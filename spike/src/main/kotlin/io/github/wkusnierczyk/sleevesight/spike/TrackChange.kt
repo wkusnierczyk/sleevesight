@@ -37,6 +37,45 @@ object TrackChange {
         position: Long,
     ): Long? = if (duration > 0) duration - position else null
 
+    /** The previous track's position at the change, and what it was computed from. */
+    data class Estimate(
+        val basis: State,
+        val changeAt: Long,
+        val position: Long,
+        val newTrackFrom: Int?,
+    )
+
+    /**
+     * Estimates where the previous track was when the next one started.
+     *
+     * Players report the new track's playback state either after its metadata or before it. In
+     * the second case the last state already belongs to the new track, with its position reset
+     * near zero. So the estimate is taken from the last state before such a reset, within
+     * [windowMs] before [now] (an earlier seek backwards is not a track change), at the time the
+     * reset arrived; with no reset, from the last state, at [now]. [Estimate.newTrackFrom] is the
+     * index of the first state belonging to the new track, if any.
+     */
+    fun estimate(
+        states: List<State>,
+        now: Long,
+        playing: Int,
+        windowMs: Long,
+        toleranceMs: Long = RESET_TOLERANCE_MS,
+    ): Estimate? {
+        if (states.isEmpty()) return null
+        val reset =
+            (states.lastIndex downTo 1)
+                .takeWhile { now - states[it].receivedAt <= windowMs }
+                .firstOrNull { i ->
+                    states[i].position < positionAt(states[i - 1], states[i].receivedAt, playing) - toleranceMs
+                }
+        val basis = if (reset != null) states[reset - 1] else states.last()
+        val changeAt = if (reset != null) states[reset].receivedAt else now
+        return Estimate(basis, changeAt, positionAt(basis, changeAt, playing), reset)
+    }
+
+    private const val RESET_TOLERANCE_MS = 1_000L
+
     /** The states received within [windowMs] before [now], oldest first. */
     fun recent(
         states: List<State>,

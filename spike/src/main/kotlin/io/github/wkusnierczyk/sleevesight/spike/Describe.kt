@@ -1,11 +1,9 @@
 package io.github.wkusnierczyk.sleevesight.spike
 
-import android.content.ContentResolver
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
-import android.net.Uri
 import android.os.Bundle
 import org.json.JSONArray
 import org.json.JSONObject
@@ -19,13 +17,6 @@ object Describe {
             MediaMetadata.METADATA_KEY_ART_URI,
             MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
             MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI,
-        )
-
-    private val BITMAP_KEYS =
-        listOf(
-            MediaMetadata.METADATA_KEY_ART,
-            MediaMetadata.METADATA_KEY_ALBUM_ART,
-            MediaMetadata.METADATA_KEY_DISPLAY_ICON,
         )
 
     private val STATES =
@@ -71,51 +62,33 @@ object Describe {
     fun actionNames(actions: Long): JSONArray = JSONArray(ACTIONS.filterKeys { actions and it != 0L }.values.toList())
 
     /** Every key the metadata carries, with its value, or a summary for bitmaps. */
-    fun metadata(
-        metadata: MediaMetadata?,
-        resolver: ContentResolver,
-    ): JSONObject {
+    fun metadata(metadata: MediaMetadata?): JSONObject {
         if (metadata == null) return JSONObject().put("present", false)
         val values = JSONObject()
-        metadata.keySet().sorted().forEach { key ->
-            when {
-                key in BITMAP_KEYS ->
-                    metadata.getBitmap(key)?.let { values.put(key, "bitmap ${it.width}x${it.height}") }
-                metadata.getText(key) != null -> values.put(key, metadata.getText(key).toString())
-                metadata.getRating(key) != null -> values.put(key, "rating ${metadata.getRating(key)}")
-                else -> values.put(key, metadata.getLong(key))
-            }
-        }
-        val art = JSONObject()
-        ART_URI_KEYS.forEach { key ->
-            metadata.getString(key)?.let { art.put(key, artAccess(Uri.parse(it), resolver)) }
-        }
+        metadata.keySet().sorted().forEach { key -> values.put(key, value(metadata, key)) }
         return JSONObject()
             .put("present", true)
             .put("keys", JSONArray(metadata.keySet().sorted()))
             .put("values", values)
-            .put("artUriAccess", art)
+            .put("artUris", JSONArray(artUris(metadata)))
             .put("description", metadata.description?.toString())
     }
 
-    /** Whether an art URI can be read by this app: the question behind the Phase 0 art check. */
-    private fun artAccess(
-        uri: Uri,
-        resolver: ContentResolver,
-    ): JSONObject {
-        val result = JSONObject().put("uri", uri.toString()).put("scheme", uri.scheme)
-        if (uri.scheme != ContentResolver.SCHEME_CONTENT && uri.scheme != ContentResolver.SCHEME_ANDROID_RESOURCE) {
-            return result.put("read", "not attempted: not a content URI")
-        }
-        // Any failure is the measurement itself, so it is recorded rather than rethrown.
-        @Suppress("TooGenericExceptionCaught")
-        return try {
-            val bytes = resolver.openInputStream(uri)?.use { it.readBytes().size }
-            result.put("read", if (bytes != null) "ok" else "null stream").put("bytes", bytes)
-        } catch (e: Exception) {
-            result.put("read", "failed").put("error", e.javaClass.name).put("message", e.message)
-        }
-    }
+    /** The art URIs the metadata carries, for [ArtProbe]. */
+    fun artUris(metadata: MediaMetadata?): List<String> = ART_URI_KEYS.mapNotNull { metadata?.getString(it) }
+
+    /**
+     * A value of unknown type. `MediaMetadata` has no typed lookup, and a getter of the wrong type
+     * returns its default (logging a warning to logcat), so the types are tried in turn.
+     */
+    private fun value(
+        metadata: MediaMetadata,
+        key: String,
+    ): Any =
+        metadata.getBitmap(key)?.let { "bitmap ${it.width}x${it.height}" }
+            ?: metadata.getText(key)?.toString()
+            ?: metadata.getRating(key)?.let { "rating $it" }
+            ?: JSONObject().put("longOrUnknown", metadata.getLong(key))
 
     fun playbackState(state: PlaybackState?): JSONObject {
         if (state == null) return JSONObject().put("present", false)
@@ -155,10 +128,19 @@ object Describe {
             .put("ratingType", controller.ratingType)
             .put("extras", bundle(controller.extras))
 
-    @Suppress("DEPRECATION") // Bundle.get is the only way to read values of unknown type.
+    /**
+     * A bundle's contents. Unparcelling a player's bundle can throw (for example a
+     * `BadParcelableException` for a class this app does not have), so the failure is logged
+     * instead of crashing the probe inside a callback.
+     */
+    @Suppress("DEPRECATION", "TooGenericExceptionCaught") // Bundle.get reads values of unknown type.
     fun bundle(extras: Bundle?): JSONObject {
         val json = JSONObject()
-        extras?.keySet()?.sorted()?.forEach { key -> json.put(key, extras.get(key)?.toString()) }
+        try {
+            extras?.keySet()?.sorted()?.forEach { key -> json.put(key, extras.get(key)?.toString()) }
+        } catch (e: Exception) {
+            json.put("unreadable", e.javaClass.name).put("message", e.message)
+        }
         return json
     }
 }

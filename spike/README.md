@@ -20,19 +20,19 @@ Then open **Sleevesight probe**, tap **Notification access**, and switch it on. 
 
 Each step leaves its trace in the log; the screen shows the latest lines.
 
-1. **Metadata.** Play a few tracks in Spotify, then in YouTube Music and a podcast app. Each `session_added` and `metadata_changed` line lists every metadata key the player sends, including `android.media.metadata.MEDIA_ID`, and whether its art URIs could be read (`artUriAccess`).
+1. **Metadata.** Play a few tracks in Spotify, then in YouTube Music and a podcast app. Each `session_added` and `track_changed` line lists every metadata key the player sends, including `android.media.metadata.MEDIA_ID`; `metadata_updated` lines are updates to the same track, such as art arriving later.
 2. **Queue.** Play a playlist in Spotify. `session_added` and `queue_changed` show whether `getQueue()` and `getQueueTitle()` are published.
 3. **Transport.** Use **Prev**, **Play**, **Pause** and **Next** under each player. `probe_command` lines record the command; the following `playback_state` lines show whether it worked and which actions the player advertises.
-4. **Opening the player.** Tap **Open player** (the session activity), **Open track** (a `spotify:track:` URI, if the media id is one) and **Search** (`spotify:search:`). `open_session_activity` and `deep_link` lines record what resolved and what opened.
+4. **Opening the player.** Tap **Open player** (the session activity), **Open track** (a `spotify:track:` URI, if the media id is one) and **Search** (`spotify:search:`). `open_session_activity` and `deep_link` lines record what resolved and what was sent; **note which screen actually opened**, since Android can block a launch without telling the app.
 5. **Track changes (D5).** In Spotify, with crossfade off:
    - let a track end on its own;
    - skip in Spotify itself, early and late in a track;
    - skip from the notification, headphones or a watch, if available;
    - skip with the probe's **Next**.
 
-   Then switch crossfade on (Settings, Playback, Crossfade; try the maximum, 12 s) and let a few tracks end on their own. Each `metadata_changed` line has a `trackChange` object: the previous track's remaining time at the change, the playback states in the 3 s before it (any `SKIPPING_TO_NEXT` or `SKIPPING_TO_PREVIOUS`), and whether the probe sent a command just before.
-6. **Art.** Covered by step 1: `artUriAccess` per player, and the bitmap sizes in `values`.
-7. **Restricted settings (D7).** Install the CI artifact by downloading it in the phone's browser, and try to grant notification access. Note whether Android blocks it and what unlocking takes. `probe_opened` records the installer.
+   Then switch crossfade on (Settings, Playback, Crossfade; try the maximum, 12 s) and let a few tracks end on their own. Each `track_changed` line has a `trackChange` object: the previous and next track, the previous track's remaining time at the change, whether the new track's playback state arrived before its metadata, every playback state in the 3 s before (with positions and times, so the estimate can be recomputed), and whether the probe sent that player a command just before.
+6. **Art.** Covered by step 1: an `art_access` line for each art URI a player publishes, saying whether this app could read it, and the bitmap sizes in `values`.
+7. **Restricted settings (D7).** Uninstall the probe, install the CI artifact by downloading it in the phone's browser, and try to grant notification access. Note whether Android blocks it and what unlocking takes. If you have a store client that installs APKs (Obtainium, or F-Droid with a repository), repeat through it. `probe_opened` records the installer, the initiating package and, on Android 13+, the package source.
 
 ## Reading the log
 

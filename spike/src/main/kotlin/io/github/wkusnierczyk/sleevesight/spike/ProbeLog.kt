@@ -44,7 +44,8 @@ object ProbeLog {
 
     fun tail(): List<String> = synchronized(tail) { tail.toList() }
 
-    fun contents(): String = file?.takeIf { it.exists() }?.readText().orEmpty()
+    /** The whole log, after every write already queued. */
+    fun contents(): String = writer.submit<String> { file?.takeIf { it.exists() }?.readText().orEmpty() }.get()
 
     fun clear() {
         synchronized(tail) { tail.clear() }

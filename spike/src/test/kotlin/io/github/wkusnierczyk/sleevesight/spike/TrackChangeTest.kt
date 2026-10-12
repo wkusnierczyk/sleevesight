@@ -37,4 +37,39 @@ class TrackChangeTest {
             TrackChange.recent(states, now = 10_000, windowMs = 3_000).map { it.receivedAt },
         )
     }
+
+    private fun state(
+        position: Long,
+        at: Long,
+    ) = TrackChange.State(playing, position = position, updateTime = at, speed = 1f, receivedAt = at)
+
+    @Test
+    fun `with metadata first the last state is the previous track's, extrapolated to now`() {
+        val estimate =
+            TrackChange.estimate(
+                listOf(state(170_000, at = 1_000)),
+                now = 11_000,
+                playing = playing,
+                windowMs = 3_000,
+            )!!
+        assertEquals(180_000, estimate.position)
+        assertNull(estimate.newTrackFrom)
+    }
+
+    @Test
+    fun `with the new state first the estimate comes from the state before the reset`() {
+        val states = listOf(state(170_000, at = 1_000), state(0, at = 10_000))
+        val estimate = TrackChange.estimate(states, now = 10_200, playing = playing, windowMs = 3_000)!!
+        assertEquals(179_000, estimate.position)
+        assertEquals(10_000, estimate.changeAt)
+        assertEquals(1, estimate.newTrackFrom)
+    }
+
+    @Test
+    fun `a seek backwards before the window is not taken for the change`() {
+        val states = listOf(state(50_000, at = 1_000), state(10_000, at = 2_000))
+        val estimate = TrackChange.estimate(states, now = 100_000, playing = playing, windowMs = 3_000)!!
+        assertEquals(108_000, estimate.position)
+        assertNull(estimate.newTrackFrom)
+    }
 }

@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.spike
 
+import android.content.ContentResolver
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -15,23 +16,57 @@ import org.json.JSONObject
 /**
  * Follows every active media session and logs what it publishes. At each track change it records
  * how far from its end the previous track was and the states just before, for decision D5.
+ *
+ * Touched only on the main thread: the active-sessions listener and the controller callbacks
+ * both run on the main looper.
  */
 object SessionWatcher {
     private const val RECENT_STATES_WINDOW_MS = 3_000L
     private const val STATES_KEPT = 50
 
+    /** What identifies a track: the media id when the player sends one, else title, artist and length. */
+    private data class Track(
+        val mediaId: String?,
+        val title: String?,
+        val artist: String?,
+        val duration: Long,
+    ) {
+        fun isSameAs(other: Track) =
+            if (mediaId != null && other.mediaId != null) {
+                mediaId == other.mediaId
+            } else {
+                title == other.title && artist == other.artist && duration == other.duration
+            }
+
+        fun json(): JSONObject =
+            JSONObject()
+                .put("mediaId", mediaId)
+                .put("title", title)
+                .put("artist", artist)
+                .put("duration", duration)
+
+        companion object {
+            fun of(metadata: MediaMetadata?) =
+                Track(
+                    metadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID),
+                    metadata?.getString(MediaMetadata.METADATA_KEY_TITLE),
+                    metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST),
+                    metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0,
+                )
+        }
+    }
+
     private class Watched(
         val controller: MediaController,
         val callback: MediaController.Callback,
-        var title: String?,
-        var duration: Long,
+        var track: Track,
         val states: ArrayDeque<TrackChange.State> = ArrayDeque(),
+        var lastCommand: Pair<String, Long>? = null,
     )
 
     private val handler = Handler(Looper.getMainLooper())
     private val watched = mutableMapOf<MediaSession.Token, Watched>()
     val observers = Observers()
-    private var lastCommand: Pair<String, Long>? = null
 
     fun controllers(): List<MediaController> = watched.values.map { it.controller }
 
@@ -47,7 +82,9 @@ object SessionWatcher {
                 ProbeLog.event("session_removed", JSONObject().put("package", gone.controller.packageName))
             }
         }
-        active.filter { it.sessionToken !in watched }.forEach { controller -> follow(context, controller) }
+        active.filter { it.sessionToken !in watched }.forEach { controller ->
+            follow(context.contentResolver, controller)
+        }
         observers.fire()
     }
 
@@ -58,11 +95,9 @@ object SessionWatcher {
     }
 
     private fun follow(
-        context: Context,
+        resolver: ContentResolver,
         controller: MediaController,
     ) {
-        val resolver = context.contentResolver
-        val metadata = controller.metadata
         lateinit var entry: Watched
         val callback =
             object : MediaController.Callback() {
@@ -86,21 +121,17 @@ object SessionWatcher {
 
                 override fun onSessionDestroyed() = log(entry, "session_destroyed", JSONObject())
             }
-        entry =
-            Watched(
-                controller,
-                callback,
-                metadata?.getString(MediaMetadata.METADATA_KEY_TITLE),
-                metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0,
-            )
+        val metadata = controller.metadata
+        entry = Watched(controller, callback, Track.of(metadata))
         controller.playbackState?.let { entry.states.addLast(stateOf(it)) }
         watched[controller.sessionToken] = entry
         controller.registerCallback(callback, handler)
+        Describe.artUris(metadata).forEach { ArtProbe.check(it, controller.packageName, resolver) }
         ProbeLog.event(
             "session_added",
             JSONObject()
                 .put("controller", Describe.controller(controller))
-                .put("metadata", Describe.metadata(metadata, resolver))
+                .put("metadata", Describe.metadata(metadata))
                 .put("playbackState", Describe.playbackState(controller.playbackState))
                 .put("queueTitle", controller.queueTitle?.toString())
                 .put("queue", Describe.queue(controller.queue)),
@@ -110,39 +141,49 @@ object SessionWatcher {
     private fun metadataChanged(
         entry: Watched,
         metadata: MediaMetadata?,
-        resolver: android.content.ContentResolver,
+        resolver: ContentResolver,
     ) {
-        val now = SystemClock.elapsedRealtime()
-        val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
-        val change = JSONObject().put("sameTitle", title == entry.title)
-        entry.states.lastOrNull()?.let { last ->
-            val position = TrackChange.positionAt(last, now, PlaybackState.STATE_PLAYING)
-            change
-                .put("previousTitle", entry.title)
-                .put("previousDuration", entry.duration)
-                .put("previousPositionAtChange", position)
-                .put("previousRemainingAtChange", TrackChange.remaining(entry.duration, position))
-                .put(
-                    "recentStates",
-                    JSONArray(
-                        TrackChange.recent(entry.states.toList(), now, RECENT_STATES_WINDOW_MS).map {
-                            JSONObject().put("state", Describe.stateName(it.state)).put(
-                                "msBeforeChange",
-                                now - it.receivedAt,
-                            )
-                        },
-                    ),
-                )
+        Describe.artUris(metadata).forEach { ArtProbe.check(it, entry.controller.packageName, resolver) }
+        val track = Track.of(metadata)
+        if (track.isSameAs(entry.track)) {
+            // The same track updated (art arriving later, for example): not a track change.
+            log(entry, "metadata_updated", JSONObject().put("metadata", Describe.metadata(metadata)))
+            return
         }
-        lastCommand?.takeIf { now - it.second <= RECENT_STATES_WINDOW_MS }?.let {
+        val now = SystemClock.elapsedRealtime()
+        val change = JSONObject().put("previous", entry.track.json()).put("next", track.json())
+        val estimate =
+            TrackChange.estimate(
+                entry.states.toList(),
+                now,
+                PlaybackState.STATE_PLAYING,
+                RECENT_STATES_WINDOW_MS,
+            )
+        estimate?.let {
+            change
+                .put("previousPositionAtChange", it.position)
+                .put("previousRemainingAtChange", TrackChange.remaining(entry.track.duration, it.position))
+                .put("changeMsBeforeMetadata", now - it.changeAt)
+                .put("newStateBeforeMetadata", it.newTrackFrom != null)
+        }
+        change.put(
+            "recentStates",
+            JSONArray(
+                TrackChange.recent(entry.states.toList(), now, RECENT_STATES_WINDOW_MS).map { stateJson(it, now) },
+            ),
+        )
+        entry.lastCommand?.takeIf { now - it.second <= RECENT_STATES_WINDOW_MS }?.let {
             change.put("probeCommand", it.first).put("probeCommandMsBefore", now - it.second)
         }
-        entry.title = title
-        entry.duration = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0
+        // States from the reset on belong to the new track; the rest to the previous one.
+        val kept = estimate?.newTrackFrom?.let { entry.states.drop(it) }.orEmpty()
+        entry.states.clear()
+        entry.states.addAll(kept)
+        entry.track = track
         log(
             entry,
-            "metadata_changed",
-            JSONObject().put("trackChange", change).put("metadata", Describe.metadata(metadata, resolver)),
+            "track_changed",
+            JSONObject().put("trackChange", change).put("metadata", Describe.metadata(metadata)),
         )
     }
 
@@ -166,6 +207,18 @@ object SessionWatcher {
             SystemClock.elapsedRealtime(),
         )
 
+    /** Everything needed to recompute the estimate offline. */
+    private fun stateJson(
+        state: TrackChange.State,
+        now: Long,
+    ) = JSONObject()
+        .put("state", Describe.stateName(state.state))
+        .put("position", state.position)
+        .put("updateTime", state.updateTime)
+        .put("speed", state.speed.toDouble())
+        .put("receivedAt", state.receivedAt)
+        .put("msBeforeMetadata", now - state.receivedAt)
+
     private fun log(
         entry: Watched,
         type: String,
@@ -175,12 +228,12 @@ object SessionWatcher {
         observers.fire()
     }
 
-    /** Sends a transport command from the probe, and logs it so a following change can be attributed. */
+    /** Sends a transport command from the probe, and logs it so the next change of that session can be attributed. */
     fun command(
         controller: MediaController,
         name: String,
     ) {
-        lastCommand = name to SystemClock.elapsedRealtime()
+        watched[controller.sessionToken]?.lastCommand = name to SystemClock.elapsedRealtime()
         ProbeLog.event("probe_command", JSONObject().put("package", controller.packageName).put("command", name))
         val controls = controller.transportControls
         when (name) {

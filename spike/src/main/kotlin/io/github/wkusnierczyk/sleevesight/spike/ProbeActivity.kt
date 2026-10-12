@@ -1,12 +1,16 @@
 package io.github.wkusnierczyk.sleevesight.spike
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Typeface
 import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.media.session.MediaSessionManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -65,6 +69,11 @@ class ProbeActivity : ComponentActivity() {
         ProbeLog.observers += refresh
         SessionWatcher.observers += refresh
         ProbeLog.event("probe_opened", Install.describe(this))
+        // The listener may have connected before this screen, or the process restarted: ask directly.
+        if (Install.hasNotificationAccess(this)) {
+            val component = ComponentName(this, ProbeListenerService::class.java)
+            SessionWatcher.update(this, getSystemService(MediaSessionManager::class.java).getActiveSessions(component))
+        }
         render()
     }
 
@@ -137,8 +146,21 @@ class ProbeActivity : ComponentActivity() {
         val intent = controller.sessionActivity
         val result = JSONObject().put("package", controller.packageName).put("present", intent != null)
         try {
-            intent?.send()
-            result.put("sent", intent != null)
+            // Android 14+ starts the activity only if the sender opts in to lending its own right to
+            // start activities; without this, the launch can be blocked with only a logcat line.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                @Suppress("DEPRECATION") // The API 36 replacement is not available below 36.
+                val options =
+                    ActivityOptions
+                        .makeBasic()
+                        .setPendingIntentBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+                        ).toBundle()
+                intent?.send(this, 0, null, null, null, null, options)
+            } else {
+                intent?.send()
+            }
+            result.put("sent", intent != null).put("note", "check which screen opened")
         } catch (e: PendingIntent.CanceledException) {
             result.put("sent", false).put("error", e.javaClass.name)
         }
@@ -182,7 +204,9 @@ class ProbeActivity : ComponentActivity() {
         val json = JSONObject(line)
         val detail =
             json.optJSONObject("trackChange")?.let { change ->
-                " remaining=${change.opt("previousRemainingAtChange")} states=${change.optJSONArray("recentStates")}"
+                " remaining=${change.opt(
+                    "previousRemainingAtChange",
+                )} newStateFirst=${change.opt("newStateBeforeMetadata")}"
             } ?: json
                 .optJSONObject("playbackState")
                 ?.optString("state")
