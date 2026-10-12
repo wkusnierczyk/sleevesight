@@ -11,7 +11,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="Sleevesight probe">
+        android:label="Sleevesight probe"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <activity
             android:name=".ProbeActivity"
