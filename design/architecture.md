@@ -2,7 +2,7 @@
 
 **Status:** Proposal, for discussion  
 **Date:** 2026-10-12  
-**Builds on:** [design.md](design.md) and the [simulator](simulator.html)  
+**Builds on:** [design.md](design.md) and the [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html)  
 **Tracking:** [#3](https://github.com/wkusnierczyk/sleevesight/issues/3)
 
 This document turns the design into a buildable structure: modules and their boundaries, the runtime data flow, the technology choices, how the structural constraints are enforced, testing and CI. It starts with a review of the design and the simulator, because several findings change the architecture. The decisions it needed are collected at the end, as made by the owner.
@@ -34,7 +34,7 @@ The simulator is a prototype of the experience: it shows how the app behaves as 
 | Component | In the simulator | For the implementation |
 |---|---|---|
 | Normalizer | Real logic (`normalize`) | Port |
-| Prompts, grounding check | Real logic (`promptInsight` and the others, `groundCheck`), live against Claude | Port |
+| Prompts, grounding check | Real logic (`promptInsight` and the others, `groundCheck`), live against Claude when run as a claude.ai artifact | Port |
 | Debounce, cancellation | Real logic (`onMetadataChanged`, `runPipeline`) | Port, as coroutines |
 | Caching rules | Real logic (`fetchSource` for retrieval; `write` and `writeJson`, keyed with `srcSig`, for insights and cards) | Port, with the synthesis key extended per R2 |
 | Source adapters (Wikipedia, Last.fm, web search) | Stood in for: frozen snapshots behind simulated latency (`querySource`, `fetchSource` over `facts-data`) | Build |
@@ -457,4 +457,4 @@ Each question was put with a recommendation; ✅ marks it decided by the owner (
 
 ### Follow-ups outside this document
 
-- Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10; [#14](https://github.com/wkusnierczyk/sleevesight/issues/14)).
+- ✅ The artifact runtime `<script>` is removed from `design/simulator.html`, and the simulator links point to its GitHub Pages copy, which has no AI service and shows the first facts found in place of written insights (R10; [#14](https://github.com/wkusnierczyk/sleevesight/issues/14)).
