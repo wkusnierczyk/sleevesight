@@ -35,14 +35,16 @@ The simulator is a prototype of the experience: it shows how the app behaves as 
 |---|---|---|
 | Normalizer | Real logic (`normalize`) | Port |
 | Prompts, grounding check | Real logic (`promptInsight` and the others, `groundCheck`), live against Claude | Port |
-| Debounce, cancellation, caching rules | Real logic (`onMetadataChanged`, `runPipeline`) | Port, as coroutines |
+| Debounce, cancellation | Real logic (`onMetadataChanged`, `runPipeline`) | Port, as coroutines |
+| Caching rules | Real logic (`fetchSource` for retrieval, `write` with `srcSig` for insights) | Port, with the synthesis key extended per R2 |
+| Source adapters (Wikipedia, Last.fm, web search) | Stood in for: frozen snapshots behind simulated latency (`querySource`, `fetchSource` over `facts-data`) | Build |
 | Entity resolution | Stood in for: each fixture record carries its outcome (`song_article`, `mismatch`, ...) | Build |
 | MusicBrainz | Stood in for: shown as `blocked` | Build |
 | Multi-artist resolution | Stood in for: the primary artist's data only | Build |
 | Evidence extraction | Stood in for: fact lines written in advance, in `facts-data` | Build |
 | Discogs | Not shown | Build (Phase 3) |
 
-The components to build are the ones the design calls the hard ones, so the architecture puts them in plain Kotlin behind interfaces, where Phase 0.5 can iterate on them in a command-line tool, on the fixture playlist, before any Android code depends on them. The simulator's frozen outcomes and fact lines become the expected results those tests aim for.
+The components to build are the ones the design calls the hard ones, so the architecture puts them in plain Kotlin behind interfaces, where Phase 0.5 can iterate on them in a command-line tool, on the fixture playlist, before any Android code depends on them. The simulator's frozen data then serves Phase 0.5's tests (see [Testing](#testing)): its resolution outcomes as expected outcomes, and its fact lines as reference facts that extraction should find, though not word for word.
 
 ### Findings
 
