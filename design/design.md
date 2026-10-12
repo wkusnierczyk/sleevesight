@@ -110,7 +110,11 @@ Measured for decision D5 on 21 Spotify track changes (of 24 logged; the other th
 ### Notification access and installation
 
 - Installed through `adb`, the probe got notification access without restriction (`packageSource` OTHER, initiating package `com.android.shell`).
-- An APK installed from the browser or a file manager, where Android 13+ applies restricted settings: **to measure** (D7).
+- **Installing from a file (measured, D7).** The probe's APK, opened from My Files, was first stopped by **Google Play Protect** ("App blocked to protect your device": Play Protect has not seen an app from this developer before), which offers **Install anyway**. After that, **Advanced Protection** blocked it outright ("Advanced Protection only allows apps from Google Play and other app stores pre-installed on your phone"), with no override. On this phone the device setting was off and the block came from the Google account being enrolled in Google's Advanced Protection Program. So:
+  - for a user without Advanced Protection, installing Sleevesight from a file costs a Play Protect warning and a tap;
+  - for a user whose phone or Google account has Advanced Protection, only Google Play (or a store pre-installed on the phone) can install it, which rules out GitHub releases and F-Droid for them.
+- Restricted settings on notification access, for an app installed from a file, could not be measured on this phone, since the install itself is blocked; it is **to measure** on a phone or emulator without Advanced Protection.
+- `adb` installs are not affected by either block.
 
 ### Spotify Web API constraints
 
@@ -326,7 +330,7 @@ A throwaway app on a real phone. Outputs, written to a log file:
 - Which `PlaybackState` actions each player advertises; whether transport controls work.
 - Whether `getSessionActivity()` and `spotify:` deep links open the expected screens.
 
-**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: an install from the browser (D7).
+**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: restricted settings on notification access for an app installed from a file, on a device without Advanced Protection (D7). The D7 decision itself is up for review in light of the installation findings.
 
 ### Phase 0.5. Pipeline CLI
 
