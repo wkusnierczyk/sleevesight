@@ -41,34 +41,73 @@ The prototype in the simulator covers the whole flow against a real 80-track pla
 
 ## Platform facts
 
-These were established while designing. Items marked **unverified** are Phase 0 tasks.
+These were established while designing, and checked in Phase 0 with the platform probe (`spike/`) on a Samsung Galaxy S25 Ultra (SM-S938B, Android 16, API 36), with Spotify, Castbox (podcasts) and a Sonos session, on 2026-10-12. Items marked **to measure** are still open.
 
 ### Reading now-playing
 
 - `MediaSessionManager.getActiveSessions(componentName)` returns a `MediaController` for every app currently publishing a media session: Spotify, YouTube Music, Tidal, Deezer, podcast apps, browsers playing media.
 - It requires a declared `NotificationListenerService`. Its `ComponentName` is passed to `getActiveSessions()`; without it the call throws `SecurityException`. The user grants access in Settings, Notification access.
 - Use callbacks, not polling. `addOnActiveSessionsChangedListener` tracks sessions appearing and disappearing; `MediaController.Callback.onMetadataChanged` and `onPlaybackStateChanged` deliver track and state changes.
-- Spotify fills `METADATA_KEY_TITLE`, `ARTIST`, `ALBUM`, `DURATION` and the album-art bitmap. Other players vary; some send only a title. **Unverified:** the exact fields per player, and whether Spotify's `METADATA_KEY_MEDIA_ID` carries a `spotify:track:` URI.
-- Spotify also has an opt-in "Device Broadcast Status" setting that sends broadcast intents on metadata, playback-state and queue changes. It carries track, artist, album and length but no playlist. Useful as a fallback, not as the primary path.
+- **Spotify (measured)** fills `TITLE`, `ARTIST`, `ALBUM`, `ALBUM_ARTIST`, `DURATION`, the album art (a 300×300 bitmap and an `ALBUM_ART_URI`), and `METADATA_KEY_MEDIA_ID` as a **`spotify:track:<id>`** URI. `ARTIST` is one comma-joined string of the credited artists ("Ginton, Richard Bona, Salif Keita"), as the normalizer assumes. It also sends its own keys: the playing context (`com.spotify.music.extra.CONTEXT_URI`, `CONTEXT_TITLE`, `CONTEXT_DESCRIPTION`, `CONTEXT_SHARE_URL`), an `ART_HTTPS_URI` on Spotify's image CDN, an extracted background colour, and explicit, download and advertisement flags.
+- **Castbox (measured)** fills `TITLE`, `DISPLAY_TITLE`, `ARTIST` (the publisher), `ALBUM` (the episode title), `DURATION`, `MEDIA_ID` (its own episode id) and, for the playing episode, `MEDIA_URI` and http(s) art URIs. A **Sonos** session sent only art and an empty media id. Other players: **to measure** (YouTube Music).
+- **Spotify republishes unchanged metadata constantly**: 153 of 166 same-track updates in one 6-minute session changed nothing, and most of the rest changed only the art, the length (sent as a placeholder first) or the extracted colour. The debounce and the lookup-key comparison in the pipeline are what keep this from triggering lookups.
+- Spotify also has an opt-in "Device Broadcast Status" setting that sends broadcast intents on metadata, playback-state and queue changes. The media session carries everything it does and more, so it is not used.
+
+### Album art
+
+- Spotify's `ALBUM_ART_URI` is a `content://com.spotify.mobile.android.mediaapi/...` URI, and **another app can read it**. The bitmap and the https URI are there as well.
+- Castbox publishes http(s) art URLs (and a small bitmap), which `:sources` fetches like any other network resource.
 
 ### Controlling the player
 
 - `MediaController.getTransportControls()` gives `play()`, `pause()`, `skipToNext()`, `skipToPrevious()` and `seekTo()`.
-- Only offer an action the session advertises in `PlaybackState.getActions()`.
+- Only offer an action the session advertises in `PlaybackState.getActions()`. **Measured:** Spotify advertises play or pause, previous, next, seek, play from search and play from URI; all worked. Castbox advertises the full set while playing but only play/pause while paused.
 
 ### Opening the player
 
-- `MediaController.getSessionActivity()` usually returns a `PendingIntent` to the player's own now-playing screen.
-- Opening a specific track, album or artist in Spotify needs a Spotify ID: `Intent.ACTION_VIEW` with `spotify:track:<id>`, `spotify:album:<id>` or `spotify:artist:<id>`.
-- When no ID is known, fall back to `spotify:search:<query>`, which always opens. Log the fallback.
+- `MediaController.getSessionActivity()` returns a `PendingIntent` to the player's own screen **for Castbox, and opens it; Spotify publishes none.** So for Spotify the app opens the player through a `spotify:` URI or its launch intent instead.
+- Opening a specific track, album or artist in Spotify needs a Spotify ID: `Intent.ACTION_VIEW` with `spotify:track:<id>`, `spotify:album:<id>` or `spotify:artist:<id>`. **Measured:** `spotify:track:` with the id from `MEDIA_ID` opens the track.
+- When no ID is known, fall back to `spotify:search:<query>`, which always opens (**measured**). Log the fallback.
 
 ### Playlist context
 
-The media session describes the current track, not the playlist. Three ways to get more, in order of reliability:
+The media session carries more context than the design assumed. In order of reliability:
 
-1. **Session history.** Every track the app has seen play. Always available, but it only knows the past.
-2. **The session queue.** `MediaController.getQueue()` and `getQueueTitle()` return upcoming items if the player publishes them. Players are not required to. **Unverified** for Spotify.
-3. **Spotify Web API, optional account.** `GET /me/player/currently-playing` returns a `context` (playlist or album URI); `GET /playlists/{id}/items` returns the full list.
+1. **Spotify's metadata.** `CONTEXT_URI` and `CONTEXT_TITLE` name the playlist or album being played (`spotify:playlist:...`, "This Is Salif Keita"), **without an account**.
+2. **The session queue.** Spotify publishes `getQueue()` (the upcoming tracks, with `spotify:track:` ids; 48 items in one session) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids).
+3. **Session history.** Every track the app has seen play. Always available, but it only knows the past.
+4. **Spotify Web API, optional account.** `GET /playlists/{id}/items` returns the whole playlist, not only what is queued.
+
+The track lists can therefore say "In this playlist · <name>" without the optional account; the account adds the full playlist beyond the queue.
+
+### Track changes
+
+Measured for decision D5: at each track change, the previous track's remaining time (its length less its position, extrapolated from the last playback state), and the playback states in the 3 s before the new metadata.
+
+| Change | Count | Remaining in the previous track | `PLAYING` states in the 3 s before |
+|---|---|---|---|
+| Ended on its own, no crossfade | 4 | −87 to −39 ms | 12 |
+| Ended on its own, crossfade 12 s | 3 | 11.95 to 11.99 s | 11 or 12 |
+| Skipped in Spotify, with earphones or from the notification | 12 | 20 s to 429 s | 0 |
+| Skipped with the probe's buttons, just after pressing play | 2 | 175 s and 369 s | 3 or 4 |
+
+- **No skip state.** Neither Spotify nor Castbox reported `STATE_SKIPPING_TO_NEXT` or `STATE_SKIPPING_TO_PREVIOUS`, for any kind of skip. Skips in the Spotify app, from earphones and from the notification look the same to the session.
+- **A natural end lands exactly at the crossfade.** Without crossfade the change comes within 0.1 s of the end; with a 12 s crossfade, 12.0 s before it, every time within 50 ms. Seeking towards the end beforehand changes nothing.
+- **Timing alone is ambiguous inside the crossfade.** The remaining time is measured against the track's full length, so a skip 8 s before a 12 s crossfade reads as 20 s remaining. With a 5 s crossfade, a natural end and a skip 5 s before the transition would both read as 10 s: one change cannot say which it was.
+- **The state burst.** Before every natural end Spotify published a steady stream of `PLAYING` states (11 or 12 in the last 3 s); before a skip, none, unless the user had just pressed play (3 or 4). This separates the two even where timing cannot. It is undocumented Spotify behaviour, measured on 21 changes, so it is used with the timing, not alone.
+- Castbox, when skipped, sent the new episode's state (position 0) before its metadata; the probe's estimate handles both orders.
+
+**Decision (D5, refined):** a user setting, *Crossfade*: **Autodetect** (the default) or a fixed value, 0 to 15 s.
+
+- A fixed value *c*: a change is a natural end when the remaining time is within 0.5 s of *c*.
+- Autodetect, for a player where the burst has been measured (so far only Spotify): a change is a natural end when the burst is there (at least 8 `PLAYING` states in the 3 s before), with the remaining time at most 15 s. Each such remaining time is a crossfade candidate; when two agree within 0.1 s, that value is the learned crossfade, and natural ends must then also fall within 0.5 s of it. Without the burst, or with more than 15 s remaining, the change is a skip.
+- Autodetect, for any other player: timing alone. A change is a natural end when the remaining time is at most 15 s; remaining times that repeat within 0.1 s become the learned crossfade, as above. Whether other players show a burst, or another signal, is investigated as they are covered.
+- Either way, detection errs towards "ended on its own" (decision D5).
+
+### Notification access and installation
+
+- Installed through `adb`, the probe got notification access without restriction (`packageSource` OTHER, initiating package `com.android.shell`).
+- An APK installed from the browser or a file manager, where Android 13+ applies restricted settings: **to measure** (D7).
 
 ### Spotify Web API constraints
 
