@@ -164,7 +164,8 @@ data class TrackState(
 ### Session layer (`:app`)
 
 - `SleevesightListenerService : NotificationListenerService` is declared only to obtain the session permission; it ignores notifications themselves.
-- `SessionRepository` registers `addOnActiveSessionsChangedListener` and a `MediaController.Callback` on the active session of each followed player, and maps metadata to `NowPlaying` (title, artists string, album, duration, art bitmap, package, media id when present). Events from players not followed are dropped and logged as ignored.
+- `SessionRepository` registers `addOnActiveSessionsChangedListener` and a `MediaController.Callback` on the active session of each followed player, and maps metadata to `NowPlaying` (title, artists string, album, duration, art bitmap, package, media id when present, active queue item when published). Events from players not followed are dropped and logged as ignored.
+- Track identity, for skip detection and session history (Phase 0, `design.md` *Track changes*): the media id when the player sends one; else the active queue item where the player publishes one (an item of −1 is no item, not a change); else title and artists. A new length or new art for the same track is an update, not a change, and the time left is computed from the latest length. The pipeline's lookup key (normalized artist and title) is unaffected.
 - Transport controls are offered only when `PlaybackState.actions` advertises them.
 - Handoff: `sessionActivity` for the player's own screen; `spotify:` URIs when an id is known; `spotify:search:` otherwise, logged as a fallback.
 - Process death: the service reconnects on rebind; the repository rebuilds from `getActiveSessions` on start.
