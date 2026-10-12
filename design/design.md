@@ -252,8 +252,10 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
   - To the enabled sources: the normalized title and artists, and the album name as the player reports it.
-  - To the chosen AI provider: the title, artists and album, as the player reports them and as normalized, and the evidence retrieved from the sources.
-  - Nothing else. The duration, the album art and the session history stay on the phone.
+  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources.
+  - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
+
+  Nothing else leaves the phone. The duration, the album art and the session history stay on it.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - No telemetry, crash reporting services, analytics or accounts of our own.
 
