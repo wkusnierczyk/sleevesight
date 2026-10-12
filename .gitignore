@@ -1,0 +1,16 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Android Studio and IntelliJ
+.idea/
+*.iml
+local.properties
+captures/
+
+# macOS
+.DS_Store
+
+# JVM heap dumps
+*.hprof

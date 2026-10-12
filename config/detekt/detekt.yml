@@ -1,0 +1,17 @@
+# Additions to Detekt's default configuration, for every module.
+style:
+  MaxLineLength:
+    maxLineLength: 120
+  # Network access only through :net (design, Structural constraints). :net gets its own
+  # configuration when it is created.
+  ForbiddenImport:
+    active: true
+    imports:
+      - value: 'java.net.*'
+        reason: 'Network access goes through :net.'
+      - value: 'javax.net.*'
+        reason: 'Network access goes through :net.'
+      - value: 'okhttp3.*'
+        reason: 'Network access goes through :net.'
+      - value: 'io.ktor.client.*'
+        reason: 'Network access goes through :net.'

@@ -1,0 +1,27 @@
+# Groups allowed on the shipped runtime classpath of any module, with their licence.
+# An entry matches its group exactly; `group.*` also matches its subgroups. Prefer exact
+# groups: `androidx.*` would admit androidx.privacysandbox.ads, an ads API.
+# Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
+# (design, Structural constraints), and every licence GPL-3.0 compatible.
+#
+# group                        licence
+org.jetbrains.kotlin           Apache-2.0
+org.jetbrains.kotlinx          Apache-2.0
+org.jetbrains                  Apache-2.0   # annotations
+androidx.activity              Apache-2.0
+androidx.annotation            Apache-2.0
+androidx.arch.core             Apache-2.0
+androidx.collection            Apache-2.0
+androidx.compose.runtime       Apache-2.0   # pulled in by androidx.activity
+androidx.concurrent            Apache-2.0
+androidx.core                  Apache-2.0
+androidx.interpolator          Apache-2.0
+androidx.lifecycle             Apache-2.0
+androidx.navigationevent       Apache-2.0
+androidx.profileinstaller      Apache-2.0
+androidx.savedstate            Apache-2.0
+androidx.startup               Apache-2.0
+androidx.tracing               Apache-2.0
+androidx.versionedparcelable   Apache-2.0
+com.google.guava               Apache-2.0   # listenablefuture, pulled in by androidx
+org.jspecify                   Apache-2.0   # nullness annotations, pulled in by androidx

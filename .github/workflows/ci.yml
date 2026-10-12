@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "design/**"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "design/**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build, test and lint
+        run: ./gradlew build --console=plain
+
+      - name: Structural checks
+        run: ./gradlew checkDependencies checkManifest checkModuleGraph --console=plain
+
+      - name: Probe APK
+        run: ./gradlew :spike:assembleDebug --console=plain
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: spike-debug-apk
+          path: spike/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

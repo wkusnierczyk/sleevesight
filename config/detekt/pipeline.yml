@@ -1,0 +1,48 @@
+# Multiplatform readiness for the pipeline modules (architecture, Multiplatform readiness, D2).
+# None of these is a complete check: only compiling a non-JVM target is. ForbiddenMethodCall
+# needs type resolution (the detektMain and detektTest tasks). The imports list replaces the one
+# in detekt.yml, so it repeats the network rules.
+style:
+  ForbiddenImport:
+    active: true
+    imports:
+      - value: 'java.*'
+        reason: 'JVM-only; the pipeline modules stay Multiplatform-ready (D2).'
+      - value: 'javax.*'
+        reason: 'JVM-only; the pipeline modules stay Multiplatform-ready (D2).'
+      - value: 'okhttp3.*'
+        reason: 'Network access goes through :net.'
+      - value: 'io.ktor.client.*'
+        reason: 'Network access goes through :net.'
+  ForbiddenMethodCall:
+    active: true
+    methods:
+      - value: 'java.lang.String.format'
+        reason: 'JVM-only; build the string or use a common formatter.'
+      # The extension form ("%d".format(n)) is not matched by Detekt 1.23.8 on Kotlin 2.4; kept for a
+      # later Detekt that resolves it. The non-JVM compile at the Multiplatform switch is the complete check.
+      - value: 'kotlin.text.format'
+        reason: 'JVM-only; build the string or use a common formatter.'
+      - value: 'java.lang.System.currentTimeMillis'
+        reason: 'Use kotlin.time.Clock.'
+      - value: 'java.lang.System.nanoTime'
+        reason: 'Use kotlin.time.TimeSource.'
+      - value: 'java.lang.Thread.sleep'
+        reason: 'Use kotlinx.coroutines.delay.'
+      - value: 'java.lang.Thread.<init>'
+        reason: 'Use coroutines.'
+      - value: 'java.lang.Math.abs'
+        reason: 'Use kotlin.math.'
+      - value: 'java.lang.Math.max'
+        reason: 'Use kotlin.math or maxOf.'
+      - value: 'java.lang.Math.min'
+        reason: 'Use kotlin.math or minOf.'
+      - value: 'java.lang.Math.round'
+        reason: 'Use kotlin.math.'
+      - value: 'java.lang.Math.random'
+        reason: 'Use kotlin.random.'
+  ForbiddenAnnotation:
+    active: true
+    annotations:
+      - value: 'kotlin.jvm.Synchronized'
+        reason: 'JVM-only; use kotlinx.coroutines.sync.Mutex.'
