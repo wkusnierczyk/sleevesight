@@ -141,6 +141,7 @@ sequenceDiagram
 - The pipeline is `nowPlaying.filterNotNull().debounce(650.milliseconds).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`. A `null` (no active session) is filtered out, so it neither cancels the current track's run nor clears its state; the UI reads `nowPlaying` directly to show the idle state.
 - Sources run in parallel inside `run`, each in its own child coroutine, each publishing its result as soon as it lands.
 - Detail insights (song, artist, album, genre, sounds-like) are separate on-demand jobs, scoped to the screen or box that asked, cancelled when it closes.
+- Preparing the next track (D13) is a job of its own, keyed by the next queue item and cancelled when that item changes. Requests in flight are shared by key, so a track that starts while it is being prepared waits on the same requests rather than repeating them. See [Preparing the next track](#preparing-the-next-track).
 - Playback state (play, pause, seek, progress) never enters the pipeline.
 
 ### State
@@ -223,8 +224,27 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
   Small clients over `:net` (server-sent events for Anthropic, OpenAI and Google; line-delimited JSON for Ollama) rather than vendor SDKs (D3): the three official SDKs would bring three dependency trees into the allowlist, each with its own HTTP stack outside `:net`, and they are JVM-only, against D2. The surface used is one streaming call and one model list.
 - JSON cards (genre, sounds-like) parse with kotlinx.serialization; a parse failure is a visible error, not a retry loop.
 - The grounding check is a port of the simulator's `groundCheck` and `splitSentences`, with tests from the fixtures. Its hedge detection is English-only, as the prompts are.
+- Each prompt is a fixed contract plus the user's style; see [Prompt style](#prompt-style).
 - Prompt injection and tampering: web snippets and article sentences are untrusted text inside the prompt, and on an unencrypted link to a local model the prompt and the reply can be altered in transit (D8). The model has no tools, so the most either can do is distort the text of the cards it reaches: one card for an injected instruction, every reply for someone tampering with an unencrypted link. The grounding check flags uncited sentences and citations to missing evidence, but it cannot tell whether a cited line supports its sentence, so a plausible false sentence with a valid citation passes. Evidence is fenced and labelled as data in the prompt.
 - Model prose is rendered as plain text, never as HTML, markdown or links; its only interactive elements are the citation chips, which the app builds from the evidence ids it assigned. The genre and sounds-like cards' suggestions (`more`, `start`) are parsed from the JSON fields and become actions the app builds, each used only as a percent-encoded search query in the player (`spotify:search:`), never as a URL.
+
+### Prompt style
+
+The user shapes how insights are written, within limits the grounding check depends on (D14). Each prompt has two parts:
+
+- **Contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, and for the genre and sounds-like cards their JSON structure. It is restated after the style, so a style adds preferences but cannot override it.
+- **Style**, a user setting: length, tone, focus, audience, and free text.
+
+The setting:
+
+- **A default style** for all cards, chosen from **presets** (for example Brief, Detailed, Liner-notes) or written as free text, with a reset.
+- **Overrides per card** (the home insight; the song, artist and album insights; the genre card; the sounds-like card) under *Advanced*, each starting from the default style.
+- Each card keeps its own built-in length, and a style makes it shorter or longer relative to that.
+- For the genre and sounds-like cards, the style shapes the tone and length of the text fields only.
+- The synthesis cache key includes a hash of the style the card actually used, so a changed style writes afresh rather than serving text in the old one.
+- The output language is a separate question: the grounding check's hedge detection is English-only.
+
+Free text is the user's own input to their own prompt, so it is not untrusted in the sense web snippets are; a style that asks for uncited claims still meets the restated contract and then the grounding check.
 
 ### Genre labels (`:core`)
 
@@ -236,14 +256,15 @@ The simulator's vocabulary and hues, moved to a data file in `:core`, applied to
 |---|---|---|
 | Retrieval | source, lookup key | Days, per source; a user setting (D9) |
 | Artist resolution | normalized artist name | Long, months |
-| Synthesis | kind, entity key, evidence fingerprint, prompt-template version, provider, model, model-knowledge switch | Until evicted by size |
+| Synthesis | kind, entity key, evidence fingerprint, prompt-template version, style hash (D14), provider, model, model-knowledge switch | Until evicted by size |
 | Session history | time | Local only, user-clearable |
+| Track changes (D15) | player, time | Local only, cleared with the session history |
 
 Offline: cached tracks work fully; uncached lookups are `unreachable`.
 
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 
@@ -256,13 +277,45 @@ Each insight is a paid call on the user's key (design, *Caching and offline*), s
 
   | Option | Writes without a tap |
   |---|---|
-  | On every track change | Every track |
-  | When I skip (default) | Tracks the user moved to: a skip in the player, or any action in Sleevesight |
+  | On every track change (default) | Every track |
+  | When I skip | Tracks the user moved to: a skip in the player, or any action in Sleevesight |
   | Never | Nothing; insights are written only when the user taps Write |
 
 - **Detecting a skip in the player.** Measured in Phase 0 (`design.md`, *Track changes*): Spotify, Castbox and YouTube Music report no skip state, and a natural end lands exactly at the crossfade. So a sub-setting, *Crossfade* (driver 6): **Autodetect** (the default) or a fixed value, 0 to 15 s. With a fixed value *c*, a change with at most *c* + 0.5 s left is a natural end, and for Spotify also one with the late cluster and at most 15 s left. Autodetect, for Spotify: a change with at most 15 s left is a natural end when Spotify's late cluster of playback states is there, or when the time left matches 0 or a crossfade learned from repeating natural ends; for other players, timing alone. Changes Sleevesight caused itself need no detection. Detection errs towards "ended on its own": that mistake costs a tap, the other an unrequested paid call. The one accepted exception: under Autodetect for Spotify, a natural end without the late cluster, before any crossfade is learned, reads as a skip.
 - **Actions in Sleevesight** (previous, next, play, selecting a track; not pause) always count as user-driven. Play also writes the current track if it has no insight yet, as in the simulator, except under "never".
 - **After the app opens**, nothing is written until the user's first action in it, in every mode, as in the simulator.
+- **The default** is *On every track change* (owner, 2026-10-12), so that with [Preparing the next track](#preparing-the-next-track) a card is usually written before its track plays. It assumes listening rather than skipping; someone who skips a lot, or previews a playlist, saves calls with *When I skip*. Skip detection serves *When I skip*; under the default it decides no writes.
+
+### Learning skip detection
+
+Skip detection gets better per player from data, on the device, without an LLM (D15).
+
+- **From Phase 1:** each track change is recorded locally with a few features: the time left, the pattern of playback states before it, the time since the user's last action in Sleevesight, the learned crossfade, and the player. A table in `:store`, local only, cleared with the session history.
+- **Later (Phase 2 or after):** a small, explainable model per player (for example naive Bayes over state patterns), fitted to trustworthy labels only:
+  - skips made from Sleevesight itself (certain);
+  - changes that are clear on every count (near-certain natural ends);
+  - a tap on Write after a change taken as natural (a weak hint);
+  - optionally, an opt-in calibration mode that asks.
+- **Guardrails.** It never learns from its own predictions. The fixed rules above stay as the floor: learning adjusts within limits and still errs towards "ended on its own". What it has learned is shown on the diagnostics screen, with a reset. The data stays on the phone unless the user exports it.
+- **No LLM at runtime**: it would spend the user's key, send listening behaviour off the phone, add latency, and move a decision out of code. An LLM may help the developer offline, analysing exported logs to propose rules that then ship as code, as in Phase 0.
+
+### Preparing the next track
+
+When a track starts, the pipeline also runs for the next item in the player's queue, so its card is ready if it plays (D13). Spotify publishes its queue with `spotify:track:` ids, Castbox with its episode ids, and YouTube Music its "Up next", which starts with the playing track, so the next item is the one after the active queue item (`design.md`, *Playlist context*). A player that publishes no queue gets no preparation.
+
+A user setting, *Prepare the next track*:
+
+| Option | Runs ahead |
+|---|---|
+| Off | Nothing |
+| Evidence | Normalization, resolution and source lookups. No paid call; it removes the slow part, MusicBrainz at one request per second (R3) |
+| Evidence and insight (default) | Also writes the insight: one paid AI call per track, wasted on a skip |
+
+- The default assumes listening rather than skipping, as D5's does; someone previewing a playlist turns it off.
+- It runs only while the app is visible, unless *Look up in the background* is on (D6).
+- It writes the insight ahead only where *Write insights automatically* would write it when the track plays: under *On every track change*, and never under *Never*. Under *When I skip* a track reached by a natural end would not be written, so only its evidence is prepared.
+- A preparation for a track that no longer comes next (the queue reordered or shuffled) is cancelled; what it retrieved stays cached. The preparation runs in its own job beside the current track's, cancelled when the next item changes, and it never delays the current track: its requests share the per-host rate limiters, behind the current track's.
+- When the prepared track plays, the pipeline finds its retrieval and synthesis in the cache and renders at once. A prepared track is matched by its lookup key, as any cached track is.
 
 ### Spotify account (Phase 3)
 
@@ -355,7 +408,7 @@ The data sources carry their own terms, and every evidence line shows its source
 - **Adapter tests** against recorded HTTP responses. `:cli record` captures real responses for the fixture playlist into `fixtures/http/`; tests replay them through `MockEngine`. CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.
-- **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action.
+- **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action; preparing the next track (D13) in each of its modes, including a dropped preparation when the queue changes; and a style (D14) changing the prompt but not the restated contract.
 - **Phase 0.5 gate** (from the design) is a `:cli` run with assertions: zero `unknown` citations, uncited under 5 percent, every listed collision rejected or correctly resolved.
 - **UI**: Compose previews for every state; screenshot tests once the UI settles (Phase 1).
 
@@ -373,15 +426,15 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 | Phase | Modules built | Exit |
 |---|---|---|
-| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip detection measured (the time left at a change, Spotify's state clusters, no skip state reported); art-URI players listed, and whether the `content://` grant holds; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
+| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip detection measured (the time left at a change, Spotify's state clusters, no skip state reported); art-URI players listed, and whether the `content://` grant holds; installation from a file tested (D7, which moved distribution to Google Play); `:spike` removed |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate; MusicBrainz tags judged (D12); the first web search provider chosen (D11) |
-| 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics | Runs on a real phone against Spotify |
-| 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff | |
+| 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics; preparing the next track (D13); the prompt style (D14); recording track changes (D15) | Runs on a real phone against Spotify |
+| 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff; the style's overrides per card (D14); learned skip detection (D15), here or later | |
 | 3. Context and reach | Spotify Web API (PKCE), more players, Ollama, Discogs, further AI providers | |
 
 ## Decisions
 
-Each question was put with a recommendation; ✅ marks it decided by the owner (all of D1 to D12, on 2026-10-12). The *Decision* column records the decision as made. Where the decision differs from the first recommendation, the row has the decision as made: D2 (kept Multiplatform-ready, as iOS may follow), D5 (three options instead of one rule), D6 and D9 (user settings), D8 (HTTPS through a reverse proxy rather than cleartext), D12 (judged in the pilot, with the licence a separate question). The decisions move to the design's Decisions table after this document lands.
+Each question was put with a recommendation; ✅ marks it decided by the owner (all of D1 to D15, on 2026-10-12). The *Decision* column records the decision as made. Where the decision differs from the first recommendation, the row has the decision as made: D2 (kept Multiplatform-ready, as iOS may follow), D5 (three options instead of one rule, and later the default), D6 and D9 (user settings), D7 (Google Play, after Phase 0), D8 (HTTPS through a reverse proxy rather than cleartext), D12 (judged in the pilot, with the licence a separate question). D13 to D15 were decided after this document was first written. All of them are also in the design's *Decisions* table.
 
 | # | Question | Decision |
 |---|---|---|
@@ -389,16 +442,18 @@ Each question was put with a recommendation; ✅ marks it decided by the owner (
 | D2 ✅ | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM, kept Multiplatform-ready.** The CLI and Android both run JVM bytecode, and Multiplatform buys nothing until there is a non-JVM target. iOS may follow once the Android prototype is good, so the pipeline modules follow the rules under [Multiplatform readiness](#multiplatform-readiness), which keep a later switch to about a week. **Decided 2026-10-12** |
 | D3 ✅ | Vendor SDKs or small HTTP clients for the AI providers? See [considerations](considerations.md#d3-small-clients-or-vendor-sdks-for-the-ai-providers) | **Small clients**, for one network boundary, a small allowlist, and Multiplatform readiness (D2), which the JVM-only vendor SDKs would break. **Decided 2026-10-12** |
 | D4 ✅ | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both. **Decided 2026-10-12**; the calls are to be profiled once the adapters exist |
-| D5 ✅ | How is a user skip in the player told from a track ending (R5)? | One user setting, *Write insights automatically*: on every track change, when I skip (the default), or never. Skips are detected from the time left before the end and, for Spotify, the late cluster of playback states it publishes before a natural end, under a *Crossfade* setting (Autodetect, or 0 to 15 s), refined after Phase 0. See [Writing insights automatically](#writing-insights-automatically). **Decided 2026-10-12** |
+| D5 ✅ | How is a user skip in the player told from a track ending (R5)? | One user setting, *Write insights automatically*: on every track change, when I skip, or never. The default was first *When I skip*; it is **On every track change** (owner, 2026-10-12), to go with preparing the next track ahead (D13). Skips are detected from the time left before the end and, for Spotify, the late cluster of playback states it publishes before a natural end, under a *Crossfade* setting (Autodetect, or 0 to 15 s), refined after Phase 0. See [Writing insights automatically](#writing-insights-automatically). **Decided 2026-10-12** |
 | D6 ✅ | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume. **Decided 2026-10-12** as the default of a user setting, *Look up in the background*, off (driver 6) |
-| D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait. **Phase 0 result (2026-10-12):** an app installed from a file meets a Play Protect warning (unknown developer, Install anyway), and with a Google account enrolled in Advanced Protection it could not be installed at all, only from Google Play or a pre-installed store. To revisit with the owner (`design.md`, *Notification access and installation*). |
+| D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **Google Play** (owner, 2026-10-12). The first decision was GitHub releases first and F-Droid next, with Play's review of notification-listener apps left for later. Phase 0 reversed it: an app installed from a file meets a Play Protect warning (unknown developer, Install anyway), and with a Google account enrolled in Advanced Protection it cannot be installed at all, only from Google Play or a store pre-installed on the phone (`design.md`, *Notification access and installation*). Play's review of an app that holds notification access is therefore part of the release work, not deferred. |
 | D8 ✅ | How does the app reach a local model through Ollama (R9)? | **HTTPS through a reverse proxy that terminates TLS in front of Ollama** is the supported setup. A publicly trusted certificate (for example from Let's Encrypt, or `tailscale cert`) works as is. A self-signed or private-CA certificate is trusted for that one host only: `:net` gives that host its own client with a custom `X509TrustManager` that accepts exactly the pinned certificate, whose fingerprint the user confirms on the first connection, and checks the host name against the pin rather than the certificate's names (OkHttp's `CertificatePinner` alone is not enough, since it runs after the platform's chain validation, which fails first). User-installed CAs are never trusted app-wide. Plain `http://` remains a fallback, allowed only to the configured Ollama host and only when the address it resolves to is private: IPv4 private or link-local, IPv6 unique-local (`fc00::/7`, which includes Tailscale's) or link-local, or `100.64.0.0/10`, which Tailscale uses but carrier-grade NAT shares, so it gets the same warning. The resolved address is checked, not the name, and at connect time: that client's OkHttp `Dns` returns only private addresses, so the address checked is the one connected to (no DNS rebinding), and it uses `Proxy.NO_PROXY` so a system proxy cannot skip the lookup; `.local` names may not resolve before Android 12, so Settings accepts an address as well. That needs the platform guard relaxed (`cleartextTrafficPermitted`) and replaced by `:net`'s own check, with tests; Settings warns that the link is unencrypted, and its insights carry an "unencrypted link" marker. Phase 3. **Decided 2026-10-12** |
 | D9 ✅ | Retrieval cache lifetime per source? | A user setting per source, defaulting to MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day. **Decided 2026-10-12** |
 | D10 ✅ | `minSdk`? | Nothing used forces it: the media-session APIs date from API 21 and AES-GCM Keystore keys from 23. It is reach against the number of OS versions to test. **26** (Android 8): more phones, and still above the Keystore floor; 29 would drop three versions of behaviour to test at the cost of reach. A build-time choice, so not a user setting (driver 6). **Decided 2026-10-12** |
 | D11 ✅ | The first web search provider (an open question in the design)? | Deferred to Phase 0.5; the adapter interface does not depend on it. **Decided 2026-10-12** |
 | D12 ✅ | Use MusicBrainz tags and genres (R6)? | **Established in the Phase 0.5 pilot**: pull them for the test playlist and judge what they add to the genre labels and the insights. Their licence (CC BY-NC-SA, including whether sending them in prompts to commercial AI providers is within the NC term) is a separate technical question, tracked in [#9](https://github.com/wkusnierczyk/sleevesight/issues/9) and settled before they ship in the app. **Decided 2026-10-12** |
+| D13 ✅ | Prepare the next track before it plays? | **Yes, as a user setting**, *Prepare the next track*: off, evidence, or evidence and insight (the default). See [Preparing the next track](#preparing-the-next-track). Tracked in [#20](https://github.com/wkusnierczyk/sleevesight/issues/20). **Decided 2026-10-12** |
+| D14 ✅ | Can the user shape how insights are written? | **A prompt style**, a user setting with presets, free text and overrides per card, on top of a fixed contract that it cannot override. See [Prompt style](#prompt-style). Tracked in [#21](https://github.com/wkusnierczyk/sleevesight/issues/21). **Decided 2026-10-12** |
+| D15 ✅ | Can skip detection (D5) improve per player? | **Learned on the device, without an LLM**: features of each track change recorded from Phase 1, a small explainable model per player later, trained on trustworthy labels only, within the fixed rules. See [Learning skip detection](#learning-skip-detection). Tracked in [#22](https://github.com/wkusnierczyk/sleevesight/issues/22). **Decided 2026-10-12** |
 
 ### Follow-ups outside this document
 
-- Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10).
-- `design.md`: the decisions above (D1 to D12) into its *Decisions* table; its *Web search provider* open question now points to Phase 0.5 (D11), while the others stay open. For D5: the *Settings* table, where *Write insights automatically* replaces "write automatically on every track" under the kept *Write insights* switch; the last bullet of *Caching and offline*; and the "Auto-write off by default" row of *Decisions*.
+- Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10; [#14](https://github.com/wkusnierczyk/sleevesight/issues/14)).

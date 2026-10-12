@@ -99,7 +99,7 @@ Measured for decision D5 on 21 Spotify track changes (of 24 logged; the other th
 - Castbox, when skipped, sent the new episode's state (position 0) before its metadata; the probe's estimate handles both orders.
 - **YouTube Music** (a short run on the free tier): one track listened to the end, then skips early, mid-play and late. It **re-sends the playing track with a new length** (in this run 106 s, then 278.8 s, then 279 s, for one track), so for this player the length is not part of a track's identity; the active queue item is, and it moved exactly at the tester's four changes. Read by the queue item, the natural end came at the track's end (within 0.02 s of it, by the latest length), with no cluster of states before it, so the clusters are Spotify's alone; the skips left 290 s, 131 s and **7.2 s**, the late one reading as a natural end by timing alone, the accepted trade-off. The probe, which compared lengths, first took the length updates for track changes; that is the lesson for the app: a track is identified by its media id, else by the active queue item where the player publishes one (an item of −1, which YouTube Music reports at the start of a session and while stopped in the background, is no item; when either side has no item, title and artists decide), else by title and artists; a new length is an update, after which the time left is computed from the latest length. As with Castbox, the new track's first state (position 0) arrived just before its metadata, at the natural end and the skips alike.
 
-**Decision (D5, refined):** a user setting, *Crossfade*: **Autodetect** (the default) or a fixed value, 0 to 15 s. Changes that Sleevesight caused itself (its own transport buttons, selecting a track) are known to be user-driven and are not put through detection.
+**Decision (D5, refined):** a user setting, *Crossfade*: **Autodetect** (the default) or a fixed value, 0 to 15 s. Changes that Sleevesight caused itself (its own transport buttons, selecting a track) are known to be user-driven and are not put through detection. The rules below are the floor; D15 lets detection learn per player on the device, within them (`architecture.md`, *Learning skip detection*).
 
 - A fixed value *c*: a change is a natural end when the remaining time is at most *c* + 0.5 s; for Spotify, also when the late cluster is there with at most 15 s remaining, so a value set below Spotify's real crossfade does not read natural ends as skips.
 - Autodetect, for Spotify (the only player where the clusters have been measured): a change is a natural end when the remaining time is at most 15 s and either the late cluster is there (at least 5 `PLAYING` states within 1.5 s before the change) or the remaining time is within 0.5 s of 0 or of the learned crossfade. Otherwise it is a skip.
@@ -115,6 +115,7 @@ Measured for decision D5 on 21 Spotify track changes (of 24 logged; the other th
   - for a user whose Google account is enrolled in Advanced Protection (and, by the dialog's wording, presumably one with the device setting on, which was not tested), only Google Play (or a store pre-installed on the phone) can install it, which rules out GitHub releases and F-Droid for them.
 - Restricted settings on notification access, for an app installed from a file, could not be measured on this phone, since the install itself is blocked; it is **to measure** on a phone or emulator without Advanced Protection.
 - `adb` installs are not affected by either block.
+- **Decision (D7, revised):** Sleevesight is distributed through **Google Play** (owner, 2026-10-12), the one channel that reaches every user, Advanced Protection or not, without a warning. Play's review of an app that holds notification access becomes part of the release work.
 
 ### Spotify Web API constraints
 
@@ -213,7 +214,7 @@ data class EvidenceLine(
     val id: String,          // "W1", "L3", "G2", "P1"
     val source: SourceId,
     val scope: Scope,        // SONG, ARTIST, ORIGINAL_SONG, RELEASE, WEB
-    val text: String,        // one claim, in the adapter's own words, never copied prose
+    val text: String,        // one claim: templated from structured data, or a short attributed quote, never a whole passage (D1)
     val url: String?,
     val retrievedAt: Instant,
 )
@@ -240,9 +241,9 @@ Prompt contracts are in the appendix.
 
 ### Caching and offline
 
-- Retrieval is cached per source and lookup key; synthesis per lookup key, enabled-source set, provider and model.
+- Retrieval is cached per source and lookup key; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider and model (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
-- Writing automatically on every track change is off by default, because each insight is a paid call on the user's key. User-driven changes (skip, select, play) write; tracks that change on their own get evidence and a Write button.
+- Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default goes with preparing the next track ahead (D13), so the card is usually ready when the track starts.
 
 ## User interface
 
@@ -290,19 +291,24 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
-| Insights | Write insights; write automatically on every track | On; off |
-| Insights | Crossfade, for telling skips from natural ends (D5; applies with D5's *Write insights automatically*, which replaces the switch above with #13) | Autodetect |
+| Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
+| Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
+| Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
+| Insights | Prepare the next track: off, evidence, or evidence and insight (D13) | Evidence and insight |
+| Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
+| Lookups | Look up in the background (D6) | Off |
+| Lookups | Cache lifetime per source (D9) | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
 
 Source switches decide what the model may use. The filter chips in the Sources section only change what is displayed.
 
 ## Privacy and security
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
-  - To the enabled sources: the normalized title and artists, and the album name as the player reports it.
+  - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track and, with *Prepare the next track* on (D13), for the next one in the player's queue.
   - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources.
   - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
 
-  Nothing else leaves the phone. The duration, the album art and the session history stay on it.
+  Nothing else leaves the phone. The duration, the album art, the session history and the record of track changes used to learn skip detection (D15) stay on it.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - No telemetry, crash reporting services, analytics or accounts of our own.
 
@@ -330,7 +336,7 @@ A throwaway app on a real phone. Outputs, written to a log file:
 - Which `PlaybackState` actions each player advertises; whether transport controls work.
 - Whether `getSessionActivity()` and `spotify:` deep links open the expected screens.
 
-**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: restricted settings on notification access for an app installed from a file, on a device without Advanced Protection (D7). The D7 decision itself is up for review in light of the installation findings.
+**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: restricted settings on notification access for an app installed from a file, on a device without Advanced Protection. In light of the installation findings, D7 moved distribution to Google Play (owner, 2026-10-12), so this matters for development installs and for any later channel outside Play, not for the release.
 
 ### Phase 0.5. Pipeline CLI
 
@@ -352,6 +358,8 @@ Optional Spotify account; further players; local model through Ollama; Discogs.
 
 ## Decisions
 
+D1 to D15 are set out, with their options and reasoning, under *Decisions* in [architecture.md](architecture.md#decisions).
+
 | Date | Decision | Reason |
 |---|---|---|
 | 2026-10-11 | Android only | iOS cannot read other apps' now-playing information |
@@ -364,7 +372,21 @@ Optional Spotify account; further players; local model through Ollama; Discogs.
 | 2026-10-12 | Sources section at the bottom, quiet | Provenance matters but is the least interesting content |
 | 2026-10-12 | Layout setting: separate pages or expandable boxes | Both are useful; one component serves both |
 | 2026-10-12 | Genre labels from a fixed vocabulary over Last.fm tags | Raw tags are crowd-sourced and noisy |
-| 2026-10-12 | Auto-write off by default | Each insight is a paid call on the user's key |
+| 2026-10-12 | D1: evidence lines from prose sources are short verbatim quotes, attributed, a fixed number at most per article; templated wherever structured data exists | Deterministic and checkable, no extra paid call; the model still never decides what is true |
+| 2026-10-12 | D2: the pipeline in plain Kotlin JVM modules, kept Multiplatform-ready | The CLI and Android both run JVM bytecode; iOS may follow |
+| 2026-10-12 | D3: small HTTP clients for the AI providers, not vendor SDKs | One network boundary, a small dependency allowlist, Multiplatform readiness |
+| 2026-10-12 | D4: sources queried by name in parallel, matches verified against MusicBrainz and Wikidata afterwards | A slow MusicBrainz delays only its own lines |
+| 2026-10-12 | D5: *Write insights automatically*, a user setting (on every track change, when I skip, never), with a *Crossfade* setting for skip detection. The default is on every track change. Replaces "auto-write off by default" | The cost is the user's, so the choice is too; the default goes with D13 |
+| 2026-10-12 | D6: retrieval and synthesis only while the app is visible; history always. A user setting, *Look up in the background*, off | No paid or network activity nobody is looking at |
+| 2026-10-12 | D7: distribution through Google Play. Replaces "GitHub releases first, F-Droid next" | Phase 0: a file install meets a Play Protect warning, and Advanced Protection blocks it outright |
+| 2026-10-12 | D8: a local model through Ollama over HTTPS behind a reverse proxy, with a pinned certificate for that one host; plain HTTP only to a private address, with a warning | Android blocks cleartext and distrusts private CAs; no app-wide trust is widened |
+| 2026-10-12 | D9: retrieval cache lifetime a user setting per source | Freshness against requests is the user's trade-off |
+| 2026-10-12 | D10: `minSdk` 26 | Reach; nothing used needs more, and the Keystore floor is 23 |
+| 2026-10-12 | D11: the first web search provider chosen in Phase 0.5 | The adapter interface does not depend on it |
+| 2026-10-12 | D12: MusicBrainz tags and genres judged in the Phase 0.5 pilot; their licence settled before they ship (#9) | Last.fm alone left 30 of 78 tracks without genres |
+| 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
+| 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
+| 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |
 
 ## Open questions
@@ -372,7 +394,7 @@ Optional Spotify account; further players; local model through Ollama; Discogs.
 - **General-knowledge cards and the LLM role.** Genre descriptions, comparisons and "more like this" suggestions come from the model's own knowledge, and the suggestions are the model choosing items at runtime. That sits uneasily with keeping the model to narration. Options: retrieve genre articles from Wikipedia and ground those cards too; build suggestions deterministically from Last.fm similar artists and MusicBrainz relationships, with the model only explaining them; or keep them as labelled general knowledge behind the model-knowledge switch.
 - **Deeper analysis.** What an "Analysis" mode adds beyond the collected insight: musical structure, credits graph, lineage of covers and samples.
 - **Release date semantics.** Show the recording's first release, the release being played, or both.
-- **Web search provider.** Which providers to support first, and how to keep results about the right recording.
+- **Web search provider.** Which providers to support first, and how to keep results about the right recording. Chosen in Phase 0.5 (D11).
 - **Per-player behavior.** How much of the UI to hide for players that send title only.
 - **Name.** Run the spoken-aloud test on "Sleevesight".
 
@@ -395,6 +417,8 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 | 23, 30, 77 | Almost nothing documented anywhere; the card must say so |
 
 ## Appendix. Prompt contracts
+
+These are the fixed contracts. The user's style (D14: length, tone, focus, audience, free text) is added to each prompt, and the contract is restated after it, so a style can add preferences but cannot override a rule below (`architecture.md`, *Prompt style*).
 
 ### Insight
 
