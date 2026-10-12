@@ -71,6 +71,7 @@ In order of weight:
 3. **Constraints are structural.** No analytics, no extra permissions, no network access outside the adapter and provider layer. Each is a build failure, not a review comment.
 4. **Failure is visible.** Every source returns a typed outcome; every stage logs to the diagnostics stream; nothing degrades to a blank.
 5. **Cost is the user's.** Every model call spends the user's key, so calls are explicit, cached and cancellable.
+6. **The user decides.** Where a behaviour is a judgement call rather than a correctness rule (cache lifetimes, thresholds, what runs in the background), it is a user setting with a reasoned default, not a fixed developer choice. Settings live in DataStore and reach `:core` as plain configuration values.
 
 ## Modules
 
@@ -222,7 +223,7 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
 - JSON cards (genre, sounds-like) parse with kotlinx.serialization; a parse failure is a visible error, not a retry loop.
 - The grounding check is a port of the simulator's `groundCheck` and `splitSentences`, with tests from the fixtures. Its hedge detection is English-only, as the prompts are.
 - Prompt injection and tampering: web snippets and article sentences are untrusted text inside the prompt, and on an unencrypted link to a local model the prompt and the reply can be altered in transit (D8). The model has no tools, so the most either can do is distort the text of the cards it reaches: one card for an injected instruction, every reply for someone tampering with an unencrypted link. The grounding check flags uncited sentences and citations to missing evidence, but it cannot tell whether a cited line supports its sentence, so a plausible false sentence with a valid citation passes. Evidence is fenced and labelled as data in the prompt.
-- Model prose is rendered as plain text, never as HTML, markdown or links; its only interactive elements are the citation chips, which the app builds from the evidence ids it assigned. The genre and sounds-like cards' suggestions (`more`, `start`) are parsed from the JSON fields and become actions the app builds, each used only as a search query in the player (`spotify:search:`), never as a URL.
+- Model prose is rendered as plain text, never as HTML, markdown or links; its only interactive elements are the citation chips, which the app builds from the evidence ids it assigned. The genre and sounds-like cards' suggestions (`more`, `start`) are parsed from the JSON fields and become actions the app builds, each used only as a percent-encoded search query in the player (`spotify:search:`), never as a URL.
 
 ### Genre labels (`:core`)
 
@@ -232,7 +233,7 @@ The simulator's vocabulary and hues, moved to a data file in `:core`, applied to
 
 | Table | Key | Lifetime |
 |---|---|---|
-| Retrieval | source, lookup key | Days, per source (D9) |
+| Retrieval | source, lookup key | Days, per source; a user setting (D9) |
 | Artist resolution | normalized artist name | Long, months |
 | Synthesis | kind, entity key, evidence fingerprint, prompt-template version, provider, model, model-knowledge switch | Until evicted by size |
 | Session history | time | Local only, user-clearable |
@@ -362,7 +363,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions to make
 
-Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3, D4, D6, D7, D8 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
+Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3, D4, D6, D7, D8, D9 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
 
 | # | Question | Recommendation |
 |---|---|---|
@@ -373,8 +374,8 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3,
 | D5 | How is a user skip in the player told from a track ending (R5)? | Treat a change more than 10 s before the end as user-driven; measure in Phase 0 |
 | D6 ✅ | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume. **Decided 2026-10-12** as the default, possibly a user setting (*Look up in the background*, off) |
 | D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait |
-| D8 ✅ | How does the app reach a local model through Ollama (R9)? | **HTTPS through a reverse proxy that terminates TLS in front of Ollama** is the supported setup. A publicly trusted certificate (for example from Let's Encrypt, or `tailscale cert`) works as is. A self-signed or private-CA certificate is trusted for that one host only: `:net` gives that host its own client with a custom `X509TrustManager` that accepts exactly the pinned certificate, whose fingerprint the user confirms on the first connection, and checks the host name against the pin rather than the certificate's names (OkHttp's `CertificatePinner` alone is not enough, since it runs after the platform's chain validation, which fails first). User-installed CAs are never trusted app-wide. Plain `http://` remains a fallback, allowed only to the configured Ollama host and only when the address it resolves to is private: IPv4 private or link-local, IPv6 unique-local (`fc00::/7`, which includes Tailscale's) or link-local, or `100.64.0.0/10`, which Tailscale uses but carrier-grade NAT shares, so it gets the same warning. The resolved address is checked, not the name; `.local` names may not resolve before Android 12, so Settings accepts an address as well. That needs the platform guard relaxed (`cleartextTrafficPermitted`) and replaced by `:net`'s own check, with tests; Settings warns that the link is unencrypted, and its insights carry an "unencrypted link" marker. Phase 3. **Decided 2026-10-12** |
-| D9 | Retrieval cache lifetime per source? | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day; tuned later |
+| D8 ✅ | How does the app reach a local model through Ollama (R9)? | **HTTPS through a reverse proxy that terminates TLS in front of Ollama** is the supported setup. A publicly trusted certificate (for example from Let's Encrypt, or `tailscale cert`) works as is. A self-signed or private-CA certificate is trusted for that one host only: `:net` gives that host its own client with a custom `X509TrustManager` that accepts exactly the pinned certificate, whose fingerprint the user confirms on the first connection, and checks the host name against the pin rather than the certificate's names (OkHttp's `CertificatePinner` alone is not enough, since it runs after the platform's chain validation, which fails first). User-installed CAs are never trusted app-wide. Plain `http://` remains a fallback, allowed only to the configured Ollama host and only when the address it resolves to is private: IPv4 private or link-local, IPv6 unique-local (`fc00::/7`, which includes Tailscale's) or link-local, or `100.64.0.0/10`, which Tailscale uses but carrier-grade NAT shares, so it gets the same warning. The resolved address is checked, not the name, and at connect time: that client's OkHttp `Dns` returns only private addresses, so the address checked is the one connected to (no DNS rebinding), and it uses `Proxy.NO_PROXY` so a system proxy cannot skip the lookup; `.local` names may not resolve before Android 12, so Settings accepts an address as well. That needs the platform guard relaxed (`cleartextTrafficPermitted`) and replaced by `:net`'s own check, with tests; Settings warns that the link is unencrypted, and its insights carry an "unencrypted link" marker. Phase 3. **Decided 2026-10-12** |
+| D9 ✅ | Retrieval cache lifetime per source? | A user setting per source, defaulting to MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day. **Decided 2026-10-12** |
 | D10 | `minSdk`? | Nothing used forces it: the media-session APIs date from API 21 and AES-GCM Keystore keys from 23. It is reach against the number of OS versions to test. **26** (Android 8): more phones, and still above the Keystore floor; 29 would drop three versions of behaviour to test at the cost of reach |
 | D11 | The first web search provider (an open question in the design)? | Defer to Phase 0.5; the adapter interface does not depend on it |
 | D12 | Use MusicBrainz tags and genres (R6), which are CC BY-NC-SA? | Probably yes: Sleevesight is free and non-commercial, and the NC and SA terms bind the data, not the app's code. To confirm before Phase 0.5 relies on them: that sending the tags in prompts to commercial AI providers, on the user's key, is within the NC term. Show the attribution |
