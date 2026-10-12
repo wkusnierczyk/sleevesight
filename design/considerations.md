@@ -34,11 +34,43 @@ Cons:
 
 - More build complexity: target and source-set setup, `expect`/`actual` declarations, slower builds, rougher tooling.
 - Only Multiplatform libraries can be used. Ktor, kotlinx.serialization and SQLDelight are, but the choice narrows, and regex and date handling need care.
-- The design rules out iOS, so today it buys nothing.
+- The design rules out iOS for now, so today it buys nothing.
 
 ### Recommendation
 
 Plain Kotlin, with `:core` kept clean enough that a switch later is a build change, not a rewrite. The one thing that would change this is wanting the browser simulator to run the real pipeline.
+
+### Cost of switching later
+
+iOS may follow once the Android prototype is good. Kotlin Multiplatform supports iOS (shared Kotlin compiles to a native framework), so the question is what a later switch from plain Kotlin costs. The build side is mechanical: the `multiplatform` plugin, `src/commonMain`, the targets; about a day. The rest is every use of a JVM-only API:
+
+| JVM-only | Where it would show up | Multiplatform replacement |
+|---|---|---|
+| `java.text.Normalizer` | Accent folding in the normalizer's lookup key | A small platform implementation, or a library |
+| `java.security.MessageDigest` | The evidence fingerprint | A multiplatform hashing library |
+| `java.time` | Retrieval times, cache lifetimes | kotlinx-datetime |
+| OkHttp engine | `:net` | Ktor's Darwin engine on iOS; configuration only |
+| SQLite JDBC driver | `:cli` | SQLDelight's native driver; `:store` already takes an injected driver |
+| JUnit 5 and MockK | Every test | `kotlin.test` and hand-written fakes |
+
+With the rules in place from the start (see *Multiplatform readiness* in the architecture), the switch is about a week: the build, two or three small platform implementations, and a test run on the iOS target. Without them it grows with the JVM-only usage, likely one to three weeks, most of it in tests.
+
+### iOS input
+
+Sharing the pipeline does not make an iOS app. iOS does not let an app read what another app is playing: `MPNowPlayingInfoCenter` lets an app publish its own now-playing information, not read anyone else's, and the private MediaRemote route was restricted to entitled system processes on macOS 15.4. A change looks unlikely; the one plausible lever is EU interoperability regulation, which so far targets connected devices, not this. An iOS version would need another input:
+
+| Input | Gives | Catch |
+|---|---|---|
+| Spotify Web API, `currently-playing` | The current Spotify track and its playlist | Spotify only; needs the Spotify account, optional on Android; five users per developer app |
+| Apple MusicKit | The current Apple Music track | Apple Music only |
+| ShazamKit | Recognizes the song by listening | Uses the microphone, against the "metadata only, never audio" decision |
+| Manual search | A track the user picks | No "now playing" |
+
+So an iOS version is a different product shape, decided when it comes up; the shared pipeline is what carries over.
+
+### Decision
+
+Plain Kotlin, kept Multiplatform-ready (owner, 2026-10-12).
 
 ## D3. Small clients or vendor SDKs for the AI providers
 

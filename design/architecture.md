@@ -36,7 +36,7 @@ The simulator is a prototype of the experience: it shows how the app behaves as 
 | Normalizer | Real logic (`normalize`) | Port |
 | Prompts, grounding check | Real logic (`promptInsight` and the others, `groundCheck`), live against Claude | Port |
 | Debounce, cancellation | Real logic (`onMetadataChanged`, `runPipeline`) | Port, as coroutines |
-| Caching rules | Real logic (`fetchSource` for retrieval, `write` with `srcSig` for insights) | Port, with the synthesis key extended per R2 |
+| Caching rules | Real logic (`fetchSource` for retrieval; `write` and `writeJson`, keyed with `srcSig`, for insights and cards) | Port, with the synthesis key extended per R2 |
 | Source adapters (Wikipedia, Last.fm, web search) | Stood in for: frozen snapshots behind simulated latency (`querySource`, `fetchSource` over `facts-data`) | Build |
 | Entity resolution | Stood in for: each fixture record carries its outcome (`song_article`, `mismatch`, ...) | Build |
 | MusicBrainz | Stood in for: shown as `blocked` | Build |
@@ -173,7 +173,7 @@ data class TrackState(
 
 ### Normalizer (`:core`)
 
-A port of the simulator's `normalize`, unchanged in behaviour, with the design's table and every fixture title as unit tests. Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
+A port of the simulator's `normalize`, unchanged in behaviour, with the design's table and every fixture title as unit tests. Accent folding (Unicode NFKD) sits behind a small interface, since `java.text.Normalizer` is JVM-only (D2). Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
 
 ### Entity resolution (`:core` logic, `:sources` clients)
 
@@ -203,7 +203,7 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
 ### Evidence (`:core`)
 
 - `EvidenceLine` as in the design. Ids are the source tag plus a position, assigned after a deterministic sort, so the same retrieval gives the same ids.
-- `EvidenceSet.fingerprint` is a hash over the ordered (id, scope, text) triples. It is part of the synthesis cache key (R2).
+- `EvidenceSet.fingerprint` is a hash over the ordered (id, scope, text) triples. It is part of the synthesis cache key (R2). The hash function sits behind a small interface (D2).
 
 ### Synthesis and grounding (`:core`, `:ai`)
 
@@ -280,6 +280,15 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 | Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
 | Keys never logged | The `Secret` type and the redacting logger; a unit test logs a request carrying a key and asserts it is absent |
 
+### Multiplatform readiness
+
+The pipeline modules are plain Kotlin JVM (D2), written so that a later switch to Kotlin Multiplatform, for an iOS target, is a build change plus a few small platform implementations:
+
+- No `java.*` or `javax.*` imports in `:core`, `:sources`, `:ai` and `:store`; Detekt forbids them there. `:net` is exempt: its HTTP engine is per platform anyway.
+- Platform-specific needs sit behind small interfaces in `:core`: accent folding for the normalizer, and hashing for the evidence fingerprint.
+- Dates and times with kotlinx-datetime; tests with `kotlin.test` and hand-written fakes.
+- Every library in the pipeline modules has iOS support: Ktor, kotlinx.serialization, coroutines and SQLDelight do.
+
 ### Errors and empty states
 
 Each stage has a defined visible state, as the simulator shows: gathering evidence, writing, stopped, failed with retry, insights off, no evidence, AI service not set up.
@@ -313,12 +322,13 @@ The data sources carry their own terms, and every evidence line shows its source
 | UI | Jetpack Compose, Material 3 | | Design decision |
 | Dependency injection | Manual constructor wiring, one `AppGraph` | Hilt, Koin | Small graph; keeps `:core` free of DI annotations |
 | Static analysis | Detekt, ktlint, Android lint | | Detekt carries the forbidden-API rules |
-| Tests | JUnit 5 in the JVM modules; JUnit 4 in `:app`, where Robolectric needs it; kotlinx-coroutines-test, Ktor `MockEngine` | | JVM-first, fast in CI |
+| Tests | `kotlin.test` on the JUnit 5 runner in the JVM modules, with hand-written fakes rather than a mocking library; JUnit 4 in `:app`, where Robolectric needs it; kotlinx-coroutines-test, Ktor `MockEngine` | MockK | JVM-first, fast in CI, and portable to Multiplatform (D2) |
+| Dates and times | kotlinx-datetime | `java.time` | Multiplatform-ready (D2) |
 | Android SDK | `minSdk` 26, `targetSdk` the latest stable | `minSdk` 29 | See D10 |
 
 ## Testing
 
-- **Fixtures.** The simulator's three JSON blocks (`playlist-data`, `facts-data`, `albums-data`) move to `fixtures/below-soundtrack/`, and the design's regression cases become named tests.
+- **Fixtures.** The simulator's three JSON blocks (`playlist-data`, `facts-data`, `albums-data`) move to `fixtures/below-soundtrack/`, and the design's regression cases become named tests. The `facts-data` resolution outcomes are the expected outcomes of the resolution tests; its fact lines are reference facts the extraction tests check for by content, not wording.
 - **Unit tests** in `:core`: normalizer, scoring, genre vocabulary, evidence ids and fingerprint, grounding check, prompt builders against stored prompts.
 - **Adapter tests** against recorded HTTP responses. `:cli record` captures real responses for the fixture playlist into `fixtures/http/`; tests replay them through `MockEngine`. CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
@@ -349,12 +359,12 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions to make
 
-Each with a recommendation. ✅ marks a decision the owner has made (D1, D4, D6, D7 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
+Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D4, D6, D7 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
 
 | # | Question | Recommendation |
 |---|---|---|
 | D1 ✅ | How are evidence lines made from prose sources (R1)? (a) verbatim selected sentences, attributed; (b) a model extraction pass; (c) structured data only | **(a)**, with (c) wherever structured data exists. Deterministic and checkable, no extra paid call, and the model still never decides what is true. Change the design's "never copied prose" to "short attributed quotes, never whole passages" |
-| D2 | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM.** The CLI and Android both run JVM bytecode; multiplatform buys nothing until there is a non-JVM target, and the design rules out iOS |
+| D2 ✅ | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM, kept Multiplatform-ready.** The CLI and Android both run JVM bytecode, and Multiplatform buys nothing until there is a non-JVM target. iOS may follow once the Android prototype is good, so the pipeline modules follow the rules under [Multiplatform readiness](#multiplatform-readiness), which keep a later switch to about a week. **Decided 2026-10-12** |
 | D3 | Vendor SDKs or thin HTTP clients for the AI providers? See [considerations](considerations.md#d3-small-clients-or-vendor-sdks-for-the-ai-providers) | **Thin clients**, for one dependency boundary and a small allowlist |
 | D4 ✅ | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both. **Decided 2026-10-12**; the calls are to be profiled once the adapters exist |
 | D5 | How is a user skip in the player told from a track ending (R5)? | Treat a change more than 10 s before the end as user-driven; measure in Phase 0 |
