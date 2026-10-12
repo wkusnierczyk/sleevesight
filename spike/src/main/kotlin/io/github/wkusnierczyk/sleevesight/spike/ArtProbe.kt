@@ -11,6 +11,8 @@ import java.util.concurrent.Executors
  */
 object ArtProbe {
     private val reader = Executors.newSingleThreadExecutor()
+
+    // Grows with every distinct art URI; acceptable for a probe that runs for a session or two.
     private val checked = mutableSetOf<String>()
 
     fun check(

@@ -67,7 +67,10 @@ object TrackChange {
             (states.lastIndex downTo 1)
                 .takeWhile { now - states[it].receivedAt <= windowMs }
                 .firstOrNull { i ->
-                    states[i].position < positionAt(states[i - 1], states[i].receivedAt, playing) - toleranceMs
+                    // Both extrapolated to the same moment, so a re-published state (same position and
+                    // update time, received later) is not taken for a reset.
+                    val at = states[i].receivedAt
+                    positionAt(states[i], at, playing) < positionAt(states[i - 1], at, playing) - toleranceMs
                 }
         val basis = if (reset != null) states[reset - 1] else states.last()
         val changeAt = if (reset != null) states[reset].receivedAt else now

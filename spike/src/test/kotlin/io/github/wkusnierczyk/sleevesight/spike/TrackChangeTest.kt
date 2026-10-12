@@ -72,4 +72,13 @@ class TrackChangeTest {
         assertEquals(108_000, estimate.position)
         assertNull(estimate.newTrackFrom)
     }
+
+    @Test
+    fun `a re-published state with the same position and update time is not a reset`() {
+        val first = state(170_000, at = 1_000)
+        val again = first.copy(receivedAt = 2_500)
+        val estimate = TrackChange.estimate(listOf(first, again), now = 3_000, playing = playing, windowMs = 3_000)!!
+        assertNull(estimate.newTrackFrom)
+        assertEquals(172_000, estimate.position)
+    }
 }

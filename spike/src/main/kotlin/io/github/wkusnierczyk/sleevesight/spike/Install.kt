@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.spike
 
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
@@ -10,6 +11,8 @@ import org.json.JSONObject
 
 /** How the probe was installed and whether it has notification access: the D7 restricted-settings check. */
 object Install {
+    // The constants are API 33 compile-time ints, read only under the TIRAMISU guard below.
+    @SuppressLint("InlinedApi")
     private val SOURCES =
         mapOf(
             PackageInstaller.PACKAGE_SOURCE_UNSPECIFIED to "UNSPECIFIED",
@@ -44,7 +47,8 @@ object Install {
             json
                 .put("installer", info.installingPackageName ?: "none (adb or unknown)")
                 .put("initiatingPackage", info.initiatingPackageName)
-                .put("originatingPackage", info.originatingPackageName)
+                // Null unless the caller holds INSTALL_PACKAGES, which the probe cannot: not a D7 result.
+                .put("originatingPackage", info.originatingPackageName ?: "unavailable without INSTALL_PACKAGES")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 json.put("packageSource", SOURCES[info.packageSource] ?: "UNKNOWN(${info.packageSource})")
             }

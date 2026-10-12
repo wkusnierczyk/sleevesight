@@ -31,12 +31,31 @@ object SessionWatcher {
         val artist: String?,
         val duration: Long,
     ) {
+        /** No track at all: metadata cleared between tracks, for example. */
+        val isEmpty get() = mediaId == null && title == null && artist == null && duration <= 0
+
+        /**
+         * The same track, perhaps described more fully: the media id decides when both have one;
+         * otherwise title and artist, and the length only when both know it (some players send 0
+         * first and fill it in later).
+         */
         fun isSameAs(other: Track) =
             if (mediaId != null && other.mediaId != null) {
                 mediaId == other.mediaId
             } else {
-                title == other.title && artist == other.artist && duration == other.duration
+                title == other.title &&
+                    artist == other.artist &&
+                    (duration <= 0 || other.duration <= 0 || duration == other.duration)
             }
+
+        /** This track with any field [newer] knows and this one does not yet. */
+        fun completedBy(newer: Track) =
+            Track(
+                mediaId ?: newer.mediaId,
+                title ?: newer.title,
+                artist ?: newer.artist,
+                if (duration > 0) duration else newer.duration,
+            )
 
         fun json(): JSONObject =
             JSONObject()
@@ -145,9 +164,19 @@ object SessionWatcher {
     ) {
         Describe.artUris(metadata).forEach { ArtProbe.check(it, entry.controller.packageName, resolver) }
         val track = Track.of(metadata)
+        if (track.isEmpty) {
+            // Cleared between tracks: the change is measured when the next track arrives.
+            log(entry, "metadata_cleared", JSONObject().put("metadata", Describe.metadata(metadata)))
+            return
+        }
         if (track.isSameAs(entry.track)) {
-            // The same track updated (art arriving later, for example): not a track change.
-            log(entry, "metadata_updated", JSONObject().put("metadata", Describe.metadata(metadata)))
+            // The same track updated (art or length arriving later, for example): not a track change.
+            entry.track = entry.track.completedBy(track)
+            log(
+                entry,
+                "metadata_updated",
+                JSONObject().put("track", entry.track.json()).put("metadata", Describe.metadata(metadata)),
+            )
             return
         }
         val now = SystemClock.elapsedRealtime()
