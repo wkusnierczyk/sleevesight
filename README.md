@@ -30,7 +30,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 ## Privacy
 
-Track, artist and album names go to the sources you enabled and to the AI service you chose. Nothing else leaves the phone. No accounts, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names go to the sources you enabled, and, with what those sources found, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
 
 ## Roadmap
 
