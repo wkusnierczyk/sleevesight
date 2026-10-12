@@ -108,3 +108,18 @@ Cons:
 ### Recommendation
 
 Small clients. The surface used is small and stable, and keeping network access in `:net` is one of the design's structural constraints. If one provider later needs a feature that is painful to hand-roll, adding its SDK just for that is a contained exception.
+
+### Cost of switching
+
+Either way the switch stays inside `:ai`: the pipeline sees only `AiProvider` (`stream` and `models`), so a switch rewrites one implementation per provider and nothing else.
+
+| Switch | Code, per provider | What else it costs |
+|---|---|---|
+| Small clients to an SDK | About 1 to 2 days: implement `AiProvider` on the SDK, map its stream events and errors | The SDK's own HTTP stack bypasses `:net`, so rate limits, timeouts and key redaction are configured again inside it, and `checkModuleGraph` needs an exception. Its dependencies go through the allowlist and the licence check. Replay tests need a mock server instead of `MockEngine`. The official SDKs are JVM libraries, which breaks the Multiplatform readiness of D2 |
+| An SDK to small clients | About 1 to 3 days: request and response models, the streaming parser, error mapping, recorded streams for the tests | Nothing; the dependency and the exceptions go away |
+
+The code cost is similar both ways. The difference is that small clients keep the network boundary and Multiplatform readiness by construction, while each SDK has to be patched around both.
+
+### Decision
+
+Small clients (owner, 2026-10-12). An SDK may still be adopted for one provider, if a feature it offers is painful to hand-roll, as a contained exception in a JVM-only source set.

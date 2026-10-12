@@ -361,13 +361,13 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions to make
 
-Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D4, D6, D7 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
+Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3, D4, D6, D7 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
 
 | # | Question | Recommendation |
 |---|---|---|
 | D1 ✅ | How are evidence lines made from prose sources (R1)? (a) verbatim selected sentences, attributed; (b) a model extraction pass; (c) structured data only | **(a)**, with (c) wherever structured data exists. Deterministic and checkable, no extra paid call, and the model still never decides what is true. Change the design's "never copied prose" to "short attributed quotes, never whole passages" |
 | D2 ✅ | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM, kept Multiplatform-ready.** The CLI and Android both run JVM bytecode, and Multiplatform buys nothing until there is a non-JVM target. iOS may follow once the Android prototype is good, so the pipeline modules follow the rules under [Multiplatform readiness](#multiplatform-readiness), which keep a later switch to about a week. **Decided 2026-10-12** |
-| D3 | Vendor SDKs or thin HTTP clients for the AI providers? See [considerations](considerations.md#d3-small-clients-or-vendor-sdks-for-the-ai-providers) | **Thin clients**, for one dependency boundary and a small allowlist |
+| D3 ✅ | Vendor SDKs or small HTTP clients for the AI providers? See [considerations](considerations.md#d3-small-clients-or-vendor-sdks-for-the-ai-providers) | **Small clients**, for one network boundary, a small allowlist, and Multiplatform readiness (D2), which the JVM-only vendor SDKs would break. **Decided 2026-10-12** |
 | D4 ✅ | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both. **Decided 2026-10-12**; the calls are to be profiled once the adapters exist |
 | D5 | How is a user skip in the player told from a track ending (R5)? | Treat a change more than 10 s before the end as user-driven; measure in Phase 0 |
 | D6 ✅ | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume. **Decided 2026-10-12** as the default, possibly a user setting (*Look up in the background*, off) |
