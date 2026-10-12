@@ -25,13 +25,13 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 - **Where to look.** Each source is a switch, and the model's own knowledge is a separate one, off by default.
 - **Which AI.** Anthropic, OpenAI, Google, or a local model through Ollama, with your own API key and model.
-- **When and how it writes.** Each insight is a call on your key. By default one is written for every track, and the next track in the queue is prepared ahead so its card is ready when it starts; you can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
+- **When and how it writes.** Each insight is a call on your key. By default one is written for every track you play while the app is open, and the next track in the queue is prepared ahead so its card is ready when it starts; you can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
 - **Which players.** Spotify by default; any player with a media session can be followed.
 - **Spotify account.** Optional. Connecting it, with your own Spotify developer app, lets Sleevesight see the whole playlist or album being played. Without it, the app knows the tracks it has seen play.
 
 ## Privacy
 
-Track, artist and album names go to the sources you enabled, and, with what those sources found, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names, for the playing track and, by default, the next one in the queue, go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
 
 ## Roadmap
 

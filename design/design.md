@@ -241,7 +241,7 @@ Prompt contracts are in the appendix.
 
 ### Caching and offline
 
-- Retrieval is cached per source and lookup key; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider and model (`architecture.md`, *Cache and history*).
+- Retrieval is cached per source and lookup key; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
 - Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default goes with preparing the next track ahead (D13), so the card is usually ready when the track starts.
 
@@ -294,7 +294,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
 | Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
 | Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
-| Insights | Prepare the next track: off, evidence, or evidence and insight (D13) | Evidence and insight |
+| Insights | Prepare the next track: off, evidence, or evidence and insight; the insight only where *Write insights automatically* would write it (D13) | Evidence and insight |
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
 | Lookups | Cache lifetime per source (D9) | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
@@ -305,7 +305,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
   - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track and, with *Prepare the next track* on (D13), for the next one in the player's queue.
-  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources.
+  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track and, with *Prepare the next track* set to *Evidence and insight* (the default, D13), for the next one. Each prompt also carries the user's style (D14), including any free text they wrote.
   - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
 
   Nothing else leaves the phone. The duration, the album art, the session history and the record of track changes used to learn skip detection (D15) stay on it.
@@ -346,11 +346,11 @@ A JVM Kotlin command-line tool sharing the pipeline module: normalizer, resoluti
 
 ### Phase 1. Android MVP
 
-Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching.
+Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
 
 ### Phase 2. Detail and discovery
 
-Song, artist and album detail content; genre labels and cards; sounds-like cards; layout setting; transport controls and player handoff.
+Song, artist and album detail content; genre labels and cards; sounds-like cards; layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
 
 ### Phase 3. Context and reach
 
@@ -418,13 +418,17 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 
 ## Appendix. Prompt contracts
 
-These are the fixed contracts. The user's style (D14: length, tone, focus, audience, free text) is added to each prompt, and the contract is restated after it, so a style can add preferences but cannot override a rule below (`architecture.md`, *Prompt style*).
+Each prompt has two parts (D14; `architecture.md`, *Prompt style*):
+
+- **The contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It is restated after the style, so a style cannot override it.
+- **Each card's built-in style**: the lengths and the tone below (sentence and word counts, "plain conversational English"). The user's style (length, tone, focus, audience, free text) adjusts it: shorter or longer relative to the built-in length, and for the JSON cards only in their text fields.
 
 ### Insight
 
 Input: the now-playing title, artists and album as the player reports them (not the duration), the normalized fields, and evidence lines as `[ID] (source, scope) text`. Rules given to the model:
 
-- Two to four sentences, plain conversational English, no markdown.
+- Built-in style: two to four sentences, plain conversational English.
+- No markdown.
 - End every factual sentence with supporting ids, like `[W1]` or `[W2][G1]`.
 - Use only the evidence; no names, dates, places or numbers outside it.
 - "Original song" lines describe the song as first recorded by someone else; never credit them to this artist.
@@ -434,7 +438,7 @@ Input: the now-playing title, artists and album as the player reports them (not 
 - With model knowledge on: at most one sentence from general knowledge, ending with `[M]`. Otherwise none.
 - With no usable evidence: reply exactly `NO_EVIDENCE`.
 
-Detail insights use the same rules with one or two short paragraphs, at most 130 words, focused on the song, artist or release.
+Detail insights use the same rules, with a built-in style of one or two short paragraphs, at most 130 words, focused on the song, artist or release.
 
 ### Genre card
 
