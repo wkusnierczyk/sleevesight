@@ -25,29 +25,30 @@ This document turns the design into a buildable structure: modules and their bou
 
 The design is sound in its core idea: deterministic code decides what is true (resolution, matching, citation checks), and the model only narrates. The typed resolution outcomes, the separation of `none` from `source_off`, the scope on every evidence line, and the mechanical grounding check are what make the product trustworthy, and the architecture below is organized around keeping them in code the model never touches.
 
-The findings below are the places where the design is incomplete, internally inconsistent, or rests on something the simulator did not test.
+The findings below are the places where the design is incomplete or internally inconsistent, or where the implementation needs something the design does not yet specify.
 
-### What the simulator proves, and what it does not
+### What the implementation can port from the simulator
 
-The simulator runs the real normalizer, the real prompts, the real grounding check, the real debounce and cancellation, and live synthesis. It does **not** exercise the parts the design itself calls the hard ones:
+The simulator is a prototype of the experience: it shows how the app behaves as if every part worked, and stands in for the parts that do not exist yet with frozen data. Some of its code is the app's real logic and ports directly; for the rest, the implementation starts from the design alone:
 
-| Component | In the simulator |
-|---|---|
-| Normalizer | Real logic (`normalize`) |
-| Entity resolution | **Not run.** Each fixture record carries a precomputed status (`song_article`, `mismatch`, ...) |
-| MusicBrainz | **Not run.** Always returns `blocked` |
-| Multi-artist resolution | **Not run.** Only the primary artist is looked up |
-| Evidence extraction | **Not run.** Fact lines are precomputed in `facts-data` |
-| Discogs | Absent |
-| Synthesis, grounding check | Real, against Claude only |
+| Component | In the simulator | For the implementation |
+|---|---|---|
+| Normalizer | Real logic (`normalize`) | Port |
+| Prompts, grounding check | Real logic (`promptInsight` and the others, `groundCheck`), live against Claude | Port |
+| Debounce, cancellation, caching rules | Real logic (`onMetadataChanged`, `runPipeline`) | Port, as coroutines |
+| Entity resolution | Stood in for: each fixture record carries its outcome (`song_article`, `mismatch`, ...) | Build |
+| MusicBrainz | Stood in for: shown as `blocked` | Build |
+| Multi-artist resolution | Stood in for: the primary artist's data only | Build |
+| Evidence extraction | Stood in for: fact lines written in advance, in `facts-data` | Build |
+| Discogs | Not shown | Build (Phase 3) |
 
-So the riskiest components, resolution and evidence extraction, have no working reference yet. The architecture puts both in plain Kotlin behind interfaces so that Phase 0.5 can iterate on them in a command-line tool, on the fixture playlist, before any Android code depends on them.
+The components to build are the ones the design calls the hard ones, so the architecture puts them in plain Kotlin behind interfaces, where Phase 0.5 can iterate on them in a command-line tool, on the fixture playlist, before any Android code depends on them. The simulator's frozen outcomes and fact lines become the expected results those tests aim for.
 
 ### Findings
 
 | # | Finding | Effect on the architecture |
 |---|---|---|
-| R1 | **Nobody extracts the evidence lines.** The design says each line is "one claim, in the adapter's own words, never copied prose", but an adapter is deterministic code. It can template structured data (MusicBrainz, Wikidata, Last.fm counts and tags) but it cannot paraphrase a Wikipedia article or a web page. The simulator's lines were written offline. | Evidence extraction becomes an explicit stage with a stated method per source. See D1. |
+| R1 | **Nobody extracts the evidence lines.** The design says each line is "one claim, in the adapter's own words, never copied prose", but an adapter is deterministic code. It can template structured data (MusicBrainz, Wikidata, Last.fm counts and tags) but it cannot paraphrase a Wikipedia article or a web page. The simulator's lines were written in advance, standing in for this step. | Evidence extraction becomes an explicit stage with a stated method per source. See D1. |
 | R2 | **The synthesis cache key can serve stale citations.** It is "lookup key, enabled-source set, provider and model". When the retrieval cache expires and refetches, evidence ids can point at different lines while the cached insight still cites the old ones. | The synthesis key includes a fingerprint of the evidence set. A cached insight is reused only for the exact evidence it was written from. |
 | R3 | **The latency goal and the MusicBrainz rate limit conflict.** "Within a couple of seconds" against one request per second, with a recording search, a recording lookup and one lookup per credited artist before Wikipedia can be reached safely through Wikidata. A cold track with two artists is about four seconds of MusicBrainz alone. | Progressive rendering: player metadata immediately, each source's result as it lands, the insight last. Artist resolutions are cached long-term, so the cost falls on first encounters. A per-host rate limiter is part of the network layer. See D4. |
 | R4 | **The privacy statement is narrower than the traffic.** Matching by duration ("duration tolerance") sends the duration if it goes into the MusicBrainz query, and every request reveals the phone's IP address to that service. | Duration filtering happens on the phone, after the search. The first-run text names the IP address. |
@@ -95,7 +96,7 @@ flowchart TD
 |---|---|---|---|
 | `:core` | Kotlin JVM | Domain model; normalizer; resolution logic (scoring, matching, outcomes) over client interfaces; evidence model and ids; prompt builders; grounding check; genre vocabulary; the pipeline orchestration as coroutines and flows; the diagnostics event type | Kotlin stdlib, coroutines, kotlinx.serialization. **No network, no Android** |
 | `:net` | Kotlin JVM | The one HTTP client: Ktor with the OkHttp engine, per-host rate limiting, the User-Agent, timeouts, retries, and a logger that redacts keys and tokens | Ktor, OkHttp |
-| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), the Spotify Web API client (Phase 3), an album-art fetcher for `http` art URIs, each implementing the `:core` client interfaces and `SourceAdapter`; evidence extraction per source | `:core`, `:net` |
+| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), each implementing the `:core` client interfaces and `SourceAdapter`, with its evidence extraction. Also the other outbound clients that are not sources: the Spotify Web API client (Phase 3) and an album-art fetcher for `http` art URIs | `:core`, `:net` |
 | `:ai` | Kotlin JVM | `AiProvider` implementations: Anthropic, OpenAI, Google, Ollama. Streaming, model listing, error mapping | `:core`, `:net` |
 | `:store` | Kotlin JVM | Retrieval cache, synthesis cache, artist-resolution cache, session history. SQLDelight schema and queries over an injected `SqlDriver`: `:cli` supplies the SQLite JDBC driver, `:app` the Android driver (an AAR, which a JVM module cannot depend on) | `:core`, SQLDelight runtime |
 | `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, SQLDelight JDBC driver |
