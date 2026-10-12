@@ -278,15 +278,17 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 | No analytics, crash-reporting or ads SDKs | Gradle dependency locking, plus a `checkDependencies` task that fails on any resolved group outside an allowlist file. A new dependency is a reviewed edit to that file |
 | No permissions beyond the expected set | A `checkManifest` task parses the merged release manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
 | Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
+| Pipeline stays Multiplatform-ready (D2) | Detekt `ForbiddenImport` and `ForbiddenMethodCall` in the pipeline modules, as listed under [Multiplatform readiness](#multiplatform-readiness) |
 | Keys never logged | The `Secret` type and the redacting logger; a unit test logs a request carrying a key and asserts it is absent |
 
 ### Multiplatform readiness
 
 The pipeline modules are plain Kotlin JVM (D2), written so that a later switch to Kotlin Multiplatform, for an iOS target, is a build change plus a few small platform implementations:
 
-- No `java.*` or `javax.*` imports in `:core`, `:sources`, `:ai` and `:store`; Detekt forbids them there. `:net` is exempt: its HTTP engine is per platform anyway.
+- No JVM-only APIs in `:core`, `:sources`, `:ai` and `:store`, nor in `:net` outside its HTTP engine factory (the one part that is per platform). Detekt checks two ways: `ForbiddenImport` for `java.*` and `javax.*`, and `ForbiddenMethodCall`, with type resolution, for the `java.lang` APIs that need no import (`String.format`, `System.currentTimeMillis`, `System.nanoTime`, `Thread`, `Math`) and `@Synchronized`. Neither is a complete check; only compiling a non-JVM target is, and that happens when the switch is made.
 - Platform-specific needs sit behind small interfaces in `:core`: accent folding for the normalizer, and hashing for the evidence fingerprint.
-- Dates and times with kotlinx-datetime; tests with `kotlin.test` and hand-written fakes.
+- Regular expressions only through `kotlin.text.Regex`, with portable constructs: no Unicode property classes such as `\p{M}`, no embedded flags, no lookbehind. Each platform has its own regex engine, and the normalizer's tests run on the iOS target when the switch is made.
+- Instants and clocks from the standard library's `kotlin.time`; calendar dates and time zones, if needed, from kotlinx-datetime. Tests with `kotlin.test` and hand-written fakes.
 - Every library in the pipeline modules has iOS support: Ktor, kotlinx.serialization, coroutines and SQLDelight do.
 
 ### Errors and empty states
@@ -323,7 +325,7 @@ The data sources carry their own terms, and every evidence line shows its source
 | Dependency injection | Manual constructor wiring, one `AppGraph` | Hilt, Koin | Small graph; keeps `:core` free of DI annotations |
 | Static analysis | Detekt, ktlint, Android lint | | Detekt carries the forbidden-API rules |
 | Tests | `kotlin.test` on the JUnit 5 runner in the JVM modules, with hand-written fakes rather than a mocking library; JUnit 4 in `:app`, where Robolectric needs it; kotlinx-coroutines-test, Ktor `MockEngine` | MockK | JVM-first, fast in CI, and portable to Multiplatform (D2) |
-| Dates and times | kotlinx-datetime | `java.time` | Multiplatform-ready (D2) |
+| Dates and times | `kotlin.time` for instants and clocks; kotlinx-datetime for calendar dates, if needed | `java.time` | Multiplatform-ready (D2) |
 | Android SDK | `minSdk` 26, `targetSdk` the latest stable | `minSdk` 29 | See D10 |
 
 ## Testing

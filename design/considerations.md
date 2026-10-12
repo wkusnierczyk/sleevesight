@@ -16,7 +16,7 @@ Pros:
 - The simplest build. The libraries are standard Kotlin and Java ones, with no per-platform split in the source.
 - Any JVM library works: OkHttp, the SQLite driver, JUnit 5.
 - Faster builds and fewer build-plugin version clashes.
-- Moving to Multiplatform later is cheap if `:core` stays pure Kotlin. The rules are no `java.*` APIs where a Kotlin one exists, and no Android imports.
+- Moving to Multiplatform later is cheap if the pipeline modules stay free of JVM-only APIs; the rules are under *Multiplatform readiness* in the architecture.
 
 Cons:
 
@@ -28,7 +28,7 @@ Cons:
 Pros:
 
 - The same pipeline could run in a browser (the simulator rebuilt from the real code) or as a native command-line tool.
-- It keeps the door open to iOS if Apple ever lets one app read another's now-playing information.
+- An iOS app could share the pipeline, though it would need a different input (see *iOS input* below).
 
 Cons:
 
@@ -48,7 +48,7 @@ iOS may follow once the Android prototype is good. Kotlin Multiplatform supports
 |---|---|---|
 | `java.text.Normalizer` | Accent folding in the normalizer's lookup key | A small platform implementation, or a library |
 | `java.security.MessageDigest` | The evidence fingerprint | A multiplatform hashing library |
-| `java.time` | Retrieval times, cache lifetimes | kotlinx-datetime |
+| `java.time` | Retrieval times, cache lifetimes | `kotlin.time`, and kotlinx-datetime for calendar dates |
 | OkHttp engine | `:net` | Ktor's Darwin engine on iOS; configuration only |
 | SQLite JDBC driver | `:cli` | SQLDelight's native driver; `:store` already takes an injected driver |
 | JUnit 5 and MockK | Every test | `kotlin.test` and hand-written fakes |
@@ -57,7 +57,7 @@ With the rules in place from the start (see *Multiplatform readiness* in the arc
 
 ### iOS input
 
-Sharing the pipeline does not make an iOS app. iOS does not let an app read what another app is playing: `MPNowPlayingInfoCenter` lets an app publish its own now-playing information, not read anyone else's, and the private MediaRemote route was restricted to entitled system processes on macOS 15.4. A change looks unlikely; the one plausible lever is EU interoperability regulation, which so far targets connected devices, not this. An iOS version would need another input:
+Sharing the pipeline does not make an iOS app. iOS does not let an app read what another app is playing: `MPNowPlayingInfoCenter` lets an app publish its own now-playing information, not read anyone else's, and the private MediaRemote framework has never been available to App Store apps. On macOS, where some utilities used it, Apple restricted it to entitled system processes in macOS 15.4, which suggests the direction. A change looks unlikely; the one plausible lever is EU interoperability regulation, which so far targets connected devices, not this. An iOS version would need another input:
 
 | Input | Gives | Catch |
 |---|---|---|
