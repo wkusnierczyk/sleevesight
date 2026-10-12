@@ -128,7 +128,7 @@ sequenceDiagram
   Src-->>Pl: typed outcome + evidence, per source as it lands
   Pl->>Pl: verify each match against the resolved ids (D4)
   Pl-->>UI: TrackState updates
-  UI->>Pl: Write (tap, or auto-write rule)
+  UI->>Pl: Write (tap, or the auto-write setting, D5)
   Pl->>AI: prompt (evidence only)
   AI-->>Pl: streamed text
   Pl->>Pl: grounding check
@@ -242,7 +242,7 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including *Write insights automatically* and its skip window (D5), the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 
@@ -355,7 +355,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 | Phase | Modules built | Exit |
 |---|---|---|
-| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; R5 heuristic measured; art-URI players listed, and whether the `content://` grant holds; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
+| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip-window default measured, and which players report a skip state; art-URI players listed, and whether the `content://` grant holds; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate |
 | 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics | Runs on a real phone against Spotify |
 | 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff | |
@@ -363,7 +363,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions to make
 
-Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3, D4, D6, D7, D8, D9 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
+Each with a recommendation. ✅ marks a decision the owner has made (D1 to D9 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
 
 | # | Question | Recommendation |
 |---|---|---|
@@ -371,7 +371,7 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3,
 | D2 ✅ | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM, kept Multiplatform-ready.** The CLI and Android both run JVM bytecode, and Multiplatform buys nothing until there is a non-JVM target. iOS may follow once the Android prototype is good, so the pipeline modules follow the rules under [Multiplatform readiness](#multiplatform-readiness), which keep a later switch to about a week. **Decided 2026-10-12** |
 | D3 ✅ | Vendor SDKs or small HTTP clients for the AI providers? See [considerations](considerations.md#d3-small-clients-or-vendor-sdks-for-the-ai-providers) | **Small clients**, for one network boundary, a small allowlist, and Multiplatform readiness (D2), which the JVM-only vendor SDKs would break. **Decided 2026-10-12** |
 | D4 ✅ | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both. **Decided 2026-10-12**; the calls are to be profiled once the adapters exist |
-| D5 | How is a user skip in the player told from a track ending (R5)? | A player's own skip state (`STATE_SKIPPING_TO_NEXT` or `STATE_SKIPPING_TO_PREVIOUS`) where it reports one; otherwise a change more than a set time before the end counts as user-driven. The time is a user setting (driver 6), defaulting to what Phase 0 measures; it must exceed the player's crossfade (up to 12 s in Spotify), so until then 15 s. Err towards "ended on its own": that mistake costs a tap, the other an unrequested paid call |
+| D5 ✅ | How is a user skip in the player told from a track ending (R5)? | One user setting, *Write insights automatically*, which absorbs the design's "write automatically on every track" switch: **on every track change**; **when I skip** (the default); or **never** (the Write button only). "When I skip" uses the player's own skip state (`STATE_SKIPPING_TO_NEXT` or `STATE_SKIPPING_TO_PREVIOUS`) where it reports one; otherwise a change more than a set time before the end counts as a skip. That time is a sub-setting (driver 6) whose default Phase 0 establishes; it must exceed the player's crossfade (up to 12 s in Spotify), so until then 15 s. Detection errs towards "ended on its own": that mistake costs a tap, the other an unrequested paid call. Sleevesight's own transport buttons always count as skips. **Decided 2026-10-12** |
 | D6 ✅ | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume. **Decided 2026-10-12** as the default of a user setting, *Look up in the background*, off (driver 6) |
 | D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait |
 | D8 ✅ | How does the app reach a local model through Ollama (R9)? | **HTTPS through a reverse proxy that terminates TLS in front of Ollama** is the supported setup. A publicly trusted certificate (for example from Let's Encrypt, or `tailscale cert`) works as is. A self-signed or private-CA certificate is trusted for that one host only: `:net` gives that host its own client with a custom `X509TrustManager` that accepts exactly the pinned certificate, whose fingerprint the user confirms on the first connection, and checks the host name against the pin rather than the certificate's names (OkHttp's `CertificatePinner` alone is not enough, since it runs after the platform's chain validation, which fails first). User-installed CAs are never trusted app-wide. Plain `http://` remains a fallback, allowed only to the configured Ollama host and only when the address it resolves to is private: IPv4 private or link-local, IPv6 unique-local (`fc00::/7`, which includes Tailscale's) or link-local, or `100.64.0.0/10`, which Tailscale uses but carrier-grade NAT shares, so it gets the same warning. The resolved address is checked, not the name, and at connect time: that client's OkHttp `Dns` returns only private addresses, so the address checked is the one connected to (no DNS rebinding), and it uses `Proxy.NO_PROXY` so a system proxy cannot skip the lookup; `.local` names may not resolve before Android 12, so Settings accepts an address as well. That needs the platform guard relaxed (`cleartextTrafficPermitted`) and replaced by `:net`'s own check, with tests; Settings warns that the link is unencrypted, and its insights carry an "unencrypted link" marker. Phase 3. **Decided 2026-10-12** |
@@ -383,4 +383,4 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1, D2, D3,
 ### Follow-ups outside this document
 
 - Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10).
-- `design.md`: the license line (R11), and the decisions above once made.
+- `design.md`: the license line (R11), and the decisions above once made, including the *Settings* table, where D5's *Write insights automatically* replaces "write automatically on every track".
