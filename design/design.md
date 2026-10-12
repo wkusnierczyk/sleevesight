@@ -14,7 +14,7 @@ Sleevesight is an open-source Android app that reads what a music player is play
 
 The phone already announces what is playing. Any app with notification access can read the title, artists, album, duration and album art of the current track from every player that publishes a media session, and can send play, pause, next and previous back to it. Sleevesight builds on that:
 
-1. Read the now-playing metadata and normalize it: separate the song's own title from what the player appends to it. Version tags such as "2006 Remaster" and the work a song is from are kept as notes, and featured artists move into the artist list. What remains is a clean key to look the song up by. See [Normalizer](#normalizer).
+1. Read the now-playing metadata and normalize it: separate the song's own title and artists from what the player appends to them. Version tags such as "2006 Remaster" are kept as notes, the work a song is from is recorded as its source work, featured artists move into the artist list, and a list of artists is split into the credited artists. What remains is a clean key to look the song up by. See [Normalizer](#normalizer).
 2. Resolve it to entities (recording, artists, release) and retrieve evidence from the sources enabled in Settings.
 3. Have the user's chosen AI model write a short insight from that evidence only, with a citation on every factual sentence.
 4. Check the citations mechanically before showing the text, and show the evidence underneath.
@@ -250,7 +250,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
 ## Privacy and security
 
-- What leaves the phone: track and artist names (normalized) and the album name (as the player reports it), sent to the enabled sources and to the chosen AI provider. Nothing else. The first-run screen says this plainly.
+- What leaves the phone: the track, artist and album names, as the player reports them and as normalized, sent to the enabled sources and to the chosen AI provider. Nothing else. The first-run screen says this plainly.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - No telemetry, crash reporting services, analytics or accounts of our own.
 
