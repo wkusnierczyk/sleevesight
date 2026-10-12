@@ -95,7 +95,7 @@ flowchart TD
 |---|---|---|---|
 | `:core` | Kotlin JVM | Domain model; normalizer; resolution logic (scoring, matching, outcomes) over client interfaces; evidence model and ids; prompt builders; grounding check; genre vocabulary; the pipeline orchestration as coroutines and flows; the diagnostics event type | Kotlin stdlib, coroutines, kotlinx.serialization. **No network, no Android** |
 | `:net` | Kotlin JVM | The one HTTP client: Ktor with the OkHttp engine, per-host rate limiting, the User-Agent, timeouts, retries, and a logger that redacts keys and tokens | Ktor, OkHttp |
-| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), the Spotify Web API client (Phase 3), each implementing the `:core` client interfaces and `SourceAdapter`; evidence extraction per source | `:core`, `:net` |
+| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), the Spotify Web API client (Phase 3), an album-art fetcher for `http` art URIs, each implementing the `:core` client interfaces and `SourceAdapter`; evidence extraction per source | `:core`, `:net` |
 | `:ai` | Kotlin JVM | `AiProvider` implementations: Anthropic, OpenAI, Google, Ollama. Streaming, model listing, error mapping | `:core`, `:net` |
 | `:store` | Kotlin JVM | Retrieval cache, synthesis cache, artist-resolution cache, session history. SQLDelight schema and queries over an injected `SqlDriver`: `:cli` supplies the SQLite JDBC driver, `:app` the Android driver (an AAR, which a JVM module cannot depend on) | `:core`, SQLDelight runtime |
 | `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, SQLDelight JDBC driver |
@@ -134,7 +134,7 @@ sequenceDiagram
 ### Concurrency
 
 - The session layer exposes `StateFlow<NowPlaying?>` and `StateFlow<PlaybackInfo>`.
-- The pipeline is `nowPlaying.filterNotNull().debounce(650.milliseconds).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`.
+- The pipeline is `nowPlaying.filterNotNull().debounce(650.milliseconds).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`. A `null` (no active session) is filtered out, so it neither cancels the current track's run nor clears its state; the UI reads `nowPlaying` directly to show the idle state.
 - Sources run in parallel inside `run`, each in its own child coroutine, each publishing its result as soon as it lands.
 - Detail insights (song, artist, album, genre, sounds-like) are separate on-demand jobs, scoped to the screen or box that asked, cancelled when it closes.
 - Playback state (play, pause, seek, progress) never enters the pipeline.
@@ -180,7 +180,7 @@ A port of the simulator's `normalize`, unchanged in behaviour, with the design's
 2. **First release.** From the accepted recording's releases, take the earliest release-group first-release date. The release the player reports stays separate (`P` evidence). Both are kept; which one the UI shows is still the design's open question on release-date semantics.
 3. **Artists.** Each credited artist resolved separately, to an MBID, cached long-term.
 4. **Cover detection.** The recording's work relationship and the work's earliest recording by a different artist give `original_song`.
-5. **Wikipedia identity.** With a MusicBrainz match: MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. For an article found by name: the article's own Wikidata item (its `wikibase_item`). Either way, the article is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. This is the check that rejects the wrong Reem.
+5. **Wikipedia identity.** With a MusicBrainz match: MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. For an article found by name: the article's own Wikidata item (its `wikibase_item`). Either way, the article is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. The performer is matched by its MusicBrainz artist ID (P434) when artist resolution has one, and by normalized name otherwise. This is the check that rejects the wrong Reem.
 
 Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's known cases.
 
@@ -338,7 +338,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 | Phase | Modules built | Exit |
 |---|---|---|
-| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; R5 heuristic measured; art-URI players listed; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
+| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; R5 heuristic measured; art-URI players listed, and whether the `content://` grant holds; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate |
 | 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics | Runs on a real phone against Spotify |
 | 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff | |
