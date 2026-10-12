@@ -1,6 +1,6 @@
 # Sleevesight
 
-**Status:** Draft, ready for Phase 0  
+**Status:** Draft; Phase 0 under way (platform findings in *Platform facts*)  
 **Date:** 2026-10-12  
 **Owner:** Wacek  
 **Platform:** Android (Kotlin, Jetpack Compose, Material 3)  
@@ -48,9 +48,9 @@ These were established while designing, and checked in Phase 0 with the platform
 - `MediaSessionManager.getActiveSessions(componentName)` returns a `MediaController` for every app currently publishing a media session: Spotify, YouTube Music, Tidal, Deezer, podcast apps, browsers playing media.
 - It requires a declared `NotificationListenerService`. Its `ComponentName` is passed to `getActiveSessions()`; without it the call throws `SecurityException`. The user grants access in Settings, Notification access.
 - Use callbacks, not polling. `addOnActiveSessionsChangedListener` tracks sessions appearing and disappearing; `MediaController.Callback.onMetadataChanged` and `onPlaybackStateChanged` deliver track and state changes.
-- **Spotify (measured)** fills `TITLE`, `ARTIST`, `ALBUM`, `ALBUM_ARTIST`, `DURATION`, the album art (a 300×300 bitmap and an `ALBUM_ART_URI`), and `METADATA_KEY_MEDIA_ID` as a **`spotify:track:<id>`** URI. `ARTIST` is one comma-joined string of the credited artists ("Ginton, Richard Bona, Salif Keita"), as the normalizer assumes. It also sends its own keys: the playing context (`com.spotify.music.extra.CONTEXT_URI`, `CONTEXT_TITLE`, `CONTEXT_DESCRIPTION`, `CONTEXT_SHARE_URL`), an `ART_HTTPS_URI` on Spotify's image CDN, an extracted background colour, and explicit, download and advertisement flags.
+- **Spotify (measured)** fills `TITLE`, `ARTIST`, `ALBUM`, `ALBUM_ARTIST`, `DURATION`, the album art (a bitmap, 300×300 or 472×472, and an `ALBUM_ART_URI`), and `METADATA_KEY_MEDIA_ID` as a **`spotify:track:<id>`** URI. `ARTIST` is one comma-joined string of the credited artists ("Artist A, Artist B, Artist C"), as the normalizer assumes. It also sends its own keys: the playing context (`com.spotify.music.extra.CONTEXT_URI`, `CONTEXT_TITLE`, `CONTEXT_DESCRIPTION`, `CONTEXT_SHARE_URL`), an `ART_HTTPS_URI` on Spotify's image CDN, an extracted background colour, and explicit, download and advertisement flags. Its `CROSSFADE_ENABLED` and `CROSSFADE_DURATION` extras are **unreliable**: they read `false` and `5000` throughout, including a run with a 12 s crossfade, so nothing relies on them.
 - **Castbox (measured)** fills `TITLE`, `DISPLAY_TITLE`, `ARTIST` (the publisher), `ALBUM` (the episode title), `DURATION`, `MEDIA_ID` (its own episode id) and, for the playing episode, `MEDIA_URI` and http(s) art URIs. A **Sonos** session sent only art and an empty media id. Other players: **to measure** (YouTube Music).
-- **Spotify republishes unchanged metadata constantly**: 153 of 166 same-track updates in one 6-minute session changed nothing, and most of the rest changed only the art, the length (sent as a placeholder first) or the extracted colour. The debounce and the lookup-key comparison in the pipeline are what keep this from triggering lookups.
+- **Spotify republishes unchanged metadata constantly**: 779 of 839 same-track updates across the three probe runs changed nothing, and most of the rest changed only the art, the length (sent as a placeholder first) or the extracted colour. The debounce and the lookup-key comparison in the pipeline are what keep this from triggering lookups.
 - Spotify also has an opt-in "Device Broadcast Status" setting that sends broadcast intents on metadata, playback-state and queue changes. The media session carries everything it does and more, so it is not used.
 
 ### Album art
@@ -61,11 +61,11 @@ These were established while designing, and checked in Phase 0 with the platform
 ### Controlling the player
 
 - `MediaController.getTransportControls()` gives `play()`, `pause()`, `skipToNext()`, `skipToPrevious()` and `seekTo()`.
-- Only offer an action the session advertises in `PlaybackState.getActions()`. **Measured:** Spotify advertises play or pause, previous, next, seek, play from search and play from URI; all worked. Castbox advertises the full set while playing but only play/pause while paused.
+- Only offer an action the session advertises in `PlaybackState.getActions()`. **Measured:** Spotify advertises play or pause, previous, next, seek, play from search and play from URI; play, pause, next and previous were sent and worked (the others were not tried). Castbox advertises play, pause, next, seek and its own set, but not previous, and only play/pause while in `NONE` or `BUFFERING`.
 
 ### Opening the player
 
-- `MediaController.getSessionActivity()` returns a `PendingIntent` to the player's own screen **for Castbox, and opens it; Spotify publishes none.** So for Spotify the app opens the player through a `spotify:` URI or its launch intent instead.
+- `MediaController.getSessionActivity()` returns a `PendingIntent` to the player's own screen **for Castbox, which opened it (observed by the tester); Spotify publishes none.** So for Spotify the app opens the player through a `spotify:` URI or its launch intent instead.
 - Opening a specific track, album or artist in Spotify needs a Spotify ID: `Intent.ACTION_VIEW` with `spotify:track:<id>`, `spotify:album:<id>` or `spotify:artist:<id>`. **Measured:** `spotify:track:` with the id from `MEDIA_ID` opens the track.
 - When no ID is known, fall back to `spotify:search:<query>`, which always opens (**measured**). Log the fallback.
 
@@ -73,8 +73,8 @@ These were established while designing, and checked in Phase 0 with the platform
 
 The media session carries more context than the design assumed. In order of reliability:
 
-1. **Spotify's metadata.** `CONTEXT_URI` and `CONTEXT_TITLE` name the playlist or album being played (`spotify:playlist:...`, "This Is Salif Keita"), **without an account**.
-2. **The session queue.** Spotify publishes `getQueue()` (the upcoming tracks, with `spotify:track:` ids; 48 items in one session) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids).
+1. **Spotify's metadata.** `CONTEXT_URI` and `CONTEXT_TITLE` name the playlist or album being played (`spotify:playlist:...` and the playlist's name), **without an account**.
+2. **The session queue.** Spotify publishes `getQueue()` (the upcoming tracks, with `spotify:track:` ids; 4 to 50 items, one fewer per track, reset when a track is opened through a deep link) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids).
 3. **Session history.** Every track the app has seen play. Always available, but it only knows the past.
 4. **Spotify Web API, optional account.** `GET /playlists/{id}/items` returns the whole playlist, not only what is queued.
 
@@ -82,26 +82,28 @@ The track lists can therefore say "In this playlist · <name>" without the optio
 
 ### Track changes
 
-Measured for decision D5: at each track change, the previous track's remaining time (its length less its position, extrapolated from the last playback state), and the playback states in the 3 s before the new metadata.
+Measured for decision D5 on 21 Spotify track changes (of 24 logged; the other three were two Castbox changes and one at the start of a probe session): at each change, the previous track's remaining time (its length less its position, extrapolated from the last playback state), and the playback states in the 3 s before the new metadata.
 
-| Change | Count | Remaining in the previous track | `PLAYING` states in the 3 s before |
+| Change | Count | Remaining in the previous track | `PLAYING` states in the 1.5 s before |
 |---|---|---|---|
-| Ended on its own, no crossfade | 4 | −87 to −39 ms | 12 |
-| Ended on its own, crossfade 12 s | 3 | 11.95 to 11.99 s | 11 or 12 |
+| Ended on its own, no crossfade | 4 | −87 to −39 ms | 6 |
+| Ended on its own, crossfade 12 s | 3 | 11.945 to 11.987 s | 6 |
 | Skipped in Spotify, with earphones or from the notification | 12 | 20 s to 429 s | 0 |
 | Skipped with the probe's buttons, just after pressing play | 2 | 175 s and 369 s | 3 or 4 |
 
 - **No skip state.** Neither Spotify nor Castbox reported `STATE_SKIPPING_TO_NEXT` or `STATE_SKIPPING_TO_PREVIOUS`, for any kind of skip. Skips in the Spotify app, from earphones and from the notification look the same to the session.
-- **A natural end lands exactly at the crossfade.** Without crossfade the change comes within 0.1 s of the end; with a 12 s crossfade, 12.0 s before it, every time within 50 ms. Seeking towards the end beforehand changes nothing.
+- **A natural end lands exactly at the crossfade.** Without crossfade the change comes within 0.1 s of the end; with a 12 s crossfade, 12.0 s before it, every time within 60 ms. Seeking towards the end beforehand changes nothing.
 - **Timing alone is ambiguous inside the crossfade.** The remaining time is measured against the track's full length, so a skip 8 s before a 12 s crossfade reads as 20 s remaining. With a 5 s crossfade, a natural end and a skip 5 s before the transition would both read as 10 s: one change cannot say which it was.
-- **The state burst.** Before every natural end Spotify published a steady stream of `PLAYING` states (11 or 12 in the last 3 s); before a skip, none, unless the user had just pressed play (3 or 4). This separates the two even where timing cannot. It is undocumented Spotify behaviour, measured on 21 changes, so it is used with the timing, not alone.
+- **The state clusters.** Before every natural end Spotify published two clusters of about six `PLAYING` states: one about 3 s before the change, and one 0.5 to 1 s before. Before a skip from the app, earphones or the notification it published none. Mid-track it publishes nothing but clusters around seeks and an occasional cluster of three. The late cluster therefore separates a natural end from a skip even where timing cannot. It is undocumented Spotify behaviour, so it is used with the timing, not alone. A seek shortly before a skip near the end is not measured.
+- Skips made from Sleevesight itself need no detection: the app sent them. The probe-button rows show only that recent playback activity produces a few states (3 or 4), which is why the rule counts states rather than asking for any.
 - Castbox, when skipped, sent the new episode's state (position 0) before its metadata; the probe's estimate handles both orders.
 
-**Decision (D5, refined):** a user setting, *Crossfade*: **Autodetect** (the default) or a fixed value, 0 to 15 s.
+**Decision (D5, refined):** a user setting, *Crossfade*: **Autodetect** (the default) or a fixed value, 0 to 15 s. Changes that Sleevesight caused itself are known and skip detection.
 
-- A fixed value *c*: a change is a natural end when the remaining time is within 0.5 s of *c*.
-- Autodetect, for a player where the burst has been measured (so far only Spotify): a change is a natural end when the burst is there (at least 8 `PLAYING` states in the 3 s before), with the remaining time at most 15 s. Each such remaining time is a crossfade candidate; when two agree within 0.1 s, that value is the learned crossfade, and natural ends must then also fall within 0.5 s of it. Without the burst, or with more than 15 s remaining, the change is a skip.
-- Autodetect, for any other player: timing alone. A change is a natural end when the remaining time is at most 15 s; remaining times that repeat within 0.1 s become the learned crossfade, as above. Whether other players show a burst, or another signal, is investigated as they are covered.
+- A fixed value *c*: a change is a natural end when the remaining time is at most *c* + 0.5 s.
+- Autodetect, for Spotify (the only player where the clusters have been measured): a change is a natural end when the remaining time is at most 15 s and either the late cluster is there (at least 5 `PLAYING` states within 1.5 s before the change) or the remaining time is within 0.5 s of 0 or of the learned crossfade. Otherwise it is a skip.
+- Autodetect, for any other player: timing alone. A change with at most 15 s remaining is a natural end. Whether other players publish such clusters, or another signal, is investigated as they are covered.
+- The learned crossfade: the remaining time of natural ends; when two agree within 0.1 s, that is the value, and when two later ones agree on another value, it replaces it, so a changed crossfade is followed. It only adds natural ends that lack the late cluster (a probe connected late, a restart); it never turns a change into a skip.
 - Either way, detection errs towards "ended on its own" (decision D5).
 
 ### Notification access and installation
@@ -272,7 +274,7 @@ The detail content is one component mounted either way.
 
 ### Track lists
 
-Labelled by where they came from: "Played this session" by default, "In this playlist · <name>" when a Spotify account is connected.
+Labelled by where they came from: "Played this session" by default, and "In this playlist · <name>" when the player names the playlist, as Spotify does in its metadata (see *Playlist context*); the optional Spotify account adds the tracks beyond the queue.
 
 ## Settings
 
@@ -284,6 +286,7 @@ Labelled by where they came from: "Played this session" by default, "In this pla
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
 | Insights | Write insights; write automatically on every track | On; off |
+| Insights | Crossfade, for telling skips from natural ends (D5) | Autodetect |
 
 Source switches decide what the model may use. The filter chips in the Sources section only change what is displayed.
 
@@ -322,7 +325,7 @@ A throwaway app on a real phone. Outputs, written to a log file:
 - Which `PlaybackState` actions each player advertises; whether transport controls work.
 - Whether `getSessionActivity()` and `spotify:` deep links open the expected screens.
 
-**Gate:** every unverified item in Platform facts is resolved and this document updated.
+**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: YouTube Music, and an install from the browser (D7).
 
 ### Phase 0.5. Pipeline CLI
 
