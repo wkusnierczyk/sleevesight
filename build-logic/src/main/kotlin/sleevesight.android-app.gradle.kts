@@ -27,13 +27,14 @@ extensions.configure<ApplicationExtension> {
 
 val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.properties")
 
-// Aggregates, so `./gradlew checkManifest` runs the check for every release variant.
+// Aggregates, so `./gradlew checkManifest` runs the check for every variant: release ships, and
+// debug builds the APK that CI publishes and phones install.
 val checkManifest = tasks.register("checkManifest") { group = "verification" }
 val checkDependencies = tasks.register("checkDependencies") { group = "verification" }
 val checkModuleGraph = tasks.register("checkModuleGraph") { group = "verification" }
 
 androidComponents {
-    onVariants(selector().withBuildType("release")) { variant ->
+    onVariants { variant ->
         val suffix = variant.name.replaceFirstChar { it.uppercase() }
         val runtimeRoot = variant.runtimeConfiguration.incoming.resolutionResult.rootComponent
         val compileRoot = variant.compileConfiguration.incoming.resolutionResult.rootComponent

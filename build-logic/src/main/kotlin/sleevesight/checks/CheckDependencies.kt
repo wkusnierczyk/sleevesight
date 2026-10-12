@@ -95,6 +95,9 @@ abstract class CheckDependencies : DefaultTask() {
                 if (!visited.add(next) || (next != root && stopAt(next))) continue
                 next.dependencies
                     .filterIsInstance<ResolvedDependencyResult>()
+                    // A constraint (from a BOM or a constraints block) only pins a version; it does
+                    // not bring the module in, so following it would report modules on false paths.
+                    .filterNot { it.isConstraint }
                     .forEach { queue += it.selected }
             }
             return visited.toList()
