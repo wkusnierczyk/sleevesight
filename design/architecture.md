@@ -168,7 +168,7 @@ data class TrackState(
 - Transport controls are offered only when `PlaybackState.actions` advertises them.
 - Handoff: `sessionActivity` for the player's own screen; `spotify:` URIs when an id is known; `spotify:search:` otherwise, logged as a fallback.
 - Process death: the service reconnects on rebind; the repository rebuilds from `getActiveSessions` on start.
-- Queue: when a player publishes `getQueue()` and `getQueueTitle()`, the track list uses it; Spotify does (measured in Phase 0), as well as naming the playlist in its metadata. Spotify's Device Broadcast intents are not adopted unless Phase 0 shows the session misses something they carry.
+- Queue: when a player publishes `getQueue()` and `getQueueTitle()`, the track list uses it; Spotify does (measured in Phase 0), as well as naming the playlist in its metadata. Spotify's Device Broadcast intents are not adopted: Phase 0 showed the session carries everything they do and more.
 - Players that send only a title still run the pipeline; resolution is then mostly `none`, and how much of the UI to hide stays the design's open question on per-player behaviour.
 - Session history (the default track list) is written to `:store` locally, whether or not the app is visible.
 
@@ -259,7 +259,7 @@ Each insight is a paid call on the user's key (design, *Caching and offline*), s
   | When I skip (default) | Tracks the user moved to: a skip in the player, or any action in Sleevesight |
   | Never | Nothing; insights are written only when the user taps Write |
 
-- **Detecting a skip in the player.** Measured in Phase 0 (`design.md`, *Track changes*): Spotify and Castbox report no skip state, and a natural end lands exactly at the crossfade. So a sub-setting, *Crossfade* (driver 6): **Autodetect** (the default) or a fixed value, 0 to 15 s. With a fixed value *c*, a change with at most *c* + 0.5 s left is a natural end. Autodetect, for Spotify: a change with at most 15 s left is a natural end when Spotify's late cluster of playback states is there, or when the time left matches 0 or a crossfade learned from repeating natural ends; for other players, timing alone. Changes Sleevesight caused itself need no detection. Detection errs towards "ended on its own": that mistake costs a tap, the other an unrequested paid call.
+- **Detecting a skip in the player.** Measured in Phase 0 (`design.md`, *Track changes*): Spotify and Castbox report no skip state, and a natural end lands exactly at the crossfade. So a sub-setting, *Crossfade* (driver 6): **Autodetect** (the default) or a fixed value, 0 to 15 s. With a fixed value *c*, a change with at most *c* + 0.5 s left is a natural end, and for Spotify also one with the late cluster and at most 15 s left. Autodetect, for Spotify: a change with at most 15 s left is a natural end when Spotify's late cluster of playback states is there, or when the time left matches 0 or a crossfade learned from repeating natural ends; for other players, timing alone. Changes Sleevesight caused itself need no detection. Detection errs towards "ended on its own": that mistake costs a tap, the other an unrequested paid call.
 - **Actions in Sleevesight** (previous, next, play, selecting a track; not pause) always count as user-driven. Play also writes the current track if it has no insight yet, as in the simulator, except under "never".
 - **After the app opens**, nothing is written until the user's first action in it, in every mode, as in the simulator.
 
@@ -274,7 +274,7 @@ Each insight is a paid call on the user's key (design, *Caching and offline*), s
 - Compose, Material 3, one activity, Navigation Compose.
 - Dynamic color from the album-art bitmap with material-color-utilities.
 - The detail content is one composable, mounted as a page or as an expandable box according to the layout setting.
-- No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a URI. A `content://` URI is read through the `ContentResolver` only if the player grants read access, which is not guaranteed (otherwise `SecurityException`, and no art); an `http` URI is fetched by a small art fetcher in `:sources`, since `:app` may not reach `:net`. Which players do which, and whether the grant holds, are Phase 0 measurements.
+- No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a URI. A `content://` URI is read through the `ContentResolver` only if the player grants read access, which is not guaranteed (otherwise `SecurityException`, and no art); an `http` URI is fetched by a small art fetcher in `:sources`, since `:app` may not reach `:net`. Measured in Phase 0: Spotify's `content://` art URI is readable by another app; Castbox sends http(s) URIs. Other players are measured as they are covered.
 
 ### Diagnostics
 
