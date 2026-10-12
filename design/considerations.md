@@ -104,6 +104,7 @@ Cons:
 - Each has its own HTTP stack. That breaks the single network boundary, and the dependency, manifest and module checks have to account for each one.
 - Some are Java-first, with their own async models, which fit awkwardly with coroutine cancellation.
 - Behaviour differs between providers, so the pipeline needs a layer over them anyway, which is most of the work of writing the small clients.
+- The official SDKs (Anthropic, OpenAI, Google) are JVM libraries, not Multiplatform, which breaks the readiness of D2. Ollama has no official JVM SDK.
 
 ### Recommendation
 
@@ -111,7 +112,7 @@ Small clients. The surface used is small and stable, and keeping network access 
 
 ### Cost of switching
 
-Either way the switch stays inside `:ai`: the pipeline sees only `AiProvider` (`stream` and `models`), so a switch rewrites one implementation per provider and nothing else.
+Either way the switch stays inside `:ai`: the pipeline sees only `AiProvider` (`stream` and `models`), so a switch rewrites one implementation per provider and nothing else. The SDK side applies to Anthropic, OpenAI and Google; Ollama has no official JVM SDK and stays a small client either way.
 
 | Switch | Code, per provider | What else it costs |
 |---|---|---|
@@ -122,4 +123,4 @@ The code cost is similar both ways. The difference is that small clients keep th
 
 ### Decision
 
-Small clients (owner, 2026-10-12). An SDK may still be adopted for one provider, if a feature it offers is painful to hand-roll, as a contained exception in a JVM-only source set.
+Small clients (owner, 2026-10-12). An SDK may still be adopted for one provider, if a feature it offers is painful to hand-roll, as a contained exception: confined to `:ai`, with its own `checkModuleGraph` and allowlist entries. After a Multiplatform switch it would move to the JVM and Android source sets, and that provider would be unavailable on iOS.

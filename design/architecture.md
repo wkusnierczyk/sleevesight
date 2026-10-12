@@ -218,7 +218,7 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
   }
   ```
 
-  Thin clients over `:net` (server-sent events for Anthropic, OpenAI and Google; line-delimited JSON for Ollama) rather than vendor SDKs: four SDKs would bring four dependency trees into the allowlist, and the surface used is one streaming call and one model list.
+  Small clients over `:net` (server-sent events for Anthropic, OpenAI and Google; line-delimited JSON for Ollama) rather than vendor SDKs (D3): the three official SDKs would bring three dependency trees into the allowlist, each with its own HTTP stack outside `:net`, and they are JVM-only, against D2. The surface used is one streaming call and one model list.
 - JSON cards (genre, sounds-like) parse with kotlinx.serialization; a parse failure is a visible error, not a retry loop.
 - The grounding check is a port of the simulator's `groundCheck` and `splitSentences`, with tests from the fixtures. Its hedge detection is English-only, as the prompts are.
 - Prompt injection: web snippets and article sentences are untrusted text inside the prompt. The model has no tools and its output passes the grounding check, so the most an injected instruction can do is distort one card's text, and the check flags uncited sentences. Evidence is fenced and labelled as data in the prompt.
