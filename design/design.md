@@ -14,7 +14,7 @@ Sleevesight is an open-source Android app that reads what a music player is play
 
 The phone already announces what is playing. Any app with notification access can read the title, artists, album, duration and album art of the current track from every player that publishes a media session, and can send play, pause, next and previous back to it. Sleevesight builds on that:
 
-1. Read the now-playing metadata and normalize it.
+1. Read the now-playing metadata and normalize it: separate the song's own title and artists from what the player appends to them. Version tags such as "2006 Remaster" are kept as notes, the work a song is from is recorded as its source work, featured artists move into the artist list, and a list of artists is split into the credited artists. What remains is a clean key to look the song up by. See [Normalizer](#normalizer).
 2. Resolve it to entities (recording, artists, release) and retrieve evidence from the sources enabled in Settings.
 3. Have the user's chosen AI model write a short insight from that evidence only, with a citation on every factual sentence.
 4. Check the citations mechanically before showing the text, and show the evidence underneath.
@@ -104,7 +104,7 @@ flowchart LR
 
 ### Normalizer
 
-Turns player metadata into a lookup key without losing what it removed. Rules proven on the test playlist:
+Players report a song the way their catalogue files it, which is often not how sources such as MusicBrainz and Wikipedia name it: "Fisherman's Blues - 2006 Remaster" is the song "Fisherman's Blues", and "Baby, Please Don't Go (feat. Van Morrison)" has a second artist hidden in its title. Normalizing turns the title and artist strings into the song's plain title, its list of credited artists, and a lookup key, without losing what it removed: each removed part is kept, as a note, a source work, a variant or an added artist. Rules proven on the test playlist:
 
 | Input pattern | Action | Example |
 |---|---|---|
@@ -250,7 +250,12 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
 ## Privacy and security
 
-- What leaves the phone: normalized track, artist and album names, sent to the enabled sources and to the chosen AI provider. Nothing else. The first-run screen says this plainly.
+- What leaves the phone, and to whom. The first-run screen says this plainly.
+  - To the enabled sources: the normalized title and artists, and the album name as the player reports it.
+  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources.
+  - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
+
+  Nothing else leaves the phone. The duration, the album art and the session history stay on it.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - No telemetry, crash reporting services, analytics or accounts of our own.
 
@@ -346,7 +351,7 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 
 ### Insight
 
-Input: now-playing fields, normalized fields, and evidence lines as `[ID] (source, scope) text`. Rules given to the model:
+Input: the now-playing title, artists and album as the player reports them (not the duration), the normalized fields, and evidence lines as `[ID] (source, scope) text`. Rules given to the model:
 
 - Two to four sentences, plain conversational English, no markdown.
 - End every factual sentence with supporting ids, like `[W1]` or `[W2][G1]`.

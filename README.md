@@ -15,7 +15,7 @@ Liner notes for whatever is playing. Sleevesight is an open-source Android app t
 ## How it works
 
 1. **Read.** A notification listener gives the app the player's media session: title, artists, album, duration and album art. Sleevesight never touches the audio.
-2. **Look up.** The track is normalized and matched against the sources you switched on: MusicBrainz, Wikipedia, Last.fm, Discogs, and open web search. Matches that fail an identity check are rejected and shown as rejected, not used quietly.
+2. **Look up.** The track's title and artists are cleaned up: tags the player appends, such as "2006 Remaster" or "feat. Van Morrison", are set aside, and featured artists are added to the artist list, so the song can be found under its plain name. It is then matched against the sources you switched on: MusicBrainz, Wikipedia, Last.fm, Discogs, and open web search. Matches that fail an identity check are rejected and shown as rejected, not used quietly.
 3. **Write.** The AI service you chose turns the retrieved evidence into the insight, citing evidence ids. It is not allowed to add facts of its own unless you turn that on, and then they are marked unverified.
 4. **Check.** Before anything is shown, the citations are checked in code. Uncited sentences and citations to missing evidence are flagged.
 
@@ -30,7 +30,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 ## Privacy
 
-Track, artist and album names go to the sources you enabled and to the AI service you chose. Nothing else leaves the phone. No accounts, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names go to the sources you enabled, and, with what those sources found, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
 
 ## Roadmap
 
