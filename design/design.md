@@ -14,7 +14,7 @@ Sleevesight is an open-source Android app that reads what a music player is play
 
 The phone already announces what is playing. Any app with notification access can read the title, artists, album, duration and album art of the current track from every player that publishes a media session, and can send play, pause, next and previous back to it. Sleevesight builds on that:
 
-1. Read the now-playing metadata and normalize it: separate the song's own title and artists from what the player appends to them (version tags such as "2006 Remaster", featured artists, the film a song is from), and keep those as notes. What remains is a clean key to look the song up by. See [Normalizer](#normalizer).
+1. Read the now-playing metadata and normalize it: separate the song's own title from what the player appends to it. Version tags such as "2006 Remaster" and the work a song is from are kept as notes, and featured artists move into the artist list. What remains is a clean key to look the song up by. See [Normalizer](#normalizer).
 2. Resolve it to entities (recording, artists, release) and retrieve evidence from the sources enabled in Settings.
 3. Have the user's chosen AI model write a short insight from that evidence only, with a citation on every factual sentence.
 4. Check the citations mechanically before showing the text, and show the evidence underneath.
@@ -104,7 +104,7 @@ flowchart LR
 
 ### Normalizer
 
-Players report a song the way their catalogue files it, which is often not how sources such as MusicBrainz and Wikipedia name it: "Fisherman's Blues - 2006 Remaster" is the song "Fisherman's Blues", and "Baby, Please Don't Go (feat. Van Morrison)" has a second artist hidden in its title. Normalizing turns the title and artist strings into the song's plain title, its list of credited artists, and a lookup key, without losing what it removed: each removed part is kept as a note. Rules proven on the test playlist:
+Players report a song the way their catalogue files it, which is often not how sources such as MusicBrainz and Wikipedia name it: "Fisherman's Blues - 2006 Remaster" is the song "Fisherman's Blues", and "Baby, Please Don't Go (feat. Van Morrison)" has a second artist hidden in its title. Normalizing turns the title and artist strings into the song's plain title, its list of credited artists, and a lookup key, without losing what it removed: each removed part is kept, as a note, a source work, a variant or an added artist. Rules proven on the test playlist:
 
 | Input pattern | Action | Example |
 |---|---|---|
@@ -250,7 +250,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
 ## Privacy and security
 
-- What leaves the phone: normalized track, artist and album names, sent to the enabled sources and to the chosen AI provider. Nothing else. The first-run screen says this plainly.
+- What leaves the phone: track and artist names (normalized) and the album name (as the player reports it), sent to the enabled sources and to the chosen AI provider. Nothing else. The first-run screen says this plainly.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - No telemetry, crash reporting services, analytics or accounts of our own.
 
