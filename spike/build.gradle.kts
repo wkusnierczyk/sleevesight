@@ -13,4 +13,5 @@ android {
 
 dependencies {
     implementation(libs.androidx.activity)
+    testImplementation(libs.kotlin.test.junit)
 }
