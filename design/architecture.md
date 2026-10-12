@@ -52,7 +52,7 @@ So the riskiest components, resolution and evidence extraction, have no working 
 | R3 | **The latency goal and the MusicBrainz rate limit conflict.** "Within a couple of seconds" against one request per second, with a recording search, a recording lookup and one lookup per credited artist before Wikipedia can be reached safely through Wikidata. A cold track with two artists is about four seconds of MusicBrainz alone. | Progressive rendering: player metadata immediately, each source's result as it lands, the insight last. Artist resolutions are cached long-term, so the cost falls on first encounters. A per-host rate limiter is part of the network layer. See D4. |
 | R4 | **The privacy statement is narrower than the traffic.** Matching by duration ("duration tolerance") sends the duration if it goes into the MusicBrainz query, and every request reveals the phone's IP address to that service. | Duration filtering happens on the phone, after the search. The first-run text names the IP address. |
 | R5 | **"User-driven changes write" needs a signal the session does not give.** A skip pressed inside Spotify and a track ending on its own both arrive as `onMetadataChanged`. Only Sleevesight's own transport buttons are known to be user actions. | A heuristic (the previous track's position at the change, against its duration) is a Phase 0 measurement. See D5. |
-| R6 | **Genre labels depend on one source with a user key.** Last.fm needs the user's own API key; with it missing or off, no track gets genres, and 30 of 78 tracks got none even with it. MusicBrainz has genre data per artist, release group and recording, keyless. | The genre vocabulary filter may take tags from MusicBrainz as well as Last.fm, once D12 settles their licence (MusicBrainz tags are CC BY-NC-SA). Phase 0.5 measures the coverage gain. |
+| R6 | **Genre labels depend on one source with a user key.** Last.fm needs the user's own API key; with it missing or off, no track gets genres, and 30 of 78 tracks got none even with it. MusicBrainz has genre data per artist, release group and recording, keyless. | The genre vocabulary filter may take tags from MusicBrainz as well as Last.fm, once D12 decides their use (MusicBrainz tags are CC BY-NC-SA). Phase 0.5 measures the coverage gain. |
 | R7 | **Background behaviour is unspecified.** The notification listener runs whenever access is granted, app open or not. The design does not say whether lookups run while nobody is looking. | Session history is recorded always, on the phone only. Retrieval and synthesis run only while the app is visible. See D6. |
 | R8 | **Sideloaded installs cannot easily grant notification access.** Since Android 13, "restricted settings" block notification-listener access for apps installed from outside an app store, until the user unlocks it in the app's info screen. | Onboarding detects the block and explains the unlock. The distribution channel matters; see D7. |
 | R9 | **A local model through Ollama needs cleartext HTTP to the LAN**, which Android blocks by default, and an arbitrary LAN address cannot be allowlisted in a network security config. | Decide how much cleartext to allow; see D8. |
@@ -85,7 +85,7 @@ flowchart TD
   sources --> net
   ai[":ai (JVM)"] --> core
   ai --> net
-  store[":store (JVM, Android)"] --> core
+  store[":store (JVM)"] --> core
   net[":net (JVM)"]
   core[":core (JVM)"]
   spike[":spike (Android, Phase 0 only)"]
@@ -134,7 +134,7 @@ sequenceDiagram
 ### Concurrency
 
 - The session layer exposes `StateFlow<NowPlaying?>` and `StateFlow<PlaybackInfo>`.
-- The pipeline is `nowPlaying.debounce(650.ms).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`.
+- The pipeline is `nowPlaying.filterNotNull().debounce(650.milliseconds).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`.
 - Sources run in parallel inside `run`, each in its own child coroutine, each publishing its result as soon as it lands.
 - Detail insights (song, artist, album, genre, sounds-like) are separate on-demand jobs, scoped to the screen or box that asked, cancelled when it closes.
 - Playback state (play, pause, seek, progress) never enters the pipeline.
@@ -174,13 +174,13 @@ A port of the simulator's `normalize`, unchanged in behaviour, with the design's
 
 ### Entity resolution (`:core` logic, `:sources` clients)
 
-`:core` holds the scoring and decisions; `:sources` provides `MusicBrainzClient` and `WikidataClient`. Per D4, resolution runs alongside the lookups by name rather than before them: each source's match is verified against the resolved ids when they land, and stays unverified (shown, not cited) if MusicBrainz finds nothing.
+`:core` holds the scoring and decisions; `:sources` provides `MusicBrainzClient` and `WikidataClient`. Per D4, resolution runs alongside the lookups by name rather than before them: each source's match is verified against the resolved ids when they land. A Wikipedia article can also be verified without MusicBrainz, through its own Wikidata item (step 5). Matches from the other sources stay unverified (shown, not cited) if MusicBrainz finds nothing.
 
 1. **Recording.** Search MusicBrainz by normalized title and credited artists. Score candidates on title similarity, artist-credit overlap, and duration within a tolerance (computed locally, R4). Accept above a threshold, otherwise `none`; a near miss with a conflicting artist is `rejected(reason)`.
 2. **First release.** From the accepted recording's releases, take the earliest release-group first-release date. The release the player reports stays separate (`P` evidence). Both are kept; which one the UI shows is still the design's open question on release-date semantics.
 3. **Artists.** Each credited artist resolved separately, to an MBID, cached long-term.
 4. **Cover detection.** The recording's work relationship and the work's earliest recording by a different artist give `original_song`.
-5. **Wikipedia identity.** MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. Every Wikipedia result found by name, matched by MusicBrainz or not, is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. This is the check that rejects the wrong Reem.
+5. **Wikipedia identity.** With a MusicBrainz match: MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. For an article found by name: the article's own Wikidata item (its `wikibase_item`). Either way, the article is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. This is the check that rejects the wrong Reem.
 
 Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's known cases.
 
@@ -222,7 +222,7 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
 
 ### Genre labels (`:core`)
 
-The simulator's vocabulary and hues, moved to a data file in `:core`, applied to the union of Last.fm and MusicBrainz tags (R6).
+The simulator's vocabulary and hues, moved to a data file in `:core`, applied to Last.fm tags, and to MusicBrainz tags as well subject to D12 (R6).
 
 ### Cache and history (`:store`)
 
@@ -252,7 +252,7 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 - Compose, Material 3, one activity, Navigation Compose.
 - Dynamic color from the album-art bitmap with material-color-utilities.
 - The detail content is one composable, mounted as a page or as an expandable box according to the layout setting.
-- No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a `content://` URI read through the `ContentResolver`; an `http` URI would go through `:net`. Which players do which is a Phase 0 measurement.
+- No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a URI. A `content://` URI is read through the `ContentResolver` only if the player grants read access, which is not guaranteed (otherwise `SecurityException`, and no art); an `http` URI is fetched by a small art fetcher in `:sources`, since `:app` may not reach `:net`. Which players do which, and whether the grant holds, are Phase 0 measurements.
 
 ### Diagnostics
 
@@ -319,6 +319,7 @@ The data sources carry their own terms, and every evidence line shows its source
 - **Unit tests** in `:core`: normalizer, scoring, genre vocabulary, evidence ids and fingerprint, grounding check, prompt builders against stored prompts.
 - **Adapter tests** against recorded HTTP responses. `:cli record` captures real responses for the fixture playlist into `fixtures/http/`; tests replay them through `MockEngine`. CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
+- **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.
 - **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write rule.
 - **Phase 0.5 gate** (from the design) is a `:cli` run with assertions: zero `unknown` citations, uncited under 5 percent, every listed collision rejected or correctly resolved.
 - **UI**: Compose previews for every state; screenshot tests once the UI settles (Phase 1).
@@ -360,7 +361,7 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1, D4, D6,
 | D9 | Retrieval cache lifetime per source? | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day; tuned later |
 | D10 | `minSdk`? | Nothing used forces it: the media-session APIs date from API 21 and AES-GCM Keystore keys from 23. It is reach against the number of OS versions to test. **26** (Android 8): more phones, and still above the Keystore floor; 29 would drop three versions of behaviour to test at the cost of reach |
 | D11 | The first web search provider (an open question in the design)? | Defer to Phase 0.5; the adapter interface does not depend on it |
-| D12 | Use MusicBrainz tags and genres (R6), which are CC BY-NC-SA? | Probably yes: Sleevesight is free and non-commercial, and the NC and SA terms bind the data, not the app's code. Confirm before Phase 0.5 relies on them, and show the attribution |
+| D12 | Use MusicBrainz tags and genres (R6), which are CC BY-NC-SA? | Probably yes: Sleevesight is free and non-commercial, and the NC and SA terms bind the data, not the app's code. To confirm before Phase 0.5 relies on them: that sending the tags in prompts to commercial AI providers, on the user's key, is within the NC term. Show the attribution |
 
 ### Follow-ups outside this document
 
