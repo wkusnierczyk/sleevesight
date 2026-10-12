@@ -13,3 +13,5 @@ ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle:ktlint-gradle", versio
 
 androidx-activity = { module = "androidx.activity:activity", version.ref = "activity" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+# JUnit 4 binding for Android unit tests, whose runner is JUnit 4.
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
