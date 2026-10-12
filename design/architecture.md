@@ -380,7 +380,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions
 
-Each question was put with a recommendation; ✅ marks it decided by the owner (all of D1 to D12, on 2026-10-12). The *Decision* column records the decision as made. Where the owner changed the recommendation, the row has the owner's version: D5 (three options instead of one rule), D6 and D9 (user settings), D12 (judged in the pilot, with the licence a separate question). The decisions move to the design's Decisions table after this document lands.
+Each question was put with a recommendation; ✅ marks it decided by the owner (all of D1 to D12, on 2026-10-12). The *Decision* column records the decision as made. Where the decision differs from the first recommendation, the row has the decision as made: D2 (kept Multiplatform-ready, as iOS may follow), D5 (three options instead of one rule), D6 and D9 (user settings), D8 (HTTPS through a reverse proxy rather than cleartext), D12 (judged in the pilot, with the licence a separate question). The decisions move to the design's Decisions table after this document lands.
 
 | # | Question | Decision |
 |---|---|---|
@@ -400,4 +400,4 @@ Each question was put with a recommendation; ✅ marks it decided by the owner (
 ### Follow-ups outside this document
 
 - Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10).
-- `design.md`: the decisions above (D1 to D12) into its *Decisions* table; its *Web search provider* open question now points to Phase 0.5 (D11), while *Release date semantics* and *Per-player behavior* stay open. For D5: the *Settings* table, where *Write insights automatically* replaces "write automatically on every track" under the kept *Write insights* switch; the last bullet of *Caching and offline*; and the "Auto-write off by default" row of *Decisions*.
+- `design.md`: the decisions above (D1 to D12) into its *Decisions* table; its *Web search provider* open question now points to Phase 0.5 (D11), while the others stay open. For D5: the *Settings* table, where *Write insights automatically* replaces "write automatically on every track" under the kept *Write insights* switch; the last bullet of *Caching and offline*; and the "Auto-write off by default" row of *Decisions*.
