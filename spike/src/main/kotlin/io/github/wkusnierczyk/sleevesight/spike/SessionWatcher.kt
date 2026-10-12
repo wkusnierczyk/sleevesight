@@ -36,26 +36,31 @@ object SessionWatcher {
 
         /**
          * The same track, perhaps described more fully: the media id decides when both have one;
-         * otherwise title and artist, and the length only when both know it (some players send 0
-         * first and fill it in later).
+         * otherwise title, artist and length, each compared only when both sides know it (players
+         * may send a field later, the length as 0 first).
          */
         fun isSameAs(other: Track) =
             if (mediaId != null && other.mediaId != null) {
                 mediaId == other.mediaId
             } else {
-                title == other.title &&
-                    artist == other.artist &&
+                agree(title, other.title) &&
+                    agree(artist, other.artist) &&
                     (duration <= 0 || other.duration <= 0 || duration == other.duration)
             }
 
-        /** This track with any field [newer] knows and this one does not yet. */
+        /** This track as [newer] describes it, keeping what [newer] leaves out. */
         fun completedBy(newer: Track) =
             Track(
-                mediaId ?: newer.mediaId,
-                title ?: newer.title,
-                artist ?: newer.artist,
-                if (duration > 0) duration else newer.duration,
+                newer.mediaId ?: mediaId,
+                newer.title ?: title,
+                newer.artist ?: artist,
+                if (newer.duration > 0) newer.duration else duration,
             )
+
+        private fun agree(
+            a: String?,
+            b: String?,
+        ) = a == null || b == null || a == b
 
         fun json(): JSONObject =
             JSONObject()
@@ -167,6 +172,16 @@ object SessionWatcher {
         if (track.isEmpty) {
             // Cleared between tracks: the change is measured when the next track arrives.
             log(entry, "metadata_cleared", JSONObject().put("metadata", Describe.metadata(metadata)))
+            return
+        }
+        if (entry.track.isEmpty) {
+            // The session started without metadata: the first track is set, not changed to.
+            entry.track = track
+            log(
+                entry,
+                "metadata_set",
+                JSONObject().put("track", track.json()).put("metadata", Describe.metadata(metadata)),
+            )
             return
         }
         if (track.isSameAs(entry.track)) {

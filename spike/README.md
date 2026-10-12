@@ -20,7 +20,7 @@ Then open **Sleevesight probe**, tap **Notification access**, and switch it on. 
 
 Each step leaves its trace in the log; the screen shows the latest lines.
 
-1. **Metadata.** Play a few tracks in Spotify, then in YouTube Music and a podcast app. Each `session_added` and `track_changed` line lists every metadata key the player sends, including `android.media.metadata.MEDIA_ID`; `metadata_updated` lines are updates to the same track, such as art or the length arriving later, and `metadata_cleared` lines are empty metadata between tracks.
+1. **Metadata.** Play a few tracks in Spotify, then in YouTube Music and a podcast app. Each `session_added` and `track_changed` line lists every metadata key the player sends, including `android.media.metadata.MEDIA_ID`; `metadata_updated` lines are updates to the same track, such as art or the length arriving later, `metadata_cleared` lines are empty metadata between tracks, and `metadata_set` is the first track of a session that started without one.
 2. **Queue.** Play a playlist in Spotify. `session_added` and `queue_changed` show whether `getQueue()` and `getQueueTitle()` are published.
 3. **Transport.** Use **Prev**, **Play**, **Pause** and **Next** under each player. `probe_command` lines record the command; the following `playback_state` lines show whether it worked and which actions the player advertises.
 4. **Opening the player.** Tap **Open player** (the session activity), **Open track** (a `spotify:track:` URI, if the media id is one) and **Search** (`spotify:search:`). `open_session_activity` and `deep_link` lines record what resolved and what was sent; **note which screen actually opened**, since Android can block a launch without telling the app.
