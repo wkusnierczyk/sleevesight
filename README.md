@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** design phase. There is no code yet. The design is in [design/design.md](design/design.md), and an interactive [prototype](https://claude.ai/artifact/QNA8y4AvoGp4QjHtp1kZsL) simulates the full flow.
+> **Status:** design phase. There is no code yet. The design is in [design/design.md](design/design.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow.
 
 ## What it does
 
