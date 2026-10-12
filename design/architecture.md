@@ -457,4 +457,4 @@ Each question was put with a recommendation; ✅ marks it decided by the owner (
 
 ### Follow-ups outside this document
 
-- Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10; [#14](https://github.com/wkusnierczyk/sleevesight/issues/14)).
+- ✅ The artifact runtime `<script>` is removed from `design/simulator.html`, and the simulator links point to its GitHub Pages copy, which shows evidence-only cards (R10; [#14](https://github.com/wkusnierczyk/sleevesight/issues/14)).

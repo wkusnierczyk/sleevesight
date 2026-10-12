@@ -6,7 +6,7 @@
 **Platform:** Android (Kotlin, Jetpack Compose, Material 3)  
 **License:** [GPL-3.0](../LICENSE)  
 **Repository:** [wkusnierczyk/sleevesight](https://github.com/wkusnierczyk/sleevesight)  
-**Prototype:** [Sleevesight simulator](https://claude.ai/artifact/QNA8y4AvoGp4QjHtp1kZsL)
+**Prototype:** [Sleevesight simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html)
 
 Sleevesight is an open-source Android app that reads what a music player is playing, through Android's media session metadata, and shows grounded insights about the song, its artists, its album and its genres. It never touches the audio stream. Every insight is written by an AI service of the user's choice, from evidence retrieved from sources the user switched on, and every claim points back to its source.
 
