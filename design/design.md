@@ -4,7 +4,7 @@
 **Date:** 2026-10-12  
 **Owner:** Wacek  
 **Platform:** Android (Kotlin, Jetpack Compose, Material 3)  
-**License:** open source (to be chosen)  
+**License:** [GPL-3.0](../LICENSE)  
 **Repository:** [wkusnierczyk/sleevesight](https://github.com/wkusnierczyk/sleevesight)  
 **Prototype:** [Sleevesight simulator](https://claude.ai/artifact/QNA8y4AvoGp4QjHtp1kZsL)
 

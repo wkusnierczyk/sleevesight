@@ -50,4 +50,4 @@ Android only. iOS does not let one app read what another app is playing.
 
 ## License
 
-To be chosen.
+[GPL-3.0](LICENSE).
