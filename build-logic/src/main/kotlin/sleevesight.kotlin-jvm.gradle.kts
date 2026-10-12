@@ -4,6 +4,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckModuleGraph
+import sleevesight.checks.networkModules
 
 plugins {
     kotlin("jvm")
@@ -31,6 +32,8 @@ tasks.withType<Test>().configureEach {
 }
 
 val runtimeRoot = configurations.named("runtimeClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
+val compileRoot = configurations.named("compileClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
+val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.properties")
 
 tasks.register<CheckDependencies>("checkDependencies") {
     group = "verification"
@@ -41,8 +44,13 @@ tasks.register<CheckDependencies>("checkDependencies") {
 
 tasks.register<CheckModuleGraph>("checkModuleGraph") {
     group = "verification"
-    description = "Fails on direct dependencies the module graph does not allow."
-    rules = rootProject.layout.projectDirectory.file("config/module-graph.properties")
+    description = "Fails on dependencies the module graph does not allow."
+    rules = graphRules
     modulePath = project.path
-    directDependencies = CheckModuleGraph.directOf(runtimeRoot)
+    projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot)
+    modulesOutsideNetwork =
+        CheckModuleGraph.modulesOutsideNetworkOf(runtimeRoot, networkModules(graphRules.asFile))
+            .zip(CheckModuleGraph.modulesOutsideNetworkOf(compileRoot, networkModules(graphRules.asFile))) { a, b ->
+                (a + b).distinct().sorted()
+            }
 }

@@ -1,6 +1,7 @@
 # Multiplatform readiness for the pipeline modules (architecture, Multiplatform readiness, D2).
 # None of these is a complete check: only compiling a non-JVM target is. ForbiddenMethodCall
-# needs type resolution (the detektMain and detektTest tasks).
+# needs type resolution (the detektMain and detektTest tasks). The imports list replaces the one
+# in detekt.yml, so it repeats the network rules.
 style:
   ForbiddenImport:
     active: true
@@ -9,6 +10,10 @@ style:
         reason: 'JVM-only; the pipeline modules stay Multiplatform-ready (D2).'
       - value: 'javax.*'
         reason: 'JVM-only; the pipeline modules stay Multiplatform-ready (D2).'
+      - value: 'okhttp3.*'
+        reason: 'Network access goes through :net.'
+      - value: 'io.ktor.client.*'
+        reason: 'Network access goes through :net.'
   ForbiddenMethodCall:
     active: true
     methods:

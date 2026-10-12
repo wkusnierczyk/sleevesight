@@ -12,15 +12,19 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.util.Properties
 
 /**
- * Enforces the module boundaries of the architecture: each module may depend directly only on
- * the modules listed for it in `config/module-graph.properties`, and only the modules listed
- * under `network-modules` may depend directly on an HTTP client (`network-groups`).
+ * Enforces the module boundaries of the architecture, from `config/module-graph.properties`:
+ *
+ * - each module may depend directly only on the modules listed for it, on any classpath;
+ * - an HTTP client (`network-groups`) may be reached only through a module in `network-modules`:
+ *   a client reachable from this module on a path that avoids those modules fails the check,
+ *   whether it is a direct dependency or arrives through a third-party library.
  */
 abstract class CheckModuleGraph : DefaultTask() {
     @get:InputFile
@@ -30,55 +34,81 @@ abstract class CheckModuleGraph : DefaultTask() {
     @get:Input
     abstract val modulePath: Property<String>
 
-    /** Direct dependencies, as `project::path` or `module:group:name`. */
+    /** Direct project dependencies on the runtime and compile classpaths, as project paths. */
     @get:Input
-    abstract val directDependencies: ListProperty<String>
+    abstract val projectDependencies: ListProperty<String>
+
+    /** External modules reachable without passing through a network module, as `group:name`. */
+    @get:Input
+    abstract val modulesOutsideNetwork: ListProperty<String>
+
+    /** Written on success, so the check is up to date until its inputs change. */
+    @get:OutputFile
+    abstract val marker: RegularFileProperty
+
+    init {
+        marker.convention(project.layout.buildDirectory.file("checks/$name.ok"))
+    }
 
     @TaskAction
     fun check() {
         val props = Properties().apply { rules.get().asFile.inputStream().use { load(it) } }
+        fun list(key: String) = props.getProperty(key, "").split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
         val name = modulePath.get().removePrefix(":")
-        val allowedProjects =
-            props.getProperty(name)
-                ?: throw GradleException("Module :$name has no entry in ${rules.get().asFile.name}.")
-        val allowed = allowedProjects.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val networkGroups = props.getProperty("network-groups", "").split(',').map { it.trim() }.filter { it.isNotEmpty() }
-        val networkModules = props.getProperty("network-modules", "").split(',').map { it.trim() }.toSet()
+        if (props.getProperty(name) == null) {
+            throw GradleException("Module :$name has no entry in ${rules.get().asFile.name}.")
+        }
+        val allowed = list(name).toSet()
+        val networkGroups = list("network-groups")
+        val networkModules = list("network-modules").toSet()
 
         val problems = mutableListOf<String>()
-        directDependencies.get().forEach { dep ->
-            when {
-                dep.startsWith("project::") -> {
-                    val target = dep.removePrefix("project::").removePrefix(":")
-                    if (target !in allowed) problems += ":$name may not depend on :$target"
+        projectDependencies.get().map { it.removePrefix(":") }.forEach { target ->
+            if (target !in allowed) problems += ":$name may not depend on :$target"
+        }
+        if (name !in networkModules) {
+            modulesOutsideNetwork.get()
+                .filter { module ->
+                    val group = module.substringBefore(':')
+                    networkGroups.any { group == it || group.startsWith("$it.") }
                 }
-                dep.startsWith("module:") -> {
-                    val group = dep.removePrefix("module:").substringBefore(':')
-                    val isNetwork = networkGroups.any { group == it || group.startsWith("$it.") }
-                    if (isNetwork && name !in networkModules) {
-                        problems += ":$name may not depend on an HTTP client (${dep.removePrefix("module:")})"
-                    }
-                }
-            }
+                .forEach { problems += ":$name reaches an HTTP client outside ${networkModules.joinToString { ":$it" }}: $it" }
         }
         if (problems.isNotEmpty()) {
             throw GradleException("Module graph violations:\n" + problems.joinToString("\n") { "  $it" })
         }
+        marker.get().asFile.writeText("ok\n")
     }
 
     companion object {
-        fun directOf(root: Provider<ResolvedComponentResult>): Provider<List<String>> =
+        /** Direct project dependencies of each root, as project paths, without the root itself. */
+        fun projectDependenciesOf(vararg roots: Provider<ResolvedComponentResult>): Provider<List<String>> =
+            roots.map { root ->
+                root.map { component ->
+                    val self = (component.id as? ProjectComponentIdentifier)?.projectPath
+                    component.dependencies
+                        .filterIsInstance<ResolvedDependencyResult>()
+                        .mapNotNull { (it.selected.id as? ProjectComponentIdentifier)?.projectPath }
+                        .filterNot { it == self }
+                }
+            }.reduce { a, b -> a.zip(b) { x, y -> x + y } }
+                .map { it.distinct().sorted() }
+
+        /**
+         * External modules reachable from [root] without passing through one of the
+         * [networkModules] (project paths), as `group:name`.
+         */
+        fun modulesOutsideNetworkOf(
+            root: Provider<ResolvedComponentResult>,
+            networkModules: Set<String>,
+        ): Provider<List<String>> =
             root.map { component ->
-                component.dependencies
-                    .filterIsInstance<ResolvedDependencyResult>()
-                    .mapNotNull { dep ->
-                        when (val id = dep.selected.id) {
-                            is ProjectComponentIdentifier -> "project::${id.projectPath}"
-                            is ModuleComponentIdentifier -> "module:${id.group}:${id.module}"
-                            else -> null
-                        }
-                    }
-                    .filterNot { it == "project::${(component.id as? ProjectComponentIdentifier)?.projectPath}" }
+                CheckDependencies.reachable(component) { node ->
+                    (node.id as? ProjectComponentIdentifier)?.projectPath in networkModules
+                }
+                    .mapNotNull { it.id as? ModuleComponentIdentifier }
+                    .map { "${it.group}:${it.module}" }
                     .distinct()
                     .sorted()
             }

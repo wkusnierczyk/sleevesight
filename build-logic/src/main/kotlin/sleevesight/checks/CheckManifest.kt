@@ -6,6 +6,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
@@ -28,6 +29,14 @@ abstract class CheckManifest : DefaultTask() {
     @get:Input
     abstract val applicationId: Property<String>
 
+    /** Written on success, so the check is up to date until its inputs change. */
+    @get:OutputFile
+    abstract val marker: RegularFileProperty
+
+    init {
+        marker.convention(project.layout.buildDirectory.file("checks/$name.ok"))
+    }
+
     @TaskAction
     fun check() {
         val doc =
@@ -36,9 +45,11 @@ abstract class CheckManifest : DefaultTask() {
                 .newDocumentBuilder()
                 .parse(mergedManifest.get().asFile)
         val requested =
-            doc.getElementsByTagName("uses-permission").let { nodes ->
+            PERMISSION_TAGS.flatMap { tag ->
+                val nodes = doc.getElementsByTagName(tag)
                 (0 until nodes.length).map { i ->
-                    nodes.item(i).attributes.getNamedItemNS(ANDROID_NS, "name").nodeValue
+                    nodes.item(i).attributes.getNamedItemNS(ANDROID_NS, "name")?.nodeValue
+                        ?: throw GradleException("A <$tag> in the merged manifest has no android:name.")
                 }
             }
         val allowed =
@@ -55,9 +66,11 @@ abstract class CheckManifest : DefaultTask() {
                     "\nRemove them with tools:node=\"remove\", or add them after review.",
             )
         }
+        marker.get().asFile.writeText("ok\n")
     }
 
     private companion object {
         const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
+        val PERMISSION_TAGS = listOf("uses-permission", "uses-permission-sdk-23")
     }
 }

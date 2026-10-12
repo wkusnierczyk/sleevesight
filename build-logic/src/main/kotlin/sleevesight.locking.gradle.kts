@@ -1,6 +1,15 @@
 // Dependency locking for the classpaths that ship. `./gradlew resolveAndLockAll --write-locks`
 // rewrites the lockfiles; `checkDependencies` then reads the same resolution.
-val lockedConfigurations = setOf("runtimeClasspath", "releaseRuntimeClasspath", "compileClasspath", "releaseCompileClasspath")
+val lockedConfigurations =
+    setOf(
+        "runtimeClasspath",
+        "compileClasspath",
+        "releaseRuntimeClasspath",
+        "releaseCompileClasspath",
+        // The debug APK is the CI artifact installed on phones.
+        "debugRuntimeClasspath",
+        "debugCompileClasspath",
+    )
 
 configurations.matching { it.name in lockedConfigurations }.configureEach {
     resolutionStrategy.activateDependencyLocking()
