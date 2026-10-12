@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <title>Sleevesight Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -310,10 +310,12 @@ button.schip:focus-visible{outline:2px solid var(--s-pri);outline-offset:2px}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 14px 0;font-size:11.5px;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
+</head>
+<body>
 
 <div class="masthead">
   <h1>Sleevesight <span>simulator</span></h1>
-  <p>The left pane is the outside world: a Spotify session publishing what Android's MediaSession would. The phone runs the app, which can also control the player. The log shows each step. Lookups are snapshots retrieved on 12 Oct 2026, covers are generated stand-ins for the real album art, and the Spotify screen is simulated. Insights are written live by the AI service chosen in Settings (in this simulation, always Claude through your account), from the retrieved evidence only.</p>
+  <p>The left pane is the outside world: a Spotify session publishing what Android's MediaSession would. The phone runs the app, which can also control the player. The log shows each step. Lookups are snapshots retrieved on 12 Oct 2026, covers are generated stand-ins for the real album art, and the Spotify screen is simulated. Insights are written live by the AI service chosen in Settings, from the retrieved evidence only. In this simulation that is Claude through your account, and only when the page runs as a claude.ai artifact; elsewhere the insight cards show the first facts found, and the genre and sounds-like cards stay unwritten.</p>
 </div>
 
 <div class="grid">
@@ -417,7 +419,7 @@ button.schip:focus-visible{outline:2px solid var(--s-pri);outline-offset:2px}
             <label class="field" for="aiProv"><span>Provider</span><select id="aiProv"><option value="anthropic">Anthropic · Claude</option><option value="openai">OpenAI · ChatGPT</option><option value="google">Google · Gemini</option><option value="local">Local model (Ollama)</option></select></label>
             <label class="field" for="aiModel"><span>Model</span><select id="aiModel"></select></label>
             <label class="field" for="aiKey"><span>API key</span><input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your key"></label>
-            <p class="note" id="aiNote" style="margin-top:4px">Simulation: every call goes through your own Claude account, so no key is needed and nothing typed here is kept.</p>
+            <p class="note" id="aiNote" style="margin-top:4px">Simulation: when this page runs as a claude.ai artifact, every call goes through your own Claude account, so no key is needed; elsewhere no AI service is available. Nothing typed here is kept.</p>
             <div class="setgroup">Spotify account<small>Optional. Without it, Sleevesight only knows the tracks it has seen play.</small></div>
             <label class="toggle" for="t-spot"><span class="picon">Sp</span><span><b>Connect Spotify</b><span class="d">Reads which playlist or album is playing and its full track list through Spotify's Web API. Needs Spotify Premium and your own Spotify developer app.</span></span><input type="checkbox" class="switch" id="t-spot"></label>
             <div class="setgroup">Players to follow<small>Sleevesight reacts to these apps' media sessions.</small></div>
@@ -1203,7 +1205,7 @@ $("t-synth").onchange = e => { settings.synth = e.target.checked; app.dirty = tr
 function fillModels() {
   $("aiModel").innerHTML = PROVIDERS[ai.provider].models.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   ai.model = PROVIDERS[ai.provider].models[0][0]; $("aiModel").value = ai.model;
-  $("aiNote").textContent = ai.provider === "anthropic" ? "Simulation: every call goes through your own Claude account, so no key is needed and nothing typed here is kept."
+  $("aiNote").textContent = ai.provider === "anthropic" ? "Simulation: when this page runs as a claude.ai artifact, every call goes through your own Claude account, so no key is needed; elsewhere no AI service is available. Nothing typed here is kept."
     : "Simulation: only Claude can be called here, so insights will show what would be sent instead. Nothing typed here is kept.";
 }
 fillModels();
