@@ -5,7 +5,7 @@
 **Builds on:** [design.md](design.md) and the [simulator](simulator.html)  
 **Tracking:** [#3](https://github.com/wkusnierczyk/sleevesight/issues/3)
 
-This document turns the design into a buildable structure: modules and their boundaries, the runtime data flow, the technology choices, how the structural constraints are enforced, testing and CI. It starts with a review of the design and the simulator, because several findings change the architecture. The open decisions are collected at the end, each with a recommendation.
+This document turns the design into a buildable structure: modules and their boundaries, the runtime data flow, the technology choices, how the structural constraints are enforced, testing and CI. It starts with a review of the design and the simulator, because several findings change the architecture. The decisions it needed are collected at the end, as made by the owner.
 
 ## Contents
 
@@ -19,7 +19,7 @@ This document turns the design into a buildable structure: modules and their bou
 - [Testing](#testing)
 - [CI](#ci)
 - [Phase mapping](#phase-mapping)
-- [Decisions to make](#decisions-to-make)
+- [Decisions](#decisions)
 
 ## Review of the design
 
@@ -60,7 +60,7 @@ The components to build are the ones the design calls the hard ones, so the arch
 | R8 | **Sideloaded installs cannot easily grant notification access.** Since Android 13, "restricted settings" block notification-listener access for apps installed from outside an app store, until the user unlocks it in the app's info screen. | Onboarding detects the block and explains the unlock. The distribution channel matters; see D7. |
 | R9 | **A local model through Ollama is served over plain HTTP by default**, which Android blocks, and an arbitrary LAN address cannot be allowlisted in a network security config. A home HTTPS proxy often uses a self-signed or private-CA certificate, which Android does not trust either. | How the app reaches Ollama, and which certificates it accepts; see D8. |
 | R10 | **`simulator.html` carries the artifact runtime.** Line 1 is a `<script>` tag loading the claude.ai artifact frame runtime from `claudeusercontent.com`, with a signed URL, saved from the rendered page. Outside claude.ai `window.claude` is absent, so the README's GitHub Pages link would show the evidence-only fallback, never live synthesis; and Pages does not serve private repositories on a free plan. | Not architecture, but recorded here; a separate cleanup issue. |
-| R11 | **`design.md` still says "License: open source (to be chosen)"**; it is GPL-3.0 since #2. | A separate docs issue. |
+| R11 | **`design.md` still said "License: open source (to be chosen)"**; it is GPL-3.0 since #2. | Fixed by #6, with the README. |
 
 ## Architectural drivers
 
@@ -378,11 +378,11 @@ A release workflow (signed APK) comes with the first release; the signing key go
 | 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff | |
 | 3. Context and reach | Spotify Web API (PKCE), more players, Ollama, Discogs, further AI providers | |
 
-## Decisions to make
+## Decisions
 
-Each with a recommendation. ✅ marks a decision the owner has made (D1 to D12 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
+Each question was put with a recommendation; ✅ marks it decided by the owner (all of D1 to D12, on 2026-10-12). The *Decision* column records the decision as made. Where the owner changed the recommendation, the row has the owner's version: D5 (three options instead of one rule), D6 and D9 (user settings), D12 (judged in the pilot, with the licence a separate question). The decisions move to the design's Decisions table after this document lands.
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 |---|---|---|
 | D1 ✅ | How are evidence lines made from prose sources (R1)? (a) verbatim selected sentences, attributed; (b) a model extraction pass; (c) structured data only | **(a)**, with (c) wherever structured data exists. Deterministic and checkable, no extra paid call, and the model still never decides what is true. Change the design's "never copied prose" to "short attributed quotes, never whole passages" |
 | D2 ✅ | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? See [considerations](considerations.md#d2-plain-kotlin-or-kotlin-multiplatform-for-the-pipeline) | **Plain JVM, kept Multiplatform-ready.** The CLI and Android both run JVM bytecode, and Multiplatform buys nothing until there is a non-JVM target. iOS may follow once the Android prototype is good, so the pipeline modules follow the rules under [Multiplatform readiness](#multiplatform-readiness), which keep a later switch to about a week. **Decided 2026-10-12** |
@@ -400,4 +400,4 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1 to D12 o
 ### Follow-ups outside this document
 
 - Remove the artifact runtime `<script>` from `design/simulator.html`, and decide where the simulator link should point (R10).
-- `design.md`: the license line (R11), and the decisions above once made. For D5: the *Settings* table, where *Write insights automatically* replaces "write automatically on every track" under the kept *Write insights* switch; the last bullet of *Caching and offline*; and the "Auto-write off by default" row of *Decisions*.
+- `design.md`: the decisions above (D1 to D12) into its *Decisions* table; its *Web search provider* open question now points to Phase 0.5 (D11), while *Release date semantics* and *Per-player behavior* stay open. For D5: the *Settings* table, where *Write insights automatically* replaces "write automatically on every track" under the kept *Write insights* switch; the last bullet of *Caching and offline*; and the "Auto-write off by default" row of *Decisions*.
