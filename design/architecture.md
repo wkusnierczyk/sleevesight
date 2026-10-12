@@ -324,17 +324,17 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 ## Decisions to make
 
-Each with a recommendation. Decided ones move to the design's Decisions table.
+Each with a recommendation. ✅ marks a decision the owner has made (D1, D4, D6, D7 on 2026-10-12, as recommended unless noted); decided ones move to the design's Decisions table when this document lands.
 
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | How are evidence lines made from prose sources (R1)? (a) verbatim selected sentences, attributed; (b) a model extraction pass; (c) structured data only | **(a)**, with (c) wherever structured data exists. Deterministic and checkable, no extra paid call, and the model still never decides what is true. Change the design's "never copied prose" to "short attributed quotes, never whole passages" |
+| D1 ✅ | How are evidence lines made from prose sources (R1)? (a) verbatim selected sentences, attributed; (b) a model extraction pass; (c) structured data only | **(a)**, with (c) wherever structured data exists. Deterministic and checkable, no extra paid call, and the model still never decides what is true. Change the design's "never copied prose" to "short attributed quotes, never whole passages" |
 | D2 | Where does the pipeline live: plain JVM modules, or Kotlin Multiplatform? | **Plain JVM.** The CLI and Android both run JVM bytecode; multiplatform buys nothing until there is a non-JVM target, and the design rules out iOS |
 | D3 | Vendor SDKs or thin HTTP clients for the AI providers? | **Thin clients**, for one dependency boundary and a small allowlist |
-| D4 | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both |
+| D4 ✅ | Wait for MusicBrainz before Wikipedia and Last.fm, or query them by name in parallel and verify afterwards (R3)? | **Parallel by name, verified afterwards** through Wikidata (the check in step 5), so a slow MusicBrainz delays only its own lines. Phase 0.5 measures both. **Decided 2026-10-12**; the calls are to be profiled once the adapters exist |
 | D5 | How is a user skip in the player told from a track ending (R5)? | Treat a change more than 10 s before the end as user-driven; measure in Phase 0 |
-| D6 | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume |
-| D7 | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait |
+| D6 ✅ | Run lookups while the app is not visible (R7)? | **No.** History always; retrieval and synthesis only while visible, and the visible track catches up on resume. **Decided 2026-10-12** as the default, possibly a user setting (*Look up in the background*, off) |
+| D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait |
 | D8 | Cleartext HTTP for Ollama (R9)? | Android's network security config cannot name an arbitrary LAN host, so the platform guard has to be relaxed (`cleartextTrafficPermitted`) and replaced by our own: `:net` refuses `http://` to any host but the Ollama address the user entered, with a test. Settings warns that this traffic is unencrypted. Phase 3; until then cleartext stays off |
 | D9 | Retrieval cache lifetime per source? | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day; tuned later |
 | D10 | `minSdk`? | **29** (Android 10): current Keystore and notification-access behaviour, and the large majority of phones in use |
