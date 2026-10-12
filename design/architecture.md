@@ -313,7 +313,7 @@ A user setting, *Prepare the next track*:
 
 - The default assumes listening rather than skipping, as D5's does; someone previewing a playlist turns it off.
 - It runs only while the app is visible, unless *Look up in the background* is on (D6).
-- No insight is prepared while *Write insights* is off, or before the user's first action after the app opens.
+- No insight is prepared while *Write insights* is off, or before the user's first action after the app opens; the evidence still is.
 - It writes the insight ahead only where *Write insights automatically* would write it when the track plays: under *On every track change*, and never under *Never*. Under *When I skip* a track reached by a natural end would not be written, so only its evidence is prepared.
 - A preparation for a track that no longer comes next (the queue reordered or shuffled) is cancelled; what it retrieved stays cached. The preparation runs in its own job beside the current track's, cancelled when the next item changes, and it never delays the current track: its requests share the per-host rate limiters, behind the current track's.
 - When the prepared track plays, the pipeline finds its retrieval and synthesis in the cache and renders at once. A prepared track is matched by its lookup key, as any cached track is.
