@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** design phase. There is no code yet. The design is in [design/design.md](design/design.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow.
+> **Status:** Phase 0, platform spike. The build and CI are in place; the app itself is not written yet. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow.
 
 ## What it does
 
@@ -47,6 +47,18 @@ Details and the reasoning behind each decision are in the [design document](desi
 ## Requirements
 
 Android only. iOS does not let one app read what another app is playing.
+
+## Building
+
+Requires JDK 17 or later and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
+
+```sh
+./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint
+./gradlew checkDependencies checkManifest checkModuleGraph   # the structural checks
+./gradlew :spike:assembleDebug                               # the Phase 0 probe APK
+```
+
+The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`.
 
 ## License
 

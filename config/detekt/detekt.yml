@@ -1,0 +1,4 @@
+# Additions to Detekt's default configuration, for every module.
+style:
+  MaxLineLength:
+    maxLineLength: 120

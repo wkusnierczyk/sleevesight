@@ -1,0 +1,12 @@
+# Groups allowed on the shipped runtime classpath of any module, with their licence.
+# A group matches itself and its subgroups (androidx matches androidx.core).
+# Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
+# (design, Structural constraints), and every licence GPL-3.0 compatible.
+#
+# group                    licence
+org.jetbrains.kotlin       Apache-2.0
+org.jetbrains.kotlinx      Apache-2.0
+org.jetbrains              Apache-2.0   # annotations
+androidx                   Apache-2.0
+com.google.guava           Apache-2.0   # listenablefuture, pulled in by androidx
+org.jspecify               Apache-2.0   # nullness annotations, pulled in by androidx

@@ -1,0 +1,5 @@
+# Permissions the merged release manifest may request (design, Structural constraints).
+# Anything else is removed with tools:node="remove" or added here after review.
+android.permission.INTERNET
+# Signature permission androidx.core adds for its own unexported receivers.
+${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
