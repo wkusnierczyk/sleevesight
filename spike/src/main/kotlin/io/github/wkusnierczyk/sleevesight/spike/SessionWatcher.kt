@@ -147,7 +147,7 @@ object SessionWatcher {
             }
         val metadata = controller.metadata
         entry = Watched(controller, callback, Track.of(metadata))
-        controller.playbackState?.let { entry.states.addLast(stateOf(it)) }
+        controller.playbackState?.let { entry.states.addLast(it.received()) }
         watched[controller.sessionToken] = entry
         controller.registerCallback(callback, handler)
         Describe.artUris(metadata).forEach { ArtProbe.check(it, controller.packageName, resolver) }
@@ -169,40 +169,34 @@ object SessionWatcher {
     ) {
         Describe.artUris(metadata).forEach { ArtProbe.check(it, entry.controller.packageName, resolver) }
         val track = Track.of(metadata)
-        if (track.isEmpty) {
+        val described = Describe.metadata(metadata)
+        when {
             // Cleared between tracks: the change is measured when the next track arrives.
-            log(entry, "metadata_cleared", JSONObject().put("metadata", Describe.metadata(metadata)))
-            return
-        }
-        if (entry.track.isEmpty) {
+            track.isEmpty -> log(entry, "metadata_cleared", JSONObject().put("metadata", described))
             // The session started without metadata: the first track is set, not changed to.
-            entry.track = track
-            log(
-                entry,
-                "metadata_set",
-                JSONObject().put("track", track.json()).put("metadata", Describe.metadata(metadata)),
-            )
-            return
-        }
-        if (track.isSameAs(entry.track)) {
+            entry.track.isEmpty -> {
+                entry.track = track
+                log(entry, "metadata_set", JSONObject().put("track", track.json()).put("metadata", described))
+            }
             // The same track updated (art or length arriving later, for example): not a track change.
-            entry.track = entry.track.completedBy(track)
-            log(
-                entry,
-                "metadata_updated",
-                JSONObject().put("track", entry.track.json()).put("metadata", Describe.metadata(metadata)),
-            )
-            return
+            track.isSameAs(entry.track) -> {
+                entry.track = entry.track.completedBy(track)
+                log(entry, "metadata_updated", JSONObject().put("track", entry.track.json()).put("metadata", described))
+            }
+            else -> trackChanged(entry, track, described)
         }
+    }
+
+    /** A different track: logs the D5 measurement and starts following the new track. */
+    private fun trackChanged(
+        entry: Watched,
+        track: Track,
+        described: JSONObject,
+    ) {
         val now = SystemClock.elapsedRealtime()
+        val states = entry.states.toList()
         val change = JSONObject().put("previous", entry.track.json()).put("next", track.json())
-        val estimate =
-            TrackChange.estimate(
-                entry.states.toList(),
-                now,
-                PlaybackState.STATE_PLAYING,
-                RECENT_STATES_WINDOW_MS,
-            )
+        val estimate = TrackChange.estimate(states, now, PlaybackState.STATE_PLAYING, RECENT_STATES_WINDOW_MS)
         estimate?.let {
             change
                 .put("previousPositionAtChange", it.position)
@@ -213,22 +207,20 @@ object SessionWatcher {
         change.put(
             "recentStates",
             JSONArray(
-                TrackChange.recent(entry.states.toList(), now, RECENT_STATES_WINDOW_MS).map { stateJson(it, now) },
+                TrackChange.recent(states, now, RECENT_STATES_WINDOW_MS).map {
+                    it.json(now)
+                },
             ),
         )
         entry.lastCommand?.takeIf { now - it.second <= RECENT_STATES_WINDOW_MS }?.let {
             change.put("probeCommand", it.first).put("probeCommandMsBefore", now - it.second)
         }
         // States from the reset on belong to the new track; the rest to the previous one.
-        val kept = estimate?.newTrackFrom?.let { entry.states.drop(it) }.orEmpty()
+        val kept = estimate?.newTrackFrom?.let { states.drop(it) }.orEmpty()
         entry.states.clear()
         entry.states.addAll(kept)
         entry.track = track
-        log(
-            entry,
-            "track_changed",
-            JSONObject().put("trackChange", change).put("metadata", Describe.metadata(metadata)),
-        )
+        log(entry, "track_changed", JSONObject().put("trackChange", change).put("metadata", described))
     }
 
     private fun stateChanged(
@@ -236,32 +228,11 @@ object SessionWatcher {
         state: PlaybackState?,
     ) {
         state?.let {
-            entry.states.addLast(stateOf(it))
+            entry.states.addLast(it.received())
             while (entry.states.size > STATES_KEPT) entry.states.removeFirst()
         }
         log(entry, "playback_state", JSONObject().put("playbackState", Describe.playbackState(state)))
     }
-
-    private fun stateOf(state: PlaybackState) =
-        TrackChange.State(
-            state.state,
-            state.position,
-            state.lastPositionUpdateTime,
-            state.playbackSpeed,
-            SystemClock.elapsedRealtime(),
-        )
-
-    /** Everything needed to recompute the estimate offline. */
-    private fun stateJson(
-        state: TrackChange.State,
-        now: Long,
-    ) = JSONObject()
-        .put("state", Describe.stateName(state.state))
-        .put("position", state.position)
-        .put("updateTime", state.updateTime)
-        .put("speed", state.speed.toDouble())
-        .put("receivedAt", state.receivedAt)
-        .put("msBeforeMetadata", now - state.receivedAt)
 
     private fun log(
         entry: Watched,
