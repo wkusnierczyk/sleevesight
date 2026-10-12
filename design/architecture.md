@@ -3,7 +3,7 @@
 **Status:** Proposal, for discussion  
 **Date:** 2026-10-12  
 **Builds on:** [design.md](design.md) and the [simulator](simulator.html)  
-**Tracking:** #3
+**Tracking:** [#3](https://github.com/wkusnierczyk/sleevesight/issues/3)
 
 This document turns the design into a buildable structure: modules and their boundaries, the runtime data flow, the technology choices, how the structural constraints are enforced, testing and CI. It starts with a review of the design and the simulator, because several findings change the architecture. The open decisions are collected at the end, each with a recommendation.
 
@@ -52,7 +52,7 @@ So the riskiest components, resolution and evidence extraction, have no working 
 | R3 | **The latency goal and the MusicBrainz rate limit conflict.** "Within a couple of seconds" against one request per second, with a recording search, a recording lookup and one lookup per credited artist before Wikipedia can be reached safely through Wikidata. A cold track with two artists is about four seconds of MusicBrainz alone. | Progressive rendering: player metadata immediately, each source's result as it lands, the insight last. Artist resolutions are cached long-term, so the cost falls on first encounters. A per-host rate limiter is part of the network layer. See D4. |
 | R4 | **The privacy statement is narrower than the traffic.** Matching by duration ("duration tolerance") sends the duration if it goes into the MusicBrainz query, and every request reveals the phone's IP address to that service. | Duration filtering happens on the phone, after the search. The first-run text names the IP address. |
 | R5 | **"User-driven changes write" needs a signal the session does not give.** A skip pressed inside Spotify and a track ending on its own both arrive as `onMetadataChanged`. Only Sleevesight's own transport buttons are known to be user actions. | A heuristic (the previous track's position at the change, against its duration) is a Phase 0 measurement. See D5. |
-| R6 | **Genre labels depend on one source with a user key.** Last.fm needs the user's own API key; with it missing or off, no track gets genres, and 30 of 78 tracks got none even with it. MusicBrainz has genre data per artist, release group and recording, keyless. | The genre vocabulary filter takes tags from MusicBrainz as well as Last.fm. Phase 0.5 measures the coverage gain. |
+| R6 | **Genre labels depend on one source with a user key.** Last.fm needs the user's own API key; with it missing or off, no track gets genres, and 30 of 78 tracks got none even with it. MusicBrainz has genre data per artist, release group and recording, keyless. | The genre vocabulary filter may take tags from MusicBrainz as well as Last.fm, once D12 settles their licence (MusicBrainz tags are CC BY-NC-SA). Phase 0.5 measures the coverage gain. |
 | R7 | **Background behaviour is unspecified.** The notification listener runs whenever access is granted, app open or not. The design does not say whether lookups run while nobody is looking. | Session history is recorded always, on the phone only. Retrieval and synthesis run only while the app is visible. See D6. |
 | R8 | **Sideloaded installs cannot easily grant notification access.** Since Android 13, "restricted settings" block notification-listener access for apps installed from outside an app store, until the user unlocks it in the app's info screen. | Onboarding detects the block and explains the unlock. The distribution channel matters; see D7. |
 | R9 | **A local model through Ollama needs cleartext HTTP to the LAN**, which Android blocks by default, and an arbitrary LAN address cannot be allowlisted in a network security config. | Decide how much cleartext to allow; see D8. |
@@ -95,11 +95,11 @@ flowchart TD
 |---|---|---|---|
 | `:core` | Kotlin JVM | Domain model; normalizer; resolution logic (scoring, matching, outcomes) over client interfaces; evidence model and ids; prompt builders; grounding check; genre vocabulary; the pipeline orchestration as coroutines and flows; the diagnostics event type | Kotlin stdlib, coroutines, kotlinx.serialization. **No network, no Android** |
 | `:net` | Kotlin JVM | The one HTTP client: Ktor with the OkHttp engine, per-host rate limiting, the User-Agent, timeouts, retries, and a logger that redacts keys and tokens | Ktor, OkHttp |
-| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), each implementing the `:core` client interfaces and `SourceAdapter`; evidence extraction per source | `:core`, `:net` |
+| `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), the Spotify Web API client (Phase 3), each implementing the `:core` client interfaces and `SourceAdapter`; evidence extraction per source | `:core`, `:net` |
 | `:ai` | Kotlin JVM | `AiProvider` implementations: Anthropic, OpenAI, Google, Ollama. Streaming, model listing, error mapping | `:core`, `:net` |
-| `:store` | Kotlin JVM, Android driver | Retrieval cache, synthesis cache, artist-resolution cache, session history. SQLDelight, with the SQLite JDBC driver for the CLI and the Android driver for the app | `:core`, SQLDelight |
-| `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | all but `:app` |
-| `:app` | Android application | Session layer (`NotificationListenerService`, `MediaSessionManager`); Compose UI; settings (DataStore); secrets (Keystore); wiring; diagnostics screen | all but `:cli` |
+| `:store` | Kotlin JVM | Retrieval cache, synthesis cache, artist-resolution cache, session history. SQLDelight schema and queries over an injected `SqlDriver`: `:cli` supplies the SQLite JDBC driver, `:app` the Android driver (an AAR, which a JVM module cannot depend on) | `:core`, SQLDelight runtime |
+| `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, SQLDelight JDBC driver |
+| `:app` | Android application | Session layer (`NotificationListenerService`, `MediaSessionManager`); Compose UI; settings (DataStore); secrets (Keystore); wiring; diagnostics screen | `:core`, `:sources`, `:ai`, `:store`, SQLDelight Android driver |
 | `:spike` | Android application | Phase 0 probe. Removed when the Phase 0 gate passes; history keeps it | Android only |
 
 The boundaries do the enforcing. `:core` cannot reach the network because it has no HTTP dependency; only `:sources` and `:ai` see `:net`; and `:app` gets network results only through them. The checks under [Structural constraints](#structural-constraints) make that a build failure rather than a convention.
@@ -120,8 +120,9 @@ sequenceDiagram
   S->>UI: NowPlaying (immediately)
   S->>Pl: NowPlaying (debounced 650 ms, latest wins)
   Pl->>Pl: normalize
-  Pl->>Src: resolve, then look up (parallel per source)
+  Pl->>Src: look up by name, all sources in parallel (MusicBrainz resolves alongside)
   Src-->>Pl: typed outcome + evidence, per source as it lands
+  Pl->>Pl: verify each match against the resolved ids (D4)
   Pl-->>UI: TrackState updates
   UI->>Pl: Write (tap, or auto-write rule)
   Pl->>AI: prompt (evidence only)
@@ -133,7 +134,7 @@ sequenceDiagram
 ### Concurrency
 
 - The session layer exposes `StateFlow<NowPlaying?>` and `StateFlow<PlaybackInfo>`.
-- The pipeline is `nowPlaying.debounce(650.ms).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`.
+- The pipeline is `nowPlaying.debounce(650.ms).map(::normalize).distinctUntilChangedBy { it.lookupKey }.collectLatest { run(it) }`: normalization comes first, because the lookup key belongs to `NormalizedTrack`, not to `NowPlaying`. `collectLatest` cancels a superseded track's retrieval and synthesis, the coroutine version of the simulator's `AbortController` and `app.gen`.
 - Sources run in parallel inside `run`, each in its own child coroutine, each publishing its result as soon as it lands.
 - Detail insights (song, artist, album, genre, sounds-like) are separate on-demand jobs, scoped to the screen or box that asked, cancelled when it closes.
 - Playback state (play, pause, seek, progress) never enters the pipeline.
@@ -163,6 +164,8 @@ data class TrackState(
 - Transport controls are offered only when `PlaybackState.actions` advertises them.
 - Handoff: `sessionActivity` for the player's own screen; `spotify:` URIs when an id is known; `spotify:search:` otherwise, logged as a fallback.
 - Process death: the service reconnects on rebind; the repository rebuilds from `getActiveSessions` on start.
+- Queue: when a player publishes `getQueue()` and `getQueueTitle()`, the track list uses it; whether Spotify does is a Phase 0 measurement. Spotify's Device Broadcast intents are not adopted unless Phase 0 shows the session misses something they carry.
+- Players that send only a title still run the pipeline; resolution is then mostly `none`, and how much of the UI to hide stays the design's open question on per-player behaviour.
 - Session history (the default track list) is written to `:store` locally, whether or not the app is visible.
 
 ### Normalizer (`:core`)
@@ -171,19 +174,19 @@ A port of the simulator's `normalize`, unchanged in behaviour, with the design's
 
 ### Entity resolution (`:core` logic, `:sources` clients)
 
-`:core` holds the scoring and decisions; `:sources` provides `MusicBrainzClient` and `WikidataClient`.
+`:core` holds the scoring and decisions; `:sources` provides `MusicBrainzClient` and `WikidataClient`. Per D4, resolution runs alongside the lookups by name rather than before them: each source's match is verified against the resolved ids when they land, and stays unverified (shown, not cited) if MusicBrainz finds nothing.
 
 1. **Recording.** Search MusicBrainz by normalized title and credited artists. Score candidates on title similarity, artist-credit overlap, and duration within a tolerance (computed locally, R4). Accept above a threshold, otherwise `none`; a near miss with a conflicting artist is `rejected(reason)`.
-2. **First release.** From the accepted recording's releases, take the earliest release-group first-release date. The release the player reports stays separate (`P` evidence).
+2. **First release.** From the accepted recording's releases, take the earliest release-group first-release date. The release the player reports stays separate (`P` evidence). Both are kept; which one the UI shows is still the design's open question on release-date semantics.
 3. **Artists.** Each credited artist resolved separately, to an MBID, cached long-term.
 4. **Cover detection.** The recording's work relationship and the work's earliest recording by a different artist give `original_song`.
-5. **Wikipedia identity.** MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. With no MusicBrainz match, a Wikipedia search result is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. This is the check that rejects the wrong Reem.
+5. **Wikipedia identity.** MBID to Wikidata through the MusicBrainz URL relationship, then the English Wikipedia sitelink. Every Wikipedia result found by name, matched by MusicBrainz or not, is accepted only if Wikidata confirms it: instance of song, single or musical work, with a performer (P175) matching a credited artist; otherwise `rejected`. This is the check that rejects the wrong Reem.
 
 Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's known cases.
 
 ### Source adapters (`:sources`)
 
-`SourceAdapter` as in the design, returning `SourceResult(outcome: Outcome, evidence: List<EvidenceDraft>, latency)`. Evidence extraction per source, pending D1:
+`SourceAdapter` as in the design, with the input D4 needs: `lookup(track: NormalizedTrack, resolution: Deferred<Resolution>)`, so an adapter starts by name at once and awaits the resolved ids only to verify. It returns `SourceResult(outcome: Outcome, evidence: List<EvidenceDraft>, latency)`. Evidence extraction per source (D1):
 
 | Source | Evidence lines |
 |---|---|
@@ -227,7 +230,7 @@ The simulator's vocabulary and hues, moved to a data file in `:core`, applied to
 |---|---|---|
 | Retrieval | source, lookup key | Days, per source (D9) |
 | Artist resolution | normalized artist name | Long, months |
-| Synthesis | kind, entity key, evidence fingerprint, provider, model, model-knowledge switch | Until evicted by size |
+| Synthesis | kind, entity key, evidence fingerprint, prompt-template version, provider, model, model-knowledge switch | Until evicted by size |
 | Session history | time | Local only, user-clearable |
 
 Offline: cached tracks work fully; uncached lookups are `unreachable`.
@@ -236,14 +239,20 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 
 - Preferences in DataStore.
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
-- `Secret` is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
+- `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
+
+### Spotify account (Phase 3)
+
+- The Web API client lives in `:sources`, so it reaches the network through `:net` like every other source.
+- Sign-in is OAuth with PKCE and the user's own client ID: the authorization page opens in a Custom Tab (`androidx.browser`, an allowlist entry), and the redirect returns to the app through an intent filter on a `sleevesight://` callback.
+- The access and refresh tokens are stored as secrets, like the API keys.
 
 ### UI (`:app`)
 
 - Compose, Material 3, one activity, Navigation Compose.
 - Dynamic color from the album-art bitmap with material-color-utilities.
 - The detail content is one composable, mounted as a page or as an expandable box according to the layout setting.
-- No image-loading library: the art arrives as a bitmap from the session.
+- No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a `content://` URI read through the `ContentResolver`; an `http` URI would go through `:net`. Which players do which is a Phase 0 measurement.
 
 ### Diagnostics
 
@@ -264,7 +273,7 @@ Offline: cached tracks work fully; uncached lookups are `unreachable`.
 | Constraint | Enforcement |
 |---|---|
 | No analytics, crash-reporting or ads SDKs | Gradle dependency locking, plus a `checkDependencies` task that fails on any resolved group outside an allowlist file. A new dependency is a reviewed edit to that file |
-| No permissions beyond the expected set | A `checkManifest` task parses the merged release manifest and fails on any `uses-permission` other than `INTERNET`. Libraries that merge in extras get `tools:node="remove"` |
+| No permissions beyond the expected set | A `checkManifest` task parses the merged release manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
 | Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
 | Keys never logged | The `Secret` type and the redacting logger; a unit test logs a request carrying a key and asserts it is absent |
 
@@ -274,14 +283,26 @@ Each stage has a defined visible state, as the simulator shows: gathering eviden
 
 ### Licensing
 
-GPL-3.0. Dependencies must be GPL-3.0 compatible (Apache-2.0, MIT, BSD are); the allowlist file records each one's license. Evidence quoted from Wikipedia and Last.fm is CC BY-SA and shown with its source link.
+GPL-3.0. Dependencies must be GPL-3.0 compatible (Apache-2.0, MIT, BSD are); the allowlist file records each one's license.
+
+The data sources carry their own terms, and every evidence line shows its source link:
+
+| Source | Licence of what is used |
+|---|---|
+| MusicBrainz core data (recordings, releases, artists, relationships) | CC0 |
+| MusicBrainz supplementary data (tags, genres, ratings) | CC BY-NC-SA; see D12 |
+| Wikidata | CC0 |
+| Wikipedia | CC BY-SA 4.0 |
+| Last.fm bios | CC BY-SA; the API itself is under Last.fm's API terms |
+| Discogs | CC0 for the release data; the API under Discogs' terms |
+| Web search | Per provider's terms; snippets only |
 
 ## Technology choices
 
 | Area | Choice | Main alternative | Why |
 |---|---|---|---|
 | Language | Kotlin, JVM 17 bytecode | | Android standard |
-| Build | Gradle Kotlin DSL, version catalog, convention plugins in `build-logic/` | | Shared config across eight modules |
+| Build | Gradle Kotlin DSL, version catalog, convention plugins in `build-logic/` | | Shared config across the modules |
 | Async | Coroutines, Flow | | `collectLatest` is the cancellation model |
 | HTTP | Ktor client, OkHttp engine | Retrofit | Same client on JVM and Android, streaming-friendly, one dependency boundary |
 | JSON | kotlinx.serialization | Moshi | Multiplatform-ready, no reflection |
@@ -289,8 +310,8 @@ GPL-3.0. Dependencies must be GPL-3.0 compatible (Apache-2.0, MIT, BSD are); the
 | UI | Jetpack Compose, Material 3 | | Design decision |
 | Dependency injection | Manual constructor wiring, one `AppGraph` | Hilt, Koin | Small graph; keeps `:core` free of DI annotations |
 | Static analysis | Detekt, ktlint, Android lint | | Detekt carries the forbidden-API rules |
-| Tests | JUnit 5, kotlinx-coroutines-test, Ktor `MockEngine`, Robolectric for the session layer | | JVM-first, fast in CI |
-| Android SDK | `minSdk` 29, `targetSdk` the latest stable | `minSdk` 26 | See D10 |
+| Tests | JUnit 5 in the JVM modules; JUnit 4 in `:app`, where Robolectric needs it; kotlinx-coroutines-test, Ktor `MockEngine` | | JVM-first, fast in CI |
+| Android SDK | `minSdk` 26, `targetSdk` the latest stable | `minSdk` 29 | See D10 |
 
 ## Testing
 
@@ -316,7 +337,7 @@ A release workflow (signed APK) comes with the first release; the signing key go
 
 | Phase | Modules built | Exit |
 |---|---|---|
-| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; R5 heuristic measured; `:spike` removed |
+| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; R5 heuristic measured; art-URI players listed; notification access tested on an APK installed from a browser and through a store client (D7); `:spike` removed |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate |
 | 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics | Runs on a real phone against Spotify |
 | 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff | |
@@ -337,8 +358,9 @@ Each with a recommendation. ✅ marks a decision the owner has made (D1, D4, D6,
 | D7 ✅ | Distribution: Play Store, F-Droid, GitHub releases? (R8) | **GitHub releases first, F-Droid next.** A store client that installs through the session API should not trip restricted settings, which would make F-Droid the smoother path; verify in Phase 0 with an APK installed both ways. Play's review of notification-listener apps can wait |
 | D8 | Cleartext HTTP for Ollama (R9)? | Android's network security config cannot name an arbitrary LAN host, so the platform guard has to be relaxed (`cleartextTrafficPermitted`) and replaced by our own: `:net` refuses `http://` to any host but the Ollama address the user entered, with a test. Settings warns that this traffic is unencrypted. Phase 3; until then cleartext stays off |
 | D9 | Retrieval cache lifetime per source? | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day; tuned later |
-| D10 | `minSdk`? | **29** (Android 10): current Keystore and notification-access behaviour, and the large majority of phones in use |
+| D10 | `minSdk`? | Nothing used forces it: the media-session APIs date from API 21 and AES-GCM Keystore keys from 23. It is reach against the number of OS versions to test. **26** (Android 8): more phones, and still above the Keystore floor; 29 would drop three versions of behaviour to test at the cost of reach |
 | D11 | The first web search provider (an open question in the design)? | Defer to Phase 0.5; the adapter interface does not depend on it |
+| D12 | Use MusicBrainz tags and genres (R6), which are CC BY-NC-SA? | Probably yes: Sleevesight is free and non-commercial, and the NC and SA terms bind the data, not the app's code. Confirm before Phase 0.5 relies on them, and show the attribution |
 
 ### Follow-ups outside this document
 
