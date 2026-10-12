@@ -1206,7 +1206,7 @@ function fillModels() {
   $("aiModel").innerHTML = PROVIDERS[ai.provider].models.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
   ai.model = PROVIDERS[ai.provider].models[0][0]; $("aiModel").value = ai.model;
   $("aiNote").textContent = ai.provider === "anthropic" ? "Simulation: when this page runs as a claude.ai artifact, every call goes through your own Claude account, so no key is needed; elsewhere no AI service is available. Nothing typed here is kept."
-    : "Simulation: only Claude can be called here, so insights will show what would be sent instead. Nothing typed here is kept.";
+    : "Simulation: only Claude can be called, and only when this page runs as a claude.ai artifact; with another provider, the cards say where the app would send the request. Nothing typed here is kept.";
 }
 fillModels();
 $("aiProv").onchange = e => { ai.provider = e.target.value; fillModels(); app.dirty = true; log("app", `setting: AI service = ${PROVIDERS[ai.provider].name}, ${aiLabel()}`); };
