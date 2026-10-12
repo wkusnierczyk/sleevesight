@@ -25,7 +25,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 - **Where to look.** Each source is a switch, and the model's own knowledge is a separate one, off by default.
 - **Which AI.** Anthropic, OpenAI, Google, or a local model through Ollama, with your own API key and model.
-- **When and how it writes.** Each insight is a call on your key. By default, while the app is on screen, one is written for every track after your first action in the app each time you open it, and the next track in the queue is prepared ahead so its card is ready when it starts; you can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
+- **When and how it writes.** Each insight is a call on your key. By default one is written for every track while the app is on screen, and the next track in the queue is prepared ahead so its card is ready when it starts. You can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. In every mode, nothing is written after you open the app until your first action in it. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
 - **Which players.** Spotify by default; any player with a media session can be followed.
 - **Spotify account.** Optional. Connecting it, with your own Spotify developer app, lets Sleevesight see the whole playlist or album being played. Without it, the app knows the tracks it has seen play.
 
