@@ -13,7 +13,7 @@ import org.gradle.api.tasks.TaskAction
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Fails when the merged release manifest requests a permission that is not in the permission
+ * Fails when a variant's merged manifest requests a permission that is not in the permission
  * allowlist. Libraries can merge permissions in unseen; this makes each one a reviewed edit.
  * `${applicationId}` in the allowlist stands for the application id.
  */

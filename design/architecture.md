@@ -295,7 +295,7 @@ Each insight is a paid call on the user's key (design, *Caching and offline*), s
 | Constraint | Enforcement |
 |---|---|
 | No analytics, crash-reporting or ads SDKs | Gradle dependency locking, plus a `checkDependencies` task that fails on any resolved group outside an allowlist file. A new dependency is a reviewed edit to that file |
-| No permissions beyond the expected set | A `checkManifest` task parses the merged release manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
+| No permissions beyond the expected set | A `checkManifest` task parses each variant's merged manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
 | Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
 | Pipeline stays Multiplatform-ready (D2) | Detekt `ForbiddenImport`, `ForbiddenMethodCall` and `ForbiddenAnnotation` in the pipeline modules, as listed under [Multiplatform readiness](#multiplatform-readiness) |
 | Keys never logged | The `Secret` type and the redacting logger; a unit test logs a request carrying a key and asserts it is absent |

@@ -1,5 +1,5 @@
 // An Android application: SDK levels from the architecture (D10), Java 17, and the shared checks,
-// plus `checkManifest` on the merged release manifest.
+// plus `checkManifest` on each variant's merged manifest.
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import sleevesight.checks.CheckDependencies
