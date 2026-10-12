@@ -19,7 +19,7 @@ The phone already announces what is playing. Any app with notification access ca
 3. Have the user's chosen AI model write a short insight from that evidence only, with a citation on every factual sentence.
 4. Check the citations mechanically before showing the text, and show the evidence underneath.
 
-The prototype in the simulator covers the whole flow against a real 80-track playlist, with frozen lookups and, while it was hosted as a claude.ai artifact, live synthesis. The public copy linked above has no AI service and shows the first facts found instead. This document records what it established and what still has to be verified on a real phone.
+The prototype in the simulator covers the whole flow against a real 80-track playlist, with frozen lookups and, while it was hosted as a claude.ai artifact, live synthesis. The public copy linked above has no AI service, and its insight cards show the first facts found instead. This document records what it established and what still has to be verified on a real phone.
 
 ## Goals and non-goals
 
