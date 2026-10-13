@@ -1,0 +1,16 @@
+# :net, the one module allowed to reach an HTTP client (architecture, Structural constraints). Applied
+# after detekt.yml and pipeline.yml; its imports list replaces theirs, so it repeats the readiness
+# rules and leaves out io.ktor.client. OkHttp and the JVM stay forbidden outside the engine factory
+# (OkHttpEngine.kt), the one per-platform part (Multiplatform readiness), which is excluded, as is
+# its test.
+style:
+  ForbiddenImport:
+    active: true
+    excludes: ['**/net/OkHttpEngine.kt', '**/net/OkHttpEngineTest.kt']
+    imports:
+      - value: 'java.*'
+        reason: 'JVM-only; outside the engine factory, :net stays Multiplatform-ready (D2).'
+      - value: 'javax.*'
+        reason: 'JVM-only; outside the engine factory, :net stays Multiplatform-ready (D2).'
+      - value: 'okhttp3.*'
+        reason: 'JVM-only; OkHttp is reached through the engine factory alone.'
