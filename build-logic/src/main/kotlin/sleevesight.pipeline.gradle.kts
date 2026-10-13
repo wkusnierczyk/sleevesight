@@ -19,11 +19,13 @@ kotlin.sourceSets.named("main") {
 val checkPlatformSources =
     tasks.register<CheckPlatformSources>("checkPlatformSources") {
         group = "verification"
-        description = "Fails when portable code refers to platform code, or platform code imports network APIs."
+        description = "Fails when portable code refers to platform code, or platform code uses network APIs."
         portableSources.from(layout.projectDirectory.dir("src/main/kotlin"))
         platformSources.from(layout.projectDirectory.dir("src/jvmMain/kotlin"))
-        // The network imports of `config/detekt/detekt.yml`. `:net` sets its own list.
-        forbiddenPlatformImports.convention(listOf("java.net.", "javax.net.", "okhttp3.", "io.ktor.client."))
+        // The same prefixes as the network `ForbiddenImport` entries in `config/detekt/detekt.yml`;
+        // a change to one list is made to the other. `:net`, whose engine factory needs OkHttp and
+        // Ktor, overrides this with a shorter list.
+        forbiddenPlatformNames.convention(listOf("java.net.", "javax.net.", "okhttp3.", "io.ktor.client."))
     }
 
 detekt {

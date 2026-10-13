@@ -48,7 +48,7 @@ data class Settings(
 
         /**
          * D9: MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day.
-         * D9 names no lifetime for Discogs; its release data is as stable as MusicBrainz's, so 30.
+         * Discogs: 30 days, as for MusicBrainz (D9; owner, 2026-10-13).
          */
         val DEFAULT_CACHE_LIFETIMES: Map<SourceId, Duration> =
             mapOf(

@@ -8,4 +8,10 @@ dependencies {
     implementation(libs.kotlin.serialization.plugin)
     implementation(libs.detekt.gradle.plugin)
     implementation(libs.ktlint.gradle.plugin)
+
+    testImplementation(libs.kotlin.test)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

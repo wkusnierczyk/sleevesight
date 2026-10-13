@@ -3,7 +3,9 @@ style:
   MaxLineLength:
     maxLineLength: 120
   # Network access only through :net (design, Structural constraints). :net gets its own
-  # configuration when it is created.
+  # configuration when it is created. The `checkPlatformSources` task in
+  # build-logic/src/main/kotlin/sleevesight.pipeline.gradle.kts repeats these prefixes for
+  # src/jvmMain; a change to one list is made to the other.
   ForbiddenImport:
     active: true
     imports:

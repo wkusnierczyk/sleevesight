@@ -20,7 +20,10 @@ import java.io.File
  *
  * - portable code may not refer to a `platform` package, where the JVM implementations live: at
  *   the Multiplatform switch it would not compile;
- * - platform code may still not import the network APIs, which only `:net` may use.
+ * - platform code must itself be in a `platform` package, so the first rule sees every use of it;
+ * - platform code may still not use the network APIs, which only `:net` may use.
+ *
+ * The rules and their limits are in [PlatformSourceRules].
  */
 abstract class CheckPlatformSources : DefaultTask() {
     @get:InputFiles
@@ -31,9 +34,9 @@ abstract class CheckPlatformSources : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val platformSources: ConfigurableFileCollection
 
-    /** Package prefixes platform code may not import, such as `java.net.`. */
+    /** Qualified-name prefixes platform code may not use, such as `java.net.`. */
     @get:Input
-    abstract val forbiddenPlatformImports: ListProperty<String>
+    abstract val forbiddenPlatformNames: ListProperty<String>
 
     /** Written on success, so the check is up to date until its inputs change. */
     @get:OutputFile
@@ -45,23 +48,11 @@ abstract class CheckPlatformSources : DefaultTask() {
 
     @TaskAction
     fun check() {
-        val problems = mutableListOf<String>()
-        for (file in kotlinFiles(portableSources.files)) {
-            file.readLines().forEachIndexed { index, line ->
-                if (PLATFORM_REFERENCE.containsMatchIn(line)) {
-                    problems += "${file.path}:${index + 1}: portable code refers to a platform package"
+        val problems =
+            kotlinFiles(portableSources.files).flatMap { PlatformSourceRules.portableProblems(it.path, it.readText()) } +
+                kotlinFiles(platformSources.files).flatMap {
+                    PlatformSourceRules.platformProblems(it.path, it.readText(), forbiddenPlatformNames.get())
                 }
-            }
-        }
-        val forbidden = forbiddenPlatformImports.get()
-        for (file in kotlinFiles(platformSources.files)) {
-            file.readLines().forEachIndexed { index, line ->
-                val imported = IMPORT.find(line)?.groupValues?.get(1) ?: return@forEachIndexed
-                if (forbidden.any { imported.startsWith(it) }) {
-                    problems += "${file.path}:${index + 1}: platform code imports $imported; network access goes through :net"
-                }
-            }
-        }
         if (problems.isNotEmpty()) {
             throw GradleException("Platform source rules broken:\n" + problems.joinToString("\n") { "  $it" })
         }
@@ -70,9 +61,4 @@ abstract class CheckPlatformSources : DefaultTask() {
 
     private fun kotlinFiles(roots: Set<File>): List<File> =
         roots.flatMap { root -> root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }.sorted()
-
-    private companion object {
-        val PLATFORM_REFERENCE = Regex("""\bio\.github\.wkusnierczyk\.sleevesight\.(?:\w+\.)*platform\b""")
-        val IMPORT = Regex("""^\s*import\s+([\w.*`]+)""")
-    }
 }

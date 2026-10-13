@@ -110,7 +110,9 @@ class Normalizer(
 
         // An ASCII letter matches either case, as in JavaScript's `/i` without `u`: `ci("mono")` is
         // `[mM][oO][nN][oO]`. Other characters stand for themselves.
-        fun ci(word: String): String =
-            word.map { c -> if (c in 'a'..'z') "[$c${c.uppercaseChar()}]" else c.toString() }.joinToString("")
+        fun ci(word: String): String {
+            require(word == word.lowercase()) { "ci takes a lowercase pattern, was $word" }
+            return word.map { c -> if (c in 'a'..'z') "[$c${c.uppercaseChar()}]" else c.toString() }.joinToString("")
+        }
     }
 }
