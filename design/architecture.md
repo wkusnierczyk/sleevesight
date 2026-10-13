@@ -192,6 +192,14 @@ How steps 1 to 4 are made (#36), where the steps leave room:
 - An artist is resolved from the accepted recording's credit, or from a performer relationship on it (a band's singer). It is never searched by name alone: without an accepted recording no artist gets an id, since a same-name collision would give the wrong one.
 - A recording is a cover when MusicBrainz marks its performance of the work as one, or when the work has an earlier recording by an artist not credited on it. The original is the work's earliest dated recording by such an artist; MusicBrainz dates a work's recordings by when they were recorded, so a cover whose original is undated stays a cover with no original named.
 
+How step 5 is made (#37, `IdentityCheck`), where the step leaves room:
+
+- *Song, single or musical work* is a fixed set of `P31` classes (`Wd.SONG_CLASSES`), matched directly, without following subclasses. A disambiguation page is rejected as one.
+- A credited artist confirms a song as performer (P175) or as writer (composer P86, lyricist P676): the anthem *Ode to Newfoundland* has no performer, and the track credits its composer. With a MusicBrainz id the match is by P434 only, never by name, so a performer item with no P434 does not confirm a resolved artist.
+- A song confirmed by someone other than the credited artists is the *original song* when its performer is the original recording's artist (step 4), or when it is the item MusicBrainz links to the recording or its work (the work's own link, else its P435).
+- Found by name alone, a song by someone else is rejected, even when its title is the track's: a same-title song and a cover cannot be told apart without MusicBrainz (the fixture's Peleboy track "We In Here" is not DMX's song of that name). So the fixture's covers by acts MusicBrainz does not know, or knows without a work (tracks 45 and 48), are rejected rather than resolved to the original song; only MusicBrainz's cover detection (step 4) leads to one. Track 76's only article is a soundtrack album, not a song, and is rejected too. The gate (#46) may weigh a further signal for covers.
+- An artist article is accepted only through the artist's MusicBrainz id (P434); without one, it is rejected, since a same-name article cannot be told apart.
+
 Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's known cases. They decide whether a match is correct, so they stay fixed rather than becoming user settings (driver 6).
 
 ### Source adapters (`:sources`)

@@ -1,0 +1,963 @@
+{
+ "entities": {
+  "Q104092599": {
+   "type": "item",
+   "id": "Q104092599",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Willow"
+    }
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "33d81754a79b2dab75d17c156313b0f8f0f4f086",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 134556,
+         "id": "Q134556"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$5DFD4740-3EFE-4115-B9B6-1A8FE5466E7B",
+      "rank": "normal"
+     }
+    ],
+    "P175": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P175",
+       "hash": "4b27f22dc2cb3e71ff538377207e9508e2be1e3c",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 26876,
+         "id": "Q26876"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$59E7D4BB-C847-4DF0-B415-566A1020A41D",
+      "rank": "normal"
+     }
+    ],
+    "P264": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P264",
+       "hash": "dad37017a00fff99d83934fa310c6442f37a0a33",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4413456,
+         "id": "Q4413456"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$2BCCCF1E-C434-4FD1-B255-F2DA930272A8",
+      "rank": "normal"
+     }
+    ],
+    "P1651": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1651",
+       "hash": "3d3a320faed2e9e2391cae176cf7a5215dc7302b",
+       "datavalue": {
+        "value": "RsEZmictANA",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "1ba758e5416820465db0cc90132a618cc5f63992",
+         "datavalue": {
+          "value": "Taylor Swift - willow (Official Music Video)",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ],
+       "P5436": [
+        {
+         "snaktype": "value",
+         "property": "P5436",
+         "hash": "2565a5d79afe453e70ef5ef64d92b5354d76311c",
+         "datavalue": {
+          "value": {
+           "amount": "+65445811",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P577": [
+        {
+         "snaktype": "value",
+         "property": "P577",
+         "hash": "dd806748d57709f1b4074f09f2a79fc7e0de3348",
+         "datavalue": {
+          "value": {
+           "time": "+2020-12-11T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ],
+       "P585": [
+        {
+         "snaktype": "value",
+         "property": "P585",
+         "hash": "dd58b8b1646180a984d641f8a93dcb3dd61eb481",
+         "datavalue": {
+          "value": {
+           "time": "+2021-03-18T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ],
+       "P2047": [
+        {
+         "snaktype": "value",
+         "property": "P2047",
+         "hash": "12da36345e44337b4558cbf02176704d4b514131",
+         "datavalue": {
+          "value": {
+           "amount": "+253.0",
+           "unit": "http://www.wikidata.org/entity/Q11574"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810",
+       "P5436",
+       "P577",
+       "P585",
+       "P2047"
+      ],
+      "id": "Q104092599$84EDE3C4-3ADF-4EF9-ADE7-6A130C2A1E13",
+      "rank": "normal"
+     }
+    ],
+    "P6218": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P6218",
+       "hash": "0927dd53f971293a4efff116894d4ff1532cfac3",
+       "datavalue": {
+        "value": "Taylor-swift-willow-lyrics",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$A0AE7CD2-E594-4868-9B19-8C8991C167E9",
+      "rank": "normal"
+     }
+    ],
+    "P577": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P577",
+       "hash": "dd806748d57709f1b4074f09f2a79fc7e0de3348",
+       "datavalue": {
+        "value": {
+         "time": "+2020-12-11T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 11,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q104092599$4E0CEF1A-F8A0-485E-BA71-B94841E2AE8C",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "67eefc21d494aa87752ee7a13ba8fb1fb458486a",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "c10265d3d64a8407fce7c00cfb4d63b91ed39bb4",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=111023169",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P437": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "3237b53c4d3ec4ece3e5d87f4d44bf89b53fc119",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 6473564,
+         "id": "Q6473564"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$6AB47B8C-76C2-4D04-86CE-A368E29E4EE0",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "f70c6290b338c4f54eeef6975007ab67318c09c8",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 15982450,
+         "id": "Q15982450"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$5DEE31B3-C743-434C-A60D-02C72E9FA2CF",
+      "rank": "normal"
+     }
+    ],
+    "P2047": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2047",
+       "hash": "2c5c9c36489e7b885347c9b9ecdede3a70d58d52",
+       "datavalue": {
+        "value": {
+         "amount": "+214",
+         "unit": "http://www.wikidata.org/entity/Q11574"
+        },
+        "type": "quantity"
+       },
+       "datatype": "quantity"
+      },
+      "type": "statement",
+      "id": "Q104092599$492416AF-52C1-455F-A3F3-4BC78DC2621B",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "67eefc21d494aa87752ee7a13ba8fb1fb458486a",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "c10265d3d64a8407fce7c00cfb4d63b91ed39bb4",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=111023169",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P162": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P162",
+       "hash": "12160004f4e2c8a335cd213de33fb7805c037f5a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4661964,
+         "id": "Q4661964"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$19C0EE87-B2EF-4460-86C1-0FD9F0D802C1",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "67eefc21d494aa87752ee7a13ba8fb1fb458486a",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "c10265d3d64a8407fce7c00cfb4d63b91ed39bb4",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=111023169",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P162",
+       "hash": "9861fa24f8ad8544135981b6597bc3986051daf3",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 26876,
+         "id": "Q26876"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$8881ECA0-3467-48B2-8544-E4B8105560C1",
+      "rank": "normal"
+     }
+    ],
+    "P676": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P676",
+       "hash": "e8a5c9c8abd454ca3fde9ddb05dbea6929ff8d56",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 26876,
+         "id": "Q26876"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$49E44CDC-1629-4E18-B0F6-41EC2FA33B18",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "67eefc21d494aa87752ee7a13ba8fb1fb458486a",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "c10265d3d64a8407fce7c00cfb4d63b91ed39bb4",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=111023169",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P676",
+       "hash": "0d62519401343c4875fa26d3a1371c12102bd8ff",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4661964,
+         "id": "Q4661964"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$79B08045-1E0F-4E07-87F4-7062F5B2478D",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "67eefc21d494aa87752ee7a13ba8fb1fb458486a",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "c10265d3d64a8407fce7c00cfb4d63b91ed39bb4",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=111023169",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P436": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P436",
+       "hash": "dad1ae12acbd922f3a76e48a009e10bef0dc69e5",
+       "datavalue": {
+        "value": "05e1c8f5-bc95-49c5-aec6-dcaeaefa58db",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$A7E3A440-B302-46A0-A830-20D27711B077",
+      "rank": "normal"
+     }
+    ],
+    "P2671": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2671",
+       "hash": "9ed8708af36ea40996636c0ac16fb9516773fe52",
+       "datavalue": {
+        "value": "/g/11n04tyznb",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$F0F990B6-C77A-40CF-91D3-D9B3E5369314",
+      "rank": "normal"
+     }
+    ],
+    "P136": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "911976ea82882541d736e3ceee77229a898bf1d9",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 11700058,
+         "id": "Q11700058"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$5ABDCE78-AE09-441B-8E52-8482F07966B3",
+      "rank": "normal"
+     }
+    ],
+    "P1476": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1476",
+       "hash": "3442d07c54da0c3dc66a9bbc94a2dffdce216ec9",
+       "datavalue": {
+        "value": {
+         "text": "Willow",
+         "language": "en"
+        },
+        "type": "monolingualtext"
+       },
+       "datatype": "monolingualtext"
+      },
+      "type": "statement",
+      "id": "Q104092599$E0D0DA48-2762-4F07-9869-8F6DB7015F81",
+      "rank": "normal"
+     }
+    ],
+    "P155": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P155",
+       "hash": "72d7b71ada5240d0f95ffe5388b7d6d0e04abe38",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97653197,
+         "id": "Q97653197"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$2F3A5C8F-8493-4C50-B990-A1B0692196CD",
+      "rank": "normal"
+     }
+    ],
+    "P156": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P156",
+       "hash": "bc91ba80cb862a90a5e423cdc68df80ceccf487b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 104148872,
+         "id": "Q104148872"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$0C8DEA09-09C8-4CED-90D1-1BDC3BF8F897",
+      "rank": "normal"
+     }
+    ],
+    "P407": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P407",
+       "hash": "daf1c4fcb58181b02dff9cc89deb084004ddae4b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 1860,
+         "id": "Q1860"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$3DFE2F11-894D-4859-AC4A-D53161794554",
+      "rank": "normal"
+     }
+    ],
+    "P1954": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1954",
+       "hash": "b9e48c20bf2daa5f1b6557cffd0b5d0e366256cd",
+       "datavalue": {
+        "value": "1881534",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$48EDC830-4334-4CD8-9DB9-57F8A08EFFCA",
+      "rank": "normal"
+     }
+    ],
+    "P3192": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P3192",
+       "hash": "5edb3e7d85d7116816d3e9831962a0c3b705a67e",
+       "datavalue": {
+        "value": "Taylor+Swift/_/willow",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$E195AA4C-D84A-44DC-964B-819AB9C6DEAE",
+      "rank": "normal"
+     }
+    ],
+    "P435": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P435",
+       "hash": "cafc98ff00973f0c546b8500a9fc9922348be1d0",
+       "datavalue": {
+        "value": "d4333f22-db44-42e5-adba-f7732570a49f",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$952b5633-6b47-4597-9c5a-228ab309934e",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "6a71250e105aca7b85a4c2204fdd73be96fb84a6",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "73fe26cd7685a5e66c07f6bae1514ca760485c10",
+           "datavalue": {
+            "value": {
+             "time": "+2022-08-31T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P7937": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7937",
+       "hash": "95c182f3c475d9df12743fde55dc93e0a76efa11",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 7366,
+         "id": "Q7366"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$7a710809-4ff5-2203-abff-729713851f45",
+      "rank": "normal"
+     }
+    ],
+    "P214": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P214",
+       "hash": "20903563da9631b179ffed5ae2d6dde92fdb987f",
+       "datavalue": {
+        "value": "1247162368024225790002",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$91afae45-4740-227a-84a1-fdb54bf838d2",
+      "rank": "normal"
+     }
+    ],
+    "P1889": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1889",
+       "hash": "8f6089ae7d14828c0ef4c9d0560207d17203f7a8",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 11254381,
+         "id": "Q11254381"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$29b180bb-4698-319e-19dd-0ca2c11820c1",
+      "rank": "normal"
+     }
+    ],
+    "P13602": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P13602",
+       "hash": "9a713a8cef2a4403d9a65de7eb7781ab4b953732",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 104092260,
+         "id": "Q104092260"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$D113B157-A2C6-4E82-B193-98B9C10B5328",
+      "rank": "normal"
+     }
+    ],
+    "P361": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P361",
+       "hash": "69280a1e071b838eee8e75a8594e211129c0d8c6",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 104092260,
+         "id": "Q104092260"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q104092599$B436F6E2-0D62-4AE1-8194-FD37C2ACD06B",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "9c074ae2623781bcdb08acf56bd40902cf529a23",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "07596fc82d3ed4d248b85e5543852cc31e37dc8c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 199913,
+             "id": "Q199913"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "09a993912587ebbf8704b7ee416918bc770099e9",
+           "datavalue": {
+            "value": "https://he.wikipedia.org/w/index.php?title=Willow&oldid=43579969",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P8419": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P8419",
+       "hash": "48906f67b79bfe682e21c0578b5a20413cbf68d6",
+       "datavalue": {
+        "value": "willow - Taylor Swift (Music Video)",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q104092599$DA7E6BE2-D28F-4B44-A27F-9E991E95C719",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Willow (song)",
+     "badges": [
+      "Q17437798"
+     ]
+    }
+   }
+  }
+ },
+ "success": 1
+}

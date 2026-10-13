@@ -47,7 +47,7 @@ object MusicBrainzEvidence {
             lines +=
                 Line(
                     Scope.SONG,
-                    "“$title”$by was first released ${dateText(release.date)}, on $type“${release.title}”.",
+                    "“$title”$by was first released ${EvidenceText.date(release.date)}, on $type“${release.title}”.",
                     link,
                 )
         }
@@ -63,7 +63,9 @@ object MusicBrainzEvidence {
                 lines +=
                     Line(
                         Scope.ORIGINAL_SONG,
-                        "“${work.title}” was first recorded by ${original.artistCredit}, ${dateText(original.date)}.",
+                        "“${work.title}” was first recorded by ${original.artistCredit}, ${EvidenceText.date(
+                            original.date,
+                        )}.",
                         "$SITE/recording/${original.recordingMbid}",
                     )
             }
@@ -92,18 +94,21 @@ object MusicBrainzEvidence {
         val lines = mutableListOf<Line>()
         if (traditional) lines += Line(Scope.SONG, "“$title” is a traditional song.", url)
         if (composers.isNotEmpty() && composers == lyricists) {
-            lines += Line(Scope.SONG, "“$title” was written by ${list(composers)}.", url)
+            lines += Line(Scope.SONG, "“$title” was written by ${EvidenceText.list(composers)}.", url)
         } else {
             if (composers.isNotEmpty()) {
                 lines +=
-                    Line(Scope.SONG, "The music of “$title” was composed by ${list(composers)}.", url)
+                    Line(Scope.SONG, "The music of “$title” was composed by ${EvidenceText.list(composers)}.", url)
             }
             if (lyricists.isNotEmpty()) {
                 lines +=
-                    Line(Scope.SONG, "The lyrics of “$title” were written by ${list(lyricists)}.", url)
+                    Line(Scope.SONG, "The lyrics of “$title” were written by ${EvidenceText.list(lyricists)}.", url)
             }
         }
-        if (writers.isNotEmpty()) lines += Line(Scope.SONG, "“$title” was written by ${list(writers)}.", url)
+        if (writers.isNotEmpty()) {
+            lines +=
+                Line(Scope.SONG, "“$title” was written by ${EvidenceText.list(writers)}.", url)
+        }
         return lines
     }
 
@@ -116,7 +121,7 @@ object MusicBrainzEvidence {
         val producers = credits.filter { it.role == CreditRole.PRODUCER }.map { it.name }
         if (producers.isNotEmpty()) {
             lines +=
-                Line(Scope.SONG, "This recording of “$title” was produced by ${list(producers)}.", url)
+                Line(Scope.SONG, "This recording of “$title” was produced by ${EvidenceText.list(producers)}.", url)
         }
         credits.filter { it.role == CreditRole.PERFORMER }.take(MAX_PERFORMER_LINES).forEach { performer ->
             val detail = if (performer.detail.isEmpty()) "" else " (${performer.detail.joinToString(", ")})"
@@ -124,42 +129,6 @@ object MusicBrainzEvidence {
         }
         return lines
     }
-
-    /** `A`, `A and B`, `A, B and C`. */
-    internal fun list(names: List<String>): String =
-        when (names.size) {
-            0 -> ""
-            1 -> names.single()
-            else -> names.dropLast(1).joinToString(", ") + " and " + names.last()
-        }
-
-    /** A MusicBrainz date as prose: `in 1974`, `in January 1974`, `on 25 March 1974`. */
-    internal fun dateText(date: String): String {
-        val parts = date.split('-')
-        val month = parts.getOrNull(1)?.toIntOrNull()?.let { MONTHS.getOrNull(it - 1) }
-        val day = parts.getOrNull(2)?.toIntOrNull()
-        return when {
-            month == null -> "in ${parts[0]}"
-            day == null -> "in $month ${parts[0]}"
-            else -> "on $day $month ${parts[0]}"
-        }
-    }
-
-    private val MONTHS =
-        listOf(
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December",
-        )
 
     private data class Line(
         val scope: Scope,

@@ -18,9 +18,9 @@ class MusicBrainzEvidenceTest {
 
     @Test
     fun `dates read at the precision MusicBrainz gives`() {
-        assertEquals("in 1974", MusicBrainzEvidence.dateText("1974"))
-        assertEquals("in January 1974", MusicBrainzEvidence.dateText("1974-01"))
-        assertEquals("on 6 November 1964", MusicBrainzEvidence.dateText("1964-11-06"))
+        assertEquals("in 1974", EvidenceText.date("1974"))
+        assertEquals("in January 1974", EvidenceText.date("1974-01"))
+        assertEquals("on 6 November 1964", EvidenceText.date("1964-11-06"))
     }
 
     @Test

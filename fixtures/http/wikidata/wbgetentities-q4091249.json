@@ -1,0 +1,153 @@
+{
+ "entities": {
+  "Q4091249": {
+   "type": "item",
+   "id": "Q4091249",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Reem"
+    }
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "0ebb78ffecd3415a2dbc8db900881ff784fead2a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4167410,
+         "id": "Q4167410"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q4091249$0B25D7BB-F9B4-45CE-8B44-83E45E87FD2E",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P1889": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1889",
+       "hash": "550f9aa99774aada0543161915fcdc6a0b89b5a1",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 7306910,
+         "id": "Q7306910"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1013": [
+        {
+         "snaktype": "value",
+         "property": "P1013",
+         "hash": "4c971721f95a205104fbb803c87eb7e7c87aeded",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 23765057,
+           "id": "Q23765057"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1013"
+      ],
+      "id": "Q4091249$5487A740-BB24-49A1-BECA-515F8C7F1850",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1889",
+       "hash": "cd8691315ddb25a245d7ee9fa88170e68cf05e0a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 36966376,
+         "id": "Q36966376"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1013": [
+        {
+         "snaktype": "value",
+         "property": "P1013",
+         "hash": "94271bee1daecc0a84c7ff0e80a6f5e76c330944",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 27924673,
+           "id": "Q27924673"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1013"
+      ],
+      "id": "Q4091249$10AADE3E-E4F3-467D-80F7-A394F52E5979",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Reem",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

@@ -8,6 +8,7 @@ makes for the first occurrence of each regression track (`RecordedTracks` in `:s
 | Directory | Source | Licence of the content |
 |---|---|---|
 | `musicbrainz/` | MusicBrainz web service, `https://musicbrainz.org/ws/2` | Core data, CC0 ([Data License](https://musicbrainz.org/doc/About/Data_License)). Requested without `inc=tags` or `inc=genres`; the `tags` and `genres` fields a search returns unasked (supplementary data, CC BY-NC-SA 3.0) are removed when recording, and nothing else is changed |
+| `wikidata/` | Wikidata action API, `https://www.wikidata.org/w/api.php` | CC0 ([Wikidata licensing](https://www.wikidata.org/wiki/Wikidata:Licensing)); stored as received |
 
 Each directory has an `index.json`: one entry per request (method, URL, query) with the status and
 the file of its response. `ReplayNetClient` in `:sources`' test fixtures serves them, matching a
@@ -19,7 +20,7 @@ Live, keyless, through the real `NetClient` and its rate limits (MusicBrainz at 
 with the app's User-Agent naming the repository as contact):
 
 ```
-SLEEVESIGHT_RECORD_HTTP=1 ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
+SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
 python3 -I fixtures/http/record.py sources/build/test-results/test
 ```
 

@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q76364": {
+   "type": "item",
+   "id": "Q76364",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Hans Zimmer"
+    }
+   }
+  },
+  "Q492264": {
+   "type": "item",
+   "id": "Q492264",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "film score"
+    }
+   }
+  },
+  "Q4887811": {
+   "type": "item",
+   "id": "Q4887811",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "WaterTower Music"
+    }
+   }
+  }
+ },
+ "success": 1
+}

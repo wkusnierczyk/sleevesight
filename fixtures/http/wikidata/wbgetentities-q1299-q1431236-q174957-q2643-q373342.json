@@ -1,0 +1,55 @@
+{
+ "entities": {
+  "Q1299": {
+   "type": "item",
+   "id": "Q1299",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "The Beatles"
+    }
+   }
+  },
+  "Q1431236": {
+   "type": "item",
+   "id": "Q1431236",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Steve Harley & Cockney Rebel"
+    }
+   }
+  },
+  "Q174957": {
+   "type": "item",
+   "id": "Q174957",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Nina Simone"
+    }
+   }
+  },
+  "Q2643": {
+   "type": "item",
+   "id": "Q2643",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "George Harrison"
+    }
+   }
+  },
+  "Q373342": {
+   "type": "item",
+   "id": "Q373342",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "popular music"
+    }
+   }
+  }
+ },
+ "success": 1
+}

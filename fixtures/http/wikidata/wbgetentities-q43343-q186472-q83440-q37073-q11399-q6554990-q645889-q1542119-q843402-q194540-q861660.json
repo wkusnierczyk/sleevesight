@@ -1,0 +1,225 @@
+{
+ "entities": {
+  "Q43343": {
+   "type": "item",
+   "id": "Q43343",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "folk music"
+    }
+   }
+  },
+  "Q186472": {
+   "type": "item",
+   "id": "Q186472",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "folk rock"
+    }
+   }
+  },
+  "Q83440": {
+   "type": "item",
+   "id": "Q83440",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "country music"
+    }
+   }
+  },
+  "Q37073": {
+   "type": "item",
+   "id": "Q37073",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "pop music"
+    }
+   }
+  },
+  "Q11399": {
+   "type": "item",
+   "id": "Q11399",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "rock music"
+    }
+   }
+  },
+  "Q6554990": {
+   "type": "item",
+   "id": "Q6554990",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Linus Entertainment"
+    }
+   }
+  },
+  "Q645889": {
+   "type": "item",
+   "id": "Q645889",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Reprise Records"
+    }
+   }
+  },
+  "Q1542119": {
+   "type": "item",
+   "id": "Q1542119",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "United Artists Records"
+    }
+   }
+  },
+  "Q843402": {
+   "type": "item",
+   "id": "Q843402",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Warner Bros. Records"
+    }
+   }
+  },
+  "Q194540": {
+   "type": "item",
+   "id": "Q194540",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Queen Elizabeth II Diamond Jubilee Medal"
+    }
+   }
+  },
+  "Q861660": {
+   "type": "item",
+   "id": "Q861660",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Songwriters Hall of Fame"
+    }
+   }
+  },
+  "Q15278107": {
+   "type": "item",
+   "id": "Q15278107",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Companion of the Order of Canada"
+    }
+   }
+  },
+  "Q1032083": {
+   "type": "item",
+   "id": "Q1032083",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canadian Country Music Hall of Fame"
+    }
+   }
+  },
+  "Q857933": {
+   "type": "item",
+   "id": "Q857933",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canada's Walk of Fame"
+    }
+   }
+  },
+  "Q742162": {
+   "type": "item",
+   "id": "Q742162",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Order of Ontario"
+    }
+   }
+  },
+  "Q3362498": {
+   "type": "item",
+   "id": "Q3362498",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canadian Songwriters Hall of Fame"
+    }
+   }
+  },
+  "Q6314075": {
+   "type": "item",
+   "id": "Q6314075",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Juno Award for Folk Artist of the Year"
+    }
+   }
+  },
+  "Q6314105": {
+   "type": "item",
+   "id": "Q6314105",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Juno Award for Songwriter of the Year"
+    }
+   }
+  },
+  "Q3362499": {
+   "type": "item",
+   "id": "Q3362499",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canadian Music Hall of Fame"
+    }
+   }
+  },
+  "Q3405798": {
+   "type": "item",
+   "id": "Q3405798",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Governor General's Award for English-language poetry"
+    }
+   }
+  },
+  "Q28663097": {
+   "type": "item",
+   "id": "Q28663097",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Golden Plate Award"
+    }
+   }
+  },
+  "Q5464413": {
+   "type": "item",
+   "id": "Q5464413",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Folk Alliance International"
+    }
+   }
+  }
+ },
+ "success": 1
+}
