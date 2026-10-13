@@ -1,3 +1,5 @@
+import sleevesight.checks.CheckNetworkReferences
+
 plugins {
     id("sleevesight.pipeline")
 }
@@ -6,6 +8,12 @@ plugins {
 // its Detekt configuration lets it import Ktor; the other readiness rules stay.
 detekt {
     config.from(rootProject.file("config/detekt/net.yml"))
+}
+
+// For the same reason, the class-file check has no network package to forbid here: `:net` wraps
+// Ktor and OkHttp, and its engine factory and `ProtocolException` handling use `java.net`.
+tasks.named<CheckNetworkReferences>("checkNetworkReferences") {
+    forbiddenPrefixes.set(emptyList())
 }
 
 dependencies {
