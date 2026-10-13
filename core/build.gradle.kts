@@ -12,7 +12,10 @@ sourceSets {
 }
 
 dependencies {
+    // `SourceAdapter.lookup` takes a `Deferred`, so coroutines are part of the API.
+    api(libs.kotlinx.coroutines.core)
     testFixturesApi(libs.kotlinx.serialization.json)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
 
 // The simulator embeds the same fixtures; a test checks that the two agree.
