@@ -70,9 +70,18 @@ class GenreVocabularyTest {
     @Test
     fun `labels are title case, with the vocabulary's overrides`() {
         assertEquals(
-            listOf("R&B", "UK Garage", "RnB", "Post-Punk", "Chanson Francaise"),
-            vocabulary.labelsFor(listOf("r&b", "uk garage", "rnb", "post-punk", "chanson francaise")).map { it.label },
+            listOf("R&B", "UK Garage", "Post-Punk", "Chanson Francaise"),
+            vocabulary.labelsFor(listOf("r&b", "uk garage", "post-punk", "chanson francaise")).map { it.label },
         )
+        assertEquals(listOf("RnB"), vocabulary.labelsFor(listOf("rnb")).map { it.label })
+    }
+
+    @Test
+    fun `spellings of one genre give one label, the first`() {
+        assertEquals(listOf("RnB", "Soul"), vocabulary.labelsFor(listOf("rnb", "r&b", "soul")).map { it.label })
+        assertEquals(vocabulary.identity("r&b"), vocabulary.identity("RnB"))
+        assertEquals(vocabulary.identity("hip-hop"), vocabulary.identity("hip hop"))
+        assertEquals(null, vocabulary.identity("seen live"))
     }
 
     @Test
@@ -104,5 +113,11 @@ class GenreVocabularyTest {
         assertEquals(GenreAgreement(lastFm = 1, musicBrainz = 2, both = 1), agreement)
         assertEquals(false, agreement.fillsGap)
         assertEquals(true, vocabulary.agreement(listOf("seen live"), listOf("rock")).fillsGap)
+    }
+
+    @Test
+    fun `agreement counts spellings of one genre as the same label`() {
+        assertEquals(GenreAgreement(1, 1, 1), vocabulary.agreement(listOf("hip-hop"), listOf("hip hop")))
+        assertEquals(GenreAgreement(1, 1, 1), vocabulary.agreement(listOf("r&b"), listOf("rnb")))
     }
 }

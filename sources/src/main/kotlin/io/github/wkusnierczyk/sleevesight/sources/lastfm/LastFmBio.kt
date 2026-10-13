@@ -27,6 +27,18 @@ internal object LastFmBio {
             RegexOption.IGNORE_CASE,
         )
 
+    private val SHARED_NAME =
+        Regex(
+            "(several|multiple|many|\\d+|two|three|four|five) (different )?" +
+                "(artists|bands|acts|groups|musicians|people|persons) " +
+                "(share|sharing|with|using|have) (this|the same|that) name",
+            RegexOption.IGNORE_CASE,
+        )
+
+    // An enumerated list, `1) … 2) …` or `1. … 2. …`; a number such as `1.5` has no space after the mark.
+    private val FIRST_ITEM = Regex("(^|\\s)1[.)] ")
+    private val SECOND_ITEM = Regex("\\s2[.)] ")
+
     private val WHITESPACE = Regex("\\s+")
 
     /** Words that end in a full stop without ending a sentence. */
@@ -55,15 +67,29 @@ internal object LastFmBio {
     private val ENTITIES =
         mapOf("amp" to "&", "quot" to "\"", "apos" to "'", "lt" to "<", "gt" to ">", "nbsp" to " ")
 
-    /** The sentences to quote from [summary], in the bio's order. */
+    /** The sentences to quote from [summary], in the bio's order; none from a [sharedPage]'s. */
     fun sentences(summary: String?): List<String> {
         val text = plainText(summary.orEmpty())
-        return if (DISAMBIGUATION.containsMatchIn(text)) {
+        return if (isShared(text)) {
             emptyList()
         } else {
-            split(text).filter { it.length in MIN_LENGTH..MAX_LENGTH }.take(MAX_SENTENCES)
+            split(text)
+                .filter { it.length in MIN_LENGTH..MAX_LENGTH && !it.endsWith("...") && !it.endsWith("…") }
+                .take(MAX_SENTENCES)
         }
     }
+
+    /**
+     * Whether [summary] says the page is shared by several artists of one name: it starts "There
+     * are several artists …", says several artists share the name, or enumerates them (`1)` and
+     * `2)`, or `1.` and `2.`). Such a page's listeners, tags and similar artists mix them all.
+     */
+    fun sharedPage(summary: String?): Boolean = isShared(plainText(summary.orEmpty()))
+
+    private fun isShared(text: String): Boolean =
+        DISAMBIGUATION.containsMatchIn(text) ||
+            SHARED_NAME.containsMatchIn(text) ||
+            (FIRST_ITEM.containsMatchIn(text) && SECOND_ITEM.containsMatchIn(text))
 
     /** [html] without tags, Last.fm's "Read more" link and licence note, entities decoded, spaces collapsed. */
     fun plainText(html: String): String =
@@ -74,7 +100,11 @@ internal object LastFmBio {
             .removeSuffix(READ_MORE)
             .trim()
 
-    /** Sentences end at `.`, `!` or `?` (with any closing quote or bracket) before a space and a capital or digit. */
+    /**
+     * Sentences end at `.`, `!` or `?` (with any closing quote or bracket) before a space and a
+     * capital or digit, or at the end of the text. A tail without such an end, a summary cut off
+     * mid-sentence, is not a sentence and is dropped.
+     */
     fun split(text: String): List<String> {
         val sentences = mutableListOf<String>()
         var start = 0
@@ -95,7 +125,7 @@ internal object LastFmBio {
         text
             .substring(start)
             .trim()
-            .takeIf { it.isNotEmpty() }
+            .takeIf { it.trimEnd { c -> c in CLOSERS }.lastOrNull()?.let { c -> c in ".!?" } == true }
             ?.let { sentences += it }
         return sentences
     }

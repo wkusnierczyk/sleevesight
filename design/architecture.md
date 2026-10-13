@@ -192,7 +192,7 @@ Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's
 
 Wikidata's lines carry a source of their own, `WIKIDATA` with the tag `WD`, apart from Wikipedia's `W`: they are templated from structured data and cached for their own lifetime (D9). The user's one Wikipedia switch covers both. The player's metadata (`P`) and the model's own knowledge (`M`) are pseudo-sources that retrieve nothing.
 
-`SourceAdapter` as in the design, with the input D4 needs: `lookup(track: NormalizedTrack, resolution: Deferred<Resolution>)`, so an adapter starts by name at once and awaits the resolved ids only to verify. It returns `SourceResult(outcome: Outcome, evidence: List<EvidenceDraft>, latency)`. Evidence extraction per source (D1):
+`SourceAdapter` as in the design, with the input D4 needs: `lookup(track: NormalizedTrack, resolution: Deferred<Resolution>)`, so an adapter starts by name at once and awaits the resolved ids only to verify. It returns `SourceResult(outcome: Outcome, evidence: List<EvidenceDraft>, latency, unverified: List<EvidenceDraft>, rejections: List<Rejection>)`. Evidence extraction per source (D1):
 
 | Source | Evidence lines |
 |---|---|
@@ -203,7 +203,7 @@ Wikidata's lines carry a source of their own, `WIKIDATA` with the tag `WD`, apar
 | Discogs | Templated: personnel, labels, formats |
 | Web search | One line per result: the provider's snippet, verbatim, with its URL |
 
-A match that cannot be verified is shown, never cited (D4): `SourceResult` keeps its lines apart, in `unverified`, from the verified lines in `evidence`, which alone get ids and go to the model. The default of `unverified` is empty, so a line is cited only when an adapter puts it in `evidence`. A match that fails the check gives neither, and `rejected(reason)`.
+A match that cannot be verified is shown, never cited (D4): `SourceResult` keeps its lines apart, in `unverified`, from the verified lines in `evidence`, which alone get ids and go to the model. The default of `unverified` is empty, so a line is cited only when an adapter puts it in `evidence`. A match that fails the check gives neither, and `rejected(reason)`; each rejected candidate is also kept in `rejections`, with what it was looked up for and why, also when another candidate gave lines (one credited artist of several), so *Sources* can show it. `Outcome` says what the source found, not whether it was verified, and has no unverified case: a result with lines only in `unverified` is the unverified one, whatever its outcome.
 
 #### Last.fm verification
 
@@ -213,7 +213,7 @@ Last.fm describes artists, so each credited artist is looked up by name (`artist
 2. Otherwise, a name Last.fm corrected (it differs from the credit beyond case, accents, spacing and punctuation) is rejected. Autocorrection is how a small act lands on an unrelated band's page: the fixture's track 61, `Jessiah`, which Last.fm answers with `Jesaiah`, a Swedish metalcore band. So track 61 is rejected without MusicBrainz, and also when resolution finds the real Jessiah, whose id differs.
 3. Otherwise the match is unverified: the name is the same, and nothing confirms the artist. With no resolution (`Resolution.NONE`), every Last.fm match is unverified at best.
 
-A bio that is a disambiguation note ("There are several artists named …") gives no sentence, since it describes more than one artist. Genre labels come from the top tags weighted at least 10 of 100 (a starting value, tuned in #46), or from `artist.getInfo`'s five tags when the top tags do not arrive, and only for a verified or unverified match. The adapter's `lookupArtists` returns, besides the `SourceResult`, each credited artist's answer, judgement and labels, for the genre and similar-artist cards.
+A page several artists share is unverified at best, even when it carries the resolved artist's id: its listeners, tags and similar artists mix them. It is recognised from its bio, which starts "There are several artists …", says several artists share the name, or enumerates them (`1)` and `2)`, or `1.` and `2.`), and it gives no bio sentence. A bio sentence is quoted only whole: a summary's unterminated or ellipsized tail is dropped. Genre labels come from the top tags weighted at least 10 of 100 (a starting value, tuned in #46), or from `artist.getInfo`'s five tags when the top tags do not arrive, and only for a verified or unverified match. The adapter's `lookupArtists` returns, besides the `SourceResult`, each credited artist's answer, judgement and labels, for the genre and similar-artist cards.
 
 ### Evidence (`:core`)
 

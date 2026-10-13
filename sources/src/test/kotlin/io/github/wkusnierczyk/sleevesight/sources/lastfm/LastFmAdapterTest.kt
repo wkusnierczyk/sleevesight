@@ -9,6 +9,7 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmResourceReader
+import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
 import io.github.wkusnierczyk.sleevesight.fixtures.BelowSoundtrack
@@ -145,6 +146,7 @@ class LastFmAdapterTest {
             val match = assertIs<LastFmMatch.Rejected>(lookup.artists.single().match)
             assertEquals("Last.fm corrected Jessiah to Jesaiah, and no MusicBrainz id confirms it", match.reason)
             assertEquals(Outcome.Rejected(match.reason), lookup.result.outcome)
+            assertEquals(listOf(Rejection("Jessiah", match.reason)), lookup.result.rejections)
             assertTrue(lookup.result.evidence.isEmpty())
             assertTrue(lookup.result.unverified.isEmpty())
             assertTrue(
@@ -200,6 +202,46 @@ class LastFmAdapterTest {
                 listOf(emptyList(), listOf("Rap", "Hip-Hop")),
                 lookup.artists.map { a -> a.genres.map { it.label } },
             )
+        }
+
+    @Test
+    fun `a page several artists share is never verified, even with the resolved MBID`() =
+        runTest {
+            val lookup = adapter().lookupArtists(normalizer.normalize("Bad Energy", "Reem"), resolved("Reem" to REEM))
+
+            assertEquals(LastFmMatch.Unverified, lookup.artists.single().match)
+            assertTrue(
+                lookup.artists
+                    .single()
+                    .artist!!
+                    .sharedPage,
+            )
+            assertTrue(lookup.result.evidence.isEmpty())
+            assertTrue(lookup.result.unverified.isNotEmpty())
+        }
+
+    @Test
+    fun `one credited artist verified and one rejected, the rejection kept with its reason`() =
+        runTest {
+            val n = RegressionCase.MULTIPLE_ARTISTS.tracks.single()
+            // Resolution names the artist `PeleBoy`, the credit `Peleboy`: matched by name key.
+            val lookup =
+                adapter().lookupArtists(fixtureTrack(n), resolved("PeleBoy" to PELEBOY, "Tony K" to OTHER_TONY_K))
+
+            assertEquals(
+                listOf(LastFmMatch.Verified, LastFmMatch.Rejected(TONY_K_REASON)),
+                lookup.artists.map { it.match },
+            )
+            assertEquals(Outcome.ArtistArticle, lookup.result.outcome)
+            assertEquals(listOf(Rejection("Tony K", TONY_K_REASON)), lookup.result.rejections)
+            assertEquals(
+                listOf("Last.fm counts 5,325 listeners for Peleboy.", "Last.fm lists artists similar to Peleboy"),
+                lookup.result.evidence.map { it.text.substringBefore(" by listening") },
+            )
+            assertTrue(lookup.result.unverified.isEmpty())
+            val tonyK = lookup.artists[1]
+            assertEquals(null, tonyK.shown)
+            assertTrue(tonyK.genres.isEmpty())
         }
 
     @Test
@@ -297,5 +339,9 @@ class LastFmAdapterTest {
         const val GORDON_LIGHTFOOT = "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
         const val JESAIAH = "b26aefc5-3332-462b-b770-1baf152e3a08"
         const val JESSIAH = "ac5019aa-c554-4ca0-b29b-ef4e5fe31b2d"
+        const val PELEBOY = "00000000-0000-4000-8000-000000000014"
+        const val REEM = "00000000-0000-4000-8000-000000000012"
+        const val OTHER_TONY_K = "00000000-0000-4000-8000-0000000001ff"
+        const val TONY_K_REASON = "Last.fm's Tony K is a different MusicBrainz artist from Tony K"
     }
 }

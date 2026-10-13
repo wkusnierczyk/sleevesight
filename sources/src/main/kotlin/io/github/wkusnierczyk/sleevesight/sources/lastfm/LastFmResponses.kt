@@ -18,6 +18,8 @@ import kotlinx.serialization.json.jsonObject
  * @property tags the top tags, at most five, in Last.fm's order.
  * @property bioSummary the bio's summary as Last.fm sends it, HTML included.
  * @property bioUrl the bio's own page (`…/+wiki`), when given.
+ * @property sharedPage the bio says several artists share this page ([LastFmBio.sharedPage]): its
+ *   listeners, tags and similar artists mix them, so the match is never verified.
  */
 data class LastFmArtist(
     val name: String,
@@ -28,6 +30,7 @@ data class LastFmArtist(
     val similar: List<LastFmSimilar>,
     val bioSummary: String?,
     val bioUrl: String?,
+    val sharedPage: Boolean = false,
 )
 
 /** A similar artist: by listening overlap, not by sound. */
@@ -85,6 +88,7 @@ internal object LastFmJson {
                         similar.string("name")?.let { LastFmSimilar(it, similar.string("url")) }
                     },
                 bioSummary = artist.obj("bio")?.string("summary"),
+                sharedPage = LastFmBio.sharedPage(artist.obj("bio")?.string("summary")),
                 bioUrl =
                     artist
                         .obj("bio")

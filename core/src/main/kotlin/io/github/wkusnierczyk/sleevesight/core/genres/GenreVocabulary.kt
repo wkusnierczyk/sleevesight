@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
 class GenreVocabulary(
     val families: List<GenreFamily>,
     private val labelOverrides: Map<String, String> = emptyMap(),
+    synonyms: List<List<String>> = emptyList(),
 ) {
     private val familyOf: Map<String, GenreFamily> =
         buildMap {
@@ -31,11 +32,30 @@ class GenreVocabulary(
     /** The vocabulary's tags. */
     val tags: Set<String> get() = familyOf.keys
 
+    private val synonymOf: Map<String, String> =
+        buildMap {
+            for (group in synonyms) {
+                require(group.all { it in familyOf }) { "synonyms $group are not all in the vocabulary" }
+                for (tag in group) {
+                    require(
+                        put(tag, spelling(group.first())) == null,
+                    ) { "tag '$tag' is in two synonym groups" }
+                }
+            }
+        }
+
+    /**
+     * What a vocabulary tag stands for, so spelling variants count as one genre: its letters and
+     * digits (`hip-hop` and `hip hop` are `hiphop`), or its synonym group's (`r&b` and `rnb`).
+     * Null for a tag outside the vocabulary.
+     */
+    fun identity(tag: String): String? = key(tag).takeIf { it in familyOf }?.let { synonymOf[it] ?: spelling(it) }
+
     /**
      * The genre labels for [tags], in their order (the source's, most applied first), at most
-     * [MAX_LABELS]: each tag lowercased and trimmed, kept if it is in the vocabulary, once. Two tags
-     * that differ only in punctuation or spacing (`hip-hop`, `hip hop`) give one label, the first.
-     * As the simulator's `genresFrom`, except for that.
+     * [MAX_LABELS]: each tag lowercased and trimmed, kept if it is in the vocabulary, once per
+     * [identity]: two spellings of one genre (`hip-hop` and `hip hop`, `r&b` and `rnb`) give one
+     * label, the first. As the simulator's `genresFrom`, except for that.
      */
     fun labelsFor(tags: List<String>): List<GenreLabel> {
         val seen = mutableSetOf<String>()
@@ -43,7 +63,7 @@ class GenreVocabulary(
             .asSequence()
             .map(::key)
             .mapNotNull { tag -> familyOf[tag]?.let { tag to it } }
-            .filter { (tag, _) -> seen.add(tag.filter(Char::isLetterOrDigit)) }
+            .filter { (tag, _) -> seen.add(synonymOf[tag] ?: spelling(tag)) }
             .take(MAX_LABELS)
             .map { (tag, family) -> GenreLabel(tag, family.id, family.hue, labelOverrides[tag] ?: titleCase(tag)) }
             .toList()
@@ -68,10 +88,16 @@ class GenreVocabulary(
         /** A vocabulary in the resource's format. */
         fun parse(text: String): GenreVocabulary {
             val file = json.decodeFromString<VocabularyFile>(text)
-            return GenreVocabulary(file.families.map { GenreFamily(it.id, it.hue, it.tags) }, file.labels)
+            return GenreVocabulary(
+                file.families.map { GenreFamily(it.id, it.hue, it.tags) },
+                file.labels,
+                file.synonyms,
+            )
         }
 
         private fun key(tag: String): String = tag.trim().lowercase()
+
+        private fun spelling(tag: String): String = tag.filter(Char::isLetterOrDigit)
 
         /** Each word's first letter or digit uppercased, as the simulator's `\b\w` replacement does. */
         private fun titleCase(tag: String): String =
@@ -107,6 +133,7 @@ private class VocabularyFile(
     @Suppress("unused") val about: String = "",
     val families: List<FamilyEntry>,
     val labels: Map<String, String> = emptyMap(),
+    val synonyms: List<List<String>> = emptyList(),
 )
 
 @Serializable

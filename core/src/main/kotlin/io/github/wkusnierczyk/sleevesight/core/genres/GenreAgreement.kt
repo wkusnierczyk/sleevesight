@@ -20,12 +20,16 @@ data class GenreAgreement(
     val fillsGap: Boolean get() = lastFm == 0 && musicBrainz > 0
 }
 
-/** How [lastFmTags] and [musicBrainzTags], each in its source's order, compare through this vocabulary. */
+/**
+ * How [lastFmTags] and [musicBrainzTags], each in its source's order, compare through this
+ * vocabulary. Labels compare by [GenreVocabulary.identity], so `hip-hop` from one source and
+ * `hip hop` from the other agree.
+ */
 fun GenreVocabulary.agreement(
     lastFmTags: List<String>,
     musicBrainzTags: List<String>,
 ): GenreAgreement {
-    val fromLastFm = labelsFor(lastFmTags).map { it.tag }.toSet()
-    val fromMusicBrainz = labelsFor(musicBrainzTags).map { it.tag }.toSet()
+    val fromLastFm = labelsFor(lastFmTags).mapNotNull { identity(it.tag) }.toSet()
+    val fromMusicBrainz = labelsFor(musicBrainzTags).mapNotNull { identity(it.tag) }.toSet()
     return GenreAgreement(fromLastFm.size, fromMusicBrainz.size, (fromLastFm intersect fromMusicBrainz).size)
 }

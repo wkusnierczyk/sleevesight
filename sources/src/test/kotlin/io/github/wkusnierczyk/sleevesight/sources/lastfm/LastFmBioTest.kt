@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.sources.lastfm
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class LastFmBioTest {
@@ -56,6 +57,36 @@ class LastFmBioTest {
         )) {
             assertTrue(LastFmBio.sentences(summary).isEmpty(), summary)
         }
+    }
+
+    @Test
+    fun `a summary cut off mid-sentence loses its tail`() {
+        val summary =
+            "A complete first sentence here. And then the band rele " +
+                "<a href=\"https://www.last.fm/music/X\">Read more on Last.fm</a>"
+        assertEquals(listOf("A complete first sentence here."), LastFmBio.sentences(summary))
+        assertEquals(
+            listOf("A complete first sentence here.", "A complete last sentence, \"quoted.\""),
+            LastFmBio.split("A complete first sentence here. A complete last sentence, \"quoted.\""),
+        )
+        assertEquals(
+            listOf("A complete first sentence here."),
+            LastFmBio.sentences("A complete first sentence here. Then they toured Europe and..."),
+        )
+    }
+
+    @Test
+    fun `a page several artists share is recognised in each form`() {
+        for (summary in listOf(
+            "There are several artists named Reem. 1) A rapper.",
+            "Multiple artists share this name. A rapper from Denmark.",
+            "1) Reem is a rapper from Denmark. 2) Reem is a singer.",
+            "1. Reem is a rapper from Denmark. 2. Reem is a singer.",
+        )) {
+            assertTrue(LastFmBio.sharedPage(summary), summary)
+            assertTrue(LastFmBio.sentences(summary).isEmpty(), summary)
+        }
+        assertFalse(LastFmBio.sharedPage("Their album sold 1.5 million copies in 2001. It went 2. place."))
     }
 
     @Test

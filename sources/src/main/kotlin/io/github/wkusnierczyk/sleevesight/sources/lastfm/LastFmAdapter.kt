@@ -8,6 +8,7 @@ import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
+import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceAdapter
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
@@ -79,6 +80,10 @@ class LastFmAdapter(
                 evidence = verified,
                 latency = started.elapsedNow(),
                 unverified = unverified,
+                rejections =
+                    answers.mapNotNull { answer ->
+                        (answer.match as? LastFmMatch.Rejected)?.let { Rejection(answer.credited, it.reason) }
+                    },
             )
         return LastFmLookup(result, answers)
     }
@@ -166,7 +171,7 @@ class LastFmAdapter(
         lookup: LastFmArtistLookup,
         retrievedAt: Instant,
     ): List<EvidenceDraft> {
-        val artist = lookup.artist ?: return emptyList()
+        val artist = lookup.shown ?: return emptyList()
         val name = lookup.credited
         val texts = mutableListOf<Pair<String, String?>>()
         for (sentence in LastFmBio.sentences(artist.bioSummary)) {

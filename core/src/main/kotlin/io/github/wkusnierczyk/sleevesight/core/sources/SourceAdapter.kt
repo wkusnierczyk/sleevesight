@@ -46,12 +46,25 @@ val SourceAdapter.tag: String get() = id.tag
  * cited, so never given to the model. A match that failed the check gives neither, and an
  * [Outcome.Rejected]. The default is empty, so a line is cited only when an adapter puts it in
  * [evidence].
+ *
+ * [outcome] says what the source found, not whether it was verified: [Outcome] has no unverified
+ * case, so a result whose lines are all in [unverified] (and none in [evidence]) is the unverified
+ * one, whatever its outcome. [rejections] keeps each candidate that failed the check, with its
+ * reason, also when another candidate gave lines (one credited artist of several), so the
+ * *Sources* section can show them.
  */
 data class SourceResult(
     val outcome: Outcome,
     val evidence: List<EvidenceDraft>,
     val latency: Duration,
     val unverified: List<EvidenceDraft> = emptyList(),
+    val rejections: List<Rejection> = emptyList(),
+)
+
+/** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */
+data class Rejection(
+    val subject: String,
+    val reason: String,
 )
 
 /**
