@@ -199,7 +199,7 @@ interface SourceAdapter {
 
 | Source | Role | Notes |
 |---|---|---|
-| MusicBrainz | Recordings, releases, credits, relationships, first release dates | Rate limit about one request per second; descriptive User-Agent with contact info is required. No key. |
+| MusicBrainz | Recordings, releases, credits, relationships, first release dates | Rate limit about one request per second; descriptive User-Agent with contact info is required. No key. Core data is CC0; tags and genre associations are CC BY-NC-SA 3.0 (`architecture.md`, *Licensing*). |
 | Wikipedia and Wikidata | Song and artist articles | Reach the article through the MusicBrainz Wikidata link where possible, to avoid same-name collisions. No key. |
 | Last.fm | Artist bio, listener count, tags, similar artists | User's own API key. Tags are crowd-applied and noisy; similar artists come from listening overlap, not audio. |
 | Discogs | Releases and personnel | User's own token. |
@@ -237,6 +237,7 @@ Prompt contracts are in the appendix.
 - Derived from Last.fm artist tags filtered through a fixed genre vocabulary. Tags outside the vocabulary (places, decades, "seen live", noise such as "bagel" or "under 2000 listeners") are dropped.
 - Each vocabulary entry belongs to a family with a fixed hue: folk 135, rock 8, pop 328, hip-hop 30, soul and R&B 48, reggae 92, electronic 190, soundtrack and classical 262, jazz and blues 215.
 - Labels are artist-level, and the UI says so.
+- MusicBrainz tags may feed the same filter if D12 adopts them. Labels drawn from them link the MusicBrainz entity page, credited "MusicBrainz contributors, CC BY-NC-SA 3.0" (`architecture.md`, *MusicBrainz tags and genres*). The vocabulary may take names from MusicBrainz's genre list, which is CC0.
 - In the test playlist, 30 of 78 unique tracks got no genre labels because their artists have no usable tags.
 
 ### Caching and offline
