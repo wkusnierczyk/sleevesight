@@ -191,10 +191,11 @@ One interface, one adapter per source:
 
 ```kotlin
 interface SourceAdapter {
-    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA, WIKIDATA, LASTFM, DISCOGS, WEB
-    val tag: String                  // MB, W, WD, L, D, G
+    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA (also emits WIKIDATA lines), LASTFM, DISCOGS, WEB
     suspend fun lookup(track: NormalizedTrack, resolution: Deferred<Resolution>): SourceResult  // typed outcome + evidence lines; see architecture.md, Source adapters
 }
+
+val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, G
 ```
 
 | Source | Role | Notes |
