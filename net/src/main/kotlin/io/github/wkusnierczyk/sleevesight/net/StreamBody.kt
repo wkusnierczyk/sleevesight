@@ -6,6 +6,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -36,6 +37,9 @@ internal suspend fun readLines(
             total += read
             if (total > maxBytes) failure = NetError.TooLarge(maxBytes) else splitter.feed(chunk, read)
         }
+        // The engine ends the body channel cleanly, without an error, when the call is cancelled
+        // under it (a connection lost mid-body can do that): a body cut off is no end of stream.
+        if (failure == null && !response.coroutineContext.isActive) failure = NetError.Offline("CancelledBody")
         if (failure == null) splitter.finish()
     } catch (e: IOException) {
         currentCoroutineContext().ensureActive()

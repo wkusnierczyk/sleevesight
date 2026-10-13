@@ -219,4 +219,22 @@ class StreamTest {
             assertEquals("1", response.header("x-a"))
             assertContentEquals(ByteArray(0), response.bytes)
         }
+
+    @Test
+    fun `a line handler that stops the stream still leaves its attempt in the log`() =
+        runTest {
+            // As a provider does on data it cannot read: it throws from the handler to stop.
+            class Unreadable : IllegalStateException()
+            val log = RecordingLog()
+            val events = "event: message_start\ndata: {}\n\nevent: delta\ndata: not json\n\ndata: {}\n\n"
+            assertFailsWith<Unreadable> {
+                withClient(log = log, handler = { respond(events) }) { client ->
+                    client.stream(post) { if (it == "data: not json") throw Unreadable() }
+                }
+            }
+            assertEquals(
+                listOf("POST https://api.example.org/v1/messages {1 header} -> stopped by caller in 0 ms (attempt 1)"),
+                log.lines,
+            )
+        }
 }

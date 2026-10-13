@@ -28,10 +28,12 @@ interface NetClient : AutoCloseable {
      * across the whole stream, ends it with [NetError.TooLarge]; a connection lost mid-stream is
      * [NetError.Offline]; in both cases [onLine] has seen the lines before. [NetRequest.timeout]
      * bounds the whole exchange, stream included. Each attempt is logged once, when it ends. What
-     * [onLine] throws ends the stream and is rethrown to the caller as it is.
+     * [onLine] throws ends the stream, is logged as the attempt stopped by the caller, and is
+     * rethrown to the caller as it is.
      *
      * The default reads the response whole through [send] and then splits it, which suits fakes; the
-     * client over Ktor streams.
+     * client over Ktor streams. The default inherits [send]'s handling of redirects, so a fake that
+     * follows them follows them here too.
      */
     suspend fun stream(
         request: NetRequest,

@@ -1,11 +1,15 @@
 package io.github.wkusnierczyk.sleevesight.net
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -13,6 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * What the real OkHttp engine sends, against servers on the loopback interface (no internet): nothing
@@ -249,6 +254,60 @@ class OkHttpEngineTest {
                 }
 
             assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `a request timeout bounds a stream, and after its first line it ends Offline, sent once, logged once`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("first\n" + "x".repeat(60))
+                    .throttleBody(6, 1, TimeUnit.SECONDS)
+                    .build(),
+            )
+            val log = RecordingLog()
+            val lines = mutableListOf<String>()
+            val slow = NetRequest(server.url("/s").toString(), timeout = 1500.milliseconds)
+
+            val result = KtorNetClient(twice, okHttpEngine(), log).use { it.stream(slow) { line -> lines += line } }
+
+            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals(listOf("first"), lines)
+            assertEquals(1, server.requestCount)
+            assertEquals(1, log.lines.size, log.lines.joinToString("\n"))
+        }
+
+    @Test
+    fun `a caller that cancels mid-stream stops it, with no retry`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("first\n" + "x".repeat(60))
+                    .throttleBody(6, 1, TimeUnit.SECONDS)
+                    .build(),
+            )
+            server.enqueue(ok("again\n"))
+            val firstLine = CompletableDeferred<Unit>()
+            val lines = mutableListOf<String>()
+
+            KtorNetClient(twice, okHttpEngine(), NetLog.NONE).use { client ->
+                val job =
+                    launch {
+                        client.stream(NetRequest(server.url("/s").toString())) { line ->
+                            lines += line
+                            firstLine.complete(Unit)
+                        }
+                    }
+                firstLine.await()
+                job.cancelAndJoin()
+            }
+
+            assertEquals(listOf("first"), lines)
             assertEquals(1, server.requestCount)
         }
 }

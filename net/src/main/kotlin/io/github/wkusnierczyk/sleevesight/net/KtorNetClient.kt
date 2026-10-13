@@ -127,7 +127,15 @@ internal class KtorNetClient(
         while (true) {
             limiter?.acquire()
             val started = timeSource.markNow()
-            val outcome = tryOnce(request, url, policy, onLine)
+            val outcome =
+                try {
+                    tryOnce(request, url, policy, onLine)
+                } catch (e: ConsumerFailure) {
+                    // The caller's line handler threw: the attempt ends here and is still logged.
+                    val elapsed = started.elapsedNow().inWholeMilliseconds
+                    log.log("$description -> stopped by caller in $elapsed ms (attempt $attempt)")
+                    throw e
+                }
             val wait = retryWait(request, outcome, attempt)
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
@@ -163,8 +171,11 @@ internal class KtorNetClient(
         url: Url,
         policy: HostPolicy?,
         onLine: (suspend (String) -> Unit)?,
-    ): Attempt =
-        try {
+    ): Attempt {
+        // Set once a streamed 2xx body begins: a failure after it is final, wherever it is caught.
+        // A request timeout mid-stream, for one, leaves `execute` as Ktor's timeout exception.
+        val stream = StreamProgress()
+        return try {
             http
                 .prepareRequest {
                     url(url)
@@ -176,27 +187,34 @@ internal class KtorNetClient(
                         setBody(OneShotContent(body.text.encodeToByteArray(), type))
                     }
                     request.timeout?.let { timeout { requestTimeoutMillis = it.inWholeMilliseconds } }
-                }.execute { response -> classify(request, response, policy, onLine) }
+                }.execute { response -> classify(request, response, policy, onLine, stream) }
         } catch (e: EngineProtocolException) {
-            Attempt.Failed(NetError.Protocol(e.reason))
+            Attempt.Failed(NetError.Protocol(e.reason), final = stream.began)
         } catch (e: IOException) {
             // Defensive: no known path brings a cancellation here as an IOException, but if one does,
             // it is a cancellation, not Offline.
             currentCoroutineContext().ensureActive()
             // Timeouts, refused connections, DNS failures and dropped connections are all
             // IOExceptions in Ktor 3. Only the type is kept: a message can carry the URL.
-            Attempt.Failed(NetError.Offline(e::class.simpleName ?: "IOException"))
+            Attempt.Failed(NetError.Offline(e::class.simpleName ?: "IOException"), final = stream.began)
         } catch (e: IllegalArgumentException) {
             // A check in Ktor or OkHttp that validation did not foresee. Its message can quote a
             // header value, so it is reported by a fixed label.
-            Attempt.Failed(NetError.InvalidRequest("request"))
+            Attempt.Failed(NetError.InvalidRequest("request"), final = stream.began)
         }
+    }
+
+    /** Whether an attempt's streamed body has begun. */
+    private class StreamProgress {
+        var began: Boolean = false
+    }
 
     private suspend fun classify(
         request: NetRequest,
         response: HttpResponse,
         policy: HostPolicy?,
         onLine: (suspend (String) -> Unit)?,
+        stream: StreamProgress,
     ): Attempt {
         val status = response.status
         val retryAfter = {
@@ -227,7 +245,7 @@ internal class KtorNetClient(
             }
 
             else -> {
-                read(response, request.maxBytes, onLine)
+                read(response, request.maxBytes, onLine, stream)
             }
         }
     }
@@ -244,8 +262,10 @@ internal class KtorNetClient(
         response: HttpResponse,
         maxBytes: Long,
         onLine: (suspend (String) -> Unit)?,
+        stream: StreamProgress,
     ): Attempt {
         if (onLine != null && response.status.isSuccess()) {
+            stream.began = true
             return readLines(response, maxBytes, onLine)?.let { Attempt.Failed(it, final = true) }
                 ?: Attempt.Answered(NetResponse(response.status.value, headersOf(response), ByteArray(0)))
         }
