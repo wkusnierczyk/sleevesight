@@ -52,7 +52,7 @@ Android only. iOS does not let one app read what another app is playing. Sleeves
 
 ## Building
 
-Requires JDK 17 or later and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
+Requires JDK 17 or later. The Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`) is needed again once the app module exists.
 
 ```sh
 ./gradlew build                                # compile, tests, Detekt, ktlint

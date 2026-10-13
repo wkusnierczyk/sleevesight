@@ -1,6 +1,6 @@
 # Sleevesight
 
-**Status:** Draft; Phase 0 under way (platform findings in *Platform facts*)  
+**Status:** Draft; Phase 0 passed, Phase 0.5 under way (platform findings in *Platform facts*)  
 **Date:** 2026-10-12  
 **Owner:** Wacek  
 **Platform:** Android (Kotlin, Jetpack Compose, Material 3)  

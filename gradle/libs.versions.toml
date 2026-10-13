@@ -3,7 +3,6 @@ agp = "9.4.1"
 kotlin = "2.4.21"
 detekt = "1.23.8"
 ktlint-gradle = "14.2.0"
-activity = "1.13.0"
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
@@ -11,7 +10,4 @@ kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", v
 detekt-gradle-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle:ktlint-gradle", version.ref = "ktlint-gradle" }
 
-androidx-activity = { module = "androidx.activity:activity", version.ref = "activity" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-# JUnit 4 binding for Android unit tests, whose runner is JUnit 4.
-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
