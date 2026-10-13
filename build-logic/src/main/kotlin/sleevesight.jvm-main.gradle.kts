@@ -4,15 +4,18 @@
 // a JVM implementation does not compile, however it is written.
 //
 // - The module's jar carries both, and consumers and the test fixtures get `jvmMain` through it.
-//   The tests are associated with `jvmMain` as well as `main`, and both tests and test fixtures
-//   take the jar as a friend module, so they see the internals of both.
-// - `jvmMain` shares `main`'s dependencies and may declare none of its own: a dependency on a
-//   `jvmMain*` configuration would reach no consumer and escape the dependency allowlist, the
-//   module graph check and locking, so declaring one fails the build.
+//   The tests are associated with `main` and `jvmMain`, which gives them the internals of both;
+//   the test fixtures see the module through its jar, so they take the jar as a friend path.
+// - `jvmMain` shares `main`'s dependencies: `checkJvmMainDependencies` (in `check`) fails when
+//   its compile or runtime classpath resolves an external module or version that `main`'s does
+//   not, by any route. Such a dependency would reach no consumer and escape the dependency
+//   allowlist, the module graph check and locking.
 // - The root `gradle.properties` sets `kotlin.build.archivesTaskOutputAsFriendModule=false`:
 //   `jvmMain` reads `main`'s internals from its classes, since the jar, which carries `jvmMain`,
 //   would be a cycle.
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import sleevesight.checks.CheckDependencies
+import sleevesight.checks.CheckJvmMainDependencies
 import sleevesight.checks.CheckSourceRoots
 
 plugins {
@@ -36,24 +39,24 @@ jar {
 }
 
 val jarFile = jar.flatMap { it.archiveFile }
-tasks.named<KotlinCompile>("compileTestKotlin") {
-    friendPaths.from(jarFile)
-}
 pluginManager.withPlugin("java-test-fixtures") {
     tasks.named<KotlinCompile>("compileTestFixturesKotlin") {
         friendPaths.from(jarFile)
     }
 }
 
-val ownDependencies = setOf("jvmMainApi", "jvmMainImplementation", "jvmMainCompileOnly", "jvmMainRuntimeOnly")
-configurations.matching { it.name in ownDependencies }.configureEach {
-    val configuration = name
-    dependencies.whenObjectAdded {
-        throw GradleException(
-            "$configuration: jvmMain shares main's dependencies; declare $group:$name on main's configurations.",
-        )
+fun modulesOf(configuration: String) =
+    CheckDependencies.modulesOf(configurations.named(configuration).flatMap { it.incoming.resolutionResult.rootComponent })
+
+val checkJvmMainDependencies =
+    tasks.register<CheckJvmMainDependencies>("checkJvmMainDependencies") {
+        group = "verification"
+        description = "Fails when jvmMain resolves external modules or versions that main does not."
+        mainCompile = modulesOf("compileClasspath")
+        jvmMainCompile = modulesOf("jvmMainCompileClasspath")
+        mainRuntime = modulesOf("runtimeClasspath")
+        jvmMainRuntime = modulesOf("jvmMainRuntimeClasspath")
     }
-}
 
 // Kotlin compiles `.kt` files under `src/<set>/java` too; nothing compiles from there.
 val checkSourceRoots =
@@ -64,5 +67,5 @@ val checkSourceRoots =
     }
 
 tasks.named("check") {
-    dependsOn(checkSourceRoots)
+    dependsOn(checkSourceRoots, checkJvmMainDependencies)
 }

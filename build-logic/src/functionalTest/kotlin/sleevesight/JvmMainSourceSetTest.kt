@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 /**
  * `sleevesight.jvm-main` on a small two-module build: portable code cannot see `jvmMain`, while
  * `jvmMain` sees `main`'s internals; the module's tests and test fixtures see the internals of
- * both; its jar and a consumer carry both; and `jvmMain` declares no dependencies of its own.
+ * both; its jar and a consumer carry both; and `jvmMain` resolves exactly `main`'s dependencies.
  *
  * A functional test (`./gradlew :build-logic:functionalTest`, run by CI after the build): the
  * nested build resolves Kotlin from Maven Central, so it stays out of `check`.
@@ -105,15 +105,51 @@ class JvmMainSourceSetTest {
         assertTrue("Hidden.kt" in failed.output, failed.output)
     }
 
-    @Test
-    fun `jvmMain declares no dependencies of its own`() {
-        project()
+    // `lib` with a dependency of `main`'s, and [extra] appended to its build script.
+    private fun libWith(extra: String) {
         dir.write(
             "lib/build.gradle.kts",
             "plugins { id(\"sleevesight.jvm-main\") }\n\n" +
-                "dependencies { \"jvmMainImplementation\"(\"org.jetbrains:annotations:23.0.0\") }\n",
+                "dependencies { implementation(\"org.jetbrains:annotations:23.0.0\") }\n\n" + extra,
         )
-        val failed = runner(":lib:help").buildAndFail()
+    }
+
+    private fun assertCheckFailsNaming(component: String) {
+        val failed = runner(":lib:check").buildAndFail()
         assertTrue("jvmMain shares main's dependencies" in failed.output, failed.output)
+        assertTrue(component in failed.output, failed.output)
+    }
+
+    @Test
+    fun `jvmMain compiles on its own, and shares main's dependencies`() {
+        project()
+        libWith("")
+        runner(":lib:compileJvmMainKotlin").build()
+        runner(":lib:checkJvmMainDependencies").build()
+    }
+
+    @Test
+    fun `a dependency declared on jvmMain fails check`() {
+        project()
+        libWith("dependencies { \"jvmMainImplementation\"(\"org.jspecify:jspecify:1.0.0\") }\n")
+        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0")
+    }
+
+    @Test
+    fun `a dependency inherited by jvmMain fails check`() {
+        project()
+        libWith(
+            "val extra = configurations.create(\"extra\")\n" +
+                "configurations.named(\"jvmMainImplementation\") { extendsFrom(extra) }\n" +
+                "dependencies { \"extra\"(\"org.jspecify:jspecify:1.0.0\") }\n",
+        )
+        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0")
+    }
+
+    @Test
+    fun `a constraint that raises a version for jvmMain fails check`() {
+        project()
+        libWith("dependencies { constraints { add(\"jvmMainImplementation\", \"org.jetbrains:annotations:24.0.0\") } }\n")
+        assertCheckFailsNaming("org.jetbrains:annotations:24.0.0")
     }
 }

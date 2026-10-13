@@ -43,6 +43,13 @@ tasks.register<Test>("functionalTest") {
     testClassesDirs = functionalTest.output.classesDirs
     classpath = functionalTest.runtimeClasspath
     useJUnitPlatform()
-    val testKitDir = layout.buildDirectory.dir("testkit")
-    systemProperty("testkit.dir", testKitDir.get().asFile.path)
+    jvmArgumentProviders += TestKitDir(layout.buildDirectory.dir("testkit").get().asFile)
+}
+
+// The TestKit home as a system property, kept out of the task's inputs so the cache key does not
+// depend on where the checkout is.
+class TestKitDir(
+    @get:LocalState val dir: File,
+) : CommandLineArgumentProvider {
+    override fun asArguments() = listOf("-Dtestkit.dir=${dir.path}")
 }
