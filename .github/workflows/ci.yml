@@ -13,7 +13,7 @@ on:
 
 concurrency:
   # A pull request's runs share a group, so a new push cancels the superseded run. Each branch push
-  # gets a group of its own, so none is cancelled or replaced while pending, and every merge is built.
+  # gets a group of its own, so no run of a merge is cancelled or replaced while pending.
   group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
