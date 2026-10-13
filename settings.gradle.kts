@@ -18,4 +18,3 @@ dependencyResolutionManagement {
 rootProject.name = "sleevesight"
 
 include(":core")
-include(":spike")

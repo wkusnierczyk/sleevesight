@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** Phase 0, platform spike. The build and CI are in place; the app itself is not written yet. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
+> **Status:** Phase 0.5, pipeline CLI. The platform spike is done and its findings are in the design; the app itself is not written yet. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
 
 ## What it does
 
@@ -52,15 +52,14 @@ Android only. iOS does not let one app read what another app is playing. Sleeves
 
 ## Building
 
-Requires JDK 17 or later and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
+Requires JDK 17 or later. The Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`) is needed again once the app module exists.
 
 ```sh
-./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint
-./gradlew checkDependencies checkManifest checkModuleGraph   # the structural checks
-./gradlew :spike:assembleDebug                               # the Phase 0 probe APK
+./gradlew build                                # compile, tests, Detekt, ktlint
+./gradlew checkDependencies checkModuleGraph   # the structural checks
 ```
 
-The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`.
+The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`, checked by `checkManifest` once the app exists), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`.
 
 ## License
 
