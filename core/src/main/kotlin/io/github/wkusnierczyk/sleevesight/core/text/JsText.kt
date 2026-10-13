@@ -12,10 +12,18 @@ internal const val JS_WHITESPACE_CLASS: String =
     "[\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
 
 private val JS_WHITESPACE = Regex(JS_WHITESPACE_CLASS)
-private val JS_EDGES = Regex("^$JS_WHITESPACE_CLASS+|$JS_WHITESPACE_CLASS+$")
 
 /** Whether [c] matches JavaScript's `\s`. */
 internal fun isJsWhitespace(c: Char): Boolean = JS_WHITESPACE.matches(c.toString())
 
-/** JavaScript's `String.prototype.trim`. */
-internal fun String.trimJs(): String = replace(JS_EDGES, "")
+/**
+ * JavaScript's `String.prototype.trim`, as a scan from both ends. Not a regex: `$` also matches
+ * before a final line terminator, U+0085 among them, which JavaScript's `\s` does not include.
+ */
+internal fun String.trimJs(): String {
+    var start = 0
+    var end = length
+    while (start < end && isJsWhitespace(this[start])) start++
+    while (end > start && isJsWhitespace(this[end - 1])) end--
+    return substring(start, end)
+}

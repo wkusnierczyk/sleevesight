@@ -15,8 +15,9 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
  * - **Data is fenced and labelled as data.** The track, as the player reports it, and the evidence
  *   sit between `<track>` and `</track>`, and `<evidence>` and `</evidence>`, with a line saying
  *   their text is data, never instructions. Each field and each evidence line is flattened to one
- *   line ([oneLine]), and every line inside a fence starts with a fixed label or an id, so no
- *   player title or web snippet can end a fence early or pass for an evidence line of its own.
+ *   line, its `<` replaced ([oneLine]), and every line inside a fence starts with a fixed label or
+ *   an id, so no player title or web snippet can write a fence's tag or pass for an evidence line
+ *   of its own.
  * - **Contract, style, contract.** The fixed contract (citations, evidence only, the scope rules,
  *   plain text, `NO_EVIDENCE`) comes first; then the style, which is the card's built-in style
  *   (two to four sentences, plain conversational English) and the user's style, which D14 fills
@@ -144,10 +145,22 @@ object InsightPrompt {
         }
 
     /**
-     * [text] on one line: every control character and Unicode line or paragraph separator becomes a
-     * space, so a field cannot start a line of its own inside a fence.
+     * [text] on one line, and without a tag: every control character and Unicode line or paragraph
+     * separator becomes a space, so a field cannot start a line of its own inside a fence, and every
+     * `<` becomes `\u2039` (single left-pointing angle quotation mark), so a field cannot write a
+     * fence's tag (`</evidence>`) anywhere, in any case or spelling.
      */
-    fun oneLine(text: String): String = text.map { if (breaksLine(it)) ' ' else it }.joinToString("")
+    fun oneLine(text: String): String =
+        text
+            .map {
+                when {
+                    breaksLine(it) -> ' '
+                    it == '<' -> TAG_OPEN_STANDIN
+                    else -> it
+                }
+            }.joinToString("")
+
+    private const val TAG_OPEN_STANDIN = '\u2039'
 
     private fun breaksLine(c: Char): Boolean = c < ' ' || c in '\u007F'..'\u009F' || c == '\u2028' || c == '\u2029'
 }

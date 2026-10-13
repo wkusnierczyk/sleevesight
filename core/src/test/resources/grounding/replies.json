@@ -671,5 +671,20 @@
    "G2"
   ],
   "allowModel": false
+ },
+ {
+  "name": "a next-line character is not JavaScript whitespace",
+  "reply": "x[M]　",
+  "ids": [],
+  "allowModel": true
+ },
+ {
+  "name": "a next-line character between sentences",
+  "reply": "It was a hit. [W3]It went gold. [W4]　",
+  "ids": [
+   "W3",
+   "W4"
+  ],
+  "allowModel": false
  }
 ]

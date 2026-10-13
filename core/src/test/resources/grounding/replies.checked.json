@@ -737,5 +737,36 @@
     }
    ]
   ]
+ },
+ {
+  "name": "a next-line character is not JavaScript whitespace",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "x[M]　",
+     "cites": [
+      "M"
+     ],
+     "status": "model"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a next-line character between sentences",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [W3]It went gold. [W4]　",
+     "cites": [
+      "W3",
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
  }
 ]
