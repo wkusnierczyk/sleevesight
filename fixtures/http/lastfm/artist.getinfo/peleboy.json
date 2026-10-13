@@ -1,0 +1,178 @@
+{
+  "artist": {
+    "name": "PeleBoy",
+    "mbid": "00000000-0000-4000-8000-000000000014",
+    "url": "https://www.last.fm/music/PeleBoy",
+    "image": [
+      {
+        "#text": "",
+        "size": "small"
+      },
+      {
+        "#text": "",
+        "size": "medium"
+      },
+      {
+        "#text": "",
+        "size": "large"
+      },
+      {
+        "#text": "",
+        "size": "extralarge"
+      },
+      {
+        "#text": "",
+        "size": "mega"
+      },
+      {
+        "#text": "",
+        "size": ""
+      }
+    ],
+    "streamable": "0",
+    "ontour": "0",
+    "stats": {
+      "listeners": "5325",
+      "playcount": "40211"
+    },
+    "similar": {
+      "artist": [
+        {
+          "name": "Tara George",
+          "url": "https://www.last.fm/music/Tara+George",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Mad Night",
+          "url": "https://www.last.fm/music/Mad+Night",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "YAEN",
+          "url": "https://www.last.fm/music/YAEN",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Dumi Maraire",
+          "url": "https://www.last.fm/music/Dumi+Maraire",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "tag": []
+    },
+    "bio": {
+      "links": {
+        "link": {
+          "#text": "",
+          "rel": "original",
+          "href": "https://www.last.fm/music/PeleBoy/+wiki"
+        }
+      },
+      "published": "01 Jan 2010, 00:00",
+      "summary": "<a href=\"https://www.last.fm/music/PeleBoy\">Read more on Last.fm</a>",
+      "content": ""
+    }
+  }
+}
