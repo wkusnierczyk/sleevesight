@@ -19,10 +19,17 @@ fun interface NetLog {
  * 1. Every value in [NetRequest.secrets] is redacted, whatever its name.
  * 2. Every other header or parameter whose name looks like a key is redacted ([isSensitive]), including
  *    parameters written into the URL itself; so are user and password in the URL.
- * 3. Any secret value still found in the line, plain or URL-encoded, is replaced.
+ * 3. The line is percent-decoded, so a partly encoded key (`%73k-…`) is plain, and then the secrets'
+ *    material (each value, and each token inside a header value such as `Bearer <token>`) is
+ *    replaced wherever it appears, plain or encoded.
+ *
+ * A URL that does not parse is not shown at all.
  */
 object Redaction {
     const val REDACTED: String = "REDACTED"
+
+    private const val INVALID_URL = "<invalid url>"
+    private const val MAX_DECODE_ROUNDS = 3
 
     private val SENSITIVE_PARTS =
         listOf("key", "token", "secret", "password", "passwd", "auth", "signature", "session", "cookie", "credential")
@@ -47,11 +54,12 @@ object Redaction {
                     append(headers.joinToString(prefix = " {", postfix = "}") { (name, value) -> "$name: $value" })
                 }
             }
-        return scrub(line, request.secrets.query.values + request.secrets.headers.values)
+        return scrub(line, request.secrets.material)
     }
 
     private fun redactedUrl(request: NetRequest): String {
-        val builder = URLBuilder(request.url)
+        val url = parseHttpUrl(request.url) ?: return INVALID_URL
+        val builder = URLBuilder(url)
         builder.user = null
         builder.password = null
         builder.fragment = ""
@@ -77,5 +85,29 @@ object Redaction {
             .filter { it.isNotEmpty() }
             .flatMap { listOf(it, it.encodeURLParameter()) }
             .sortedByDescending { it.length }
-            .fold(line) { acc, secret -> acc.replace(secret, REDACTED) }
+            .fold(decoded(line)) { acc, secret -> acc.replace(secret, REDACTED) }
+
+    /**
+     * [line] with every percent-escape of a visible ASCII character decoded, repeatedly, so no
+     * encoding of a key, partial or double, hides it. Lenient: a stray `%` stays as it is.
+     */
+    private fun decoded(line: String): String {
+        var current = line
+        repeat(MAX_DECODE_ROUNDS) {
+            val next =
+                ESCAPE.replace(current) { match ->
+                    val code = match.groupValues[1].toInt(HEX)
+                    if (code in VISIBLE) code.toChar().toString() else match.value
+                }
+            if (next == current) return current
+            current = next
+        }
+        return current
+    }
+
+    private val ESCAPE = Regex("%([0-9A-Fa-f]{2})")
+    private const val HEX = 16
+    private const val FIRST_VISIBLE = 0x20
+    private const val DEL = 0x7f
+    private val VISIBLE = FIRST_VISIBLE until DEL
 }

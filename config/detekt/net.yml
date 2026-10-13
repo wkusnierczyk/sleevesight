@@ -1,12 +1,11 @@
 # :net, the one module allowed to reach an HTTP client (architecture, Structural constraints). Applied
 # after detekt.yml and pipeline.yml; its imports list replaces theirs, so it repeats the readiness
-# rules and leaves out io.ktor.client. OkHttp stays forbidden: the engine factory (OkHttpEngine.kt)
-# reaches it through Ktor's engine, and is the one per-platform part (Multiplatform readiness). When
-# the factory needs JVM or OkHttp APIs itself (the pinned Ollama client, D8), it gets an `excludes`
-# entry here.
+# rules and leaves out io.ktor.client. OkHttp and the JVM stay forbidden outside the engine factory
+# (OkHttpEngine.kt), the one per-platform part (Multiplatform readiness), which is excluded.
 style:
   ForbiddenImport:
     active: true
+    excludes: ['**/net/OkHttpEngine.kt']
     imports:
       - value: 'java.*'
         reason: 'JVM-only; outside the engine factory, :net stays Multiplatform-ready (D2).'

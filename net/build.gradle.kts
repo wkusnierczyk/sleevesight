@@ -15,5 +15,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.ktor.client.mock)
+    // A loopback server, to test what the real OkHttp engine sends; still no internet.
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
 }

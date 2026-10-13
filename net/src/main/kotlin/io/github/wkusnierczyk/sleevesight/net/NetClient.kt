@@ -9,12 +9,20 @@ import kotlin.coroutines.cancellation.CancellationException
 interface NetClient : AutoCloseable {
     /**
      * Sends [request], waiting for its host's rate limit and retrying as [NetConfig.retry] allows.
-     * A cancelled caller cancels the request.
+     * Redirects of a GET are followed here, at most five, each through its target's rate limit, and
+     * to another origin without the request's secrets or headers named like keys; a redirected POST
+     * is returned as its 3xx response. A cancelled caller cancels the request.
      */
     suspend fun send(request: NetRequest): NetResult<NetResponse>
 }
 
-/** The client over the OkHttp engine, logging each attempt to [log], redacted. */
+/**
+ * The client over the OkHttp engine, logging each attempt to [log], redacted.
+ *
+ * The rate limiters belong to the instance, so a process makes exactly one: the app's `AppGraph`
+ * and the CLI each create it once and inject it into every adapter and provider. Two instances
+ * would each allow MusicBrainz a request a second.
+ */
 fun NetClient(
     config: NetConfig,
     log: NetLog = NetLog.NONE,
@@ -22,7 +30,8 @@ fun NetClient(
 
 /**
  * Sends [request] and reads the response with [parse]. Anything [parse] throws is a
- * [NetError.Parse], so a malformed response is a typed error, not a crash.
+ * [NetError.Parse] carrying only the exception's type, since its message can quote the response or
+ * the request; a malformed response is a typed error, not a crash.
  */
 @Suppress("TooGenericExceptionCaught") // Any parser failure, whatever its type, is a Parse error.
 suspend fun <T> NetClient.fetch(
@@ -40,7 +49,7 @@ suspend fun <T> NetClient.fetch(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                NetResult.Failure(NetError.Parse(e.message ?: e::class.simpleName ?: "unreadable response"))
+                NetResult.Failure(NetError.Parse(e::class.simpleName ?: "Exception"))
             }
         }
     }

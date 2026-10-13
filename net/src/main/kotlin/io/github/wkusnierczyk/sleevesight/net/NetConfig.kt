@@ -7,23 +7,27 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * How the one client behaves: the User-Agent, the per-host rate limits, timeouts and retries.
  *
- * [appVersion] is the version of the app or tool making the requests, for the User-Agent.
+ * [appVersion] is the version of the app or tool making the requests, for the User-Agent. [hosts]
+ * keys are domains, matched case-insensitively and without a trailing dot.
  */
 class NetConfig(
     val appVersion: String,
-    val hosts: Map<String, HostPolicy> = DEFAULT_HOSTS,
+    hosts: Map<String, HostPolicy> = DEFAULT_HOSTS,
     val timeouts: Timeouts = Timeouts(),
     val retry: RetryPolicy = RetryPolicy(),
 ) {
+    val hosts: Map<String, HostPolicy> = hosts.mapKeys { normalizeHost(it.key) }
+
     /** In the form MusicBrainz asks for: application, version, and a contact in parentheses. */
     val userAgent: String get() = "Sleevesight/$appVersion ( $CONTACT )"
 
-    /** The policy for [host]: an entry for the host itself or for a domain it belongs to. */
-    fun policyFor(host: String): Pair<String, HostPolicy>? =
-        hosts.entries
-            .filter { (domain, _) -> host == domain || host.endsWith(".$domain") }
-            .maxByOrNull { it.key.length }
-            ?.toPair()
+    /** The configured domain [host] belongs to (the longest match), or null if it has no limit. */
+    fun domainFor(host: String): String? {
+        val normalized = normalizeHost(host)
+        return hosts.keys
+            .filter { domain -> normalized == domain || normalized.endsWith(".$domain") }
+            .maxByOrNull { it.length }
+    }
 
     companion object {
         /** MusicBrainz requires a contact in the User-Agent; a URL is allowed (owner, 2026-10-13). */
@@ -32,10 +36,16 @@ class NetConfig(
         const val MUSICBRAINZ: String = "musicbrainz.org"
 
         /**
-         * MusicBrainz allows one request per second per client. The other sources state no hard
-         * limit the pipeline comes near; their adapters add an entry when one applies.
+         * MusicBrainz allows one request per second per client, and answers 503 beyond it, which
+         * `:net` reports as [NetError.RateLimited] for any host with a policy. Last.fm's API terms
+         * (checked 2026-10-13) say limits are set and enforced at its discretion, with no figure, and
+         * Wikimedia asks for serial requests without a rate; their adapters add an entry when a
+         * stated limit applies, as Discogs' will (60 a minute, Phase 3).
          */
         val DEFAULT_HOSTS: Map<String, HostPolicy> = mapOf(MUSICBRAINZ to HostPolicy(minInterval = 1.seconds))
+
+        /** Host names compare lowercased and without the trailing dot of a fully qualified name. */
+        fun normalizeHost(host: String): String = host.lowercase().trimEnd('.')
     }
 }
 
@@ -44,7 +54,10 @@ data class HostPolicy(
     val minInterval: Duration,
 )
 
-/** Ktor's three timeouts: to connect, between two packets, and for the whole request. */
+/**
+ * Ktor's three timeouts: to connect, between two packets, and for the whole request.
+ * [NetRequest.timeout] replaces [request] for one request.
+ */
 data class Timeouts(
     val connect: Duration = 10.seconds,
     val socket: Duration = 30.seconds,
@@ -63,12 +76,14 @@ data class RetryPolicy(
 ) {
     init {
         require(maxAttempts >= 1) { "maxAttempts must be at least 1" }
+        require(initialDelay.isPositive()) { "initialDelay must be positive" }
+        require(maxDelay >= initialDelay) { "maxDelay must be at least initialDelay" }
     }
 
     /** The wait before attempt [attempt] + 1. */
     fun delayAfter(attempt: Int): Duration {
         var delay = initialDelay
         repeat(attempt - 1) { delay = (delay * 2).coerceAtMost(maxDelay) }
-        return delay.coerceAtMost(maxDelay)
+        return delay
     }
 }

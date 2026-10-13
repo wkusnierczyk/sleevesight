@@ -1,6 +1,7 @@
 # Groups allowed on the shipped runtime classpath of any module, with their licence.
-# An entry matches its group exactly; `group.*` also matches its subgroups. Prefer exact
-# groups: `androidx.*` would admit androidx.privacysandbox.ads, an ads API.
+# An entry matches its group exactly; `group.*` also matches its subgroups, and `group:name`
+# matches that one module only. Prefer exact groups: `androidx.*` would admit
+# androidx.privacysandbox.ads, an ads API.
 # Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
 # (design, Structural constraints), and every licence GPL-3.0 compatible.
 #
@@ -15,7 +16,8 @@ org.jetbrains                  Apache-2.0   # annotations
 io.ktor                        Apache-2.0   # HTTP client, in :net only (#35)
 com.squareup.okhttp3           Apache-2.0   # Ktor's engine, in :net only (#35)
 com.squareup.okio              Apache-2.0   # I/O, pulled in by OkHttp
-org.slf4j                      MIT          # logging API, pulled in by Ktor; no binding ships
+org.slf4j:slf4j-api            MIT          # logging API, pulled in by Ktor; the module only, so no binding
+                                            # (which would print Ktor's trace logs, URLs and keys) ships unseen
 androidx.activity              Apache-2.0
 androidx.annotation            Apache-2.0
 androidx.arch.core             Apache-2.0

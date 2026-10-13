@@ -14,16 +14,19 @@ sealed interface NetResult<out T> {
 }
 
 /**
- * Every way a request can fail (architecture, Networking). None carries an exception message or a
- * URL, which could hold a key.
+ * Every way a request can fail (architecture, Networking). None carries an exception message, a URL
+ * or a header value, any of which could hold a key: only kinds, statuses, durations and field names.
  */
 sealed interface NetError {
-    /** No response: no connection, a DNS failure, a timeout, a dropped connection. [reason] names the kind. */
+    /** No response: no connection, a DNS failure, a timeout, a dropped connection. [reason] is the exception's type. */
     data class Offline(
         val reason: String,
     ) : NetError
 
-    /** 429, still there after the retries, or asking for a wait longer than they allow. */
+    /**
+     * 429, or 503 from a host with a rate limit (MusicBrainz signals its limit with 503), still there
+     * after the retries, or asking for a wait longer than they allow.
+     */
     data class RateLimited(
         val retryAfter: Duration?,
     ) : NetError
@@ -38,8 +41,17 @@ sealed interface NetError {
         val status: Int,
     ) : NetError
 
-    /** The response arrived but could not be read as the caller expected. */
+    /** The response arrived but could not be read as the caller expected. [reason] is the exception's type. */
     data class Parse(
         val reason: String,
+    ) : NetError
+
+    /**
+     * The request could not be sent as given: a malformed URL, a header value with control characters
+     * (a key read from a file with its newline), a malformed media type. [field] names the part, never
+     * its value. Never retried.
+     */
+    data class InvalidRequest(
+        val field: String,
     ) : NetError
 }

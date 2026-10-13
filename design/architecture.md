@@ -339,9 +339,11 @@ A user setting, *Prepare the next track*:
 
 ### Networking
 
-- One `HttpClient` from `:net`, configured per host: MusicBrainz at one request per second with a descriptive User-Agent and contact address; the others at their documented limits.
-- Every failure maps to a typed error (`Offline`, `RateLimited`, `Unauthorized`, `Server`, `Parse`), which the adapters map to outcomes.
-- The redacting logger never prints headers carrying keys, or query parameters named like keys.
+- One `HttpClient` from `:net`, configured per host: MusicBrainz at one request per second with a descriptive User-Agent and contact address; the others at their documented limits. The rate limiters belong to the client instance, so `AppGraph` and `:cli` each create exactly one `NetClient` and inject it into every adapter and provider; a second instance would double every limit.
+- Every failure maps to a typed error (`Offline`, `RateLimited`, `Unauthorized`, `Server`, `Parse`, and `InvalidRequest` for a request that cannot be sent as given, such as a key with a trailing newline), which the adapters map to outcomes. No error carries an exception message, a URL or a header value. A 404 and the other statuses outside 401, 403, 429 and 5xx are responses, not errors: what they mean depends on the source, so the adapter decides. MusicBrainz signals its limit with 503, so a 503 from a host with a rate limit is `RateLimited`.
+- Retries: a 429 (or a rate-limited 503) for any method, since the server refused the request without acting on it; a 5xx or a lost connection only for `GET`, so a paid `POST` is never sent twice. A `Retry-After`, in seconds or as a date, replaces the backoff; one beyond the cap ends the retries. The engine sends nothing of its own: OkHttp's redirects and connection retries are off, and request bodies are one-shot.
+- Redirects of a `GET` are followed by `:net`, each hop through its target's rate limit; to another origin, the secrets and the headers named like keys stay behind. A redirected `POST` is returned as it is.
+- The redacting logger never prints headers carrying keys, or query parameters named like keys. `:net` does not depend on `:core`, so it does not see `Secret`: adapters pass `Secret.reveal()` into the request's `NetSecrets`, whose values the log redacts whatever their names and scrubs wherever they appear.
 
 ### Structural constraints
 
@@ -351,7 +353,7 @@ A user setting, *Prepare the next track*:
 | No permissions beyond the expected set | A `checkManifest` task parses each variant's merged manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
 | Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
 | Pipeline stays Multiplatform-ready (D2) | Detekt `ForbiddenImport`, `ForbiddenMethodCall` and `ForbiddenAnnotation` in the pipeline modules, as listed under [Multiplatform readiness](#multiplatform-readiness) |
-| Keys never logged | The `Secret` type and the redacting logger; a unit test logs a request carrying a key and asserts it is absent |
+| Keys never logged | The `Secret` type in `:core`, revealed only into `:net`'s `NetSecrets`, and the redacting logger; a unit test logs a request carrying a key and asserts it is absent. No SLF4J binding ships (the allowlist admits `slf4j-api` alone), so Ktor's own trace logs, which print URLs, go nowhere |
 
 ### Multiplatform readiness
 
@@ -404,7 +406,7 @@ The data sources carry their own terms, and every evidence line shows its source
 
 - **Fixtures.** The simulator's three JSON blocks (`playlist-data`, `facts-data`, `albums-data`) move to `fixtures/below-soundtrack/`, and the design's regression cases become named tests. The `facts-data` resolution outcomes are the expected outcomes of the resolution tests; its fact lines are reference facts the extraction tests check for by content, not wording.
 - **Unit tests** in `:core`: normalizer, scoring, genre vocabulary, evidence ids and fingerprint, grounding check, prompt builders against stored prompts.
-- **Adapter tests** against recorded HTTP responses. `:cli record` captures real responses for the fixture playlist into `fixtures/http/`; tests replay them through `MockEngine`. CI never calls a live service.
+- **Adapter tests** against recorded HTTP responses. `:cli record` captures real responses for the fixture playlist into `fixtures/http/`; tests replay them through `:net`, since Detekt forbids `io.ktor.client` outside it: `:net` gains a replay hook for them (a test fixture over `MockEngine`) with the first adapter, #36. CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.
 - **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action; preparing the next track (D13) in each of its modes, including a dropped preparation when the queue changes; and a style (D14) changing the prompt but not the restated contract.
