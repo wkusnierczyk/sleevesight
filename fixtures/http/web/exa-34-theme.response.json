@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "url": "https://streaming.example/track/doctor-who-theme-lmw",
+      "title": "Doctor Who Theme - song by London Music Works | Streaming",
+      "highlights": [
+        "Doctor Who Theme · London Music Works · TV Themes ... also on this album: Coronation Street Theme"
+      ]
+    },
+    {
+      "url": "https://streaming.example/track/coronation-street-theme-lmw",
+      "title": "Theme from Coronation Street - song by London Music Works | Streaming",
+      "highlights": [
+        "Theme from Coronation Street · London Music Works · 2:25"
+      ]
+    },
+    {
+      "url": "https://tvthemes.example/coronation-street",
+      "title": "Coronation Street theme: the recordings",
+      "highlights": [
+        "London Music Works recorded the theme for a collection of British television themes."
+      ]
+    },
+    {
+      "url": "https://streaming.example/track/eastenders-theme-lmw",
+      "title": "EastEnders Theme - London Music Works",
+      "highlights": [
+        "EastEnders Theme · London Music Works · 1:58"
+      ]
+    }
+  ]
+}

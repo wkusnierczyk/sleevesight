@@ -1,0 +1,19 @@
+{
+  "query": "\"Baby, Please Don't Go\" by Them and Van Morrison, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Baby, Please Don't Go Them Van Morrison",
+      "maxCharacters": 300
+    }
+  }
+}

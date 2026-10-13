@@ -1,0 +1,19 @@
+{
+  "query": "\"Fishin' In A Dory\" by Ray Johnson And The Sou' Westers, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Fishin' In A Dory Ray Johnson And The Sou' Westers",
+      "maxCharacters": 300
+    }
+  }
+}
