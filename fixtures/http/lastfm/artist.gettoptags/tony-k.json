@@ -1,0 +1,24 @@
+{
+  "toptags": {
+    "tag": [
+      {
+        "count": 100,
+        "name": "rap",
+        "url": "https://www.last.fm/tag/rap"
+      },
+      {
+        "count": 40,
+        "name": "hip-hop",
+        "url": "https://www.last.fm/tag/hip-hop"
+      },
+      {
+        "count": 20,
+        "name": "detroit",
+        "url": "https://www.last.fm/tag/detroit"
+      }
+    ],
+    "@attr": {
+      "artist": "Tony K"
+    }
+  }
+}

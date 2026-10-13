@@ -1,0 +1,34 @@
+{
+  "toptags": {
+    "tag": [
+      {
+        "count": 100,
+        "name": "metalcore",
+        "url": "https://www.last.fm/tag/metalcore"
+      },
+      {
+        "count": 45,
+        "name": "metal",
+        "url": "https://www.last.fm/tag/metal"
+      },
+      {
+        "count": 30,
+        "name": "swedish",
+        "url": "https://www.last.fm/tag/swedish"
+      },
+      {
+        "count": 22,
+        "name": "hardcore",
+        "url": "https://www.last.fm/tag/hardcore"
+      },
+      {
+        "count": 11,
+        "name": "rock",
+        "url": "https://www.last.fm/tag/rock"
+      }
+    ],
+    "@attr": {
+      "artist": "Jesaiah"
+    }
+  }
+}
