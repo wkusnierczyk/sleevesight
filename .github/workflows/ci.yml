@@ -12,8 +12,9 @@ on:
       - "design/**"
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # Superseded pull request runs are cancelled; branch pushes always finish, so each merge is built.
+  # A pull request's runs share a group, so a new push cancels the superseded run. Each branch push
+  # gets a group of its own, so none is cancelled or replaced while pending, and every merge is built.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -33,7 +34,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
         with:
-          # Pushes to `main` and `dev-*` write the cache, since an integration branch's dependencies run ahead of `main`'s.
+          # Pushes to `main` and `dev-*` write the cache, since an integration branch's
+          # dependencies run ahead of `main`'s.
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Build, test and lint
