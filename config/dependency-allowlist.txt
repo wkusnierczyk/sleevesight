@@ -4,6 +4,9 @@
 # Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
 # (design, Structural constraints), and every licence GPL-3.0 compatible.
 #
+# The `androidx.*` groups and the two after them were sized to the Phase 0 probe, which is
+# gone; no module pulls them in now. `:app` (#47) reviews them again.
+#
 # group                        licence
 org.jetbrains.kotlin           Apache-2.0
 org.jetbrains.kotlinx          Apache-2.0
