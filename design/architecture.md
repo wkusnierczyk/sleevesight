@@ -413,7 +413,7 @@ The data sources carry their own terms, and every evidence line shows its source
 
 ## CI
 
-GitHub Actions from the first code PR. On every pull request and push to `main`:
+GitHub Actions from the first code PR. On every pull request and every push to `main` or a `dev-*` integration branch:
 
 1. `./gradlew build`: compile, unit tests, Detekt, ktlint, Android lint.
 2. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
