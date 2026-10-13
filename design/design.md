@@ -348,6 +348,10 @@ A JVM Kotlin command-line tool sharing the pipeline module: normalizer, resoluti
 
 Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
 
+### Phase 1.5. Play release
+
+The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. The work is in [plan.md](plan.md).
+
 ### Phase 2. Detail and discovery
 
 Song, artist and album detail content; genre labels and cards; sounds-like cards; layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
