@@ -4,9 +4,9 @@
 # Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
 # (design, Structural constraints), and every licence GPL-3.0 compatible.
 #
-# Only `org.jetbrains.kotlin` and `org.jetbrains` are in use now. The rest, `com.google.guava`
-# and `org.jspecify` included, were sized to the Phase 0 probe, which is gone; `:app` (#47)
-# reviews them again.
+# When the Phase 0 probe was removed (#30), only `org.jetbrains.kotlin` and `org.jetbrains`
+# were in use; the rest, `com.google.guava` and `org.jspecify` included, were sized to the
+# probe. `:app` (#47) reviews them again.
 #
 # group                        licence
 org.jetbrains.kotlin           Apache-2.0
