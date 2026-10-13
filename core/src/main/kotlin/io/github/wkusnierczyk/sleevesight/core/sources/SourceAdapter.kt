@@ -66,30 +66,3 @@ data class Rejection(
     val subject: String,
     val reason: String,
 )
-
-/**
- * What entity resolution established about a track, which adapters verify their matches against
- * (`design/architecture.md`, *Entity resolution*). Built by the MusicBrainz resolution (#36),
- * which may add to it; every field is null or empty when nothing was resolved.
- *
- * @property recordingMbid the accepted MusicBrainz recording.
- * @property artists each credited artist, resolved separately.
- * @property firstReleaseDate the earliest first-release date of the recording's release groups,
- *   as MusicBrainz gives it (`1974`, `1974-03`, `1974-03-25`); the player's release stays separate.
- */
-data class Resolution(
-    val recordingMbid: String? = null,
-    val artists: List<ResolvedArtist> = emptyList(),
-    val firstReleaseDate: String? = null,
-) {
-    companion object {
-        /** Nothing resolved. */
-        val NONE: Resolution = Resolution()
-    }
-}
-
-/** A credited artist as the track names it, and its MusicBrainz artist id when resolved. */
-data class ResolvedArtist(
-    val name: String,
-    val mbid: String?,
-)

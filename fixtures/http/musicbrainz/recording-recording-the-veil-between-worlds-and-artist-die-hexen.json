@@ -1,0 +1,217 @@
+{
+ "created": "2026-10-13T23:04:46.560Z",
+ "count": 3,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
+   "score": 100,
+   "artist-credit-id": "33097634-f52a-4843-8f56-5791c1f52750",
+   "title": "THE VEIL BETWEEN WORLDS",
+   "length": 148667,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "DIE HEXEN",
+     "artist": {
+      "id": "10fe804c-59d3-4ac4-9230-4a0f34124481",
+      "name": "DIE HEXEN",
+      "sort-name": "DIE HEXEN",
+      "disambiguation": "Composer, Multi-instrumentalist, Producer, Sound Designer, Score, Soundtrack"
+     }
+    }
+   ],
+   "first-release-date": "2022-07-22",
+   "releases": [
+    {
+     "id": "2bafe2f3-1604-47e6-8bb6-ff8d80fa2c4c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "YOU ARE NOT MY MOTHER",
+     "status": "Official",
+     "release-group": {
+      "id": "2d640ce8-8e57-4e1e-8e96-4d853e3930cb",
+      "type-id": "22a628ad-c082-3c4f-b1b6-d41665107b88",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "YOU ARE NOT MY MOTHER",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Soundtrack"
+      ],
+      "secondary-type-ids": [
+       "22a628ad-c082-3c4f-b1b6-d41665107b88"
+      ]
+     },
+     "date": "2022-07-22",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2022-07-22",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 31,
+     "media": [
+      {
+       "id": "71d2245b-403c-49d2-b4e2-e2c445622ab3",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "911fc027-3d77-457c-a046-5357c529b14e",
+         "number": "19",
+         "title": "THE VEIL BETWEEN WORLDS",
+         "length": 148667
+        }
+       ],
+       "track-count": 31,
+       "track-offset": 18
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "359e197d-9dce-46b3-afe3-e804db785974",
+   "score": 99,
+   "artist-credit-id": "33097634-f52a-4843-8f56-5791c1f52750",
+   "title": "The Veil Between Worlds",
+   "length": 148667,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "DIE HEXEN",
+     "artist": {
+      "id": "10fe804c-59d3-4ac4-9230-4a0f34124481",
+      "name": "DIE HEXEN",
+      "sort-name": "DIE HEXEN",
+      "disambiguation": "Composer, Multi-instrumentalist, Producer, Sound Designer, Score, Soundtrack"
+     }
+    }
+   ],
+   "first-release-date": "2022-07-22",
+   "releases": [
+    {
+     "id": "04d91410-0749-4652-ab37-09d26044ed8a",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "You Are Not My Mother",
+     "status": "Official",
+     "release-group": {
+      "id": "d2778f45-68dd-46da-96e5-0e314fe1a01c",
+      "type-id": "22a628ad-c082-3c4f-b1b6-d41665107b88",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "You Are Not My Mother",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Soundtrack"
+      ],
+      "secondary-type-ids": [
+       "22a628ad-c082-3c4f-b1b6-d41665107b88"
+      ]
+     },
+     "track-count": 31,
+     "media": [
+      {
+       "id": "a9061870-5526-4496-a1da-49e84ae2ae54",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "fbabe95d-d130-4cf7-b586-c909a978d2b2",
+         "number": "19",
+         "title": "The Veil Between Worlds",
+         "length": 148667
+        }
+       ],
+       "track-count": 31,
+       "track-offset": 18
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6ef5fd9d-26a6-4c19-b6b5-82dafa8d44e6",
+   "score": 99,
+   "artist-credit-id": "33097634-f52a-4843-8f56-5791c1f52750",
+   "title": "THE VEIL BETWEEN WORLDS",
+   "length": 148667,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "DIE HEXEN",
+     "artist": {
+      "id": "10fe804c-59d3-4ac4-9230-4a0f34124481",
+      "name": "DIE HEXEN",
+      "sort-name": "DIE HEXEN",
+      "disambiguation": "Composer, Multi-instrumentalist, Producer, Sound Designer, Score, Soundtrack"
+     }
+    }
+   ],
+   "first-release-date": "2022-07-22",
+   "releases": [
+    {
+     "id": "9c6cfae7-ee8a-4bbd-9336-f7cbc91930c4",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "YOU ARE NOT MY MOTHER",
+     "status": "Official",
+     "release-group": {
+      "id": "180d18b5-4a4a-437e-ac4d-217bc33727ec",
+      "type-id": "22a628ad-c082-3c4f-b1b6-d41665107b88",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "YOU ARE NOT MY MOTHER",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Soundtrack"
+      ],
+      "secondary-type-ids": [
+       "22a628ad-c082-3c4f-b1b6-d41665107b88"
+      ]
+     },
+     "date": "2022-07-22",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2022-07-22",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 31,
+     "media": [
+      {
+       "id": "27db62f9-4ddb-4aab-af34-272db205e333",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "104f9855-3f34-455e-aae2-c1c389163e7b",
+         "number": "19",
+         "title": "THE VEIL BETWEEN WORLDS",
+         "length": 148667
+        }
+       ],
+       "track-count": 31,
+       "track-offset": 18
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

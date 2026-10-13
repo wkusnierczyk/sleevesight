@@ -1,0 +1,417 @@
+{
+ "title": "New York Groove",
+ "relations": [
+  {
+   "direction": "backward",
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "ended": false,
+   "artist": {
+    "type": "Person",
+    "name": "Anton Fig",
+    "disambiguation": "",
+    "id": "7d9b9240-fcca-42d4-9c71-955746447373",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "sort-name": "Fig, Anton"
+   },
+   "attribute-values": {},
+   "type": "instrument",
+   "attribute-credits": {},
+   "target-credit": "",
+   "attribute-ids": {
+    "drums (drum set)": "12092505-6ee1-46af-a15a-b5b468b6b155"
+   },
+   "attributes": [
+    "drums (drum set)"
+   ],
+   "source-credit": ""
+  },
+  {
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "target-type": "artist",
+   "end": null,
+   "begin": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-credits": {
+    "electric guitar": "lead guitar"
+   },
+   "attribute-ids": {
+    "electric guitar": "7ee8ebf5-3aed-4fc8-8004-49f4a8c45a87"
+   },
+   "attributes": [
+    "electric guitar"
+   ],
+   "source-credit": "",
+   "ended": false,
+   "artist": {
+    "sort-name": "Frehley, Ace",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "disambiguation": "American rock guitarist",
+    "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+    "name": "Ace Frehley",
+    "type": "Person"
+   },
+   "attribute-values": {},
+   "type": "instrument"
+  },
+  {
+   "direction": "backward",
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "target-type": "artist",
+   "begin": null,
+   "end": null,
+   "ended": false,
+   "artist": {
+    "name": "Bobby McAdams",
+    "type": "Person",
+    "disambiguation": "",
+    "id": "ed680469-cef9-48bf-900b-180662b69fec",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "McAdams, Bobby"
+   },
+   "attribute-values": {},
+   "type": "instrument",
+   "target-credit": "",
+   "attribute-credits": {
+    "talkbox": "power mouth"
+   },
+   "attribute-ids": {
+    "talkbox": "9eecc5ee-d625-4330-85dd-a338d80ea433"
+   },
+   "attributes": [
+    "talkbox"
+   ],
+   "source-credit": ""
+  },
+  {
+   "type": "producer",
+   "attribute-values": {},
+   "artist": {
+    "disambiguation": "American rock guitarist",
+    "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+    "sort-name": "Frehley, Ace",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "type": "Person",
+    "name": "Ace Frehley"
+   },
+   "ended": false,
+   "source-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "target-type": "artist",
+   "begin": null,
+   "end": null,
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0"
+  },
+  {
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "target-type": "artist",
+   "end": null,
+   "begin": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "source-credit": "",
+   "ended": false,
+   "artist": {
+    "sort-name": "Kramer, Eddie",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "disambiguation": "engineer",
+    "id": "7f22b075-52b4-41c1-9dc2-b19fbcc62101",
+    "type": "Person",
+    "name": "Eddie Kramer"
+   },
+   "attribute-values": {},
+   "type": "producer"
+  },
+  {
+   "direction": "backward",
+   "target-type": "artist",
+   "begin": null,
+   "end": null,
+   "type-id": "a01ee869-80a8-45ef-9447-c59e91aa7926",
+   "type": "recording",
+   "attribute-values": {},
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "sort-name": "Kramer, Eddie",
+    "disambiguation": "engineer",
+    "id": "7f22b075-52b4-41c1-9dc2-b19fbcc62101",
+    "type": "Person",
+    "name": "Eddie Kramer"
+   },
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {},
+   "attributes": [],
+   "target-credit": ""
+  },
+  {
+   "attributes": [
+    "background vocals"
+   ],
+   "attribute-ids": {
+    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+   },
+   "source-credit": "",
+   "attribute-credits": {},
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "vocal",
+   "ended": false,
+   "artist": {
+    "disambiguation": "",
+    "id": "24f95021-7799-438c-9ce2-6f19f0a5732f",
+    "sort-name": "Collins, Susan",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "type": "Person",
+    "name": "Susan Collins"
+   },
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "direction": "backward"
+  },
+  {
+   "attributes": [
+    "lead vocals"
+   ],
+   "attribute-ids": {
+    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5"
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-credits": {},
+   "attribute-values": {},
+   "type": "vocal",
+   "ended": false,
+   "artist": {
+    "name": "Ace Frehley",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "sort-name": "Frehley, Ace",
+    "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+    "disambiguation": "American rock guitarist"
+   },
+   "target-type": "artist",
+   "begin": null,
+   "end": null,
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "direction": "backward"
+  },
+  {
+   "target-type": "artist",
+   "end": null,
+   "begin": null,
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "direction": "backward",
+   "attribute-ids": {
+    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+   },
+   "attributes": [
+    "background vocals"
+   ],
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-credits": {},
+   "attribute-values": {},
+   "type": "vocal",
+   "ended": false,
+   "artist": {
+    "name": "Ace Frehley",
+    "type": "Person",
+    "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+    "disambiguation": "American rock guitarist",
+    "sort-name": "Frehley, Ace",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US"
+   }
+  },
+  {
+   "attribute-credits": {},
+   "target-credit": "",
+   "source-credit": "",
+   "attributes": [
+    "background vocals"
+   ],
+   "attribute-ids": {
+    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+   },
+   "artist": {
+    "name": "David Lasley",
+    "type": "Person",
+    "id": "434d2e8f-3e85-4576-8d71-826fe378b2d2",
+    "disambiguation": "",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Lasley, David"
+   },
+   "ended": false,
+   "type": "vocal",
+   "attribute-values": {},
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "end": null,
+   "begin": null,
+   "target-type": "artist",
+   "direction": "backward"
+  },
+  {
+   "direction": "forward",
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "url": {
+    "id": "3eb46ddb-647a-4fc7-a8d1-dcaec8aa65c2",
+    "resource": "https://open.spotify.com/track/49uNugmS6kiaw88MtpTn59"
+   },
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type": "free streaming",
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "source-credit": ""
+  },
+  {
+   "ended": false,
+   "attribute-values": {},
+   "type": "free streaming",
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "source-credit": "",
+   "direction": "forward",
+   "url": {
+    "id": "311c009d-8822-49c3-9966-1d256066ae42",
+    "resource": "https://www.deezer.com/track/78369153"
+   },
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "begin": null,
+   "end": null,
+   "target-type": "url"
+  },
+  {
+   "type-id": "92777657-504c-4acb-bd33-51a201bd57e1",
+   "url": {
+    "id": "8a49a321-cbcc-4030-a6a0-b2248808c9f0",
+    "resource": "https://music.apple.com/us/song/1444175649"
+   },
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "direction": "forward",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attributes": [],
+   "source-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type": "purchase for download"
+  },
+  {
+   "ended": false,
+   "type": "streaming",
+   "attribute-values": {},
+   "target-credit": "",
+   "source-credit": "",
+   "attribute-ids": {},
+   "attributes": [],
+   "direction": "forward",
+   "url": {
+    "resource": "https://music.apple.com/us/song/1444175649",
+    "id": "8a49a321-cbcc-4030-a6a0-b2248808c9f0"
+   },
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "end": null,
+   "begin": null,
+   "target-type": "url"
+  },
+  {
+   "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+   "url": {
+    "resource": "https://tidal.com/track/29583793",
+    "id": "fc9c9ba2-307f-47cb-8e03-7438d64b4dcd"
+   },
+   "target-type": "url",
+   "end": null,
+   "begin": null,
+   "direction": "forward",
+   "target-credit": "",
+   "attributes": [],
+   "attribute-ids": {},
+   "source-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type": "streaming"
+  },
+  {
+   "direction": "forward",
+   "target-type": "work",
+   "end": null,
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "work": {
+    "type": "Song",
+    "iswcs": [
+     "T-900.099.056-7"
+    ],
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "language": "eng",
+    "languages": [
+     "eng"
+    ],
+    "title": "New York Groove",
+    "id": "8d9cf249-1f5c-433c-a0ea-dae54cf38a7e",
+    "disambiguation": "",
+    "attributes": []
+   },
+   "attribute-values": {},
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "target-credit": ""
+  }
+ ],
+ "length": 182000,
+ "artist-credit": [
+  {
+   "artist": {
+    "name": "Ace Frehley",
+    "type": "Person",
+    "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+    "disambiguation": "American rock guitarist",
+    "country": "US",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Frehley, Ace"
+   },
+   "joinphrase": "",
+   "name": "Ace Frehley"
+  }
+ ],
+ "id": "2fb8c627-4368-4b29-ba35-18bcc808e27a",
+ "disambiguation": "",
+ "video": false,
+ "first-release-date": "1978-09-18"
+}

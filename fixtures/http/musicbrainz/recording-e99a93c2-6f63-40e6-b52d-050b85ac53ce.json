@@ -1,0 +1,58 @@
+{
+ "title": "Baby, Please Don’t Go",
+ "first-release-date": "1964-11-06",
+ "artist-credit": [
+  {
+   "artist": {
+    "country": "GB",
+    "disambiguation": "Northern Irish group originally feat. Van Morrison",
+    "name": "Them",
+    "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+    "sort-name": "Them",
+    "type": "Group",
+    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b"
+   },
+   "name": "Them",
+   "joinphrase": ""
+  }
+ ],
+ "length": 160000,
+ "disambiguation": "",
+ "video": false,
+ "relations": [
+  {
+   "work": {
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "title": "Baby, Please Don’t Go",
+    "type": "Song",
+    "disambiguation": "",
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "id": "59c21df2-f1a3-49af-98e8-30becab2a5ce",
+    "iswcs": [
+     "T-070.278.618-2"
+    ],
+    "language": "eng"
+   },
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": false,
+   "target-type": "work",
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attributes": [
+    "cover"
+   ],
+   "source-credit": "",
+   "direction": "forward",
+   "type": "performance"
+  }
+ ],
+ "id": "e99a93c2-6f63-40e6-b52d-050b85ac53ce"
+}

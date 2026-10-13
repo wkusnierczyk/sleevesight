@@ -1,0 +1,286 @@
+{
+ "id": "16fa6212-1feb-4d5d-ab61-0921d0769635",
+ "relations": [
+  {
+   "attribute-credits": {},
+   "attribute-values": {},
+   "attribute-ids": {
+    "bass": "6505f98c-f698-4406-8bf4-8ca43d05c36f"
+   },
+   "ended": false,
+   "target-type": "artist",
+   "target-credit": "",
+   "end": null,
+   "artist": {
+    "disambiguation": "",
+    "id": "ada28d21-2aad-4cc5-8d97-1481a222de25",
+    "name": "Trevor Hutchinson",
+    "country": "GB",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Hutchinson, Trevor"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "begin": null,
+   "attributes": [
+    "bass"
+   ],
+   "source-credit": "",
+   "direction": "backward",
+   "type": "instrument"
+  },
+  {
+   "attribute-values": {},
+   "attribute-credits": {},
+   "target-type": "artist",
+   "ended": false,
+   "attribute-ids": {
+    "membranophone": "3bccb7eb-cbca-42cd-b0ac-a5e959df7221"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "artist": {
+    "type": "Person",
+    "sort-name": "McKinney, Peter",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "id": "b8af00c7-bb06-4b62-9227-8b6dc842b0fc",
+    "name": "Peter McKinney",
+    "disambiguation": ""
+   },
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "membranophone"
+   ],
+   "source-credit": "",
+   "direction": "backward",
+   "type": "instrument"
+  },
+  {
+   "type": "instrument",
+   "direction": "backward",
+   "source-credit": "",
+   "attributes": [
+    "guitar"
+   ],
+   "begin": null,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "artist": {
+    "name": "Mike Scott",
+    "id": "36deef3e-384d-4cdd-9a8e-f63aa3e16878",
+    "disambiguation": "The Waterboys",
+    "country": "GB",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Scott, Mike",
+    "type": "Person"
+   },
+   "end": null,
+   "target-credit": "",
+   "target-type": "artist",
+   "ended": false,
+   "attribute-ids": {
+    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+   },
+   "attribute-values": {},
+   "attribute-credits": {}
+  },
+  {
+   "attribute-ids": {
+    "mandolin": "37fa9bb5-d5d7-4b0f-aa4d-531339ba9c32"
+   },
+   "ended": false,
+   "target-type": "artist",
+   "attribute-credits": {},
+   "attribute-values": {},
+   "target-credit": "",
+   "end": null,
+   "artist": {
+    "country": "GB",
+    "name": "Anthony Thistlethwaite",
+    "id": "8bdcf053-4c77-49a1-9c30-3195b62f3cae",
+    "disambiguation": "",
+    "sort-name": "Thistlethwaite, Anthony",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "begin": null,
+   "source-credit": "",
+   "attributes": [
+    "mandolin"
+   ],
+   "type": "instrument",
+   "direction": "backward"
+  },
+  {
+   "source-credit": "",
+   "attributes": [
+    "fiddle"
+   ],
+   "type": "instrument",
+   "direction": "backward",
+   "target-type": "artist",
+   "attribute-ids": {
+    "fiddle": "04a21d03-535a-4ace-9098-12013867b8e5"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "attribute-credits": {},
+   "begin": null,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "artist": {
+    "id": "fed16045-b97d-4708-8bf7-aae4da46c240",
+    "name": "Steve Wickham",
+    "disambiguation": "",
+    "country": "IE",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Wickham, Steve"
+   },
+   "end": null,
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "3e3102e1-1896-4f50-b5b2-dd9824e46efe",
+   "artist": {
+    "country": "GB",
+    "name": "Phil Tennant",
+    "id": "737ccfae-74b2-48a8-996d-77d2875eac04",
+    "disambiguation": "",
+    "sort-name": "Tennant, Phil",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "ended": false,
+   "attribute-ids": {},
+   "target-type": "artist",
+   "attribute-values": {},
+   "type": "mix",
+   "direction": "backward",
+   "source-credit": "",
+   "attributes": []
+  },
+  {
+   "source-credit": "",
+   "attributes": [],
+   "type": "recording",
+   "direction": "backward",
+   "target-type": "artist",
+   "ended": false,
+   "attribute-ids": {},
+   "attribute-values": {},
+   "begin": null,
+   "type-id": "a01ee869-80a8-45ef-9447-c59e91aa7926",
+   "artist": {
+    "country": null,
+    "disambiguation": "",
+    "name": "Pearse Dunne",
+    "id": "d4680c7d-818e-4131-88b9-36220885281d",
+    "sort-name": "Dunne, Pearse",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "end": null,
+   "target-credit": ""
+  },
+  {
+   "attributes": [],
+   "source-credit": "",
+   "direction": "backward",
+   "type": "recording",
+   "attribute-values": {},
+   "target-type": "artist",
+   "attribute-ids": {},
+   "ended": false,
+   "type-id": "a01ee869-80a8-45ef-9447-c59e91aa7926",
+   "artist": {
+    "disambiguation": "",
+    "name": "Pat McCarthy",
+    "id": "9a3c96f8-4473-4c91-9f75-1046eed1107d",
+    "country": "IE",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "McCarthy, Pat",
+    "type": "Person"
+   },
+   "begin": null,
+   "target-credit": "",
+   "end": null
+  },
+  {
+   "begin": null,
+   "type-id": "0fdbe3c6-7700-4a31-ae54-b53f06ae1cfa",
+   "artist": {
+    "sort-name": "Scott, Mike",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
+    "disambiguation": "The Waterboys",
+    "name": "Mike Scott",
+    "id": "36deef3e-384d-4cdd-9a8e-f63aa3e16878"
+   },
+   "end": null,
+   "target-credit": "",
+   "attribute-values": {},
+   "target-type": "artist",
+   "attribute-ids": {},
+   "ended": false,
+   "direction": "backward",
+   "type": "vocal",
+   "attributes": [],
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "direction": "forward",
+   "source-credit": "",
+   "attributes": [],
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "target-type": "work",
+   "ended": false,
+   "attribute-ids": {},
+   "work": {
+    "title": "Fisherman’s Blues",
+    "type": "Song",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "iswcs": [
+     "T-010.157.503-4"
+    ],
+    "language": "eng",
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "disambiguation": "",
+    "id": "c4efc5eb-9904-309a-97a4-675a73a9494f"
+   },
+   "attribute-values": {}
+  }
+ ],
+ "disambiguation": "",
+ "video": false,
+ "first-release-date": "1989-01-07",
+ "title": "Fisherman's Blues",
+ "length": null,
+ "artist-credit": [
+  {
+   "joinphrase": "",
+   "name": "The Waterboys",
+   "artist": {
+    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+    "sort-name": "Waterboys, The",
+    "type": "Group",
+    "disambiguation": "folk-rock",
+    "name": "The Waterboys",
+    "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+    "country": "GB"
+   }
+  }
+ ]
+}
