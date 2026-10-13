@@ -6,7 +6,7 @@ on:
       - "**/*.md"
       - "design/**"
   push:
-    branches: [main]
+    branches: [main, "dev-*"]
     paths-ignore:
       - "**/*.md"
       - "design/**"
