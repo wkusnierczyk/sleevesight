@@ -1,24 +1,24 @@
 {
- "title": "THE VEIL BETWEEN WORLDS",
  "length": 148667,
- "disambiguation": "",
- "id": "1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
  "artist-credit": [
   {
-   "joinphrase": "",
-   "name": "DIE HEXEN",
    "artist": {
+    "country": "GB",
+    "name": "DIE HEXEN",
     "id": "10fe804c-59d3-4ac4-9230-4a0f34124481",
     "disambiguation": "Composer, Multi-instrumentalist, Producer, Sound Designer, Score, Soundtrack",
-    "name": "DIE HEXEN",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "country": "GB",
     "sort-name": "DIE HEXEN",
-    "type": "Person"
-   }
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "name": "DIE HEXEN",
+   "joinphrase": ""
   }
  ],
- "video": false,
  "first-release-date": "2022-07-22",
- "relations": []
+ "title": "THE VEIL BETWEEN WORLDS",
+ "id": "1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
+ "relations": [],
+ "video": false,
+ "disambiguation": ""
 }

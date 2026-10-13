@@ -22,12 +22,14 @@ with the app's User-Agent naming the repository as contact):
 
 ```
 SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata,wikipedia ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
-python3 -I fixtures/http/record.py sources/build/test-results/test
+python3 -I fixtures/http/record.py sources/build/test-results/test --prune
 ```
 
 `RecordHttpFixtures` runs the same lookups as the tests through `RecordingNetClient`, which prints
 each exchange to the test report and refuses any request carrying credentials; `record.py` writes
-them here and updates the indexes. Without the variable the test does nothing. Re-recording changes
+them here and updates the indexes; `--prune` then drops the recorded sources' requests the run no
+longer made. Prune only after a run whose test passed: a lookup that failed was not recorded, and
+pruning would remove its old recording. Without the variable the test does nothing. Re-recording changes
 responses as the sources' data changes, so the tests' expectations are checked again after it.
 
 Recorded 2026-10-14. `:cli record` (architecture, *Testing*) is to take this over.

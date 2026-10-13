@@ -67,10 +67,40 @@ class RecordingResolver(
         found: List<MbRecording>,
     ): Resolution {
         val candidates = found.map { candidate(track, duration, it) }
-        val accepted = candidates.filter { it.titleMatches && it.durationMatches && it.creditedArtists > 0 }
+        val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.creditedArtists > 0 }
+        // With the player's length, a candidate whose length is known and fits beats one with no
+        // length, however early: a lengthless recording may be a demo, a bootleg or a live take.
+        val measured = fitting.filter { it.durationGap != null }
+        val accepted = if (duration != null && measured.isNotEmpty()) measured else fitting
+        val ambiguous = if (duration == null) ambiguousArtist(track, accepted) else null
         val chosen = accepted.minWithOrNull(PREFERENCE)
-        return if (chosen == null) unmatched(track, candidates) else accept(track, chosen.recording)
+        return when {
+            ambiguous != null ->
+                Resolution(
+                    outcome =
+                        Outcome.Rejected(
+                            "several MusicBrainz artists are named $ambiguous, and no length tells them apart",
+                        ),
+                )
+            chosen == null -> unmatched(track, candidates)
+            else -> accept(track, chosen.recording)
+        }
     }
+
+    // Without a length to choose by, a credited name that the accepted candidates give to more than
+    // one MusicBrainz artist cannot be resolved: it is a same-name collision.
+    private fun ambiguousArtist(
+        track: NormalizedTrack,
+        accepted: List<Candidate>,
+    ): String? =
+        track.artists.firstOrNull { artist ->
+            accepted
+                .flatMap { it.recording.credits }
+                .filter { credits(it, artist) }
+                .map { it.artistMbid }
+                .distinct()
+                .size > 1
+        }
 
     private fun candidate(
         track: NormalizedTrack,
@@ -153,17 +183,22 @@ class RecordingResolver(
         work: MbWork,
     ): Resolution {
         val ours = recording.credits.map { it.artistMbid }.toSet()
-        val recorded = work.performances.firstOrNull { it.recordingMbid == recording.mbid }?.date
-        val ourDate = listOfNotNull(recorded, recording.firstReleaseDate).minOrNull()
+        // Our artists' recordings of the work, the chosen one among them: the search finds only some,
+        // and MusicBrainz leaves many undated, so the chosen one need not be their first.
+        val own = work.performances.filter { performance -> performance.credits.any { it.artistMbid in ours } }
+        val ownUndated = own.any { it.date == null && it.recordingMbid != recording.mbid }
+        val ourEarliest = (own.mapNotNull { it.date } + listOfNotNull(recording.firstReleaseDate)).minOrNull()
         val original = originalOf(work, ours)
-        // An earlier recording by someone else makes this one a version, whether or not MusicBrainz
-        // marks it as a cover; with no date of our own, only the mark does.
-        val predates = original != null && (ourDate == null || isEarlier(original.date, ourDate))
-        val cover = link.cover || (original != null && ourDate != null && predates)
+        // Someone else's recording counts as earlier only when it predates every dated one of ours.
+        val predates = original != null && ourEarliest != null && isEarlier(original.date, ourEarliest)
+        // From dates, a cover only when all our artists' recordings of the work are dated, since an
+        // undated one may be the original; otherwise MusicBrainz's cover mark alone decides.
+        val cover = link.cover || (predates && !ownUndated)
+        val named = cover && (predates || (link.cover && ourEarliest == null))
         return withRecording.copy(
             work = ResolvedWork(work.mbid, work.title),
             cover = cover,
-            original = original?.takeIf { cover && predates },
+            original = original?.takeIf { named },
             credits = workCredits(work.artistRelations) + withRecording.credits,
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),
         )

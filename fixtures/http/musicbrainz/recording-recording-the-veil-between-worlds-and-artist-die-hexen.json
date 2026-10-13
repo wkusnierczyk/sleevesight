@@ -1,5 +1,5 @@
 {
- "created": "2026-10-13T23:04:46.560Z",
+ "created": "2026-10-13T23:38:27.348Z",
  "count": 3,
  "offset": 0,
  "recordings": [
@@ -80,7 +80,7 @@
   },
   {
    "id": "359e197d-9dce-46b3-afe3-e804db785974",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "33097634-f52a-4843-8f56-5791c1f52750",
    "title": "The Veil Between Worlds",
    "length": 148667,
@@ -140,7 +140,7 @@
   },
   {
    "id": "6ef5fd9d-26a6-4c19-b6b5-82dafa8d44e6",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "33097634-f52a-4843-8f56-5791c1f52750",
    "title": "THE VEIL BETWEEN WORLDS",
    "length": 148667,

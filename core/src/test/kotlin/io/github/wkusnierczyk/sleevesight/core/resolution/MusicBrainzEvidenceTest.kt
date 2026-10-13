@@ -53,7 +53,8 @@ class MusicBrainzEvidenceTest {
             listOf(
                 Scope.SONG to "“Song” by Cover Act was first released on 18 September 1978, on the album “Album”.",
                 Scope.SONG to "This recording of “Song” by Cover Act is a cover of “Song”.",
-                Scope.ORIGINAL_SONG to "“Song” was first recorded by Original Act, in 1975.",
+                Scope.ORIGINAL_SONG to
+                    "The earliest dated recording of “Song” on MusicBrainz is by Original Act, in 1975.",
                 Scope.SONG to "“Song” was written by Writer.",
                 Scope.SONG to "This recording of “Song” was produced by Producer.",
                 Scope.SONG to "Player performs on this recording of “Song” (electric guitar).",

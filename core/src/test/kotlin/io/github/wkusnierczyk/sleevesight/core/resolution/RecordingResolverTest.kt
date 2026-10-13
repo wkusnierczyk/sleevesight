@@ -219,6 +219,93 @@ class RecordingResolverTest {
             assertNull(resolution.original)
         }
 
+    private fun ownSong(performances: List<MbPerformance>): FakeMusicBrainz {
+        val search = listOf(recording("ours", "Song", "Writer", 200, "2005"))
+        val detail =
+            MbRecordingDetail(
+                "ours",
+                "Song",
+                listOf(credit("Writer")),
+                "2005",
+                listOf(MbWorkLink("w", "Song", cover = false)),
+                emptyList(),
+                emptyList(),
+            )
+        return FakeMusicBrainz(
+            Lookup.Found(search),
+            mapOf("ours" to detail),
+            mapOf(
+                "w" to MbWork("w", "Song", emptyList(), emptyList(), performances),
+            ),
+        )
+    }
+
+    @Test
+    fun `an artist's own song is not a cover when an own recording of it is undated`() =
+        runTest {
+            // Only a 2005 recording was found; the artist's undated original and a 1990 cover are on the work.
+            val musicBrainz =
+                ownSong(
+                    listOf(
+                        MbPerformance("ours", "Song", listOf(credit("Writer")), null, emptyList()),
+                        MbPerformance("first", "Song", listOf(credit("Writer")), null, emptyList()),
+                        MbPerformance("cover", "Song", listOf(credit("Coverer")), "1990", emptyList()),
+                    ),
+                )
+            val resolution = resolve(musicBrainz, track("Song", "Writer"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+        }
+
+    @Test
+    fun `a recording by someone else is earlier only if it predates every dated one of ours`() =
+        runTest {
+            val musicBrainz =
+                ownSong(
+                    listOf(
+                        MbPerformance("first", "Song", listOf(credit("Writer")), "1970", emptyList()),
+                        MbPerformance("cover", "Song", listOf(credit("Coverer")), "1990", emptyList()),
+                    ),
+                )
+            val resolution = resolve(musicBrainz, track("Song", "Writer"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
+        }
+
+    @Test
+    fun `with the player's length, a fitting measured recording beats an earlier one with no length`() =
+        runTest {
+            val search =
+                listOf(
+                    recording("studio", "Song", "Artist", 200, "1975"),
+                    recording("bootleg", "Song", "Artist", null, "1974"),
+                )
+            assertEquals(
+                "studio",
+                resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", "Artist"), 200).recordingMbid,
+            )
+            assertEquals(
+                "bootleg",
+                resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", "Artist"), null).recordingMbid,
+            )
+        }
+
+    @Test
+    fun `without a length, a name two MusicBrainz artists share is rejected as ambiguous`() =
+        runTest {
+            val search =
+                listOf(
+                    recording("a", "Wonderland", "Reem", 200, "2020").copy(credits = listOf(credit("Reem", "reem-1"))),
+                    recording("b", "Wonderland", "Reem", 210, "2024").copy(credits = listOf(credit("Reem", "reem-2"))),
+                )
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Wonderland", "Reem"), null)
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists are named Reem, and no length tells them apart"),
+                resolution.outcome,
+            )
+            assertNull(resolution.recordingMbid)
+        }
+
     @Test
     fun `dates compare at the precision both have`() {
         assertTrue(RecordingResolver.isEarlier("1975", "1978-09-18"))

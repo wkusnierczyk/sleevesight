@@ -22,11 +22,13 @@ import io.github.wkusnierczyk.sleevesight.core.model.Outcome
  * @property firstRelease the earliest release of the recording; the player's release stays
  *   separate (`P` evidence).
  * @property work the work the recording performs, when MusicBrainz links one.
- * @property original the work's earliest recording by another artist, when this recording is a
- *   cover or version (step 4); null when it is not, or when the original could not be dated.
+ * @property original the work's earliest dated recording by another artist, when this recording
+ *   is a cover or version (step 4) and that recording predates every dated one by the track's
+ *   artists; null otherwise. MusicBrainz leaves many recordings undated, so it is the earliest
+ *   known, not necessarily the first.
  * @property cover whether this recording is a cover or version of a song first recorded by someone
- *   else: MusicBrainz marks the performance as a cover, or the work has an earlier recording by
- *   another artist.
+ *   else: MusicBrainz marks the performance as a cover, or the work has a recording by another
+ *   artist dated before every recording of it by the track's artists, all of which are dated.
  * @property credits the people credited on the recording and the work (writers, producers,
  *   performers), in MusicBrainz's order, for the templated evidence (D1).
  * @property wikidataIds Wikidata items MusicBrainz links to the recording and its work, for the

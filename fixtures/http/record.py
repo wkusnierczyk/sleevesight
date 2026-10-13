@@ -4,13 +4,14 @@
 Usage, from the repository root:
 
     SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata,wikipedia ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
-    python3 -I fixtures/http/record.py sources/build/test-results/test
+    python3 -I fixtures/http/record.py sources/build/test-results/test [--prune]
 
 Each exchange goes to fixtures/http/<source>/<name>.json, and its request into that directory's
 index.json, replacing an entry for the same request. MusicBrainz responses lose every `tags` and
 `genres` field (CC BY-NC-SA 3.0 supplementary data, which a search returns unasked); nothing else
 is changed. A run that recorded nothing is an error, so a skipped recording is never mistaken for
-an empty one.
+an empty one. With --prune, the requests of each recorded source that this run did not make are
+removed, with their files, so a source's directory holds only what the tests use.
 """
 
 import glob
@@ -58,11 +59,12 @@ def name_for(record):
     return (slug or "root")[:100].rstrip("-")
 
 
-def main(results_dir):
+def main(results_dir, prune=False):
     found = list(records(results_dir))
     if not found:
         sys.exit("No HTTP-RECORD lines in " + results_dir + ": was SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata,wikipedia set, with --rerun?")
     indexes = {}
+    refreshed = {}
     for record in found:
         host = urlsplit(record["url"]).hostname
         source = SOURCES.get(host)
@@ -89,9 +91,15 @@ def main(results_dir):
         with open(os.path.join(directory, name), "w") as out:
             json.dump(body, out, ensure_ascii=False, indent=1, sort_keys=False)
             out.write("\n")
+        refreshed.setdefault(source, set()).add(json.dumps(list(key), sort_keys=True))
         index.append({"method": record["method"], "url": record["url"], "query": record["query"],
                       "status": record["status"], "file": name})
     for source, index in indexes.items():
+        if prune:
+            keep = refreshed.get(source, set())
+            for old in [e for e in index if json.dumps([e["method"], e["url"], e["query"]], sort_keys=True) not in keep]:
+                os.remove(os.path.join(HERE, source, old["file"]))
+                index.remove(old)
         index.sort(key=lambda e: e["file"])
         with open(os.path.join(HERE, source, "index.json"), "w") as out:
             json.dump(index, out, ensure_ascii=False, indent=1)
@@ -100,4 +108,5 @@ def main(results_dir):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "sources/build/test-results/test")
+    args = [a for a in sys.argv[1:] if a != "--prune"]
+    main(args[0] if args else "sources/build/test-results/test", "--prune" in sys.argv[1:])

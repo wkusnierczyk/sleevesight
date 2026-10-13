@@ -63,9 +63,8 @@ object MusicBrainzEvidence {
                 lines +=
                     Line(
                         Scope.ORIGINAL_SONG,
-                        "“${work.title}” was first recorded by ${original.artistCredit}, ${EvidenceText.date(
-                            original.date,
-                        )}.",
+                        "The earliest dated recording of “${work.title}” on MusicBrainz is by " +
+                            "${original.artistCredit}, ${EvidenceText.date(original.date)}.",
                         "$SITE/recording/${original.recordingMbid}",
                     )
             }
