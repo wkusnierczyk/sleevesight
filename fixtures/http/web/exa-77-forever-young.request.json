@@ -1,0 +1,19 @@
+{
+  "query": "\"Forever Young\" by dearoldfriend and Winston Hunte, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Forever Young dearoldfriend Winston Hunte",
+      "maxCharacters": 300
+    }
+  }
+}

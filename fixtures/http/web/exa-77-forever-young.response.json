@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "url": "https://streaming.example/track/forever-young-alphaville",
+      "title": "Forever Young - song by Alphaville | Streaming",
+      "highlights": [
+        "Forever Young · Alphaville · 1984 · 3:46"
+      ]
+    },
+    {
+      "url": "https://songnotes.example/alphaville/forever-young",
+      "title": "Forever Young by Alphaville - Song Notes",
+      "highlights": [
+        "Alphaville's Forever Young is a hopeful song with a fear of ageing underneath."
+      ]
+    },
+    {
+      "url": "https://streaming.example/track/forever-young-rod-stewart",
+      "title": "Forever Young - song by Rod Stewart | Streaming",
+      "highlights": [
+        "Forever Young · Rod Stewart · Out of Order · 1988"
+      ]
+    }
+  ]
+}

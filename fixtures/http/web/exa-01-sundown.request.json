@@ -1,0 +1,19 @@
+{
+  "query": "\"Sundown\" by Gordon Lightfoot, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Sundown Gordon Lightfoot",
+      "maxCharacters": 300
+    }
+  }
+}
