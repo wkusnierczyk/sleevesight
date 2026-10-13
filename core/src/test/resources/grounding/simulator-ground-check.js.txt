@@ -1,0 +1,12 @@
+function splitSentences(text) {
+  return text.replace(/[ \t]+/g, " ").trim().split(/(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)\s+(?=[A-Z"“(])/).filter(s => s.trim());
+}
+function groundCheck(text, evidence, allowModel) {
+  const ids = new Set(evidence.map(e => e.id));
+  return text.split(/\n\s*\n/).map(p => splitSentences(p).map(s => {
+    const cites = [...s.matchAll(/\[([A-Z]{1,2}\d*)\]/g)].map(m => m[1]);
+    const bad = cites.filter(c => c === "M" ? !allowModel : !ids.has(c));
+    const hedge = /little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|isn't much|is not much|nothing (else )?is (known|documented)/i.test(s);
+    return { s, cites, status: bad.length ? "unknown" : cites.length ? (cites.includes("M") ? "model" : "ok") : hedge ? "hedge" : "uncited" };
+  })).filter(p => p.length);
+}

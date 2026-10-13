@@ -1,0 +1,772 @@
+[
+ {
+  "name": "claude-haiku-5-5 on prompts/insight-41.txt",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Arthur Scammell wrote the song in 1928 about squid-jigging fishermen in Newfoundland, and this recording is a version of it [W1].",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It is sung to the traditional Irish jig tune Larry O'Gaff, and its melody matches the Flanagan Brothers' 1927 recording Mick from Tralee [W2][G3].",
+     "cites": [
+      "W2",
+      "G3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "The song is about squid jigging, where bait squid are caught with a baitless metal jigger of tiny hooks, on inshore grounds usually from July into August [G6][G8].",
+     "cites": [
+      "G6",
+      "G8"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Dick Nolan is a Newfoundland folk performer known for Toronto nightclub work [L1][L2], but the sources I have don't mention his recording of this song, so its details are not documented here [W6][G5].",
+     "cites": [
+      "L1",
+      "L2",
+      "W6",
+      "G5"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "claude-haiku-5-5 on prompts/insight-1.txt",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown was issued as a single in 1974 and became Gordon Lightfoot's only number one on the US Hot 100 [W1][W3].",
+     "cites": [
+      "W1",
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home, and he tied the song to his roughly three-year relationship with Cathy Smith [W5][G4].",
+     "cites": [
+      "W5",
+      "G4"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Despite its mellow sound, it is described as dark, expressing jealousy and paranoia [G3].",
+     "cites": [
+      "G3"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "all cited",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown was issued as a single in March 1974 on Reprise. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It reached number one on the US Hot 100. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Gordon Lightfoot is often credited with defining the 1970s singer-songwriter era. [L2]",
+     "cites": [
+      "L2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "citations before the stop",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown was recorded in Toronto [W2].",
+     "cites": [
+      "W2"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It went gold [W4].",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "several citations",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It topped the charts in the US and Canada. [W3][G1]",
+     "cites": [
+      "W3",
+      "G1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Listeners tag him as folk. [L3] [G2]",
+     "cites": [
+      "L3",
+      "G2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "uncited sentence",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown was a single in 1974. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It is one of the great songs of the decade.",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "unknown id",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was covered many times. [W9]",
+     "cites": [
+      "W9"
+     ],
+     "status": "unknown"
+    },
+    {
+     "s": "The song is on the release Sundown. [P1]",
+     "cites": [
+      "P1"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "model knowledge on",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown is on the release Sundown. [P1]",
+     "cites": [
+      "P1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
+     "cites": [
+      "M"
+     ],
+     "status": "model"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "model knowledge off",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown is on the release Sundown. [P1]",
+     "cites": [
+      "P1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
+     "cites": [
+      "M"
+     ],
+     "status": "unknown"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "model and evidence in one sentence",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "He was Canadian and wrote many hits. [L1][M]",
+     "cites": [
+      "L1",
+      "M"
+     ],
+     "status": "model"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "hedges",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Little is documented about this recording.",
+     "cites": [],
+     "status": "hedge"
+    },
+    {
+     "s": "Not much is known about the band.",
+     "cites": [],
+     "status": "hedge"
+    },
+    {
+     "s": "There is no further information.",
+     "cites": [],
+     "status": "hedge"
+    },
+    {
+     "s": "There isn't much else.",
+     "cites": [],
+     "status": "hedge"
+    },
+    {
+     "s": "Nothing else is documented here.",
+     "cites": [],
+     "status": "hedge"
+    },
+    {
+     "s": "This is not much to go on.",
+     "cites": [],
+     "status": "hedge"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "hedge in capitals",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "LITTLE IS KNOWN about this track.",
+     "cites": [],
+     "status": "hedge"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "hedge with a curly apostrophe is uncited",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "There isn’t much more.",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "two paragraphs",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown reached number one. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    }
+   ],
+   [
+    {
+     "s": "Lightfoot was born in Orillia. [L1]",
+     "cites": [
+      "L1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "He died in 2023. [L1]",
+     "cites": [
+      "L1"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "paragraphs with spaces between",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "First paragraph. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    }
+   ],
+   [
+    {
+     "s": "Second paragraph. [W2]",
+     "cites": [
+      "W2"
+     ],
+     "status": "ok"
+    }
+   ],
+   [
+    {
+     "s": "Third. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "single newline is not a paragraph",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "One sentence. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Another sentence. [W2]",
+     "cites": [
+      "W2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "abbreviation splits",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Produced by Lenny Waronker with Dr.",
+     "cites": [],
+     "status": "uncited"
+    },
+    {
+     "s": "Smith on guitar. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "lowercase after a stop does not split",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It reached no. 1 on the chart. [W3] e.g. in the US.",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "quote and parenthesis open a sentence",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "\"Sundown\" is still played. [G1]",
+     "cites": [
+      "G1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "(It went gold.) [W4] “A classic,” one site says. [G2]",
+     "cites": [
+      "W4",
+      "G2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "question and exclamation",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Who was the girlfriend?",
+     "cites": [],
+     "status": "uncited"
+    },
+    {
+     "s": "Many say Cathy Smith! [W5]",
+     "cites": [
+      "W5"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "tabs and runs of spaces",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Sundown was a hit. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It went gold. [W4]",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "non-breaking space between sentences",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It went gold. [W4]",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "ideographic space and BOM",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [W3]",
+     "cites": [
+      "W3"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "It went gold. [W4]",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "three-letter tag is not a citation",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [ABC] It went gold. [W4]",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "two-letter tag",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Recorded in 1973. [MB1]",
+     "cites": [
+      "MB1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "The single was on Reprise. [WD2]",
+     "cites": [
+      "WD2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "citation with lowercase is not a citation",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [w3] It went gold. [W4]",
+     "cites": [
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "bare M is an id only when allowed",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Unverified claim. [M]",
+     "cites": [
+      "M"
+     ],
+     "status": "unknown"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "empty reply",
+  "none": false,
+  "paragraphs": []
+ },
+ {
+  "name": "whitespace reply",
+  "none": false,
+  "paragraphs": []
+ },
+ {
+  "name": "no evidence",
+  "none": true,
+  "paragraphs": []
+ },
+ {
+  "name": "no evidence with padding",
+  "none": true,
+  "paragraphs": []
+ },
+ {
+  "name": "no evidence with a stop",
+  "none": true,
+  "paragraphs": []
+ },
+ {
+  "name": "no evidence followed by text",
+  "none": true,
+  "paragraphs": []
+ },
+ {
+  "name": "no evidence glued to a word",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "NO_EVIDENCEX",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "no evidence with underscore",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "NO_EVIDENCE_",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "no evidence later in the text",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "There is nothing here.",
+     "cites": [],
+     "status": "uncited"
+    },
+    {
+     "s": "NO_EVIDENCE",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "lowercase no evidence",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "no_evidence",
+     "cites": [],
+     "status": "uncited"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "no evidence set",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "Little is documented about this recording.",
+     "cites": [],
+     "status": "hedge"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "surrogate pair text",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "The title is 🎵 Sundown. [W1]",
+     "cites": [
+      "W1"
+     ],
+     "status": "ok"
+    },
+    {
+     "s": "Next. [W2]",
+     "cites": [
+      "W2"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a next-line character is not JavaScript whitespace",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "x[M]　",
+     "cites": [
+      "M"
+     ],
+     "status": "model"
+    }
+   ]
+  ]
+ },
+ {
+  "name": "a next-line character between sentences",
+  "none": false,
+  "paragraphs": [
+   [
+    {
+     "s": "It was a hit. [W3]It went gold. [W4]　",
+     "cites": [
+      "W3",
+      "W4"
+     ],
+     "status": "ok"
+    }
+   ]
+  ]
+ }
+]

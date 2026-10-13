@@ -104,6 +104,9 @@ class NetResponse(
 
     val isSuccess: Boolean get() = status in SUCCESS
 
+    /** This response with an empty body, for a stream whose body went to the caller line by line. */
+    internal fun withoutBody(): NetResponse = NetResponse(status, headers, ByteArray(0))
+
     override fun toString(): String = "NetResponse($status, ${bytes.size} bytes)"
 
     private companion object {

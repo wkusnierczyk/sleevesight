@@ -2,6 +2,8 @@ package io.github.wkusnierczyk.sleevesight.core.normalizer
 
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.NowPlaying
+import io.github.wkusnierczyk.sleevesight.core.text.JS_WHITESPACE_CLASS
+import io.github.wkusnierczyk.sleevesight.core.text.trimJs
 
 /**
  * Turns a player's title and artist strings into the song's plain title, its credited artists
@@ -82,8 +84,8 @@ class Normalizer(
     private fun splitArtists(artists: String): List<String> = artists.split(ARTIST_SEPARATOR).filter { it.isNotEmpty() }
 
     private companion object {
-        // JavaScript's `\s`: its WhiteSpace and LineTerminator characters.
-        const val S = "[\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+        // JavaScript's `\s`.
+        const val S = JS_WHITESPACE_CLASS
 
         val SUFFIX =
             Regex(
@@ -103,10 +105,6 @@ class Normalizer(
         val ARTIST_SEPARATOR = Regex("$S*,$S*")
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val NOT_KEY = Regex("[^a-z0-9|]+")
-
-        val JS_SPACE = Regex("^$S+|$S+$")
-
-        fun String.trimJs(): String = replace(JS_SPACE, "")
 
         // An ASCII letter matches either case, as in JavaScript's `/i` without `u`: `ci("mono")` is
         // `[mM][oO][nN][oO]`. Other characters stand for themselves.

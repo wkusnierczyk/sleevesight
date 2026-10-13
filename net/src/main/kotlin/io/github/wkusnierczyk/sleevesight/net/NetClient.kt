@@ -14,6 +14,39 @@ interface NetClient : AutoCloseable {
      * returned as its 3xx response. A cancelled caller cancels the request.
      */
     suspend fun send(request: NetRequest): NetResult<NetResponse>
+
+    /**
+     * Sends [request] as [send] does, but hands a 2xx response's body to [onLine] line by line as it
+     * arrives, for server-sent events and line-delimited JSON: a line ends at `\n`, `\r\n` or `\r`,
+     * and the terminators are not passed on. The [NetResponse] returned then has an empty body. Any
+     * other response is read whole, up to [NetRequest.maxBytes], and returned as [send] returns it,
+     * without calling [onLine]; redirects are not followed, so a 3xx is returned too.
+     *
+     * The guarantees of [send] hold. Waits for the host's rate limit and retries happen only before
+     * the body: once a line has been passed on, a failure is returned, never retried, whatever the
+     * method, so a paid stream is never sent twice. A body longer than [NetRequest.maxBytes], counted
+     * across the whole stream, ends it with [NetError.TooLarge]; a connection lost mid-stream is
+     * [NetError.Offline]; in both cases [onLine] has seen the lines before. [NetRequest.timeout]
+     * bounds the whole exchange, stream included. Each attempt is logged once, when it ends. What
+     * [onLine] throws ends the stream, is logged as the attempt stopped by the caller, and is
+     * rethrown to the caller as it is.
+     *
+     * The default reads the response whole through [send] and then splits it, which suits fakes; the
+     * client over Ktor streams. The default inherits [send]'s handling of redirects, so a fake that
+     * follows them follows them here too.
+     */
+    suspend fun stream(
+        request: NetRequest,
+        onLine: suspend (String) -> Unit,
+    ): NetResult<NetResponse> {
+        val result = send(request)
+        val response = (result as? NetResult.Success)?.value?.takeIf { it.isSuccess } ?: return result
+        LineSplitter(onLine).apply {
+            feed(response.bytes)
+            finish()
+        }
+        return NetResult.Success(response.withoutBody())
+    }
 }
 
 /**
