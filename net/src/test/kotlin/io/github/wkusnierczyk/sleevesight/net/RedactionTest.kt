@@ -9,6 +9,7 @@ import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -36,70 +37,96 @@ class RedactionTest {
             }) { it.send(request) }
 
             assertTrue(sent.any { key in it }, "the key was sent")
-            assertEquals(1, log.lines.size)
-            assertFalse(key in log.lines.single(), log.lines.single())
-            assertTrue("artist=Reem" in log.lines.single(), "the rest of the request is logged")
+            val line = log.lines.single()
+            assertFalse(key in line, line)
+            assertTrue(
+                line.startsWith(
+                    "GET https://ws.audioscrobbler.com/2.0/?method&artist&track&api_key {Accept, x-api-key}",
+                ),
+                line,
+            )
             assertFalse(key in request.toString())
         }
 
     @Test
-    fun `values whose names look like keys are redacted even when not declared secret`() {
+    fun `no header or query value is logged, whatever its name, and no user info`() {
         val request =
             NetRequest(
                 url = "https://user:hunter2@example.org/search?q=reem&token=$key#frag",
-                query = mapOf("api_key" to key, "Signature" to key, "sk" to key, "limit" to "5"),
-                headers = mapOf("Authorization" to "Bearer $key", "x-goog-api-key" to key, "Accept" to "*/*"),
+                query = mapOf("api_key" to key, "limit" to "5"),
+                headers = mapOf("Authorization" to "Bearer $key", "Accept" to "text/plain"),
             )
 
-        val line = Redaction.describe(request)
+        val line = request.toString()
 
-        assertFalse(key in line, line)
-        assertFalse("hunter2" in line, line)
-        assertTrue("q=reem" in line && "limit=5" in line && "Accept: */*" in line, line)
+        assertEquals("GET https://example.org/search?q&token&api_key&limit {Authorization, Accept}", line)
     }
 
     @Test
-    fun `a declared secret is scrubbed wherever it appears, plain or URL-encoded`() {
-        val odd = "a+b/c==xyz"
-        val request =
-            NetRequest(
-                url = "https://example.org/v1/$odd/items?q=$odd",
-                secrets = NetSecrets(headers = mapOf("x-custom" to odd)),
-            )
+    fun `a secret in the path is hidden, as written, pre-encoded or double-encoded`() {
+        for ((secret, path) in listOf(
+            "ab%41cdefghij" to "ab%41cdefghij",
+            "ab%41cdefghij" to "ab%2541cdefghij",
+            "a%252FbSECRET" to "a%252FbSECRET",
+            "a+b/c==xyz" to "a%2Bb%2Fc%3D%3Dxyz",
+            "sk-probe-SECRET0" to "%73k-probe-SECRET0",
+        )) {
+            val request =
+                NetRequest(
+                    "https://example.org/v1/$path/x",
+                    secrets =
+                        NetSecrets(
+                            headers =
+                                mapOf(
+                                    "x-k" to secret,
+                                ),
+                        ),
+                )
 
-        val line = Redaction.describe(request)
-
-        assertFalse(odd in line, line)
-        assertFalse("a%2Bb%2Fc%3D%3Dxyz" in line, line)
+            assertEquals("GET https://example.org/v1/REDACTED/x {x-k}", request.toString(), "$secret in $path")
+        }
     }
 
     @Test
-    fun `a partly encoded secret is scrubbed`() {
-        val token = "sk-probe-SECRET0"
+    fun `the token of a Bearer header is hidden wherever it appears, however short`() {
         val request =
             NetRequest(
-                url = "https://example.org/v1/%73k-probe-SECRET0/x?q=%2573k-probe-SECRET0",
-                secrets = NetSecrets(headers = mapOf("x-api-key" to token)),
+                url = "https://example.org/v1/abc1234",
+                secrets = NetSecrets(headers = mapOf("Authorization" to "Bearer abc1234")),
             )
 
-        val line = Redaction.describe(request)
-
-        assertFalse("probe-SECRET0" in line, line)
+        assertEquals("GET https://example.org/v1/REDACTED {Authorization}", request.toString())
     }
 
     @Test
-    fun `the token of a Bearer header is scrubbed wherever else it appears`() {
-        val token = "tok-0123456789abcdef"
+    fun `a quoted credential is hidden without its quotes`() {
         val request =
             NetRequest(
-                url = "https://example.org/v1/items",
-                query = mapOf("q" to token),
-                secrets = NetSecrets(headers = mapOf("Authorization" to "Bearer $token")),
+                url = "https://example.org/v1/tok123",
+                headers = mapOf("Authorization" to "OAuth \"tok123\""),
             )
 
-        val line = Redaction.describe(request)
+        assertFalse("tok123" in request.toString(), request.toString())
+    }
 
-        assertFalse(token in line, line)
+    @Test
+    fun `an encoded sensitive query name shows no value`() {
+        val request =
+            NetRequest(
+                "https://example.org/a?%256B%2565%2579=SECRET&q=1",
+                secrets =
+                    NetSecrets(
+                        query =
+                            mapOf(
+                                "x" to "1",
+                            ),
+                    ),
+            )
+
+        val line = request.toString()
+
+        assertFalse("SECRET" in line, line)
+        assertFalse("=" in line, line)
     }
 
     @Test
@@ -175,17 +202,12 @@ class RedactionTest {
     @Test
     fun `a redirect to another origin drops the secrets and the headers named like keys`() =
         runTest {
-            val log = RecordingLog()
             val seen = mutableListOf<Pair<String, Map<String, String?>>>()
-            withClient(log = log, handler = { request ->
+            withClient(handler = { request ->
                 val names = listOf("x-api-key", "Authorization", "Accept")
                 seen += request.url.host to names.associateWith { request.headers[it] }
                 if (request.url.host == "api.example.org") {
-                    respond(
-                        "",
-                        HttpStatusCode.Found,
-                        headersOf(HttpHeaders.Location, "https://other.example.net/x?echo=$key"),
-                    )
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://other.example.net/x"))
                 } else {
                     respond("ok")
                 }
@@ -204,8 +226,64 @@ class RedactionTest {
             assertNull(redirected["x-api-key"])
             assertNull(redirected["Authorization"])
             assertEquals("x/y", redirected["Accept"])
-            assertEquals(2, log.lines.size)
+        }
+
+    @Test
+    fun `a redirect to another origin that would carry a key is not followed`() =
+        runTest {
+            val log = RecordingLog()
+            var calls = 0
+            val result =
+                withClient(log = log, handler = {
+                    calls++
+                    respond(
+                        "",
+                        HttpStatusCode.Found,
+                        headersOf(HttpHeaders.Location, "https://other.example.net/x?echo=$key"),
+                    )
+                }) {
+                    it.send(
+                        NetRequest("https://api.example.org/a", secrets = NetSecrets(query = mapOf("api_key" to key))),
+                    )
+                }
+
+            assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status)
+            assertEquals(1, calls)
             log.lines.forEach { assertFalse(key in it, it) }
+        }
+
+    @Test
+    fun `a key from a header named like one, echoed into a redirected path, is not logged`() =
+        runTest {
+            val log = RecordingLog()
+            val echoed = "key-SECRET123"
+            withClient(log = log, handler = { request ->
+                if (request.url.encodedPath == "/a") {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/echo/$echoed"))
+                } else {
+                    respond("ok")
+                }
+            }) { it.send(NetRequest("https://api.example.org/a", headers = mapOf("x-api-key" to echoed))) }
+
+            assertEquals(2, log.lines.size)
+            assertTrue("/echo/REDACTED" in log.lines[1], log.lines[1])
+            log.lines.forEach { assertFalse(echoed in it, it) }
+        }
+
+    @Test
+    fun `user info is never sent, nor carried into a redirect`() =
+        runTest {
+            val users = mutableListOf<String?>()
+            withClient(handler = { request ->
+                users += request.url.user
+                if (request.url.host == "a.example.org") {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "//b.example.org/x"))
+                } else {
+                    respond("ok")
+                }
+            }) { it.send(NetRequest("https://u:pw@a.example.org/p")) }
+
+            assertEquals(listOf<String?>(null, null), users)
         }
 
     @Test
@@ -226,5 +304,36 @@ class RedactionTest {
             }
 
             assertEquals(listOf<String?>(key, key), keys)
+        }
+
+    @Test
+    fun `a change of scheme or port is another origin`() =
+        runTest {
+            for (location in listOf("http://api.example.org/b", "https://api.example.org:8443/b")) {
+                val keys = mutableListOf<String?>()
+                withClient(handler = { request ->
+                    keys += request.headers["x-api-key"]
+                    if (request.url.encodedPath == "/a") {
+                        respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                    } else {
+                        respond("ok")
+                    }
+                }) {
+                    it.send(
+                        NetRequest(
+                            "https://api.example.org/a",
+                            secrets =
+                                NetSecrets(
+                                    headers =
+                                        mapOf(
+                                            "x-api-key" to key,
+                                        ),
+                                ),
+                        ),
+                    )
+                }
+
+                assertEquals(listOf<String?>(key, null), keys, location)
+            }
         }
 }

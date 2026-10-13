@@ -7,6 +7,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.http.toHttpDate
 import io.ktor.util.date.GMTDate
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.job
@@ -17,6 +18,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class) // TestCoroutineScheduler.currentTime
@@ -185,10 +187,10 @@ class KtorNetClientTest {
         }
 
     @Test
-    fun `a Retry-After date in the past, or negative seconds, is no wait`() =
+    fun `a Retry-After date in the past is no wait, and negative seconds are no Retry-After`() =
         runTest {
             assertEquals(listOf(0L, 0L), retryTimes(GMTDate(EPOCH_MILLIS - 60_000).toHttpDate(), get))
-            assertEquals(listOf(0L, 0L), retryTimes("-5", get))
+            assertEquals(listOf(0L, 500L), retryTimes("-5", get))
         }
 
     @Test
@@ -330,6 +332,139 @@ class KtorNetClientTest {
             engine.coroutineContext.job.join()
 
             assertFalse(engine.coroutineContext.job.isActive)
+        }
+
+    @Test
+    fun `a 503 to a POST is Server and not retried, even from a host whose 503 means its limit`() =
+        runTest {
+            var calls = 0
+            val result =
+                withClient(handler = {
+                    calls++
+                    respond("", HttpStatusCode.ServiceUnavailable)
+                }) {
+                    it.send(
+                        NetRequest(
+                            "https://musicbrainz.org/ws/2/x",
+                            NetMethod.POST,
+                            body = NetBody("{}", "application/json"),
+                        ),
+                    )
+                }
+
+            assertEquals(NetResult.Failure(NetError.Server(503)), result)
+            assertEquals(1, calls)
+        }
+
+    @Test
+    fun `a 503 from a host with a limit but without the flag is Server`() =
+        runTest {
+            val config = NetConfig(appVersion = "test", hosts = mapOf("example.org" to HostPolicy(1.seconds)))
+            val result =
+                withClient(config, handler = { respond("", HttpStatusCode.ServiceUnavailable) }) { it.send(get) }
+
+            assertEquals(NetResult.Failure(NetError.Server(503)), result)
+        }
+
+    @Test
+    fun `a body longer than maxBytes is TooLarge, declared or not`() =
+        runTest {
+            val small = NetRequest("https://example.org/a", maxBytes = 5)
+            val declared = withClient(handler = { respond("0123456789") }) { it.send(small) }
+            val undeclared =
+                withClient(handler = { respond(ByteReadChannel("0123456789"), HttpStatusCode.OK) }) { it.send(small) }
+            val fits = withClient(handler = { respond("01234") }) { it.send(small) }
+
+            assertEquals(NetResult.Failure(NetError.TooLarge(5)), declared)
+            assertEquals(NetResult.Failure(NetError.TooLarge(5)), undeclared)
+            assertEquals("01234", assertIs<NetResult.Success<NetResponse>>(fits).value.body)
+        }
+
+    @Test
+    fun `a timeout or size limit that is not positive is an invalid request`() =
+        runTest {
+            withClient(handler = { respond("") }) { client ->
+                assertEquals(
+                    NetResult.Failure(NetError.InvalidRequest("timeout")),
+                    client.send(NetRequest("https://example.org/a", timeout = Duration.ZERO)),
+                )
+                assertEquals(
+                    NetResult.Failure(NetError.InvalidRequest("maxBytes")),
+                    client.send(NetRequest("https://example.org/a", maxBytes = 0)),
+                )
+            }
+        }
+
+    @Test
+    fun `a host not written in plain ASCII is an invalid request`() =
+        runTest {
+            withClient(handler = { respond("") }) { client ->
+                for (url in listOf(
+                    "https://%6dusicbrainz.org/a",
+                    "https://musicbrainz%2Eorg/a",
+                    "https://\uFF4Dusicbrainz.org/a",
+                )) {
+                    assertEquals(NetResult.Failure(NetError.InvalidRequest("url")), client.send(NetRequest(url)), url)
+                }
+            }
+        }
+
+    @Test
+    fun `303, 307 and 308 are followed for a GET`() =
+        runTest {
+            for (status in listOf(
+                HttpStatusCode.SeeOther,
+                HttpStatusCode.TemporaryRedirect,
+                HttpStatusCode.PermanentRedirect,
+            )) {
+                val paths = mutableListOf<String>()
+                withClient(handler = { request ->
+                    paths += request.url.encodedPath
+                    if (paths.size == 1) respond("", status, headersOf(HttpHeaders.Location, "/b")) else respond("ok")
+                }) { it.send(get) }
+
+                assertEquals(listOf("/a", "/b"), paths, status.toString())
+            }
+        }
+
+    @Test
+    fun `a relative Location is resolved as RFC 3986 says, against the URL sent`() =
+        runTest {
+            for ((location, expected) in listOf(
+                "/b" to "https://example.org/b",
+                "?y=2" to "https://example.org/p/q?y=2",
+                "r" to "https://example.org/p/r",
+                "#f" to "https://example.org/p/q?x=1",
+                "https://other.example.net/z" to "https://other.example.net/z",
+            )) {
+                val urls = mutableListOf<String>()
+                withClient(handler = { request ->
+                    urls += request.url.toString()
+                    if (urls.size ==
+                        1
+                    ) {
+                        respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                    } else {
+                        respond("ok")
+                    }
+                }) { it.send(NetRequest("https://example.org/p/q", query = mapOf("x" to "1"))) }
+
+                assertEquals(listOf("https://example.org/p/q?x=1", expected), urls, location)
+            }
+        }
+
+    @Test
+    fun `a blank Location is not followed`() =
+        runTest {
+            var calls = 0
+            val result =
+                withClient(handler = {
+                    calls++
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "  "))
+                }) { it.send(get) }
+
+            assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status)
+            assertEquals(1, calls)
         }
 
     /** The virtual times of a request answered 429 with [retryAfter], then 200. */

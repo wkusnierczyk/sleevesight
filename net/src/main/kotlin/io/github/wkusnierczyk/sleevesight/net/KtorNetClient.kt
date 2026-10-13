@@ -6,12 +6,11 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.header
-import io.ktor.client.request.parameter
-import io.ktor.client.request.request
+import io.ktor.client.request.prepareRequest
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -19,10 +18,12 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.content.OutgoingContent
 import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.io.IOException
+import kotlinx.io.readByteArray
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.TimeSource
@@ -57,16 +58,19 @@ internal class KtorNetClient(
         config.hosts.mapValues { (_, policy) -> RateLimiter(policy.minInterval, timeSource) }
 
     override suspend fun send(request: NetRequest): NetResult<NetResponse> {
+        // Collected before the first send, so a redirect can neither log nor carry it elsewhere.
+        val material = credentialMaterial(request)
         var current = request
         var redirects = 0
         while (true) {
-            val result =
+            val sent =
                 when (val validated = validate(current)) {
-                    is Validated.Invalid -> invalid(current, validated.field)
-                    is Validated.Valid -> sendWithRetries(current, validated.url)
+                    is Validated.Invalid -> return invalid(current, validated.field, material)
+                    is Validated.Valid -> effectiveUrl(validated.url, current)
                 }
-            val next = redirectFrom(current, result)?.takeIf { redirects < MAX_REDIRECTS } ?: return result
-            current = next
+            val result = sendWithRetries(current, sent, material)
+            current =
+                redirectFrom(current, sent, result, material)?.takeIf { redirects < MAX_REDIRECTS } ?: return result
             redirects++
         }
     }
@@ -80,25 +84,29 @@ internal class KtorNetClient(
     private fun invalid(
         request: NetRequest,
         field: String,
+        material: Set<String>,
     ): NetResult<NetResponse> {
         val error = NetError.InvalidRequest(field)
-        log.log("$request -> $error")
+        log.log("${Redaction.describe(request, null, material)} -> $error")
         return NetResult.Failure(error)
     }
 
     private suspend fun sendWithRetries(
         request: NetRequest,
         url: Url,
+        material: Set<String>,
     ): NetResult<NetResponse> {
         val domain = config.domainFor(url.host)
         val limiter = domain?.let { limiters.getValue(it) }
+        val policy = domain?.let { config.hosts.getValue(it) }
+        val description = Redaction.describe(request, url, material)
         var attempt = 1
         while (true) {
             limiter?.acquire()
             val started = timeSource.markNow()
-            val outcome = tryOnce(request, url, rateLimited = domain != null)
+            val outcome = tryOnce(request, url, policy)
             val wait = retryWait(request, outcome, attempt)
-            log.log(logLine(request, outcome, started.elapsedNow(), attempt, wait))
+            log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
             delay(wait)
             attempt++
@@ -126,29 +134,24 @@ internal class KtorNetClient(
     private suspend fun tryOnce(
         request: NetRequest,
         url: Url,
-        rateLimited: Boolean,
+        policy: HostPolicy?,
     ): Attempt =
         try {
-            val response =
-                http.request {
+            http
+                .prepareRequest {
                     url(url)
                     method = if (request.method == NetMethod.POST) HttpMethod.Post else HttpMethod.Get
-                    (request.query + request.secrets.query).forEach { (name, value) -> parameter(name, value) }
                     (request.headers + request.secrets.headers).forEach { (name, value) -> header(name, value) }
                     request.body?.let { body ->
                         // Validated before, so the media type parses.
-                        setBody(
-                            OneShotContent(
-                                body.text.encodeToByteArray(),
-                                checkNotNull(parseContentType(body.contentType)),
-                            ),
-                        )
+                        val type = checkNotNull(parseContentType(body.contentType))
+                        setBody(OneShotContent(body.text.encodeToByteArray(), type))
                     }
                     request.timeout?.let { timeout { requestTimeoutMillis = it.inWholeMilliseconds } }
-                }
-            classify(response, rateLimited)
+                }.execute { response -> classify(request, response, policy) }
         } catch (e: IOException) {
-            // A cancelled call can surface as an IOException; it is a cancellation, not Offline.
+            // Defensive: no known path brings a cancellation here as an IOException, but if one does,
+            // it is a cancellation, not Offline.
             currentCoroutineContext().ensureActive()
             // Timeouts, refused connections, DNS failures and dropped connections are all
             // IOExceptions in Ktor 3. Only the type is kept: a message can carry the URL.
@@ -159,22 +162,24 @@ internal class KtorNetClient(
             Attempt.Failed(NetError.InvalidRequest("request (${e::class.simpleName})"))
         }
 
-    // Detekt 1.23.8 cannot resolve `bodyAsBytes` (from a library built with a newer Kotlin than its
-    // own), so it takes the modifier for redundant; the compiler requires it.
-    @Suppress("RedundantSuspendModifier")
     private suspend fun classify(
+        request: NetRequest,
         response: HttpResponse,
-        rateLimited: Boolean,
+        policy: HostPolicy?,
     ): Attempt {
         val status = response.status
-        val retryAfter = { parseRetryAfter(response.headers[HttpHeaders.RetryAfter], clock.now()) }
+        val retryAfter = {
+            val value = response.headers[ORIGINAL_RETRY_AFTER] ?: response.headers[HttpHeaders.RetryAfter]
+            parseRetryAfter(value, clock.now())
+        }
+        val busy =
+            status == HttpStatusCode.ServiceUnavailable && policy?.rateLimitedOn503 == true && request.method.idempotent
         return when {
             status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden -> {
                 Attempt.Failed(NetError.Unauthorized(status.value))
             }
 
-            status == HttpStatusCode.TooManyRequests ||
-                (status == HttpStatusCode.ServiceUnavailable && rateLimited) -> {
+            status == HttpStatusCode.TooManyRequests || busy -> {
                 retryAfter().let { Attempt.Failed(NetError.RateLimited(it), it) }
             }
 
@@ -183,9 +188,36 @@ internal class KtorNetClient(
             }
 
             else -> {
-                val headers = response.headers.entries().associate { it.key to it.value }
-                Attempt.Answered(NetResponse(status.value, headers, response.bodyAsBytes()))
+                read(response, request.maxBytes)
             }
+        }
+    }
+
+    // Detekt 1.23.8 cannot resolve `readBuffer` (from a library built with a newer Kotlin than its
+    // own), so it takes the modifier for redundant; the compiler requires it.
+
+    /** The body, read up to [maxBytes] and no further. */
+    @Suppress("RedundantSuspendModifier")
+    private suspend fun read(
+        response: HttpResponse,
+        maxBytes: Long,
+    ): Attempt {
+        val declared = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        val bytes =
+            if (declared != null && declared > maxBytes) {
+                null
+            } else {
+                response
+                    .bodyAsChannel()
+                    .readBuffer(maxBytes + 1)
+                    .readByteArray()
+                    .takeIf { it.size <= maxBytes }
+            }
+        return if (bytes == null) {
+            Attempt.Failed(NetError.TooLarge(maxBytes))
+        } else {
+            val headers = response.headers.entries().associate { it.key to it.value }
+            Attempt.Answered(NetResponse(response.status.value, headers, bytes))
         }
     }
 
@@ -204,14 +236,14 @@ internal class KtorNetClient(
             when (outcome.error) {
                 is NetError.RateLimited -> true
                 is NetError.Server, is NetError.Offline -> request.method.idempotent
-                is NetError.Unauthorized, is NetError.Parse, is NetError.InvalidRequest -> false
+                is NetError.Unauthorized, is NetError.Parse, is NetError.InvalidRequest, is NetError.TooLarge -> false
             }
         val wait = outcome.retryAfter ?: config.retry.delayAfter(attempt)
         return wait.takeIf { retryable && it <= config.retry.maxDelay }
     }
 
     private fun logLine(
-        request: NetRequest,
+        description: String,
         outcome: Attempt,
         elapsed: Duration,
         attempt: Int,
@@ -223,7 +255,7 @@ internal class KtorNetClient(
                 is Attempt.Failed -> outcome.error.toString()
             }
         val retry = wait?.let { ", retrying in $it" } ?: ""
-        return "$request -> $result in ${elapsed.inWholeMilliseconds} ms (attempt $attempt)$retry"
+        return "$description -> $result in ${elapsed.inWholeMilliseconds} ms (attempt $attempt)$retry"
     }
 
     /**

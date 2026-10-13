@@ -36,22 +36,29 @@ class NetConfig(
         const val MUSICBRAINZ: String = "musicbrainz.org"
 
         /**
-         * MusicBrainz allows one request per second per client, and answers 503 beyond it, which
-         * `:net` reports as [NetError.RateLimited] for any host with a policy. Last.fm's API terms
+         * MusicBrainz allows one request per second per client, and answers 503 beyond it, so its
+         * policy reports a 503 to a GET as [NetError.RateLimited]. Last.fm's API terms
          * (checked 2026-10-13) say limits are set and enforced at its discretion, with no figure, and
          * Wikimedia asks for serial requests without a rate; their adapters add an entry when a
          * stated limit applies, as Discogs' will (60 a minute, Phase 3).
          */
-        val DEFAULT_HOSTS: Map<String, HostPolicy> = mapOf(MUSICBRAINZ to HostPolicy(minInterval = 1.seconds))
+        val DEFAULT_HOSTS: Map<String, HostPolicy> =
+            mapOf(MUSICBRAINZ to HostPolicy(minInterval = 1.seconds, rateLimitedOn503 = true))
 
         /** Host names compare lowercased and without the trailing dot of a fully qualified name. */
         fun normalizeHost(host: String): String = host.lowercase().trimEnd('.')
     }
 }
 
-/** The rate limit for one host: requests to it start at least [minInterval] apart. */
+/**
+ * The rate limit for one host: requests to it start at least [minInterval] apart.
+ * [rateLimitedOn503] is for a host that answers 503 when its limit is exceeded: a 503 to a GET is
+ * then [NetError.RateLimited]. A POST's 503 stays [NetError.Server] and is not retried, since a 503,
+ * unlike a 429, does not promise the request was not acted on.
+ */
 data class HostPolicy(
     val minInterval: Duration,
+    val rateLimitedOn503: Boolean = false,
 )
 
 /**

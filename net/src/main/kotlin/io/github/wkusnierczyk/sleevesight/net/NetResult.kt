@@ -24,8 +24,8 @@ sealed interface NetError {
     ) : NetError
 
     /**
-     * 429, or 503 from a host with a rate limit (MusicBrainz signals its limit with 503), still there
-     * after the retries, or asking for a wait longer than they allow.
+     * 429, or a 503 to a GET from a host whose [HostPolicy.rateLimitedOn503] says it signals its limit
+     * so (MusicBrainz), still there after the retries, or asking for a wait longer than they allow.
      */
     data class RateLimited(
         val retryAfter: Duration?,
@@ -46,9 +46,15 @@ sealed interface NetError {
         val reason: String,
     ) : NetError
 
+    /** The response body was longer than the request's `maxBytes`, [limit]. Never retried. */
+    data class TooLarge(
+        val limit: Long,
+    ) : NetError
+
     /**
-     * The request could not be sent as given: a malformed URL, a header value with control characters
-     * (a key read from a file with its newline), a malformed media type. [field] names the part, never
+     * The request could not be sent as given: a malformed URL or a host not written in plain ASCII, a
+     * header value with control characters (a key read from a file with its newline), a malformed
+     * media type, a timeout or size limit that is not positive. [field] names the part, never
      * its value. Never retried.
      */
     data class InvalidRequest(
