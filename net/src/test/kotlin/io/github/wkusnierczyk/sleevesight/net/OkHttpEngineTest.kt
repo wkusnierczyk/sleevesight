@@ -1,11 +1,15 @@
 package io.github.wkusnierczyk.sleevesight.net
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -13,6 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * What the real OkHttp engine sends, against servers on the loopback interface (no internet): nothing
@@ -201,5 +206,108 @@ class OkHttpEngineTest {
                 assertEquals(2, server.requestCount)
                 assertEquals(1, other.requestCount)
             }
+        }
+
+    @Test
+    fun `a chunked stream arrives line by line through the real engine, sent once`() =
+        runTest {
+            val events = "event: a\ndata: {\"x\":1}\n\nevent: b\r\ndata: é\r\n\n"
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .addHeader("Content-Type", "text/event-stream")
+                    .chunkedBody(events, 5)
+                    .build(),
+            )
+            val lines = mutableListOf<String>()
+            val post = NetRequest(server.url("/s").toString(), NetMethod.POST, body = NetBody("{}", "application/json"))
+
+            val result =
+                KtorNetClient(
+                    twice,
+                    okHttpEngine(),
+                    NetLog.NONE,
+                ).use { it.stream(post) { line -> lines += line } }
+
+            assertIs<NetResult.Success<NetResponse>>(result)
+            assertEquals(listOf("event: a", "data: {\"x\":1}", "", "event: b", "data: é", ""), lines)
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `a stream whose body is cut off is Offline and not repeated, even for a GET`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .chunkedBody("data: 1\n".repeat(1000), 64)
+                    .onResponseBody(SocketEffect.ShutdownConnection)
+                    .build(),
+            )
+            server.enqueue(ok("data: again\n"))
+
+            val result =
+                KtorNetClient(twice, okHttpEngine(), NetLog.NONE).use {
+                    it.stream(NetRequest(server.url("/s").toString())) { }
+                }
+
+            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `a request timeout bounds a stream, and after its first line it ends Offline, sent once, logged once`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("first\n" + "x".repeat(60))
+                    .throttleBody(6, 1, TimeUnit.SECONDS)
+                    .build(),
+            )
+            val log = RecordingLog()
+            val lines = mutableListOf<String>()
+            val slow = NetRequest(server.url("/s").toString(), timeout = 1500.milliseconds)
+
+            val result = KtorNetClient(twice, okHttpEngine(), log).use { it.stream(slow) { line -> lines += line } }
+
+            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals(listOf("first"), lines)
+            assertEquals(1, server.requestCount)
+            assertEquals(1, log.lines.size, log.lines.joinToString("\n"))
+        }
+
+    @Test
+    fun `a caller that cancels mid-stream stops it, with no retry`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .body("first\n" + "x".repeat(60))
+                    .throttleBody(6, 1, TimeUnit.SECONDS)
+                    .build(),
+            )
+            server.enqueue(ok("again\n"))
+            val firstLine = CompletableDeferred<Unit>()
+            val lines = mutableListOf<String>()
+
+            KtorNetClient(twice, okHttpEngine(), NetLog.NONE).use { client ->
+                val job =
+                    launch {
+                        client.stream(NetRequest(server.url("/s").toString())) { line ->
+                            lines += line
+                            firstLine.complete(Unit)
+                        }
+                    }
+                firstLine.await()
+                job.cancelAndJoin()
+            }
+
+            assertEquals(listOf("first"), lines)
+            assertEquals(1, server.requestCount)
         }
 }
