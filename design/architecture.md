@@ -444,7 +444,7 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 
 ## CI
 
-GitHub Actions from the first code PR. On every pull request and push to `main`:
+GitHub Actions from the first code PR. On every pull request and every push to `main` or a `dev-*` integration branch:
 
 1. `./gradlew build`: compile, unit tests, Detekt, ktlint, Android lint.
 2. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
