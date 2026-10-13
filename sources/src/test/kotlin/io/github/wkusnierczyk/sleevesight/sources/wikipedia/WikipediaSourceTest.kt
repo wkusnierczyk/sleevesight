@@ -74,7 +74,17 @@ class WikipediaSourceTest {
                         it.text == "“Sundown” was first published on 25 March 1974."
                 },
             )
-            assertTrue(result.evidence.any { it.scope == Scope.ARTIST && it.source == SourceId.WIKIPEDIA })
+            val artist =
+                result.evidence
+                    .filter {
+                        it.scope == Scope.ARTIST && it.source == SourceId.WIKIPEDIA
+                    }.map { it.text }
+            assertEquals(
+                "Gordon Meredith Lightfoot Jr. (November 17, 1938 – May 1, 2023) was a Canadian singer-songwriter " +
+                    "who achieved worldwide success and helped define the singer-songwriter era of the 1970s.",
+                artist.first(),
+            )
+            assertTrue(artist.all { it.count { c -> c == '"' } % 2 == 0 }, "$artist")
             assertEquals(emptyList(), result.rejections)
             assertEquals(emptyList(), result.unverified)
         }
@@ -161,6 +171,23 @@ class WikipediaSourceTest {
             pending.complete(resolved)
             assertEquals(Outcome.SongArticle, result.await().outcome)
         }
+
+    @Test
+    fun `a quotation is never cut, and one left open is dropped`() {
+        assertEquals(
+            listOf("Dylan said, \"I like it. I really do.\"", "It charted."),
+            WikipediaSource.split("Dylan said, \"I like it. I really do.\" It charted."),
+        )
+        assertEquals(listOf("It charted."), WikipediaSource.split("It charted. He said, \"No. Never."))
+    }
+
+    @Test
+    fun `article addresses are percent-encoded paths`() {
+        assertEquals("https://en.wikipedia.org/wiki/Why%3F_(Bronski_Beat_song)", articleUrl("Why? (Bronski Beat song)"))
+        assertEquals("https://en.wikipedia.org/wiki/100%25_Pure_Love", articleUrl("100% Pure Love"))
+        assertEquals("https://en.wikipedia.org/wiki/Baby,_Please_Don't_Go", articleUrl("Baby, Please Don't Go"))
+        assertEquals("https://en.wikipedia.org/wiki/Beyonc%C3%A9", articleUrl("Beyoncé"))
+    }
 
     @Test
     fun `song titles follow Wikipedia's naming and casing`() {

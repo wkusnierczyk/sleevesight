@@ -113,5 +113,27 @@ class WikipediaClient(
     }
 }
 
-/** The address of the English Wikipedia article [title]. */
-fun articleUrl(title: String): String = "https://en.wikipedia.org/wiki/" + title.replace(' ', '_')
+/**
+ * The address of the English Wikipedia article [title]: spaces as underscores, and the title
+ * percent-encoded as UTF-8 apart from the characters Wikipedia's own links leave as they are, so
+ * a `?`, `#` or `%` in a title stays part of the path (`Why%3F_(Bronski_Beat_song)`).
+ */
+fun articleUrl(title: String): String {
+    val path = StringBuilder()
+    for (byte in title.replace(' ', '_').encodeToByteArray()) {
+        val c = byte.toInt() and BYTE
+        if (c < ASCII && c.toChar().let { it.isLetterOrDigit() || it in PATH_SAFE }) {
+            path.append(c.toChar())
+        } else {
+            path.append('%').append(HEX[c shr NIBBLE]).append(HEX[c and LOW_NIBBLE])
+        }
+    }
+    return "https://en.wikipedia.org/wiki/$path"
+}
+
+private const val PATH_SAFE = "-._~_()',:!*;@\$/"
+private const val HEX = "0123456789ABCDEF"
+private const val BYTE = 0xFF
+private const val ASCII = 0x80
+private const val NIBBLE = 4
+private const val LOW_NIBBLE = 0x0F

@@ -18,6 +18,9 @@ enum class RegressionCase(
     MULTIPLE_ARTISTS(listOf(14), "Up Down, Peleboy, Tony K: multiple credited artists"),
     THREE_ARTISTS(listOf(37), "The Ode To Newfoundland: three credited artists"),
     COVERS(listOf(45, 48, 76), "Covers: Wikipedia only describes the original song"),
+
+    // Track 61 is also a cover of Taylor Swift's "willow" (album "Taylor Swift Covers (single)"), which
+    // the identity check cannot confirm; the album title is a signal for the gate (#46).
     WRONG_LASTFM_ARTIST(listOf(61), "willow, Jessiah: the Last.fm name resolves to an unrelated band"),
     FEATURED_ARTIST(listOf(63), "Baby, Please Don't Go (feat. Van Morrison): featured artist in the title"),
     COMPILATION_RELEASE_YEAR(listOf(13, 36), "New York Groove, Snowbird: the release year is a compilation's"),

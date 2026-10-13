@@ -181,12 +181,14 @@ class WikipediaSource(
         subjects: List<String>,
     ): List<String> {
         val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
+        // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
+        // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
         return lead
             .split('\n')
             .map { tidy(it) }
-            .flatMap { LastFmBio.split(it) }
+            .flatMap { split(it) }
+            .filterIndexed { i, sentence -> i == 0 || keys.any { it in " ${names.key(sentence)} " } }
             .filter { it.length <= MAX_SENTENCE_LENGTH }
-            .filter { sentence -> keys.any { it in " ${names.key(sentence)} " } }
             .take(MAX_SENTENCES)
     }
 
@@ -201,6 +203,29 @@ class WikipediaSource(
         // `Frehley (, FRAY-lee; April 27, 1951 – …)`. Only that, and doubled spaces, are tidied.
         private val ORPHANED_PUNCTUATION = Regex("\\(\\s*[,;]\\s*")
         private val SPACES = Regex(" {2,}")
+
+        /**
+         * [paragraph]'s sentences, never ending inside a quotation: the Last.fm splitter's pieces
+         * (`LastFmBio.split`) are joined while a quotation they open is not closed, and a piece left
+         * with an open quotation at the end of the paragraph is dropped.
+         */
+        internal fun split(paragraph: String): List<String> {
+            val sentences = mutableListOf<String>()
+            var open: String? = null
+            for (piece in LastFmBio.split(paragraph)) {
+                val joined = open?.let { "$it $piece" } ?: piece
+                if (balanced(joined)) {
+                    sentences += joined
+                    open = null
+                } else {
+                    open = joined
+                }
+            }
+            return sentences
+        }
+
+        private fun balanced(text: String): Boolean =
+            text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 
         private fun tidy(paragraph: String): String =
             paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
