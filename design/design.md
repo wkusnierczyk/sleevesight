@@ -204,9 +204,30 @@ val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, G
 | Wikipedia and Wikidata | Song and artist articles | Reach the article through the MusicBrainz Wikidata link where possible, to avoid same-name collisions. No key. |
 | Last.fm | Artist bio, listener count, tags, similar artists | User's own API key. Tags are crowd-applied and noisy; similar artists come from listening overlap, not audio. |
 | Discogs | Releases and personnel | User's own token. |
-| Web search | Generic RAG over the open web | Provider chosen by the user, with their key. Results may describe a different song with the same title. |
+| Web search | Generic RAG over the open web | User's own key; Exa first (D11, below). Results may describe a different song with the same title, so they are filtered. |
 
 The model's own knowledge is modelled as a pseudo-source with tag `M`: it retrieves nothing, and when enabled it lets the model add at most one claim, marked unverified.
+
+#### Web search provider (D11)
+
+**Exa first** ([#40](https://github.com/wkusnierczyk/sleevesight/issues/40), 2026-10-14). The user brings the key, so the deciding points are what a key costs them to get and keep, and whether the results are worth an evidence line. Exa's free tier needs no card and renews monthly; on the fixture's thin tracks it found real listings where the simulator's search found nothing; and its terms, though strict, are no worse than the others'. Only Exa was tested live: it is the only key the project holds. The others were compared on their official pages (2026-10-14):
+
+| Provider | Free tier | Card for the free tier | Price per 1000 searches | Rate limit | Terms on results |
+|---|---|---|---|---|---|
+| **Exa** | $10 of credit a month (about 2000 `instant` searches with highlights) | No | $4 `instant`, $7 `auto`; highlights $1 per 1000 pages, not charged in the spike | 10 per second for `/search` | §4.2(a): no copying, distributing or displaying information obtained through the services beyond the terms or Exa's written leave; no attribution clause |
+| Brave Search API | $5 of credit a month | Yes ("to verify identity", not charged) | $5 | 50 per second | Storing results needs a plan with storage rights; grants no rights in the third-party pages |
+| Tavily | 1000 credits a month (a basic search is 1 credit) | Pricing page says no; the owner was asked for one at sign-up | $8 (pay as you go) | 100 a minute on a development key | For integration in the customer's own applications; no attribution clause |
+| Linkup | $20 of credit, topped up monthly, for a professional email | Not stated | $5 (standard search) | Not stated | Not reviewed |
+| You.com | $100 of credit at sign-up | Not stated | $5 | Not stated | Not reviewed |
+| Serper, SerpApi | 2500 queries once; 250 a month | No; not stated | $0.30 to $1; $25 for 1000 a month | 50 per second; 50 an hour | They resell Google's results page, scraped: not a sound basis |
+| Google Custom Search JSON API | Closed to new customers, ends 2027-01-01 | | | | |
+| Bing Web Search API | Retired in 2025 | | | | |
+
+**The live test** (20 calls, about $0.10): tracks 1, 12, 23, 30, 45, 61 and 77, with `auto` and `instant`. `instant` was as relevant as `auto` at a tenth of the latency (0.3 s against 3 s) and a little over half the price, so the adapter uses it. On the thin tracks Exa found what the simulator's search did not: for 23, a library catalogue entry naming the composers and the album, a soundtrack listing with the scene, and two song-database pages; for 30, a soundtrack listing and a CritiqueBrainz page; for 77, only Alphaville's and Rod Stewart's songs, which the filter rejects. For 12 it mixed Reem's song with Juice WRLD's of the same name and returned one undecodable page; for 61 one Spotify page for Jessiah's recording among other artists' "willow"s.
+
+**Keeping results about the right recording.** The query is `"<title>" by <artists>, song`, which suits Exa's neural search; highlights of at most 300 characters, steered by the title and artists, are the snippet. Ten results are asked for; a result is kept only if its title or snippet names the title and at least one credited artist, each as a whole phrase after folding case, accents and punctuation, and at most five are kept, in Exa's order. Results from the sources the pipeline reads through their own adapters (Wikipedia and its mirror Wikiwand, Wikidata, MusicBrainz, Last.fm, Discogs) are excluded in the query and dropped again by the filter, so their text arrives only through the adapter that verifies it. Kept results give `song_article`; results that all fail give `rejected`; no results give `none`. Known limits: an artist whose name is a common word (Them) is matched by the word; a result can quote lyrics; and a page about another recording that names the artist in passing still passes.
+
+**Open on the terms.** Read literally, Exa's §4.2(a) covers showing a result to the user who holds the key, though showing results is what the API is for (§1.1 grants use "for the limited purposes set forth in the documentation"), and it covers the test recordings in `fixtures/http/web/`, which are kept to five searches and the fields the adapter reads. Before the repository is made public, ask Exa or replace the recordings with synthetic ones; before release, confirm that the app's use is within the terms. A second provider can be added behind the same `SourceAdapter`, with the filter shared.
 
 ### Evidence model
 
@@ -389,6 +410,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-12 | D9: retrieval cache lifetime a user setting per source | Freshness against requests is the user's trade-off |
 | 2026-10-12 | D10: `minSdk` 26 | Reach; nothing used needs more, and the Keystore floor is 23 |
 | 2026-10-12 | D11: the first web search provider chosen in Phase 0.5 | The adapter interface does not depend on it |
+| 2026-10-14 | D11: Exa is the first web search provider (#40); results kept only when they name the title and a credited artist | A free tier without a card, renewed monthly; real results for the thin tracks. Only Exa was tested live |
 | 2026-10-12 | D12: MusicBrainz tags and genres judged in the Phase 0.5 pilot; their licence settled before they ship (#9); licence findings in `architecture.md`, *MusicBrainz tags and genres* | Last.fm alone left 30 of 78 tracks without genres |
 | 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
@@ -401,7 +423,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 - **General-knowledge cards and the LLM role.** Genre descriptions, comparisons and "more like this" suggestions come from the model's own knowledge, and the suggestions are the model choosing items at runtime. That sits uneasily with keeping the model to narration. Options: retrieve genre articles from Wikipedia and ground those cards too; build suggestions deterministically from Last.fm similar artists and MusicBrainz relationships, with the model only explaining them; or keep them as labelled general knowledge behind the model-knowledge switch.
 - **Deeper analysis.** What an "Analysis" mode adds beyond the collected insight: musical structure, credits graph, lineage of covers and samples.
 - **Release date semantics.** Show the recording's first release, the release being played, or both.
-- **Web search provider.** Which providers to support first, and how to keep results about the right recording. Chosen in Phase 0.5 (D11).
+- **Web search provider.** Decided: Exa first (D11, 2026-10-14; *Web search provider (D11)* under *Source adapters*). Still open there: whether Exa's terms allow the test recordings and the app's use as built, and which provider comes second.
 - **Per-player behavior.** How much of the UI to hide for players that send title only.
 - **Name.** Run the spoken-aloud test on "Sleevesight".
 

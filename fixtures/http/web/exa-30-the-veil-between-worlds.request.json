@@ -1,0 +1,19 @@
+{
+  "query": "\"THE VEIL BETWEEN WORLDS\" by DIE HEXEN, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "THE VEIL BETWEEN WORLDS DIE HEXEN",
+      "maxCharacters": 300
+    }
+  }
+}
