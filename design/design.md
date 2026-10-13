@@ -191,10 +191,11 @@ One interface, one adapter per source:
 
 ```kotlin
 interface SourceAdapter {
-    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA, LASTFM, DISCOGS, WEB
-    val tag: String                  // MB, W, L, D, G
-    suspend fun lookup(entity: ResolvedEntity): SourceResult  // typed outcome + evidence lines
+    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA (also emits WIKIDATA lines), LASTFM, DISCOGS, WEB
+    suspend fun lookup(track: NormalizedTrack, resolution: Deferred<Resolution>): SourceResult  // typed outcome + evidence lines; see architecture.md, Source adapters
 }
+
+val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, G
 ```
 
 | Source | Role | Notes |
@@ -298,7 +299,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Prepare the next track: off, evidence, or evidence and insight; the insight only where *Write insights automatically* would write it (D13) | Evidence and insight |
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
-| Lookups | Cache lifetime per source (D9) | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
+| Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
 
 Source switches decide what the model may use. The filter chips in the Sources section only change what is displayed.
 
