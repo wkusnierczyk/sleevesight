@@ -183,6 +183,18 @@ class WikipediaSourceTest {
             listOf("It came out as a 7\" single.", "It charted."),
             WikipediaSource.split("It came out as a 7\" single. It charted."),
         )
+        assertEquals(
+            listOf("\"1999\" is a song by American musician Prince.", "It was released in 1982."),
+            WikipediaSource.split("\"1999\" is a song by American musician Prince. It was released in 1982."),
+        )
+        assertEquals(
+            listOf("\"Summer of '69\" is a song by Bryan Adams.", "It charted."),
+            WikipediaSource.split("\"Summer of '69\" is a song by Bryan Adams. It charted."),
+        )
+        assertEquals(
+            listOf("Prince is a musician.", "His hits include \"1999\" and \"Kiss\".", "He died in 2016."),
+            WikipediaSource.split("Prince is a musician. His hits include \"1999\" and \"Kiss\". He died in 2016."),
+        )
     }
 
     @Test

@@ -226,10 +226,15 @@ class WikipediaSource(
             return sentences
         }
 
-        // A `"` right after a digit is an inch mark (`a 7" single`), not a quotation mark.
-        private fun balanced(text: String): Boolean =
-            text.indices.count { text[it] == '"' && text.getOrNull(it - 1)?.isDigit() != true } % 2 == 0 &&
-                text.count { it == '“' } == text.count { it == '”' }
+        // Outside a quotation, a `"` right after a digit is an inch mark (`a 7" single`); inside one,
+        // it closes it (`"1999" is a song`).
+        private fun balanced(text: String): Boolean {
+            var inside = false
+            for (i in text.indices) {
+                if (text[i] == '"' && (inside || text.getOrNull(i - 1)?.isDigit() != true)) inside = !inside
+            }
+            return !inside && text.count { it == '“' } == text.count { it == '”' }
+        }
 
         private fun tidy(paragraph: String): String =
             paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
