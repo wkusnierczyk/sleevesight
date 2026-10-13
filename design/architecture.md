@@ -92,7 +92,6 @@ flowchart TD
   store[":store (JVM)"] --> core
   net[":net (JVM)"]
   core[":core (JVM)"]
-  spike[":spike (Android, Phase 0 only)"]
 ```
 
 | Module | Kind | Contents | May depend on |
@@ -104,7 +103,6 @@ flowchart TD
 | `:store` | Kotlin JVM | Retrieval cache, synthesis cache, artist-resolution cache, session history, track-change records (D15). SQLDelight schema and queries over an injected `SqlDriver`: `:cli` supplies the SQLite JDBC driver, `:app` the Android driver (an AAR, which a JVM module cannot depend on) | `:core`, SQLDelight runtime |
 | `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, SQLDelight JDBC driver |
 | `:app` | Android application | Session layer (`NotificationListenerService`, `MediaSessionManager`); Compose UI; settings (DataStore); secrets (Keystore); wiring; diagnostics screen | `:core`, `:sources`, `:ai`, `:store`, SQLDelight Android driver |
-| `:spike` | Android application | Phase 0 probe. Removed when the Phase 0 gate passes; history keeps it | Android only |
 
 The boundaries do the enforcing. `:core` cannot reach the network because it has no HTTP dependency; only `:sources` and `:ai` see `:net`; and `:app` gets network results only through them. The checks under [Structural constraints](#structural-constraints) make that a build failure rather than a convention.
 
@@ -421,13 +419,15 @@ GitHub Actions from the first code PR. On every pull request and push to `main`:
 2. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
 3. `assembleDebug`, with the APK uploaded as a workflow artifact.
 
+While no Android module exists (from the removal of `:spike` until `:app`), `checkManifest` and `assembleDebug` have nothing to run, and CI leaves them out.
+
 A release workflow (a signed app bundle for Google Play, D7) comes with the first release; the signing key goes in a protected environment, not a repository secret. Actions minutes are metered on a private repository, so the workflow caches Gradle and skips Android jobs when only docs change.
 
 ## Phase mapping
 
 | Phase | Modules built | Exit |
 |---|---|---|
-| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip detection measured (the time left at a change, Spotify's state clusters, no skip state reported); art-URI players listed, and whether the `content://` grant holds; installation from a file tested (D7, which moved distribution to Google Play); `:spike` removed |
+| 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip detection measured (the time left at a change, Spotify's state clusters, no skip state reported); art-URI players listed, and whether the `content://` grant holds; installation from a file tested (D7, which moved distribution to Google Play); `:spike` removed. **Passed 2026-10-13**; restricted settings moved to Phase 1 |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate; MusicBrainz tags judged (D12); the first web search provider chosen (D11) |
 | 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics; preparing the next track (D13); recording track changes (D15) | Runs on a real phone against Spotify |
 | 1.5. Play release | Release workflow (a signed app bundle, see [CI](#ci)); store listing, privacy policy, data safety form | Published on Google Play (D7) |

@@ -41,7 +41,7 @@ The prototype in the simulator covers the whole flow against a real 80-track pla
 
 ## Platform facts
 
-These were established while designing, and checked in Phase 0 with the platform probe (`spike/`) on a Samsung Galaxy S25 Ultra (SM-S938B, Android 16, API 36), with Spotify, Castbox (podcasts), YouTube Music (free tier) and a Sonos session, on 2026-10-12. Items marked **to measure** are still open.
+These were established while designing, and checked in Phase 0 with the platform probe (`spike/`, removed after the gate; history keeps it) on a Samsung Galaxy S25 Ultra (SM-S938B, Android 16, API 36), with Spotify, Castbox (podcasts), YouTube Music (free tier) and a Sonos session, on 2026-10-12. Items marked **to measure** are still open.
 
 ### Reading now-playing
 
@@ -113,7 +113,7 @@ Measured for decision D5 on 21 Spotify track changes (of 24 logged; the other th
 - **Installing from a file (measured, D7).** The probe's APK, opened from My Files, was first stopped by **Google Play Protect** ("App blocked to protect your device": Play Protect has not seen an app from this developer before), which offers **Install anyway**. After that, **Advanced Protection** blocked it outright ("Advanced Protection only allows apps from Google Play and other app stores pre-installed on your phone"), with no override. On this phone the device setting was off and the Google account is enrolled in Google's Advanced Protection Program, so the block presumably comes from that enrolment. So:
   - for a user without Advanced Protection, installing Sleevesight from a file costs at least a Play Protect warning (and, the first time, allowing the file manager or browser to install unknown apps);
   - for a user whose Google account is enrolled in Advanced Protection (and, by the dialog's wording, presumably one with the device setting on, which was not tested), only Google Play (or a store pre-installed on the phone) can install it, which rules out GitHub releases and F-Droid for them.
-- Restricted settings on notification access, for an app installed from a file, could not be measured on this phone, since the install itself is blocked; it is **to measure** on a phone or emulator without Advanced Protection.
+- Restricted settings on notification access, for an app installed from a file, could not be measured on this phone, since the install itself is blocked; it is **to measure** on a phone or emulator without Advanced Protection, with the debug `:app` build in Phase 1 (#29).
 - `adb` installs are not affected by either block.
 - **Decision (D7, revised):** Sleevesight is distributed through **Google Play** (owner, 2026-10-12), the one channel that reaches every user, Advanced Protection or not, without a warning. Play's review of an app that holds notification access becomes part of the release work.
 
@@ -336,7 +336,7 @@ A throwaway app on a real phone. Outputs, written to a log file:
 - Which `PlaybackState` actions each player advertises; whether transport controls work.
 - Whether `getSessionActivity()` and `spotify:` deep links open the expected screens.
 
-**Gate:** every unverified item in Platform facts is resolved and this document updated. Open as of 2026-10-12: restricted settings on notification access for an app installed from a file, on a device without Advanced Protection. In light of the installation findings, D7 moved distribution to Google Play (owner, 2026-10-12), so this matters for development installs and for any later channel outside Play, not for the release.
+**Gate:** every unverified item in Platform facts is resolved and this document updated. **Passed 2026-10-13**, with one item moved to Phase 1 (owner, 2026-10-13): restricted settings on notification access for an app installed from a file, on a device without Advanced Protection (#29). In light of the installation findings, D7 moved distribution to Google Play (owner, 2026-10-12), so this matters for development installs and for any later channel outside Play, not for the release. The probe is removed (#30).
 
 ### Phase 0.5. Pipeline CLI
 
