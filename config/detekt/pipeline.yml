@@ -5,6 +5,8 @@
 style:
   ForbiddenImport:
     active: true
+    # Platform implementations (src/jvmMain, compiled with main) may use JVM APIs.
+    excludes: ['**/src/jvmMain/**']
     imports:
       - value: 'java.*'
         reason: 'JVM-only; the pipeline modules stay Multiplatform-ready (D2).'

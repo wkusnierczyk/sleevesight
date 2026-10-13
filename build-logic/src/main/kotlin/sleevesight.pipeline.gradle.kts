@@ -6,6 +6,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Platform implementations of the small interfaces the portable code declares (accent folding,
+// hashing) live in `src/jvmMain/kotlin`, compiled with `main`. The directory is where a
+// Multiplatform `jvmMain` would be, and the readiness rules exempt it.
+kotlin.sourceSets.named("main") {
+    kotlin.srcDir("src/jvmMain/kotlin")
+}
+
 detekt {
     config.setFrom(
         rootProject.file("config/detekt/detekt.yml"),
