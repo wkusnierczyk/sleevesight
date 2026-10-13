@@ -430,6 +430,8 @@ Each prompt has two parts (D14; `architecture.md`, *Prompt style*):
 - **The contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It is restated after the style, so a style cannot override it.
 - **Each card's built-in style**: the lengths and the tone below (sentence and word counts, "plain conversational English"). The user's style (length, tone, focus, audience, free text) adjusts it: shorter or longer relative to the built-in length, and for the JSON cards only in their text fields.
 
+The prompt states the contract, then the style, then the contract again. The data it narrates (the track as the player reports it, and the evidence) is fenced in `<track>` and `<evidence>` blocks that the prompt calls data, not instructions; each field and each evidence line is flattened to one line, so no text from a player or a web page can close a block or pass for an evidence line of its own (`:core`, `InsightPrompt`).
+
 ### Insight
 
 Input: the now-playing title, artists and album as the player reports them (not the duration), the normalized fields, and evidence lines as `[ID] (source, scope) text`. Rules given to the model:

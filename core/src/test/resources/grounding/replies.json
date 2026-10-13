@@ -1,0 +1,675 @@
+[
+ {
+  "name": "claude-haiku-5-5 on prompts/insight-41.txt",
+  "reply": "Arthur Scammell wrote the song in 1928 about squid-jigging fishermen in Newfoundland, and this recording is a version of it [W1]. It is sung to the traditional Irish jig tune Larry O'Gaff, and its melody matches the Flanagan Brothers' 1927 recording Mick from Tralee [W2][G3]. The song is about squid jigging, where bait squid are caught with a baitless metal jigger of tiny hooks, on inshore grounds usually from July into August [G6][G8]. Dick Nolan is a Newfoundland folk performer known for Toronto nightclub work [L1][L2], but the sources I have don't mention his recording of this song, so its details are not documented here [W6][G5].",
+  "ids": [
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "W5",
+   "W6",
+   "L1",
+   "L2",
+   "L3",
+   "L4",
+   "L5",
+   "L6",
+   "L7",
+   "L8",
+   "L9",
+   "G1",
+   "G2",
+   "G3",
+   "G4",
+   "G5",
+   "G6",
+   "G7",
+   "G8",
+   "G9",
+   "G10",
+   "P1"
+  ],
+  "allowModel": true
+ },
+ {
+  "name": "claude-haiku-5-5 on prompts/insight-1.txt",
+  "reply": "Sundown was issued as a single in 1974 and became Gordon Lightfoot's only number one on the US Hot 100 [W1][W3]. He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home, and he tied the song to his roughly three-year relationship with Cathy Smith [W5][G4]. Despite its mellow sound, it is described as dark, expressing jealousy and paranoia [G3].",
+  "ids": [
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "W5",
+   "W6",
+   "L1",
+   "L2",
+   "L3",
+   "L4",
+   "L5",
+   "L6",
+   "G1",
+   "G2",
+   "G3",
+   "G4",
+   "G5",
+   "G6",
+   "G7",
+   "G8",
+   "P1"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "all cited",
+  "reply": "Sundown was issued as a single in March 1974 on Reprise. [W1] It reached number one on the US Hot 100. [W3] Gordon Lightfoot is often credited with defining the 1970s singer-songwriter era. [L2]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "citations before the stop",
+  "reply": "Sundown was recorded in Toronto [W2]. It went gold [W4].",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "several citations",
+  "reply": "It topped the charts in the US and Canada. [W3][G1] Listeners tag him as folk. [L3] [G2]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "uncited sentence",
+  "reply": "Sundown was a single in 1974. [W1] It is one of the great songs of the decade.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "unknown id",
+  "reply": "It was covered many times. [W9] The song is on the release Sundown. [P1]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "model knowledge on",
+  "reply": "Sundown is on the release Sundown. [P1] Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": true
+ },
+ {
+  "name": "model knowledge off",
+  "reply": "Sundown is on the release Sundown. [P1] Lightfoot also wrote The Wreck of the Edmund Fitzgerald. [M]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "model and evidence in one sentence",
+  "reply": "He was Canadian and wrote many hits. [L1][M]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": true
+ },
+ {
+  "name": "hedges",
+  "reply": "Little is documented about this recording. Not much is known about the band. There is no further information. There isn't much else. Nothing else is documented here. This is not much to go on.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "hedge in capitals",
+  "reply": "LITTLE IS KNOWN about this track.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "hedge with a curly apostrophe is uncited",
+  "reply": "There isn’t much more.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "two paragraphs",
+  "reply": "Sundown reached number one. [W3]\n\nLightfoot was born in Orillia. [L1] He died in 2023. [L1]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "paragraphs with spaces between",
+  "reply": "First paragraph. [W1]\n   \t\nSecond paragraph. [W2]\n\n\n\nThird. [W3]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "single newline is not a paragraph",
+  "reply": "One sentence. [W1]\nAnother sentence. [W2]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "abbreviation splits",
+  "reply": "Produced by Lenny Waronker with Dr. Smith on guitar. [W1]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "lowercase after a stop does not split",
+  "reply": "It reached no. 1 on the chart. [W3] e.g. in the US.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "quote and parenthesis open a sentence",
+  "reply": "It was a hit. [W3] \"Sundown\" is still played. [G1] (It went gold.) [W4] “A classic,” one site says. [G2]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "question and exclamation",
+  "reply": "Who was the girlfriend? Many say Cathy Smith! [W5]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2",
+   "W5"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "tabs and runs of spaces",
+  "reply": "  Sundown\t\twas a   hit. [W3]   \tIt went gold. [W4]  ",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "non-breaking space between sentences",
+  "reply": "It was a hit. [W3] It went gold. [W4]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "ideographic space and BOM",
+  "reply": "﻿It was a hit. [W3]　It went gold. [W4]﻿",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "three-letter tag is not a citation",
+  "reply": "It was a hit. [ABC] It went gold. [W4]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "two-letter tag",
+  "reply": "Recorded in 1973. [MB1] The single was on Reprise. [WD2]",
+  "ids": [
+   "MB1",
+   "WD2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "citation with lowercase is not a citation",
+  "reply": "It was a hit. [w3] It went gold. [W4]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "bare M is an id only when allowed",
+  "reply": "Unverified claim. [M]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2",
+   "M"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "empty reply",
+  "reply": "",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "whitespace reply",
+  "reply": "  \n\n  ",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence",
+  "reply": "NO_EVIDENCE",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence with padding",
+  "reply": "  NO_EVIDENCE\n",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence with a stop",
+  "reply": "NO_EVIDENCE.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence followed by text",
+  "reply": "NO_EVIDENCE: the sources say nothing.",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence glued to a word",
+  "reply": "NO_EVIDENCEX",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence with underscore",
+  "reply": "NO_EVIDENCE_",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence later in the text",
+  "reply": "There is nothing here. NO_EVIDENCE",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "lowercase no evidence",
+  "reply": "no_evidence",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ },
+ {
+  "name": "no evidence set",
+  "reply": "Little is documented about this recording.",
+  "ids": [],
+  "allowModel": false
+ },
+ {
+  "name": "surrogate pair text",
+  "reply": "The title is 🎵 Sundown. [W1] Next. [W2]",
+  "ids": [
+   "P1",
+   "W1",
+   "W2",
+   "W3",
+   "W4",
+   "L1",
+   "L2",
+   "L3",
+   "G1",
+   "G2"
+  ],
+  "allowModel": false
+ }
+]
