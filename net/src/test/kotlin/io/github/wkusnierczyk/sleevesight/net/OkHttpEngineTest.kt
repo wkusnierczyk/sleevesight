@@ -4,12 +4,14 @@ import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -135,30 +137,63 @@ class OkHttpEngineTest {
         }
 
     @Test
-    fun `a redirect to another server is followed by net, without the key`() =
+    fun `the guarded client speaks HTTP 1_1 only, and neither redirects nor retries on its own`() {
+        val client = OkHttpClient.Builder().apply { applyGuards() }.build()
+
+        assertEquals(listOf(Protocol.HTTP_1_1), client.protocols)
+        assertFalse(client.followRedirects)
+        assertFalse(client.followSslRedirects)
+        assertFalse(client.retryOnConnectionFailure)
+    }
+
+    @Test
+    fun `a 407 from the origin is a Protocol error, not retried`() =
         runTest {
-            server.enqueue(
-                MockResponse
-                    .Builder()
-                    .code(302)
-                    .addHeader("Location", other.url("/landed").toString())
-                    .build(),
-            )
-            other.enqueue(ok("ok"))
+            repeat(3) { server.enqueue(MockResponse.Builder().code(407).build()) }
 
             val result =
-                KtorNetClient(once, okHttpEngine(), NetLog.NONE).use {
-                    it.send(
-                        NetRequest(
-                            server.url("/start").toString(),
-                            secrets = NetSecrets(headers = mapOf("x-api-key" to "sk-ant-loopback-SECRET")),
-                        ),
-                    )
+                KtorNetClient(NetConfig(appVersion = "test"), okHttpEngine(), NetLog.NONE).use {
+                    it.send(NetRequest(server.url("/a").toString()))
                 }
 
-            assertEquals("ok", assertIs<NetResult.Success<NetResponse>>(result).value.body)
-            assertEquals("sk-ant-loopback-SECRET", server.takeRequest().headers["x-api-key"])
-            assertNull(other.takeRequest().headers["x-api-key"])
+            assertEquals(NetResult.Failure(NetError.Protocol("ProtocolException")), result)
             assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `a redirect to another server is followed by net only for a request without credentials`() =
+        runTest {
+            val redirect =
+                MockResponse
+                    .Builder()
+                    .code(
+                        302,
+                    ).addHeader("Location", other.url("/landed").toString())
+                    .build()
+            server.enqueue(redirect)
+            server.enqueue(redirect)
+            other.enqueue(ok("ok"))
+
+            KtorNetClient(once, okHttpEngine(), NetLog.NONE).use { client ->
+                val plain = client.send(NetRequest(server.url("/start").toString(), headers = mapOf("Accept" to "x/y")))
+                val keyed =
+                    client.send(
+                        NetRequest(
+                            server.url("/start").toString(),
+                            secrets =
+                                NetSecrets(
+                                    headers =
+                                        mapOf(
+                                            "x-api-key" to "sk-ant-loopback-SECRET",
+                                        ),
+                                ),
+                        ),
+                    )
+
+                assertEquals("ok", assertIs<NetResult.Success<NetResponse>>(plain).value.body)
+                assertEquals(302, assertIs<NetResult.Success<NetResponse>>(keyed).value.status)
+                assertEquals(2, server.requestCount)
+                assertEquals(1, other.requestCount)
+            }
         }
 }

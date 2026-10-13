@@ -61,6 +61,12 @@ class UriReferenceTest {
         )
     }
 
+    @Test
+    fun `a rootless base keeps no slash it did not have (5_2_3)`() {
+        assertEquals("urn:g", resolveReference("urn:foo", "g"))
+        assertEquals("urn:a/g", resolveReference("urn:a/b", "g"))
+    }
+
     private fun check(vararg cases: Pair<String, String>) {
         cases.forEach { (reference, expected) -> assertEquals(expected, resolveReference(base, reference), reference) }
     }

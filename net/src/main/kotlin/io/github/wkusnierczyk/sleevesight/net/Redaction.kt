@@ -12,52 +12,80 @@ fun interface NetLog {
 }
 
 /**
- * The log form of a request, redacted by construction rather than by scrubbing (architecture,
+ * The log form of a request, redacted by construction rather than by matching (architecture,
  * Networking): the method, scheme, host and port, the path, and the *names* of the query parameters
- * and headers, never a value. User and password are left out. The only part that can still carry a
- * secret is the path (a key echoed into a redirect's path), so a path segment that contains
- * credential material ([credentialMaterial]), as written or percent-decoded once, is shown as
- * [REDACTED]; so is a host or a name that does. A URL that does not parse is not shown at all.
+ * and headers, never a value. User info is left out. The path is the one part that could still
+ * carry a key (one echoed into a redirect's path), so for a request that carries credentials
+ * ([carriesCredentials]) it is shown as [HIDDEN_PATH]. A URL that does not parse is not shown at all.
  */
 object Redaction {
-    const val REDACTED: String = "REDACTED"
+    /** The path of a request that carries credentials, as the log shows it. */
+    const val HIDDEN_PATH: String = "/…"
 
     private const val INVALID_URL = "<invalid url>"
 
-    private val SENSITIVE_PARTS =
-        listOf("key", "token", "secret", "password", "passwd", "auth", "signature", "session", "cookie", "credential")
-    private val SENSITIVE_NAMES = setOf("sk", "sig", "api_sig", "code", "code_verifier")
+    /**
+     * Name tokens taken to mark a key, token or password. A name is split into tokens on `-`, `_`,
+     * `.` and lower-to-upper camelCase boundaries, and matches if any token is one of these, so
+     * `x-goog-api-key` and `authToken` match and `author`, `keyword` and `monkey` do not.
+     */
+    val SENSITIVE_TOKENS: Set<String> =
+        setOf(
+            "key",
+            "apikey",
+            "token",
+            "accesstoken",
+            "authtoken",
+            "secret",
+            "password",
+            "passwd",
+            "auth",
+            "authorization",
+            "signature",
+            "sig",
+            "sk",
+            "session",
+            "cookie",
+            "credential",
+            "credentials",
+            "code",
+            "verifier",
+            "bearer",
+        )
+
+    private val CAMEL_BOUNDARY = Regex("([a-z0-9])([A-Z])")
+    private val SEPARATORS = Regex("[-_.]+")
 
     /** Whether a header or parameter called [name] is taken to carry a key, token or password. */
-    fun isSensitive(name: String): Boolean {
-        val lower = name.lowercase()
-        return lower in SENSITIVE_NAMES || SENSITIVE_PARTS.any { it in lower }
-    }
+    fun isSensitive(name: String): Boolean =
+        name
+            .replace(CAMEL_BOUNDARY, "$1-$2")
+            .split(SEPARATORS)
+            .any { it.lowercase() in SENSITIVE_TOKENS }
 
     /** [request] as the log shows it, its query parameters added to its URL. */
     fun describe(request: NetRequest): String =
-        describe(request, parseHttpUrl(request.url)?.let { effectiveUrl(it, request) }, credentialMaterial(request))
+        describe(request, parseHttpUrl(request.url)?.let { effectiveUrl(it, request) }, carriesCredentials(request))
 
-    /** [request], sent to [url] (null if it does not parse), with [material] hidden. */
+    /** [request], sent to [url] (null if it does not parse); its path hidden if it [carriesCredentials]. */
     internal fun describe(
         request: NetRequest,
         url: Url?,
-        material: Set<String>,
+        carriesCredentials: Boolean,
     ): String {
-        fun shown(part: String) = if (containsMaterial(part, material)) REDACTED else part
         val target =
             if (url == null) {
                 INVALID_URL
             } else {
                 buildString {
-                    append(url.protocol.name).append("://").append(shown(url.host))
+                    append(url.protocol.name).append("://").append(url.host)
                     if (url.port != url.protocol.defaultPort) append(':').append(url.port)
-                    append(url.encodedPath.split('/').joinToString("/") { shown(it) })
+                    append(if (carriesCredentials) HIDDEN_PATH else url.encodedPath)
                     val names = url.parameters.names()
-                    if (names.isNotEmpty()) append(names.joinToString("&", prefix = "?") { shown(it) })
+                    if (names.isNotEmpty()) append(names.joinToString("&", prefix = "?"))
                 }
             }
-        val headers = (request.headers.keys + request.secrets.headers.keys).map { shown(it) }
+        val headers = request.headers.keys + request.secrets.headers.keys
         val shownHeaders = if (headers.isEmpty()) "" else headers.joinToString(prefix = " {", postfix = "}")
         return "${request.method.name} $target$shownHeaders"
     }

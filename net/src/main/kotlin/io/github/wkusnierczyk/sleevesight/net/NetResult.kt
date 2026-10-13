@@ -46,6 +46,14 @@ sealed interface NetError {
         val reason: String,
     ) : NetError
 
+    /**
+     * The server's answer broke HTTP in a way the engine does not pass on, such as a 407 from a
+     * server that is not a proxy. It answered, so it is never retried.
+     */
+    data class Protocol(
+        val reason: String,
+    ) : NetError
+
     /** The response body was longer than the request's `maxBytes`, [limit]. Never retried. */
     data class TooLarge(
         val limit: Long,
@@ -53,9 +61,10 @@ sealed interface NetError {
 
     /**
      * The request could not be sent as given: a malformed URL or a host not written in plain ASCII, a
-     * header value with control characters (a key read from a file with its newline), a malformed
-     * media type, a timeout or size limit that is not positive. [field] names the part, never
-     * its value. Never retried.
+     * header with control characters (a key read from a file with its newline), a malformed media
+     * type, a timeout or size limit out of range. [field] is a fixed label (`url`, `header`,
+     * `body content type`, `timeout`, `maxBytes`, `request`), never a name or value the caller gave.
+     * Never retried.
      */
     data class InvalidRequest(
         val field: String,

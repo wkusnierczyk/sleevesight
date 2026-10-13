@@ -52,8 +52,28 @@ class RetryAfterTest {
         val now = Instant.fromEpochMilliseconds(1_790_000_000_000L) // 2026
         assertEquals(1994, yearOf(parseHttpDate("Sunday, 06-Nov-94 08:49:37 GMT", now)))
         assertEquals(2030, yearOf(parseHttpDate("Wednesday, 06-Nov-30 08:49:37 GMT", now)))
-        assertEquals(2076, yearOf(parseHttpDate("Friday, 06-Nov-76 08:49:37 GMT", now)))
+        assertEquals(2076, yearOf(parseHttpDate("Tuesday, 06-Jan-76 08:49:37 GMT", now)))
+        assertEquals(1976, yearOf(parseHttpDate("Friday, 06-Nov-76 08:49:37 GMT", now)))
         assertEquals(1977, yearOf(parseHttpDate("Sunday, 06-Nov-77 08:49:37 GMT", now)))
+    }
+
+    @Test
+    fun `the 50-year rule compares full timestamps`() {
+        val now = Instant.fromEpochMilliseconds(parseHttpDate("Tue, 13 Oct 2026 12:00:00 GMT", justBefore)!!)
+        assertEquals(2076, yearOf(parseHttpDate("Tuesday, 13-Oct-76 12:00:00 GMT", now)))
+        assertEquals(1976, yearOf(parseHttpDate("Wednesday, 13-Oct-76 12:00:01 GMT", now)))
+        assertEquals(1976, yearOf(parseHttpDate("Thursday, 14-Oct-76 00:00:00 GMT", now)))
+    }
+
+    @Test
+    fun `month lengths and leap years are checked`() {
+        assertNull(parseHttpDate("Tue, 31 Feb 2026 00:00:00 GMT", justBefore))
+        assertNull(parseHttpDate("Thu, 31 Apr 2026 00:00:00 GMT", justBefore))
+        assertNull(parseHttpDate("Sun, 29 Feb 2026 00:00:00 GMT", justBefore))
+        assertNull(parseHttpDate("Thu, 29 Feb 1900 00:00:00 GMT", justBefore))
+        assertEquals(yearOf(parseHttpDate("Thu, 29 Feb 2024 00:00:00 GMT", justBefore)), 2024)
+        assertEquals(yearOf(parseHttpDate("Tue, 29 Feb 2000 00:00:00 GMT", justBefore)), 2000)
+        assertEquals(yearOf(parseHttpDate("Fri, 31 Dec 2027 23:59:59 GMT", justBefore)), 2027)
     }
 
     @Test

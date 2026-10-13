@@ -18,6 +18,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -465,6 +466,60 @@ class KtorNetClientTest {
 
             assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status)
             assertEquals(1, calls)
+        }
+
+    @Test
+    fun `a server's own copy of the private Retry-After header is ignored, and never passed on`() =
+        runTest {
+            var calls = 0
+            val limited =
+                withClient(handler = {
+                    calls++
+                    respond(
+                        "",
+                        HttpStatusCode.TooManyRequests,
+                        headersOf(HttpHeaders.RetryAfter to listOf("120"), ORIGINAL_RETRY_AFTER to listOf("0")),
+                    )
+                }) { it.send(get) }
+            val ok =
+                withClient(
+                    handler = { respond("ok", HttpStatusCode.OK, headersOf(ORIGINAL_RETRY_AFTER, "5")) },
+                ) { it.send(get) }
+
+            assertEquals(NetResult.Failure(NetError.RateLimited(120.seconds)), limited)
+            assertEquals(1, calls)
+            assertNull(assertIs<NetResult.Success<NetResponse>>(ok).value.header(ORIGINAL_RETRY_AFTER))
+        }
+
+    @Test
+    fun `the largest maxBytes reads a whole body, and Long_MAX_VALUE is refused`() =
+        runTest {
+            withClient(handler = { respond("hello") }) { client ->
+                val largest = client.send(NetRequest("https://example.org/a", maxBytes = Long.MAX_VALUE - 1))
+                val tooLarge = client.send(NetRequest("https://example.org/a", maxBytes = Long.MAX_VALUE))
+
+                assertEquals("hello", assertIs<NetResult.Success<NetResponse>>(largest).value.body)
+                assertEquals(NetResult.Failure(NetError.InvalidRequest("maxBytes")), tooLarge)
+            }
+        }
+
+    @Test
+    fun `hosts with empty or hyphen labels, or bracketed IPv6 literals, are invalid, and IPv4 literals are not`() =
+        runTest {
+            withClient(handler = { respond("ok") }) { client ->
+                for (url in listOf(
+                    "https://a..b/x",
+                    "https://-/x",
+                    "https://-a.org/x",
+                    "https://[::1]/x",
+                    "https://[::ffff:127.0.0.1]/x",
+                )) {
+                    assertEquals(NetResult.Failure(NetError.InvalidRequest("url")), client.send(NetRequest(url)), url)
+                }
+                for (url in listOf("https://127.0.0.1/x", "https://MusicBrainz.ORG./x")) {
+                    assertIs<NetResult.Success<NetResponse>>(client.send(NetRequest(url)), url)
+                }
+            }
         }
 
     /** The virtual times of a request answered 429 with [retryAfter], then 200. */

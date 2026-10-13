@@ -58,19 +58,19 @@ internal class KtorNetClient(
         config.hosts.mapValues { (_, policy) -> RateLimiter(policy.minInterval, timeSource) }
 
     override suspend fun send(request: NetRequest): NetResult<NetResponse> {
-        // Collected before the first send, so a redirect can neither log nor carry it elsewhere.
-        val material = credentialMaterial(request)
+        // Decided before the first send, and kept for every hop.
+        val credentials = carriesCredentials(request)
         var current = request
         var redirects = 0
         while (true) {
             val sent =
                 when (val validated = validate(current)) {
-                    is Validated.Invalid -> return invalid(current, validated.field, material)
+                    is Validated.Invalid -> return invalid(current, validated.field, credentials)
                     is Validated.Valid -> effectiveUrl(validated.url, current)
                 }
-            val result = sendWithRetries(current, sent, material)
+            val result = sendWithRetries(current, sent, credentials)
             current =
-                redirectFrom(current, sent, result, material)?.takeIf { redirects < MAX_REDIRECTS } ?: return result
+                redirectFrom(current, sent, result, credentials)?.takeIf { redirects < MAX_REDIRECTS } ?: return result
             redirects++
         }
     }
@@ -84,22 +84,23 @@ internal class KtorNetClient(
     private fun invalid(
         request: NetRequest,
         field: String,
-        material: Set<String>,
+        credentials: Boolean,
     ): NetResult<NetResponse> {
         val error = NetError.InvalidRequest(field)
-        log.log("${Redaction.describe(request, null, material)} -> $error")
+        val url = parseHttpUrl(request.url)?.takeIf { field != "url" }?.let { effectiveUrl(it, request) }
+        log.log("${Redaction.describe(request, url, credentials)} -> $error")
         return NetResult.Failure(error)
     }
 
     private suspend fun sendWithRetries(
         request: NetRequest,
         url: Url,
-        material: Set<String>,
+        credentials: Boolean,
     ): NetResult<NetResponse> {
         val domain = config.domainFor(url.host)
         val limiter = domain?.let { limiters.getValue(it) }
         val policy = domain?.let { config.hosts.getValue(it) }
-        val description = Redaction.describe(request, url, material)
+        val description = Redaction.describe(request, url, credentials)
         var attempt = 1
         while (true) {
             limiter?.acquire()
@@ -131,6 +132,8 @@ internal class KtorNetClient(
         }
     }
 
+    // Exceptions are reduced to fixed kinds on purpose: their messages can quote the URL or a header.
+    @Suppress("SwallowedException")
     private suspend fun tryOnce(
         request: NetRequest,
         url: Url,
@@ -149,6 +152,8 @@ internal class KtorNetClient(
                     }
                     request.timeout?.let { timeout { requestTimeoutMillis = it.inWholeMilliseconds } }
                 }.execute { response -> classify(request, response, policy) }
+        } catch (e: EngineProtocolException) {
+            Attempt.Failed(NetError.Protocol(e.reason))
         } catch (e: IOException) {
             // Defensive: no known path brings a cancellation here as an IOException, but if one does,
             // it is a cancellation, not Offline.
@@ -158,8 +163,8 @@ internal class KtorNetClient(
             Attempt.Failed(NetError.Offline(e::class.simpleName ?: "IOException"))
         } catch (e: IllegalArgumentException) {
             // A check in Ktor or OkHttp that validation did not foresee. Its message can quote a
-            // header value, so only the kind is kept.
-            Attempt.Failed(NetError.InvalidRequest("request (${e::class.simpleName})"))
+            // header value, so it is reported by a fixed label.
+            Attempt.Failed(NetError.InvalidRequest("request"))
         }
 
     private suspend fun classify(
@@ -169,8 +174,16 @@ internal class KtorNetClient(
     ): Attempt {
         val status = response.status
         val retryAfter = {
-            val value = response.headers[ORIGINAL_RETRY_AFTER] ?: response.headers[HttpHeaders.RetryAfter]
-            parseRetryAfter(value, clock.now())
+            // The private header is the interceptor's, and only on a 503 (see okHttpEngine).
+            val moved =
+                if (status ==
+                    HttpStatusCode.ServiceUnavailable
+                ) {
+                    response.headers[ORIGINAL_RETRY_AFTER]
+                } else {
+                    null
+                }
+            parseRetryAfter(moved ?: response.headers[HttpHeaders.RetryAfter], clock.now())
         }
         val busy =
             status == HttpStatusCode.ServiceUnavailable && policy?.rateLimitedOn503 == true && request.method.idempotent
@@ -216,7 +229,11 @@ internal class KtorNetClient(
         return if (bytes == null) {
             Attempt.Failed(NetError.TooLarge(maxBytes))
         } else {
-            val headers = response.headers.entries().associate { it.key to it.value }
+            val headers =
+                response.headers
+                    .entries()
+                    .filterNot { it.key.equals(ORIGINAL_RETRY_AFTER, ignoreCase = true) }
+                    .associate { it.key to it.value }
             Attempt.Answered(NetResponse(response.status.value, headers, bytes))
         }
     }
@@ -236,7 +253,9 @@ internal class KtorNetClient(
             when (outcome.error) {
                 is NetError.RateLimited -> true
                 is NetError.Server, is NetError.Offline -> request.method.idempotent
-                is NetError.Unauthorized, is NetError.Parse, is NetError.InvalidRequest, is NetError.TooLarge -> false
+                is NetError.Unauthorized, is NetError.Parse, is NetError.InvalidRequest, is NetError.TooLarge,
+                is NetError.Protocol,
+                -> false
             }
         val wait = outcome.retryAfter ?: config.retry.delayAfter(attempt)
         return wait.takeIf { retryable && it <= config.retry.maxDelay }

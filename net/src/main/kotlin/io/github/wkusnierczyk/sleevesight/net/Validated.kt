@@ -10,12 +10,15 @@ import io.ktor.http.parseUrl
 /**
  * Checks a request before Ktor sees it. Ktor throws on a malformed URL, header or media type with a
  * message that quotes the value, which may be a key; here the problem becomes
- * [NetError.InvalidRequest] naming only the field.
+ * [NetError.InvalidRequest] with a fixed label for the part, never a name or value the caller gave.
  */
 internal sealed interface Validated {
     data class Valid(
         val url: Url,
-    ) : Validated
+    ) : Validated {
+        /** Without the URL, which can hold a key. */
+        override fun toString(): String = "Valid"
+    }
 
     data class Invalid(
         val field: String,
@@ -31,10 +34,11 @@ internal fun validate(request: NetRequest): Validated {
     val badBody = request.body != null && parseContentType(request.body.contentType) == null
     return when {
         url == null || !isPlainHost(url.host) -> Validated.Invalid("url")
-        badHeader != null -> Validated.Invalid(if (isToken(badHeader.key)) "header ${badHeader.key}" else "header name")
+        badHeader != null -> Validated.Invalid("header")
         badBody -> Validated.Invalid("body content type")
         request.timeout?.isPositive() == false -> Validated.Invalid("timeout")
-        request.maxBytes <= 0 -> Validated.Invalid("maxBytes")
+        // At most Long.MAX_VALUE - 1: reading stops one byte past the limit.
+        request.maxBytes !in 1 until Long.MAX_VALUE -> Validated.Invalid("maxBytes")
         else -> Validated.Valid(url)
     }
 }
@@ -63,16 +67,17 @@ internal fun effectiveUrl(
         }.build()
 
 /**
- * A host written as the transport will send it: lowercase ASCII letters, digits, dots and hyphens,
- * or a bracketed IPv6 literal. A percent-encoded or non-ASCII spelling (`%6dusicbrainz.org`,
- * `ｍusicbrainz.org`) is refused, since OkHttp would canonicalise it to a host whose rate limit and
- * origin `:net` would not recognise.
+ * A host written as the transport will send it, so its rate limit and origin are the ones `:net`
+ * recognises: after lowercasing and dropping a trailing dot ([NetConfig.normalizeHost]), dot-separated
+ * labels of ASCII letters, digits and inner hyphens, none empty (`a..b`) and none starting or ending
+ * with a hyphen (`-`). IPv4 literals pass as such. Refused: percent-encoded or non-ASCII spellings
+ * (`%6dusicbrainz.org`, `ｍusicbrainz.org`), which OkHttp would canonicalise to another host, and
+ * bracketed IPv6 literals, whose spellings differ too; the Ollama host (Phase 3) decides how LAN
+ * addresses are handled.
  */
-private fun isPlainHost(host: String): Boolean =
-    PLAIN_HOST.matches(host.lowercase()) || IPV6_LITERAL.matches(host.lowercase())
+private fun isPlainHost(host: String): Boolean = NetConfig.normalizeHost(host).split('.').all { LABEL.matches(it) }
 
-private val PLAIN_HOST = Regex("[a-z0-9.-]+")
-private val IPV6_LITERAL = Regex("\\[[0-9a-f:.]+]")
+private val LABEL = Regex("[a-z0-9]([a-z0-9-]*[a-z0-9])?")
 
 @Suppress("SwallowedException") // The message quotes the value; the field name is reported instead.
 internal fun parseContentType(text: String): ContentType? =

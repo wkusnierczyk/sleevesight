@@ -76,7 +76,8 @@ private fun merge(
     if (base.authority != null && base.path.isEmpty()) {
         "/$path"
     } else {
-        base.path.substringBeforeLast('/', "") + "/" + path
+        // All but the last segment of the base path; none at all if it has no "/" (`urn:foo`).
+        base.path.substring(0, base.path.lastIndexOf('/') + 1) + path
     }
 
 /** Removing `.` and `..` segments (RFC 3986, 5.2.4). */

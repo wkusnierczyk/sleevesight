@@ -22,8 +22,8 @@ class NetBody(
  * One HTTP request, in `:net`'s own terms, so the modules above it never see Ktor.
  *
  * Keys and tokens go in [secrets]. The log never shows a header or query value at all (see
- * [Redaction]), so the difference is what `:net` does with them: secrets, and headers named like
- * keys, stay behind on a redirect to another origin. [timeout], when set, replaces
+ * [Redaction]); a request with secrets, or with headers or parameters named like keys, has its path
+ * hidden in the log and follows no redirect to another origin. [timeout], when set, replaces
  * [Timeouts.request] for this request, for a long stream or a slow model. A response body longer
  * than [maxBytes] is [NetError.TooLarge]. [toString] is the redacted form the log prints.
  */
@@ -50,26 +50,26 @@ class NetRequest(
  * The query parameters and headers of a request that carry keys or tokens. Adapters pass
  * `Secret.reveal()` here and nowhere else.
  *
- * On a redirect to another origin they are dropped, but their credential material is [carried] on,
- * so that the log still hides it, and a redirect that would send it elsewhere is not followed.
+ * On a redirect within the origin the headers follow; the query stays behind, since the `Location`
+ * is the new URL. [carried] records that an earlier hop carried credentials, so the rules for such
+ * a request still apply (see [carriesCredentials]).
  */
 class NetSecrets internal constructor(
     val query: Map<String, String>,
     val headers: Map<String, String>,
-    internal val carried: Set<String>,
+    internal val carried: Boolean,
 ) {
     constructor(
         query: Map<String, String> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
-    ) : this(query, headers, emptySet())
+    ) : this(query, headers, false)
 
-    /** The secrets that follow a redirect: none to another origin; the headers to the same one. */
-    internal fun forRedirect(
-        sameOrigin: Boolean,
-        material: Set<String>,
-    ): NetSecrets = NetSecrets(emptyMap(), if (sameOrigin) headers else emptyMap(), material)
+    /** The secrets for a redirect within the origin, the only kind a request with credentials follows. */
+    internal fun forRedirect(carriesCredentials: Boolean): NetSecrets =
+        NetSecrets(emptyMap(), headers, carriesCredentials)
 
-    override fun toString(): String = "NetSecrets(query=${query.keys}, headers=${headers.keys})"
+    /** Counts only: a name could be anything, a key included. */
+    override fun toString(): String = "NetSecrets(${query.size} query, ${headers.size} headers)"
 
     companion object {
         val NONE: NetSecrets = NetSecrets()

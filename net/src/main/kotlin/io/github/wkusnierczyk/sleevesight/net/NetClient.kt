@@ -9,9 +9,9 @@ import kotlin.coroutines.cancellation.CancellationException
 interface NetClient : AutoCloseable {
     /**
      * Sends [request], waiting for its host's rate limit and retrying as [NetConfig.retry] allows.
-     * Redirects of a GET are followed here, at most five, each through its target's rate limit, and
-     * to another origin without the request's secrets or headers named like keys; a redirected POST
-     * is returned as its 3xx response. A cancelled caller cancels the request.
+     * Redirects of a GET are followed here, at most five, each through its target's rate limit; a
+     * request that carries credentials follows them within its origin only. Any other redirect is
+     * returned as its 3xx response. A cancelled caller cancels the request.
      */
     suspend fun send(request: NetRequest): NetResult<NetResponse>
 }
