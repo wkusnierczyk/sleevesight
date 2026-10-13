@@ -348,6 +348,10 @@ A JVM Kotlin command-line tool sharing the pipeline module: normalizer, resoluti
 
 Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
 
+### Phase 1.5. Play release
+
+The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. The work is in [plan.md](plan.md).
+
 ### Phase 2. Detail and discovery
 
 Song, artist and album detail content; genre labels and cards; sounds-like cards; layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
@@ -388,6 +392,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |
+| 2026-10-13 | Phase 1.5, Play release, after Phase 1 | D7 makes Play's review, the listing and the signed bundle work of their own; the MVP's exit needs only an `adb` install |
 
 ## Open questions
 

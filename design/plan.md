@@ -1,0 +1,229 @@
+# Sleevesight MVP plan
+
+**Date:** 2026-10-13  
+**Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release  
+**Tracking:** [#31][31]
+
+The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9], which become a link from [#9][9] to [#58][58] if [#46][46] adopts MusicBrainz tags.
+
+## Dependencies
+
+An arrow points from an issue to the issues it unblocks. The dotted arrows are conditional: [#46][46] decides whether [#9][9] is needed, and [#9][9] blocks [#58][58] only if it is.
+
+```mermaid
+flowchart TD
+  subgraph P0["Phase 0. Platform spike"]
+    i30["#30 Remove the probe"]
+  end
+
+  subgraph P05["Phase 0.5. Pipeline CLI"]
+    i32["#32 Fixtures"]
+    i33["#33 Domain model, normalizer"]
+    i34["#34 Evidence model"]
+    i35["#35 :net HTTP client"]
+    i36["#36 MusicBrainz resolution"]
+    i37["#37 Wikidata identity check"]
+    i38["#38 Wikipedia adapter"]
+    i39["#39 Last.fm adapter, genres"]
+    i40["#40 Web search provider (D11)"]
+    i41["#41 Caches in :store"]
+    i42["#42 Prompts, grounding check"]
+    i43["#43 Anthropic provider"]
+    i44["#44 Orchestration"]
+    i45["#45 :cli"]
+    i46["#46 Phase 0.5 gate"]
+    i9["#9 MusicBrainz tag licence"]
+  end
+
+  subgraph P1["Phase 1. Android MVP"]
+    i47["#47 App skeleton"]
+    i48["#48 Session layer"]
+    i49["#49 History, track changes (D15)"]
+    i50["#50 Settings, secrets"]
+    i51["#51 Pipeline on the phone"]
+    i52["#52 Home screen"]
+    i53["#53 Auto-write, skip detection (D5)"]
+    i20["#20 Prepare the next track (D13)"]
+    i54["#54 Diagnostics screen"]
+    i29["#29 Restricted settings"]
+    i55["#55 Phase 1 exit"]
+  end
+
+  subgraph P15["Phase 1.5. Play release"]
+    i56["#56 Release workflow"]
+    i57["#57 Store listing, privacy policy"]
+    i58["#58 Play review"]
+  end
+
+  i32 --> i33 --> i34
+  i34 --> i36
+  i35 --> i36
+  i36 --> i37 --> i38
+  i34 --> i39
+  i35 --> i39
+  i34 --> i40
+  i35 --> i40
+  i34 --> i41
+  i34 --> i42
+  i35 --> i43
+  i42 --> i43
+  i38 --> i44
+  i39 --> i44
+  i40 --> i44
+  i41 --> i44
+  i43 --> i44
+  i44 --> i45 --> i46
+  i46 -.-> i9
+  i9 -.->|"if #46 adopts the tags"| i58
+  i46 --> i55
+
+  i30 --> i47
+  i47 --> i48
+  i47 --> i50
+  i33 --> i48
+  i33 --> i50
+  i47 --> i29
+  i48 --> i49
+  i41 --> i49
+  i48 --> i51
+  i50 --> i51
+  i44 --> i51
+  i51 --> i52
+  i51 --> i54
+  i49 --> i53
+  i51 --> i53
+  i53 --> i20
+  i52 --> i55
+  i54 --> i55
+  i20 --> i55
+  i29 --> i55
+
+  i47 --> i56
+  i52 --> i57
+  i55 --> i58
+  i56 --> i58
+  i57 --> i58
+```
+
+- **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0.
+- **Two tracks.** [#47][47] and [#29][29] need only [#30][30], and [#48][48] and [#50][50] also only the domain types and `Settings` from [#33][33], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]), [#51][51] (the pipeline from [#44][44]) and [#55][55] (the gate, [#46][46]).
+- **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55] → [#58][58]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
+
+## Work
+
+### Phase 0. Platform spike
+
+| Issue | Work | Blocked by |
+|---|---|---|
+| [#30][30] | Remove `:spike`, its CI step and its references; the restricted-settings measurement moved to [#29][29] | |
+
+### Phase 0.5. Pipeline CLI
+
+| Issue | Work | Blocked by |
+|---|---|---|
+| [#32][32] | Fixtures: the simulator's playlist, facts and albums data in `fixtures/below-soundtrack/` | |
+| [#33][33] | `:core` domain model, `Settings`, normalizer port; Multiplatform-readiness rules on | [#32][32] |
+| [#34][34] | Evidence lines, ids, fingerprint; `SourceAdapter` | [#33][33] |
+| [#35][35] | `:net`: rate limits, typed errors, redacting logger, `Secret` | |
+| [#36][36] | MusicBrainz client; recording, first release, artists, covers | [#34][34], [#35][35] |
+| [#37][37] | Wikidata client; the Wikipedia identity check | [#36][36] |
+| [#38][38] | Wikipedia adapter: lead sentences, verbatim, attributed (D1) | [#37][37] |
+| [#39][39] | Last.fm adapter; genre vocabulary; MusicBrainz tags for evaluation only | [#34][34], [#35][35] |
+| [#40][40] | Choose the web search provider (D11); its adapter | [#34][34], [#35][35] |
+| [#41][41] | `:store`: retrieval, artist-resolution and synthesis caches | [#34][34] |
+| [#42][42] | Prompt builders; grounding check | [#34][34] |
+| [#43][43] | `:ai`: Anthropic provider | [#35][35], [#42][42] |
+| [#44][44] | Pipeline orchestration (D4); `PipelineEvent`s | [#38][38], [#39][39], [#40][40], [#41][41], [#43][43] |
+| [#45][45] | `:cli`: coverage report, insights, HTTP recordings | [#44][44] |
+| [#46][46] | The gate: thresholds tuned, MusicBrainz tags judged (D12), coverage reviewed | [#45][45] |
+| [#9][9] | Licence of MusicBrainz tags; needed before [#58][58] only if [#46][46] adopts them | [#46][46] decides whether it is needed |
+
+### Phase 1. Android MVP
+
+| Issue | Work | Blocked by |
+|---|---|---|
+| [#47][47] | `:app` skeleton; first-run screen; notification access; `checkManifest` and the debug APK back in CI | [#30][30] |
+| [#48][48] | Session layer: `NowPlaying`, track identity, queue, art | [#47][47], [#33][33] |
+| [#49][49] | Session history; track-change records (D15) | [#48][48], [#41][41] |
+| [#50][50] | Settings (DataStore) and secrets (Keystore): the AI key and the sources' keys (Last.fm, web search); settings screen | [#47][47], [#33][33] |
+| [#51][51] | The pipeline on the phone, with the keys wired into the adapters; visible-only lookups (D6); Write on tap | [#48][48], [#50][50], [#44][44] |
+| [#52][52] | Home screen; every empty and error state | [#51][51] |
+| [#53][53] | *Write insights automatically*; skip detection and *Crossfade* (D5) | [#49][49], [#51][51] |
+| [#20][20] | Prepare the next track (D13) | [#53][53] |
+| [#54][54] | Diagnostics screen | [#51][51] |
+| [#29][29] | Restricted settings, on a device without Advanced Protection | [#47][47] |
+| [#55][55] | Exit: a listening session on a real phone against Spotify | [#52][52], [#54][54], [#20][20], [#29][29], [#46][46] |
+
+### Phase 1.5. Play release
+
+| Issue | Work | Blocked by |
+|---|---|---|
+| [#56][56] | Release workflow: a signed app bundle, the key in a protected environment; R8 and its keep rules | [#47][47] |
+| [#57][57] | Store listing and its graphics, launcher icon, privacy policy, data safety form | [#52][52] |
+| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57]; [#9][9] if [#46][46] adopts MusicBrainz tags |
+
+## Pending decisions
+
+| Decision | Needed by | Options, and the recommendation |
+|---|---|---|
+| Release-date semantics | [#52][52] | The recording's first release, the release being played, or both. Recommendation: the first release as "Released", the played release in its source line when it differs |
+| Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
+| AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap |
+| Web search provider (D11) | [#40][40] | Decided by that spike |
+| MusicBrainz tags (D12) | [#46][46], [#9][9] | Judged by the gate; the licence settled before they ship |
+| The name | [#57][57] | The spoken-aloud test on "Sleevesight" before the store listing fixes it |
+| Play developer account | [#58][58] | Personal or organisation; the testing a new account must do before production depends on the type |
+
+## Considerations
+
+### During implementation
+
+- **CI between [#30][30] and [#47][47]** has no Android module, so `checkManifest` and the APK artifact are off until [#47][47] brings them back.
+- **Every new library** is a reviewed edit to `config/dependency-allowlist.txt` with its licence, GPL-3.0 compatible; for example Ktor, OkHttp, SQLDelight, Compose, Navigation, DataStore, Robolectric, material-color-utilities.
+- **Multiplatform readiness (D2)** is checked from [#33][33] on, so each pipeline module starts within the rules rather than being brought into them.
+- **Recorded responses** in `fixtures/http/` hold third-party text: Wikipedia and Last.fm prose under CC BY-SA, and Last.fm and web search results under their API terms. Record only what the tests need, keep the attribution with them, and check the API terms on storing responses before committing them.
+- **Live runs cost.** Recording the fixture is minutes of MusicBrainz at one request per second; the gate run ([#46][46]) writes an insight per track on the owner's key. CI never calls a live service.
+- **Thresholds and tolerances** tuned in [#46][46] are constants, not settings (driver 6).
+- **D4's profiling** (parallel by name against waiting for MusicBrainz) happens in [#46][46]; it also tells whether preparing the next track ([#20][20]) hides MusicBrainz's latency as intended.
+- **Parallel work** on the two tracks means a worktree per agent.
+
+### After implementation
+
+- **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting.
+- **Installs outside Play.** Google's rules for apps installed outside Play are tightening; check them when [#29][29] runs, since they decide what a development install or a channel outside Play costs.
+- **Play's testing requirement** for a new developer account can add weeks before production; check it when the account is set up, so [#58][58] is scheduled with it.
+
+[9]: https://github.com/wkusnierczyk/sleevesight/issues/9
+[20]: https://github.com/wkusnierczyk/sleevesight/issues/20
+[21]: https://github.com/wkusnierczyk/sleevesight/issues/21
+[22]: https://github.com/wkusnierczyk/sleevesight/issues/22
+[29]: https://github.com/wkusnierczyk/sleevesight/issues/29
+[30]: https://github.com/wkusnierczyk/sleevesight/issues/30
+[31]: https://github.com/wkusnierczyk/sleevesight/issues/31
+[32]: https://github.com/wkusnierczyk/sleevesight/issues/32
+[33]: https://github.com/wkusnierczyk/sleevesight/issues/33
+[34]: https://github.com/wkusnierczyk/sleevesight/issues/34
+[35]: https://github.com/wkusnierczyk/sleevesight/issues/35
+[36]: https://github.com/wkusnierczyk/sleevesight/issues/36
+[37]: https://github.com/wkusnierczyk/sleevesight/issues/37
+[38]: https://github.com/wkusnierczyk/sleevesight/issues/38
+[39]: https://github.com/wkusnierczyk/sleevesight/issues/39
+[40]: https://github.com/wkusnierczyk/sleevesight/issues/40
+[41]: https://github.com/wkusnierczyk/sleevesight/issues/41
+[42]: https://github.com/wkusnierczyk/sleevesight/issues/42
+[43]: https://github.com/wkusnierczyk/sleevesight/issues/43
+[44]: https://github.com/wkusnierczyk/sleevesight/issues/44
+[45]: https://github.com/wkusnierczyk/sleevesight/issues/45
+[46]: https://github.com/wkusnierczyk/sleevesight/issues/46
+[47]: https://github.com/wkusnierczyk/sleevesight/issues/47
+[48]: https://github.com/wkusnierczyk/sleevesight/issues/48
+[49]: https://github.com/wkusnierczyk/sleevesight/issues/49
+[50]: https://github.com/wkusnierczyk/sleevesight/issues/50
+[51]: https://github.com/wkusnierczyk/sleevesight/issues/51
+[52]: https://github.com/wkusnierczyk/sleevesight/issues/52
+[53]: https://github.com/wkusnierczyk/sleevesight/issues/53
+[54]: https://github.com/wkusnierczyk/sleevesight/issues/54
+[55]: https://github.com/wkusnierczyk/sleevesight/issues/55
+[56]: https://github.com/wkusnierczyk/sleevesight/issues/56
+[57]: https://github.com/wkusnierczyk/sleevesight/issues/57
+[58]: https://github.com/wkusnierczyk/sleevesight/issues/58

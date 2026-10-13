@@ -430,6 +430,7 @@ A release workflow (a signed app bundle for Google Play, D7) comes with the firs
 | 0. Platform spike | `:spike`; CI skeleton (`build-logic`, the three checks, empty `:core`) | Design's Phase 0 gate; D5's skip detection measured (the time left at a change, Spotify's state clusters, no skip state reported); art-URI players listed, and whether the `content://` grant holds; installation from a file tested (D7, which moved distribution to Google Play); `:spike` removed |
 | 0.5. Pipeline CLI | `:core`, `:net`, `:sources` (MusicBrainz, Wikipedia and Wikidata, Last.fm, web search), `:ai` (Anthropic first), `:store`, `:cli`, fixtures and recordings | Design's Phase 0.5 gate; MusicBrainz tags judged (D12); the first web search provider chosen (D11) |
 | 1. Android MVP | `:app`: session layer, home screen, sources section, insight, settings, secrets, cache, diagnostics; preparing the next track (D13); recording track changes (D15) | Runs on a real phone against Spotify |
+| 1.5. Play release | Release workflow (a signed app bundle, see [CI](#ci)); store listing, privacy policy, data safety form | Published on Google Play (D7) |
 | 2. Detail and discovery | Detail content, genre and sounds-like cards, layout setting, transport and handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later | |
 | 3. Context and reach | Spotify Web API (PKCE), more players, Ollama, Discogs, further AI providers | |
 
