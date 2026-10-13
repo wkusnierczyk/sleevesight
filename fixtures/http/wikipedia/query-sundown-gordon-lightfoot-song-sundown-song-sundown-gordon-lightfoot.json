@@ -1,0 +1,39 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Sundown (song)",
+    "to": "Sundown",
+    "tofragment": "Music"
+   }
+  ],
+  "pages": [
+   {
+    "pageid": 82465,
+    "ns": 0,
+    "title": "Gordon Lightfoot",
+    "pageprops": {
+     "wikibase_item": "Q359552"
+    }
+   },
+   {
+    "pageid": 3575509,
+    "ns": 0,
+    "title": "Sundown",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q396678"
+    }
+   },
+   {
+    "pageid": 5571291,
+    "ns": 0,
+    "title": "Sundown (Gordon Lightfoot song)",
+    "pageprops": {
+     "wikibase_item": "Q7639816"
+    }
+   }
+  ]
+ }
+}

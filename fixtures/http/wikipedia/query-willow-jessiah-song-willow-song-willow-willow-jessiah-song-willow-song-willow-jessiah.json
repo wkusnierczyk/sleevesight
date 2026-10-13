@@ -1,0 +1,50 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "normalized": [
+   {
+    "fromencoded": false,
+    "from": "willow (Jessiah song)",
+    "to": "Willow (Jessiah song)"
+   },
+   {
+    "fromencoded": false,
+    "from": "willow (song)",
+    "to": "Willow (song)"
+   },
+   {
+    "fromencoded": false,
+    "from": "willow",
+    "to": "Willow"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Jessiah",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Willow (Jessiah song)",
+    "missing": true
+   },
+   {
+    "pageid": 91983,
+    "ns": 0,
+    "title": "Willow",
+    "pageprops": {
+     "wikibase_item": "Q36050"
+    }
+   },
+   {
+    "pageid": 66066600,
+    "ns": 0,
+    "title": "Willow (song)",
+    "pageprops": {
+     "wikibase_item": "Q104092599"
+    }
+   }
+  ]
+ }
+}

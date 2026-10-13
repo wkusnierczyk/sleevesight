@@ -1,0 +1,37 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Snowbird (Anne Murray song)",
+    "missing": true
+   },
+   {
+    "pageid": 105862,
+    "ns": 0,
+    "title": "Anne Murray",
+    "pageprops": {
+     "wikibase_item": "Q236543"
+    }
+   },
+   {
+    "pageid": 625166,
+    "ns": 0,
+    "title": "Snowbird",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q3487193"
+    }
+   },
+   {
+    "pageid": 2702260,
+    "ns": 0,
+    "title": "Snowbird (song)",
+    "pageprops": {
+     "wikibase_item": "Q12001651"
+    }
+   }
+  ]
+ }
+}

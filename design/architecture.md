@@ -200,6 +200,11 @@ How step 5 is made (#37, `IdentityCheck`), where the step leaves room:
 - Found by name alone, a song by someone else is rejected, even when its title is the track's: a same-title song and a cover cannot be told apart without MusicBrainz (the fixture's Peleboy track "We In Here" is not DMX's song of that name). So the fixture's covers by acts MusicBrainz does not know, or knows without a work (tracks 45 and 48), are rejected rather than resolved to the original song; only MusicBrainz's cover detection (step 4) leads to one. Track 76's only article is a soundtrack album, not a song, and is rejected too. The gate (#46) may weigh a further signal for covers.
 - An artist article is accepted only through the artist's MusicBrainz id (P434); without one, it is rejected, since a same-name article cannot be told apart.
 
+The Wikipedia adapter (#38, `WikipediaSource`), where the design leaves room:
+
+- By name, one request at once for the titles a song article would have (`Title (Artist song)`, `Title (song)`, `Title`, also in Wikipedia's casing and without a leading `The`) and each credited artist's name, following Wikipedia's redirects; no full-text search, whose results for small acts are noise. Then the items MusicBrainz links, then the articles found by name, each through the identity check; the first confirmed song wins. An artist's article is reached through its MusicBrainz id (P434), and one found by the artist's name is checked against it, so the wrong Reem is a rejection.
+- Lines: from each confirmed article's lead, at most 3 sentences of at most 300 characters that name the subject (the item's label, or the track's title for a song), verbatim but for the punctuation the plain-text extract leaves where it drops a pronunciation, each linking its article; then the item's Wikidata lines. Rejected candidates go into `SourceResult.rejections`.
+
 Thresholds and tolerances are constants tuned in Phase 0.5 against the fixture's known cases. They decide whether a match is correct, so they stay fixed rather than becoming user settings (driver 6).
 
 ### Source adapters (`:sources`)

@@ -1,0 +1,42 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Baby, Please Don't Go (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Baby, Please Don't Go (Them song)",
+    "missing": true
+   },
+   {
+    "pageid": 78262,
+    "ns": 0,
+    "title": "Van Morrison",
+    "pageprops": {
+     "wikibase_item": "Q272203"
+    }
+   },
+   {
+    "pageid": 770640,
+    "ns": 0,
+    "title": "Them",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q341702"
+    }
+   },
+   {
+    "pageid": 6512501,
+    "ns": 0,
+    "title": "Baby, Please Don't Go",
+    "pageprops": {
+     "wikibase_item": "Q797806"
+    }
+   }
+  ]
+ }
+}

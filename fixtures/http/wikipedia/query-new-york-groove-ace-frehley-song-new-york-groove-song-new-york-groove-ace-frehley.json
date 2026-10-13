@@ -1,0 +1,33 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "New York Groove (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "New York Groove (Ace Frehley song)",
+    "missing": true
+   },
+   {
+    "pageid": 142245,
+    "ns": 0,
+    "title": "Ace Frehley",
+    "pageprops": {
+     "wikibase_item": "Q319610"
+    }
+   },
+   {
+    "pageid": 6209420,
+    "ns": 0,
+    "title": "New York Groove",
+    "pageprops": {
+     "wikibase_item": "Q1415482"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,40 @@
+{
+ "entities": {
+  "Q52151598": {
+   "type": "item",
+   "id": "Q52151598",
+   "labels": {}
+  },
+  "Q11401": {
+   "type": "item",
+   "id": "Q11401",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "hip-hop"
+    }
+   }
+  },
+  "Q12362064": {
+   "type": "item",
+   "id": "Q12362064",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "emo rap"
+    }
+   }
+  },
+  "Q231694": {
+   "type": "item",
+   "id": "Q231694",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Interscope Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

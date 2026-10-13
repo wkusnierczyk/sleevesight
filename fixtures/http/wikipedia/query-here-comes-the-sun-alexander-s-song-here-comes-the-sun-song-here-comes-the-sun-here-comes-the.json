@@ -1,0 +1,45 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Here Comes The Sun",
+    "to": "Here Comes the Sun"
+   },
+   {
+    "from": "Here Comes the Sun (song)",
+    "to": "Here Comes the Sun"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Alexander S.",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Here Comes the Sun (Alexander S. song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Here Comes The Sun (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Here Comes The Sun (Alexander S. song)",
+    "missing": true
+   },
+   {
+    "pageid": 1329366,
+    "ns": 0,
+    "title": "Here Comes the Sun",
+    "pageprops": {
+     "wikibase_item": "Q210401"
+    }
+   }
+  ]
+ }
+}

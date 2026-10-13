@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q854451": {
+   "type": "item",
+   "id": "Q854451",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Celtic music"
+    }
+   }
+  },
+  "Q186472": {
+   "type": "item",
+   "id": "Q186472",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "folk rock"
+    }
+   }
+  },
+  "Q231694": {
+   "type": "item",
+   "id": "Q231694",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Interscope Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

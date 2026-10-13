@@ -6,6 +6,7 @@ import io.github.wkusnierczyk.sleevesight.core.resolution.WikidataLookup
 import io.github.wkusnierczyk.sleevesight.net.NetClient
 import io.github.wkusnierczyk.sleevesight.net.NetRequest
 import io.github.wkusnierczyk.sleevesight.sources.array
+import io.github.wkusnierczyk.sleevesight.sources.int
 import io.github.wkusnierczyk.sleevesight.sources.lookup
 import io.github.wkusnierczyk.sleevesight.sources.obj
 import io.github.wkusnierczyk.sleevesight.sources.parseObject
@@ -108,6 +109,29 @@ class WikidataClient(
 
         private const val MAX_IDS = 50
 
+        private const val YEAR = 9
+        private const val MONTH = 10
+
+        // A time keeps only the precision Wikidata gives it: a year stored as `+1964-01-01` is `+1964-00-00`.
+        internal fun atPrecision(
+            time: String,
+            precision: Int?,
+        ): String {
+            // A decade or a century is no date the evidence states.
+            if (precision != null && precision < YEAR) return ""
+            val (date, rest) = time.substringBefore('T') to time.substringAfter('T', "")
+            val parts = date.split('-').toMutableList()
+            val sign = if (date.startsWith("-")) 1 else 0
+            val kept =
+                when (precision) {
+                    YEAR -> sign + 1
+                    MONTH -> sign + 2
+                    else -> parts.size
+                }
+            for (i in kept until parts.size) parts[i] = "00"
+            return parts.joinToString("-") + if (rest.isEmpty()) "" else "T$rest"
+        }
+
         private fun label(json: JsonElement): String? = json.obj("labels").obj("en").string("value")
 
         // Each claim's value, deprecated ones left out: an item's id, a string, or a time.
@@ -118,7 +142,9 @@ class WikidataClient(
                 .mapNotNull { claim ->
                     when (val value = claim.obj("mainsnak").obj("datavalue")?.get("value")) {
                         is JsonPrimitive -> value.contentOrNull
-                        is JsonObject -> value.string("id") ?: value.string("time")
+                        is JsonObject ->
+                            value.string("id")
+                                ?: value.string("time")?.let { atPrecision(it, value.int("precision")) }
                         else -> null
                     }
                 }

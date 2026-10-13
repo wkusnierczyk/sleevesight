@@ -1,0 +1,946 @@
+{
+ "entities": {
+  "Q97015538": {
+   "type": "item",
+   "id": "Q97015538",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Legends Never Die"
+    }
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "dc16d32b615bf1c6edf1919941065eedccacb8e4",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 482994,
+         "id": "Q482994"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$133a61eb-465d-4f6f-6d33-72437bc0fe0a",
+      "rank": "normal"
+     }
+    ],
+    "P577": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P577",
+       "hash": "cef64dc4363e37482a5d4a562d49deb28504b9f1",
+       "datavalue": {
+        "value": {
+         "time": "+2020-07-10T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 11,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q97015538$0f93e836-4ea4-b15a-f7a3-b44abd69cc19",
+      "rank": "normal"
+     }
+    ],
+    "P6217": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P6217",
+       "hash": "a77e10bed10d6da45c258631e495a7863e761dbf",
+       "datavalue": {
+        "value": "Juice-wrld/Legends-never-die",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$ca82c02e-4673-b56a-d682-59bec8503661",
+      "rank": "normal"
+     }
+    ],
+    "P1476": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1476",
+       "hash": "821dd3d7690296a92f235cb0e019e2a88fd92656",
+       "datavalue": {
+        "value": {
+         "text": "Legends Never Die",
+         "language": "en"
+        },
+        "type": "monolingualtext"
+       },
+       "datatype": "monolingualtext"
+      },
+      "type": "statement",
+      "id": "Q97015538$e792616c-4f08-3254-1fb3-b491a1b456f5",
+      "rank": "normal"
+     }
+    ],
+    "P7937": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7937",
+       "hash": "b736d0ddd58350a6f636c0daf4befdb4b6346897",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 208569,
+         "id": "Q208569"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$abe79d0c-4fd9-fafb-ccc2-ff8e07154b47",
+      "rank": "normal"
+     }
+    ],
+    "P175": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P175",
+       "hash": "523db20ad0f4ce71b0fb147522c1fa2ea0dfbebe",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 52151598,
+         "id": "Q52151598"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$ec78c151-4c31-fe1d-b5fb-7387fdd291fb",
+      "rank": "normal"
+     }
+    ],
+    "P264": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P264",
+       "hash": "0fd920a17b155808e589a99f8537ca3f468af898",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 231694,
+         "id": "Q231694"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$15078ede-42c2-867b-e57e-d4ef1aa292ec",
+      "rank": "normal"
+     }
+    ],
+    "P136": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "52265b2e70e7a321739678d88e0d009e6004d2e6",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 11401,
+         "id": "Q11401"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$87d6045d-472d-f89b-9818-59f42f99b70f",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "3ffc3ec0748293f4800746feb88feefb37d8887b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 12362064,
+         "id": "Q12362064"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$c67dcf70-4413-350f-0fc1-c684d447e913",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "703d0137d56bbfb5b4ab7c156f8b4796c3e613df",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "6a164248fc96bfa583bbb495cb63ae6401ec203c",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 206855,
+             "id": "Q206855"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "b97de279432d7e8c7dd5b8ee338375f8f241c440",
+           "datavalue": {
+            "value": "https://ru.wikipedia.org/?oldid=108802349",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2635": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2635",
+       "hash": "bc85b2411895b6c2bf34efeb03428a1485e6343b",
+       "datavalue": {
+        "value": {
+         "amount": "+21",
+         "unit": "http://www.wikidata.org/entity/Q7302866"
+        },
+        "type": "quantity"
+       },
+       "datatype": "quantity"
+      },
+      "type": "statement",
+      "id": "Q97015538$dde36ef0-47db-762e-f957-3faefe85b839",
+      "rank": "normal"
+     }
+    ],
+    "P436": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P436",
+       "hash": "20615a8c2df9ac830b93023a9d592218f79ecbf1",
+       "datavalue": {
+        "value": "a77ca67d-a946-4582-b365-0fac3fa1bb10",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$9f684960-4777-a3b6-7c0e-db14dfb46e27",
+      "rank": "normal"
+     }
+    ],
+    "P361": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P361",
+       "hash": "9c43f1a0f685da4622d964d00cc35a2b7556cb24",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 109408733,
+         "id": "Q109408733"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P155": [
+        {
+         "snaktype": "value",
+         "property": "P155",
+         "hash": "94e754b8fcede6fab5aedb160604290b5d01c7d0",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 62031897,
+           "id": "Q62031897"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P156": [
+        {
+         "snaktype": "value",
+         "property": "P156",
+         "hash": "fb85bba1bb0ee6d306f265a2ae793495a9263e00",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 110029062,
+           "id": "Q110029062"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P155",
+       "P156"
+      ],
+      "id": "Q97015538$9c9444a4-4e4c-dc08-547c-111a9fc980b0",
+      "rank": "normal"
+     }
+    ],
+    "P154": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P154",
+       "hash": "8aa7b136365691a81e41c252062618fa0ef1722f",
+       "datavalue": {
+        "value": "Juice Wrld - Legends Never Die Logo.png",
+        "type": "string"
+       },
+       "datatype": "commonsMedia"
+      },
+      "type": "statement",
+      "id": "Q97015538$fdb3e3b1-4b6e-41f2-1504-137d4bc62baa",
+      "rank": "normal"
+     }
+    ],
+    "P8856": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P8856",
+       "hash": "237afc5e8f0c9cd8402ad7ddbf501fb1a7ce0c97",
+       "datavalue": {
+        "value": "16611-4719-2",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$bde505d0-b735-4bdd-b471-c671ecbec247",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "771da0c432141da46fc52c04d3bb633606386151",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "5a343e7e758a4282a01316d3e959b6e653b767fc",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 11920,
+             "id": "Q11920"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "e2725c99d4dfeb190676076788f0c07fc01c4842",
+           "datavalue": {
+            "value": "https://it.wikipedia.org/w/index.php?title=Legends_Never_Die_%28Juice_Wrld%29&oldid=116416884",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2671": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2671",
+       "hash": "1266f34c1aebefbf40151cd25b8c4c8d4b6ebbbe",
+       "datavalue": {
+        "value": "/g/11jgjbfyhc",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$C7F484D4-3F63-4CA6-9A2A-A31497902EA6",
+      "rank": "normal"
+     }
+    ],
+    "P1729": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1729",
+       "hash": "8bb27b7cfd155e1ce389e6c8188825c247d47719",
+       "datavalue": {
+        "value": "mw0003405017",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P2093": [
+        {
+         "snaktype": "value",
+         "property": "P2093",
+         "hash": "f53efdcb832ebbd65016676dbf29ffd8ad58562a",
+         "datavalue": {
+          "value": "Fred Thomas",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P2093"
+      ],
+      "id": "Q97015538$7016b340-4255-a2cd-5f19-250ec3d1f261",
+      "rank": "normal"
+     }
+    ],
+    "P1954": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1954",
+       "hash": "05e86b9545c76aa006aaf09d4bd82f4e49c412a8",
+       "datavalue": {
+        "value": "1819002",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$c43f1595-4bfd-0a6b-6075-87878f1ae964",
+      "rank": "normal"
+     }
+    ],
+    "P3192": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P3192",
+       "hash": "3a79ac5dc3829cc43f692b7a963e948151dbd511",
+       "datavalue": {
+        "value": "Juice+WRLD/Legends+Never+Die",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$71023b9c-430b-b999-0065-137bbffd6447",
+      "rank": "normal"
+     }
+    ],
+    "P407": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P407",
+       "hash": "daf1c4fcb58181b02dff9cc89deb084004ddae4b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 1860,
+         "id": "Q1860"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$ec7c444e-41d1-4e3d-82f3-fbdd47c3e64c",
+      "rank": "normal"
+     }
+    ],
+    "P291": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P291",
+       "hash": "d030038c836f9ed0d37c69cb8c389d689ebeb05a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 30,
+         "id": "Q30"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$693c3130-43df-1841-524c-e94ff1ecbc50",
+      "rank": "normal"
+     }
+    ],
+    "P214": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P214",
+       "hash": "6d9a86ab6abb415fdc8b5402f597bdb58d238496",
+       "datavalue": {
+        "value": "18161208972439860573",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$c58431b0-4a07-2b70-69d8-562ac486cca1",
+      "rank": "normal"
+     }
+    ],
+    "P658": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "95c294c906de6c85bce2546067e93edd5b3f1a9a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97573302,
+         "id": "Q97573302"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$68857b07-4e89-92df-439d-07675dd543fd",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "6fc5cc1287c329fdeb6a24cabace61f742bc5d6b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97616177,
+         "id": "Q97616177"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$fb0a6115-43c6-ed1e-5e14-b639cb5c8d1e",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "bde550db000f24beca4e5bfd7e4b7640366dc41e",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 92065903,
+         "id": "Q92065903"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$51c35902-4ffc-a1ea-d84a-bfa55e98e373",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "a7dc3bc159d3e2bc6ed02cbcce85303ac72463ec",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97616180,
+         "id": "Q97616180"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$343bb84b-4274-d78f-d0cc-95471e77e5d0",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "40d30d240a449b38c652d330ceeb8cafce6fb6ac",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 95721306,
+         "id": "Q95721306"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$990a3cae-418a-78d0-7032-f352f2401b2d",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "da17aef6928cb249330de8642f11111dcdca3a68",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97616181,
+         "id": "Q97616181"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$d2d8674b-4c8e-8b8e-c7ad-5c6843a70bbb",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "2b5b40e0c02af7bb09f11264fd9fdb314b678d70",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97021718,
+         "id": "Q97021718"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$8e6f1f61-494b-615c-7055-f6c824f38be9",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "9e6d6c1c5da25f57c17b7ee26a469b8bf393fad2",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97097227,
+         "id": "Q97097227"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$80695090-4a31-bce2-fb68-cceccae63643",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "975d04e24bc18448e27286d60108b877276318b6",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 110029062,
+         "id": "Q110029062"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$94879bf0-427a-ffe2-8421-69ae63508480",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "dc6fa310e6d693eba226f37027973e4fdfb973b1",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 97382488,
+         "id": "Q97382488"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$4305b8c5-4884-6fd8-3224-0d8256c0ae1c",
+      "rank": "normal"
+     }
+    ],
+    "P1712": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1712",
+       "hash": "d6681dd10f72a629b40bcea2fd6fec3e456b4685",
+       "datavalue": {
+        "value": "music/legends-never-die/juice-wrld",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "0827f5c2c0e8741840fa6a100a13a49901dc2be8",
+         "datavalue": {
+          "value": "Legends Never Die",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810"
+      ],
+      "id": "Q97015538$2a7cd5d1-4e25-5bbd-97ef-939d0429e20d",
+      "rank": "normal"
+     }
+    ],
+    "P437": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "a9e6303ba7f6a25dd0ce03e6c75f3c9e02b5f449",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 34467,
+         "id": "Q34467"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$0ed7b078-486a-d1a8-7583-40f1bf4368dd",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "4d82957d09d78c12a195d5fc40e16d643927f900",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 58959170,
+         "id": "Q58959170"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$0081d997-4e40-ffc8-64fd-0d2059e733a1",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "3237b53c4d3ec4ece3e5d87f4d44bf89b53fc119",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 6473564,
+         "id": "Q6473564"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$4900b34d-44fb-b812-36e8-61ac2fa18751",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "f70c6290b338c4f54eeef6975007ab67318c09c8",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 15982450,
+         "id": "Q15982450"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q97015538$e7ca3459-49c4-20fc-c776-1e8272fb5640",
+      "rank": "normal"
+     }
+    ],
+    "P7067": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7067",
+       "hash": "cb4c5eefadcb43cc23f4ebf8585f13e21150391b",
+       "datavalue": {
+        "value": "259296",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q97015538$5e148422-4312-e45e-c2eb-827b0dd0e07d",
+      "rank": "normal"
+     }
+    ],
+    "P736": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P736",
+       "hash": "602a2f6a939b4aa4960086563fda59a6579cf98a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 141401468,
+         "id": "Q141401468"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P3831": [
+        {
+         "snaktype": "value",
+         "property": "P3831",
+         "hash": "c5e04952fd00011abf931be1b701f93d9e6fa5d7",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 33231,
+           "id": "Q33231"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P3831"
+      ],
+      "id": "Q97015538$e93c186e-40d6-0db1-007b-28c505ddf505",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "7be9258edcc1eb4493044761e277c1936ebc843e",
+        "snaks": {
+         "P854": [
+          {
+           "snaktype": "value",
+           "property": "P854",
+           "hash": "81d16a874cda92d4a52e0fd3476fe01db8999a15",
+           "datavalue": {
+            "value": "https://www.vanityfair.com/style/2020/11/matt-adam-photographer-to-the-stars-is-an-artist",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P854"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Legends Never Die (Juice Wrld album)",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

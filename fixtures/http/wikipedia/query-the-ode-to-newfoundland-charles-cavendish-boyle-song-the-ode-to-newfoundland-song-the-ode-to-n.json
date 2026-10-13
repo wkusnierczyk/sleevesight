@@ -1,0 +1,82 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Charles Cavendish Boyle",
+    "to": "Cavendish Boyle"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Cantus Vocum Chamber Choir",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Ode to Newfoundland (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Ode to Newfoundland (Charles Cavendish Boyle song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode to Newfoundland",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode to Newfoundland (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode to Newfoundland (Charles Cavendish Boyle song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode To Newfoundland",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode To Newfoundland (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "The Ode To Newfoundland (Charles Cavendish Boyle song)",
+    "missing": true
+   },
+   {
+    "pageid": 144461,
+    "ns": 0,
+    "title": "Hubert Parry",
+    "pageprops": {
+     "wikibase_item": "Q354250"
+    }
+   },
+   {
+    "pageid": 554770,
+    "ns": 0,
+    "title": "Cavendish Boyle",
+    "pageprops": {
+     "wikibase_item": "Q5076154"
+    }
+   },
+   {
+    "pageid": 700007,
+    "ns": 0,
+    "title": "Ode to Newfoundland",
+    "pageprops": {
+     "wikibase_item": "Q2014237"
+    }
+   }
+  ]
+ }
+}

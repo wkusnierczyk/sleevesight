@@ -13,6 +13,9 @@ import io.github.wkusnierczyk.sleevesight.sources.musicbrainz.MusicBrainzClient
 import io.github.wkusnierczyk.sleevesight.sources.testing.RecordingNetClient
 import io.github.wkusnierczyk.sleevesight.sources.testing.ReplayNetClient
 import io.github.wkusnierczyk.sleevesight.sources.wikidata.WikidataClient
+import io.github.wkusnierczyk.sleevesight.sources.wikipedia.WikipediaClient
+import io.github.wkusnierczyk.sleevesight.sources.wikipedia.WikipediaSource
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,6 +58,20 @@ class RecordHttpFixtures {
                     lightfoot.mbid?.let { check.artistItem(it) }
                     check.artist("Q359552", lightfoot)
                 }
+                if ("wikipedia" in record) {
+                    val check = IdentityCheck(WikidataClient(net), RecordedTracks.names)
+                    val adapter = WikipediaSource(WikipediaClient(net), check, RecordedTracks.names)
+                    val failed =
+                        RecordedTracks.positions.filter { n ->
+                            adapter
+                                .lookup(
+                                    RecordedTracks.track(n),
+                                    CompletableDeferred(resolutions.getValue(n)),
+                                ).outcome ==
+                                Outcome.Unreachable
+                        }
+                    assertEquals(emptyList(), failed, "tracks Wikipedia or Wikidata did not answer for")
+                }
             }
         }
     }
@@ -90,6 +107,7 @@ class RecordHttpFixtures {
             mapOf(
                 "https://musicbrainz.org/" to "musicbrainz",
                 "https://www.wikidata.org/" to "wikidata",
+                "https://en.wikipedia.org/" to "wikipedia",
             )
     }
 }

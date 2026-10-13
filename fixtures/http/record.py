@@ -3,7 +3,7 @@
 
 Usage, from the repository root:
 
-    SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
+    SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata,wikipedia ./gradlew :sources:test --tests '*RecordHttpFixtures*' --rerun
     python3 -I fixtures/http/record.py sources/build/test-results/test
 
 Each exchange goes to fixtures/http/<source>/<name>.json, and its request into that directory's
@@ -61,7 +61,7 @@ def name_for(record):
 def main(results_dir):
     found = list(records(results_dir))
     if not found:
-        sys.exit("No HTTP-RECORD lines in " + results_dir + ": was SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata set, with --rerun?")
+        sys.exit("No HTTP-RECORD lines in " + results_dir + ": was SLEEVESIGHT_RECORD_HTTP=musicbrainz,wikidata,wikipedia set, with --rerun?")
     indexes = {}
     for record in found:
         host = urlsplit(record["url"]).hostname
