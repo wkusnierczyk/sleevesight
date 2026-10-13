@@ -3,6 +3,8 @@ package sleevesight.checks
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.file.FileCollection
@@ -12,6 +14,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import java.io.File
 
 /**
  * Fails when `jvmMain`'s classpaths resolve different artifacts from `main`'s: its compile
@@ -24,7 +27,7 @@ import org.gradle.api.tasks.TaskAction
  * has locked. A graph that does not resolve fails first, with its own message.
  */
 abstract class CheckJvmMainDependencies : DefaultTask() {
-    /** `configuration: requested: failure`, for each unresolved dependency of the four graphs. */
+    /** For each of the four classpaths, each unresolved dependency and each artifact that failed. */
     @get:Input
     abstract val unresolved: ListProperty<String>
 
@@ -79,17 +82,29 @@ abstract class CheckJvmMainDependencies : DefaultTask() {
             }
 
     companion object {
-        /** Each artifact [configuration] resolves, as `component file`, sorted, without [own] files. */
+        /**
+         * Each artifact [configuration] resolves, as `component file`, sorted, without [own] files.
+         * A file dependency is its path relative to [rootDir] (absolute outside it), so two jars
+         * with the same name stay apart.
+         */
         fun artifactsOf(
             configuration: Provider<Configuration>,
             own: FileCollection,
+            rootDir: File,
         ): Provider<List<String>> =
             configuration
                 .flatMap { it.incoming.artifactView { lenient(true) }.artifacts.resolvedArtifacts }
                 .map { artifacts ->
                     val ownFiles = own.files
-                    artifacts.filterNot { it.file in ownFiles }.map(::identity).distinct().sorted()
+                    artifacts.filterNot { it.file in ownFiles }.map { identity(it, rootDir) }.distinct().sorted()
                 }
+
+        /** `configuration: failure` for each artifact [configuration] could not resolve, such as a missing file. */
+        fun artifactFailuresOf(configuration: Provider<Configuration>): Provider<List<String>> =
+            configuration.flatMap { conf ->
+                val artifacts = conf.incoming.artifactView { lenient(true) }.artifacts
+                artifacts.resolvedArtifacts.map { artifacts.failures.map { "${conf.name}: ${it.message}" }.distinct() }
+            }
 
         /** `configuration: requested: failure` for each unresolved dependency [configuration] has. */
         fun unresolvedOf(configuration: Provider<Configuration>): Provider<List<String>> =
@@ -104,7 +119,13 @@ abstract class CheckJvmMainDependencies : DefaultTask() {
                 }
             }
 
-        private fun identity(artifact: ResolvedArtifactResult): String =
-            "${artifact.id.componentIdentifier.displayName} ${artifact.file.name}"
+        private fun identity(
+            artifact: ResolvedArtifactResult,
+            rootDir: File,
+        ): String =
+            when (val component = artifact.id.componentIdentifier) {
+                is ModuleComponentIdentifier, is ProjectComponentIdentifier -> "${component.displayName} ${artifact.file.name}"
+                else -> "file " + artifact.file.relativeToOrSelf(rootDir).invariantSeparatorsPath
+            }
     }
 }

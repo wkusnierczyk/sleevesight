@@ -51,14 +51,17 @@ val checkJvmMainDependencies =
         group = "verification"
         description = "Fails when jvmMain's classpaths resolve artifacts that main's do not, or the reverse."
         val names = listOf("compileClasspath", "jvmMainCompileClasspath", "runtimeClasspath", "jvmMainRuntimeClasspath")
-        for (name in names) unresolved.addAll(CheckJvmMainDependencies.unresolvedOf(configurations.named(name)))
+        for (name in names) {
+            unresolved.addAll(CheckJvmMainDependencies.unresolvedOf(configurations.named(name)))
+            unresolved.addAll(CheckJvmMainDependencies.artifactFailuresOf(configurations.named(name)))
+        }
         // `main`'s own classes, which the association puts on `jvmMain`'s classpaths.
         val own = sourceSets.getByName("main").output
         val none = files()
-        mainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("compileClasspath"), none)
-        jvmMainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainCompileClasspath"), own)
-        mainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("runtimeClasspath"), none)
-        jvmMainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainRuntimeClasspath"), own)
+        mainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("compileClasspath"), none, rootDir)
+        jvmMainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainCompileClasspath"), own, rootDir)
+        mainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("runtimeClasspath"), none, rootDir)
+        jvmMainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainRuntimeClasspath"), own, rootDir)
     }
 
 // Kotlin compiles `.kt` files under `src/<set>/java` too; nothing compiles from there.

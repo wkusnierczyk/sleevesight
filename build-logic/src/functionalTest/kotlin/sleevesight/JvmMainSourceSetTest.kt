@@ -176,6 +176,36 @@ class JvmMainSourceSetTest {
     }
 
     @Test
+    fun `a different jar with the same name as main's fails check`() {
+        project()
+        jar("lib/libs/a/same.jar")
+        jar("lib/libs/b/same.jar")
+        libWith(
+            "dependencies {\n    implementation(files(\"libs/a/same.jar\"))\n" +
+                "    \"jvmMainImplementation\"(files(\"libs/b/same.jar\"))\n}\n",
+        )
+        assertCheckFailsNaming("file lib/libs/b/same.jar")
+    }
+
+    @Test
+    fun `a missing classifier fails as not resolving`() {
+        project()
+        libWith("dependencies { \"jvmMainImplementation\"(\"org.jetbrains:annotations:23.0.0:nonexistent\") }\n")
+        val failed = runner(":lib:checkJvmMainDependencies").buildAndFail()
+        assertTrue("Dependencies that do not resolve" in failed.output, failed.output)
+        assertTrue("jvmMainCompileClasspath" in failed.output, failed.output)
+        assertTrue("annotations-23.0.0-nonexistent.jar" in failed.output, failed.output)
+    }
+
+    private fun jar(path: String) {
+        ZipOutputStream(dir.resolve(path).apply { parentFile.mkdirs() }.outputStream()).use {
+            it.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))
+            it.write("Manifest-Version: 1.0\n".toByteArray())
+            it.closeEntry()
+        }
+    }
+
+    @Test
     fun `a classifier of a module main has fails check`() {
         project()
         libWith("dependencies { \"jvmMainImplementation\"(\"org.jetbrains:annotations:23.0.0:sources\") }\n")
