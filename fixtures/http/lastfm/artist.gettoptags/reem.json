@@ -1,0 +1,29 @@
+{
+  "toptags": {
+    "tag": [
+      {
+        "count": 100,
+        "name": "rap",
+        "url": "https://www.last.fm/tag/rap"
+      },
+      {
+        "count": 60,
+        "name": "denmark",
+        "url": "https://www.last.fm/tag/denmark"
+      },
+      {
+        "count": 40,
+        "name": "moroccan",
+        "url": "https://www.last.fm/tag/moroccan"
+      },
+      {
+        "count": 15,
+        "name": "pop",
+        "url": "https://www.last.fm/tag/pop"
+      }
+    ],
+    "@attr": {
+      "artist": "Reem"
+    }
+  }
+}

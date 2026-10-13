@@ -14,6 +14,8 @@ sourceSets {
 dependencies {
     // `SourceAdapter.lookup` takes a `Deferred`, so coroutines are part of the API.
     api(libs.kotlinx.coroutines.core)
+    // The genre vocabulary is a JSON resource (`GenreVocabulary`).
+    implementation(libs.kotlinx.serialization.json)
     testFixturesApi(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlinx.coroutines.test)
 }

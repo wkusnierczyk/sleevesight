@@ -19,4 +19,5 @@ rootProject.name = "sleevesight"
 
 include(":core")
 include(":net")
+include(":sources")
 include(":ai")
