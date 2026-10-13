@@ -17,22 +17,19 @@ private val REDIRECTS =
  * The request a redirect leads to, or null if [result] is not one to follow. Only a GET is followed,
  * to a non-blank `Location` resolved against the URL that was [sent] (RFC 3986, [resolveReference]),
  * and never with user info. A chain that [staysInOrigin] follows redirects within its origin only;
- * to another origin the 3xx is returned. The next hop is hidden in the log if this one was
- * ([hidden]), if the chain stays in its origin, or if the resolved target, judged before its user
- * info is stripped, has user info or a query parameter named like a key.
+ * to another origin the 3xx is returned. The next hop is hidden in the log: its URL is the server's
+ * choice, not the caller's, so it is not provably public.
  */
 internal fun redirectFrom(
     request: NetRequest,
     sent: Url,
     result: NetResult<NetResponse>,
     staysInOrigin: Boolean,
-    hidden: Boolean,
 ): NetRequest? {
     val response = (result as? NetResult.Success)?.value
     val followed = response?.takeIf { it.status in REDIRECTS && request.method == NetMethod.GET }
     val location = followed?.header("Location")?.trim()?.takeIf { it.isNotEmpty() }
     val resolved = location?.let { resolveReference(sent.toString(), it) }?.let(::parseHttpUrl)
-    val hideNext = hidden || staysInOrigin || (resolved != null && urlBearsCredentials(resolved))
     val target =
         resolved?.let {
             URLBuilder(it)
@@ -49,7 +46,7 @@ internal fun redirectFrom(
         NetRequest(
             url = target.toString(),
             headers = request.headers,
-            secrets = request.secrets.forRedirect(staysInOrigin, hideNext),
+            secrets = request.secrets.forRedirect(),
             timeout = request.timeout,
             maxBytes = request.maxBytes,
             sensitiveUrl = request.sensitiveUrl,

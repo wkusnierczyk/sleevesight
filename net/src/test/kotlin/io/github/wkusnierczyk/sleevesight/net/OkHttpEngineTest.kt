@@ -67,9 +67,15 @@ class OkHttpEngineTest {
                         log,
                     ).use { it.send(NetRequest(server.url("/a").toString())) }
 
-                assertTrue(" -> Server(status=503) " in log.lines.first(), "$value: ${log.lines.first()}")
+                // Real time on a real engine: the duration is the one part not fixed.
+                val start503 =
+                    Regex.escape(
+                        "GET http://${server.hostName}:${server.port}/a {0 headers} -> Server(status=503) in ",
+                    )
+                val first = Regex("^$start503\\d+ ms \\(attempt 1\\)" + if (retried) ", retrying in 0s$" else "$")
+                assertTrue(first.matches(log.lines.first()), "$value: ${log.lines.first()}")
+                assertEquals(if (retried) 2 else 1, log.lines.size, value)
                 if (retried) {
-                    assertTrue("retrying in 0s" in log.lines.first(), "$value: ${log.lines.first()}")
                     assertEquals("after", assertIs<NetResult.Success<NetResponse>>(result).value.body, value)
                     assertEquals(2, server.requestCount - start, value)
                 } else {

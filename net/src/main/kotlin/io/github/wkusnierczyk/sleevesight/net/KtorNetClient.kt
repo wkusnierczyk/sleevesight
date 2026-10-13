@@ -72,7 +72,7 @@ internal class KtorNetClient(
                 }
             val result = sendWithRetries(current, sent, hidden)
             current =
-                redirectFrom(current, sent, result, staysInOrigin, hidden)?.takeIf { redirects < MAX_REDIRECTS }
+                redirectFrom(current, sent, result, staysInOrigin)?.takeIf { redirects < MAX_REDIRECTS }
                     ?: return result
             redirects++
         }

@@ -37,13 +37,11 @@ class RedactionTest {
             }) { it.send(request) }
 
             assertTrue(sent.any { key in it }, "the key was sent")
-            val line = log.lines.single()
-            assertFalse(key in line, line)
-            assertTrue(
-                line.startsWith(
-                    "GET https://ws.audioscrobbler.com/2.0/?method&artist&track {2 headers} -> 200",
+            assertEquals(
+                listOf(
+                    "GET https://ws.audioscrobbler.com/2.0/?method&artist&track {2 headers} -> 200 in 0 ms (attempt 1)",
                 ),
-                line,
+                log.lines,
             )
             assertFalse(key in request.toString())
         }
@@ -157,14 +155,15 @@ class RedactionTest {
                 }
 
             assertTrue(result is NetResult.Failure && result.error is NetError.Offline)
-            assertEquals(3, log.lines.size)
-            log.lines.forEach { line ->
-                assertTrue(
-                    line.startsWith("GET https://example.org/a {0 headers} -> Offline(reason=IOException)"),
-                    line,
-                )
-                assertFalse(key in line, line)
-            }
+            val line = "GET https://example.org/a {0 headers} -> Offline(reason=IOException) in 0 ms"
+            assertEquals(
+                listOf(
+                    "$line (attempt 1), retrying in 500ms",
+                    "$line (attempt 2), retrying in 1s",
+                    "$line (attempt 3)",
+                ),
+                log.lines,
+            )
         }
 
     @Test
@@ -209,8 +208,7 @@ class RedactionTest {
 
             assertEquals(NetResult.Failure(NetError.InvalidRequest("url")), result)
             assertFalse(key in request.toString(), request.toString())
-            assertTrue(log.lines.isNotEmpty())
-            log.lines.forEach { assertFalse(key in it, it) }
+            assertEquals(listOf("GET <invalid url> {0 headers} -> InvalidRequest(field=url)"), log.lines)
         }
 
     @Test
@@ -296,9 +294,13 @@ class RedactionTest {
                 )
             }
 
-            assertEquals(2, log.lines.size)
-            log.lines.forEach { assertFalse(echoed in it, it) }
-            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… {0 headers} -> 200"), log.lines[1])
+            assertEquals(
+                listOf(
+                    "GET https://api.example.org/a {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://api.example.org/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                ),
+                log.lines,
+            )
         }
 
     @Test
@@ -417,8 +419,7 @@ class RedactionTest {
                 it.send(NetRequest("https://example.org/a", headers = mapOf(key to "x-api-key")))
             }
 
-            assertEquals(2, log.lines.size)
-            log.lines.forEach { assertFalse(key in it, it) }
+            assertEquals(List(2) { "GET https://example.org/a {1 header} -> 200 in 0 ms (attempt 1)" }, log.lines)
         }
 
     @Test
@@ -437,8 +438,13 @@ class RedactionTest {
                 )
             }
 
-            assertEquals(2, log.lines.size)
-            log.lines.forEach { assertFalse(key in it, it) }
+            assertEquals(
+                listOf(
+                    "GET https://api.example.org/a {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://api.example.org/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                ),
+                log.lines,
+            )
         }
 
     @Test
@@ -481,9 +487,14 @@ class RedactionTest {
 
                 assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, echo)
                 assertEquals(listOf("a.example.org", "a.example.org"), hosts, echo)
-                assertEquals(2, log.lines.size, echo)
-                assertTrue(log.lines[0].startsWith("GET https://a.example.org/start {1 header} -> 302"), log.lines[0])
-                assertTrue(log.lines[1].startsWith("GET https://a.example.org/… {1 header} -> 302"), log.lines[1])
+                assertEquals(
+                    listOf(
+                        "GET https://a.example.org/start {1 header} -> 302 in 0 ms (attempt 1)",
+                        "GET https://a.example.org/… {1 header} -> 302 in 0 ms (attempt 1)",
+                    ),
+                    log.lines,
+                    echo,
+                )
                 log.lines.forEach { assertFalse(key in it, it) }
             }
         }
@@ -513,10 +524,14 @@ class RedactionTest {
             }) { it.send(NetRequest("https://a.example.org/start")) }
 
             assertEquals(listOf("a.example.org", "a.example.org", "b.example.org"), hosts)
-            assertEquals(3, log.lines.size)
-            assertTrue(log.lines[0].startsWith("GET https://a.example.org/start {0 headers} -> 302"), log.lines[0])
-            assertTrue(log.lines[1].startsWith("GET https://a.example.org/… {0 headers} -> 302"), log.lines[1])
-            assertTrue(log.lines[2].startsWith("GET https://b.example.org/… {0 headers} -> 200"), log.lines[2])
+            assertEquals(
+                listOf(
+                    "GET https://a.example.org/start {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://a.example.org/… {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://b.example.org/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                ),
+                log.lines,
+            )
             log.lines.forEach { assertFalse(key in it, it) }
         }
 
@@ -541,10 +556,14 @@ class RedactionTest {
             }) { it.send(NetRequest("https://api.example.org/a")) }
 
             assertEquals(listOf("api.example.org", "api.example.org", "cdn.example.net"), hosts)
-            assertEquals(3, log.lines.size)
-            assertTrue(log.lines[0].startsWith("GET https://api.example.org/a {0 headers} -> 302"), log.lines[0])
-            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… {0 headers} -> 302"), log.lines[1])
-            assertTrue(log.lines[2].startsWith("GET https://cdn.example.net/… {0 headers} -> 200"), log.lines[2])
+            assertEquals(
+                listOf(
+                    "GET https://api.example.org/a {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://api.example.org/… {0 headers} -> 302 in 0 ms (attempt 1)",
+                    "GET https://cdn.example.net/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                ),
+                log.lines,
+            )
         }
 
     @Test
@@ -564,10 +583,15 @@ class RedactionTest {
 
                 val host = location.substringAfter('@').substringBefore('/')
                 assertEquals(listOf<String?>(null, null, null), users, location)
-                assertEquals(3, log.lines.size, location)
-                assertTrue(log.lines[0].startsWith("GET https://a.example.org/p {0 headers} -> 302"), log.lines[0])
-                assertTrue(log.lines[1].startsWith("GET https://$host/… {0 headers} -> 302"), log.lines[1])
-                assertTrue(log.lines[2].startsWith("GET https://$host/… {0 headers} -> 200"), log.lines[2])
+                assertEquals(
+                    listOf(
+                        "GET https://a.example.org/p {0 headers} -> 302 in 0 ms (attempt 1)",
+                        "GET https://$host/… {0 headers} -> 302 in 0 ms (attempt 1)",
+                        "GET https://$host/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                    ),
+                    log.lines,
+                    location,
+                )
                 log.lines.forEach { assertFalse("SECRET" in it, it) }
             }
         }
@@ -593,9 +617,8 @@ class RedactionTest {
 
                 assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, url)
                 assertEquals(1, calls, url)
-                assertEquals(1, log.lines.size, url)
                 val host = url.removePrefix("https://").substringBefore('/')
-                assertTrue(log.lines[0].startsWith("GET https://$host/… {0 headers} -> 302"), log.lines[0])
+                assertEquals(listOf("GET https://$host/… {0 headers} -> 302 in 0 ms (attempt 1)"), log.lines, url)
             }
         }
 
@@ -611,6 +634,12 @@ class RedactionTest {
             "pwd",
             "JWT",
             "passphrase",
+            "X-Pwd",
+            "user_pwd",
+            "wallet_passphrase",
+            "X-JWT-Assertion",
+            "device_code",
+            "deviceCode",
             "code",
             "Code",
         ).forEach { assertTrue(Redaction.isSensitive(it), it) }
@@ -665,4 +694,28 @@ class RedactionTest {
         val headers = listOf("Accept", "Accept-Language", "User-Agent", "Api-User-Agent", "Accept-Encoding")
         (musicBrainz + wikipedia + wikidata + headers).forEach { assertFalse(Redaction.isSensitive(it), it) }
     }
+
+    @Test
+    fun `a server-chosen token in a public chain's Location path or bare query name is not logged`() =
+        runTest {
+            for (location in listOf("/echo/$key", "/done?$key")) {
+                val log = RecordingLog()
+                withClient(log = log, handler = { request ->
+                    if (request.url.encodedPath == "/start") {
+                        respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                    } else {
+                        respond("ok")
+                    }
+                }) { it.send(NetRequest("https://a.example.org/start")) }
+
+                assertEquals(
+                    listOf(
+                        "GET https://a.example.org/start {0 headers} -> 302 in 0 ms (attempt 1)",
+                        "GET https://a.example.org/… {0 headers} -> 200 in 0 ms (attempt 1)",
+                    ),
+                    log.lines,
+                    location,
+                )
+            }
+        }
 }

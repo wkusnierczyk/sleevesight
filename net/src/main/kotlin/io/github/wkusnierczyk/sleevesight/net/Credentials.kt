@@ -9,7 +9,8 @@ import io.ktor.http.Url
  *
  * - staysInOrigin, decided from the caller's request and carried through the chain: the chain
  *   follows no redirect to another origin.
- * - hiddenInLog, per hop and sticky: the log shows neither the hop's path nor its query names.
+ * - hiddenInLog, per hop and sticky: the log shows neither the hop's path nor its query names. Only
+ *   the caller's own URL is provably public, so every hop after a followed redirect is hidden.
  */
 
 /**
@@ -18,18 +19,16 @@ import io.ktor.http.Url
  * user info in its URL, or [NetRequest.sensitiveUrl].
  */
 internal fun staysInOrigin(request: NetRequest): Boolean =
-    request.secrets.staysInOrigin ||
-        request.secrets.query.isNotEmpty() ||
+    request.secrets.query.isNotEmpty() ||
         request.secrets.headers.isNotEmpty() ||
         request.headers.keys.any(Redaction::isSensitive) ||
         urlIsSensitive(request)
 
 /**
  * Whether the log hides [request]'s path and query names: its URL may hold a credential
- * ([urlIsSensitive]), or an earlier hop of its chain was hidden ([NetSecrets.hideInLog]). A first
- * hop whose credentials are only in [NetRequest.secrets] or in headers named like keys shows its
- * path, which is public by contract; from the first redirect of a chain that [staysInOrigin], the
- * path is the server's choice and is hidden.
+ * ([urlIsSensitive]), or it is a hop after a followed redirect ([NetSecrets.hideInLog]), whose URL
+ * the server chose. A first hop whose credentials are only in [NetRequest.secrets] or in headers
+ * named like keys shows its path, which is public by contract.
  */
 internal fun hiddenInLog(request: NetRequest): Boolean = request.secrets.hideInLog || urlIsSensitive(request)
 

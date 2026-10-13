@@ -52,6 +52,9 @@ object Redaction {
             "credentials",
             "verifier",
             "bearer",
+            "pwd",
+            "passphrase",
+            "jwt",
         )
 
     /**
@@ -74,10 +77,8 @@ object Redaction {
             "privatekey",
             "password",
             "passwd",
-            "pwd",
-            "passphrase",
-            "jwt",
             "code",
+            "devicecode",
         )
 
     private val NOT_ALPHANUMERIC = Regex("[^A-Za-z0-9]+")
