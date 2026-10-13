@@ -4,11 +4,11 @@
 **Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release  
 **Tracking:** [#31][31]
 
-The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the conditional one from [#9][9], which becomes a link if [#46][46] adopts MusicBrainz tags.
+The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9], which become a link from [#9][9] to [#58][58] if [#46][46] adopts MusicBrainz tags.
 
 ## Dependencies
 
-An arrow points from an issue to the issues it unblocks. The dotted arrow is conditional.
+An arrow points from an issue to the issues it unblocks. The dotted arrows are conditional: [#46][46] decides whether [#9][9] is needed, and [#9][9] blocks [#58][58] only if it is.
 
 ```mermaid
 flowchart TD
