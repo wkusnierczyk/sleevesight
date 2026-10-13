@@ -50,7 +50,7 @@ class ExaWebSearchTest {
         return result to net
     }
 
-    /** The recorded result for [url]: its highlights joined as the adapter joins them. */
+    /** The fixture's result for [url]: its highlights joined as the adapter joins them. */
     private fun recordedSnippet(
         recording: String,
         url: String,
@@ -116,28 +116,38 @@ class ExaWebSearchTest {
             assertLines(
                 "01-sundown",
                 listOf(
-                    "https://open.spotify.com/track/6gLrz6fdavhgbQo1RsbmI6",
-                    "https://www.songfacts.com/facts/gordon-lightfoot/sundown",
-                    "https://www.youtube.com/watch?v=1IBdZ645S-o",
-                    "https://www.youtube.com/watch?v=MeRlumGqZlY",
-                    "https://www.allmusic.com/song/sundown-mt0000540717",
+                    "https://songnotes.example/gordon-lightfoot/sundown",
+                    "https://videos.example/watch?v=sundown74",
+                    "https://streaming.example/track/sundown-lightfoot",
+                    "https://charts.example/sundown",
+                    "https://reviews.example/songs/sundown",
                 ),
                 result,
             )
             assertEquals(ExaWebSearch.MAX_LINES, result.evidence.size)
+            // Whitespace collapsed; two highlights joined.
+            assertEquals(
+                "Gordon Lightfoot's Sundown came out as a single in the spring of 1974, " +
+                    "the title track of the album of the same name.",
+                result.evidence[0].text,
+            )
+            assertEquals(
+                "Official audio for Sundown, from the 1974 album. ... Gordon Lightfoot's only US number one single.",
+                result.evidence[1].text,
+            )
         }
 
     @Test
     fun `same title by other artists is dropped`() =
         runTest {
-            // RegressionCase.SAME_NAME_ARTIST: here the other "Bad Energy"s are Juice WRLD's and others'.
+            // RegressionCase.SAME_NAME_ARTIST: here the other "Bad Energy"s are Juice WRLD's and Safaree's.
             val (result, _) = lookUp(RegressionCase.SAME_NAME_ARTIST.tracks.first(), "12-bad-energy")
             assertEquals(Outcome.SongArticle, result.outcome)
             assertLines(
                 "12-bad-energy",
                 listOf(
-                    "https://www.top-charts.com/s/bad-energy-reem",
-                    "https://www.lyricsbull.com/bad-energy-lyrics-reem/",
+                    "https://charts.example/bad-energy-reem",
+                    "https://songtexts.example/reem/bad-energy",
                 ),
                 result,
             )
@@ -146,16 +156,15 @@ class ExaWebSearchTest {
     @Test
     fun `thin tracks keep only the listings that name the recording`() =
         runTest {
-            // RegressionCase.NOTHING_DOCUMENTED: 23 and 30.
+            // RegressionCase.NOTHING_DOCUMENTED: 23 and 30. The catalogue entry spells the artist with `&`.
             val (dory, _) = lookUp(23, "23-fishin-in-a-dory")
             assertEquals(Outcome.SongArticle, dory.outcome)
             assertLines(
                 "23-fishin-in-a-dory",
                 listOf(
-                    "https://what-song.com/song/763387/fishin-in-a-dory",
-                    "https://catalog.nols.org/Hoopla/19598773",
-                    "https://what-song.com/Artist/242496/Ray-Johnson-And-The-Sou-Westers",
-                    "https://soundtrackost.com/below-songs-netflix/",
+                    "https://whatsong.example/song/fishin-in-a-dory",
+                    "https://library.example/catalog/the-newfoundland-i-love",
+                    "https://soundtrack.example/below",
                 ),
                 dory,
             )
@@ -165,8 +174,8 @@ class ExaWebSearchTest {
             assertLines(
                 "30-the-veil-between-worlds",
                 listOf(
-                    "https://what-song.com/song/763393/the-veil-between-worlds",
-                    "https://critiquebrainz.org/recording/6ef5fd9d-26a6-4c19-b6b5-82dafa8d44e6",
+                    "https://whatsong.example/song/the-veil-between-worlds",
+                    "https://reviews.example/recording/the-veil-between-worlds",
                 ),
                 veil,
             )
@@ -179,6 +188,62 @@ class ExaWebSearchTest {
             val (result, _) = lookUp(77, "77-forever-young")
             assertEquals(Outcome.Rejected(ExaWebSearch.REJECTED), result.outcome)
             assertTrue(result.evidence.isEmpty())
+        }
+
+    @Test
+    fun `the work a theme is from is required`() =
+        runTest {
+            // Track 34, Theme - From "Coronation Street": not London Music Works' Doctor Who or EastEnders theme.
+            val (result, _) = lookUp(34, "34-theme")
+            assertLines(
+                "34-theme",
+                listOf(
+                    "https://streaming.example/track/coronation-street-theme-lmw",
+                    "https://tvthemes.example/coronation-street",
+                ),
+                result,
+            )
+        }
+
+    @Test
+    fun `a page titled after another song by the artist is dropped`() =
+        runTest {
+            // RegressionCase.COVERS, 45: Yanjoco's "Caravan" page lists the song among the artist's others.
+            val (result, _) = lookUp(45, "45-i-will-follow-you-into-the-dark")
+            assertLines(
+                "45-i-will-follow-you-into-the-dark",
+                listOf(
+                    "https://streaming.example/track/i-will-follow-you-into-the-dark-yanjoco",
+                    "https://bpm.example/i-will-follow-you-into-the-dark-yanjoco",
+                ),
+                result,
+            )
+        }
+
+    @Test
+    fun `a common-word artist needs the distinctive one`() =
+        runTest {
+            // RegressionCase.FEATURED_ARTIST, 63: AC/DC's version says "them", not Van Morrison.
+            val (result, _) = lookUp(RegressionCase.FEATURED_ARTIST.tracks.first(), "63-baby-please-dont-go")
+            assertLines(
+                "63-baby-please-dont-go",
+                listOf(
+                    "https://history.example/songs/baby-please-dont-go-them",
+                    "https://blues.example/baby-please-dont-go",
+                ),
+                result,
+            )
+        }
+
+    @Test
+    fun `a track without a credited artist sends nothing`() =
+        runTest {
+            val net = ReplayNetClient.ok("""{"results":[]}""")
+            val result =
+                adapter(net).lookup(normalizer.normalize("Sundown", ""), CompletableDeferred(Resolution.NONE))
+            assertEquals(Outcome.None, result.outcome)
+            assertTrue(result.evidence.isEmpty())
+            assertTrue(net.sent.isEmpty())
         }
 
     @Test
@@ -236,6 +301,10 @@ class ExaWebSearchTest {
         val two = ExaSearchRequest.of(track(77))
         assertEquals("\"Forever Young\" by dearoldfriend and Winston Hunte, song", two.query)
 
+        val from = ExaSearchRequest.of(track(34))
+        assertEquals("\"Theme\" from Coronation Street by London Music Works, song", from.query)
+        assertEquals("Theme Coronation Street London Music Works", from.contents.highlights.query)
+
         val three = ExaSearchRequest.of(track(37))
         assertEquals(
             "\"The Ode To Newfoundland\" by Charles Cavendish Boyle, Hubert Parry and Cantus Vocum Chamber Choir, song",
@@ -252,6 +321,9 @@ class ExaWebSearchTest {
                 12 to "12-bad-energy",
                 23 to "23-fishin-in-a-dory",
                 30 to "30-the-veil-between-worlds",
+                34 to "34-theme",
+                45 to "45-i-will-follow-you-into-the-dark",
+                63 to "63-baby-please-dont-go",
                 77 to "77-forever-young",
             )
     }

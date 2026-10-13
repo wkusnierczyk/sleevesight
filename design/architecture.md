@@ -342,7 +342,7 @@ A user setting, *Prepare the next track*:
 
 ### Networking
 
-- One `HttpClient` from `:net`, configured per host: MusicBrainz at one request per second with a descriptive User-Agent and contact address; the others at their documented limits. The rate limiters belong to the client instance, so `AppGraph` and `:cli` each create exactly one `NetClient` and inject it into every adapter and provider; a second instance would double every limit.
+- One `HttpClient` from `:net`, configured per host: MusicBrainz at one request per second with a descriptive User-Agent and contact address; the others at their documented limits. A host's limit is in force only once registered in `NetConfig.hosts`: `:net`'s defaults hold MusicBrainz alone, so the app graph and the CLI register each adapter's own policy there, such as `ExaWebSearch.HOST_POLICY` under `ExaWebSearch.HOST`. The rate limiters belong to the client instance, so `AppGraph` and `:cli` each create exactly one `NetClient` and inject it into every adapter and provider; a second instance would double every limit.
 - Every failure maps to a typed error (`Offline`, `RateLimited`, `Unauthorized`, `Server`, `Parse`; `TooLarge` for a body over the request's size limit; `Protocol` for an answer the engine refuses as breaking HTTP; `InvalidRequest` for a request that cannot be sent as given, such as a key with a trailing newline or a host not written in plain ASCII), which the adapters map to outcomes. No error carries an exception message, a URL or a header value. A 404 and the other statuses outside 401, 403, 429 and 5xx are responses, not errors: what they mean depends on the source, so the adapter decides.
 - A 503 is `Server`, except from a host whose policy says it answers 503 when its limit is exceeded (MusicBrainz, and only it so far): there a 503 to a `GET` is `RateLimited`. A `POST`'s 503 stays `Server`, since a 503, unlike a 429, does not promise the request was not acted on.
 - Retries: a 429 for any method, since the server refused the request without acting on it; a 5xx, a rate-limited 503 or a lost connection only for `GET`, so a paid `POST` is never sent twice. A `Retry-After`, in seconds or as a date in any of HTTP's three forms, replaces the backoff; one beyond the cap ends the retries.
@@ -389,7 +389,7 @@ The data sources carry their own terms, and every evidence line shows its source
 | Wikipedia | CC BY-SA 4.0 |
 | Last.fm bios | CC BY-SA; the API itself is under Last.fm's API terms |
 | Discogs | CC0 for the release data; the API under Discogs' terms |
-| Web search | Per provider's terms; snippets only. Exa's §4.2(a) is strict; what it means for the app and the recordings is open (design, *Web search provider (D11)*) |
+| Web search | Per provider's terms; snippets only. Exa's §4.2(a) is strict; what it means for the app is open, and the test fixtures are synthetic (design, *Web search provider (D11)*) |
 
 #### MusicBrainz tags and genres (#9)
 

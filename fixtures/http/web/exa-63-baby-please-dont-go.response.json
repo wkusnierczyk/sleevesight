@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "url": "https://history.example/songs/baby-please-dont-go-them",
+      "title": "Baby, Please Don't Go - Them featuring Van Morrison",
+      "highlights": [
+        "Them's 1964 single, with Van Morrison singing."
+      ]
+    },
+    {
+      "url": "https://rock.example/acdc/baby-please-dont-go",
+      "title": "Baby, Please Don't Go - AC/DC",
+      "highlights": [
+        "AC/DC opened their first album with it; many bands had covered it before them."
+      ]
+    },
+    {
+      "url": "https://blues.example/baby-please-dont-go",
+      "title": "Baby, Please Don't Go: the 1935 original and its versions",
+      "highlights": [
+        "Big Joe Williams recorded it first; Them, with Van Morrison singing, made it a rock song."
+      ]
+    }
+  ]
+}

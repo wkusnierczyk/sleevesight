@@ -1,0 +1,19 @@
+{
+  "query": "\"Theme\" from Coronation Street by London Music Works, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "Theme Coronation Street London Music Works",
+      "maxCharacters": 300
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "query": "\"I Will Follow You Into The Dark\" by Yanjoco, song",
+  "type": "instant",
+  "numResults": 10,
+  "excludeDomains": [
+    "wikipedia.org",
+    "wikiwand.com",
+    "wikidata.org",
+    "musicbrainz.org",
+    "last.fm",
+    "discogs.com"
+  ],
+  "contents": {
+    "highlights": {
+      "query": "I Will Follow You Into The Dark Yanjoco",
+      "maxCharacters": 300
+    }
+  }
+}

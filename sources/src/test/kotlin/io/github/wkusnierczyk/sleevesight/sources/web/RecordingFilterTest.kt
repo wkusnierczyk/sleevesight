@@ -15,6 +15,12 @@ class RecordingFilterTest {
         vararg artists: String,
     ) = NormalizedTrack(title, artists.toList(), artists.first(), null, null, emptyList(), "")
 
+    private fun from(
+        title: String,
+        from: String,
+        vararg artists: String,
+    ) = track(title, *artists).copy(from = from)
+
     private fun about(
         track: NormalizedTrack,
         title: String?,
@@ -28,6 +34,46 @@ class RecordingFilterTest {
         assertEquals("charlie dee", filter.fold("Charlie Dée"))
         assertEquals("ispini na heireann", filter.fold("Ispíní na hÉireann"))
         assertEquals("東京 2020", filter.fold("東京・2020"))
+        assertEquals("ray johnson and the sou westers", filter.fold("Ray Johnson & The Sou' Westers"))
+        assertEquals("rock and roll", filter.fold("Rock&Roll"))
+    }
+
+    @Test
+    fun `and matches an ampersand`() {
+        val dory = track("Fishin' In A Dory", "Ray Johnson And The Sou' Westers")
+        assertTrue(about(dory, "The Newfoundland I Love", "Ray Johnson & The Sou' Westers: Fishin' In A Dory"))
+        assertTrue(
+            about(track("Apple Trees & Buzzing Bees", "Charlie Dée"), "Apple Trees and Buzzing Bees by Charlie Dee"),
+        )
+    }
+
+    @Test
+    fun `needs the work the song is from when the player names it`() {
+        val theme = from("Theme", "Coronation Street", "London Music Works")
+        assertFalse(about(theme, "Doctor Who Theme - song by London Music Works"))
+        assertFalse(about(theme, "Doctor Who Theme - song by London Music Works", "also: Coronation Street Theme"))
+        assertTrue(about(theme, "Theme from Coronation Street - London Music Works"))
+        assertTrue(about(theme, "Coronation Street theme", "recorded by London Music Works"))
+    }
+
+    @Test
+    fun `a result titled after the artist without the song is dropped`() {
+        val dark = track("I Will Follow You Into The Dark", "Yanjoco")
+        assertFalse(about(dark, "Caravan - song by Yanjoco", "More by Yanjoco: I Will Follow You Into The Dark"))
+        assertFalse(about(dark, "Yanjoco", "I Will Follow You Into The Dark"))
+        assertTrue(about(dark, "Below soundtrack", "I Will Follow You Into The Dark - Yanjoco"))
+    }
+
+    @Test
+    fun `common-word artists give way to a distinctive one`() {
+        val baby = track("Baby, Please Don't Go", "Them", "Van Morrison")
+        assertEquals(listOf("van morrison"), filter.requiredArtists(baby))
+        assertFalse(about(baby, "Baby, Please Don't Go - AC/DC", "many bands covered it before them"))
+        assertTrue(about(baby, "Baby, Please Don't Go", "Them, with Van Morrison singing"))
+        // With no distinctive artist, every credited one counts.
+        val twelve = track("Glittery", "To Twelve")
+        assertEquals(listOf("to twelve"), filter.requiredArtists(twelve))
+        assertTrue(about(twelve, "Glittery - To Twelve"))
     }
 
     @Test

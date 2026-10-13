@@ -28,7 +28,7 @@ import kotlin.time.Instant
 import kotlin.time.TimeSource
 
 /**
- * Web search through Exa, the first provider (D11; `design/design.md`, *Open questions*), on the
+ * Web search through Exa, the first provider (D11; `design/design.md`, *Web search provider (D11)*), on the
  * user's own key. One evidence line per kept result: Exa's highlight for it, verbatim apart from
  * whitespace, with the result's URL (architecture, *Source adapters*).
  *
@@ -38,9 +38,13 @@ import kotlin.time.TimeSource
  * its lines stay unverified like any other source's that MusicBrainz cannot confirm.
  *
  * Outcomes: [Outcome.SongArticle] when a result is kept; [Outcome.Rejected] when results came back
- * and none named the song and an artist; [Outcome.None] when none came back; [Outcome.Unreachable]
+ * and none passed the filter; [Outcome.None] when none came back, or when the track credits no
+ * artist, since then no result could be checked and nothing is sent; [Outcome.Unreachable]
  * for a network error or any answer other than a 2xx (a wrong key, exhausted credits, a bad
  * request), which carries nothing to show.
+ *
+ * The app graph and the CLI register [HOST_POLICY] under [HOST] in `NetConfig.hosts`; without it
+ * `:net` puts no limit on Exa's host.
  */
 class ExaWebSearch(
     private val net: NetClient,
@@ -58,6 +62,7 @@ class ExaWebSearch(
         resolution: Deferred<Resolution>,
     ): SourceResult {
         val start = timeSource.markNow()
+        if (track.artists.none { it.isNotBlank() }) return SourceResult(Outcome.None, emptyList(), start.elapsedNow())
         val result = net.fetch(request(track), ::parse)
         val retrievedAt = clock.now()
         val outcome: Outcome
@@ -120,14 +125,15 @@ class ExaWebSearch(
 
         /**
          * Exa allows 10 requests a second to `/search` across a team's keys; one every 100 ms keeps
-         * a single client within it. For `NetConfig.hosts` under [HOST].
+         * a single client within it. The app graph and the CLI must register it in
+         * `NetConfig.hosts` under [HOST].
          */
         val HOST_POLICY: HostPolicy = HostPolicy(minInterval = 100.milliseconds)
 
         /** The most lines kept per track. Fixed, as the Wikipedia quote count is (D1). */
         const val MAX_LINES: Int = 5
 
-        internal const val REJECTED: String = "no result names both the song and a credited artist"
+        internal const val REJECTED: String = "no result is about this recording"
 
         internal val JSON: Json =
             Json {
@@ -155,7 +161,10 @@ class ExaWebSearch(
  *
  * - `instant`: the cheapest type ($4 per 1000 against $7 for `auto`) and about a tenth of the
  *   latency (0.3 s against 3 s in the spike), with results as relevant on the fixture's tracks.
- * - [numResults] 10, the most the base price covers, so the filter has enough to choose from.
+ * - [numResults] 10, the most the base price covers, so the filter has enough to choose from: it
+ *   kept 0 to 4 of 10 on the thin and same-title tracks. Whether highlights are billed per result on
+ *   top is ambiguous in Exa's documents (`design/design.md`, *Web search provider (D11)*); if they
+ *   are, 5 would halve that charge at the cost of fewer candidates.
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
  * - Highlights of at most 300 characters, steered by the title and artists: the snippet. Exa's
  *   results carry no snippet without a `contents` option.
@@ -170,24 +179,27 @@ internal data class ExaSearchRequest(
 ) {
     companion object {
         /**
-         * The query for [track]: `"<title>" by <artists>, song`, with the artists as a sentence
+         * The query for [track]: `"<title>" from <work> by <artists>, song`, the `from` part only
+         * when the player named the work ([NormalizedTrack.from]), with the artists as a sentence
          * would list them. Exa's search is neural, so a phrase reads better than keywords; the
-         * quotes keep a title made of common words together.
+         * quotes keep a title made of common words together. The track credits an artist: the
+         * adapter sends nothing otherwise.
          */
         fun of(track: NormalizedTrack): ExaSearchRequest {
-            val artists = track.artists.ifEmpty { listOf(track.primary) }.filter { it.isNotBlank() }
+            val artists = track.artists.filter { it.isNotBlank() }
             val byline =
-                when (artists.size) {
-                    0 -> ""
-                    1 -> " by ${artists[0]}"
-                    else -> " by ${artists.dropLast(1).joinToString(", ")} and ${artists.last()}"
+                if (artists.size == 1) {
+                    " by ${artists[0]}"
+                } else {
+                    " by ${artists.dropLast(1).joinToString(", ")} and ${artists.last()}"
                 }
+            val from = track.from?.let { " from $it" }.orEmpty()
             return ExaSearchRequest(
-                query = "\"${track.title}\"$byline, song",
+                query = "\"${track.title}\"$from$byline, song",
                 contents =
                     ExaContents(
                         ExaHighlights(
-                            query = (listOf(track.title) + artists).joinToString(" "),
+                            query = (listOfNotNull(track.title, track.from) + artists).joinToString(" "),
                             maxCharacters = HIGHLIGHT_CHARACTERS,
                         ),
                     ),
