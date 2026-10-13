@@ -23,10 +23,11 @@ class NetBody(
  *
  * [url] is public: a key never goes in it, in its path or its query, unless [sensitiveUrl] is set.
  * Keys and tokens go in [secrets]; a source whose API wants the key in the path, or a signed URL or
- * one with a `?ticket=`, sets [sensitiveUrl] instead. The log never shows a value or a header name
- * (see [Redaction]), and a request that carries credentials, by any of these or by a header or
- * parameter named like a key, has its path and query names hidden too and follows no redirect to
- * another origin ([carriesCredentials]). [timeout], when set, replaces [Timeouts.request] for this
+ * one with a `?ticket=`, sets [sensitiveUrl] instead. [sensitiveUrl] covers the path and query only:
+ * the host is always logged, so a key never goes in it. The log never shows a value or a header
+ * name (see [Redaction]). A request that carries credentials follows no redirect to another origin
+ * ([staysInOrigin]); the log hides its path and query names when its URL may hold one, and from its
+ * first redirect on ([hiddenInLog]). [timeout], when set, replaces [Timeouts.request] for this
  * request, for a long stream or a slow model. A response body longer than [maxBytes] is
  * [NetError.TooLarge]. [toString] is the redacted form the log prints.
  */
@@ -52,25 +53,30 @@ class NetRequest(
 
 /**
  * The query parameters and headers of a request that carry keys or tokens. Adapters pass
- * `Secret.reveal()` here and nowhere else.
+ * `Secret.reveal()` here and nowhere else. A key goes here even when its wire name is not one
+ * [Redaction.isSensitive] recognises (AcoustID's `client`): never in [NetRequest.query] or
+ * [NetRequest.headers].
  *
  * On a redirect the headers follow (a chain that carries them never leaves its origin); the query
- * stays behind, since the `Location` is the new URL. [carried] records that an earlier hop was
- * credential-bearing, so the chain stays so (see [carriesCredentials]).
+ * stays behind, since the `Location` is the new URL. [staysInOrigin] and [hideInLog] carry the
+ * chain's state to its next hop (see [staysInOrigin] and [hiddenInLog] in `Credentials.kt`).
  */
 class NetSecrets internal constructor(
     val query: Map<String, String>,
     val headers: Map<String, String>,
-    internal val carried: Boolean,
+    internal val staysInOrigin: Boolean,
+    internal val hideInLog: Boolean,
 ) {
     constructor(
         query: Map<String, String> = emptyMap(),
         headers: Map<String, String> = emptyMap(),
-    ) : this(query, headers, false)
+    ) : this(query, headers, false, false)
 
-    /** The secrets for the next hop of a redirect, which inherits the chain's credential status. */
-    internal fun forRedirect(chainBearsCredentials: Boolean): NetSecrets =
-        NetSecrets(emptyMap(), headers, chainBearsCredentials)
+    /** The secrets for the next hop of a redirect, with the chain's state. */
+    internal fun forRedirect(
+        staysInOrigin: Boolean,
+        hideInLog: Boolean,
+    ): NetSecrets = NetSecrets(emptyMap(), headers, staysInOrigin, hideInLog)
 
     /** Counts only: a name could be anything, a key included. */
     override fun toString(): String = "NetSecrets(${query.size} query, ${headers.size} headers)"

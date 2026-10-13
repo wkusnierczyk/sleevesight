@@ -14,12 +14,12 @@ fun interface NetLog {
 /**
  * The log form of a request: only what is provably public. Every line shows the method, scheme,
  * host and port, and the number of headers; never a header name, a secret's name or any value, nor
- * user info. A public hop also shows its path and its query parameter names; a credential-bearing
- * one ([carriesCredentials]) shows its path as [HIDDEN_PATH] and no query names at all. A URL that
- * does not parse is not shown.
+ * user info. A hop the log does not hide ([hiddenInLog]) also shows its path and its query parameter
+ * names, without the names in `secrets.query`; a hidden one shows its path as [HIDDEN_PATH] and no
+ * query names at all. A URL that does not parse is not shown.
  */
 object Redaction {
-    /** The path of a credential-bearing request, as the log shows it. */
+    /** The path of a hidden hop, as the log shows it. */
     const val HIDDEN_PATH: String = "/…"
 
     private const val INVALID_URL = "<invalid url>"
@@ -50,9 +50,34 @@ object Redaction {
             "cookie",
             "credential",
             "credentials",
-            "code",
             "verifier",
             "bearer",
+        )
+
+    /**
+     * Whole names, compared lowercased with everything but letters and digits removed, so that a
+     * compound written without boundaries (`CLIENTSECRET`, `XAPIKEY`, `SESSIONID`) still matches.
+     * `code` (the OAuth parameter) is here rather than among the tokens, so `languageCode` does not
+     * match.
+     */
+    val SENSITIVE_NAMES: Set<String> =
+        setOf(
+            "apikey",
+            "xapikey",
+            "apitoken",
+            "accesstoken",
+            "authtoken",
+            "clientsecret",
+            "sessionid",
+            "sessiontoken",
+            "secretkey",
+            "privatekey",
+            "password",
+            "passwd",
+            "pwd",
+            "passphrase",
+            "jwt",
+            "code",
         )
 
     private val NOT_ALPHANUMERIC = Regex("[^A-Za-z0-9]+")
@@ -69,18 +94,18 @@ object Redaction {
                 .split(NOT_ALPHANUMERIC)
                 .map { it.lowercase() }
         val all = tokens(name.lowercase()) + tokens(name.replace(CAMEL_BOUNDARY, "$1 $2"))
-        return all.any { it in SENSITIVE_TOKENS }
+        return all.any { it in SENSITIVE_TOKENS } || name.lowercase().replace(NOT_ALPHANUMERIC, "") in SENSITIVE_NAMES
     }
 
     /** [request] as the log shows it, its query parameters added to its URL. */
     fun describe(request: NetRequest): String =
-        describe(request, parseHttpUrl(request.url)?.let { effectiveUrl(it, request) }, carriesCredentials(request))
+        describe(request, parseHttpUrl(request.url)?.let { effectiveUrl(it, request) }, hiddenInLog(request))
 
-    /** [request], sent to [url] (null if it does not parse); [credentials] if the hop is credential-bearing. */
+    /** [request], sent to [url] (null if it does not parse); its path and query names [hidden] or not. */
     internal fun describe(
         request: NetRequest,
         url: Url?,
-        credentials: Boolean,
+        hidden: Boolean,
     ): String {
         val target =
             if (url == null) {
@@ -89,11 +114,11 @@ object Redaction {
                 buildString {
                     append(url.protocol.name).append("://").append(url.host)
                     if (url.port != url.protocol.defaultPort) append(':').append(url.port)
-                    if (credentials) {
+                    if (hidden) {
                         append(HIDDEN_PATH)
                     } else {
                         append(url.encodedPath)
-                        val names = url.parameters.names()
+                        val names = url.parameters.names() - request.secrets.query.keys
                         if (names.isNotEmpty()) append(names.joinToString("&", prefix = "?"))
                     }
                 }

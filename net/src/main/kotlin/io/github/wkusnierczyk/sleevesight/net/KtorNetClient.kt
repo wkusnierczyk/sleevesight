@@ -58,20 +58,22 @@ internal class KtorNetClient(
         config.hosts.mapValues { (_, policy) -> RateLimiter(policy.minInterval, timeSource) }
 
     override suspend fun send(request: NetRequest): NetResult<NetResponse> {
-        var credentials = false
+        // Decided from the caller's request alone, and carried through the chain.
+        val staysInOrigin = staysInOrigin(request)
         var current = request
         var redirects = 0
         while (true) {
-            // Decided again on every hop, before logging or sending; once true, it stays so.
-            credentials = credentials || carriesCredentials(current)
+            // Decided on every hop, before logging or sending; once true, it stays so (NetSecrets.hideInLog).
+            val hidden = hiddenInLog(current)
             val sent =
                 when (val validated = validate(current)) {
-                    is Validated.Invalid -> return invalid(current, validated.field, credentials)
+                    is Validated.Invalid -> return invalid(current, validated.field, hidden)
                     is Validated.Valid -> effectiveUrl(validated.url, current)
                 }
-            val result = sendWithRetries(current, sent, credentials)
+            val result = sendWithRetries(current, sent, hidden)
             current =
-                redirectFrom(current, sent, result, credentials)?.takeIf { redirects < MAX_REDIRECTS } ?: return result
+                redirectFrom(current, sent, result, staysInOrigin, hidden)?.takeIf { redirects < MAX_REDIRECTS }
+                    ?: return result
             redirects++
         }
     }
@@ -85,23 +87,23 @@ internal class KtorNetClient(
     private fun invalid(
         request: NetRequest,
         field: String,
-        credentials: Boolean,
+        hidden: Boolean,
     ): NetResult<NetResponse> {
         val error = NetError.InvalidRequest(field)
         val url = parseHttpUrl(request.url)?.takeIf { field != "url" }?.let { effectiveUrl(it, request) }
-        log.log("${Redaction.describe(request, url, credentials)} -> $error")
+        log.log("${Redaction.describe(request, url, hidden)} -> $error")
         return NetResult.Failure(error)
     }
 
     private suspend fun sendWithRetries(
         request: NetRequest,
         url: Url,
-        credentials: Boolean,
+        hidden: Boolean,
     ): NetResult<NetResponse> {
         val domain = config.domainFor(url.host)
         val limiter = domain?.let { limiters.getValue(it) }
         val policy = domain?.let { config.hosts.getValue(it) }
-        val description = Redaction.describe(request, url, credentials)
+        val description = Redaction.describe(request, url, hidden)
         var attempt = 1
         while (true) {
             limiter?.acquire()

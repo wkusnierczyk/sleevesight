@@ -41,7 +41,7 @@ class RedactionTest {
             assertFalse(key in line, line)
             assertTrue(
                 line.startsWith(
-                    "GET https://ws.audioscrobbler.com/… {2 headers} -> 200",
+                    "GET https://ws.audioscrobbler.com/2.0/?method&artist&track {2 headers} -> 200",
                 ),
                 line,
             )
@@ -61,7 +61,7 @@ class RedactionTest {
     }
 
     @Test
-    fun `a request with credentials hides its path, whatever the secret looks like`() {
+    fun `a sensitive URL hides its path, whatever the key in it looks like`() {
         val cases =
             listOf(
                 "abc/def" to "/v1/abc/def",
@@ -69,27 +69,40 @@ class RedactionTest {
                 "ab/cd" to "/v1/ab%252fcd",
                 "sk-probe-SECRET0" to "/%73k-probe-SECRET0/%zz",
                 "a+b/c==xyz" to "/x;token=a+b/c==xyz",
-                "1" to "/v1",
             )
         for ((secret, path) in cases) {
-            val request = NetRequest("https://example.org$path", secrets = NetSecrets(headers = mapOf("x-k" to secret)))
+            val request = NetRequest("https://example.org$path?q=1", sensitiveUrl = true)
 
-            assertEquals("GET https://example.org/… {1 header}", request.toString(), "$secret in $path")
+            assertEquals("GET https://example.org/… {0 headers}", request.toString(), "$secret in $path")
         }
     }
 
     @Test
-    fun `headers and parameters named like keys, and user info, count as credentials`() {
+    fun `a first hop with credentials only in secrets or headers shows its public path, without secret names`() {
+        val request =
+            NetRequest(
+                "https://api.anthropic.com/v1/messages",
+                NetMethod.POST,
+                query = mapOf("beta" to "true"),
+                headers = mapOf("Authorization" to "Bearer $key"),
+                secrets = NetSecrets(query = mapOf("api_key" to key), headers = mapOf("x-api-key" to key)),
+                body = NetBody("{}", "application/json"),
+            )
+
+        assertEquals("POST https://api.anthropic.com/v1/messages?beta {2 headers}", request.toString())
+    }
+
+    @Test
+    fun `a URL that may hold a credential hides its path and query names`() {
         val requests =
             listOf(
-                NetRequest("https://example.org/v1/abc1234", headers = mapOf("Authorization" to "Bearer abc1234")),
                 NetRequest("https://example.org/v1/abc1234", query = mapOf("api_key" to "abc1234")),
                 NetRequest("https://example.org/v1/abc1234?token=abc1234"),
                 NetRequest("https://u:abc1234@example.org/v1/abc1234"),
+                NetRequest("https://example.org/v1/abc1234?q=1", sensitiveUrl = true),
             )
         for (request in requests) {
-            assertFalse("abc1234" in request.toString(), request.toString())
-            assertTrue("/…" in request.toString(), request.toString())
+            assertEquals("GET https://example.org/… {0 headers}", request.toString())
         }
     }
 
@@ -144,8 +157,14 @@ class RedactionTest {
                 }
 
             assertTrue(result is NetResult.Failure && result.error is NetError.Offline)
-            assertTrue(log.lines.isNotEmpty())
-            log.lines.forEach { assertFalse(key in it, it) }
+            assertEquals(3, log.lines.size)
+            log.lines.forEach { line ->
+                assertTrue(
+                    line.startsWith("GET https://example.org/a {0 headers} -> Offline(reason=IOException)"),
+                    line,
+                )
+                assertFalse(key in line, line)
+            }
         }
 
     @Test
@@ -175,7 +194,9 @@ class RedactionTest {
 
             assertEquals(0, calls)
             assertEquals(4, log.lines.size)
-            log.lines.forEach { assertFalse(key in it, it) }
+            log.lines.forEach { line ->
+                assertEquals("GET https://example.org/a {1 header} -> InvalidRequest(field=header)", line)
+            }
         }
 
     @Test
@@ -421,53 +442,134 @@ class RedactionTest {
         }
 
     @Test
-    fun `a public chain turns credential-bearing at the hop with a key, and stays in its origin`() =
+    fun `a chain started with secrets stays in its origin when the server hands back a key`() =
+        runTest {
+            for (echo in listOf("api_key=$key", "SESSIONID=$key")) {
+                val log = RecordingLog()
+                val hosts = mutableListOf<String>()
+                val result =
+                    withClient(log = log, handler = { request ->
+                        hosts += request.url.host
+                        when (request.url.encodedPath) {
+                            "/start" ->
+                                respond(
+                                    "",
+                                    HttpStatusCode.Found,
+                                    headersOf(HttpHeaders.Location, "/echo/$key?$echo"),
+                                )
+                            else ->
+                                respond(
+                                    "",
+                                    HttpStatusCode.Found,
+                                    headersOf(HttpHeaders.Location, "https://b.example.org/$key"),
+                                )
+                        }
+                    }) {
+                        it.send(
+                            NetRequest(
+                                "https://a.example.org/start",
+                                secrets =
+                                    NetSecrets(
+                                        headers =
+                                            mapOf(
+                                                "x-k" to "v",
+                                            ),
+                                    ),
+                            ),
+                        )
+                    }
+
+                assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, echo)
+                assertEquals(listOf("a.example.org", "a.example.org"), hosts, echo)
+                assertEquals(2, log.lines.size, echo)
+                assertTrue(log.lines[0].startsWith("GET https://a.example.org/start {1 header} -> 302"), log.lines[0])
+                assertTrue(log.lines[1].startsWith("GET https://a.example.org/… {1 header} -> 302"), log.lines[1])
+                log.lines.forEach { assertFalse(key in it, it) }
+            }
+        }
+
+    @Test
+    fun `a public chain handed a key by the server follows on, hidden in the log`() =
         runTest {
             val log = RecordingLog()
             val hosts = mutableListOf<String>()
-            val result =
-                withClient(log = log, handler = { request ->
-                    hosts += request.url.host
-                    when (request.url.encodedPath) {
-                        "/start" ->
-                            respond(
-                                "",
-                                HttpStatusCode.Found,
-                                headersOf(HttpHeaders.Location, "/echo/$key?api_key=$key"),
-                            )
-                        else ->
-                            respond(
-                                "",
-                                HttpStatusCode.Found,
-                                headersOf(HttpHeaders.Location, "https://b.example.org/$key"),
-                            )
-                    }
-                }) { it.send(NetRequest("https://a.example.org/start")) }
+            withClient(log = log, handler = { request ->
+                hosts += request.url.host
+                when (request.url.encodedPath) {
+                    "/start" ->
+                        respond(
+                            "",
+                            HttpStatusCode.Found,
+                            headersOf(HttpHeaders.Location, "/echo/$key?SESSIONID=$key"),
+                        )
+                    "/echo/$key" ->
+                        respond(
+                            "",
+                            HttpStatusCode.Found,
+                            headersOf(HttpHeaders.Location, "https://b.example.org/$key"),
+                        )
+                    else -> respond("ok")
+                }
+            }) { it.send(NetRequest("https://a.example.org/start")) }
 
-            assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status)
-            assertEquals(listOf("a.example.org", "a.example.org"), hosts)
-            assertEquals(2, log.lines.size)
+            assertEquals(listOf("a.example.org", "a.example.org", "b.example.org"), hosts)
+            assertEquals(3, log.lines.size)
             assertTrue(log.lines[0].startsWith("GET https://a.example.org/start {0 headers} -> 302"), log.lines[0])
             assertTrue(log.lines[1].startsWith("GET https://a.example.org/… {0 headers} -> 302"), log.lines[1])
+            assertTrue(log.lines[2].startsWith("GET https://b.example.org/… {0 headers} -> 200"), log.lines[2])
             log.lines.forEach { assertFalse(key in it, it) }
         }
 
     @Test
-    fun `a server-issued token in a Location makes the rest of the chain credential-bearing`() =
+    fun `a server-issued token in a Location hides the rest of the chain, which may leave its origin`() =
         runTest {
             val log = RecordingLog()
-            var calls = 0
+            val hosts = mutableListOf<String>()
             withClient(log = log, handler = { request ->
-                calls++
-                if (request.url.encodedPath == "/a") {
-                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/next?token=issued"))
-                } else {
-                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://other.example.net/x"))
+                hosts += request.url.host
+                when {
+                    request.url.encodedPath == "/a" ->
+                        respond(
+                            "",
+                            HttpStatusCode.Found,
+                            headersOf(HttpHeaders.Location, "/next?token=issued"),
+                        )
+                    request.url.host == "api.example.org" ->
+                        respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://cdn.example.net/x"))
+                    else -> respond("ok")
                 }
             }) { it.send(NetRequest("https://api.example.org/a")) }
 
-            assertEquals(2, calls)
-            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… "), log.lines[1])
+            assertEquals(listOf("api.example.org", "api.example.org", "cdn.example.net"), hosts)
+            assertEquals(3, log.lines.size)
+            assertTrue(log.lines[0].startsWith("GET https://api.example.org/a {0 headers} -> 302"), log.lines[0])
+            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… {0 headers} -> 302"), log.lines[1])
+            assertTrue(log.lines[2].startsWith("GET https://cdn.example.net/… {0 headers} -> 200"), log.lines[2])
+        }
+
+    @Test
+    fun `user info in a Location is judged before it is stripped, in and out of the origin`() =
+        runTest {
+            for (location in listOf("https://u:SECRET@a.example.org/next", "https://u:SECRET@b.example.org/next")) {
+                val log = RecordingLog()
+                val users = mutableListOf<String?>()
+                withClient(log = log, handler = { request ->
+                    users += request.url.user
+                    when (request.url.encodedPath) {
+                        "/p" -> respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+                        "/next" -> respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/x"))
+                        else -> respond("ok")
+                    }
+                }) { it.send(NetRequest("https://a.example.org/p")) }
+
+                val host = location.substringAfter('@').substringBefore('/')
+                assertEquals(listOf<String?>(null, null, null), users, location)
+                assertEquals(3, log.lines.size, location)
+                assertTrue(log.lines[0].startsWith("GET https://a.example.org/p {0 headers} -> 302"), log.lines[0])
+                assertTrue(log.lines[1].startsWith("GET https://$host/… {0 headers} -> 302"), log.lines[1])
+                assertTrue(log.lines[2].startsWith("GET https://$host/… {0 headers} -> 200"), log.lines[2])
+                log.lines.forEach { assertFalse("SECRET" in it, it) }
+            }
         }
 
     @Test
@@ -491,10 +593,76 @@ class RedactionTest {
 
                 assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, url)
                 assertEquals(1, calls, url)
-                log.lines.forEach { line ->
-                    assertFalse(key in line, line)
-                    assertFalse("?" in line, line)
-                }
+                assertEquals(1, log.lines.size, url)
+                val host = url.removePrefix("https://").substringBefore('/')
+                assertTrue(log.lines[0].startsWith("GET https://$host/… {0 headers} -> 302"), log.lines[0])
             }
         }
+
+    @Test
+    fun `compound credential names match without boundaries, and OAuth's code only whole`() {
+        listOf(
+            "CLIENTSECRET",
+            "CLIENTSecret",
+            "SESSIONID",
+            "XAPIKEY",
+            "clientSecret",
+            "client_secret",
+            "pwd",
+            "JWT",
+            "passphrase",
+            "code",
+            "Code",
+        ).forEach { assertTrue(Redaction.isSensitive(it), it) }
+        listOf(
+            "languageCode",
+            "countryCode",
+            "barcode",
+            "statusCode",
+        ).forEach { assertFalse(Redaction.isSensitive(it), it) }
+    }
+
+    @Test
+    fun `the names keyless sources use are not sensitive`() {
+        val musicBrainz =
+            listOf(
+                "query",
+                "fmt",
+                "inc",
+                "limit",
+                "offset",
+                "dismax",
+                "type",
+                "status",
+                "artist",
+                "recording",
+                "release",
+                "work",
+            )
+        val wikipedia =
+            listOf(
+                "action",
+                "format",
+                "formatversion",
+                "prop",
+                "titles",
+                "pageids",
+                "redirects",
+                "exintro",
+                "explaintext",
+                "exsentences",
+                "list",
+                "srsearch",
+                "srlimit",
+                "sroffset",
+                "origin",
+                "uselang",
+                "ppprop",
+                "continue",
+                "utf8",
+            )
+        val wikidata = listOf("ids", "props", "languages", "languagefallback", "sitefilter", "sites", "normalize")
+        val headers = listOf("Accept", "Accept-Language", "User-Agent", "Api-User-Agent", "Accept-Encoding")
+        (musicBrainz + wikipedia + wikidata + headers).forEach { assertFalse(Redaction.isSensitive(it), it) }
+    }
 }
