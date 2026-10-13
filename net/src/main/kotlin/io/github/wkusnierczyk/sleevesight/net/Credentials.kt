@@ -39,5 +39,5 @@ private fun urlIsSensitive(request: NetRequest): Boolean =
         parseHttpUrl(request.url)?.let(::urlBearsCredentials) == true
 
 /** Whether [url] itself has user info or a query parameter named like a key. */
-internal fun urlBearsCredentials(url: Url): Boolean =
+private fun urlBearsCredentials(url: Url): Boolean =
     url.user != null || url.password != null || url.parameters.names().any(Redaction::isSensitive)
