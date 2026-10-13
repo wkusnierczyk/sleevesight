@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.core.settings
 
+import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,6 +24,17 @@ class SettingsTest {
         assertEquals(Crossfade.Autodetect, defaults.crossfade)
         assertEquals(PrepareNextTrack.EVIDENCE_AND_INSIGHT, defaults.prepareNextTrack)
         assertFalse(defaults.lookUpInBackground)
+    }
+
+    @Test
+    fun `the model is the user's choice, else the provider's default, else none`() {
+        assertNull(defaults.model)
+        assertEquals("claude-haiku-5-5", defaults.copy(aiProvider = ProviderId.ANTHROPIC).model)
+        assertEquals(
+            "claude-opus-5-5",
+            defaults.copy(aiProvider = ProviderId.ANTHROPIC, aiModel = "claude-opus-5-5").model,
+        )
+        assertNull(defaults.copy(aiProvider = ProviderId.OLLAMA).model)
     }
 
     @Test

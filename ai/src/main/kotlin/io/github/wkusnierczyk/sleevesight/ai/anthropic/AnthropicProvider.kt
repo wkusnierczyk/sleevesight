@@ -1,0 +1,241 @@
+package io.github.wkusnierczyk.sleevesight.ai.anthropic
+
+import io.github.wkusnierczyk.sleevesight.ai.ServerSentEvents
+import io.github.wkusnierczyk.sleevesight.core.Secret
+import io.github.wkusnierczyk.sleevesight.core.ai.AiErrorKind
+import io.github.wkusnierczyk.sleevesight.core.ai.AiProvider
+import io.github.wkusnierczyk.sleevesight.core.ai.CompletionEvent
+import io.github.wkusnierczyk.sleevesight.core.ai.CompletionRequest
+import io.github.wkusnierczyk.sleevesight.core.ai.ModelInfo
+import io.github.wkusnierczyk.sleevesight.core.ai.ModelList
+import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
+import io.github.wkusnierczyk.sleevesight.net.NetBody
+import io.github.wkusnierczyk.sleevesight.net.NetClient
+import io.github.wkusnierczyk.sleevesight.net.NetError
+import io.github.wkusnierczyk.sleevesight.net.NetMethod
+import io.github.wkusnierczyk.sleevesight.net.NetRequest
+import io.github.wkusnierczyk.sleevesight.net.NetResponse
+import io.github.wkusnierczyk.sleevesight.net.NetResult
+import io.github.wkusnierczyk.sleevesight.net.NetSecrets
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
+
+/**
+ * Anthropic's Messages API, as a small client over `:net` (D3): one streaming call, `POST
+ * /v1/messages` with `stream: true`, read as server-sent events; and the model list, `GET
+ * /v1/models`. The key goes in `x-api-key`, through `NetSecrets`, so it is never logged.
+ *
+ * The stream's text deltas become [CompletionEvent.Delta]s; other content (a model's reasoning,
+ * which current models do by default and return without its text) is skipped. `message_stop`
+ * ends it with [CompletionEvent.Done], carrying the usage and the stop reason; an `error` event, an
+ * error status or a stream that breaks off ends it with [CompletionEvent.Error]. The request is a
+ * `POST`, so `:net` never repeats it once it may have been acted on: a paid call is never sent twice.
+ *
+ * @param net the process's one `NetClient`.
+ * @param baseUrl the API's origin, for tests.
+ */
+class AnthropicProvider(
+    private val net: NetClient,
+    private val baseUrl: String = BASE_URL,
+) : AiProvider {
+    override val id: ProviderId = ProviderId.ANTHROPIC
+
+    override suspend fun models(key: Secret): ModelList {
+        val models = mutableListOf<ModelInfo>()
+        var after: String? = null
+        var failure: AiErrorKind? = null
+        var pages = 0
+        do {
+            when (val page = modelPage(key, after)) {
+                is Page.Failed -> {
+                    failure = page.kind
+                }
+
+                is Page.Read -> {
+                    models += page.models
+                    after = page.next
+                }
+            }
+            pages++
+        } while (failure == null && after != null && pages < MAX_MODEL_PAGES)
+        return failure?.let { ModelList.Failed(it) } ?: ModelList.Listed(models)
+    }
+
+    override fun stream(
+        request: CompletionRequest,
+        key: Secret,
+    ): Flow<CompletionEvent> =
+        channelFlow {
+            val reader = MessageStream()
+            val events = ServerSentEvents()
+
+            // A stream stopped here ends as the reader decided; nothing of the exception is needed.
+            @Suppress("SwallowedException")
+            val result =
+                try {
+                    net.stream(messagesRequest(request, key)) { line ->
+                        events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                        if (reader.malformed) throw StopStream()
+                    }
+                } catch (e: StopStream) {
+                    null
+                }
+            reader.end(result)?.let { send(it) }
+        }
+
+    private sealed interface Page {
+        data class Read(
+            val models: List<ModelInfo>,
+            val next: String?,
+        ) : Page
+
+        data class Failed(
+            val kind: AiErrorKind,
+        ) : Page
+    }
+
+    private suspend fun modelPage(
+        key: Secret,
+        after: String?,
+    ): Page {
+        val query = mapOf("limit" to MODEL_PAGE_SIZE.toString()) + listOfNotNull(after?.let { "after_id" to it })
+        val request = NetRequest("$baseUrl/v1/models", query = query, headers = HEADERS, secrets = secrets(key))
+        return when (val result = net.send(request)) {
+            is NetResult.Failure -> {
+                Page.Failed(kindOf(result.error))
+            }
+
+            is NetResult.Success -> {
+                val response = result.value
+                val page = if (response.isSuccess) decode<WireModelPage>(response.body) else null
+                when {
+                    !response.isSuccess -> Page.Failed(kindOf(response))
+                    page == null -> Page.Failed(AiErrorKind.UNEXPECTED_RESPONSE)
+                    else -> Page.Read(page.data.map(::modelInfo), page.lastId.takeIf { page.hasMore })
+                }
+            }
+        }
+    }
+
+    private fun messagesRequest(
+        request: CompletionRequest,
+        key: Secret,
+    ): NetRequest {
+        val body =
+            buildJsonObject {
+                put("model", request.model)
+                put("max_tokens", request.maxTokens)
+                put("stream", true)
+                putJsonArray("messages") {
+                    addJsonObject {
+                        put("role", "user")
+                        put("content", request.prompt)
+                    }
+                }
+            }
+        return NetRequest(
+            url = "$baseUrl/v1/messages",
+            method = NetMethod.POST,
+            headers = HEADERS + ("accept" to "text/event-stream"),
+            secrets = secrets(key),
+            body = NetBody(body.toString(), "application/json"),
+            timeout = STREAM_TIMEOUT,
+        )
+    }
+
+    /** Thrown from the line handler to end a stream whose events cannot be read. */
+    private class StopStream : RuntimeException()
+
+    companion object {
+        const val BASE_URL: String = "https://api.anthropic.com"
+
+        /** The API version this client speaks, sent as `anthropic-version`. */
+        const val API_VERSION: String = "2023-06-01"
+
+        /**
+         * A whole stream, reasoning included, may take this long; `:net`'s socket timeout still
+         * bounds each silence.
+         */
+        val STREAM_TIMEOUT: Duration = 5.minutes
+
+        private const val MODEL_PAGE_SIZE = 100
+
+        /** A bound on pagination, against a server that always says there is more. */
+        private const val MAX_MODEL_PAGES = 10
+
+        private val HEADERS = mapOf("anthropic-version" to API_VERSION)
+
+        private fun secrets(key: Secret) = NetSecrets(headers = mapOf("x-api-key" to key.reveal()))
+
+        private fun modelInfo(model: WireModel) =
+            ModelInfo(
+                id = model.id,
+                displayName = model.displayName ?: model.id,
+                createdAt = model.createdAt?.let { Instant.parseOrNull(it) },
+            )
+    }
+}
+
+internal val json = Json { ignoreUnknownKeys = true }
+
+/** [text] decoded as [T], or null if it is not one; why is of no use to the caller. */
+@Suppress("SwallowedException")
+internal inline fun <reified T> decode(text: String): T? =
+    try {
+        json.decodeFromString<T>(text)
+    } catch (e: SerializationException) {
+        null
+    } catch (e: IllegalArgumentException) {
+        null
+    }
+
+/** The kind of a request that got no usable answer from `:net`. */
+internal fun kindOf(error: NetError): AiErrorKind =
+    when (error) {
+        is NetError.Offline -> AiErrorKind.OFFLINE
+        is NetError.RateLimited -> AiErrorKind.RATE_LIMITED
+        is NetError.Unauthorized -> AiErrorKind.UNAUTHORIZED
+        is NetError.Server -> if (error.status == OVERLOADED_STATUS) AiErrorKind.OVERLOADED else AiErrorKind.SERVER
+        is NetError.InvalidRequest -> AiErrorKind.INVALID_REQUEST
+        is NetError.Parse, is NetError.Protocol, is NetError.TooLarge -> AiErrorKind.UNEXPECTED_RESPONSE
+    }
+
+/** The kind of an error response that `:net` passes on as a response (400, 402, 404, 413 and the like). */
+internal fun kindOf(response: NetResponse): AiErrorKind =
+    decode<WireErrorBody>(response.body)?.error?.type?.let(::kindOfType)
+        ?: when (response.status) {
+            BAD_REQUEST -> AiErrorKind.INVALID_REQUEST
+            PAYMENT_REQUIRED -> AiErrorKind.BILLING
+            NOT_FOUND -> AiErrorKind.MODEL_NOT_FOUND
+            CONTENT_TOO_LARGE -> AiErrorKind.REQUEST_TOO_LARGE
+            else -> AiErrorKind.UNEXPECTED_RESPONSE
+        }
+
+/** The kind of an error Anthropic names by its `error.type`, or null for a type this client does not know. */
+internal fun kindOfType(type: String): AiErrorKind? =
+    when (type) {
+        "invalid_request_error" -> AiErrorKind.INVALID_REQUEST
+        "authentication_error", "permission_error" -> AiErrorKind.UNAUTHORIZED
+        "billing_error" -> AiErrorKind.BILLING
+        "not_found_error" -> AiErrorKind.MODEL_NOT_FOUND
+        "request_too_large" -> AiErrorKind.REQUEST_TOO_LARGE
+        "rate_limit_error" -> AiErrorKind.RATE_LIMITED
+        "api_error" -> AiErrorKind.SERVER
+        "overloaded_error" -> AiErrorKind.OVERLOADED
+        else -> null
+    }
+
+private const val BAD_REQUEST = 400
+private const val PAYMENT_REQUIRED = 402
+private const val NOT_FOUND = 404
+private const val CONTENT_TOO_LARGE = 413
+private const val OVERLOADED_STATUS = 529

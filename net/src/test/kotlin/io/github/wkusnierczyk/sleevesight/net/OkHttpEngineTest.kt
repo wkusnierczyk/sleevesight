@@ -202,4 +202,53 @@ class OkHttpEngineTest {
                 assertEquals(1, other.requestCount)
             }
         }
+
+    @Test
+    fun `a chunked stream arrives line by line through the real engine, sent once`() =
+        runTest {
+            val events = "event: a\ndata: {\"x\":1}\n\nevent: b\r\ndata: é\r\n\n"
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .addHeader("Content-Type", "text/event-stream")
+                    .chunkedBody(events, 5)
+                    .build(),
+            )
+            val lines = mutableListOf<String>()
+            val post = NetRequest(server.url("/s").toString(), NetMethod.POST, body = NetBody("{}", "application/json"))
+
+            val result =
+                KtorNetClient(
+                    twice,
+                    okHttpEngine(),
+                    NetLog.NONE,
+                ).use { it.stream(post) { line -> lines += line } }
+
+            assertIs<NetResult.Success<NetResponse>>(result)
+            assertEquals(listOf("event: a", "data: {\"x\":1}", "", "event: b", "data: é", ""), lines)
+            assertEquals(1, server.requestCount)
+        }
+
+    @Test
+    fun `a stream whose body is cut off is Offline and not repeated, even for a GET`() =
+        runTest {
+            server.enqueue(
+                MockResponse
+                    .Builder()
+                    .code(200)
+                    .chunkedBody("data: 1\n".repeat(1000), 64)
+                    .onResponseBody(SocketEffect.ShutdownConnection)
+                    .build(),
+            )
+            server.enqueue(ok("data: again\n"))
+
+            val result =
+                KtorNetClient(twice, okHttpEngine(), NetLog.NONE).use {
+                    it.stream(NetRequest(server.url("/s").toString())) { }
+                }
+
+            assertIs<NetError.Offline>(assertIs<NetResult.Failure>(result).error)
+            assertEquals(1, server.requestCount)
+        }
 }

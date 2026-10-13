@@ -11,6 +11,7 @@ import kotlin.time.Duration.Companion.seconds
  * driver 6). `:app` reads them from DataStore into this type, and `:cli` uses the defaults, so the
  * two run the pipeline the same way. Secrets (API keys, tokens) are not settings.
  *
+ * @property aiModel the model the user chose for [aiProvider], or null for its default; read [model].
  * @property followedPlayers one switch per player seen, by package name; see [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
@@ -33,11 +34,22 @@ data class Settings(
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
     fun follows(player: String): Boolean = followedPlayers[player] ?: false
 
+    /** The model to write with: the user's choice, or [aiProvider]'s default ([DEFAULT_MODELS]), or none. */
+    val model: String? get() = aiModel ?: aiProvider?.let { DEFAULT_MODELS[it] }
+
     /** Whether lines from [source] may be used: its switch is on, or it is the player's metadata. */
     fun isEnabled(source: SourceId): Boolean = SourceSwitch.of(source)?.let { it in enabledSources } ?: true
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /**
+         * Each provider's default model. Anthropic: Claude Haiku 5.5, the cheapest current model in
+         * the Anthropic models API on 2026-10-14. The key and its bill are the user's (driver 5), and
+         * an insight narrates a few evidence lines, which needs no larger model; the user can choose
+         * another from the provider's list. The other providers get theirs with their clients.
+         */
+        val DEFAULT_MODELS: Map<ProviderId, String> = mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5")
 
         /** All on except the model's own knowledge. */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL

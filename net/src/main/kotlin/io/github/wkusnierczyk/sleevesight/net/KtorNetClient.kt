@@ -17,6 +17,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.content.OutgoingContent
+import io.ktor.http.isSuccess
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.currentCoroutineContext
@@ -78,6 +79,23 @@ internal class KtorNetClient(
         }
     }
 
+    override suspend fun stream(
+        request: NetRequest,
+        onLine: suspend (String) -> Unit,
+    ): NetResult<NetResponse> {
+        val hidden = hiddenInLog(request)
+        val sent =
+            when (val validated = validate(request)) {
+                is Validated.Invalid -> return invalid(request, validated.field, hidden)
+                is Validated.Valid -> effectiveUrl(validated.url, request)
+            }
+        return try {
+            sendWithRetries(request, sent, hidden, onLine)
+        } catch (e: ConsumerFailure) {
+            throw e.failure
+        }
+    }
+
     /** `HttpClient(engine)` leaves the engine to its owner, which is this client. */
     override fun close() {
         http.close()
@@ -99,6 +117,7 @@ internal class KtorNetClient(
         request: NetRequest,
         url: Url,
         hidden: Boolean,
+        onLine: (suspend (String) -> Unit)? = null,
     ): NetResult<NetResponse> {
         val domain = config.domainFor(url.host)
         val limiter = domain?.let { limiters.getValue(it) }
@@ -108,7 +127,7 @@ internal class KtorNetClient(
         while (true) {
             limiter?.acquire()
             val started = timeSource.markNow()
-            val outcome = tryOnce(request, url, policy)
+            val outcome = tryOnce(request, url, policy, onLine)
             val wait = retryWait(request, outcome, attempt)
             log.log(logLine(description, outcome, started.elapsedNow(), attempt, wait))
             if (wait == null) return outcome.result
@@ -127,9 +146,11 @@ internal class KtorNetClient(
             override val result = NetResult.Success(response)
         }
 
+        /** [final]: the failure came after a streamed body began, so the attempt is not repeated. */
         data class Failed(
             val error: NetError,
             val retryAfter: Duration? = null,
+            val final: Boolean = false,
         ) : Attempt {
             override val result = NetResult.Failure(error)
         }
@@ -141,6 +162,7 @@ internal class KtorNetClient(
         request: NetRequest,
         url: Url,
         policy: HostPolicy?,
+        onLine: (suspend (String) -> Unit)?,
     ): Attempt =
         try {
             http
@@ -154,7 +176,7 @@ internal class KtorNetClient(
                         setBody(OneShotContent(body.text.encodeToByteArray(), type))
                     }
                     request.timeout?.let { timeout { requestTimeoutMillis = it.inWholeMilliseconds } }
-                }.execute { response -> classify(request, response, policy) }
+                }.execute { response -> classify(request, response, policy, onLine) }
         } catch (e: EngineProtocolException) {
             Attempt.Failed(NetError.Protocol(e.reason))
         } catch (e: IOException) {
@@ -174,6 +196,7 @@ internal class KtorNetClient(
         request: NetRequest,
         response: HttpResponse,
         policy: HostPolicy?,
+        onLine: (suspend (String) -> Unit)?,
     ): Attempt {
         val status = response.status
         val retryAfter = {
@@ -204,7 +227,7 @@ internal class KtorNetClient(
             }
 
             else -> {
-                read(response, request.maxBytes)
+                read(response, request.maxBytes, onLine)
             }
         }
     }
@@ -212,12 +235,20 @@ internal class KtorNetClient(
     // Detekt 1.23.8 cannot resolve `readBuffer` (from a library built with a newer Kotlin than its
     // own), so it takes the modifier for redundant; the compiler requires it.
 
-    /** The body, read up to [maxBytes] and no further. */
+    /**
+     * The body, read up to [maxBytes] and no further; for a stream ([onLine]) a 2xx body is passed on
+     * line by line instead, and once lines have reached the caller a failure is final.
+     */
     @Suppress("RedundantSuspendModifier")
     private suspend fun read(
         response: HttpResponse,
         maxBytes: Long,
+        onLine: (suspend (String) -> Unit)?,
     ): Attempt {
+        if (onLine != null && response.status.isSuccess()) {
+            return readLines(response, maxBytes, onLine)?.let { Attempt.Failed(it, final = true) }
+                ?: Attempt.Answered(NetResponse(response.status.value, headersOf(response), ByteArray(0)))
+        }
         val declared = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
         val bytes =
             if (declared != null && declared > maxBytes) {
@@ -232,12 +263,7 @@ internal class KtorNetClient(
         return if (bytes == null) {
             Attempt.Failed(NetError.TooLarge(maxBytes))
         } else {
-            val headers =
-                response.headers
-                    .entries()
-                    .filterNot { it.key.equals(ORIGINAL_RETRY_AFTER, ignoreCase = true) }
-                    .associate { it.key to it.value }
-            Attempt.Answered(NetResponse(response.status.value, headers, bytes))
+            Attempt.Answered(NetResponse(response.status.value, headersOf(response), bytes))
         }
     }
 
@@ -251,7 +277,7 @@ internal class KtorNetClient(
         outcome: Attempt,
         attempt: Int,
     ): Duration? {
-        if (outcome !is Attempt.Failed || attempt >= config.retry.maxAttempts) return null
+        if (outcome !is Attempt.Failed || outcome.final || attempt >= config.retry.maxAttempts) return null
         val retryable =
             when (outcome.error) {
                 is NetError.RateLimited -> true
@@ -297,3 +323,10 @@ internal class KtorNetClient(
         const val MAX_REDIRECTS = 5
     }
 }
+
+/** [response]'s headers, without the one the engine uses to carry a 503's `Retry-After` past OkHttp. */
+private fun headersOf(response: HttpResponse): Map<String, List<String>> =
+    response.headers
+        .entries()
+        .filterNot { it.key.equals(ORIGINAL_RETRY_AFTER, ignoreCase = true) }
+        .associate { it.key to it.value }

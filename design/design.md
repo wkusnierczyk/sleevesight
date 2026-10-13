@@ -289,7 +289,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Group | Setting | Default |
 |---|---|---|
 | Layout | Separate pages or expandable boxes | Separate pages |
-| AI service | Provider, model, API key | None until set |
+| AI service | Provider, model, API key | None until set; the model then defaults per provider (Anthropic: Claude Haiku 5.5, its cheapest current model) |
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
