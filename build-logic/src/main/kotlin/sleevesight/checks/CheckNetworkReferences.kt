@@ -74,6 +74,9 @@ abstract class CheckNetworkReferences : DefaultTask() {
                         return internalName
                     }
                 }
+            // The delegate is a `ClassWriter`, not an empty visitor: `ClassRemapper` remaps only what
+            // its delegate visits, and an empty visitor returns no method, field or annotation
+            // visitors, so method bodies and annotations would go unread.
             ClassReader(classFile).accept(ClassRemapper(ClassWriter(0), recorder), 0)
             return found
         }

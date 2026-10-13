@@ -39,6 +39,11 @@ jobs:
       - name: Build, test and lint
         run: ./gradlew build --console=plain
 
+      # Nested TestKit builds of the convention plugins; they need Maven Central, so they are not
+      # part of `build`.
+      - name: Functional tests of the build logic
+        run: ./gradlew :build-logic:functionalTest --console=plain
+
       # `checkManifest` and the debug APK come back with `:app` (#47).
       - name: Structural checks
         run: ./gradlew checkDependencies checkModuleGraph --console=plain
