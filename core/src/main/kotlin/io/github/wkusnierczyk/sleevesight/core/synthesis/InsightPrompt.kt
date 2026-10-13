@@ -149,5 +149,5 @@ object InsightPrompt {
      */
     fun oneLine(text: String): String = text.map { if (breaksLine(it)) ' ' else it }.joinToString("")
 
-    private fun breaksLine(c: Char): Boolean = c < ' ' || c in '\u007F'..'\u009F' || c == ' ' || c == ' '
+    private fun breaksLine(c: Char): Boolean = c < ' ' || c in '\u007F'..'\u009F' || c == '\u2028' || c == '\u2029'
 }
