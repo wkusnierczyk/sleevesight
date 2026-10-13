@@ -4,7 +4,7 @@
 **Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release  
 **Tracking:** [#31][31]
 
-The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue.
+The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the conditional one from [#9][9], which becomes a link if [#46][46] adopts MusicBrainz tags.
 
 ## Dependencies
 
@@ -73,11 +73,15 @@ flowchart TD
   i41 --> i44
   i43 --> i44
   i44 --> i45 --> i46
-  i9 -.->|"if #46 adopts the tags"| i55
+  i46 -.-> i9
+  i9 -.->|"if #46 adopts the tags"| i58
+  i46 --> i55
 
   i30 --> i47
   i47 --> i48
   i47 --> i50
+  i33 --> i48
+  i33 --> i50
   i47 --> i29
   i48 --> i49
   i41 --> i49
@@ -102,8 +106,8 @@ flowchart TD
 ```
 
 - **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0.
-- **Two tracks.** [#47][47], [#48][48], [#50][50] and [#29][29] need only [#30][30], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]) and [#51][51] (the pipeline from [#44][44]).
-- **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
+- **Two tracks.** [#47][47] and [#29][29] need only [#30][30], and [#48][48] and [#50][50] also only the domain types and `Settings` from [#33][33], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]), [#51][51] (the pipeline from [#44][44]) and [#55][55] (the gate, [#46][46]).
+- **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55] → [#58][58]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
 
 ## Work
 
@@ -132,31 +136,31 @@ flowchart TD
 | [#44][44] | Pipeline orchestration (D4); `PipelineEvent`s | [#38][38], [#39][39], [#40][40], [#41][41], [#43][43] |
 | [#45][45] | `:cli`: coverage report, insights, HTTP recordings | [#44][44] |
 | [#46][46] | The gate: thresholds tuned, MusicBrainz tags judged (D12), coverage reviewed | [#45][45] |
-| [#9][9] | Licence of MusicBrainz tags; needed only if [#46][46] adopts them | |
+| [#9][9] | Licence of MusicBrainz tags; needed before [#58][58] only if [#46][46] adopts them | [#46][46] decides whether it is needed |
 
 ### Phase 1. Android MVP
 
 | Issue | Work | Blocked by |
 |---|---|---|
 | [#47][47] | `:app` skeleton; first-run screen; notification access; `checkManifest` and the debug APK back in CI | [#30][30] |
-| [#48][48] | Session layer: `NowPlaying`, track identity, queue, art | [#47][47] |
+| [#48][48] | Session layer: `NowPlaying`, track identity, queue, art | [#47][47], [#33][33] |
 | [#49][49] | Session history; track-change records (D15) | [#48][48], [#41][41] |
-| [#50][50] | Settings (DataStore) and secrets (Keystore); settings screen | [#47][47] |
-| [#51][51] | The pipeline on the phone; visible-only lookups (D6); Write on tap | [#48][48], [#50][50], [#44][44] |
+| [#50][50] | Settings (DataStore) and secrets (Keystore): the AI key and the sources' keys (Last.fm, web search); settings screen | [#47][47], [#33][33] |
+| [#51][51] | The pipeline on the phone, with the keys wired into the adapters; visible-only lookups (D6); Write on tap | [#48][48], [#50][50], [#44][44] |
 | [#52][52] | Home screen; every empty and error state | [#51][51] |
 | [#53][53] | *Write insights automatically*; skip detection and *Crossfade* (D5) | [#49][49], [#51][51] |
 | [#20][20] | Prepare the next track (D13) | [#53][53] |
 | [#54][54] | Diagnostics screen | [#51][51] |
 | [#29][29] | Restricted settings, on a device without Advanced Protection | [#47][47] |
-| [#55][55] | Exit: a listening session on a real phone against Spotify | [#52][52], [#54][54], [#20][20], [#29][29] |
+| [#55][55] | Exit: a listening session on a real phone against Spotify | [#52][52], [#54][54], [#20][20], [#29][29], [#46][46] |
 
 ### Phase 1.5. Play release
 
 | Issue | Work | Blocked by |
 |---|---|---|
-| [#56][56] | Release workflow: a signed app bundle, the key in a protected environment | [#47][47] |
-| [#57][57] | Store listing, privacy policy, data safety form | [#52][52] |
-| [#58][58] | Play's requirements for notification access; testing track; review | [#55][55], [#56][56], [#57][57] |
+| [#56][56] | Release workflow: a signed app bundle, the key in a protected environment; R8 and its keep rules | [#47][47] |
+| [#57][57] | Store listing and its graphics, launcher icon, privacy policy, data safety form | [#52][52] |
+| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57]; [#9][9] if [#46][46] adopts MusicBrainz tags |
 
 ## Pending decisions
 
@@ -175,7 +179,7 @@ flowchart TD
 ### During implementation
 
 - **CI between [#30][30] and [#47][47]** has no Android module, so `checkManifest` and the APK artifact are off until [#47][47] brings them back.
-- **Every new library** is a reviewed edit to `config/dependency-allowlist.txt` with its licence, GPL-3.0 compatible: Ktor, OkHttp, SQLDelight, Compose, Navigation, DataStore, Robolectric, material-color-utilities.
+- **Every new library** is a reviewed edit to `config/dependency-allowlist.txt` with its licence, GPL-3.0 compatible; for example Ktor, OkHttp, SQLDelight, Compose, Navigation, DataStore, Robolectric, material-color-utilities.
 - **Multiplatform readiness (D2)** is checked from [#33][33] on, so each pipeline module starts within the rules rather than being brought into them.
 - **Recorded responses** in `fixtures/http/` hold third-party text: Wikipedia and Last.fm prose under CC BY-SA, and Last.fm and web search results under their API terms. Record only what the tests need, keep the attribution with them, and check the API terms on storing responses before committing them.
 - **Live runs cost.** Recording the fixture is minutes of MusicBrainz at one request per second; the gate run ([#46][46]) writes an insight per track on the owner's key. CI never calls a live service.
