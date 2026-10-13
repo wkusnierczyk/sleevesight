@@ -18,7 +18,8 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer;
  * - a performer matching the original recording's artist (a cover, step 4) makes it the original
  *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
- *   original song for a cover, else the track's own song;
+ *   original song for a cover or when it names performers who are not the track's, else the
+ *   track's own song;
  * - anything else is rejected, with the reason. A song by someone else found by name alone is
  *   rejected even when its title is the track's: a same-title song and a cover cannot be told
  *   apart without MusicBrainz (Peleboy's "We In Here" is not DMX's), so only MusicBrainz's cover
@@ -151,8 +152,11 @@ class IdentityCheck(
                 // performers, the item's facts are theirs (a songwriter's song made famous by others).
                 performers.isEmpty() && matches(writers, context.credited, labels) -> Scope.SONG
                 original.isNotEmpty() && matches(performers, original, labels) -> Scope.ORIGINAL_SONG
-                // MusicBrainz links the recording to this item: a cover's original, else the song itself.
-                context.route == Route.MUSICBRAINZ -> if (context.resolution.cover) Scope.ORIGINAL_SONG else Scope.SONG
+                // MusicBrainz links the recording to this item, whose performers are not the track's:
+                // the original song, cover marked or not (MusicBrainz rarely dates enough to infer one);
+                // the track's own song only when the item names no performer.
+                context.route == Route.MUSICBRAINZ ->
+                    if (context.resolution.cover || performers.isNotEmpty()) Scope.ORIGINAL_SONG else Scope.SONG
                 else -> null
             }
         return if (scope != null) {

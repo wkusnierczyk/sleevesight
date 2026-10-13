@@ -183,10 +183,22 @@ class IdentityCheckRulesTest {
         }
 
     @Test
-    fun `the item MusicBrainz links to a recording that is no cover is the track's own song`() =
+    fun `the item MusicBrainz links is the original song when its performers are others, cover marked or not`() =
         runTest {
-            val own = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q1"))
-            val verdict = check.song("Q1", track, own, Route.MUSICBRAINZ)
+            val unmarked = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q1"))
+            val verdict = check.song("Q1", track, unmarked, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.ORIGINAL_SONG, verdict.scope)
+        }
+
+    @Test
+    fun `the item MusicBrainz links, naming no performer, is the track's own song`() =
+        runTest {
+            val unperformed = WdEntity("Q5", "Song", "Song", mapOf(Wd.INSTANCE_OF to listOf("Q7366")))
+            val linked =
+                IdentityCheck(FakeWikidata(mapOf("Q5" to unperformed), emptyMap()), NameMatcher(JvmAccentFolder))
+            val own = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q5"))
+            val verdict = linked.song("Q5", track, own, Route.MUSICBRAINZ)
             assertIs<Verdict.Accepted>(verdict)
             assertEquals(Scope.SONG, verdict.scope)
         }
