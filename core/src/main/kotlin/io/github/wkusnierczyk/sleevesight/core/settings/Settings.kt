@@ -12,8 +12,8 @@ import kotlin.time.Duration.Companion.seconds
  * two run the pipeline the same way. Secrets (API keys, tokens) are not settings.
  *
  * @property followedPlayers one switch per player seen, by package name; see [follows].
- * @property enabledSources the sources the model may use (*Where to look*). The user's Wikipedia
- *   switch covers [SourceId.WIKIPEDIA] and [SourceId.WIKIDATA]; [SourceId.PLAYER] is no switch.
+ * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
+ *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9).
  */
@@ -22,7 +22,7 @@ data class Settings(
     val aiProvider: ProviderId? = null,
     val aiModel: String? = null,
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
-    val enabledSources: Set<SourceId> = DEFAULT_SOURCES,
+    val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
     val crossfade: Crossfade = Crossfade.Autodetect,
@@ -33,19 +33,14 @@ data class Settings(
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
     fun follows(player: String): Boolean = followedPlayers[player] ?: false
 
+    /** Whether lines from [source] may be used: its switch is on, or it is the player's metadata. */
+    fun isEnabled(source: SourceId): Boolean = SourceSwitch.of(source)?.let { it in enabledSources } ?: true
+
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
 
         /** All on except the model's own knowledge. */
-        val DEFAULT_SOURCES: Set<SourceId> =
-            setOf(
-                SourceId.MUSICBRAINZ,
-                SourceId.WIKIPEDIA,
-                SourceId.WIKIDATA,
-                SourceId.LASTFM,
-                SourceId.DISCOGS,
-                SourceId.WEB,
-            )
+        val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
 
         private const val STABLE_DAYS = 30
         private const val ARTICLE_DAYS = 7
@@ -64,6 +59,27 @@ data class Settings(
                 SourceId.LASTFM to ARTICLE_DAYS.days,
                 SourceId.WEB to WEB_DAYS.days,
             )
+    }
+}
+
+/**
+ * The user's switches under *Where to look* (`design/design.md`, *Settings*), each covering the
+ * sources it names. The player's metadata ([SourceId.PLAYER]) has no switch: it is always used.
+ */
+enum class SourceSwitch(
+    val sources: Set<SourceId>,
+) {
+    MUSICBRAINZ(setOf(SourceId.MUSICBRAINZ)),
+    WIKIPEDIA(setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA)),
+    LASTFM(setOf(SourceId.LASTFM)),
+    DISCOGS(setOf(SourceId.DISCOGS)),
+    WEB(setOf(SourceId.WEB)),
+    MODEL(setOf(SourceId.MODEL)),
+    ;
+
+    companion object {
+        /** The switch that covers [source], or null for the player's metadata. */
+        fun of(source: SourceId): SourceSwitch? = entries.firstOrNull { source in it.sources }
     }
 }
 

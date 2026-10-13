@@ -5,7 +5,9 @@
 style:
   ForbiddenImport:
     active: true
-    # Platform implementations (src/jvmMain, compiled with main) may use JVM APIs.
+    # Platform implementations (src/jvmMain, compiled with main) may use JVM APIs. The exemption
+    # covers the whole rule, so the `checkPlatformSources` Gradle task keeps the network imports
+    # out of src/jvmMain, and references to the platform package out of src/main.
     excludes: ['**/src/jvmMain/**']
     imports:
       - value: 'java.*'

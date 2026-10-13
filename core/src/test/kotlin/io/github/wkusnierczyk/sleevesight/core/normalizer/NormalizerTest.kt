@@ -82,20 +82,22 @@ class NormalizerTest {
         )
     }
 
-    // Where the port spells out the simulator's JavaScript regex classes.
+    // Deviations from the simulator, by design (see `Normalizer`).
 
     @Test
-    fun `version needs a word boundary before it, as in the simulator`() {
-        assertEquals("Song", normalizer.normalize("Song - version", "A").title)
-        assertEquals("Song", normalizer.normalize("Song - Rock'n'Roll Version", "A").title)
-        assertEquals("Song - Conversion", normalizer.normalize("Song - Conversion", "A").title)
+    fun `an empty artist string gives an empty primary artist`() {
+        val track = normalizer.normalize("Song", "")
+        assertEquals(emptyList(), track.artists)
+        assertEquals("", track.primary)
+        assertEquals("|song", track.lookupKey)
     }
 
     @Test
-    fun `JavaScript whitespace is trimmed and matched`() {
-        assertEquals("Song", normalizer.normalize(" Song　", "A").title)
-        assertEquals("Song", normalizer.normalize("Song - demo", "A").title)
-        assertEquals(listOf("A", "B"), normalizer.normalize("Song", "A , B").artists)
+    fun `with an empty artist string, a featured artist becomes the primary`() {
+        val track = normalizer.normalize("Song (feat. B)", "")
+        assertEquals(listOf("B"), track.artists)
+        assertEquals("B", track.primary)
+        assertEquals("b|song", track.lookupKey)
     }
 
     @Test
@@ -116,19 +118,52 @@ class NormalizerTest {
     @Test
     fun `every fixture title normalizes as the simulator does`() {
         val expected = Json.decodeFromString<List<Expected>>(Fixtures.text("below-soundtrack/normalized.json"))
-        assertEquals(BelowSoundtrack.tracks.size, expected.size)
-        for (entry in expected) {
-            val actual = normalizer.normalize(entry.title, entry.artist)
-            val want = entry.normalized
-            val message = "track ${entry.n}, ${entry.title}"
-            assertEquals(want.title, actual.title, message)
-            assertEquals(want.artists, actual.artists, message)
-            assertEquals(want.primary, actual.primary, message)
-            assertEquals(want.from, actual.from, message)
-            assertEquals(want.key, actual.lookupKey, message)
-            assertEquals(want.notes, actual.notes, message)
+        // The oracle was run over exactly these entries, in this order.
+        assertEquals(
+            BelowSoundtrack.tracks.map { Triple(it.n, it.title, it.artist) },
+            expected.map { Triple(it.n, it.title, it.artist) },
+        )
+        for ((track, want) in BelowSoundtrack.tracks.zip(expected.map { it.normalized })) {
+            assertMatches(want, track.title, track.artist, "track ${track.n}, ${track.title}")
         }
     }
+
+    // ASCII-only case matching (no `ſ`, `ı` or Kelvin sign folding), JavaScript whitespace, the
+    // word boundary before `version`: the simulator's output from `normalized.js`.
+    @Test
+    fun `edge cases normalize as the simulator does`() {
+        val expected = Json.decodeFromString<List<Expected>>(resource("/normalizer/edge-cases.normalized.json"))
+        val inputs = Json.decodeFromString<List<Input>>(resource("/normalizer/edge-cases.json"))
+        assertEquals(inputs.map { it.title to it.artist }, expected.map { it.title to it.artist })
+        for (entry in expected) {
+            assertMatches(entry.normalized, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
+        }
+        assertEquals("Song - ſingle edit", normalizer.normalize("Song - ſingle edit", "A").title)
+    }
+
+    private fun assertMatches(
+        want: ExpectedTrack,
+        title: String,
+        artist: String,
+        message: String,
+    ) {
+        val actual = normalizer.normalize(title, artist)
+        assertEquals(want.title, actual.title, message)
+        assertEquals(want.artists, actual.artists, message)
+        assertEquals(want.primary, actual.primary, message)
+        assertEquals(want.from, actual.from, message)
+        assertEquals(want.key, actual.lookupKey, message)
+        assertEquals(want.notes, actual.notes, message)
+    }
+
+    private fun resource(path: String): String =
+        checkNotNull(javaClass.getResourceAsStream(path)) { "no $path" }.use { it.readBytes().decodeToString() }
+
+    @Serializable
+    private data class Input(
+        val title: String,
+        val artist: String,
+    )
 
     private fun key(n: Int): String =
         BelowSoundtrack.track(n).let { normalizer.normalize(it.title, it.artist).lookupKey }

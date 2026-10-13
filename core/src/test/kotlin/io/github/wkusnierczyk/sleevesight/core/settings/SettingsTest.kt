@@ -27,8 +27,28 @@ class SettingsTest {
 
     @Test
     fun `every source is on except the model's own knowledge`() {
-        assertFalse(SourceId.MODEL in defaults.enabledSources)
-        assertEquals(SourceId.entries.toSet() - SourceId.MODEL - SourceId.PLAYER, defaults.enabledSources)
+        assertEquals(SourceSwitch.entries.toSet() - SourceSwitch.MODEL, defaults.enabledSources)
+        assertEquals(SourceId.entries - SourceId.MODEL, SourceId.entries.filter { defaults.isEnabled(it) })
+    }
+
+    @Test
+    fun `each switch covers its sources, and the player's metadata has none`() {
+        assertEquals(setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA), SourceSwitch.WIKIPEDIA.sources)
+        for (source in SourceId.entries - SourceId.PLAYER) {
+            assertEquals(1, SourceSwitch.entries.count { source in it.sources }, source.name)
+        }
+        assertNull(SourceSwitch.of(SourceId.PLAYER))
+        assertEquals(SourceSwitch.WIKIPEDIA, SourceSwitch.of(SourceId.WIKIDATA))
+    }
+
+    @Test
+    fun `switching Wikipedia off turns Wikidata off too, but never the player's metadata`() {
+        val noWikipedia = defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.WIKIPEDIA)
+        assertFalse(noWikipedia.isEnabled(SourceId.WIKIPEDIA))
+        assertFalse(noWikipedia.isEnabled(SourceId.WIKIDATA))
+        assertTrue(noWikipedia.isEnabled(SourceId.LASTFM))
+        assertTrue(defaults.copy(enabledSources = emptySet()).isEnabled(SourceId.PLAYER))
+        assertTrue(defaults.copy(enabledSources = setOf(SourceSwitch.MODEL)).isEnabled(SourceId.MODEL))
     }
 
     @Test
