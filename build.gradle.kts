@@ -1,6 +1,9 @@
 // Plugins are applied per module through the convention plugins in build-logic/.
+plugins {
+    base
+}
 
-// `./gradlew build` also builds and tests build-logic, the structural checks among it.
-tasks.register("build") {
-    dependsOn(gradle.includedBuild("build-logic").task(":build"))
+// `./gradlew build` also tests the build logic (the structural checks), which is an included build.
+tasks.named("check") {
+    dependsOn(gradle.includedBuild("build-logic").task(":check"))
 }
