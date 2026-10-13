@@ -58,11 +58,12 @@ internal class KtorNetClient(
         config.hosts.mapValues { (_, policy) -> RateLimiter(policy.minInterval, timeSource) }
 
     override suspend fun send(request: NetRequest): NetResult<NetResponse> {
-        // Decided before the first send, and kept for every hop.
-        val credentials = carriesCredentials(request)
+        var credentials = false
         var current = request
         var redirects = 0
         while (true) {
+            // Decided again on every hop, before logging or sending; once true, it stays so.
+            credentials = credentials || carriesCredentials(current)
             val sent =
                 when (val validated = validate(current)) {
                     is Validated.Invalid -> return invalid(current, validated.field, credentials)

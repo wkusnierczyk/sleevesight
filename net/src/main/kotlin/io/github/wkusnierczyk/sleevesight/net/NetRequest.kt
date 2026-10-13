@@ -21,13 +21,16 @@ class NetBody(
 /**
  * One HTTP request, in `:net`'s own terms, so the modules above it never see Ktor.
  *
- * Keys and tokens go in [secrets]. The log never shows a header or query value at all (see
- * [Redaction]); a request with secrets, or with headers or parameters named like keys, has its path
- * hidden in the log and follows no redirect to another origin. [timeout], when set, replaces
- * [Timeouts.request] for this request, for a long stream or a slow model. A response body longer
- * than [maxBytes] is [NetError.TooLarge]. [toString] is the redacted form the log prints.
+ * [url] is public: a key never goes in it, in its path or its query, unless [sensitiveUrl] is set.
+ * Keys and tokens go in [secrets]; a source whose API wants the key in the path, or a signed URL or
+ * one with a `?ticket=`, sets [sensitiveUrl] instead. The log never shows a value or a header name
+ * (see [Redaction]), and a request that carries credentials, by any of these or by a header or
+ * parameter named like a key, has its path and query names hidden too and follows no redirect to
+ * another origin ([carriesCredentials]). [timeout], when set, replaces [Timeouts.request] for this
+ * request, for a long stream or a slow model. A response body longer than [maxBytes] is
+ * [NetError.TooLarge]. [toString] is the redacted form the log prints.
  */
-@Suppress("LongParameterList") // Eight independent parts of a request, all but the URL defaulted.
+@Suppress("LongParameterList") // Nine independent parts of a request, all but the URL defaulted.
 class NetRequest(
     val url: String,
     val method: NetMethod = NetMethod.GET,
@@ -37,6 +40,7 @@ class NetRequest(
     val body: NetBody? = null,
     val timeout: Duration? = null,
     val maxBytes: Long = DEFAULT_MAX_BYTES,
+    val sensitiveUrl: Boolean = false,
 ) {
     override fun toString(): String = Redaction.describe(this)
 
@@ -50,9 +54,9 @@ class NetRequest(
  * The query parameters and headers of a request that carry keys or tokens. Adapters pass
  * `Secret.reveal()` here and nowhere else.
  *
- * On a redirect within the origin the headers follow; the query stays behind, since the `Location`
- * is the new URL. [carried] records that an earlier hop carried credentials, so the rules for such
- * a request still apply (see [carriesCredentials]).
+ * On a redirect the headers follow (a chain that carries them never leaves its origin); the query
+ * stays behind, since the `Location` is the new URL. [carried] records that an earlier hop was
+ * credential-bearing, so the chain stays so (see [carriesCredentials]).
  */
 class NetSecrets internal constructor(
     val query: Map<String, String>,
@@ -64,9 +68,9 @@ class NetSecrets internal constructor(
         headers: Map<String, String> = emptyMap(),
     ) : this(query, headers, false)
 
-    /** The secrets for a redirect within the origin, the only kind a request with credentials follows. */
-    internal fun forRedirect(carriesCredentials: Boolean): NetSecrets =
-        NetSecrets(emptyMap(), headers, carriesCredentials)
+    /** The secrets for the next hop of a redirect, which inherits the chain's credential status. */
+    internal fun forRedirect(chainBearsCredentials: Boolean): NetSecrets =
+        NetSecrets(emptyMap(), headers, chainBearsCredentials)
 
     /** Counts only: a name could be anything, a key included. */
     override fun toString(): String = "NetSecrets(${query.size} query, ${headers.size} headers)"

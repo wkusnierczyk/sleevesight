@@ -41,7 +41,7 @@ class RedactionTest {
             assertFalse(key in line, line)
             assertTrue(
                 line.startsWith(
-                    "GET https://ws.audioscrobbler.com/…?method&artist&track&api_key {Accept, x-api-key} -> 200",
+                    "GET https://ws.audioscrobbler.com/… {2 headers} -> 200",
                 ),
                 line,
             )
@@ -57,7 +57,7 @@ class RedactionTest {
                 headers = mapOf("Accept" to "text/plain"),
             )
 
-        assertEquals("GET https://example.org/v1/search?q&limit {Accept}", request.toString())
+        assertEquals("GET https://example.org/v1/search?q&limit {1 header}", request.toString())
     }
 
     @Test
@@ -74,7 +74,7 @@ class RedactionTest {
         for ((secret, path) in cases) {
             val request = NetRequest("https://example.org$path", secrets = NetSecrets(headers = mapOf("x-k" to secret)))
 
-            assertEquals("GET https://example.org/… {x-k}", request.toString(), "$secret in $path")
+            assertEquals("GET https://example.org/… {1 header}", request.toString(), "$secret in $path")
         }
     }
 
@@ -161,6 +161,7 @@ class RedactionTest {
                     mapOf("x-api-key" to "$key\n"),
                     mapOf(key to "bad\n"),
                     mapOf("bad name" to key),
+                    mapOf("Authorization: Bearer $key" to ""),
                 )) {
                     val result =
                         client.send(
@@ -173,9 +174,8 @@ class RedactionTest {
             }
 
             assertEquals(0, calls)
-            // Header names are logged by design; a value never is.
-            assertFalse(key in log.lines[0], log.lines[0])
-            assertFalse(key in log.lines[2], log.lines[2])
+            assertEquals(4, log.lines.size)
+            log.lines.forEach { assertFalse(key in it, it) }
         }
 
     @Test
@@ -277,7 +277,7 @@ class RedactionTest {
 
             assertEquals(2, log.lines.size)
             log.lines.forEach { assertFalse(echoed in it, it) }
-            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… -> 200"), log.lines[1])
+            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… {0 headers} -> 200"), log.lines[1])
         }
 
     @Test
@@ -361,5 +361,140 @@ class RedactionTest {
             }) { it.send(NetRequest("https://a.example.org/", headers = mapOf("Accept" to "x/y"))) }
 
             assertEquals(listOf<String?>("x/y", "x/y"), accepts)
+        }
+
+    @Test
+    fun `sensitive names match whatever their case and separators`() {
+        val sensitive =
+            listOf(
+                "cOoKiE",
+                "AuthoriZation",
+                "X-Api-KeY",
+                "auth[token]",
+                "api key",
+                "api:key",
+                "key2",
+                "apiKey2",
+                "X-Api-Key2",
+            )
+        sensitive.forEach { assertTrue(Redaction.isSensitive(it), it) }
+        listOf(
+            "author",
+            "keyword",
+            "monkey",
+            "Author",
+            "KEYWORD",
+        ).forEach { assertFalse(Redaction.isSensitive(it), it) }
+    }
+
+    @Test
+    fun `a swapped header name and value is counted, not shown`() =
+        runTest {
+            val log = RecordingLog()
+            withClient(log = log, handler = { respond("ok") }) {
+                it.send(NetRequest("https://example.org/a", secrets = NetSecrets(headers = mapOf(key to "x-api-key"))))
+                it.send(NetRequest("https://example.org/a", headers = mapOf(key to "x-api-key")))
+            }
+
+            assertEquals(2, log.lines.size)
+            log.lines.forEach { assertFalse(key in it, it) }
+        }
+
+    @Test
+    fun `a key as a bare query name from the server's Location is not shown`() =
+        runTest {
+            val log = RecordingLog()
+            withClient(log = log, handler = { request ->
+                if (request.url.encodedPath == "/a") {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/done?$key"))
+                } else {
+                    respond("ok")
+                }
+            }) {
+                it.send(
+                    NetRequest("https://api.example.org/a", secrets = NetSecrets(query = mapOf("api_key" to key))),
+                )
+            }
+
+            assertEquals(2, log.lines.size)
+            log.lines.forEach { assertFalse(key in it, it) }
+        }
+
+    @Test
+    fun `a public chain turns credential-bearing at the hop with a key, and stays in its origin`() =
+        runTest {
+            val log = RecordingLog()
+            val hosts = mutableListOf<String>()
+            val result =
+                withClient(log = log, handler = { request ->
+                    hosts += request.url.host
+                    when (request.url.encodedPath) {
+                        "/start" ->
+                            respond(
+                                "",
+                                HttpStatusCode.Found,
+                                headersOf(HttpHeaders.Location, "/echo/$key?api_key=$key"),
+                            )
+                        else ->
+                            respond(
+                                "",
+                                HttpStatusCode.Found,
+                                headersOf(HttpHeaders.Location, "https://b.example.org/$key"),
+                            )
+                    }
+                }) { it.send(NetRequest("https://a.example.org/start")) }
+
+            assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status)
+            assertEquals(listOf("a.example.org", "a.example.org"), hosts)
+            assertEquals(2, log.lines.size)
+            assertTrue(log.lines[0].startsWith("GET https://a.example.org/start {0 headers} -> 302"), log.lines[0])
+            assertTrue(log.lines[1].startsWith("GET https://a.example.org/… {0 headers} -> 302"), log.lines[1])
+            log.lines.forEach { assertFalse(key in it, it) }
+        }
+
+    @Test
+    fun `a server-issued token in a Location makes the rest of the chain credential-bearing`() =
+        runTest {
+            val log = RecordingLog()
+            var calls = 0
+            withClient(log = log, handler = { request ->
+                calls++
+                if (request.url.encodedPath == "/a") {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/next?token=issued"))
+                } else {
+                    respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://other.example.net/x"))
+                }
+            }) { it.send(NetRequest("https://api.example.org/a")) }
+
+            assertEquals(2, calls)
+            assertTrue(log.lines[1].startsWith("GET https://api.example.org/… "), log.lines[1])
+        }
+
+    @Test
+    fun `a sensitive URL hides its path and query names and stays in its origin`() =
+        runTest {
+            for (url in listOf(
+                "https://www.theaudiodb.com/api/v1/json/$key/search.php?s=reem",
+                "https://dl.example.org/file?ticket=$key",
+            )) {
+                val log = RecordingLog()
+                var calls = 0
+                val result =
+                    withClient(log = log, handler = {
+                        calls++
+                        respond(
+                            "",
+                            HttpStatusCode.Found,
+                            headersOf(HttpHeaders.Location, "https://other.example.net/x"),
+                        )
+                    }) { it.send(NetRequest(url, sensitiveUrl = true)) }
+
+                assertEquals(302, assertIs<NetResult.Success<NetResponse>>(result).value.status, url)
+                assertEquals(1, calls, url)
+                log.lines.forEach { line ->
+                    assertFalse(key in line, line)
+                    assertFalse("?" in line, line)
+                }
+            }
         }
 }
