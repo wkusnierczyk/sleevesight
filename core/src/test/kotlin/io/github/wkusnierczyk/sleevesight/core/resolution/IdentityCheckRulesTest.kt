@@ -112,6 +112,86 @@ class IdentityCheckRulesTest {
         }
 
     @Test
+    fun `an unresolved artist's name does not match a performer MusicBrainz knows`() =
+        runTest {
+            // "Wonderland" by an unresolved Reem, against a Wonderland by a Reem with a MusicBrainz id.
+            val reem = Normalizer(JvmAccentFolder).normalize("Wonderland", "Reem")
+            val wonderland =
+                WdEntity(
+                    "Q2",
+                    "Wonderland",
+                    "Wonderland",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q20"),
+                    ),
+                )
+            val other =
+                FakeWikidata(
+                    mapOf("Q2" to wonderland),
+                    mapOf("Q20" to "Reem"),
+                    mapOf(
+                        "Q20" to listOf("mbid-other-reem"),
+                    ),
+                )
+            val verdict =
+                IdentityCheck(
+                    other,
+                    NameMatcher(JvmAccentFolder),
+                ).song("Q2", reem, Resolution.NONE, Route.NAME)
+            assertIs<Verdict.Rejected>(verdict)
+        }
+
+    @Test
+    fun `a credited writer confirms a song only when no one is named performing it`() =
+        runTest {
+            val songwriter = Normalizer(JvmAccentFolder).normalize("Song", "Writer")
+            val performed =
+                WdEntity(
+                    "Q3",
+                    "Song",
+                    "Song",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q30"),
+                        Wd.COMPOSER to listOf("Q31"),
+                    ),
+                )
+            val anthem =
+                WdEntity(
+                    "Q4",
+                    "Anthem",
+                    "Anthem",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.COMPOSER to listOf("Q31"),
+                    ),
+                )
+            val wikidata =
+                FakeWikidata(
+                    mapOf("Q3" to performed, "Q4" to anthem),
+                    mapOf(
+                        "Q30" to "Singer",
+                        "Q31" to "Writer",
+                    ),
+                )
+            val writerCheck = IdentityCheck(wikidata, NameMatcher(JvmAccentFolder))
+            assertIs<Verdict.Rejected>(writerCheck.song("Q3", songwriter, Resolution.NONE, Route.NAME))
+            val verdict = writerCheck.song("Q4", songwriter, Resolution.NONE, Route.NAME)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+        }
+
+    @Test
+    fun `the item MusicBrainz links to a recording that is no cover is the track's own song`() =
+        runTest {
+            val own = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q1"))
+            val verdict = check.song("Q1", track, own, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+        }
+
+    @Test
     fun `Wikidata not answering is unreachable, not a rejection`() =
         runTest {
             val down = IdentityCheck(FakeWikidata(emptyMap(), emptyMap(), failing = true), NameMatcher(JvmAccentFolder))

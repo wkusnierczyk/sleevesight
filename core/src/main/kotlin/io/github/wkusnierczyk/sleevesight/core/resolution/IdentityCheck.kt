@@ -12,12 +12,13 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  *
  * A song item ([song]) must be an instance of song, single or musical work ([Wd.SONG_CLASSES]),
  * and then:
- * - a performer (P175) or writer (P86, P676) matching a credited artist makes it the track's own
- *   song ([Scope.SONG]): by MusicBrainz artist id (P434) when resolution has one for that artist,
- *   by normalized name otherwise;
- * - a performer matching the original recording's artist (a cover, step 4), or the item being the
- *   one MusicBrainz links to the recording or its work, makes it the original song
- *   ([Scope.ORIGINAL_SONG]);
+ * - a performer (P175) matching a credited artist makes it the track's own song ([Scope.SONG]): by
+ *   MusicBrainz artist id (P434) when resolution has one for that artist; by normalized name
+ *   otherwise, and then only a performer with no P434, since one MusicBrainz knows is not shown to
+ *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer;
+ * - a performer matching the original recording's artist (a cover, step 4) makes it the original
+ *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
+ *   original song for a cover, else the track's own song;
  * - anything else is rejected, with the reason. A song by someone else found by name alone is
  *   rejected even when its title is the track's: a same-title song and a cover cannot be told
  *   apart without MusicBrainz (Peleboy's "We In Here" is not DMX's), so only MusicBrainz's cover
@@ -145,9 +146,13 @@ class IdentityCheck(
         val scope =
             when {
                 Wd.DISAMBIGUATION in classes || classes.none { it in Wd.SONG_CLASSES } -> null
-                matches(performers + writers, context.credited, labels) -> Scope.SONG
+                matches(performers, context.credited, labels, anonymousOnly = true) -> Scope.SONG
+                // A writer confirms only a song no one is named performing (an anthem): with
+                // performers, the item's facts are theirs (a songwriter's song made famous by others).
+                performers.isEmpty() && matches(writers, context.credited, labels) -> Scope.SONG
                 original.isNotEmpty() && matches(performers, original, labels) -> Scope.ORIGINAL_SONG
-                context.route == Route.MUSICBRAINZ -> Scope.ORIGINAL_SONG
+                // MusicBrainz links the recording to this item: a cover's original, else the song itself.
+                context.route == Route.MUSICBRAINZ -> if (context.resolution.cover) Scope.ORIGINAL_SONG else Scope.SONG
                 else -> null
             }
         return if (scope != null) {
@@ -158,10 +163,13 @@ class IdentityCheck(
     }
 
     // Whether any of [people] is one of [artists]: by MusicBrainz id when the artist has one, by name otherwise.
+    // With [anonymousOnly], an artist without an id matches by name only a person MusicBrainz does
+    // not know (no P434): one it knows is a resolved artist the track's, unresolved, is not shown to be.
     private suspend fun matches(
         people: List<String>,
         artists: List<ResolvedArtist>,
         labels: Map<String, String>,
+        anonymousOnly: Boolean = false,
     ): Boolean =
         artists.any { artist ->
             val mbid = artist.mbid
@@ -169,7 +177,8 @@ class IdentityCheck(
                 if (mbid != null) {
                     mbid in claims(person, Wd.MUSICBRAINZ_ARTIST)
                 } else {
-                    labels[person]?.let { names.sameName(it, artist.name) } ?: false
+                    val named = labels[person]?.let { names.sameName(it, artist.name) } ?: false
+                    named && !(anonymousOnly && claims(person, Wd.MUSICBRAINZ_ARTIST).isNotEmpty())
                 }
             }
         }
