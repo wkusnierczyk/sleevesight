@@ -3,7 +3,7 @@
 The playlist "Below Soundtrack Netflix" with frozen lookups, the fixture of the pipeline's tests
 and of the `:cli` (`design/design.md`, *Test fixtures*; `design/architecture.md`, *Testing*).
 
-The three data files are the simulator's JSON blocks, unchanged. `design/simulator.html` still embeds
+The three data files are the simulator's JSON blocks, plus a final newline. `design/simulator.html` still embeds
 its own copy, so it runs from a single file; a test in `:core` fails if the two disagree, so a
 change to one is made to both.
 

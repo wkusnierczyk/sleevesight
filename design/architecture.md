@@ -421,7 +421,7 @@ GitHub Actions from the first code PR. On every pull request and every push to `
 
 While no Android module exists (from the removal of `:spike` until `:app`), Android lint, `checkManifest` and `assembleDebug` have nothing to run, and CI leaves the last two out.
 
-A release workflow (a signed app bundle for Google Play, D7) comes with the first release; the signing key goes in a protected environment, not a repository secret. Actions minutes are metered on a private repository, so the workflow caches Gradle and skips Android jobs when only docs change.
+A release workflow (a signed app bundle for Google Play, D7) comes with the first release; the signing key goes in a protected environment, not a repository secret. Actions minutes are metered on a private repository, so the workflow caches Gradle and skips Android jobs when only docs change. A change to Markdown alone runs no CI; `design/simulator.html` does run it, since a `:core` test checks that its embedded data agrees with the fixtures.
 
 ## Phase mapping
 

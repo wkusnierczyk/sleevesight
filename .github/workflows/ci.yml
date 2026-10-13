@@ -4,12 +4,10 @@ on:
   pull_request:
     paths-ignore:
       - "**/*.md"
-      - "design/**"
   push:
     branches: [main, "dev-*"]
     paths-ignore:
       - "**/*.md"
-      - "design/**"
 
 concurrency:
   # A pull request's runs share a group, so a new push cancels the superseded run. Each branch push
