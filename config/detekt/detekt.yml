@@ -2,8 +2,8 @@
 style:
   MaxLineLength:
     maxLineLength: 120
-  # Network access only through :net (design, Structural constraints). :net gets its own
-  # configuration when it is created.
+  # Network access only through :net (design, Structural constraints). :net has its own
+  # configuration, config/detekt/net.yml.
   ForbiddenImport:
     active: true
     imports:
