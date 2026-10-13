@@ -24,8 +24,11 @@ import kotlin.time.Instant
 class SourceAdapterTest {
     private val track: NormalizedTrack = Normalizer(JvmAccentFolder).normalize("Bad Energy", "Reem")
 
-    // An adapter in the shape D4 asks for: it finds a candidate by name at once, then awaits the
-    // resolution only to verify it.
+    // A compile-shape check: these tests exercise a fake written here, not production code, and
+    // show only that the interface allows the shape D4 asks for (find a candidate by name at once,
+    // then await the resolution only to verify it). The behaviour itself, other sources' lines
+    // landing before the resolution completes, belongs in the pipeline tests with fake adapters
+    // (#44).
     private class FakeWikipedia(
         private val performerMbid: String,
     ) : SourceAdapter {

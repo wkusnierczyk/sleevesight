@@ -14,23 +14,29 @@ import kotlin.time.Duration
  * Per D4 an adapter looks up by name at once and awaits [Resolution] only to verify its match
  * against the resolved ids, so a slow MusicBrainz delays only its own lines. A match that cannot
  * be verified stays unverified (shown, not cited).
+ *
+ * The pipeline always completes the `Deferred<Resolution>` normally: with [Resolution.NONE] when
+ * resolution fails, is switched off or is cancelled, never exceptionally, so `await()` never
+ * throws into an adapter and one failing source cannot take the others down. The resolution
+ * (#36) and the orchestration (#44) enforce it.
  */
 interface SourceAdapter {
     val id: SourceId
 
-    /** The prefix of this source's evidence ids. */
-    val tag: String get() = id.tag
-
     /**
      * Looks [track] up. Lines in the result must come in a deterministic order for the same
      * response, since [io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceSet] keeps it
-     * when assigning ids.
+     * when assigning ids. Each draft names its own source, which decides its id; an adapter may
+     * make lines for a source besides [id], as the Wikipedia adapter does for Wikidata (`WD`).
      */
     suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
     ): SourceResult
 }
+
+/** The prefix of the evidence ids of this adapter's own source, [SourceAdapter.id]. */
+val SourceAdapter.tag: String get() = id.tag
 
 /** What one lookup gave: the typed outcome, the evidence lines without ids, and how long it took. */
 data class SourceResult(

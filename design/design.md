@@ -193,7 +193,7 @@ One interface, one adapter per source:
 interface SourceAdapter {
     val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA, WIKIDATA, LASTFM, DISCOGS, WEB
     val tag: String                  // MB, W, WD, L, D, G
-    suspend fun lookup(entity: ResolvedEntity): SourceResult  // typed outcome + evidence lines
+    suspend fun lookup(track: NormalizedTrack, resolution: Deferred<Resolution>): SourceResult  // typed outcome + evidence lines; see architecture.md, Source adapters
 }
 ```
 

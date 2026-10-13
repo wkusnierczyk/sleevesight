@@ -205,8 +205,8 @@ Wikidata's lines carry a source of their own, `WIKIDATA` with the tag `WD`, apar
 
 ### Evidence (`:core`)
 
-- `EvidenceLine` as in the design. Ids are the source tag plus a position, assigned after a deterministic sort, so the same retrieval gives the same ids.
-- `EvidenceSet.fingerprint` is a hash over the ordered (id, scope, text) triples. It is part of the synthesis cache key (R2). The hash function sits behind a small interface (D2).
+- `EvidenceLine` as in the design. Ids are the source tag plus a position, assigned after a deterministic sort, so the same retrieval gives the same ids. The sort is by source, in a fixed order (`EvidenceSet.SOURCE_ORDER`), keeping each source's own order; lines are numbered from 1 within each source, so a source's ids do not depend on the others. Each adapter therefore emits its lines in a deterministic order, the order of its response.
+- `EvidenceSet.fingerprint` is a hash over the ordered (id, scope, text) triples. It is part of the synthesis cache key (R2). The hash function sits behind a small interface (D2). It is SHA-256, in lowercase hex, over each line in order: for the id, the scope's fixed key (`song`, `original_song`, ...) and the text, the field's UTF-8 byte length, `:`, and its UTF-8 bytes; then a newline. URL and retrieval time are left out, so a refetch that finds the same lines keeps the cached insight. A lone UTF-16 surrogate in a line's text becomes U+FFFD when the line is made, so the encoding is the same on every platform. Changing the encoding, the source order, a tag or a scope key changes every fingerprint; a golden test pins them.
 
 ### Synthesis and grounding (`:core`, `:ai`)
 

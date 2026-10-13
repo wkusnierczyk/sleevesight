@@ -115,6 +115,46 @@ class EvidenceSetTest {
         assertNotEquals(one.fingerprint, other.fingerprint)
     }
 
+    // Pins the encoding, the source order, the tags and the scope keys: the fingerprint is part of
+    // a persisted cache key. The value was computed independently of this code, in Python, from the
+    // encoding documented on `EvidenceSet`.
+    @Test
+    fun `the fingerprint format is fixed`() {
+        val evidence =
+            set(
+                listOf(
+                    draft(SourceId.LASTFM, Scope.ARTIST, "Canadian singer-songwriter.", null),
+                    draft(SourceId.WIKIPEDIA, Scope.SONG, "Released in 1974 on Reprise.", null),
+                    draft(SourceId.WIKIPEDIA, Scope.ORIGINAL_SONG, "Written by Gené.", null),
+                ),
+            )
+        assertEquals(listOf("W1", "W2", "L1"), evidence.ids)
+        assertEquals("cd591087279e96ba2aa214f2410314ed882d0a163bb8630e86b23c5624109d21", evidence.fingerprint)
+    }
+
+    @Test
+    fun `the source order covers every source`() {
+        assertEquals(SourceId.entries.toSet(), EvidenceSet.SOURCE_ORDER.toSet())
+        assertEquals(SourceId.entries.size, EvidenceSet.SOURCE_ORDER.size)
+    }
+
+    @Test
+    fun `a lone surrogate becomes U+FFFD when the draft is made`() {
+        val high = draft(SourceId.WEB, Scope.WEB, "a\uD800", null)
+        val low = draft(SourceId.WEB, Scope.WEB, "a\uDC01", null)
+        assertEquals("a\uFFFD", high.text)
+        assertEquals("a\uFFFD", low.text)
+        assertEquals("a\uFFFD", high.copy(text = "a\uD801").text)
+        // A pair is kept.
+        assertEquals("a\uD83C\uDFB5", draft(SourceId.WEB, Scope.WEB, "a\uD83C\uDFB5", null).text)
+        // The fingerprint hashes the stored text, so it is the same on every platform, and differs
+        // from a literal `?`.
+        val evidence = set(listOf(high))
+        assertEquals("a\uFFFD", evidence["G1"]?.text)
+        assertEquals("e83ba8ff851937cc00fe3aa062d69290ede7e357b018cf1779d891cb8669fdf0", evidence.fingerprint)
+        assertNotEquals(evidence.fingerprint, set(listOf(draft(SourceId.WEB, Scope.WEB, "a?", null))).fingerprint)
+    }
+
     @Test
     fun `an empty set has a fingerprint too`() {
         val empty = set(emptyList())
