@@ -3,7 +3,9 @@ package sleevesight
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -132,7 +134,7 @@ class JvmMainSourceSetTest {
     fun `a dependency declared on jvmMain fails check`() {
         project()
         libWith("dependencies { \"jvmMainImplementation\"(\"org.jspecify:jspecify:1.0.0\") }\n")
-        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0")
+        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0 jspecify-1.0.0.jar")
     }
 
     @Test
@@ -143,13 +145,56 @@ class JvmMainSourceSetTest {
                 "configurations.named(\"jvmMainImplementation\") { extendsFrom(extra) }\n" +
                 "dependencies { \"extra\"(\"org.jspecify:jspecify:1.0.0\") }\n",
         )
-        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0")
+        assertCheckFailsNaming("org.jspecify:jspecify:1.0.0 jspecify-1.0.0.jar")
+    }
+
+    @Test
+    fun `a project dependency of jvmMain fails check`() {
+        project()
+        dir.write(
+            "settings.gradle.kts",
+            "dependencyResolutionManagement { repositories { mavenCentral() } }\n" +
+                "rootProject.name = \"probe\"\n" +
+                "include(\":lib\", \":consumer\", \":extra\")\n",
+        )
+        dir.write("extra/build.gradle.kts", "plugins { kotlin(\"jvm\") }\n")
+        dir.write("extra/src/main/kotlin/e/Extra.kt", "package e\n\nobject Extra\n")
+        libWith("dependencies { \"jvmMainImplementation\"(project(\":extra\")) }\n")
+        assertCheckFailsNaming("project ':extra' extra.jar")
+    }
+
+    @Test
+    fun `a file dependency of jvmMain fails check`() {
+        project()
+        ZipOutputStream(dir.resolve("lib/libs").apply { mkdirs() }.resolve("local.jar").outputStream()).use {
+            it.putNextEntry(ZipEntry("META-INF/MANIFEST.MF"))
+            it.write("Manifest-Version: 1.0\n".toByteArray())
+            it.closeEntry()
+        }
+        libWith("dependencies { \"jvmMainImplementation\"(files(\"libs/local.jar\")) }\n")
+        assertCheckFailsNaming("local.jar")
+    }
+
+    @Test
+    fun `a classifier of a module main has fails check`() {
+        project()
+        libWith("dependencies { \"jvmMainImplementation\"(\"org.jetbrains:annotations:23.0.0:sources\") }\n")
+        assertCheckFailsNaming("annotations-23.0.0-sources.jar")
+    }
+
+    @Test
+    fun `a dependency that does not resolve fails first`() {
+        project()
+        libWith("dependencies { \"jvmMainRuntimeOnly\"(\"org.example.missing:nothing:1.0\") }\n")
+        val failed = runner(":lib:checkJvmMainDependencies").buildAndFail()
+        assertTrue("Dependencies that do not resolve" in failed.output, failed.output)
+        assertTrue("jvmMainRuntimeClasspath: org.example.missing:nothing:1.0" in failed.output, failed.output)
     }
 
     @Test
     fun `a constraint that raises a version for jvmMain fails check`() {
         project()
         libWith("dependencies { constraints { add(\"jvmMainImplementation\", \"org.jetbrains:annotations:24.0.0\") } }\n")
-        assertCheckFailsNaming("org.jetbrains:annotations:24.0.0")
+        assertCheckFailsNaming("org.jetbrains:annotations:24.0.0 annotations-24.0.0.jar")
     }
 }

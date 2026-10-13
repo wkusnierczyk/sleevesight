@@ -49,7 +49,7 @@ tasks.register<Test>("functionalTest") {
 // The TestKit home as a system property, kept out of the task's inputs so the cache key does not
 // depend on where the checkout is.
 class TestKitDir(
-    @get:LocalState val dir: File,
+    @get:Internal val dir: File,
 ) : CommandLineArgumentProvider {
     override fun asArguments() = listOf("-Dtestkit.dir=${dir.path}")
 }

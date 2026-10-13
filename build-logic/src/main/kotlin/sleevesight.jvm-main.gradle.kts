@@ -7,14 +7,15 @@
 //   The tests are associated with `main` and `jvmMain`, which gives them the internals of both;
 //   the test fixtures see the module through its jar, so they take the jar as a friend path.
 // - `jvmMain` shares `main`'s dependencies: `checkJvmMainDependencies` (in `check`) fails when
-//   its compile or runtime classpath resolves an external module or version that `main`'s does
-//   not, by any route. Such a dependency would reach no consumer and escape the dependency
-//   allowlist, the module graph check and locking.
+//   its compile or runtime classpath resolves other artifacts than `main`'s (apart from `main`'s
+//   own classes), whether through a declaration, an inherited configuration, a constraint or
+//   platform, a project or file dependency, a classifier or a variant. Such a dependency would
+//   reach no consumer and escape the dependency allowlist and the module graph check; with equal
+//   artifacts, `jvmMain` also gets the versions `main` has locked.
 // - The root `gradle.properties` sets `kotlin.build.archivesTaskOutputAsFriendModule=false`:
 //   `jvmMain` reads `main`'s internals from its classes, since the jar, which carries `jvmMain`,
 //   would be a cycle.
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckJvmMainDependencies
 import sleevesight.checks.CheckSourceRoots
 
@@ -45,17 +46,19 @@ pluginManager.withPlugin("java-test-fixtures") {
     }
 }
 
-fun modulesOf(configuration: String) =
-    CheckDependencies.modulesOf(configurations.named(configuration).flatMap { it.incoming.resolutionResult.rootComponent })
-
 val checkJvmMainDependencies =
     tasks.register<CheckJvmMainDependencies>("checkJvmMainDependencies") {
         group = "verification"
-        description = "Fails when jvmMain resolves external modules or versions that main does not."
-        mainCompile = modulesOf("compileClasspath")
-        jvmMainCompile = modulesOf("jvmMainCompileClasspath")
-        mainRuntime = modulesOf("runtimeClasspath")
-        jvmMainRuntime = modulesOf("jvmMainRuntimeClasspath")
+        description = "Fails when jvmMain's classpaths resolve artifacts that main's do not, or the reverse."
+        val names = listOf("compileClasspath", "jvmMainCompileClasspath", "runtimeClasspath", "jvmMainRuntimeClasspath")
+        for (name in names) unresolved.addAll(CheckJvmMainDependencies.unresolvedOf(configurations.named(name)))
+        // `main`'s own classes, which the association puts on `jvmMain`'s classpaths.
+        val own = sourceSets.getByName("main").output
+        val none = files()
+        mainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("compileClasspath"), none)
+        jvmMainCompile = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainCompileClasspath"), own)
+        mainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("runtimeClasspath"), none)
+        jvmMainRuntime = CheckJvmMainDependencies.artifactsOf(configurations.named("jvmMainRuntimeClasspath"), own)
     }
 
 // Kotlin compiles `.kt` files under `src/<set>/java` too; nothing compiles from there.
