@@ -14,4 +14,4 @@ What the build, CI or project setup lacks or gets wrong.
 What to add or change.
 
 **Done when**
-How to tell it works: the build or workflow run that shows it.
+How to tell it works (e.g. the build or workflow run that shows it, or where to see the new setup).
