@@ -179,6 +179,10 @@ class WikipediaSourceTest {
             WikipediaSource.split("Dylan said, \"I like it. I really do.\" It charted."),
         )
         assertEquals(listOf("It charted."), WikipediaSource.split("It charted. He said, \"No. Never."))
+        assertEquals(
+            listOf("It came out as a 7\" single.", "It charted."),
+            WikipediaSource.split("It came out as a 7\" single. It charted."),
+        )
     }
 
     @Test

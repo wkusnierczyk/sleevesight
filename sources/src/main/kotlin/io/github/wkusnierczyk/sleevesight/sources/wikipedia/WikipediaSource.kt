@@ -183,11 +183,13 @@ class WikipediaSource(
         val keys = subjects.map { " ${names.key(it)} " }.filter { it.isNotBlank() }
         // The lead's first sentence defines the subject, often under a fuller name ("Gordon Meredith
         // Lightfoot Jr."), so it is taken whether or not it names the subject as the label does.
-        return lead
-            .split('\n')
-            .map { tidy(it) }
+        // Only the first piece of the first paragraph is exempt: if the splitter drops it, no other
+        // sentence takes its place unchecked.
+        val paragraphs = lead.split('\n').map { tidy(it) }.filter { it.isNotEmpty() }
+        val first = paragraphs.firstOrNull()?.let { LastFmBio.split(it).firstOrNull() }
+        return paragraphs
             .flatMap { split(it) }
-            .filterIndexed { i, sentence -> i == 0 || keys.any { it in " ${names.key(sentence)} " } }
+            .filter { sentence -> sentence == first || keys.any { it in " ${names.key(sentence)} " } }
             .filter { it.length <= MAX_SENTENCE_LENGTH }
             .take(MAX_SENTENCES)
     }
@@ -224,8 +226,10 @@ class WikipediaSource(
             return sentences
         }
 
+        // A `"` right after a digit is an inch mark (`a 7" single`), not a quotation mark.
         private fun balanced(text: String): Boolean =
-            text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
+            text.indices.count { text[it] == '"' && text.getOrNull(it - 1)?.isDigit() != true } % 2 == 0 &&
+                text.count { it == '“' } == text.count { it == '”' }
 
         private fun tidy(paragraph: String): String =
             paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
