@@ -72,14 +72,14 @@ class RecordingResolver(
         // length, however early: a lengthless recording may be a demo, a bootleg or a live take.
         val measured = fitting.filter { it.durationGap != null }
         val accepted = if (duration != null && measured.isNotEmpty()) measured else fitting
-        val ambiguous = if (duration == null) ambiguousArtist(track, accepted) else null
+        val ambiguous = ambiguousArtist(track, accepted)
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
             ambiguous != null ->
                 Resolution(
                     outcome =
                         Outcome.Rejected(
-                            "several MusicBrainz artists are named $ambiguous, and no length tells them apart",
+                            "several MusicBrainz artists named $ambiguous have a matching recording",
                         ),
                 )
             chosen == null -> unmatched(track, candidates)
@@ -87,8 +87,8 @@ class RecordingResolver(
         }
     }
 
-    // Without a length to choose by, a credited name that the accepted candidates give to more than
-    // one MusicBrainz artist cannot be resolved: it is a same-name collision.
+    // A credited name that the accepted candidates, after the length has narrowed them, give to more
+    // than one MusicBrainz artist cannot be resolved: it is a same-name collision.
     private fun ambiguousArtist(
         track: NormalizedTrack,
         accepted: List<Candidate>,
@@ -186,7 +186,13 @@ class RecordingResolver(
         // Our artists' recordings of the work, the chosen one among them: the search finds only some,
         // and MusicBrainz leaves many undated, so the chosen one need not be their first.
         val own = work.performances.filter { performance -> performance.credits.any { it.artistMbid in ours } }
-        val ownUndated = own.any { it.date == null && it.recordingMbid != recording.mbid }
+        // The chosen recording's release date stands in for its missing recording date; with neither,
+        // it is as undated as any other.
+        val ownUndated =
+            own.any {
+                it.date == null &&
+                    (it.recordingMbid != recording.mbid || recording.firstReleaseDate == null)
+            }
         val ourEarliest = (own.mapNotNull { it.date } + listOfNotNull(recording.firstReleaseDate)).minOrNull()
         val original = originalOf(work, ours)
         // Someone else's recording counts as earlier only when it predates every dated one of ours.

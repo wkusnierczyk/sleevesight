@@ -102,6 +102,14 @@ class MusicBrainzResolutionTest {
         }
 
     @Test
+    fun `version suffix - Fisherman's Blues resolves to a recording with a length, first released in 1988`() =
+        runTest {
+            val resolution = resolve(RegressionCase.VERSION_SUFFIX.tracks.single())
+            assertEquals("51b75c9a-8990-42d6-ad81-228d65805070", resolution.recordingMbid)
+            assertEquals("1988-10-17", resolution.firstReleaseDate)
+        }
+
+    @Test
     fun `the search sends the normalized title and the primary artist, and never asks for tags or genres`() =
         runTest {
             resolve(RegressionCase.VERSION_SUFFIX.tracks.single())

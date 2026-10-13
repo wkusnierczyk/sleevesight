@@ -290,20 +290,64 @@ class RecordingResolverTest {
             )
         }
 
+    private fun reems(
+        lengthA: Int?,
+        lengthB: Int?,
+    ) = FakeMusicBrainz(
+        Lookup.Found(
+            listOf(
+                recording("a", "Wonderland", "Reem", lengthA, "2020").copy(credits = listOf(credit("Reem", "reem-1"))),
+                recording("b", "Wonderland", "Reem", lengthB, "2024").copy(credits = listOf(credit("Reem", "reem-2"))),
+            ),
+        ),
+    )
+
     @Test
-    fun `without a length, a name two MusicBrainz artists share is rejected as ambiguous`() =
+    fun `a name two MusicBrainz artists share is rejected as ambiguous, with or without a length`() =
         runTest {
-            val search =
-                listOf(
-                    recording("a", "Wonderland", "Reem", 200, "2020").copy(credits = listOf(credit("Reem", "reem-1"))),
-                    recording("b", "Wonderland", "Reem", 210, "2024").copy(credits = listOf(credit("Reem", "reem-2"))),
+            val rejected = Outcome.Rejected("several MusicBrainz artists named Reem have a matching recording")
+            for ((musicBrainz, seconds) in listOf(
+                reems(200, 210) to null,
+                reems(null, null) to 200,
+                reems(200, 200) to 200,
+            )) {
+                val resolution = resolve(musicBrainz, track("Wonderland", "Reem"), seconds)
+                assertEquals(rejected, resolution.outcome, "player length $seconds")
+                assertNull(resolution.recordingMbid)
+            }
+        }
+
+    @Test
+    fun `a chosen recording with no date at all does not make a later cover the original`() =
+        runTest {
+            val search = listOf(recording("ours", "Song", "Writer", 200, null))
+            val detail =
+                MbRecordingDetail(
+                    "ours",
+                    "Song",
+                    listOf(credit("Writer")),
+                    null,
+                    listOf(MbWorkLink("w", "Song", cover = false)),
+                    emptyList(),
+                    emptyList(),
                 )
-            val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Wonderland", "Reem"), null)
-            assertEquals(
-                Outcome.Rejected("several MusicBrainz artists are named Reem, and no length tells them apart"),
-                resolution.outcome,
-            )
-            assertNull(resolution.recordingMbid)
+            val performances =
+                listOf(
+                    MbPerformance("ours", "Song", listOf(credit("Writer")), null, emptyList()),
+                    MbPerformance("live", "Song", listOf(credit("Writer")), "2005", emptyList()),
+                    MbPerformance("cover", "Song", listOf(credit("Coverer")), "1990", emptyList()),
+                )
+            val musicBrainz =
+                FakeMusicBrainz(
+                    Lookup.Found(search),
+                    mapOf("ours" to detail),
+                    mapOf(
+                        "w" to MbWork("w", "Song", emptyList(), emptyList(), performances),
+                    ),
+                )
+            val resolution = resolve(musicBrainz, track("Song", "Writer"))
+            assertFalse(resolution.cover)
+            assertNull(resolution.original)
         }
 
     @Test
