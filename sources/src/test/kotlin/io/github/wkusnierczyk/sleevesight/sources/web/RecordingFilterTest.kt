@@ -39,6 +39,27 @@ class RecordingFilterTest {
     }
 
     @Test
+    fun `apostrophes are dropped, so Dont matches Don't`() {
+        assertEquals("baby please dont go", filter.fold("Baby, Please Don\u2019t Go"))
+        assertEquals("fishin in a dory", filter.fold("Fishin' In A Dory"))
+        assertEquals("sou westers", filter.fold("Sou\u02BC Westers"))
+        assertEquals("gordon lightfoot s sundown", filter.fold("Gordon Lightfoot\u2019s Sundown"))
+        assertEquals("them s single", filter.fold("Them's single"))
+        val baby = track("Baby, Please Don't Go", "Them", "Van Morrison")
+        assertTrue(
+            about(baby, "Baby Please Dont Go - Them featuring Van Morrison", "Them's single, Baby, Please Don't Go."),
+        )
+    }
+
+    @Test
+    fun `a track that folds to nothing cannot be checked`() {
+        assertFalse(filter.canCheck(track("Sundown", "!!!")))
+        assertFalse(filter.canCheck(track("!!!", "Gordon Lightfoot")))
+        assertFalse(filter.canCheck(from("Theme", "???", "London Music Works")))
+        assertTrue(filter.canCheck(track("Sundown", "Gordon Lightfoot")))
+    }
+
+    @Test
     fun `and matches an ampersand`() {
         val dory = track("Fishin' In A Dory", "Ray Johnson And The Sou' Westers")
         assertTrue(about(dory, "The Newfoundland I Love", "Ray Johnson & The Sou' Westers: Fishin' In A Dory"))

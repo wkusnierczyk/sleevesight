@@ -236,14 +236,16 @@ class ExaWebSearchTest {
         }
 
     @Test
-    fun `a track without a credited artist sends nothing`() =
+    fun `a track without a checkable artist sends nothing`() =
         runTest {
-            val net = ReplayNetClient.ok("""{"results":[]}""")
-            val result =
-                adapter(net).lookup(normalizer.normalize("Sundown", ""), CompletableDeferred(Resolution.NONE))
-            assertEquals(Outcome.None, result.outcome)
-            assertTrue(result.evidence.isEmpty())
-            assertTrue(net.sent.isEmpty())
+            for (artists in listOf("", "!!!")) {
+                val net = ReplayNetClient.ok("""{"results":[]}""")
+                val result =
+                    adapter(net).lookup(normalizer.normalize("Sundown", artists), CompletableDeferred(Resolution.NONE))
+                assertEquals(Outcome.None, result.outcome)
+                assertTrue(result.evidence.isEmpty())
+                assertTrue(net.sent.isEmpty(), "sent a request for artists \"$artists\"")
+            }
         }
 
     @Test

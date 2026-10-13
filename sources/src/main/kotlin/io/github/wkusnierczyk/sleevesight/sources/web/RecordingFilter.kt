@@ -23,8 +23,10 @@ import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
  * ([OWN_SOURCE_HOSTS]), are dropped too, so an unverified copy of their text cannot slip in here.
  *
  * Its limits: an artist whose every word is common ("To Twelve", "a balladeer") is matched by any
- * text with those words, so for such an artist the title does most of the work; and a page on
- * another recording that names the song and the artist in passing still passes.
+ * text with those words, so for such an artist the title does most of the work; a page on another
+ * recording that names the song and the artist in passing still passes; and a listing titled with
+ * several artists, this one among them, but not the song ("Below soundtrack: Ray Johnson And The
+ * Sou' Westers, Die Hexen and others") is dropped by the third rule, even when it lists the song.
  */
 class RecordingFilter(
     private val accentFolder: AccentFolder,
@@ -48,6 +50,15 @@ class RecordingFilter(
     }
 
     /**
+     * Whether [track] can be checked at all: its title, its work when it has one, and at least one
+     * credited artist fold to something. A track that cannot be checked is not searched.
+     */
+    fun canCheck(track: NormalizedTrack): Boolean =
+        fold(track.title).isNotEmpty() &&
+            track.from?.let { fold(it).isNotEmpty() } != false &&
+            requiredArtists(track).isNotEmpty()
+
+    /**
      * The credited artists a result must name one of, folded: the distinctive ones, those with a
      * word outside [COMMON_WORDS], or all of them when none is distinctive.
      */
@@ -60,18 +71,23 @@ class RecordingFilter(
     private fun padded(phrase: String): String = " ${fold(phrase)} "
 
     /**
-     * [text] lowercased, decomposed, without combining marks, with `&` read as `and` and every
-     * other run of characters other than letters and digits (in any script) made one space, and
-     * trimmed.
+     * [text] lowercased, decomposed, without combining marks, with `&` read as `and`, apostrophes
+     * (`'`, `’`, `ʼ`) dropped so "Don't" and "Dont" agree, except before a possessive `s`, which
+     * stays a word of its own so "Lightfoot's" still names Lightfoot, every other run of characters
+     * other than letters and digits (in any script) made one space, and trimmed.
      */
     internal fun fold(text: String): String {
         val decomposed = accentFolder.decompose(text.lowercase())
         val out = StringBuilder(decomposed.length)
         var space = false
-        for (c in decomposed) {
+        for ((i, c) in decomposed.withIndex()) {
             when {
                 c in COMBINING_MARKS -> {
                     continue
+                }
+
+                c in APOSTROPHES -> {
+                    if (isPossessive(decomposed, i)) space = true
                 }
 
                 c == '&' -> {
@@ -91,6 +107,12 @@ class RecordingFilter(
         return out.toString()
     }
 
+    // Whether the apostrophe at [i] is followed by an `s` that ends the word: `lightfoot's`.
+    private fun isPossessive(
+        text: String,
+        i: Int,
+    ): Boolean = text.getOrNull(i + 1) == 's' && text.getOrNull(i + 2)?.isLetterOrDigit() != true
+
     companion object {
         /**
          * Hosts of sources the pipeline reads through their own adapters, which verify their
@@ -102,6 +124,9 @@ class RecordingFilter(
             listOf("wikipedia.org", "wikiwand.com", "wikidata.org", "musicbrainz.org", "last.fm", "discogs.com")
 
         private val COMBINING_MARKS = '\u0300'..'\u036F'
+
+        // ASCII apostrophe, right single quotation mark, modifier letter apostrophe.
+        private val APOSTROPHES = setOf('\'', '\u2019', '\u02BC')
 
         /**
          * Words too common to identify an artist on their own: articles, pronouns, prepositions,

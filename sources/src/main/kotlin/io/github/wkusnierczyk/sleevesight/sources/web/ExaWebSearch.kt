@@ -38,8 +38,9 @@ import kotlin.time.TimeSource
  * its lines stay unverified like any other source's that MusicBrainz cannot confirm.
  *
  * Outcomes: [Outcome.SongArticle] when a result is kept; [Outcome.Rejected] when results came back
- * and none passed the filter; [Outcome.None] when none came back, or when the track credits no
- * artist, since then no result could be checked and nothing is sent; [Outcome.Unreachable]
+ * and none passed the filter; [Outcome.None] when none came back, or when the track cannot be
+ * checked ([RecordingFilter.canCheck]: no credited artist, or a title or artist that folds to
+ * nothing, such as "!!!"), since then no result could pass and nothing is sent; [Outcome.Unreachable]
  * for a network error or any answer other than a 2xx (a wrong key, exhausted credits, a bad
  * request), which carries nothing to show.
  *
@@ -62,7 +63,7 @@ class ExaWebSearch(
         resolution: Deferred<Resolution>,
     ): SourceResult {
         val start = timeSource.markNow()
-        if (track.artists.none { it.isNotBlank() }) return SourceResult(Outcome.None, emptyList(), start.elapsedNow())
+        if (!filter.canCheck(track)) return SourceResult(Outcome.None, emptyList(), start.elapsedNow())
         val result = net.fetch(request(track), ::parse)
         val retrievedAt = clock.now()
         val outcome: Outcome
@@ -166,8 +167,10 @@ class ExaWebSearch(
  *   top is ambiguous in Exa's documents (`design/design.md`, *Web search provider (D11)*); if they
  *   are, 5 would halve that charge at the cost of fewer candidates.
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
- * - Highlights of at most 300 characters, steered by the title and artists: the snippet. Exa's
- *   results carry no snippet without a `contents` option.
+ * - Highlights of at most 300 characters, steered by the title, the work it is from when there is
+ *   one, and the artists: the snippet. Exa's results carry no snippet without a `contents` option.
+ * - The results are then judged by [RecordingFilter]: the song (and its work) and a distinctive
+ *   credited artist named, and the result's own title not naming the artist without the song.
  */
 @Serializable
 internal data class ExaSearchRequest(
