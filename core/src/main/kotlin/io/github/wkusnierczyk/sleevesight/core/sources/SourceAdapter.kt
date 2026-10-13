@@ -38,11 +38,20 @@ interface SourceAdapter {
 /** The prefix of the evidence ids of this adapter's own source, [SourceAdapter.id]. */
 val SourceAdapter.tag: String get() = id.tag
 
-/** What one lookup gave: the typed outcome, the evidence lines without ids, and how long it took. */
+/**
+ * What one lookup gave: the typed outcome, the evidence lines without ids, and how long it took.
+ *
+ * [evidence] holds the lines of a verified match: they get ids and may be cited. [unverified] holds
+ * the lines of a match that could not be verified against the [Resolution] (D4): shown, never
+ * cited, so never given to the model. A match that failed the check gives neither, and an
+ * [Outcome.Rejected]. The default is empty, so a line is cited only when an adapter puts it in
+ * [evidence].
+ */
 data class SourceResult(
     val outcome: Outcome,
     val evidence: List<EvidenceDraft>,
     val latency: Duration,
+    val unverified: List<EvidenceDraft> = emptyList(),
 )
 
 /**

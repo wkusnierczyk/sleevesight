@@ -1,0 +1,121 @@
+{
+  "artist": {
+    "name": "Tony K",
+    "mbid": "",
+    "url": "https://www.last.fm/music/Tony+K",
+    "image": [
+      {
+        "#text": "",
+        "size": "small"
+      },
+      {
+        "#text": "",
+        "size": "medium"
+      },
+      {
+        "#text": "",
+        "size": "large"
+      },
+      {
+        "#text": "",
+        "size": "extralarge"
+      },
+      {
+        "#text": "",
+        "size": "mega"
+      },
+      {
+        "#text": "",
+        "size": ""
+      }
+    ],
+    "streamable": "0",
+    "ontour": "0",
+    "stats": {
+      "listeners": "48210",
+      "playcount": "512330"
+    },
+    "similar": {
+      "artist": [
+        {
+          "name": "Reem",
+          "url": "https://www.last.fm/music/Reem",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Peleboy",
+          "url": "https://www.last.fm/music/Peleboy",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "tag": {
+        "name": "rap",
+        "url": "https://www.last.fm/tag/rap"
+      }
+    },
+    "bio": {
+      "links": {
+        "link": {
+          "#text": "",
+          "rel": "original",
+          "href": "https://www.last.fm/music/Tony+K/+wiki"
+        }
+      },
+      "published": "01 Jan 2010, 00:00",
+      "summary": "Tony K is a rapper. <a href=\"https://www.last.fm/music/Tony+K\">Read more on Last.fm</a>",
+      "content": "Tony K is a rapper. <a href=\"https://www.last.fm/music/Tony+K\">Read more on Last.fm</a>"
+    }
+  }
+}

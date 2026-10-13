@@ -1,0 +1,15 @@
+{
+  "about": "Sleevesight genre vocabulary: the tags that become genre labels, by family, with the family hue (design/design.md, Genre labels). Taken from GENRE_FAMILIES in design/simulator.html; a test checks the two agree. labels overrides the default label, the tag in title case.",
+  "families": [
+    { "id": "folk", "hue": 135, "tags": ["folk", "singer-songwriter", "celtic", "acoustic", "country", "country folk", "indie folk", "folk rock", "celtic rock"] },
+    { "id": "rock", "hue": 8, "tags": ["rock", "classic rock", "alternative", "alternative rock", "indie", "indie rock", "hard rock", "heavy metal", "metal", "garage rock", "stoner rock", "punk", "punk rock", "post-punk", "new wave", "gothic", "goth", "britpop", "surf rock", "surf", "british invasion", "blues rock", "rock francais"] },
+    { "id": "pop", "hue": 328, "tags": ["pop", "soft rock", "easy listening", "pop vocal group", "indie pop", "chanson francaise"] },
+    { "id": "hiphop", "hue": 30, "tags": ["rap", "hip-hop", "hip hop", "trap", "cloud rap", "soundcloud rap", "drill", "grime"] },
+    { "id": "soul", "hue": 48, "tags": ["rnb", "r&b", "soul", "funk", "disco"] },
+    { "id": "reggae", "hue": 92, "tags": ["reggae", "dancehall", "ragga", "ska", "dub"] },
+    { "id": "electronic", "hue": 190, "tags": ["electronic", "ambient", "dark ambient", "dubstep", "downtempo", "drum and bass", "jungle", "uk garage", "footwork", "witch house", "darkwave", "experimental", "house", "techno", "trip-hop"] },
+    { "id": "score", "hue": 262, "tags": ["soundtrack", "instrumental", "classical", "choral", "score", "neoclassical"] },
+    { "id": "jazzblues", "hue": 215, "tags": ["jazz", "blues"] }
+  ],
+  "labels": { "uk garage": "UK Garage", "rnb": "RnB" }
+}
