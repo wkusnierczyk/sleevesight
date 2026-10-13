@@ -13,7 +13,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pull request runs are cancelled; branch pushes always finish, so each merge is built.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -31,6 +32,9 @@ jobs:
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          # Pushes to `main` and `dev-*` write the cache, since an integration branch's dependencies run ahead of `main`'s.
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Build, test and lint
         run: ./gradlew build --console=plain
