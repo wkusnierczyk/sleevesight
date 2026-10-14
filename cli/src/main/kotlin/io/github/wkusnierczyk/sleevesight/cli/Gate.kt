@@ -22,14 +22,24 @@ enum class Verdict {
     PASS,
     FAIL,
 
-    /** Nothing in this run could test it: the source was off, or no insight was written. */
+    /**
+     * The run could not test it: nothing in it applied (a source switched off, no insight asked
+     * for), or, when the criterion is [Criterion.incomplete], a lookup or a call it needed failed.
+     */
     NOT_CHECKED,
 }
 
+/**
+ * One criterion's outcome. [incomplete] marks a [Verdict.NOT_CHECKED] that the run should have
+ * checked but could not, because a source was unreachable or failed, or an insight call failed:
+ * the CLI exits non-zero for it ([Cli.EXIT_UNCHECKED]), so a gate run cannot pass on what it did
+ * not test.
+ */
 data class Criterion(
     val name: String,
     val verdict: Verdict,
     val detail: String,
+    val incomplete: Boolean = false,
 )
 
 /**
@@ -117,71 +127,149 @@ object Gate {
             ),
         )
 
-    fun evaluate(results: List<TrackResult>): List<Criterion> {
-        val written = results.mapNotNull { (it.state.insight as? InsightState.Written)?.grounded?.counts }
+    /**
+     * The criteria over [results]. [insightsAsked] is whether the run asked for insights: then a
+     * failed insight call leaves the citation criteria incomplete rather than quietly smaller.
+     */
+    fun evaluate(
+        results: List<TrackResult>,
+        insightsAsked: Boolean,
+    ): List<Criterion> = citations(results, insightsAsked) + collisions(results)
+
+    private fun citations(
+        results: List<TrackResult>,
+        insightsAsked: Boolean,
+    ): List<Criterion> {
+        val withEvidence = results.filter { it.state.evidence?.isEmpty() == false }
+        val written = withEvidence.mapNotNull { (it.state.insight as? InsightState.Written)?.grounded?.counts }
+        val failed =
+            withEvidence.mapNotNull { r ->
+                (r.state.insight as? InsightState.Failed)?.let { r.n to it.reason }
+            }
+        val tally =
+            "${written.size} of ${withEvidence.size} insights written" +
+                if (failed.isEmpty()) {
+                    ""
+                } else {
+                    "; ${failed.size} failed (${failed.joinToString {
+                        "${it.first}: ${it.second}"
+                    }})"
+                }
         val unknown = written.sumOf { it.unknown }
         val uncited = written.sumOf { it.uncited }
         val sentences = written.sumOf { it.total }
-        return listOf(
-            if (written.isEmpty()) {
-                Criterion("Zero unknown citations", Verdict.NOT_CHECKED, "no insight was written")
-            } else {
+        val unchecked =
+            when {
+                insightsAsked && failed.isNotEmpty() -> "$tally: not every insight could be checked"
+                !insightsAsked -> "no insight was asked for"
+                sentences == 0 -> "no insight was written ($tally)"
+                else -> null
+            }
+        val incomplete = insightsAsked && failed.isNotEmpty()
+        return if (unchecked != null) {
+            listOf(UNKNOWN_CITATIONS, UNCITED).map { Criterion(it, Verdict.NOT_CHECKED, unchecked, incomplete) }
+        } else {
+            val share = uncited.toDouble() / sentences
+            listOf(
                 Criterion(
-                    "Zero unknown citations",
+                    UNKNOWN_CITATIONS,
                     if (unknown == 0) Verdict.PASS else Verdict.FAIL,
-                    "$unknown unknown in $sentences sentences of ${written.size} insights",
-                )
-            },
-            if (sentences == 0) {
-                Criterion("Uncited sentences under 5 percent", Verdict.NOT_CHECKED, "no insight was written")
-            } else {
-                val share = uncited.toDouble() / sentences
+                    "$unknown unknown in $sentences sentences; $tally",
+                ),
                 Criterion(
-                    "Uncited sentences under 5 percent",
+                    UNCITED,
                     if (share < MAX_UNCITED) Verdict.PASS else Verdict.FAIL,
-                    "$uncited of $sentences sentences (${percent(share)})",
-                )
-            },
-            collisions(results),
-        )
+                    "$uncited of $sentences sentences (${percent(share)}); $tally",
+                ),
+            )
+        }
+    }
+
+    /** One listed check on one track: passed, failed with a problem, or unchecked with a reason. */
+    private sealed interface CheckOutcome {
+        val label: String
+
+        data class Passed(
+            override val label: String,
+        ) : CheckOutcome
+
+        data class Failed(
+            override val label: String,
+            val problem: String,
+        ) : CheckOutcome
+
+        data class Unchecked(
+            override val label: String,
+            val reason: String,
+        ) : CheckOutcome
     }
 
     private fun collisions(results: List<TrackResult>): Criterion {
-        // Each check of each listed collision, for each of its tracks in this run with the source on.
         val outcomes =
             COLLISIONS.flatMap { collision ->
                 results
                     .filter { it.n in collision.tracks }
                     .flatMap { result -> collision.checks.mapNotNull { check -> outcomeOf(result, check) } }
             }
-        val failed = outcomes.filter { it.second != null }.map { "${it.first}: ${it.second}" }
-        val passed = outcomes.filter { it.second == null }.map { it.first }
-        val name = "Every listed same-name collision rejected or correctly resolved"
+        val failed = outcomes.filterIsInstance<CheckOutcome.Failed>().map { "${it.label}: ${it.problem}" }
+        val unchecked = outcomes.filterIsInstance<CheckOutcome.Unchecked>().map { "${it.label}: ${it.reason}" }
+        val passed = outcomes.filterIsInstance<CheckOutcome.Passed>().map { it.label }
         return when {
             failed.isNotEmpty() -> {
-                Criterion(name, Verdict.FAIL, failed.joinToString("; "))
+                Criterion(
+                    COLLISIONS_NAME,
+                    Verdict.FAIL,
+                    (failed + unchecked.map { "unchecked: $it" }).joinToString("; "),
+                )
+            }
+
+            unchecked.isNotEmpty() -> {
+                Criterion(
+                    COLLISIONS_NAME,
+                    Verdict.NOT_CHECKED,
+                    "unchecked: ${unchecked.joinToString("; ")}",
+                    incomplete = true,
+                )
             }
 
             passed.isEmpty() -> {
-                Criterion(name, Verdict.NOT_CHECKED, "no listed collision was in this run with its source on")
+                Criterion(
+                    COLLISIONS_NAME,
+                    Verdict.NOT_CHECKED,
+                    "no listed collision was in this run with its source on",
+                )
             }
 
             else -> {
-                Criterion(name, Verdict.PASS, "${passed.size} checks passed: ${passed.joinToString("; ")}")
+                Criterion(COLLISIONS_NAME, Verdict.PASS, "${passed.size} checks passed: ${passed.joinToString("; ")}")
             }
         }
     }
 
-    // The check's label and its problem (null when right), or null when the source did not run.
+    // A source switched off (or not run) is not a check; one that failed or was unreachable is a
+    // check that could not be made.
     private fun outcomeOf(
         result: TrackResult,
         check: Check,
-    ): Pair<String, String?>? {
-        val done = result.state.sources[check.source] as? SourceState.Done
-        return done?.result?.takeIf { it.outcome != Outcome.SourceOff }?.let {
-            "track ${result.n}, ${check.source.tag}: ${check.rule}" to check.problem(it)
+    ): CheckOutcome? {
+        val label = "track ${result.n}, ${check.source.tag}: ${check.rule}"
+        return when (val state = result.state.sources[check.source]) {
+            null, SourceState.Pending -> null
+            is SourceState.Failed -> CheckOutcome.Unchecked(label, "the lookup failed (${state.reason})")
+            is SourceState.Done ->
+                when (state.result.outcome) {
+                    Outcome.SourceOff -> null
+                    Outcome.Unreachable -> CheckOutcome.Unchecked(label, "the source was unreachable")
+                    else ->
+                        check.problem(state.result)?.let { CheckOutcome.Failed(label, it) }
+                            ?: CheckOutcome.Passed(label)
+                }
         }
     }
+
+    private const val UNKNOWN_CITATIONS = "Zero unknown citations"
+    private const val UNCITED = "Uncited sentences under 5 percent"
+    private const val COLLISIONS_NAME = "Every listed same-name collision rejected or correctly resolved"
 
     private const val PER_MILLE = 1000
     private const val PER_CENT = 10.0

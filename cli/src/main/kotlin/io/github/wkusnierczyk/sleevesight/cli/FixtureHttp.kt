@@ -274,8 +274,10 @@ class RecordingNetClient(
     private val recorded: Set<String>,
 ) : NetClient {
     private val replay = ReplayNetClient(store)
+    private val refused = mutableListOf<String>()
 
-    val misses: List<String> get() = replay.misses
+    /** The requests replayed with no recording, and the answers not recorded because they could not be read. */
+    val misses: List<String> get() = replay.misses + synchronized(refused) { refused.toList() }
 
     override suspend fun send(request: NetRequest): NetResult<NetResponse> {
         val source = FixtureStore.sourceOf(request.url)
@@ -283,15 +285,14 @@ class RecordingNetClient(
         checkKeyless(source, request)
         val result = live.send(request)
         if (result is NetResult.Success) {
-            val body =
-                if (source ==
-                    MUSICBRAINZ
-                ) {
-                    withoutTags(result.value.body)
-                } else {
-                    FixtureStore.pretty(result.value.body)
-                }
-            synchronized(store) { store.record(request, result.value.status, body, "json") }
+            // A MusicBrainz body that cannot be read cannot have its tags removed, so it is not kept.
+            val raw = result.value.body
+            val body = if (source == MUSICBRAINZ) withoutTags(raw) else FixtureStore.pretty(raw)
+            if (body == null) {
+                synchronized(refused) { refused += "${ReplayNetClient.describe(request)} (not recorded: not JSON)" }
+            } else {
+                synchronized(store) { store.record(request, result.value.status, body, "json") }
+            }
         }
         return result
     }
@@ -332,11 +333,12 @@ class RecordingNetClient(
         const val ANTHROPIC = "anthropic"
         val MESSAGE_ID = Regex("\"id\":\\s*\"msg_[A-Za-z0-9_]+\"")
 
-        fun withoutTags(body: String): String =
-            runCatching {
-                FixtureStore.PRETTY.encodeToString(JsonElement.serializer(), strip(Json.parseToJsonElement(body))) +
-                    "\n"
-            }.getOrDefault(body)
+        // Null when the body is not a JSON object or array (the parser takes a bare word as a value).
+        fun withoutTags(body: String): String? =
+            runCatching { Json.parseToJsonElement(body) }
+                .getOrNull()
+                ?.takeIf { it is JsonObject || it is JsonArray }
+                ?.let { FixtureStore.PRETTY.encodeToString(JsonElement.serializer(), strip(it)) + "\n" }
 
         fun strip(element: JsonElement): JsonElement =
             when (element) {

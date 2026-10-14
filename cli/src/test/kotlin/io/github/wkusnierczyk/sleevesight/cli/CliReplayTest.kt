@@ -1,7 +1,9 @@
 package io.github.wkusnierczyk.sleevesight.cli
 
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -42,6 +44,31 @@ class CliReplayTest {
 
         assertEquals(Cli.EXIT_USAGE, status)
         assertTrue("Requests with no recording" in report)
+    }
+
+    @Test
+    fun `an unreachable source on a listed collision track leaves the gate unchecked, and the run fails`() {
+        // A copy of the fixtures in which Wikipedia answers 503 to its lookups for tracks 8 and 12.
+        val copy = Files.createTempDirectory("fixtures").toFile()
+        try {
+            File(fixtures).copyRecursively(copy)
+            val index = File(copy, "http/wikipedia/index.json")
+            val broken =
+                listOf("query-we-in-here-peleboy", "query-bad-energy-reem").fold(index.readText()) { text, file ->
+                    text.replace(Regex("\"status\": 200,(\\s*\"file\": \"$file)"), "\"status\": 503,$1")
+                }
+            index.writeText(broken)
+            for (track in listOf("8", "12")) {
+                val (status, report) = run("replay", "--fixtures", copy.path, "--tracks", track, "--no-insights")
+                assertEquals(Cli.EXIT_UNCHECKED, status, report)
+                assertTrue(
+                    "| Every listed same-name collision rejected or correctly resolved | NOT_CHECKED | unchecked:" in
+                        report,
+                )
+            }
+        } finally {
+            copy.deleteRecursively()
+        }
     }
 
     @Test

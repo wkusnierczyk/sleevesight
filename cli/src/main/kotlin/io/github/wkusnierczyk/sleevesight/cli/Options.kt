@@ -49,6 +49,7 @@ data class Options(
             Usage: sleevesight-cli <replay|live|record> [options]
 
               replay   Run the pipeline over the recorded responses in fixtures/http/: no network, no keys.
+                       Fails on any source request with no recording.
               live     Run it against the live services, with the keys in the environment or the keys file.
               record   Like live for the sources given by --record, replayed for the others; writes what
                        the live ones answer into fixtures/http/. Web search is off: Exa's results may not
@@ -68,8 +69,11 @@ data class Options(
                                   (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
 
-            Exit status: 0 when the gate's criteria pass or were not checked, 1 when one fails,
-            2 for a usage error or a request with no recording.
+            Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them;
+            1 when one fails; 2 for a usage error, or a source request with no recording (a missing
+            recorded AI reply is reported, not fatal) or whose answer could not be recorded; 3 when a
+            criterion the run should have checked could not be, because a source was unreachable or
+            failed, or an insight call failed.
             """.trimIndent()
 
         private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia", "anthropic")

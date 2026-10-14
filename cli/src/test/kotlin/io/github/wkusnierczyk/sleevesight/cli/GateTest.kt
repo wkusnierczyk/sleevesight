@@ -16,6 +16,8 @@ import io.github.wkusnierczyk.sleevesight.core.synthesis.GroundingCheck
 import io.github.wkusnierczyk.sleevesight.core.synthesis.InsightReply
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -62,11 +64,62 @@ class GateTest {
             Duration.ZERO,
         )
 
-    private fun verdicts(vararg results: TrackResult) = Gate.evaluate(results.toList()).map { it.verdict }
+    private fun verdicts(vararg results: TrackResult) =
+        Gate.evaluate(results.toList(), insightsAsked = true).map {
+            it.verdict
+        }
+
+    private fun collision(vararg results: TrackResult) = Gate.evaluate(results.toList(), insightsAsked = false)[2]
 
     @Test
-    fun `nothing to check is not checked, not passed`() {
-        assertEquals(listOf(Verdict.NOT_CHECKED, Verdict.NOT_CHECKED, Verdict.NOT_CHECKED), verdicts(state(1)))
+    fun `nothing to check is not checked, not passed, and not incomplete`() {
+        val criteria = Gate.evaluate(listOf(state(1)), insightsAsked = false)
+        assertEquals(listOf(Verdict.NOT_CHECKED, Verdict.NOT_CHECKED, Verdict.NOT_CHECKED), criteria.map { it.verdict })
+        assertTrue(criteria.none { it.incomplete })
+    }
+
+    @Test
+    fun `an unreachable or failed source on a listed track leaves the collision unchecked, not passed`() {
+        val unreachable = SourceResult(Outcome.Unreachable, emptyList(), Duration.ZERO)
+        val track8 = collision(state(8, wikipedia = unreachable))
+        assertEquals(Verdict.NOT_CHECKED, track8.verdict)
+        assertTrue(track8.incomplete)
+        assertTrue("unreachable" in track8.detail, track8.detail)
+
+        val failed =
+            state(12).let { r ->
+                r.copy(
+                    state =
+                        r.state.copy(
+                            sources =
+                                mapOf(
+                                    SourceId.WIKIPEDIA to SourceState.Failed("IllegalStateException"),
+                                ),
+                        ),
+                )
+            }
+        val track12 = collision(failed, state(20, wikipedia = lines(Scope.SONG)))
+        assertEquals(Verdict.NOT_CHECKED, track12.verdict)
+        assertTrue(track12.incomplete)
+
+        // A failure elsewhere is still a failure; a source switched off is no check at all.
+        assertEquals(
+            Verdict.FAIL,
+            collision(state(8, wikipedia = unreachable), state(45, wikipedia = lines(Scope.SONG))).verdict,
+        )
+        val off = SourceResult(Outcome.SourceOff, emptyList(), Duration.ZERO)
+        val disabled = collision(state(8, wikipedia = off))
+        assertEquals(Verdict.NOT_CHECKED, disabled.verdict)
+        assertFalse(disabled.incomplete)
+    }
+
+    @Test
+    fun `failed insights are counted, and leave the citation criteria unchecked`() {
+        val failed = state(1).let { r -> r.copy(state = r.state.copy(insight = InsightState.Failed("offline"))) }
+        val criteria = Gate.evaluate(listOf(state(63, reply = "It is a song [MB1]."), failed), insightsAsked = true)
+        assertEquals(Verdict.NOT_CHECKED, criteria[0].verdict)
+        assertTrue(criteria[0].incomplete)
+        assertTrue("1 of 2 insights written; 1 failed (1: offline)" in criteria[0].detail, criteria[0].detail)
     }
 
     @Test
@@ -91,9 +144,10 @@ class GateTest {
         assertEquals(Verdict.FAIL, verdicts(state(1, reply = "It is a song [W9]."))[0])
         val cited = (1..19).map { state(1, reply = "It is a song [MB1].") }
         val uncited = state(1, reply = "It is a song.")
-        assertEquals(Verdict.FAIL, Gate.evaluate(cited.take(18) + uncited)[1].verdict)
-        assertEquals(Verdict.FAIL, Gate.evaluate(cited.take(19) + uncited)[1].verdict) // exactly 5 percent
-        assertEquals(Verdict.PASS, Gate.evaluate(cited + cited.take(1) + uncited)[1].verdict)
-        assertEquals(Verdict.PASS, Gate.evaluate(cited)[0].verdict)
+        assertEquals(Verdict.FAIL, Gate.evaluate(cited.take(18) + uncited, insightsAsked = true)[1].verdict)
+        // Exactly 5 percent is not under it.
+        assertEquals(Verdict.FAIL, Gate.evaluate(cited.take(19) + uncited, insightsAsked = true)[1].verdict)
+        assertEquals(Verdict.PASS, Gate.evaluate(cited + cited.take(1) + uncited, insightsAsked = true)[1].verdict)
+        assertEquals(Verdict.PASS, Gate.evaluate(cited, insightsAsked = true)[0].verdict)
     }
 }

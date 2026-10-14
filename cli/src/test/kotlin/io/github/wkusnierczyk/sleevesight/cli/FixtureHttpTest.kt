@@ -88,6 +88,18 @@ class FixtureHttpTest {
         }
 
     @Test
+    fun `a MusicBrainz body that cannot be read is not recorded, and is reported`() =
+        runBlocking {
+            val store = FixtureStore(root)
+            val recorder = RecordingNetClient(Live("<html>busy</html>"), store, setOf("musicbrainz"))
+            recorder.send(search)
+            store.save()
+
+            assertFalse(File(root, "musicbrainz").exists())
+            assertTrue(recorder.misses.single().endsWith("(not recorded: not JSON)"), recorder.misses.toString())
+        }
+
+    @Test
     fun `a keyless source's request carrying a key is refused`() {
         val recorder = RecordingNetClient(Live("{}"), FixtureStore(root), setOf("wikipedia"))
         val keyed =

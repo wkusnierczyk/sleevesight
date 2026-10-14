@@ -112,7 +112,7 @@ class Cli(
             val results = runAll(events)
             if (options.mode == Mode.RECORD) store.save()
             val misses = recorder?.misses ?: replay.misses
-            val gate = Gate.evaluate(results)
+            val gate = Gate.evaluate(results, insightsAsked = ai != null)
             val summary =
                 RunSummary(
                     mode = options.mode,
@@ -133,6 +133,7 @@ class Cli(
             return when {
                 sourceMisses.isNotEmpty() -> EXIT_USAGE
                 gate.any { it.verdict == Verdict.FAIL } -> EXIT_GATE
+                gate.any { it.incomplete } -> EXIT_UNCHECKED
                 else -> 0
             }
         }
@@ -238,8 +239,15 @@ class Cli(
 
     companion object {
         const val APP_VERSION = "0.0"
+
+        /** A gate criterion failed. */
         const val EXIT_GATE = 1
+
+        /** A usage error, or a source's request with no recording (replay) or not recordable (record). */
         const val EXIT_USAGE = 2
+
+        /** A criterion the run should have checked could not be: a source or an insight call failed. */
+        const val EXIT_UNCHECKED = 3
         private const val ANTHROPIC = "anthropic"
         private const val SECONDS_PER_MINUTE = 60
 
