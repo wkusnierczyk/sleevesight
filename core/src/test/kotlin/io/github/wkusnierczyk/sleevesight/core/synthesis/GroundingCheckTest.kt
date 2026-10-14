@@ -112,14 +112,25 @@ class GroundingCheckTest {
         )
     }
 
-    /** The simulator's hedges only allow "nothing else"; the check also "little else", "little more" (#46). */
+    /** The prompt's fixed sentence for a gap is a hedge, as written; other wordings as the simulator's (#46). */
     @Test
-    fun `a gap stated with else or more is a hedge`() {
+    fun `the prompt's gap sentence is a hedge, other wordings as before`() {
         val reply =
-            "Beyond that, little else is documented about this recording. Little more is known. " +
-                "Not much else is documented. Nothing more is known about it. Little was ever said."
-        val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, emptySet(), allowModel = false))
-        assertEquals(listOf(4, 1), listOf(written.grounded.counts.hedge, written.grounded.counts.uncited))
+            "It was a single. [P1] Little else is documented. Beyond that, little else is documented about it. " +
+                "Little more is known. Little is known about the B-side."
+        val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("P1"), allowModel = false))
+        assertEquals(
+            listOf(
+                SentenceStatus.OK,
+                SentenceStatus.HEDGE,
+                SentenceStatus.UNCITED,
+                SentenceStatus.UNCITED,
+                SentenceStatus.HEDGE,
+            ),
+            written.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
     }
 
     @Test

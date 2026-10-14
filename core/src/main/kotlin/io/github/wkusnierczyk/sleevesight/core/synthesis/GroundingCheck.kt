@@ -72,9 +72,9 @@ sealed interface InsightReply {
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
  * its `NO_EVIDENCE` test, rule for rule but for two deviations from the Phase 0.5 gate (#46): an
- * abbreviation does not end a sentence ([splitSentences]), and a stated gap may say "little else"
- * or "little more". The tests compare it with the simulator's own code on the same replies
- * (`core/src/test/resources/grounding/`).
+ * abbreviation does not end a sentence ([splitSentences]), and the prompt's fixed sentence for a
+ * gap, [GAP_SENTENCE], is a hedge. The tests compare it with the simulator's own code on the same
+ * replies (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -83,6 +83,14 @@ sealed interface InsightReply {
 object GroundingCheck {
     /** The model's id for its own knowledge. */
     const val MODEL_ID: String = "M"
+
+    /**
+     * The one sentence a reply may end with, uncited, to state that the evidence covers only part
+     * of what it would say: the insight prompt asks for exactly this (#46). A hedge when it is the
+     * whole sentence, as written; other wordings of a gap are hedges only as the simulator's
+     * patterns allow.
+     */
+    const val GAP_SENTENCE: String = "Little else is documented."
 
     /** The reply that says there is no usable evidence. */
     const val NO_EVIDENCE: String = "NO_EVIDENCE"
@@ -154,7 +162,8 @@ object GroundingCheck {
             when {
                 bad -> SentenceStatus.UNKNOWN
                 cites.isNotEmpty() -> if (MODEL_ID in cites) SentenceStatus.MODEL else SentenceStatus.OK
-                HEDGE.containsMatchIn(sentence.asciiLowercase()) -> SentenceStatus.HEDGE
+                sentence.trimJs() == GAP_SENTENCE || HEDGE.containsMatchIn(sentence.asciiLowercase()) ->
+                    SentenceStatus.HEDGE
                 else -> SentenceStatus.UNCITED
             }
         return CheckedSentence(sentence, cites, status)
@@ -251,12 +260,9 @@ object GroundingCheck {
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
 
-    // The simulator's, with "else" and "more" allowed after "little", "not much" and "nothing" (#46):
-    // the prompt asks for "little is documented", and the model writes "little else is documented".
     private val HEDGE =
         Regex(
-            "little (else |more )?is (known|documented)|not much (else |more )?is (known|documented)|" +
-                "no (further )?(details|information)|isn't much|is not much|" +
-                "nothing (else |more )?is (known|documented)",
+            "little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|" +
+                "isn't much|is not much|nothing (else )?is (known|documented)",
         )
 }

@@ -552,7 +552,7 @@ Input: the now-playing title, artists and album as the player reports them (not 
 - "Original song" lines describe the song as first recorded by someone else; never credit them to this artist.
 - "Artist" lines describe the performer, not this recording.
 - Web lines may be about a different song with the same name; ignore what does not fit.
-- If little is documented, say so in one uncited sentence.
+- If the evidence covers only part of what the insight would say: the sentences it supports, each cited; to state the gap, end with exactly `Little else is documented.`, uncited, and no other uncited sentence (prompt version 2, #46; the simulator let the model word the gap freely).
 - With model knowledge on: at most one sentence from general knowledge, ending with `[M]`. Otherwise none.
 - With no usable evidence: reply exactly `NO_EVIDENCE`.
 
