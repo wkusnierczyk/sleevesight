@@ -61,8 +61,8 @@ class InterleavingDriver(
 
 /**
  * [Caches] over a fresh in-memory SQLite database, with settings and a clock the test controls. The
- * default settings give Discogs a lifetime of one day, so the tests have a short-lived source that
- * may be kept: web search, which had that lifetime, is never kept (Exa's terms).
+ * default settings give Discogs a lifetime of one day, so the tests have a short-lived source besides
+ * web search.
  */
 class CacheFixture(
     var settings: Settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.DISCOGS to 1.days)),

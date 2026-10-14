@@ -29,7 +29,7 @@ interface PipelineCache {
 
     /**
      * Keeps what [adapter] gave for [track] at [duration]; the cache decides whether it may (not an
-     * unreachable result, and never web search's: Exa's terms forbid storing its results).
+     * unreachable result, for one).
      */
     suspend fun keep(
         adapter: SourceAdapter,

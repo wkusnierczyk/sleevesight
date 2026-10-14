@@ -24,9 +24,9 @@ import java.security.MessageDigest
  * `ReplayNetClient` in `:sources`' test fixtures reads. A `POST` (Anthropic's messages) is matched on
  * its body too, by the body's SHA-256 (`bodySha256`, in the `anthropic` index only).
  *
- * Only the keyless sources and Anthropic are recorded. Exa's results may not be stored (its terms,
+ * Only the keyless sources and Anthropic are recorded. Exa's results are not committed (its terms,
  * §4.2(a); `design/design.md`, *Web search provider (D11)*), so web search is neither recorded nor
- * replayed; Last.fm has no key yet.
+ * replayed; Last.fm has no key yet. (The live run's on-device cache does keep them, for a day.)
  */
 class FixtureStore(
     private val root: File,
