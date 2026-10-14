@@ -202,7 +202,7 @@ class WikipediaSourceTest {
     }
 
     @Test
-    fun `a paragraph with a straight quote right after a digit gives nothing`() {
+    fun `a paragraph with a closing quote right after a number gives nothing`() {
         val dropped =
             listOf(
                 "It came out as a 7\" single. It charted.",

@@ -27,6 +27,10 @@ sealed interface LastFmMatch {
     data class Failed(
         val reason: String,
     ) : LastFmMatch
+
+    /** Whether the artist so judged may be shown: verified or unverified. */
+    val shows: Boolean
+        get() = this == Verified || this == Unverified
 }
 
 /**
@@ -45,7 +49,7 @@ data class LastFmArtistLookup(
 ) {
     /** [artist] when the match is verified or unverified, the only artist whose data may be shown. */
     val shown: LastFmArtist?
-        get() = artist.takeIf { match == LastFmMatch.Verified || match == LastFmMatch.Unverified }
+        get() = artist.takeIf { match.shows }
 }
 
 /**

@@ -39,7 +39,11 @@ internal suspend fun readLines(
         }
         // The engine ends the body channel cleanly, without an error, when the call is cancelled
         // under it (a connection lost mid-body can do that): a body cut off is no end of stream.
-        if (failure == null && !response.coroutineContext.isActive) failure = NetError.Offline("CancelledBody")
+        // When the caller itself was cancelled, that is the cancellation, not a lost connection.
+        if (failure == null && !response.coroutineContext.isActive) {
+            currentCoroutineContext().ensureActive()
+            failure = NetError.Offline("CancelledBody")
+        }
         if (failure == null) splitter.finish()
     } catch (e: IOException) {
         currentCoroutineContext().ensureActive()

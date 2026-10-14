@@ -35,11 +35,15 @@ internal object LastFmBio {
             RegexOption.IGNORE_CASE,
         )
 
-    // An enumerated list, `1) … 2) …` or `1. … 2. …`; a number such as `1.5` has no space after the mark.
+    // An enumerated list, `1) … 2) …` or `1. … 2. …`; a number such as `1.5` has no space after the
+    // mark. Deliberately loose (see [sharedPage]).
     private val FIRST_ITEM = Regex("(^|\\s)1[.)] ")
     private val SECOND_ITEM = Regex("\\s2[.)] ")
 
     private val WHITESPACE = Regex("\\s+")
+
+    // A trailing ellipsis, before any closing quotes or brackets.
+    private val ELLIPSIS = Regex("(\\.\\.\\.|…)[\"')\\]”’]*$")
 
     /** Words that end in a full stop without ending a sentence. */
     private val ABBREVIATIONS =
@@ -74,15 +78,21 @@ internal object LastFmBio {
             emptyList()
         } else {
             split(text)
-                .filter { it.length in MIN_LENGTH..MAX_LENGTH && !it.endsWith("...") && !it.endsWith("…") }
+                // A sentence that trails off, inside closing quotes or brackets or not, is cut off.
+                .filter { it.length in MIN_LENGTH..MAX_LENGTH && !ELLIPSIS.containsMatchIn(it) }
                 .take(MAX_SENTENCES)
         }
     }
 
     /**
      * Whether [summary] says the page is shared by several artists of one name: it starts "There
-     * are several artists …", says several artists share the name, or enumerates them (`1)` and
-     * `2)`, or `1.` and `2.`). Such a page's listeners, tags and similar artists mix them all.
+     * are several artists …", says several artists share the name, or enumerates them: a `1)` or
+     * `1.` at the start or after a space (a line break counts, see [plainText]), and a `2)` or `2.`
+     * after a space. Such a page's listeners, tags and similar artists mix them all.
+     *
+     * Detection deliberately over-matches, since taking a shared page for one artist's is the
+     * unsafe failure. Known limit: a single artist's bio with chart positions ("No. 1. … No. 2.")
+     * is taken as shared; its match is then unverified at best and its sentences are dropped.
      */
     fun sharedPage(summary: String?): Boolean = isShared(plainText(summary.orEmpty()))
 
@@ -91,7 +101,10 @@ internal object LastFmBio {
             SHARED_NAME.containsMatchIn(text) ||
             (FIRST_ITEM.containsMatchIn(text) && SECOND_ITEM.containsMatchIn(text))
 
-    /** [html] without tags, Last.fm's "Read more" link and licence note, entities decoded, spaces collapsed. */
+    /**
+     * [html] without tags (a line break or a block's edge leaves a space), Last.fm's "Read more"
+     * link and licence note, entities decoded, spaces collapsed.
+     */
     fun plainText(html: String): String =
         decodeEntities(stripTags(html))
             .replace(LICENCE_NOTE, " ")
@@ -149,18 +162,38 @@ internal object LastFmBio {
 
     private const val OPENERS = "\"“‘'("
 
+    // Tags removed; a line break or a block's edge (`<br>`, `<p>`, `</li>`) leaves a space, so the
+    // words on either side stay apart.
     private fun stripTags(html: String): String {
         val out = StringBuilder(html.length)
+        val tag = StringBuilder()
         var inTag = false
         for (c in html) {
             when {
-                c == '<' -> inTag = true
-                c == '>' && inTag -> inTag = false
-                !inTag -> out.append(c)
+                c == '<' -> {
+                    inTag = true
+                    tag.clear()
+                }
+
+                c == '>' && inTag -> {
+                    inTag = false
+                    val name =
+                        tag
+                            .trimStart('/')
+                            .takeWhile { it.isLetterOrDigit() }
+                            .toString()
+                            .lowercase()
+                    if (name in BREAKING_TAGS) out.append(' ')
+                }
+
+                inTag -> tag.append(c)
+                else -> out.append(c)
             }
         }
         return out.toString()
     }
+
+    private val BREAKING_TAGS = setOf("br", "p", "div", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6")
 
     private val ENTITY = Regex("&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);")
 

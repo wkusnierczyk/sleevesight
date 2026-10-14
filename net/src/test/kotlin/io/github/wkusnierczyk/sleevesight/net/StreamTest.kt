@@ -1,6 +1,9 @@
 package io.github.wkusnierczyk.sleevesight.net
 
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.request.prepareGet
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -10,6 +13,8 @@ import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -18,6 +23,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -236,5 +242,26 @@ class StreamTest {
                 listOf("POST https://api.example.org/v1/messages {1 header} -> stopped by caller in 0 ms (attempt 1)"),
                 log.lines,
             )
+        }
+
+    @Test
+    fun `a caller cancelled before a clean end of body is cancelled, not Offline`() =
+        runTest {
+            // The caller is cancelled, and the call under it with it, while the body's last bytes
+            // are already in hand, so the read that follows sees a clean end without suspending.
+            val client = HttpClient(MockEngine { respond("a\n") })
+            var returned: NetError? = null
+            var read = false
+            val job =
+                launch {
+                    client.prepareGet("https://example.org/feed").execute { response ->
+                        returned = readLines(response, Long.MAX_VALUE) { currentCoroutineContext().cancel() }
+                        read = true
+                    }
+                }
+            job.join()
+            client.close()
+            assertTrue(job.isCancelled)
+            assertFalse(read, "readLines returned $returned")
         }
 }

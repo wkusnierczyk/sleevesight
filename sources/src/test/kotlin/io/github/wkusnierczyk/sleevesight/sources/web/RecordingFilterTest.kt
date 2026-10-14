@@ -45,6 +45,7 @@ class RecordingFilterTest {
         assertEquals("sou westers", filter.fold("Sou\u02BC Westers"))
         assertEquals("gordon lightfoot s sundown", filter.fold("Gordon Lightfoot\u2019s Sundown"))
         assertEquals("them s single", filter.fold("Them's single"))
+        assertEquals("xs", filter.fold("x'\u015B"), "an accented s is not a possessive")
         val baby = track("Baby, Please Don't Go", "Them", "Van Morrison")
         assertTrue(
             about(baby, "Baby Please Dont Go - Them featuring Van Morrison", "Them's single, Baby, Please Don't Go."),
