@@ -10,6 +10,7 @@ import io.github.wkusnierczyk.sleevesight.core.ai.CompletionEvent
 import io.github.wkusnierczyk.sleevesight.core.ai.CompletionRequest
 import io.github.wkusnierczyk.sleevesight.core.ai.ModelInfo
 import io.github.wkusnierczyk.sleevesight.core.ai.ModelList
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.ai.StopReason
 import io.github.wkusnierczyk.sleevesight.core.ai.Usage
 import io.github.wkusnierczyk.sleevesight.net.NetError
@@ -89,6 +90,24 @@ class AnthropicProviderTest {
             )
             assertEquals("application/json", sent.body!!.contentType)
             assertFalse("sk-ant" in sent.toString() + sent.url + sent.headers + sent.body!!.text)
+        }
+
+    @Test
+    fun `an effort goes in output_config, and none leaves the model's default`() =
+        runTest {
+            val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+            AnthropicProvider(net).stream(request.copy(effort = ReasoningEffort.LOW), key).toList()
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        net.requests
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals(Json.parseToJsonElement("""{"effort":"low"}"""), body["output_config"])
+            assertEquals(null, body["thinking"])
         }
 
     @Test

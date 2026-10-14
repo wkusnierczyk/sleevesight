@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.store
 
 import io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceDraft
 import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
+import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
@@ -17,8 +18,11 @@ import kotlin.time.Instant
  * cache; instants and durations in ISO 8601, which round-trip exactly.
  */
 internal object RetrievalCodec {
-    /** The encoding's version; a change to it makes every kept result a miss. */
-    const val FORMAT: Int = 1
+    /**
+     * The encoding's version; a change to it makes every kept result a miss. 2: genre labels (#44),
+     * which a result of version 1 would lack.
+     */
+    const val FORMAT: Int = 2
 
     private val json = Json { encodeDefaults = false }
 
@@ -34,6 +38,7 @@ internal object RetrievalCodec {
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason) },
+                genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label) },
             ),
         )
 
@@ -47,6 +52,7 @@ internal object RetrievalCodec {
                 latency = Duration.parseIsoString(stored.latency),
                 unverified = stored.unverified.map(::draft),
                 rejections = stored.rejections.map { Rejection(it.subject, it.reason) },
+                genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label) },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -105,6 +111,15 @@ internal object RetrievalCodec {
         val evidence: List<DraftJson> = emptyList(),
         val unverified: List<DraftJson> = emptyList(),
         val rejections: List<RejectionJson> = emptyList(),
+        val genres: List<GenreJson> = emptyList(),
+    )
+
+    @Serializable
+    private data class GenreJson(
+        val tag: String,
+        val family: String,
+        val hue: Int,
+        val label: String,
     )
 
     @Serializable

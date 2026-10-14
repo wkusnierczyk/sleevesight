@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.core.sources
 
 import io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceDraft
+import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
@@ -67,6 +68,10 @@ val SourceAdapter.tag: String get() = id.tag
  * one, whatever its outcome. [rejections] keeps each candidate that failed the check, with its
  * reason, also when another candidate gave lines (one credited artist of several), so the
  * *Sources* section can show them.
+ *
+ * [genres] are the genre labels the source gives the track's artists (Last.fm's tags through the
+ * vocabulary, `design/architecture.md`, *Genre labels*), from a verified or unverified match only;
+ * empty for a source that gives none.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -74,6 +79,7 @@ data class SourceResult(
     val latency: Duration,
     val unverified: List<EvidenceDraft> = emptyList(),
     val rejections: List<Rejection> = emptyList(),
+    val genres: List<GenreLabel> = emptyList(),
 )
 
 /** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */

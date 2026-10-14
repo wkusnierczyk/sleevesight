@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.store
 
 import io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceDraft
 import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
+import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
@@ -317,6 +318,7 @@ class RetrievalCacheTest {
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page")),
+            genres = listOf(GenreLabel("folk rock", "folk", 135, "Folk Rock")),
         )
     }
 

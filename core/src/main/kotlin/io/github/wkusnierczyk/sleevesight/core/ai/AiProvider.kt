@@ -31,12 +31,15 @@ interface AiProvider {
 
 /**
  * One completion: [prompt] as the single user message to [model]. [maxTokens] bounds the reply,
- * including any reasoning the model does before it, which counts against it.
+ * including any reasoning the model does before it, which counts against it. [effort] is how much
+ * the model may reason before it answers, where the provider has such a control; null leaves the
+ * provider's default.
  */
 data class CompletionRequest(
     val model: String,
     val prompt: String,
     val maxTokens: Int = DEFAULT_MAX_TOKENS,
+    val effort: ReasoningEffort? = null,
 ) {
     init {
         require(maxTokens > 0) { "maxTokens must be positive, was $maxTokens" }
@@ -49,6 +52,16 @@ data class CompletionRequest(
          */
         const val DEFAULT_MAX_TOKENS: Int = 4096
     }
+}
+
+/**
+ * How much a model may reason before it answers: a provider maps it to its own control (Anthropic's
+ * `output_config.effort`), or ignores it where it has none. Less is faster and cheaper.
+ */
+enum class ReasoningEffort {
+    LOW,
+    MEDIUM,
+    HIGH,
 }
 
 /** What a completion stream emits. */

@@ -30,6 +30,12 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
  */
 object InsightPrompt {
     /**
+     * The version of this prompt's template, part of the synthesis cache key: raised when the
+     * contract or the built-in style changes, so cards written from the old prompt are not reused.
+     */
+    const val VERSION: Int = 1
+
+    /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With
      * [allowModel] (the *Model's own knowledge* switch), the model may add one sentence of its own,
      * cited `[M]`. [userStyle] is the user's style for this card (D14), or null for the built-in

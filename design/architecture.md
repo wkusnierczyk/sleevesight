@@ -158,6 +158,17 @@ data class TrackState(
 )
 ```
 
+How the orchestration is made (#44, `Pipeline` in `:core`), where the sections above leave room:
+
+- **Entry points.** `Pipeline.follow(changes: Flow<TrackChange?>)` is the app's loop, as under *Concurrency*; a `TrackChange` carries the session layer's verdict on why the track changed (`ChangeCause`: an action in Sleevesight, a skip in the player, or a natural end), which `AutoWrite` turns into D5's decision, together with whether the user has acted since the app opened. Skip detection itself stays in the session layer. `Pipeline.run(nowPlaying, write)` runs one track and returns its final state, for the CLI. `write()` is the tap on Write; `userActed()` the first action. `Settings` is read once per track.
+- **State.** As above, plus `resolution` (MusicBrainz's, once made); `similar` waits for the sounds-like card (Phase 2), so it is not there yet. `SourceState.Done` holds the adapter's whole `SourceResult` and whether it came from the cache; `Failed` holds the exception's type only, for an adapter that threw (a bug: the network is `unreachable`). A switched-off source is `Done` with `source_off`. The evidence and genre labels are assembled once every source has landed.
+- **The cache first.** Each enabled adapter's result is looked up in the retrieval cache; resolution runs only when some source misses, so a fully cached track makes no request at all. The cache is an interface in `:core`, `PipelineCache`, which `:store` implements (`StorePipelineCache`, running the blocking database calls in an injected I/O context): `:core` cannot see `:store`. A failing cache is logged and treated as a miss.
+- **What is not cached.** A result is kept only when the MusicBrainz resolution it may have been verified against was made: not when MusicBrainz was unreachable, and not when it is switched off, since either result would stay unverified once MusicBrainz is back or on. That costs a repeated web search when MusicBrainz is down; the rule does not ask which adapters awaited the resolution.
+- **Evidence.** The player's release is the `P` line, worded as the simulator words it ("This recording is on the release "…"."), with no year: the session does not report one. The other lines are the enabled sources' verified lines, in the adapters' order, so the ids do not depend on the order the sources land in. Genre labels come with the source's result (`SourceResult.genres`, Last.fm's), at most five, once each.
+- **The insight.** No AI call without evidence: nothing to narrate, and the call would be paid for a `NO_EVIDENCE`. A card is served from the synthesis cache when its full key matches (kind, the track's retrieval key, fingerprint, `InsightPrompt.VERSION`, the style's hash, provider, model, model-knowledge switch); `CardKind` names the kinds by fixed keys. A reply is kept only when it ended normally, not when it was cut off at the token limit (shown, marked incomplete) or declined. The request carries the reasoning effort (below).
+- **Diagnostics.** `PipelineEvent`s go to a `SharedFlow` that never suspends the pipeline: a slow collector loses the oldest of the last 256.
+- **Reasoning effort**, a user setting (`Settings.aiEffort`, low by default; driver 6): how much the model may reason before it writes, mapped by each provider to its own control (Anthropic's `output_config.effort`). Claude Haiku 5.5 reasons by default at medium effort; an insight narrates a few lines and is waited for, and the grounding check, not the model's deliberation, keeps it honest, so low is the default. Thinking is not switched off: not every model allows it, and every current one takes an effort.
+
 ## Components
 
 ### Session layer (`:app`)
@@ -308,7 +319,7 @@ How the three caches are made (#41, `Caches`), where the table leaves room:
 
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the AI reasoning effort, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 

@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.store
 
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
+import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,7 +16,7 @@ class SynthesisCacheTest {
 
     private val key =
         SynthesisKey(
-            kind = "insight",
+            kind = CardKind.INSIGHT,
             entityKey = "gordon lightfoot|sundown",
             evidenceFingerprint = "9f2c",
             promptVersion = 1,
@@ -41,7 +42,7 @@ class SynthesisCacheTest {
         synthesis.put(key, "text")
         val changed =
             mapOf(
-                "kind" to key.copy(kind = "genre"),
+                "kind" to key.copy(kind = CardKind.GENRE),
                 "entity" to key.copy(entityKey = "gordon lightfoot"),
                 "evidence fingerprint" to key.copy(evidenceFingerprint = "9f2d"),
                 "prompt version" to key.copy(promptVersion = 2),

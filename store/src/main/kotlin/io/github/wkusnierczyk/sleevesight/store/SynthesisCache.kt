@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.store
 
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
+import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
 import kotlin.time.Instant
 
 /**
@@ -17,7 +18,7 @@ class SynthesisCache internal constructor(
         val row =
             context.queries
                 .synthesisGet(
-                    kind = key.kind,
+                    kind = key.kind.key,
                     entityKey = key.entityKey,
                     evidenceFingerprint = key.evidenceFingerprint,
                     promptVersion = key.promptVersion.toLong(),
@@ -40,14 +41,14 @@ class SynthesisCache internal constructor(
         writtenAt: Instant = context.clock.now(),
     ): Boolean {
         val keyBytes =
-            listOf(key.kind, key.entityKey, key.evidenceFingerprint, key.styleHash, key.provider.name, key.model)
+            listOf(key.kind.key, key.entityKey, key.evidenceFingerprint, key.styleHash, key.provider.name, key.model)
                 .sumOf { it.utf8Size() }
         val size = keyBytes + text.utf8Size()
         if (!context.fits(size)) return false
         val now = context.clock.now().toEpochMilliseconds()
         context.queries.transaction {
             context.queries.synthesisRemoveKey(
-                kind = key.kind,
+                kind = key.kind.key,
                 entityKey = key.entityKey,
                 evidenceFingerprint = key.evidenceFingerprint,
                 promptVersion = key.promptVersion.toLong(),
@@ -57,7 +58,7 @@ class SynthesisCache internal constructor(
                 modelKnowledge = key.modelKnowledge.toLong(),
             )
             context.queries.synthesisInsert(
-                kind = key.kind,
+                kind = key.kind.key,
                 entity_key = key.entityKey,
                 evidence_fingerprint = key.evidenceFingerprint,
                 prompt_version = key.promptVersion.toLong(),
@@ -82,7 +83,7 @@ class SynthesisCache internal constructor(
  * What a written card depends on (architecture, *Cache and history*; R2, D14).
  *
  * @property kind the card: the home insight, a song, artist or album insight, the genre or
- *   sounds-like card.
+ *   sounds-like card, stored by its fixed [CardKind.key].
  * @property entityKey what the card is about: for a track, its [RetrievalCache.keyOf], which tells
  *   apart tracks the lookup key alone does not; for an artist or album, its own key.
  * @property evidenceFingerprint [io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceSet.fingerprint]
@@ -93,7 +94,7 @@ class SynthesisCache internal constructor(
  * @property modelKnowledge whether the model's own knowledge was allowed.
  */
 data class SynthesisKey(
-    val kind: String,
+    val kind: CardKind,
     val entityKey: String,
     val evidenceFingerprint: String,
     val promptVersion: Int,

@@ -6,6 +6,7 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
+import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -182,5 +183,5 @@ class CachesTest {
     private fun result(): SourceResult = SourceResult(Outcome.None, emptyList(), 100.milliseconds)
 
     private fun key(entity: String): SynthesisKey =
-        SynthesisKey("insight", entity, "fp", 1, "style", ProviderId.ANTHROPIC, "model", false)
+        SynthesisKey(CardKind.INSIGHT, entity, "fp", 1, "style", ProviderId.ANTHROPIC, "model", false)
 }
