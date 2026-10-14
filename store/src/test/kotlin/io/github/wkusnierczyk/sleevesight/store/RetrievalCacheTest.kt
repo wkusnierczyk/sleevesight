@@ -15,6 +15,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -239,6 +240,29 @@ class RetrievalCacheTest {
         assertEquals(1, fixture.caches.purgeExpired())
         assertEquals(1, entries())
         fixture.assertTotals()
+    }
+
+    @Test
+    fun `purging deletes the entries holding lines of a source the app no longer knows`() {
+        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        fixture.caches.queries.retrievalInsert("W", key, " W XX ", RetrievalCodec.FORMAT.toLong(), 1, "{}", 0, 0, 10)
+
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertNotNull(retrieval.get(SourceId.WEB, key, 1))
+        assertEquals(1, entries())
+        fixture.assertTotals()
+    }
+
+    @Test
+    fun `artists and works of symbols only get keys of their own`() {
+        assertNotEquals(
+            retrieval.keyOf(normalizer.normalize("Song", "A, !!!")),
+            retrieval.keyOf(normalizer.normalize("Song", "A, †††")),
+        )
+        assertNotEquals(
+            retrieval.keyOf(normalizer.normalize("Song (From !)", "A")),
+            retrieval.keyOf(normalizer.normalize("Song (From ?)", "A")),
+        )
     }
 
     @Test

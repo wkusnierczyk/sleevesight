@@ -124,9 +124,9 @@ DELETE FROM retrieval WHERE id = :id;
 retrievalPurgeSource:
 DELETE FROM retrieval WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
 
--- Rows of a source the app no longer has.
-retrievalPurgeUnknownSources:
-DELETE FROM retrieval WHERE source NOT IN :known;
+-- Each row's sources, for purging the rows that hold a source the app no longer has.
+retrievalSources:
+SELECT id, stored_at, sources FROM retrieval;
 
 retrievalPurgeFormat:
 DELETE FROM retrieval WHERE format <> :format;

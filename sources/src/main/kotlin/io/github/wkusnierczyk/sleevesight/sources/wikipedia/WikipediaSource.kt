@@ -11,6 +11,7 @@ import io.github.wkusnierczyk.sleevesight.core.resolution.IdentityCheck.Verdict
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
 import io.github.wkusnierczyk.sleevesight.core.resolution.NameMatcher
 import io.github.wkusnierczyk.sleevesight.core.resolution.WikidataEvidence
+import io.github.wkusnierczyk.sleevesight.core.settings.SourceSwitch
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
@@ -49,7 +50,7 @@ class WikipediaSource(
     override val id: SourceId = SourceId.WIKIPEDIA
 
     // The identity check asks Wikidata, so a rejection depends on it too.
-    override val consults: Set<SourceId> = setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA)
+    override val consults: Set<SourceId> = SourceSwitch.WIKIPEDIA.sources
 
     override suspend fun lookup(
         track: NormalizedTrack,

@@ -61,11 +61,23 @@ class Caches(
                 val cutoff = current.cacheLifetimes[source]?.let { (now - it).toEpochMilliseconds() } ?: Long.MAX_VALUE
                 deleted += queries.retrievalPurgeSource(source.tag, cutoff).value
             }
-            deleted += queries.retrievalPurgeUnknownSources(SourceId.entries.map { it.tag }).value
+            deleted += purgeUnknownSources()
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
             deleted + enforceLimit()
         }
+
+    // Rows holding a source tag the app no longer knows, as the adapter's source or among the
+    // sources of its lines or consulted; a read treats them as misses. Reads the small `sources`
+    // column of every row, once per purge.
+    private fun purgeUnknownSources(): Long {
+        val known = SourceId.entries.map { it.tag }.toSet()
+        return queries
+            .retrievalSources()
+            .executeAsList()
+            .filter { row -> row.sources.split(' ').any { it.isNotEmpty() && it !in known } }
+            .sumOf { queries.retrievalDeleteSeen(it.id, it.stored_at).value }
+    }
 
     /** The bytes of keys and values held, which [Settings.cacheSizeLimit] limits. */
     fun sizeBytes(): Long = stats().bytes
