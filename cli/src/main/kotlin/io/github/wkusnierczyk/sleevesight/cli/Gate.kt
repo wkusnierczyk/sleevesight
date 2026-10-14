@@ -158,31 +158,38 @@ object Gate {
         val unknown = written.sumOf { it.unknown }
         val uncited = written.sumOf { it.uncited }
         val sentences = written.sumOf { it.total }
-        val unchecked =
+
+        // The written insights decide first: one that fails a criterion fails it, whatever else failed.
+        // Only when none fails does a failed call leave the criterion unchecked, since it might have.
+        fun criterion(
+            name: String,
+            passes: Boolean,
+            detail: String,
+        ): Criterion =
             when {
-                insightsAsked && failed.isNotEmpty() -> "$tally: not every insight could be checked"
-                !insightsAsked -> "no insight was asked for"
-                sentences == 0 -> "no insight was written ($tally)"
-                else -> null
+                !insightsAsked -> Criterion(name, Verdict.NOT_CHECKED, "no insight was asked for")
+                sentences == 0 ->
+                    Criterion(
+                        name,
+                        Verdict.NOT_CHECKED,
+                        "no insight was written ($tally)",
+                        failed.isNotEmpty(),
+                    )
+                !passes -> Criterion(name, Verdict.FAIL, "$detail; $tally")
+                failed.isNotEmpty() ->
+                    Criterion(
+                        name,
+                        Verdict.NOT_CHECKED,
+                        "$detail; $tally: not every insight could be checked",
+                        true,
+                    )
+                else -> Criterion(name, Verdict.PASS, "$detail; $tally")
             }
-        val incomplete = insightsAsked && failed.isNotEmpty()
-        return if (unchecked != null) {
-            listOf(UNKNOWN_CITATIONS, UNCITED).map { Criterion(it, Verdict.NOT_CHECKED, unchecked, incomplete) }
-        } else {
-            val share = uncited.toDouble() / sentences
-            listOf(
-                Criterion(
-                    UNKNOWN_CITATIONS,
-                    if (unknown == 0) Verdict.PASS else Verdict.FAIL,
-                    "$unknown unknown in $sentences sentences; $tally",
-                ),
-                Criterion(
-                    UNCITED,
-                    if (share < MAX_UNCITED) Verdict.PASS else Verdict.FAIL,
-                    "$uncited of $sentences sentences (${percent(share)}); $tally",
-                ),
-            )
-        }
+        val share = if (sentences == 0) 0.0 else uncited.toDouble() / sentences
+        return listOf(
+            criterion(UNKNOWN_CITATIONS, unknown == 0, "$unknown unknown in $sentences sentences"),
+            criterion(UNCITED, share < MAX_UNCITED, "$uncited of $sentences sentences (${percent(share)})"),
+        )
     }
 
     /** One listed check on one track: passed, failed with a problem, or unchecked with a reason. */

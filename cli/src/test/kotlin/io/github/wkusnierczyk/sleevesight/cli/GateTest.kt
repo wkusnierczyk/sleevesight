@@ -114,6 +114,18 @@ class GateTest {
     }
 
     @Test
+    fun `a written insight that fails a criterion fails it, though another insight failed`() {
+        val failed = state(1).let { r -> r.copy(state = r.state.copy(insight = InsightState.Failed("offline"))) }
+        val criteria = Gate.evaluate(listOf(state(63, reply = "It is a song [W9]."), failed), insightsAsked = true)
+        assertEquals(Verdict.FAIL, criteria[0].verdict)
+        assertFalse(criteria[0].incomplete)
+        assertTrue("1 failed (1: offline)" in criteria[0].detail, criteria[0].detail)
+        // The uncited criterion, which the written insight passes, stays unchecked.
+        assertEquals(Verdict.NOT_CHECKED, criteria[1].verdict)
+        assertTrue(criteria[1].incomplete)
+    }
+
+    @Test
     fun `failed insights are counted, and leave the citation criteria unchecked`() {
         val failed = state(1).let { r -> r.copy(state = r.state.copy(insight = InsightState.Failed("offline"))) }
         val criteria = Gate.evaluate(listOf(state(63, reply = "It is a song [MB1]."), failed), insightsAsked = true)
