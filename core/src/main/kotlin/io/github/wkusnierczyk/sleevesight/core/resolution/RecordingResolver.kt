@@ -66,7 +66,23 @@ class RecordingResolver(
         duration: Duration?,
         found: List<MbRecording>,
     ): Resolution {
-        val candidates = found.map { candidate(track, duration, it) }
+        val searched = found.map { candidate(track, duration, it) }
+        val leaders = Leaders(musicBrainz, names)
+        val confirmed =
+            leaders.confirm(searched.filter { it.titleMatches && it.durationMatches && it.led.isNotEmpty() })
+                ?: return Resolution.UNREACHABLE
+        // A band credit counts only as its confirmed leader; an unconfirmed one does not credit the artist.
+        val candidates =
+            searched.map { c ->
+                val confirmedLeaders =
+                    c.led.mapNotNull { (artist, band) ->
+                        confirmed[artist to band]?.let {
+                            artist to
+                                it
+                        }
+                    }
+                c.copy(ids = c.ids + confirmedLeaders)
+            }
         val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.creditedArtists > 0 }
         // With the player's length, a candidate whose length is known and fits beats one with no
         // length, however early: a lengthless recording may be a demo, a bootleg or a live take.
@@ -83,24 +99,20 @@ class RecordingResolver(
                         ),
                 )
             chosen == null -> unmatched(track, candidates)
-            else -> accept(track, chosen.recording)
+            else -> accept(track, chosen.recording, leaders.details[chosen.recording.mbid])
         }
     }
 
     // A credited name that the accepted candidates, after the length has narrowed them, give to more
-    // than one MusicBrainz artist cannot be resolved: it is a same-name collision. Only the name
-    // itself counts: a band the artist leads is another MusicBrainz artist, not a namesake.
+    // than one MusicBrainz artist cannot be resolved: it is a same-name collision. A band credit
+    // counts as its confirmed leader, so a namesake's solo recording and the real leader's band, or
+    // two bands whose leaders are different artists of that name, collide too.
     private fun ambiguousArtist(
         track: NormalizedTrack,
         accepted: List<Candidate>,
     ): String? =
         track.artists.firstOrNull { artist ->
-            accepted
-                .flatMap { it.recording.credits }
-                .filter { credits(it, artist, byName = true) }
-                .map { it.artistMbid }
-                .distinct()
-                .size > 1
+            accepted.mapNotNull { it.ids[artist] }.distinct().size > 1
         }
 
     private fun candidate(
@@ -110,10 +122,23 @@ class RecordingResolver(
     ): Candidate {
         val length = recording.lengthMs?.milliseconds
         val gap = if (duration == null || length == null) null else (length - duration).absoluteValue
+        val ids =
+            track.artists
+                .mapNotNull { artist ->
+                    val credit = recording.credits.firstOrNull { credits(it, artist, byName = true) }
+                    credit?.let { artist to it.artistMbid }
+                }.toMap()
+        val led =
+            track.artists
+                .filter { it !in ids }
+                .mapNotNull { artist ->
+                    recording.credits.firstOrNull { credits(it, artist) }?.let { artist to it.artistMbid }
+                }.toMap()
         return Candidate(
             recording = recording,
             titleSimilarity = names.titleSimilarity(track.title, recording.title),
-            creditedArtists = track.artists.count { artist -> recording.credits.any { credits(it, artist) } },
+            ids = ids,
+            led = led,
             durationGap = gap,
         )
     }
@@ -138,6 +163,7 @@ class RecordingResolver(
     private suspend fun accept(
         track: NormalizedTrack,
         recording: MbRecording,
+        fetched: MbRecordingDetail?,
     ): Resolution {
         val base =
             Resolution(
@@ -151,7 +177,7 @@ class RecordingResolver(
                     },
                 firstRelease = firstRelease(recording),
             )
-        val detail = (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
+        val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
         return if (detail == null) base else withDetail(track, recording, base, detail)
     }
 
@@ -232,16 +258,76 @@ class RecordingResolver(
         credits.firstOrNull { credits(it, artist, byName = true) }?.artistMbid
             ?: relations.firstOrNull { it.type in PERFORMER_TYPES && names.sameName(it.artistName, artist) }?.artistMbid
 
+    /**
+     * A search result as a candidate: [ids] maps each track artist it credits to that artist's
+     * MusicBrainz id; [led] each one credited only through a band they would lead to the band's id,
+     * until [Leaders] confirms them.
+     */
     private data class Candidate(
         val recording: MbRecording,
         val titleSimilarity: Double,
-        val creditedArtists: Int,
+        val ids: Map<String, String>,
+        val led: Map<String, String>,
         val durationGap: Duration?,
     ) {
+        val creditedArtists: Int get() = ids.size
+
         val titleMatches: Boolean get() = titleSimilarity >= ResolutionThresholds.TITLE_SIMILARITY
         val durationMatches: Boolean get() =
             durationGap == null ||
                 durationGap <= ResolutionThresholds.DURATION_TOLERANCE
+    }
+
+    /**
+     * Confirms band credits (#77): a band credit (`X and His …`) stands for the track's artist X
+     * only when a recording of that band among the candidates names X in a performer relationship;
+     * the wording alone would let "Echo" match Echo & the Bunnymen. The relationship gives X's own
+     * id, which the same-name check then counts. Each band is tried on its preferred candidates,
+     * at most [TRIES] of them, so an unconfirmed band costs a few requests, not one per recording.
+     */
+    private class Leaders(
+        private val musicBrainz: MusicBrainzLookup,
+        private val names: NameMatcher,
+    ) {
+        /** The recordings fetched, so the chosen one is not fetched twice. */
+        val details: MutableMap<String, MbRecordingDetail> = mutableMapOf()
+
+        /**
+         * For each (artist, band id) of [candidates]' band credits, the artist's id when confirmed;
+         * null when MusicBrainz did not answer, since a band left unchecked could hide a collision.
+         */
+        suspend fun confirm(candidates: List<Candidate>): Map<Pair<String, String>, String>? {
+            val bands =
+                candidates
+                    .flatMap { c -> c.led.entries.map { (artist, band) -> (artist to band) to c } }
+                    .groupBy({ it.first }, { it.second })
+            val confirmed = mutableMapOf<Pair<String, String>, String>()
+            for ((key, recordings) in bands) {
+                for (candidate in recordings.sortedWith(PREFERENCE).take(TRIES)) {
+                    val relations =
+                        when (val detail = detail(candidate.recording.mbid)) {
+                            is Lookup.Found -> detail.value.artistRelations
+                            is Lookup.NotFound -> emptyList()
+                            is Lookup.Failed -> return null
+                        }
+                    val leader =
+                        relations.firstOrNull { it.type in PERFORMER_TYPES && names.sameName(it.artistName, key.first) }
+                    if (leader != null) {
+                        confirmed[key] = leader.artistMbid
+                        break
+                    }
+                }
+            }
+            return confirmed
+        }
+
+        private suspend fun detail(mbid: String): Lookup<MbRecordingDetail> =
+            details[mbid]?.let { Lookup.Found(it) }
+                ?: musicBrainz.recording(mbid).also { if (it is Lookup.Found) details[mbid] = it.value }
+
+        private companion object {
+            const val TRIES = 3
+        }
     }
 
     companion object {

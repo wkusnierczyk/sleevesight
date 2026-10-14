@@ -133,9 +133,149 @@ class RecordingResolverTest {
             assertEquals("Dick Dale and His Del-Tones", resolution.artistCredit)
             // From the performer relationship; never the band's own id.
             assertEquals(listOf(ResolvedArtist("Dick Dale", "mbid-Dick Dale")), resolution.artists)
-            val searchOnly = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Misirlou", "Dick Dale"), 135)
-            assertEquals("band", searchOnly.recordingMbid)
-            assertEquals(listOf(ResolvedArtist("Dick Dale", null)), searchOnly.artists)
+            // Without a recording that shows Dick Dale in the band, the band credit is not his.
+            val unconfirmed = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Misirlou", "Dick Dale"), 135)
+            assertEquals("solo", unconfirmed.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Dick Dale", "mbid-Dick Dale")), unconfirmed.artists)
+        }
+
+    // [recording] (credited to a band), whose detail names [performers] (name to id) as performing on it.
+    private fun banded(
+        recording: MbRecording,
+        vararg performers: Pair<String, String>,
+    ): Pair<MbRecording, MbRecordingDetail> =
+        recording to
+            MbRecordingDetail(
+                mbid = recording.mbid,
+                title = recording.title,
+                credits = recording.credits,
+                firstReleaseDate = recording.firstReleaseDate,
+                works = emptyList(),
+                artistRelations = performers.map { (name, id) -> MbArtistRelation("vocal", id, name, emptyList()) },
+                wikidataIds = emptyList(),
+            )
+
+    private fun searching(
+        solo: List<MbRecording>,
+        vararg bands: Pair<MbRecording, MbRecordingDetail>,
+    ) = FakeMusicBrainz(
+        Lookup.Found(solo + bands.map { it.first }),
+        recordings = bands.associate { (recording, detail) -> recording.mbid to detail },
+    )
+
+    @Test
+    fun `a band whose recording does not show the artist is not theirs - Echo is not Echo and the Bunnymen`() =
+        runTest {
+            val musicBrainz =
+                searching(
+                    listOf(recording("echo", "The Killing Moon", "Echo", 335, "2019")),
+                    banded(
+                        recording("bunnymen", "The Killing Moon", "Echo & the Bunnymen", 333, "1984"),
+                        "Ian McCulloch" to "mbid-ian",
+                    ),
+                )
+            val resolution = resolve(musicBrainz, track("The Killing Moon", "Echo"), 335)
+            assertEquals("echo", resolution.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Echo", "mbid-Echo")), resolution.artists)
+            // Alone, the band's recording is a near miss, as before band credits counted.
+            val bandOnly =
+                searching(
+                    emptyList(),
+                    banded(
+                        recording("bunnymen", "The Killing Moon", "Echo & the Bunnymen", 333, "1984"),
+                        "Ian McCulloch" to "mbid-ian",
+                    ),
+                )
+            assertEquals(
+                Outcome.Rejected("MusicBrainz has “The Killing Moon” by Echo & the Bunnymen, not by Echo"),
+                resolve(bandOnly, track("The Killing Moon", "Echo"), 335).outcome,
+            )
+        }
+
+    @Test
+    fun `a namesake's solo recording and the real leader's band collide`() =
+        runTest {
+            val alexSmith =
+                recording(
+                    "solo",
+                    "Song",
+                    "Alex Smith",
+                    200,
+                    "2000",
+                ).copy(credits = listOf(credit("Alex Smith", "artist-a")))
+            val haley =
+                searching(
+                    listOf(recording("namesake", "Rock Around the Clock", "Bill Haley", 130, "2020")),
+                    banded(
+                        recording("comets", "Rock Around the Clock", "Bill Haley & His Comets", 130, "1954"),
+                        "Bill Haley" to "mbid-real-haley",
+                    ),
+                )
+            val rejected = resolve(haley, track("Rock Around the Clock", "Bill Haley"), 130)
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Bill Haley have a matching recording"),
+                rejected.outcome,
+            )
+            assertNull(rejected.recordingMbid)
+            // Alex Smith solo, and an orchestra of that name led by another Alex Smith.
+            val smith =
+                searching(
+                    listOf(alexSmith),
+                    banded(
+                        recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Alex Smith" to "artist-b",
+                    ),
+                )
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording"),
+                resolve(smith, track("Song", "Alex Smith"), 200).outcome,
+            )
+            // An orchestra whose recording names no Alex Smith is not his: the solo recording stands.
+            val unrelated =
+                searching(
+                    listOf(alexSmith),
+                    banded(
+                        recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Someone Else" to "mbid-else",
+                    ),
+                )
+            assertEquals("solo", resolve(unrelated, track("Song", "Alex Smith"), 200).recordingMbid)
+        }
+
+    @Test
+    fun `two bands whose leaders are different artists of one name collide, the same leader's do not`() =
+        runTest {
+            val different =
+                searching(
+                    emptyList(),
+                    banded(
+                        recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Alex Smith" to "artist-a",
+                    ),
+                    banded(
+                        recording("trio", "Song", "Alex Smith with the Trio", 200, "1970"),
+                        "Alex Smith" to "artist-b",
+                    ),
+                )
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording"),
+                resolve(different, track("Song", "Alex Smith"), 200).outcome,
+            )
+            val same =
+                searching(
+                    emptyList(),
+                    banded(
+                        recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Alex Smith" to "artist-a",
+                    ),
+                    banded(
+                        recording("trio", "Song", "Alex Smith with the Trio", 200, "1970"),
+                        "Alex Smith" to "artist-a",
+                    ),
+                )
+            val resolution = resolve(same, track("Song", "Alex Smith"), 200)
+            assertEquals("orchestra", resolution.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Alex Smith", "artist-a")), resolution.artists)
         }
 
     @Test
