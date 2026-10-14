@@ -3,6 +3,7 @@ package io.github.wkusnierczyk.sleevesight.store
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
+import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceAdapter
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
@@ -28,6 +29,7 @@ import kotlin.time.Instant
  */
 class RetrievalCache internal constructor(
     private val context: CacheContext,
+    private val normalizer: Normalizer,
 ) {
     /**
      * The result [adapter] gave for [track], if kept, current and within its lifetime. The key is
@@ -73,20 +75,25 @@ class RetrievalCache internal constructor(
         adapter: SourceAdapter,
         track: NormalizedTrack,
         result: SourceResult,
-    ): Boolean = put(adapter.id, keyOf(track), adapter.extractionVersion, result)
+    ): Boolean = put(adapter.id, keyOf(track), adapter.extractionVersion, result, adapter.consults)
 
     /**
      * Keeps [result], replacing any entry for [source] and [key], and evicts down to the size
-     * limit. Returns whether it was kept: not when it holds a source with no lifetime, nor for an
-     * [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is larger than the limit.
+     * limit. The entry lives for the shortest lifetime among [consults] (the sources the adapter
+     * asked, [SourceAdapter.consults]: a rejection by Wikidata's identity check has no Wikidata line
+     * but depends on Wikidata) and the sources of its lines. Returns whether it was kept: not when
+     * one of them has no lifetime, nor for an [Outcome.Unreachable] or [Outcome.SourceOff] result,
+     * nor when it is larger than the limit.
      */
     fun put(
         source: SourceId,
         key: String,
         extractionVersion: Int,
         result: SourceResult,
+        consults: Set<SourceId> = setOf(source),
     ): Boolean {
-        val sources = (listOf(source) + (result.evidence + result.unverified).map { it.source }).distinct()
+        val lineSources = (result.evidence + result.unverified).map { it.source }
+        val sources = (listOf(source) + consults + lineSources).distinct()
         val payload = RetrievalCodec.encode(result)
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
@@ -116,21 +123,22 @@ class RetrievalCache internal constructor(
         return keep
     }
 
-    companion object {
-        /**
-         * The retrieval key of [track]: its [NormalizedTrack.lookupKey] (primary artist and title,
-         * folded), its credited artists, lowercased and sorted, and the work it is from, lowercased.
-         * The adapters read the artists (each is looked up, and verified) and the work (web search
-         * filters on it), so "Song (feat. X)" and "Song" get entries of their own. Each part is
-         * prefixed with its length, so no two different tracks encode alike.
-         */
-        fun keyOf(track: NormalizedTrack): String {
-            val parts =
-                listOf(track.lookupKey) + track.artists.map { it.lowercase() }.sorted() +
-                    listOf(track.from?.lowercase())
-            return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
-        }
+    /**
+     * The retrieval key of [track]: its [NormalizedTrack.lookupKey] (primary artist and title), its
+     * credited artists, sorted, and the work it is from, each folded as the lookup key is
+     * ([Normalizer.foldForKey]), so equivalent spellings (NFC and NFD, any case) give one key. The
+     * adapters read the artists (each is looked up, and verified) and the work (web search filters
+     * on it), so "Song (feat. X)" and "Song" get entries of their own. Each part is prefixed with its
+     * length, so no two different combinations of parts encode alike.
+     */
+    fun keyOf(track: NormalizedTrack): String {
+        val parts =
+            listOf(track.lookupKey) + track.artists.map(normalizer::foldForKey).sorted() +
+                listOf(track.from?.let(normalizer::foldForKey))
+        return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
+    }
 
+    private companion object {
         private fun tagsOf(column: String): List<SourceId?> =
             column.split(' ').filter { it.isNotEmpty() }.map { SourceId.ofTag(it) }
 

@@ -32,6 +32,13 @@ interface SourceAdapter {
     val extractionVersion: Int get() = 1
 
     /**
+     * The sources this adapter asks, which its result depends on even when it holds none of their
+     * lines: the Wikipedia adapter's rejection comes from Wikidata's identity check. The retrieval
+     * cache keeps a result for the shortest lifetime among these and the sources of its lines.
+     */
+    val consults: Set<SourceId> get() = setOf(id)
+
+    /**
      * Looks [track] up. Lines in the result must come in a deterministic order for the same
      * response, since [io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceSet] keeps it
      * when assigning ids. Each draft names its own source, which decides its id; an adapter may

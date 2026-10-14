@@ -48,6 +48,9 @@ class WikipediaSource(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.WIKIPEDIA
 
+    // The identity check asks Wikidata, so a rejection depends on it too.
+    override val consults: Set<SourceId> = setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA)
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,

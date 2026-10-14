@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.store
 
 import app.cash.sqldelight.db.SqlDriver
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
+import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.store.db.CacheDatabase
 import io.github.wkusnierczyk.sleevesight.store.db.CacheQueries
@@ -11,7 +12,8 @@ import kotlin.time.Instant
 /**
  * The caches (`design/architecture.md`, *Cache and history*), over a database the caller opens:
  * [driver] is SQLite through JDBC in `:cli` and the tests, the Android driver in `:app`, with
- * [CacheDatabase.Schema] created on it.
+ * [CacheDatabase.Schema] created on it. [normalizer] folds the parts of the retrieval key
+ * ([RetrievalCache.keyOf]) as the lookup key is folded.
  *
  * - [retrieval]: what each source lookup gave, per source and lookup key, for the source's
  *   lifetime ([Settings.cacheLifetimes], D9).
@@ -31,20 +33,22 @@ import kotlin.time.Instant
 class Caches(
     driver: SqlDriver,
     private val settings: () -> Settings,
+    normalizer: Normalizer,
     private val clock: Clock = Clock.System,
 ) {
     internal val queries: CacheQueries = CacheDatabase(driver).cacheQueries
     private val context = CacheContext(queries, settings, clock, ::enforceLimit)
 
-    val retrieval: RetrievalCache = RetrievalCache(context)
+    val retrieval: RetrievalCache = RetrievalCache(context, normalizer)
     val artists: ArtistCache = ArtistCache(context)
     val synthesis: SynthesisCache = SynthesisCache(context)
 
     /**
      * Deletes the expired entries, as of [now]: retrieval entries past the shortest lifetime of the
-     * sources they hold lines from (also those holding a source that no longer has one, and those
-     * in an old encoding) and artist entries past theirs. Then evicts down to the size limit, which
-     * may have been lowered since. Reads never return an expired entry either way; this frees the
+     * sources they hold lines from or consulted (also those holding a source that no longer has
+     * one, those of a source the app no longer knows, and those in an old encoding) and artist
+     * entries past theirs. Then evicts down to the size limit, which may have been lowered since.
+     * Reads never return an expired entry either way; this frees the
      * space. An entry kept under an adapter's older extraction version is not expired: it is
      * deleted when read, replaced, or evicted. `:cli` calls this at start, and the app on start.
      * Returns how many entries it deleted.
@@ -57,6 +61,7 @@ class Caches(
                 val cutoff = current.cacheLifetimes[source]?.let { (now - it).toEpochMilliseconds() } ?: Long.MAX_VALUE
                 deleted += queries.retrievalPurgeSource(source.tag, cutoff).value
             }
+            deleted += queries.retrievalPurgeUnknownSources(SourceId.entries.map { it.tag }).value
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
             deleted + enforceLimit()

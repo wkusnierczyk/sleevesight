@@ -5,8 +5,6 @@ import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
-import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
-import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
@@ -28,7 +26,7 @@ import kotlin.time.Instant
 class RetrievalCacheTest {
     private val fixture = CacheFixture()
     private val retrieval = fixture.caches.retrieval
-    private val normalizer = Normalizer(JvmAccentFolder)
+    private val normalizer = fixture.normalizer
     private val key = "gordon lightfoot|sundown"
     private val track = normalizer.normalize("Sundown", "Gordon Lightfoot")
 
@@ -167,7 +165,7 @@ class RetrievalCacheTest {
     fun `an adapter's default extraction version is 1`() {
         retrieval.put(FakeAdapter(SourceId.WEB), track, sample(Outcome.SongArticle, SourceId.WEB))
 
-        assertNotNull(retrieval.get(SourceId.WEB, RetrievalCache.keyOf(track), 1))
+        assertNotNull(retrieval.get(SourceId.WEB, retrieval.keyOf(track), 1))
     }
 
     @Test
@@ -204,12 +202,43 @@ class RetrievalCacheTest {
         assertEquals(plain.lookupKey, featuring.lookupKey)
         assertEquals(plain.lookupKey, from.lookupKey)
 
-        val keys = listOf(plain, featuring, from).map { RetrievalCache.keyOf(it) }
+        val keys = listOf(plain, featuring, from).map { retrieval.keyOf(it) }
         assertEquals(3, keys.toSet().size)
         assertEquals(
-            RetrievalCache.keyOf(normalizer.normalize("Song", "A, B")),
-            RetrievalCache.keyOf(normalizer.normalize("Song", "a, b")),
+            retrieval.keyOf(normalizer.normalize("Song", "A, B")),
+            retrieval.keyOf(normalizer.normalize("Song", "a, b")),
         )
+    }
+
+    @Test
+    fun `equivalent spellings of the artists and the work give one key`() {
+        val nfc = normalizer.normalize("Song (From Déjà Vu)", "A, Beyoncé")
+        val nfd = normalizer.normalize("Song (From De\u0301ja\u0300 Vu)", "a, Beyonce\u0301")
+
+        assertEquals(retrieval.keyOf(nfc), retrieval.keyOf(nfd))
+    }
+
+    @Test
+    fun `a rejection by an adapter that consults a shorter-lived source expires with it`() {
+        fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WIKIDATA to 1.days))
+        val adapter = FakeAdapter(SourceId.WIKIPEDIA, consults = setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
+        val rejected = SourceResult(Outcome.Rejected("not a song"), emptyList(), 1.milliseconds)
+        retrieval.put(adapter, track, rejected)
+
+        fixture.clock.advance(1.days - 1.milliseconds)
+        assertNotNull(retrieval.get(adapter, track))
+        fixture.clock.advance(1.milliseconds)
+        assertNull(retrieval.get(adapter, track), "Wikidata's 1 day, though it gave no line")
+    }
+
+    @Test
+    fun `purging deletes the entries of a source the app no longer knows`() {
+        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        fixture.caches.queries.retrievalInsert("XX", key, " XX ", RetrievalCodec.FORMAT.toLong(), 1, "{}", 0, 0, 10)
+
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertEquals(1, entries())
+        fixture.assertTotals()
     }
 
     @Test
@@ -221,6 +250,10 @@ class RetrievalCacheTest {
 
         assertNotNull(retrieval.get(adapter, utada))
         assertNull(retrieval.get(adapter, sakamoto))
+
+        val moi = normalizer.normalize("Мои", "Кино")
+        retrieval.put(adapter, normalizer.normalize("Мой", "Кино"), sample(Outcome.SongArticle))
+        assertNull(retrieval.get(adapter, moi))
     }
 
     @Test
@@ -266,6 +299,7 @@ class RetrievalCacheTest {
     private class FakeAdapter(
         override val id: SourceId,
         override val extractionVersion: Int = 1,
+        override val consults: Set<SourceId> = setOf(id),
     ) : SourceAdapter {
         override suspend fun lookup(
             track: NormalizedTrack,

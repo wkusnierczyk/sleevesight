@@ -4,6 +4,8 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
+import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.store.db.CacheDatabase
 import kotlin.test.assertEquals
@@ -62,7 +64,8 @@ class CacheFixture(
 ) {
     private val jdbc = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { CacheDatabase.Schema.create(it) }
     val driver: InterleavingDriver = InterleavingDriver(jdbc)
-    val caches: Caches = Caches(driver, { settings }, clock)
+    val normalizer: Normalizer = Normalizer(JvmAccentFolder)
+    val caches: Caches = Caches(driver, { settings }, normalizer, clock)
 
     /** The running totals agree with the rows. */
     fun assertTotals() = assertEquals(caches.countedStats(), caches.stats())

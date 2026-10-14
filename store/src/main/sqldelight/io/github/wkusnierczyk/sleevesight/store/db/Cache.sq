@@ -9,8 +9,9 @@
 -- What one source lookup gave the pipeline: the `SourceResult`, serialised (`payload`), never the
 -- raw response. `format` is the payload's encoding (`RetrievalCodec.FORMAT`), `extraction` the
 -- adapter's extraction rules (`SourceAdapter.extractionVersion`); a row with either different is a
--- miss. `sources` holds the tag of the adapter's source and of every source its lines name, each
--- between spaces (` W WD `): the row expires with the shortest of their lifetimes.
+-- miss. `sources` holds the tag of the adapter's source, of every source it consults and of every
+-- source its lines name, each between spaces (` W WD `): the row expires with the shortest of their
+-- lifetimes.
 CREATE TABLE retrieval (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,
@@ -122,6 +123,10 @@ DELETE FROM retrieval WHERE id = :id;
 -- Rows with a line from `tag`'s source stored at or before the cutoff.
 retrievalPurgeSource:
 DELETE FROM retrieval WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
+
+-- Rows of a source the app no longer has.
+retrievalPurgeUnknownSources:
+DELETE FROM retrieval WHERE source NOT IN :known;
 
 retrievalPurgeFormat:
 DELETE FROM retrieval WHERE format <> :format;
