@@ -440,6 +440,21 @@ class PipelineTest {
         }
 
     @Test
+    fun `a length that differs only in milliseconds does not restart the run`() =
+        runTest {
+            val mb = mb()
+            val pipeline = pipeline(listOf(mb))
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown.copy(duration = 213.seconds)))
+            backgroundScope.launch { pipeline.follow(changes) }
+            settle()
+
+            changes.value = TrackChange(sundown.copy(duration = 213.seconds + 420.milliseconds))
+            settle()
+
+            assertEquals(1, mb.asked.size)
+        }
+
+    @Test
     fun `another release, credit or length of the same song is run again`() =
         runTest {
             val mb = mb()

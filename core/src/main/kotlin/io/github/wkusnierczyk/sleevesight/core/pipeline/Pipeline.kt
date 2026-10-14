@@ -135,7 +135,7 @@ class Pipeline(
             .debounce(DEBOUNCE)
             .map { change -> change to parts.normalizer.normalize(change.nowPlaying) }
             .distinctUntilChangedBy { (change, track) ->
-                RunKey(track, change.nowPlaying.album, change.nowPlaying.duration)
+                RunKey(track, change.nowPlaying.album, change.nowPlaying.duration?.inWholeSeconds)
             }.collectLatest { (change, track) ->
                 val current = settings()
                 val writes = AutoWrite.writes(current, change.cause, acted.value)
@@ -178,11 +178,12 @@ class Pipeline(
         }
     }
 
-    // Everything a run reads from a change: two changes with the same key give the same run.
+    // Everything a run reads from a change: two changes with the same key give the same run. The
+    // length in whole seconds, as the cache keys hold it, so a player's millisecond jitter is no change.
     private data class RunKey(
         val track: NormalizedTrack,
         val album: String?,
-        val duration: Duration?,
+        val seconds: Long?,
     )
 
     companion object {
