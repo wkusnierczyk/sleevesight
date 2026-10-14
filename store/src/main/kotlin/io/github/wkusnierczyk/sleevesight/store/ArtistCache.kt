@@ -19,36 +19,46 @@ class ArtistCache internal constructor(
         val fresh = now - Instant.fromEpochMilliseconds(row.stored_at) < context.settings().artistCacheLifetime
         val resolution = if (fresh) resolution(row.state, row.mbid) else null
         if (resolution == null) {
-            context.queries.artistDelete(row.id)
+            // Only the row this read saw: one written since has another id.
+            context.queries.artistDeleteSeen(row.id, row.stored_at)
         } else {
             context.queries.artistTouch(now.toEpochMilliseconds(), row.id)
         }
         return resolution
     }
 
-    /** Keeps [resolution] for [name], replacing what was kept, and evicts down to the size limit. */
+    /**
+     * Keeps [resolution] for [name], replacing what was kept, and evicts down to the size limit.
+     * Returns whether it was kept: not when it alone is larger than the limit.
+     */
     fun put(
         name: String,
         resolution: ArtistResolution,
-    ) {
+    ): Boolean {
         val (state, mbid) =
             when (resolution) {
                 is ArtistResolution.Resolved -> RESOLVED to resolution.mbid
                 ArtistResolution.None -> NONE to null
                 is ArtistResolution.Ambiguous -> AMBIGUOUS to resolution.candidates.joinToString(" ")
             }
-        val now = context.clock.now().toEpochMilliseconds()
-        context.queries.transaction {
-            context.queries.artistPut(
-                name = name,
-                state = state,
-                mbid = mbid,
-                stored_at = now,
-                used_at = now,
-                size_bytes = name.utf8Size() + state.utf8Size() + (mbid?.utf8Size() ?: 0),
-            )
-            context.afterWrite()
+        val size = name.utf8Size() + state.utf8Size() + (mbid?.utf8Size() ?: 0)
+        val keep = context.fits(size)
+        if (keep) {
+            val now = context.clock.now().toEpochMilliseconds()
+            context.queries.transaction {
+                context.queries.artistRemoveKey(name)
+                context.queries.artistInsert(
+                    name = name,
+                    state = state,
+                    mbid = mbid,
+                    stored_at = now,
+                    used_at = now,
+                    size_bytes = size,
+                )
+                context.afterWrite()
+            }
         }
+        return keep
     }
 
     private fun resolution(

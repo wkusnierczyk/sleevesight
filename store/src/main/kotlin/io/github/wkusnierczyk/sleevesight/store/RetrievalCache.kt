@@ -6,11 +6,13 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceAdapter
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
- * What source lookups gave, per source and lookup key ([NormalizedTrack.lookupKey]), kept for the
- * source's lifetime in [Settings.cacheLifetimes] (D9).
+ * What source lookups gave, per source and track ([keyOf]), kept for the shortest lifetime in
+ * [Settings.cacheLifetimes] (D9) among the sources the result holds lines from: the Wikipedia
+ * adapter's result also holds Wikidata's lines, and lives no longer than Wikidata's lifetime.
  *
  * It keeps the [SourceResult] the pipeline uses (outcome, evidence lines, unverified lines,
  * rejections, latency), never the raw response: that keeps it small, and keeps text the app does
@@ -19,83 +21,127 @@ import kotlin.time.Instant
  * and one written under another version is a miss.
  *
  * Not kept: a result that is [Outcome.Unreachable] (a network error is not an answer) or
- * [Outcome.SourceOff], and anything for a source with no lifetime (the pseudo-sources). The
- * orchestration (#44) also does not keep a result verified against a resolution that could not be
- * made, since it would stay unverified after MusicBrainz is back.
+ * [Outcome.SourceOff], anything holding a source with no lifetime (the pseudo-sources), and an
+ * entry larger than the whole size limit. The orchestration (#44) also does not keep a result
+ * verified against a resolution that could not be made, since it would stay unverified after
+ * MusicBrainz is back.
  */
 class RetrievalCache internal constructor(
     private val context: CacheContext,
 ) {
-    /** The result [adapter] gave for [lookupKey], if kept, current and within its lifetime. */
+    /**
+     * The result [adapter] gave for [track], if kept, current and within its lifetime. The key is
+     * [keyOf]: the track's lookup key, its credited artists and the work it is from, which the
+     * adapters read besides the title and primary artist.
+     */
     fun get(
         adapter: SourceAdapter,
-        lookupKey: String,
-    ): CachedResult? = get(adapter.id, lookupKey, adapter.extractionVersion)
+        track: NormalizedTrack,
+    ): CachedResult? = get(adapter.id, keyOf(track), adapter.extractionVersion)
 
-    /** The result [source]'s adapter, at [extractionVersion], gave for [lookupKey], if kept and current. */
+    /**
+     * The result [source]'s adapter, at [extractionVersion], gave for [key], if kept, current and
+     * within its lifetime. [key] must cover everything the adapter's lookup reads from the track
+     * ([keyOf] does): two tracks that share a key share an entry.
+     */
     fun get(
         source: SourceId,
-        lookupKey: String,
+        key: String,
         extractionVersion: Int,
     ): CachedResult? {
-        val lifetime = context.settings().cacheLifetimes[source]
-        val row = lifetime?.let { context.queries.retrievalGet(source.tag, lookupKey).executeAsOneOrNull() }
-        if (lifetime == null || row == null) return null
+        val row = context.queries.retrievalGet(source.tag, key).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val storedAt = Instant.fromEpochMilliseconds(row.stored_at)
+        val lifetime = lifetimeOf(tagsOf(row.sources), context.settings())
         val current =
-            row.format == RetrievalCodec.FORMAT.toLong() &&
+            lifetime != null &&
+                row.format == RetrievalCodec.FORMAT.toLong() &&
                 row.extraction == extractionVersion.toLong() &&
                 now - storedAt < lifetime
         val result = if (current) RetrievalCodec.decode(row.payload) else null
         if (result == null) {
-            context.queries.retrievalDelete(row.id)
+            // Only the row this read saw: one written since has another id.
+            context.queries.retrievalDeleteSeen(row.id, row.stored_at)
         } else {
             context.queries.retrievalTouch(now.toEpochMilliseconds(), row.id)
         }
         return result?.let { CachedResult(it, storedAt) }
     }
 
-    /** Keeps what [adapter] gave for [lookupKey]; see [put]. */
+    /** Keeps what [adapter] gave for [track]; see [put]. */
     fun put(
         adapter: SourceAdapter,
-        lookupKey: String,
+        track: NormalizedTrack,
         result: SourceResult,
-    ): Boolean = put(adapter.id, lookupKey, adapter.extractionVersion, result)
+    ): Boolean = put(adapter.id, keyOf(track), adapter.extractionVersion, result)
 
     /**
-     * Keeps [result], replacing any entry for [source] and [lookupKey], and evicts down to the size
-     * limit. Returns whether it was kept: not for a source with no lifetime, nor for an
-     * [Outcome.Unreachable] or [Outcome.SourceOff] result.
+     * Keeps [result], replacing any entry for [source] and [key], and evicts down to the size
+     * limit. Returns whether it was kept: not when it holds a source with no lifetime, nor for an
+     * [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is larger than the limit.
      */
     fun put(
         source: SourceId,
-        lookupKey: String,
+        key: String,
         extractionVersion: Int,
         result: SourceResult,
     ): Boolean {
+        val sources = (listOf(source) + (result.evidence + result.unverified).map { it.source }).distinct()
+        val payload = RetrievalCodec.encode(result)
+        val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
+        val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
         val keep =
-            context.settings().cacheLifetimes.containsKey(source) &&
+            lifetimeOf(sources, context.settings()) != null &&
                 result.outcome != Outcome.Unreachable &&
-                result.outcome != Outcome.SourceOff
+                result.outcome != Outcome.SourceOff &&
+                context.fits(size)
         if (keep) {
-            val payload = RetrievalCodec.encode(result)
             val now = context.clock.now().toEpochMilliseconds()
             context.queries.transaction {
-                context.queries.retrievalPut(
+                context.queries.retrievalRemoveKey(source.tag, key)
+                context.queries.retrievalInsert(
                     source = source.tag,
-                    lookup_key = lookupKey,
+                    lookup_key = key,
+                    sources = sourcesColumn,
                     format = RetrievalCodec.FORMAT.toLong(),
                     extraction = extractionVersion.toLong(),
                     payload = payload,
                     stored_at = now,
                     used_at = now,
-                    size_bytes = source.tag.utf8Size() + lookupKey.utf8Size() + payload.utf8Size(),
+                    size_bytes = size,
                 )
                 context.afterWrite()
             }
         }
         return keep
+    }
+
+    companion object {
+        /**
+         * The retrieval key of [track]: its [NormalizedTrack.lookupKey] (primary artist and title,
+         * folded), its credited artists, lowercased and sorted, and the work it is from, lowercased.
+         * The adapters read the artists (each is looked up, and verified) and the work (web search
+         * filters on it), so "Song (feat. X)" and "Song" get entries of their own. Each part is
+         * prefixed with its length, so no two different tracks encode alike.
+         */
+        fun keyOf(track: NormalizedTrack): String {
+            val parts =
+                listOf(track.lookupKey) + track.artists.map { it.lowercase() }.sorted() +
+                    listOf(track.from?.lowercase())
+            return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
+        }
+
+        private fun tagsOf(column: String): List<SourceId?> =
+            column.split(' ').filter { it.isNotEmpty() }.map { SourceId.ofTag(it) }
+
+        // The shortest lifetime among [sources], or null when one has none (or is unknown).
+        private fun lifetimeOf(
+            sources: List<SourceId?>,
+            settings: Settings,
+        ): Duration? {
+            val lifetimes = sources.map { source -> source?.let { settings.cacheLifetimes[it] } }
+            return if (lifetimes.any { it == null }) null else lifetimes.filterNotNull().minOrNull()
+        }
     }
 }
 

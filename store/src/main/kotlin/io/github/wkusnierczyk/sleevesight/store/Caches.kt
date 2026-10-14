@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.store
 
 import app.cash.sqldelight.db.SqlDriver
+import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.store.db.CacheDatabase
 import io.github.wkusnierczyk.sleevesight.store.db.CacheQueries
@@ -22,14 +23,17 @@ import kotlin.time.Instant
  * from [clock] alone. Past [Settings.cacheSizeLimit], the least recently used retrieval and
  * synthesis entries are evicted first, artist entries (small and long-lived) only after them.
  *
- * Calls are blocking database calls: the app makes them off the main thread.
+ * Calls are blocking database calls: the app makes them off the main thread. Concurrent calls are
+ * safe with a file-backed database (the JDBC driver on a file, or the Android driver), each write a
+ * transaction of its own; not with the JDBC driver's in-memory database, which shares one
+ * connection between threads and is for single-threaded tests only.
  */
 class Caches(
     driver: SqlDriver,
     private val settings: () -> Settings,
     private val clock: Clock = Clock.System,
 ) {
-    private val queries: CacheQueries = CacheDatabase(driver).cacheQueries
+    internal val queries: CacheQueries = CacheDatabase(driver).cacheQueries
     private val context = CacheContext(queries, settings, clock, ::enforceLimit)
 
     val retrieval: RetrievalCache = RetrievalCache(context)
@@ -37,20 +41,22 @@ class Caches(
     val synthesis: SynthesisCache = SynthesisCache(context)
 
     /**
-     * Deletes what reads would no longer return: retrieval entries past their source's lifetime
-     * (also those of a source that no longer has one, or in an old encoding) and artist entries past
-     * theirs, as of [now]. Then evicts down to the size limit, which may have been lowered since.
-     * Reads never return an expired entry either way; this frees the space. `:cli` calls it at
-     * start, and the app on start. Returns how many entries it deleted.
+     * Deletes the expired entries, as of [now]: retrieval entries past the shortest lifetime of the
+     * sources they hold lines from (also those holding a source that no longer has one, and those
+     * in an old encoding) and artist entries past theirs. Then evicts down to the size limit, which
+     * may have been lowered since. Reads never return an expired entry either way; this frees the
+     * space. An entry kept under an adapter's older extraction version is not expired: it is
+     * deleted when read, replaced, or evicted. `:cli` calls this at start, and the app on start.
+     * Returns how many entries it deleted.
      */
     fun purgeExpired(now: Instant = clock.now()): Long =
         queries.transactionWithResult {
             val current = settings()
             var deleted = 0L
-            for ((source, lifetime) in current.cacheLifetimes) {
-                deleted += queries.retrievalPurgeSource(source.tag, (now - lifetime).toEpochMilliseconds()).value
+            for (source in SourceId.entries) {
+                val cutoff = current.cacheLifetimes[source]?.let { (now - it).toEpochMilliseconds() } ?: Long.MAX_VALUE
+                deleted += queries.retrievalPurgeSource(source.tag, cutoff).value
             }
-            deleted += queries.retrievalPurgeOtherSources(current.cacheLifetimes.keys.map { it.tag }).value
             deleted += queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value
             deleted += queries.artistPurge((now - current.artistCacheLifetime).toEpochMilliseconds()).value
             deleted + enforceLimit()
@@ -65,12 +71,19 @@ class Caches(
      * page overhead and does not shrink until vacuumed.
      */
     fun stats(): CacheStats {
-        val tables = queries.tableSizes().executeAsList().associate { it.name to TableStats(it.rows, it.bytes ?: 0) }
+        val tables = queries.tableSizes().executeAsList().associate { it.name to TableStats(it.entries, it.bytes) }
         return CacheStats(
             retrieval = tables.getValue(RETRIEVAL),
             artists = tables.getValue(ARTIST),
             synthesis = tables.getValue(SYNTHESIS),
         )
+    }
+
+    // [stats] counted from the rows rather than the running totals, for the tests.
+    internal fun countedStats(): CacheStats {
+        val tables =
+            queries.tableSizesCounted().executeAsList().associate { it.name to TableStats(it.entries, it.bytes ?: 0) }
+        return CacheStats(tables.getValue(RETRIEVAL), tables.getValue(ARTIST), tables.getValue(SYNTHESIS))
     }
 
     // Evicts the least recently used entries until the caches fit the limit: retrieval and
@@ -143,7 +156,13 @@ internal class CacheContext(
     val settings: () -> Settings,
     val clock: Clock,
     val afterWrite: () -> Long,
-)
+) {
+    /**
+     * Whether an entry of [bytes] may be kept at all: one larger than the whole limit is not, rather
+     * than evicting every other entry and then itself.
+     */
+    fun fits(bytes: Long): Boolean = bytes <= settings().cacheSizeLimit
+}
 
 /** The size a key or value counts for: its UTF-8 bytes. */
 internal fun String.utf8Size(): Long = encodeToByteArray().size.toLong()

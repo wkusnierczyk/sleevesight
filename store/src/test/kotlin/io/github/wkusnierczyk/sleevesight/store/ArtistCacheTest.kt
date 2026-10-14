@@ -62,6 +62,20 @@ class ArtistCacheTest {
     }
 
     @Test
+    fun `a cleanup after a stale read leaves an entry written meanwhile`() {
+        artists.put("reem", ArtistResolution.None)
+        fixture.clock.advance(Settings.DEFAULT_ARTIST_CACHE_LIFETIME)
+        fixture.driver.before("DELETE FROM artist WHERE id") {
+            artists.put("reem", ArtistResolution.Resolved("mbid"))
+        }
+
+        assertNull(artists.get("reem"))
+
+        assertEquals(ArtistResolution.Resolved("mbid"), artists.get("reem"))
+        fixture.assertTotals()
+    }
+
+    @Test
     fun `a candidate id with a space is refused`() {
         assertFailsWith<IllegalArgumentException> { ArtistResolution.Ambiguous(listOf("a b")) }
     }

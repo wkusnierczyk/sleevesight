@@ -1,15 +1,21 @@
 -- The caches (architecture, *Cache and history*). Times are epoch milliseconds. `used_at` is the
 -- last read or write, for evicting the least recently used rows under the size limit; `size_bytes`
 -- is the UTF-8 size of the row's keys and value, which the limit counts.
+--
+-- Ids are `AUTOINCREMENT`, so never reused: a cleanup delete by the id (and the timestamp) a read
+-- saw cannot remove a row written since. Writes delete the row they replace and insert, never
+-- `INSERT OR REPLACE`, whose deletions fire no triggers, so `cache_size` stays exact.
 
 -- What one source lookup gave the pipeline: the `SourceResult`, serialised (`payload`), never the
 -- raw response. `format` is the payload's encoding (`RetrievalCodec.FORMAT`), `extraction` the
 -- adapter's extraction rules (`SourceAdapter.extractionVersion`); a row with either different is a
--- miss.
+-- miss. `sources` holds the tag of the adapter's source and of every source its lines name, each
+-- between spaces (` W WD `): the row expires with the shortest of their lifetimes.
 CREATE TABLE retrieval (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,
     lookup_key TEXT NOT NULL,
+    sources TEXT NOT NULL,
     format INTEGER NOT NULL,
     extraction INTEGER NOT NULL,
     payload TEXT NOT NULL,
@@ -19,12 +25,12 @@ CREATE TABLE retrieval (
     UNIQUE (source, lookup_key)
 );
 
-CREATE INDEX retrieval_used_at ON retrieval (used_at);
+CREATE INDEX retrieval_used_at ON retrieval (used_at, size_bytes);
 
 -- A credited artist's MusicBrainz id by normalized name: `resolved` with `mbid`, `none`, or
 -- `ambiguous` with the candidates' ids in `mbid`, space-separated.
 CREATE TABLE artist (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     state TEXT NOT NULL,
     mbid TEXT,
@@ -33,9 +39,11 @@ CREATE TABLE artist (
     size_bytes INTEGER NOT NULL
 );
 
+CREATE INDEX artist_used_at ON artist (used_at, size_bytes);
+
 -- A written insight or card, by the full synthesis key (R2, D14).
 CREATE TABLE synthesis (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     kind TEXT NOT NULL,
     entity_key TEXT NOT NULL,
     evidence_fingerprint TEXT NOT NULL,
@@ -51,30 +59,69 @@ CREATE TABLE synthesis (
     UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge)
 );
 
-CREATE INDEX synthesis_used_at ON synthesis (used_at);
+CREATE INDEX synthesis_used_at ON synthesis (used_at, size_bytes);
+
+-- Running totals per table, kept by the triggers below in the transaction of each write, so
+-- checking the size limit reads three rows instead of every row.
+CREATE TABLE cache_size (
+    name TEXT NOT NULL PRIMARY KEY,
+    entries INTEGER NOT NULL,
+    bytes INTEGER NOT NULL
+);
+
+INSERT INTO cache_size (name, entries, bytes) VALUES ('retrieval', 0, 0), ('artist', 0, 0), ('synthesis', 0, 0);
+
+CREATE TRIGGER retrieval_inserted AFTER INSERT ON retrieval BEGIN
+    UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'retrieval';
+END;
+
+CREATE TRIGGER retrieval_deleted AFTER DELETE ON retrieval BEGIN
+    UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'retrieval';
+END;
+
+CREATE TRIGGER artist_inserted AFTER INSERT ON artist BEGIN
+    UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'artist';
+END;
+
+CREATE TRIGGER artist_deleted AFTER DELETE ON artist BEGIN
+    UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'artist';
+END;
+
+CREATE TRIGGER synthesis_inserted AFTER INSERT ON synthesis BEGIN
+    UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'synthesis';
+END;
+
+CREATE TRIGGER synthesis_deleted AFTER DELETE ON synthesis BEGIN
+    UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'synthesis';
+END;
 
 -- Retrieval
 
 retrievalGet:
-SELECT id, format, extraction, payload, stored_at
+SELECT id, sources, format, extraction, payload, stored_at
 FROM retrieval
 WHERE source = :source AND lookup_key = :lookupKey;
 
-retrievalPut:
-INSERT OR REPLACE INTO retrieval (source, lookup_key, format, extraction, payload, stored_at, used_at, size_bytes)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+retrievalRemoveKey:
+DELETE FROM retrieval WHERE source = :source AND lookup_key = :lookupKey;
+
+retrievalInsert:
+INSERT INTO retrieval (source, lookup_key, sources, format, extraction, payload, stored_at, used_at, size_bytes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 retrievalTouch:
 UPDATE retrieval SET used_at = :usedAt WHERE id = :id;
 
+-- The row a read saw, only if it is still that row.
+retrievalDeleteSeen:
+DELETE FROM retrieval WHERE id = :id AND stored_at = :storedAt;
+
 retrievalDelete:
 DELETE FROM retrieval WHERE id = :id;
 
+-- Rows with a line from `tag`'s source stored at or before the cutoff.
 retrievalPurgeSource:
-DELETE FROM retrieval WHERE source = :source AND stored_at <= :storedAtOrBefore;
-
-retrievalPurgeOtherSources:
-DELETE FROM retrieval WHERE source NOT IN :sources;
+DELETE FROM retrieval WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
 
 retrievalPurgeFormat:
 DELETE FROM retrieval WHERE format <> :format;
@@ -86,12 +133,18 @@ SELECT id, state, mbid, stored_at
 FROM artist
 WHERE name = :name;
 
-artistPut:
-INSERT OR REPLACE INTO artist (name, state, mbid, stored_at, used_at, size_bytes)
+artistRemoveKey:
+DELETE FROM artist WHERE name = :name;
+
+artistInsert:
+INSERT INTO artist (name, state, mbid, stored_at, used_at, size_bytes)
 VALUES (?, ?, ?, ?, ?, ?);
 
 artistTouch:
 UPDATE artist SET used_at = :usedAt WHERE id = :id;
+
+artistDeleteSeen:
+DELETE FROM artist WHERE id = :id AND stored_at = :storedAt;
 
 artistDelete:
 DELETE FROM artist WHERE id = :id;
@@ -113,8 +166,19 @@ WHERE kind = :kind
   AND model = :model
   AND model_knowledge = :modelKnowledge;
 
-synthesisPut:
-INSERT OR REPLACE INTO synthesis (
+synthesisRemoveKey:
+DELETE FROM synthesis
+WHERE kind = :kind
+  AND entity_key = :entityKey
+  AND evidence_fingerprint = :evidenceFingerprint
+  AND prompt_version = :promptVersion
+  AND style_hash = :styleHash
+  AND provider = :provider
+  AND model = :model
+  AND model_knowledge = :modelKnowledge;
+
+synthesisInsert:
+INSERT INTO synthesis (
     kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge,
     text, written_at, used_at, size_bytes
 )
@@ -129,7 +193,11 @@ DELETE FROM synthesis WHERE id = :id;
 -- Size and eviction
 
 tableSizes:
-SELECT 'retrieval' AS name, count(*) AS rows, coalesce(sum(size_bytes), 0) AS bytes FROM retrieval
+SELECT name, entries, bytes FROM cache_size;
+
+-- The same, counted from the rows: for the tests, which check the running totals against it.
+tableSizesCounted:
+SELECT 'retrieval' AS name, count(*) AS entries, coalesce(sum(size_bytes), 0) AS bytes FROM retrieval
 UNION ALL
 SELECT 'artist', count(*), coalesce(sum(size_bytes), 0) FROM artist
 UNION ALL

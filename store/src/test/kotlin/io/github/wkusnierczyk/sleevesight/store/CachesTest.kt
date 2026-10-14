@@ -4,10 +4,12 @@ import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
+import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -134,13 +136,47 @@ class CachesTest {
     }
 
     @Test
-    fun `an entry larger than the limit is not kept`() {
-        fixture.settings = Settings(cacheSizeLimit = 10)
+    fun `an entry larger than the limit is not kept and evicts nothing`() {
+        caches.synthesis.put(key("a"), "text")
+        caches.artists.put("b", ArtistResolution.None)
+        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
+        val before = caches.stats()
+        fixture.settings = Settings(cacheSizeLimit = before.bytes + 10)
 
-        caches.synthesis.put(key("a"), "a text longer than the limit")
+        val tooLong = "x".repeat(fixture.settings.cacheSizeLimit.toInt())
+        assertFalse(caches.synthesis.put(key("big"), tooLong))
+        assertFalse(caches.artists.put(tooLong, ArtistResolution.None))
+        val big = SourceResult(Outcome.None, emptyList(), 1.milliseconds, rejections = listOf(Rejection(tooLong, "y")))
+        assertFalse(caches.retrieval.put(SourceId.WEB, "d|x", 1, big))
 
-        assertNull(caches.synthesis.get(key("a")))
-        assertEquals(0, caches.sizeBytes())
+        assertEquals(before, caches.stats())
+        assertNotNull(caches.synthesis.get(key("a")))
+    }
+
+    @Test
+    fun `the running totals stay exact through every kind of change`() {
+        caches.synthesis.put(key("a"), "text")
+        caches.synthesis.put(key("a"), "a longer text, replacing")
+        caches.artists.put("b", ArtistResolution.None)
+        caches.artists.put("b", ArtistResolution.Ambiguous(listOf("x", "y")))
+        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
+        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
+        caches.retrieval.put(SourceId.MUSICBRAINZ, "c|x", 1, result())
+        fixture.assertTotals()
+        assertEquals(2, caches.stats().retrieval.entries)
+
+        assertNull(caches.retrieval.get(SourceId.MUSICBRAINZ, "c|x", 2), "invalidated by version")
+        fixture.assertTotals()
+
+        fixture.clock.advance(2.days)
+        caches.purgeExpired()
+        fixture.assertTotals()
+
+        for (name in listOf("e", "f", "g")) caches.synthesis.put(key(name), "text")
+        fixture.settings = Settings(cacheSizeLimit = caches.sizeBytes() / 2)
+        caches.purgeExpired()
+        fixture.assertTotals()
+        assertTrue(caches.sizeBytes() <= fixture.settings.cacheSizeLimit)
     }
 
     private fun result(): SourceResult = SourceResult(Outcome.None, emptyList(), 100.milliseconds)

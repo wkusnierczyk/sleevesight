@@ -30,18 +30,33 @@ class SynthesisCache internal constructor(
         return CachedSynthesis(row.text, Instant.fromEpochMilliseconds(row.written_at))
     }
 
-    /** Keeps [text], written for [key] at [writtenAt], and evicts down to the size limit. */
+    /**
+     * Keeps [text], written for [key] at [writtenAt], replacing what was kept, and evicts down to
+     * the size limit. Returns whether it was kept: not when it alone is larger than the limit.
+     */
     fun put(
         key: SynthesisKey,
         text: String,
         writtenAt: Instant = context.clock.now(),
-    ) {
-        val now = context.clock.now().toEpochMilliseconds()
+    ): Boolean {
         val keyBytes =
             listOf(key.kind, key.entityKey, key.evidenceFingerprint, key.styleHash, key.provider.name, key.model)
                 .sumOf { it.utf8Size() }
+        val size = keyBytes + text.utf8Size()
+        if (!context.fits(size)) return false
+        val now = context.clock.now().toEpochMilliseconds()
         context.queries.transaction {
-            context.queries.synthesisPut(
+            context.queries.synthesisRemoveKey(
+                kind = key.kind,
+                entityKey = key.entityKey,
+                evidenceFingerprint = key.evidenceFingerprint,
+                promptVersion = key.promptVersion.toLong(),
+                styleHash = key.styleHash,
+                provider = key.provider.name,
+                model = key.model,
+                modelKnowledge = key.modelKnowledge.toLong(),
+            )
+            context.queries.synthesisInsert(
                 kind = key.kind,
                 entity_key = key.entityKey,
                 evidence_fingerprint = key.evidenceFingerprint,
@@ -53,10 +68,11 @@ class SynthesisCache internal constructor(
                 text = text,
                 written_at = writtenAt.toEpochMilliseconds(),
                 used_at = now,
-                size_bytes = keyBytes + text.utf8Size(),
+                size_bytes = size,
             )
             context.afterWrite()
         }
+        return true
     }
 
     private fun Boolean.toLong(): Long = if (this) 1L else 0L
@@ -67,7 +83,8 @@ class SynthesisCache internal constructor(
  *
  * @property kind the card: the home insight, a song, artist or album insight, the genre or
  *   sounds-like card.
- * @property entityKey what the card is about: the track's lookup key, or the artist's or album's.
+ * @property entityKey what the card is about: for a track, its [RetrievalCache.keyOf], which tells
+ *   apart tracks the lookup key alone does not; for an artist or album, its own key.
  * @property evidenceFingerprint [io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceSet.fingerprint]
  *   of the evidence it was written from (R2).
  * @property promptVersion the version of the card's prompt template, raised when its contract or

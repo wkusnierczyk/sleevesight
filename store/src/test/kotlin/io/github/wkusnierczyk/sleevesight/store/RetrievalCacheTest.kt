@@ -5,6 +5,8 @@ import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
+import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
+import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
@@ -26,10 +28,17 @@ import kotlin.time.Instant
 class RetrievalCacheTest {
     private val fixture = CacheFixture()
     private val retrieval = fixture.caches.retrieval
+    private val normalizer = Normalizer(JvmAccentFolder)
     private val key = "gordon lightfoot|sundown"
+    private val track = normalizer.normalize("Sundown", "Gordon Lightfoot")
 
     @AfterTest
     fun close() = fixture.close()
+
+    private fun entries(): Long =
+        fixture.caches
+            .stats()
+            .retrieval.entries
 
     @Test
     fun `a result comes back as it was kept`() {
@@ -52,7 +61,7 @@ class RetrievalCacheTest {
                 Outcome.Rejected("no"),
             )
         for (outcome in outcomes) {
-            retrieval.put(SourceId.MUSICBRAINZ, key, 1, sample(outcome))
+            retrieval.put(SourceId.MUSICBRAINZ, key, 1, sample(outcome, SourceId.MUSICBRAINZ))
             assertEquals(outcome, retrieval.get(SourceId.MUSICBRAINZ, key, 1)?.result?.outcome)
         }
     }
@@ -68,7 +77,7 @@ class RetrievalCacheTest {
     @Test
     fun `each source's entries expire after its own lifetime`() {
         for (source in listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WEB)) {
-            retrieval.put(source, key, 1, sample(Outcome.SongArticle))
+            retrieval.put(source, key, 1, sample(Outcome.SongArticle, source))
         }
 
         fixture.clock.advance(1.days - 1.milliseconds)
@@ -87,7 +96,7 @@ class RetrievalCacheTest {
 
     @Test
     fun `a changed lifetime applies to entries already kept`() {
-        retrieval.put(SourceId.MUSICBRAINZ, key, 1, sample(Outcome.SongArticle))
+        retrieval.put(SourceId.MUSICBRAINZ, key, 1, sample(Outcome.SongArticle, SourceId.MUSICBRAINZ))
         fixture.clock.advance(3.days)
 
         val shorter = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.MUSICBRAINZ to 2.days)
@@ -97,45 +106,68 @@ class RetrievalCacheTest {
     }
 
     @Test
-    fun `errors, switched-off sources and the pseudo-sources are not kept`() {
-        assertFalse(retrieval.put(SourceId.LASTFM, key, 1, sample(Outcome.Unreachable)))
-        assertFalse(retrieval.put(SourceId.LASTFM, key, 1, sample(Outcome.SourceOff)))
-        assertFalse(retrieval.put(SourceId.PLAYER, key, 1, sample(Outcome.SongArticle)))
-        assertFalse(retrieval.put(SourceId.MODEL, key, 1, sample(Outcome.SongArticle)))
+    fun `a result expires with the shortest lifetime of the sources it holds lines from`() {
+        // The Wikipedia adapter's result holds Wikidata's lines too.
+        fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WIKIDATA to 1.days))
+        retrieval.put(SourceId.WIKIPEDIA, key, 1, sample(Outcome.SongArticle))
+        retrieval.put(SourceId.LASTFM, key, 1, sample(Outcome.ArtistArticle, SourceId.LASTFM))
 
-        assertEquals(
-            0,
-            fixture.caches
-                .stats()
-                .retrieval.entries,
-        )
+        fixture.clock.advance(1.days)
+
+        assertNull(retrieval.get(SourceId.WIKIPEDIA, key, 1), "Wikidata's 1 day, not Wikipedia's 7")
+        assertNotNull(retrieval.get(SourceId.LASTFM, key, 1))
+    }
+
+    @Test
+    fun `purging uses the shortest lifetime too`() {
+        fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WIKIDATA to 1.days))
+        retrieval.put(SourceId.WIKIPEDIA, key, 1, sample(Outcome.SongArticle))
+        fixture.clock.advance(1.days)
+
+        assertEquals(1, fixture.caches.purgeExpired())
+        assertEquals(0, entries())
+        fixture.assertTotals()
+    }
+
+    @Test
+    fun `errors, switched-off sources and the pseudo-sources are not kept`() {
+        assertFalse(retrieval.put(SourceId.LASTFM, key, 1, sample(Outcome.Unreachable, SourceId.LASTFM)))
+        assertFalse(retrieval.put(SourceId.LASTFM, key, 1, sample(Outcome.SourceOff, SourceId.LASTFM)))
+        assertFalse(retrieval.put(SourceId.PLAYER, key, 1, sample(Outcome.SongArticle, SourceId.PLAYER)))
+        assertFalse(retrieval.put(SourceId.MODEL, key, 1, sample(Outcome.SongArticle, SourceId.MODEL)))
+        // A line from a source with no lifetime.
+        assertFalse(retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.PLAYER)))
+
+        assertEquals(0, entries())
+    }
+
+    @Test
+    fun `a result holding a source that lost its lifetime is not kept`() {
+        fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES - SourceId.WIKIDATA)
+
+        assertFalse(retrieval.put(SourceId.WIKIPEDIA, key, 1, sample(Outcome.SongArticle)))
     }
 
     @Test
     fun `a result kept under other extraction rules is a miss`() {
         val old = FakeAdapter(SourceId.LASTFM, extractionVersion = 1)
         val new = FakeAdapter(SourceId.LASTFM, extractionVersion = 2)
-        retrieval.put(old, key, sample(Outcome.ArtistArticle))
-        assertNotNull(retrieval.get(old, key))
+        retrieval.put(old, track, sample(Outcome.ArtistArticle, SourceId.LASTFM))
+        assertNotNull(retrieval.get(old, track))
 
-        assertNull(retrieval.get(new, key))
-        assertEquals(
-            0,
-            fixture.caches
-                .stats()
-                .retrieval.entries,
-            "the stale entry is dropped",
-        )
+        assertNull(retrieval.get(new, track))
+        assertEquals(0, entries(), "the stale entry is dropped")
 
-        retrieval.put(new, key, sample(Outcome.None))
-        assertEquals(Outcome.None, retrieval.get(new, key)?.result?.outcome)
+        retrieval.put(new, track, sample(Outcome.None, SourceId.LASTFM))
+        assertEquals(Outcome.None, retrieval.get(new, track)?.result?.outcome)
+        fixture.assertTotals()
     }
 
     @Test
     fun `an adapter's default extraction version is 1`() {
-        retrieval.put(FakeAdapter(SourceId.WEB), key, sample(Outcome.SongArticle))
+        retrieval.put(FakeAdapter(SourceId.WEB), track, sample(Outcome.SongArticle, SourceId.WEB))
 
-        assertNotNull(retrieval.get(SourceId.WEB, key, 1))
+        assertNotNull(retrieval.get(SourceId.WEB, RetrievalCache.keyOf(track), 1))
     }
 
     @Test
@@ -150,36 +182,83 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `a cleanup after a stale read leaves an entry written meanwhile`() {
+        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        fixture.clock.advance(2.days)
+        // Between this read's select and its delete of the expired row, another call writes afresh.
+        fixture.driver.before("DELETE FROM retrieval WHERE id") {
+            retrieval.put(SourceId.WEB, key, 1, sample(Outcome.None, SourceId.WEB))
+        }
+
+        assertNull(retrieval.get(SourceId.WEB, key, 1))
+
+        assertEquals(Outcome.None, retrieval.get(SourceId.WEB, key, 1)?.result?.outcome)
+        fixture.assertTotals()
+    }
+
+    @Test
+    fun `the track key covers the credited artists and the work`() {
+        val plain = normalizer.normalize("Song", "A")
+        val featuring = normalizer.normalize("Song (feat. B)", "A")
+        val from = normalizer.normalize("Song (From The Film)", "A")
+        assertEquals(plain.lookupKey, featuring.lookupKey)
+        assertEquals(plain.lookupKey, from.lookupKey)
+
+        val keys = listOf(plain, featuring, from).map { RetrievalCache.keyOf(it) }
+        assertEquals(3, keys.toSet().size)
+        assertEquals(
+            RetrievalCache.keyOf(normalizer.normalize("Song", "A, B")),
+            RetrievalCache.keyOf(normalizer.normalize("Song", "a, b")),
+        )
+    }
+
+    @Test
+    fun `tracks in other scripts get entries of their own`() {
+        val adapter = FakeAdapter(SourceId.WIKIPEDIA)
+        val utada = normalizer.normalize("First Love", "宇多田ヒカル")
+        val sakamoto = normalizer.normalize("First Love", "坂本龍一")
+        retrieval.put(adapter, utada, sample(Outcome.SongArticle))
+
+        assertNotNull(retrieval.get(adapter, utada))
+        assertNull(retrieval.get(adapter, sakamoto))
+    }
+
+    @Test
     fun `a newer result replaces the kept one`() {
         retrieval.put(SourceId.WIKIPEDIA, key, 1, sample(Outcome.None))
         retrieval.put(SourceId.WIKIPEDIA, key, 1, sample(Outcome.SongArticle))
 
         assertEquals(Outcome.SongArticle, retrieval.get(SourceId.WIKIPEDIA, key, 1)?.result?.outcome)
-        assertEquals(
-            1,
-            fixture.caches
-                .stats()
-                .retrieval.entries,
-        )
+        assertEquals(1, entries())
+        fixture.assertTotals()
     }
 
-    private fun sample(outcome: Outcome): SourceResult {
+    // Lines from [source]; the Wikipedia adapter's also hold a Wikidata line, as it makes them.
+    private fun sample(
+        outcome: Outcome,
+        source: SourceId = SourceId.WIKIPEDIA,
+    ): SourceResult {
         val at = Instant.parse("2026-10-14T11:59:58.123456789Z")
+        val wikidata =
+            if (source == SourceId.WIKIPEDIA) {
+                listOf(EvidenceDraft(SourceId.WIKIDATA, Scope.SONG, "Genre: folk rock. Ünïcödé ✓", null, at))
+            } else {
+                emptyList()
+            }
         return SourceResult(
             outcome = outcome,
             evidence =
                 listOf(
                     EvidenceDraft(
-                        SourceId.WIKIPEDIA,
+                        source,
                         Scope.SONG,
                         "\"Sundown\" is a song by Canadian singer-songwriter Gordon Lightfoot.",
                         "https://en.wikipedia.org/wiki/Sundown_(Gordon_Lightfoot_song)",
                         at,
                     ),
-                    EvidenceDraft(SourceId.WIKIDATA, Scope.SONG, "Genre: folk rock. Ünïcödé ✓", null, at),
-                ),
+                ) + wikidata,
             latency = 412.milliseconds + 7.nanoseconds,
-            unverified = listOf(EvidenceDraft(SourceId.WIKIPEDIA, Scope.ARTIST, "An unverified line.", null, at)),
+            unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page")),
         )
     }

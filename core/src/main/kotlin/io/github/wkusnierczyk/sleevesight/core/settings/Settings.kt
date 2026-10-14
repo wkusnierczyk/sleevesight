@@ -101,11 +101,13 @@ data class Settings(
          * 50 MB. A track's retrieval cache holds only the evidence lines and outcomes the pipeline
          * uses, about 5 to 15 KB across its sources, and each written card 1 to 3 KB (estimates, to
          * be measured at the Phase 0.5 gate, #46): some 20 KB a track with its insights, so 50 MB
-         * holds about 2,500 tracks, and more when only evidence is cached. Since retrieval entries
-         * expire within 30 days (D9), the limit binds only for someone who plays over 80 new tracks
-         * a day; below that, expiry keeps the caches smaller. 50 MB is small beside the players'
-         * own caches, and an evicted entry costs a refetch, or a paid call for an insight, which is
-         * why it is not lower.
+         * holds about 2,500 tracks, and more when only evidence is cached. Retrieval entries expire
+         * within 30 days (D9), so evidence alone reaches the limit only for someone playing over 80
+         * new tracks a day. Written cards never expire, though: they accumulate until the limit,
+         * which every listener reaches in time (at about 2 KB a card, after some 25,000 cards), and
+         * from then on the least recently used go first, the cards of tracks not played for longest.
+         * 50 MB is small beside the players' own caches, and an evicted card costs a paid call to
+         * write again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
     }
