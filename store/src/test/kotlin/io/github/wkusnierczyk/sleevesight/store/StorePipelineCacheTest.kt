@@ -19,6 +19,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -56,7 +57,7 @@ class StorePipelineCacheTest {
         }
 
     @Test
-    fun `nothing from web search reaches the store`() =
+    fun `web search's results are kept like any other source's`() =
         runBlocking {
             val web =
                 object : SourceAdapter {
@@ -68,15 +69,12 @@ class StorePipelineCacheTest {
                     ): SourceResult = error("not looked up")
                 }
             val snippet = EvidenceDraft(SourceId.WEB, Scope.WEB, "A highlight.", "https://x.example", fixture.clock.now)
-            cache.keep(web, sundown, 213.seconds, SourceResult(Outcome.SongArticle, listOf(snippet), 12.milliseconds))
+            val result = SourceResult(Outcome.SongArticle, listOf(snippet), 12.milliseconds)
+            cache.keep(web, sundown, 213.seconds, result)
 
+            assertEquals(result, cache.result(web, sundown, 213.seconds))
+            fixture.clock.advance(1.days)
             assertNull(cache.result(web, sundown, 213.seconds))
-            assertEquals(
-                0,
-                fixture.caches
-                    .stats()
-                    .retrieval.entries,
-            )
         }
 
     @Test

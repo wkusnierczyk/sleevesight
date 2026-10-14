@@ -46,7 +46,7 @@ does (MusicBrainz without `tags` and `genres`):
 ./gradlew :cli:run --args="replay"
 ```
 
-It does not prune. Web search is never recorded: Exa's results may not be stored (`web/README.md`).
+It does not prune. Web search is never recorded: Exa's results are not committed (`web/README.md`).
 `--record anthropic` records the model's replies to the pipeline's prompts, with the developer's key
 in the environment, into `anthropic/` (an `index.json` whose entries also carry the request body's
 SHA-256, `bodySha256`, since every prompt goes to the same URL; each reply as `messages-<hash>.sse`

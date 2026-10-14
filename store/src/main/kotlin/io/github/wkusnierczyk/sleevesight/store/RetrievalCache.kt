@@ -23,11 +23,12 @@ import kotlin.time.Instant
  *
  * Not kept: a result that is [Outcome.Unreachable] (a network error is not an answer) or
  * [Outcome.SourceOff], anything holding a source with no lifetime (the pseudo-sources), and an
- * entry larger than the whole size limit. Never kept: web search's results, or any result holding a
- * web line, whatever the settings: Exa's terms (§4.2(a)) forbid storing what its service returns
- * (`design/design.md`, *Web search provider (D11)*). The orchestration (#44) also does not keep a result
- * verified against a resolution that could not be made, since it would stay unverified after
- * MusicBrainz is back.
+ * entry larger than the whole size limit. Web search's results are kept like any other source's, for
+ * its own lifetime (D9: 1 day), during development by the owner's decision of 2026-10-14; whether
+ * Exa's terms (§4.2(a)) allow storing its results in the app is open (#80) and must be settled before
+ * the app is published (`design/design.md`, *Web search provider (D11)*). The orchestration (#44)
+ * does not keep a result verified against a resolution that could not be made, since it would stay
+ * unverified after MusicBrainz is back.
  */
 class RetrievalCache internal constructor(
     private val context: CacheContext,
@@ -102,8 +103,7 @@ class RetrievalCache internal constructor(
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
         val keep =
-            SourceId.WEB !in sources &&
-                lifetimeOf(sources, context.settings()) != null &&
+            lifetimeOf(sources, context.settings()) != null &&
                 result.outcome != Outcome.Unreachable &&
                 result.outcome != Outcome.SourceOff &&
                 context.fits(size)

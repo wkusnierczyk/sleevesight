@@ -172,21 +172,35 @@ class RetrievalCacheTest {
     }
 
     @Test
-    fun `web search's results are never kept, nor any result holding a web line`() {
+    fun `web search's results are kept for web search's lifetime`() {
         val web =
             SourceResult(
                 Outcome.SongArticle,
                 listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, "A snippet.", null, fixture.clock.now)),
                 1.milliseconds,
             )
-        assertFalse(retrieval.put(SourceId.WEB, key, 1, web))
-        assertFalse(retrieval.put(SourceId.WEB, key, 1, sample(Outcome.None, SourceId.DISCOGS)))
-        assertFalse(retrieval.put(SourceId.WIKIPEDIA, key, 1, web))
-        assertFalse(
-            retrieval.put(FakeAdapter(SourceId.WEB), track, null, sample(Outcome.Rejected("no"), SourceId.DISCOGS)),
-        )
+        val adapter = FakeAdapter(SourceId.WEB)
+        assertTrue(retrieval.put(adapter, track, null, web))
 
+        fixture.clock.advance(1.days - 1.milliseconds)
+        assertEquals(web, retrieval.get(adapter, track, null)?.result, "served within its lifetime")
+
+        fixture.clock.advance(1.milliseconds)
+        assertNull(retrieval.get(adapter, track, null), "expired after it")
         assertEquals(0, entries())
+        fixture.assertTotals()
+    }
+
+    @Test
+    fun `a result holding a web line lives no longer than web search's lifetime`() {
+        val snippet = EvidenceDraft(SourceId.WEB, Scope.WEB, "A snippet.", null, fixture.clock.now)
+        val withWeb = sample(Outcome.SongArticle).let { it.copy(evidence = it.evidence + snippet) }
+        assertTrue(retrieval.put(SourceId.WIKIPEDIA, key, 1, withWeb))
+
+        fixture.clock.advance(1.days - 1.milliseconds)
+        assertNotNull(retrieval.get(SourceId.WIKIPEDIA, key, 1))
+        fixture.clock.advance(1.milliseconds)
+        assertNull(retrieval.get(SourceId.WIKIPEDIA, key, 1))
     }
 
     @Test

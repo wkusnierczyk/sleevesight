@@ -52,8 +52,8 @@ data class Options(
                        Fails on any source request with no recording.
               live     Run it against the live services, with the keys in the environment or the keys file.
               record   Like live for the sources given by --record, replayed for the others; writes what
-                       the live ones answer into fixtures/http/. Web search is off: Exa's results may not
-                       be stored. The cache is off, so every request is made.
+                       the live ones answer into fixtures/http/. Web search is off: Exa's results are not
+                       committed. The cache is off, so every request is made.
 
             Options:
               --tracks <spec>     regression (default: the design's regression cases), all, or positions

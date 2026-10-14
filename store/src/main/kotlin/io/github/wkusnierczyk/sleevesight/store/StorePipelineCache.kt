@@ -12,7 +12,7 @@ import kotlin.time.Duration
 /**
  * The pipeline's [PipelineCache] over [caches]: the retrieval cache for source results, the
  * synthesis cache for written cards, with the track's retrieval key ([RetrievalCache.keyOf]) as a
- * card's entity key. Web search's results are never kept ([RetrievalCache]: Exa's terms).
+ * card's entity key.
  * [Caches] makes blocking database calls, so each runs in [io]: the caller's
  * I/O dispatcher (`Dispatchers.IO` on the JVM), which `:core` and `:store` do not name, being
  * Multiplatform-ready.
