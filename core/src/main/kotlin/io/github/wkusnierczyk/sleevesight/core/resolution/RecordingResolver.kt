@@ -88,7 +88,8 @@ class RecordingResolver(
     }
 
     // A credited name that the accepted candidates, after the length has narrowed them, give to more
-    // than one MusicBrainz artist cannot be resolved: it is a same-name collision.
+    // than one MusicBrainz artist cannot be resolved: it is a same-name collision. Only the name
+    // itself counts: a band the artist leads is another MusicBrainz artist, not a namesake.
     private fun ambiguousArtist(
         track: NormalizedTrack,
         accepted: List<Candidate>,
@@ -96,7 +97,7 @@ class RecordingResolver(
         track.artists.firstOrNull { artist ->
             accepted
                 .flatMap { it.recording.credits }
-                .filter { credits(it, artist) }
+                .filter { credits(it, artist, byName = true) }
                 .map { it.artistMbid }
                 .distinct()
                 .size > 1
@@ -210,18 +211,25 @@ class RecordingResolver(
         )
     }
 
+    // Whether [credit] is [artist]'s, as written on the recording or as MusicBrainz names the artist: by
+    // name, or, unless [byName], a band they lead ("Dick Dale and His Del-Tones", #77).
     private fun credits(
         credit: MbCredit,
         artist: String,
-    ): Boolean = names.sameName(credit.name, artist) || names.sameName(credit.artistName, artist)
+        byName: Boolean = false,
+    ): Boolean =
+        listOf(credit.name, credit.artistName).any {
+            names.sameName(it, artist) || (!byName && names.leads(it, artist))
+        }
 
-    // The credit first; else a performer relationship of the recording ("Them" is credited, Van Morrison sings).
+    // The credit by name first; else a performer relationship of the recording ("Them" is credited, Van
+    // Morrison sings). A band the artist leads is not the artist, so its id is never theirs.
     private fun artistMbid(
         artist: String,
         credits: List<MbCredit>,
         relations: List<MbArtistRelation>,
     ): String? =
-        credits.firstOrNull { credits(it, artist) }?.artistMbid
+        credits.firstOrNull { credits(it, artist, byName = true) }?.artistMbid
             ?: relations.firstOrNull { it.type in PERFORMER_TYPES && names.sameName(it.artistName, artist) }?.artistMbid
 
     private data class Candidate(

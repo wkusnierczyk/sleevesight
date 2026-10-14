@@ -43,6 +43,22 @@ class NameMatcher(
     }
 
     /**
+     * Whether [credit] is [artist] leading a band, in the usual forms: `X and His …`, `X and Her …`,
+     * `X & the …` (or `and the`), `X with …`, with more words after them. [artist]'s name must be
+     * whole, a leading `the` aside: `Dick Daley and His Del-Tones` is not led by Dick Dale.
+     */
+    fun leads(
+        credit: String,
+        artist: String,
+    ): Boolean {
+        val ka = key(artist).removePrefix(THE)
+        val kc = key(credit).removePrefix(THE)
+        if (ka.isEmpty() || !kc.startsWith("$ka ")) return false
+        val rest = kc.removePrefix("$ka ")
+        return BAND_FORMS.any { rest.startsWith("$it ") }
+    }
+
+    /**
      * How alike two titles are, from 0 to 1: one minus the edit distance of their keys over the
      * longer key's length.
      */
@@ -61,6 +77,9 @@ class NameMatcher(
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')
         const val THE = "the "
+
+        // After the leader's name, as keys: `&` is `and`.
+        val BAND_FORMS = listOf("and his", "and her", "and the", "with")
 
         fun editDistance(
             a: String,

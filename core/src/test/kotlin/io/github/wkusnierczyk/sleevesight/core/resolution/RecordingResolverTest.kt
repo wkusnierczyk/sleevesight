@@ -107,6 +107,53 @@ class RecordingResolverTest {
         }
 
     @Test
+    fun `a band the artist leads is credited, the earliest chosen, and the band's id is not the artist's`() =
+        runTest {
+            // Misirlou (#77): the 1962 original is credited to the band, later releases to Dick Dale alone.
+            val search =
+                listOf(
+                    recording("solo", "Misirlou", "Dick Dale", 136, "2012-09-19"),
+                    recording("band", "Misirlou", "Dick Dale and His Del-Tones", 135, "1962-04"),
+                )
+            val detail =
+                MbRecordingDetail(
+                    mbid = "band",
+                    title = "Misirlou",
+                    credits = listOf(credit("Dick Dale and His Del-Tones")),
+                    firstReleaseDate = "1962-04",
+                    works = emptyList(),
+                    artistRelations =
+                        listOf(MbArtistRelation("instrument", "mbid-Dick Dale", "Dick Dale", listOf("guitar"))),
+                    wikidataIds = emptyList(),
+                )
+            val withDetail = FakeMusicBrainz(Lookup.Found(search), recordings = mapOf("band" to detail))
+            val resolution = resolve(withDetail, track("Misirlou", "Dick Dale"), 135)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("band", resolution.recordingMbid)
+            assertEquals("Dick Dale and His Del-Tones", resolution.artistCredit)
+            // From the performer relationship; never the band's own id.
+            assertEquals(listOf(ResolvedArtist("Dick Dale", "mbid-Dick Dale")), resolution.artists)
+            val searchOnly = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Misirlou", "Dick Dale"), 135)
+            assertEquals("band", searchOnly.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Dick Dale", null)), searchOnly.artists)
+        }
+
+    @Test
+    fun `a band led by someone else, or by a name that only starts the same, is not the artist's`() =
+        runTest {
+            for (band in listOf("Y and His Del-Tones", "Dick Daley and His Del-Tones")) {
+                val search = listOf(recording("other", "Misirlou", band, 135, "1962-04"))
+                val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Misirlou", "Dick Dale"), 135)
+                assertEquals(
+                    Outcome.Rejected("MusicBrainz has “Misirlou” by $band, not by Dick Dale"),
+                    resolution.outcome,
+                    band,
+                )
+                assertNull(resolution.recordingMbid)
+            }
+        }
+
+    @Test
     fun `a same-title recording by another artist is rejected, never accepted`() =
         runTest {
             val search = listOf(recording("other", "Wonderland", "Reema", 208, "2024"))

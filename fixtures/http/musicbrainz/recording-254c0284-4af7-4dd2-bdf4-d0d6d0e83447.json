@@ -1,0 +1,293 @@
+{
+ "id": "254c0284-4af7-4dd2-bdf4-d0d6d0e83447",
+ "relations": [
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attribute-ids": {
+    "piano": "b3eac5f9-7859-4416-ac39-7154e2e8d348"
+   },
+   "attributes": [
+    "piano"
+   ],
+   "attribute-credits": {},
+   "end": null,
+   "artist": {
+    "disambiguation": "Keyboardist, not the tuba player",
+    "country": "US",
+    "name": "Bill Barber",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Barber, Bill",
+    "id": "6ab27a44-3367-4adf-9623-20813dcdad19"
+   },
+   "type": "instrument",
+   "target-type": "artist",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "artist",
+   "type": "instrument",
+   "end": null,
+   "artist": {
+    "type": "Person",
+    "name": "Dick Dale",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Dale, Dick",
+    "id": "cc6115aa-379c-4133-9f46-5743a4a341d0",
+    "disambiguation": "surf guitarist",
+    "country": "US"
+   },
+   "attributes": [
+    "guitar"
+   ],
+   "attribute-credits": {
+    "guitar": "lead guitar"
+   },
+   "attribute-ids": {
+    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461"
+  },
+  {
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {
+    "saxophone": "a9ed16cd-b8cb-4256-9c41-93f5f0458c49"
+   },
+   "attribute-credits": {},
+   "attributes": [
+    "saxophone"
+   ],
+   "artist": {
+    "id": "ee2ae030-10ce-48ec-9a7a-884a3895ef81",
+    "sort-name": "Frank, Armon",
+    "name": "Armon Frank",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "disambiguation": ""
+   },
+   "end": null,
+   "type": "instrument",
+   "target-type": "artist",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "attribute-ids": {
+    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "end": null,
+   "artist": {
+    "country": "US",
+    "disambiguation": "US surf rock guitarist",
+    "sort-name": "O’Malley, Nick",
+    "id": "b3990699-9671-4900-b76b-30ad4d483f7a",
+    "type": "Person",
+    "name": "Nick O’Malley",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "attributes": [
+    "guitar"
+   ],
+   "attribute-credits": {
+    "guitar": "rhythm guitar"
+   },
+   "type": "instrument",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "artist"
+  },
+  {
+   "attribute-credits": {},
+   "attributes": [
+    "saxophone"
+   ],
+   "artist": {
+    "type": "Person",
+    "name": "Barry Rillera",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "778800a4-4d2f-422f-8eee-0e7783570a9f",
+    "sort-name": "Rillera, Barry",
+    "disambiguation": "",
+    "country": "US"
+   },
+   "end": null,
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "saxophone": "a9ed16cd-b8cb-4256-9c41-93f5f0458c49"
+   },
+   "target-type": "artist",
+   "begin": null,
+   "source-credit": "",
+   "type": "instrument"
+  },
+  {
+   "type": "instrument",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "artist",
+   "attribute-ids": {
+    "bass guitar": "17f9f065-2312-4a24-8309-6f6dd63e2e33"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "direction": "backward",
+   "target-credit": "",
+   "artist": {
+    "country": "US",
+    "disambiguation": "",
+    "sort-name": "Rillera, Rick",
+    "id": "76258100-1da0-4875-ba05-9499d8a59a50",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "name": "Rick Rillera"
+   },
+   "end": null,
+   "attributes": [
+    "bass guitar"
+   ],
+   "attribute-credits": {}
+  },
+  {
+   "type": "instrument",
+   "target-type": "artist",
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attribute-ids": {
+    "drums (drum set)": "12092505-6ee1-46af-a15a-b5b468b6b155"
+   },
+   "attribute-credits": {},
+   "attributes": [
+    "drums (drum set)"
+   ],
+   "end": null,
+   "artist": {
+    "name": "Jerry Stevens",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Stevens, Jerry",
+    "id": "8a2b93b4-6b24-4298-b1c4-42e9c7de1c35",
+    "disambiguation": "US surf rock drummer",
+    "country": "US"
+   }
+  },
+  {
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "ended": false,
+   "end": null,
+   "artist": {
+    "country": null,
+    "disambiguation": "",
+    "id": "e9cc235b-e154-41d8-8d65-4b5db3d6fb37",
+    "sort-name": "Monsour, Jim",
+    "name": "Jim Monsour",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+   },
+   "attributes": [],
+   "type": "producer",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "artist"
+  },
+  {
+   "attributes": [],
+   "end": null,
+   "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "forward",
+   "target-credit": "",
+   "url": {
+    "id": "900b5d33-8673-4f03-97f4-c1318ac3c22d",
+    "resource": "https://open.spotify.com/track/2csVtq15gaThr54AiwC8mU"
+   },
+   "attribute-ids": {},
+   "target-type": "url",
+   "begin": null,
+   "source-credit": "",
+   "type": "free streaming"
+  },
+  {
+   "type": "performance",
+   "target-type": "work",
+   "begin": null,
+   "source-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "forward",
+   "attribute-ids": {},
+   "attributes": [],
+   "work": {
+    "title": "Misirlou",
+    "disambiguation": "Dick Dale instrumental arrangement",
+    "attributes": [],
+    "languages": [
+     "zxx"
+    ],
+    "id": "98cd98b6-897c-3c8c-9718-98b1206d8927",
+    "iswcs": [],
+    "language": "zxx",
+    "type": null,
+    "type-id": null
+   },
+   "end": null
+  }
+ ],
+ "title": "Misirlou",
+ "first-release-date": "1962-04",
+ "length": 134920,
+ "video": false,
+ "artist-credit": [
+  {
+   "artist": {
+    "sort-name": "Dale, Dick and His Del‐Tones",
+    "id": "820263ae-ab51-426d-85e9-bed5a74f00e1",
+    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+    "type": "Group",
+    "name": "Dick Dale and His Del‐Tones",
+    "country": "US",
+    "disambiguation": ""
+   },
+   "joinphrase": "",
+   "name": "Dick Dale and His Del‐Tones"
+  }
+ ],
+ "disambiguation": ""
+}
