@@ -115,7 +115,9 @@ internal class TrackRun(
     }
 
     private suspend fun fromCache(adapter: SourceAdapter): Boolean {
-        val hit = guard.attempt("read ${adapter.id.tag}") { parts.cache.result(adapter, track) } ?: return false
+        val hit =
+            guard.attempt("read ${adapter.id.tag}") { parts.cache.result(adapter, track, nowPlaying.duration) }
+                ?: return false
         land(adapter.id, SourceState.Done(hit, cached = true))
         return true
     }
@@ -170,7 +172,9 @@ internal class TrackRun(
         land(adapter.id, landed)
         if (landed is SourceState.Done && landed.result.outcome != Outcome.Unreachable) {
             if (made.await()) {
-                guard.attempt("write ${adapter.id.tag}") { parts.cache.keep(adapter, track, landed.result) }
+                guard.attempt(
+                    "write ${adapter.id.tag}",
+                ) { parts.cache.keep(adapter, track, nowPlaying.duration, landed.result) }
             } else {
                 emit(PipelineEvent.NotCached(key, adapter.id, NOT_RESOLVED))
             }

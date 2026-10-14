@@ -244,6 +244,35 @@ class PipelineTest {
         }
 
     @Test
+    fun `the player's length is part of the cache key, since resolution chooses the recording by it`() =
+        runTest {
+            val cache = MemoryCache()
+            val resolver = FakeResolver()
+            val pipeline = pipeline(listOf(mb()), resolver, cache = cache)
+
+            pipeline.run(sundown.copy(duration = 180.seconds), write = false)
+            pipeline.run(sundown.copy(duration = 300.seconds), write = false)
+            pipeline.run(sundown.copy(duration = 180.seconds), write = false)
+
+            assertEquals(2, resolver.calls)
+        }
+
+    @Test
+    fun `a raised effort writes afresh rather than serving the card written at the old one`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
+
+            pipeline.run(sundown, write = true)
+            settings = settings.copy(aiEffort = ReasoningEffort.HIGH)
+            pipeline.run(sundown, write = true)
+            pipeline.run(sundown, write = true)
+
+            assertEquals(listOf(ReasoningEffort.LOW, ReasoningEffort.HIGH), provider.requests.map { it.effort })
+        }
+
+    @Test
     fun `a failing cache is a miss, and the run goes on`() =
         runTest {
             val cache = MemoryCache().apply { failing = true }
@@ -389,7 +418,7 @@ class PipelineTest {
         }
 
     @Test
-    fun `no session neither cancels nor clears, and the same track is not run again`() =
+    fun `no session neither cancels nor clears, and the same metadata is not run again`() =
         runTest {
             val mb = mb()
             val pipeline = pipeline(listOf(mb))
@@ -399,7 +428,7 @@ class PipelineTest {
 
             changes.value = null
             settle()
-            changes.value = TrackChange(sundown.copy(album = "Gord's Gold"))
+            changes.value = TrackChange(sundown.copy(artUri = "content://art/2"))
             settle()
 
             assertEquals(1, mb.asked.size)
@@ -408,6 +437,35 @@ class PipelineTest {
                 pipeline.state.value!!
                     .normalized.title,
             )
+        }
+
+    @Test
+    fun `another release, credit or length of the same song is run again`() =
+        runTest {
+            val mb = mb()
+            val pipeline = pipeline(listOf(mb))
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes) }
+            settle()
+
+            val otherRelease = sundown.copy(album = "Gord's Gold")
+            changes.value = TrackChange(otherRelease)
+            settle()
+            val p1 = pipeline.state.value!!.evidence!!["P1"]!!
+            assertEquals("This recording is on the release \"Gord's Gold\".", p1.text)
+
+            val featuring = otherRelease.copy(title = "Sundown (feat. Guest)")
+            changes.value = TrackChange(featuring)
+            settle()
+            assertEquals(
+                listOf("Gordon Lightfoot", "Guest"),
+                pipeline.state.value!!
+                    .normalized.artists,
+            )
+
+            changes.value = TrackChange(featuring.copy(duration = 300.seconds))
+            settle()
+            assertEquals(4, mb.asked.size)
         }
 
     @Test

@@ -1,10 +1,12 @@
 package io.github.wkusnierczyk.sleevesight.core.pipeline
 
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceAdapter
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceResult
 import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
+import kotlin.time.Duration
 
 /**
  * The caches the pipeline consults first (`design/architecture.md`, *Cache and history*). An
@@ -15,16 +17,24 @@ import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
  * An implementation may throw; the pipeline then goes on as if it had missed, and logs it.
  */
 interface PipelineCache {
-    /** What [adapter] gave for [track], if kept and current. */
+    /**
+     * What [adapter] gave for [track], played at [duration] (the player's length, or null), if kept
+     * and current. The length is part of the key: resolution chooses the recording by it.
+     */
     suspend fun result(
         adapter: SourceAdapter,
         track: NormalizedTrack,
+        duration: Duration?,
     ): SourceResult?
 
-    /** Keeps what [adapter] gave for [track]; the cache decides whether it may (not an unreachable one). */
+    /**
+     * Keeps what [adapter] gave for [track] at [duration]; the cache decides whether it may (not an
+     * unreachable result, and never web search's: Exa's terms forbid storing its results).
+     */
     suspend fun keep(
         adapter: SourceAdapter,
         track: NormalizedTrack,
+        duration: Duration?,
         result: SourceResult,
     )
 
@@ -42,11 +52,13 @@ interface PipelineCache {
         override suspend fun result(
             adapter: SourceAdapter,
             track: NormalizedTrack,
+            duration: Duration?,
         ): SourceResult? = null
 
         override suspend fun keep(
             adapter: SourceAdapter,
             track: NormalizedTrack,
+            duration: Duration?,
             result: SourceResult,
         ) = Unit
 
@@ -67,15 +79,19 @@ interface PipelineCache {
  * @property evidenceFingerprint the fingerprint of the evidence the card was written from.
  * @property promptVersion the card's prompt template version.
  * @property styleHash a hash of the user's style the card used (D14), SHA-256 in hex.
+ * @property duration the player's length for the track, part of its entity key.
  * @property modelKnowledge whether the model's own knowledge was allowed.
+ * @property effort the reasoning effort asked for, null for the provider's default.
  */
 data class CardKey(
     val kind: CardKind,
     val track: NormalizedTrack,
+    val duration: Duration?,
     val evidenceFingerprint: String,
     val promptVersion: Int,
     val styleHash: String,
     val provider: ProviderId,
     val model: String,
     val modelKnowledge: Boolean,
+    val effort: ReasoningEffort?,
 )

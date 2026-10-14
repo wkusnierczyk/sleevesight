@@ -20,9 +20,10 @@ import kotlin.time.Instant
 internal object RetrievalCodec {
     /**
      * The encoding's version; a change to it makes every kept result a miss. 2: genre labels (#44),
-     * which a result of version 1 would lack.
+     * which a result of version 1 would lack. 3: the key holds the player's length (#44), so entries
+     * under the old key are dropped rather than left to expire.
      */
-    const val FORMAT: Int = 2
+    const val FORMAT: Int = 3
 
     private val json = Json { encodeDefaults = false }
 

@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.store
 
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceDraft
 import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
@@ -19,6 +20,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class StorePipelineCacheTest {
     private val fixture = CacheFixture()
@@ -46,10 +48,35 @@ class StorePipelineCacheTest {
                     listOf(EvidenceDraft(SourceId.WIKIPEDIA, Scope.SONG, "A line.", null, fixture.clock.now)),
                     12.milliseconds,
                 )
-            cache.keep(adapter, sundown, result)
+            cache.keep(adapter, sundown, 213.seconds, result)
 
-            assertEquals(result, cache.result(adapter, sundown))
-            assertNull(cache.result(adapter, fixture.normalizer.normalize("Sundown", "Someone Else")))
+            assertEquals(result, cache.result(adapter, sundown, 213.seconds))
+            assertNull(cache.result(adapter, sundown, null))
+            assertNull(cache.result(adapter, fixture.normalizer.normalize("Sundown", "Someone Else"), 213.seconds))
+        }
+
+    @Test
+    fun `nothing from web search reaches the store`() =
+        runBlocking {
+            val web =
+                object : SourceAdapter {
+                    override val id: SourceId = SourceId.WEB
+
+                    override suspend fun lookup(
+                        track: NormalizedTrack,
+                        resolution: Deferred<Resolution>,
+                    ): SourceResult = error("not looked up")
+                }
+            val snippet = EvidenceDraft(SourceId.WEB, Scope.WEB, "A highlight.", "https://x.example", fixture.clock.now)
+            cache.keep(web, sundown, 213.seconds, SourceResult(Outcome.SongArticle, listOf(snippet), 12.milliseconds))
+
+            assertNull(cache.result(web, sundown, 213.seconds))
+            assertEquals(
+                0,
+                fixture.caches
+                    .stats()
+                    .retrieval.entries,
+            )
         }
 
     @Test
@@ -59,12 +86,14 @@ class StorePipelineCacheTest {
                 CardKey(
                     kind = CardKind.INSIGHT,
                     track = sundown,
+                    duration = 213.seconds,
                     evidenceFingerprint = "9f2c",
                     promptVersion = 1,
                     styleHash = "e3b0",
                     provider = ProviderId.ANTHROPIC,
                     model = "claude-haiku-5-5",
                     modelKnowledge = false,
+                    effort = ReasoningEffort.LOW,
                 )
             cache.keep(key, "It was a hit [W1].")
 
@@ -73,13 +102,14 @@ class StorePipelineCacheTest {
                 fixture.caches.synthesis.get(
                     SynthesisKey(
                         CardKind.INSIGHT,
-                        fixture.caches.retrieval.keyOf(sundown),
+                        fixture.caches.retrieval.keyOf(sundown, 213.seconds),
                         "9f2c",
                         1,
                         "e3b0",
                         ProviderId.ANTHROPIC,
                         "claude-haiku-5-5",
                         false,
+                        ReasoningEffort.LOW,
                     ),
                 )
             assertEquals("It was a hit [W1].", stored?.text)

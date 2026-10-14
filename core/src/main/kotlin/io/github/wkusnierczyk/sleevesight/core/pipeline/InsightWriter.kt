@@ -157,12 +157,14 @@ internal class InsightWriter(
         CardKey(
             kind = CardKind.INSIGHT,
             track = track,
+            duration = nowPlaying.duration,
             evidenceFingerprint = evidence.fingerprint,
             promptVersion = InsightPrompt.VERSION,
             styleHash = styleHash(NO_STYLE),
             provider = ai.provider.id,
             model = model,
             modelKnowledge = allowModel,
+            effort = settings.aiEffort,
         )
 
     // D14's style is not built yet: every card uses the built-in style, the hash of no style.

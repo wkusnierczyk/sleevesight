@@ -122,8 +122,10 @@ class Pipeline(
 
     /**
      * Runs the pipeline over [changes] until cancelled: a `null` (no active session) is ignored, a
-     * change waits [DEBOUNCE] for the next to settle, and one with the same lookup key as the last
-     * is not run again. A new track cancels the previous one's retrieval and synthesis.
+     * change waits [DEBOUNCE] for the next to settle, and one identical to the last in everything a
+     * run depends on (the normalized track, its credited artists and work included, the album and
+     * the length) is not run again; a metadata update that changes none of them is suppressed. A
+     * new track cancels the previous one's retrieval and synthesis.
      */
     @OptIn(FlowPreview::class)
     suspend fun follow(changes: Flow<TrackChange?>) {
@@ -132,8 +134,9 @@ class Pipeline(
             .onEach { if (it.cause == ChangeCause.USER_ACTION) acted.value = true }
             .debounce(DEBOUNCE)
             .map { change -> change to parts.normalizer.normalize(change.nowPlaying) }
-            .distinctUntilChangedBy { (_, track) -> track.lookupKey }
-            .collectLatest { (change, track) ->
+            .distinctUntilChangedBy { (change, track) ->
+                RunKey(track, change.nowPlaying.album, change.nowPlaying.duration)
+            }.collectLatest { (change, track) ->
                 val current = settings()
                 val writes = AutoWrite.writes(current, change.cause, acted.value)
                 start(change.nowPlaying, track, current).run(autoWrite = writes, waitForTap = true)
@@ -174,6 +177,13 @@ class Pipeline(
             if (compareAndSet(seen, seen + 1)) return seen + 1
         }
     }
+
+    // Everything a run reads from a change: two changes with the same key give the same run.
+    private data class RunKey(
+        val track: NormalizedTrack,
+        val album: String?,
+        val duration: Duration?,
+    )
 
     companion object {
         /** How long a track change waits for the next before it runs: skips settle first. */

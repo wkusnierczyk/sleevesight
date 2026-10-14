@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.store
 
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
 import kotlin.test.AfterTest
@@ -24,6 +25,7 @@ class SynthesisCacheTest {
             provider = ProviderId.ANTHROPIC,
             model = "claude-haiku-5-5",
             modelKnowledge = false,
+            effort = ReasoningEffort.LOW,
         )
 
     @AfterTest
@@ -50,6 +52,8 @@ class SynthesisCacheTest {
                 "provider" to key.copy(provider = ProviderId.OPENAI),
                 "model" to key.copy(model = "claude-sonnet-5"),
                 "model knowledge" to key.copy(modelKnowledge = true),
+                "effort" to key.copy(effort = ReasoningEffort.HIGH),
+                "default effort" to key.copy(effort = null),
             )
 
         assertNotNull(synthesis.get(key.copy()))

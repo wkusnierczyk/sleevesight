@@ -131,18 +131,20 @@ class MemoryCache : PipelineCache {
     override suspend fun result(
         adapter: SourceAdapter,
         track: NormalizedTrack,
+        duration: Duration?,
     ): SourceResult? {
         check(!failing) { "cache down" }
-        return results[adapter.id to track.lookupKey]
+        return results[adapter.id to "${track.lookupKey}@$duration"]
     }
 
     override suspend fun keep(
         adapter: SourceAdapter,
         track: NormalizedTrack,
+        duration: Duration?,
         result: SourceResult,
     ) {
         check(!failing) { "cache down" }
-        if (result.outcome != Outcome.Unreachable) results[adapter.id to track.lookupKey] = result
+        if (result.outcome != Outcome.Unreachable) results[adapter.id to "${track.lookupKey}@$duration"] = result
     }
 
     override suspend fun card(key: CardKey): String? = cards[key]

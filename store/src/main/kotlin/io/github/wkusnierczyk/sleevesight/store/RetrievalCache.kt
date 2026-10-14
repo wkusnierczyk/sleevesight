@@ -23,7 +23,9 @@ import kotlin.time.Instant
  *
  * Not kept: a result that is [Outcome.Unreachable] (a network error is not an answer) or
  * [Outcome.SourceOff], anything holding a source with no lifetime (the pseudo-sources), and an
- * entry larger than the whole size limit. The orchestration (#44) also does not keep a result
+ * entry larger than the whole size limit. Never kept: web search's results, or any result holding a
+ * web line, whatever the settings: Exa's terms (§4.2(a)) forbid storing what its service returns
+ * (`design/design.md`, *Web search provider (D11)*). The orchestration (#44) also does not keep a result
  * verified against a resolution that could not be made, since it would stay unverified after
  * MusicBrainz is back.
  */
@@ -39,7 +41,8 @@ class RetrievalCache internal constructor(
     fun get(
         adapter: SourceAdapter,
         track: NormalizedTrack,
-    ): CachedResult? = get(adapter.id, keyOf(track), adapter.extractionVersion)
+        duration: Duration?,
+    ): CachedResult? = get(adapter.id, keyOf(track, duration), adapter.extractionVersion)
 
     /**
      * The result [source]'s adapter, at [extractionVersion], gave for [key], if kept, current and
@@ -70,12 +73,13 @@ class RetrievalCache internal constructor(
         return result?.let { CachedResult(it, storedAt) }
     }
 
-    /** Keeps what [adapter] gave for [track]; see [put]. */
+    /** Keeps what [adapter] gave for [track], played at [duration]; see [put]. */
     fun put(
         adapter: SourceAdapter,
         track: NormalizedTrack,
+        duration: Duration?,
         result: SourceResult,
-    ): Boolean = put(adapter.id, keyOf(track), adapter.extractionVersion, result, adapter.consults)
+    ): Boolean = put(adapter.id, keyOf(track, duration), adapter.extractionVersion, result, adapter.consults)
 
     /**
      * Keeps [result], replacing any entry for [source] and [key], and evicts down to the size
@@ -98,7 +102,8 @@ class RetrievalCache internal constructor(
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
         val keep =
-            lifetimeOf(sources, context.settings()) != null &&
+            SourceId.WEB !in sources &&
+                lifetimeOf(sources, context.settings()) != null &&
                 result.outcome != Outcome.Unreachable &&
                 result.outcome != Outcome.SourceOff &&
                 context.fits(size)
@@ -128,13 +133,18 @@ class RetrievalCache internal constructor(
      * credited artists, sorted, and the work it is from, each folded as the lookup key is
      * ([Normalizer.foldForKey]), so equivalent spellings (NFC and NFD, any case) give one key. The
      * adapters read the artists (each is looked up, and verified) and the work (web search filters
-     * on it), so "Song (feat. X)" and "Song" get entries of their own. Each part is prefixed with its
-     * length, so no two different combinations of parts encode alike.
+     * on it), so "Song (feat. X)" and "Song" get entries of their own. Then the length the player
+     * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
+     * recording by its length, so the same song at another length may resolve to another recording.
+     * Each part is prefixed with its length, so no two different combinations of parts encode alike.
      */
-    fun keyOf(track: NormalizedTrack): String {
+    fun keyOf(
+        track: NormalizedTrack,
+        duration: Duration?,
+    ): String {
         val parts =
             listOf(track.lookupKey) + track.artists.map(normalizer::foldForKey).sorted() +
-                listOf(track.from?.let(normalizer::foldForKey))
+                listOf(track.from?.let(normalizer::foldForKey), duration?.let { "${it.inWholeSeconds}s" })
         return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
     }
 

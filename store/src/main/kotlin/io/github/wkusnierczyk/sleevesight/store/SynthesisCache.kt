@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.store
 
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.synthesis.CardKind
 import kotlin.time.Instant
@@ -26,6 +27,7 @@ class SynthesisCache internal constructor(
                     provider = key.provider.name,
                     model = key.model,
                     modelKnowledge = key.modelKnowledge.toLong(),
+                    effort = key.effortKey,
                 ).executeAsOneOrNull() ?: return null
         context.queries.synthesisTouch(context.clock.now().toEpochMilliseconds(), row.id)
         return CachedSynthesis(row.text, Instant.fromEpochMilliseconds(row.written_at))
@@ -41,8 +43,15 @@ class SynthesisCache internal constructor(
         writtenAt: Instant = context.clock.now(),
     ): Boolean {
         val keyBytes =
-            listOf(key.kind.key, key.entityKey, key.evidenceFingerprint, key.styleHash, key.provider.name, key.model)
-                .sumOf { it.utf8Size() }
+            listOf(
+                key.kind.key,
+                key.entityKey,
+                key.evidenceFingerprint,
+                key.styleHash,
+                key.provider.name,
+                key.model,
+                key.effortKey,
+            ).sumOf { it.utf8Size() }
         val size = keyBytes + text.utf8Size()
         if (!context.fits(size)) return false
         val now = context.clock.now().toEpochMilliseconds()
@@ -56,6 +65,7 @@ class SynthesisCache internal constructor(
                 provider = key.provider.name,
                 model = key.model,
                 modelKnowledge = key.modelKnowledge.toLong(),
+                effort = key.effortKey,
             )
             context.queries.synthesisInsert(
                 kind = key.kind.key,
@@ -66,6 +76,7 @@ class SynthesisCache internal constructor(
                 provider = key.provider.name,
                 model = key.model,
                 model_knowledge = key.modelKnowledge.toLong(),
+                effort = key.effortKey,
                 text = text,
                 written_at = writtenAt.toEpochMilliseconds(),
                 used_at = now,
@@ -92,6 +103,8 @@ class SynthesisCache internal constructor(
  *   built-in style changes.
  * @property styleHash a hash of the user's style the card used (D14).
  * @property modelKnowledge whether the model's own knowledge was allowed.
+ * @property effort the reasoning effort the card was written at, null for the provider's default:
+ *   a raised effort writes afresh rather than serving a card written at the old one.
  */
 data class SynthesisKey(
     val kind: CardKind,
@@ -102,7 +115,11 @@ data class SynthesisKey(
     val provider: ProviderId,
     val model: String,
     val modelKnowledge: Boolean,
-)
+    val effort: ReasoningEffort?,
+) {
+    /** [effort] as stored: its name, or `default`. */
+    internal val effortKey: String get() = effort?.name?.lowercase() ?: "default"
+}
 
 /** A kept card: its [text], and when it was written. */
 data class CachedSynthesis(

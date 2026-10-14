@@ -32,7 +32,7 @@ class CachesTest {
 
     @Test
     fun `purging deletes the expired entries and keeps the rest`() {
-        caches.retrieval.put(SourceId.WEB, "a|x", 1, result())
+        caches.retrieval.put(SourceId.DISCOGS, "a|x", 1, result())
         caches.retrieval.put(SourceId.MUSICBRAINZ, "a|x", 1, result())
         caches.artists.put("a", ArtistResolution.None)
         caches.synthesis.put(key("a|x"), "text")
@@ -62,7 +62,7 @@ class CachesTest {
 
         val synthesisBytes =
             "insight".length + "k".length + "fp".length + "style".length + "ANTHROPIC".length +
-                "model".length + 2
+                "model".length + "default".length + 2
         val artistBytes = 2 + "none".length
         assertEquals(TableStats(1, synthesisBytes.toLong()), caches.stats().synthesis)
         assertEquals(TableStats(1, artistBytes.toLong()), caches.stats().artists)
@@ -140,7 +140,7 @@ class CachesTest {
     fun `an entry larger than the limit is not kept and evicts nothing`() {
         caches.synthesis.put(key("a"), "text")
         caches.artists.put("b", ArtistResolution.None)
-        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
+        caches.retrieval.put(SourceId.DISCOGS, "c|x", 1, result())
         val before = caches.stats()
         fixture.settings = Settings(cacheSizeLimit = before.bytes + 10)
 
@@ -148,7 +148,7 @@ class CachesTest {
         assertFalse(caches.synthesis.put(key("big"), tooLong))
         assertFalse(caches.artists.put(tooLong, ArtistResolution.None))
         val big = SourceResult(Outcome.None, emptyList(), 1.milliseconds, rejections = listOf(Rejection(tooLong, "y")))
-        assertFalse(caches.retrieval.put(SourceId.WEB, "d|x", 1, big))
+        assertFalse(caches.retrieval.put(SourceId.DISCOGS, "d|x", 1, big))
 
         assertEquals(before, caches.stats())
         assertNotNull(caches.synthesis.get(key("a")))
@@ -160,8 +160,8 @@ class CachesTest {
         caches.synthesis.put(key("a"), "a longer text, replacing")
         caches.artists.put("b", ArtistResolution.None)
         caches.artists.put("b", ArtistResolution.Ambiguous(listOf("x", "y")))
-        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
-        caches.retrieval.put(SourceId.WEB, "c|x", 1, result())
+        caches.retrieval.put(SourceId.DISCOGS, "c|x", 1, result())
+        caches.retrieval.put(SourceId.DISCOGS, "c|x", 1, result())
         caches.retrieval.put(SourceId.MUSICBRAINZ, "c|x", 1, result())
         fixture.assertTotals()
         assertEquals(2, caches.stats().retrieval.entries)
@@ -183,5 +183,5 @@ class CachesTest {
     private fun result(): SourceResult = SourceResult(Outcome.None, emptyList(), 100.milliseconds)
 
     private fun key(entity: String): SynthesisKey =
-        SynthesisKey(CardKind.INSIGHT, entity, "fp", 1, "style", ProviderId.ANTHROPIC, "model", false)
+        SynthesisKey(CardKind.INSIGHT, entity, "fp", 1, "style", ProviderId.ANTHROPIC, "model", false, null)
 }

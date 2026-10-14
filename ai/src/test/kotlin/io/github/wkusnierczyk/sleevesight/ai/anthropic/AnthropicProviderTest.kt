@@ -111,6 +111,35 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `a model not known to take an effort gets none`() =
+        runTest {
+            val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+            val older = request.copy(model = "claude-haiku-4-5", effort = ReasoningEffort.LOW)
+            AnthropicProvider(net).stream(older, key).toList()
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        net.requests
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals(null, body["output_config"])
+            for (model in listOf(
+                "claude-haiku-5-5",
+                "claude-opus-5-5",
+                "claude-sonnet-4-6",
+                "claude-opus-4-5-20251101",
+            )) {
+                assertEquals(true, AnthropicProvider.takesEffort(model), model)
+            }
+            for (model in listOf("claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-50")) {
+                assertEquals(false, AnthropicProvider.takesEffort(model), model)
+            }
+        }
+
+    @Test
     fun `reasoning and other content are skipped, and the stop reasons map`() =
         runTest {
             val reasons =
