@@ -25,6 +25,8 @@ object IdentityCases {
             Case(1, "Q7639816", Route.MUSICBRAINZ, null, Scope.SONG),
             Case(13, "Q1415482", Route.MUSICBRAINZ, null, Scope.SONG),
             Case(36, "Q12001651", Route.MUSICBRAINZ, null, Scope.SONG),
+            // Chuck Berry's own song: the item names only later performers, and him as its writer (#76).
+            Case(55, "Q1437885", Route.MUSICBRAINZ, null, Scope.SONG),
             Case(63, "Q797806", Route.MUSICBRAINZ, null, Scope.SONG),
             Case(12, "Q4091249", Route.NAME, "Reem", null),
             Case(37, "Q2014237", Route.NAME, "Ode to Newfoundland", Scope.SONG),

@@ -110,6 +110,30 @@ class MusicBrainzResolutionTest {
         }
 
     @Test
+    fun `a much-recorded song - Chuck Berry's 1956 Roll Over Beethoven, far down the 100 results`() =
+        runTest {
+            val resolution = resolve(55)
+            assertEquals("5f574686-4d14-4207-aa72-cc8c8549e264", resolution.recordingMbid)
+            assertEquals("1956-05", resolution.firstReleaseDate)
+            assertEquals("Roll Over Beethoven / Drifting Heart", resolution.firstRelease?.title)
+            assertEquals("100", net.sent.first().query["limit"])
+        }
+
+    @Test
+    fun `a bandleader credit - Misirlou resolves to Dick Dale and His Del-Tones' 1962 recording`() =
+        runTest {
+            val resolution = resolve(62)
+            assertEquals("254c0284-4af7-4dd2-bdf4-d0d6d0e83447", resolution.recordingMbid)
+            assertEquals("1962-04", resolution.firstReleaseDate)
+            assertEquals("Dick Dale and His Del‐Tones", resolution.artistCredit)
+            // Dick Dale's own id, from his guitar credit on the recording, not the band's.
+            assertEquals(
+                listOf(ResolvedArtist("Dick Dale", "cc6115aa-379c-4133-9f46-5743a4a341d0")),
+                resolution.artists,
+            )
+        }
+
+    @Test
     fun `the search sends the normalized title and the primary artist, and never asks for tags or genres`() =
         runTest {
             resolve(RegressionCase.VERSION_SUFFIX.tracks.single())

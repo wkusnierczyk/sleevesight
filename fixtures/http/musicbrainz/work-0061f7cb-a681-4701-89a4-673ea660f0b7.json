@@ -1,1034 +1,14 @@
 {
- "iswcs": [
-  "T-071.513.877-4"
- ],
- "type": "Song",
- "relations": [
-  {
-   "direction": "backward",
-   "begin": null,
-   "end": null,
-   "target-type": "artist",
-   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
-   "type": "composer",
-   "attribute-values": {},
-   "artist": {
-    "sort-name": "Lightfoot, Gordon",
-    "country": "CA",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "disambiguation": "",
-    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-    "name": "Gordon Lightfoot",
-    "type": "Person"
-   },
-   "ended": false,
-   "source-credit": "",
-   "attributes": [],
-   "attribute-ids": {},
-   "target-credit": ""
-  },
-  {
-   "artist": {
-    "name": "Gordon Lightfoot",
-    "type": "Person",
-    "disambiguation": "",
-    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-    "country": "CA",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "sort-name": "Lightfoot, Gordon"
-   },
-   "ended": false,
-   "type": "lyricist",
-   "attribute-values": {},
-   "target-credit": "",
-   "source-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "direction": "backward",
-   "type-id": "3e48faba-ec01-47fd-8e89-30e81161661c",
-   "end": null,
-   "begin": null,
-   "target-type": "artist"
-  },
-  {
-   "source-credit": "",
-   "attributes": [
-    "live"
-   ],
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
-   "target-credit": "",
-   "type": "performance",
-   "attribute-values": {},
-   "ended": true,
-   "target-type": "recording",
-   "end": "1979-09-08",
-   "begin": "1979-09-08",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "length": 225000,
-    "title": "Sundown",
-    "artist-credit": [
-     {
-      "artist": {
-       "name": "Gordon Lightfoot",
-       "type": null,
-       "disambiguation": "",
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-       "sort-name": "Lightfoot, Gordon",
-       "country": "CA",
-       "type-id": null
-      },
-      "joinphrase": "",
-      "name": "Gordon Lightfoot"
-     }
-    ],
-    "id": "c722ff73-97b4-4a90-b879-4b1b147d544c",
-    "disambiguation": "live, 1979‐09‐08: WTTW’s Grainger Studio, Chicago, IL, USA"
-   },
-   "direction": "backward"
-  },
-  {
-   "source-credit": "",
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
-   "attributes": [
-    "live"
-   ],
-   "target-credit": "",
-   "type": "performance",
-   "attribute-values": {},
-   "ended": true,
-   "end": "1998-05-07",
-   "begin": "1998-05-07",
-   "target-type": "recording",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "title": "Sundown",
-    "length": 184000,
-    "artist-credit": [
-     {
-      "name": "Gordon Lightfoot",
-      "joinphrase": "",
-      "artist": {
-       "country": "CA",
-       "type-id": null,
-       "sort-name": "Lightfoot, Gordon",
-       "disambiguation": "",
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-       "name": "Gordon Lightfoot",
-       "type": null
-      }
-     }
-    ],
-    "id": "d0d439f9-5324-4728-8706-2da39adb89c5",
-    "disambiguation": "live, 1998-05-07: Massey Hall, Toronto, ON, Canada"
-   },
-   "direction": "backward"
-  },
-  {
-   "end": "2000-04",
-   "begin": "2000-04",
-   "target-type": "recording",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "disambiguation": "live, 2000-04: Pioneer Theater, Reno, NV, USA",
-    "id": "8871ced7-a79c-4bbb-9210-af2ba2871864",
-    "artist-credit": [
-     {
-      "name": "Gordon Lightfoot",
-      "joinphrase": "",
-      "artist": {
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-       "disambiguation": "",
-       "sort-name": "Lightfoot, Gordon",
-       "type-id": null,
-       "country": "CA",
-       "type": null,
-       "name": "Gordon Lightfoot"
-      }
-     }
-    ],
-    "length": 201485,
-    "title": "Sundown",
-    "video": true
-   },
-   "direction": "backward",
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
-   "attributes": [
-    "live"
-   ],
-   "source-credit": "",
-   "target-credit": "",
-   "attribute-values": {},
-   "type": "performance",
-   "ended": true
-  },
-  {
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "target-credit": "",
-   "attributes": [
-    "cover"
-   ],
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "source-credit": "",
-   "direction": "backward",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Elwood",
-      "artist": {
-       "type": null,
-       "name": "Elwood",
-       "disambiguation": "Prince Elwood Strickland III & Brian Boland project/collaboration",
-       "id": "b10405b5-36e5-4081-86bb-f6b02da69a44",
-       "type-id": null,
-       "country": "US",
-       "sort-name": "Elwood"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "50ead7a2-525e-4306-a4a4-90e66d345b4e",
-    "length": 238720,
-    "title": "Sundown",
-    "video": false
-   },
-   "begin": null,
-   "end": null,
-   "target-type": "recording"
-  },
-  {
-   "direction": "backward",
-   "target-type": "recording",
-   "begin": null,
-   "end": null,
-   "recording": {
-    "video": false,
-    "id": "c4599250-9001-400a-831a-1f7c31b5f781",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "artist": {
-       "type-id": null,
-       "country": "CA",
-       "sort-name": "Lightfoot, Gordon",
-       "disambiguation": "",
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-       "name": "Gordon Lightfoot",
-       "type": null
-      },
-      "joinphrase": "",
-      "name": "Gordon Lightfoot"
-     }
-    ],
-    "title": "Sundown",
-    "length": 215640
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "type": "performance",
-   "attribute-values": {},
-   "ended": false,
-   "source-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "target-credit": ""
-  },
-  {
-   "attribute-values": {},
-   "type": "performance",
-   "ended": false,
-   "attributes": [
-    "cover"
-   ],
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "source-credit": "",
-   "target-credit": "",
-   "direction": "backward",
-   "begin": null,
-   "end": null,
-   "target-type": "recording",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Jesse Winchester",
-      "artist": {
-       "sort-name": "Winchester, Jesse",
-       "country": "US",
-       "type-id": null,
-       "id": "455911db-b472-4702-bf0d-ae4f87c922bd",
-       "disambiguation": "singer-songwriter, producer",
-       "name": "Jesse Winchester",
-       "type": null
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "ef3b3b0a-0b6c-47e1-bd13-e3a3fe93902d",
-    "title": "Sundown",
-    "length": 191146
-   }
-  },
-  {
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "name": "Lee Towers",
-      "joinphrase": "",
-      "artist": {
-       "type": null,
-       "name": "Lee Towers",
-       "type-id": null,
-       "country": "NL",
-       "sort-name": "Towers, Lee",
-       "disambiguation": "",
-       "id": "b197e9e3-762b-465a-b761-86f5fb38a192"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "3f32ef63-af1d-4e21-b2ea-c8b4a7986309",
-    "length": 185200,
-    "title": "Sundown"
-   },
-   "end": null,
-   "begin": null,
-   "target-type": "recording",
-   "direction": "backward",
-   "target-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance"
-  },
-  {
-   "direction": "backward",
-   "recording": {
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Ed Kuepper",
-      "artist": {
-       "id": "75b51945-e1fe-43cd-92d9-a5e372972eef",
-       "disambiguation": "",
-       "sort-name": "Kuepper, Ed",
-       "type-id": null,
-       "country": "AU",
-       "name": "Ed Kuepper",
-       "type": null
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "131f6baa-6b47-4aaf-a919-e79e41c736df",
-    "length": 280906,
-    "title": "Sundown",
-    "video": false
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "begin": null,
-   "end": null,
-   "target-type": "recording",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "target-credit": "",
-   "attributes": [
-    "cover"
-   ],
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "source-credit": ""
-  },
-  {
-   "target-credit": "",
-   "source-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "ended": false,
-   "type": "performance",
-   "attribute-values": {},
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "id": "fb765e01-dd1a-49f7-bd22-c1fea5566acf",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Scott Walker",
-      "artist": {
-       "name": "Scott Walker",
-       "type": null,
-       "sort-name": "Walker, Scott",
-       "type-id": null,
-       "country": "GB",
-       "id": "99524243-dc2e-4bf3-82c0-72395391d21f",
-       "disambiguation": "singer‐songwriter, musician and producer"
-      }
-     }
-    ],
-    "title": "Sundown",
-    "length": 289360,
-    "video": false
-   },
-   "target-type": "recording",
-   "end": null,
-   "begin": null,
-   "direction": "backward"
-  },
-  {
-   "target-credit": "",
-   "source-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "ended": false,
-   "type": "performance",
-   "attribute-values": {},
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "disambiguation": "",
-    "id": "f97d021a-ee18-4f27-96b7-d8c5be5b5591",
-    "artist-credit": [
-     {
-      "artist": {
-       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
-       "disambiguation": "German big band leader & composer, 1929–2015",
-       "sort-name": "Last, James",
-       "country": "DE",
-       "type-id": null,
-       "name": "James Last",
-       "type": null
-      },
-      "name": "James Last",
-      "joinphrase": ""
-     }
-    ],
-    "title": "Sundown",
-    "length": 215000
-   },
-   "target-type": "recording",
-   "end": null,
-   "begin": null,
-   "direction": "backward"
-  },
-  {
-   "direction": "backward",
-   "begin": null,
-   "end": null,
-   "target-type": "recording",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "name": "James Last",
-      "joinphrase": "",
-      "artist": {
-       "type": null,
-       "name": "James Last",
-       "type-id": null,
-       "country": "DE",
-       "sort-name": "Last, James",
-       "disambiguation": "German big band leader & composer, 1929–2015",
-       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76"
-      }
-     }
-    ],
-    "id": "4185d50a-2ef2-4edf-8711-f46eb62c72ce",
-    "disambiguation": "",
-    "length": 218000,
-    "title": "Sundown"
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "type": "performance",
-   "attribute-values": {},
-   "ended": false,
-   "source-credit": "",
-   "attributes": [
-    "cover"
-   ],
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "target-credit": ""
-  },
-  {
-   "target-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "artist": {
-       "name": "James Last",
-       "type": null,
-       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
-       "disambiguation": "German big band leader & composer, 1929–2015",
-       "type-id": null,
-       "country": "DE",
-       "sort-name": "Last, James"
-      },
-      "joinphrase": "",
-      "name": "James Last"
-     }
-    ],
-    "id": "f9577dc6-40c3-4763-83b7-c4bab4943ec9",
-    "disambiguation": "",
-    "title": "Sundown",
-    "length": 221000
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "target-type": "recording",
-   "begin": null,
-   "end": null,
-   "direction": "backward"
-  },
-  {
-   "direction": "backward",
-   "recording": {
-    "video": false,
-    "id": "778e881e-9820-49ce-bd26-c22734056d11",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "artist": {
-       "type-id": null,
-       "country": "DE",
-       "sort-name": "Last, James",
-       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
-       "disambiguation": "German big band leader & composer, 1929–2015",
-       "type": null,
-       "name": "James Last"
-      },
-      "joinphrase": "",
-      "name": "James Last"
-     }
-    ],
-    "length": 216607,
-    "title": "Sundown"
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": null,
-   "begin": null,
-   "target-type": "recording",
-   "ended": false,
-   "type": "performance",
-   "attribute-values": {},
-   "target-credit": "",
-   "source-credit": "",
-   "attributes": [],
-   "attribute-ids": {}
-  },
-  {
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "target-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "source-credit": "",
-   "direction": "backward",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "id": "f1f92469-37ac-48cb-aba0-b2f42f80dd6e",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "artist": {
-       "sort-name": "Eager, Vince",
-       "type-id": null,
-       "country": "GB",
-       "id": "01107224-83f1-4edb-933f-cc7a5395310e",
-       "disambiguation": "",
-       "name": "Vince Eager",
-       "type": null
-      },
-      "joinphrase": "",
-      "name": "Vince Eager"
-     }
-    ],
-    "length": null,
-    "title": "Sundown"
-   },
-   "begin": null,
-   "end": null,
-   "target-type": "recording"
-  },
-  {
-   "type": "performance",
-   "attribute-values": {},
-   "ended": false,
-   "source-credit": "",
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover",
-    "live"
-   ],
-   "target-credit": "",
-   "direction": "backward",
-   "target-type": "recording",
-   "begin": null,
-   "end": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "title": "Sundown",
-    "length": 234840,
-    "artist-credit": [
-     {
-      "name": "Franklin’s Mint",
-      "joinphrase": "",
-      "artist": {
-       "type": null,
-       "name": "Franklin’s Mint",
-       "sort-name": "Franklin’s Mint",
-       "country": "AU",
-       "type-id": null,
-       "disambiguation": "project of Phil Franklin from Sunburned Hand of the Man",
-       "id": "f2ff90f4-1f11-4ae1-9b82-f6021c938321"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "8d29e8e4-120c-46ac-b2d2-75007f8119e7",
-    "video": false
-   }
-  },
-  {
-   "attribute-values": {},
-   "type": "performance",
-   "ended": false,
-   "attributes": [
-    "cover"
-   ],
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "source-credit": "",
-   "target-credit": "",
-   "direction": "backward",
-   "target-type": "recording",
-   "begin": null,
-   "end": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "title": "Sundown",
-    "length": 143500,
-    "artist-credit": [
-     {
-      "name": "Gabriel Birnbaum",
-      "joinphrase": "",
-      "artist": {
-       "type": null,
-       "name": "Gabriel Birnbaum",
-       "sort-name": "Birnbaum, Gabriel",
-       "country": "US",
-       "type-id": null,
-       "id": "01c0f89e-ffb6-4e7f-a8d1-24dda0f8ad0f",
-       "disambiguation": ""
-      }
-     }
-    ],
-    "id": "c87476dc-4554-46e2-b52e-fc320d097b76",
-    "disambiguation": "",
-    "video": false
-   }
-  },
-  {
-   "target-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Ray Conniff",
-      "artist": {
-       "type": null,
-       "name": "Ray Conniff",
-       "disambiguation": "",
-       "id": "b84dfb67-c437-4ccc-b512-1073fd4612eb",
-       "country": "US",
-       "type-id": null,
-       "sort-name": "Conniff, Ray"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "a6660dca-4c93-4213-9a71-61ecf98e0481",
-    "title": "Sundown",
-    "length": null,
-    "video": false
-   },
-   "end": null,
-   "begin": null,
-   "target-type": "recording",
-   "direction": "backward"
-  },
-  {
-   "recording": {
-    "title": "Sundown",
-    "length": 202449,
-    "id": "e8d52a93-7f41-445a-b48c-ac5a58380fc6",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "name": "Langhorne Slim",
-      "joinphrase": "",
-      "artist": {
-       "name": "Langhorne Slim",
-       "type": null,
-       "sort-name": "Langhorne Slim",
-       "country": "US",
-       "type-id": null,
-       "disambiguation": "",
-       "id": "0bc5259b-bf08-40ad-9f6a-20462f652e83"
-      }
-     }
-    ],
-    "video": false
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": null,
-   "begin": null,
-   "target-type": "recording",
-   "direction": "backward",
-   "target-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance"
-  },
-  {
-   "begin": null,
-   "end": null,
-   "target-type": "recording",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "length": 212000,
-    "title": "Sundown",
-    "disambiguation": "",
-    "id": "a459c9b7-c3ef-4069-97ba-6c2c08919d72",
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Darling West",
-      "artist": {
-       "type": null,
-       "name": "Darling West",
-       "type-id": null,
-       "country": "NO",
-       "sort-name": "Darling West",
-       "id": "06993a2f-645d-4359-b848-88203f81db92",
-       "disambiguation": ""
-      }
-     }
-    ],
-    "video": false
-   },
-   "direction": "backward",
-   "source-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "target-credit": "",
-   "type": "performance",
-   "attribute-values": {},
-   "ended": false
-  },
-  {
-   "target-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "attributes": [
-    "cover"
-   ],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "recording": {
-    "length": 216000,
-    "title": "Sundown",
-    "artist-credit": [
-     {
-      "artist": {
-       "type": null,
-       "name": "Charles Wesley Godwin",
-       "id": "082e1531-e8ff-43ef-8f1c-7c6600b0c00d",
-       "disambiguation": "",
-       "sort-name": "Godwin, Charles Wesley",
-       "type-id": null,
-       "country": "US"
-      },
-      "joinphrase": "",
-      "name": "Charles Wesley Godwin"
-     }
-    ],
-    "id": "4bc0939a-54e8-4d11-9e88-3f1459b786d2",
-    "disambiguation": "",
-    "video": false
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "target-type": "recording",
-   "begin": null,
-   "end": null,
-   "direction": "backward"
-  },
-  {
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "id": "2b6fb626-9f91-4a15-b6e5-4c2566a822c0",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "name": "James Last",
-      "joinphrase": "",
-      "artist": {
-       "type": null,
-       "name": "James Last",
-       "sort-name": "Last, James",
-       "type-id": null,
-       "country": "DE",
-       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
-       "disambiguation": "German big band leader & composer, 1929–2015"
-      }
-     }
-    ],
-    "title": "Sundown",
-    "length": 217000
-   },
-   "end": null,
-   "begin": null,
-   "target-type": "recording",
-   "direction": "backward",
-   "target-credit": "",
-   "attributes": [],
-   "attribute-ids": {},
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance"
-  },
-  {
-   "target-type": "recording",
-   "end": null,
-   "begin": null,
-   "recording": {
-    "length": 216960,
-    "title": "Sundown",
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "Gordon Lightfoot",
-      "artist": {
-       "name": "Gordon Lightfoot",
-       "type": null,
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-       "disambiguation": "",
-       "type-id": null,
-       "country": "CA",
-       "sort-name": "Lightfoot, Gordon"
-      }
-     }
-    ],
-    "id": "05403097-62c3-4965-90ce-d6eb80b0f466",
-    "disambiguation": "",
-    "video": false
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "direction": "backward",
-   "attributes": [],
-   "attribute-ids": {},
-   "source-credit": "",
-   "target-credit": "",
-   "attribute-values": {},
-   "type": "performance",
-   "ended": false
-  },
-  {
-   "target-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "performance",
-   "recording": {
-    "video": false,
-    "title": "Sundown",
-    "length": 211520,
-    "artist-credit": [
-     {
-      "artist": {
-       "type": null,
-       "name": "Gordon Lightfoot",
-       "type-id": null,
-       "country": "CA",
-       "sort-name": "Lightfoot, Gordon",
-       "disambiguation": "",
-       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
-      },
-      "name": "Gordon Lightfoot",
-      "joinphrase": ""
-     }
-    ],
-    "id": "a6b8231e-957a-4553-9d8c-530c9863723f",
-    "disambiguation": ""
-   },
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "target-type": "recording",
-   "end": null,
-   "begin": null,
-   "direction": "backward"
-  },
-  {
-   "direction": "backward",
-   "target-type": "recording",
-   "end": null,
-   "begin": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "The Smithereens",
-      "artist": {
-       "name": "The Smithereens",
-       "type": null,
-       "sort-name": "Smithereens, The",
-       "country": "US",
-       "type-id": null,
-       "id": "fae2cd4c-f847-4cb3-b311-60c8906cdb0b",
-       "disambiguation": "New Jersey power pop band"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "id": "39922de2-ab58-4885-8c96-ad4417b6876b",
-    "title": "Sundown (demo)",
-    "length": 209000
-   },
-   "attribute-values": {},
-   "type": "performance",
-   "ended": false,
-   "attribute-ids": {},
-   "attributes": [],
-   "source-credit": "",
-   "target-credit": ""
-  },
-  {
-   "target-credit": "",
-   "attribute-ids": {},
-   "attributes": [],
-   "source-credit": "",
-   "ended": false,
-   "attribute-values": {},
-   "type": "secondhandsongs",
-   "url": {
-    "resource": "https://secondhandsongs.com/work/26675",
-    "id": "ae93774f-24e2-4939-9cc7-69b7a4a7486c"
-   },
-   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52",
-   "end": null,
-   "begin": null,
-   "target-type": "url",
-   "direction": "backward"
-  },
-  {
-   "attributes": [],
-   "attribute-ids": {},
-   "source-credit": "",
-   "target-credit": "",
-   "attribute-values": {},
-   "type": "wikidata",
-   "ended": false,
-   "begin": null,
-   "end": null,
-   "target-type": "url",
-   "url": {
-    "id": "203df72e-2c72-4dc2-a509-d96dc2eeabc0",
-    "resource": "https://www.wikidata.org/wiki/Q7639816"
-   },
-   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
-   "direction": "backward"
-  }
- ],
- "title": "Sundown",
- "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
- "languages": [
-  "eng"
- ],
- "language": "eng",
  "attributes": [
   {
    "type-id": "034f35ae-d250-3749-95e7-854e606d5960",
-   "type": "SUISA ID",
-   "value": "000341 897 79"
+   "value": "000341 897 79",
+   "type": "SUISA ID"
   },
   {
+   "type-id": "fd46ccc3-b3bb-4c5a-b40d-23b81899ef46",
    "value": "4044854",
-   "type": "SPAC ID",
-   "type-id": "fd46ccc3-b3bb-4c5a-b40d-23b81899ef46"
+   "type": "SPAC ID"
   },
   {
    "type-id": "f15e9a05-231e-415b-8b7d-8ec44c736bde",
@@ -1037,23 +17,23 @@
   },
   {
    "value": "10719591",
-   "type": "SOCAN ID",
-   "type-id": "00370bc6-7388-34a1-aa5b-b0e081ccb53d"
-  },
-  {
    "type-id": "00370bc6-7388-34a1-aa5b-b0e081ccb53d",
-   "value": "212299795",
    "type": "SOCAN ID"
   },
   {
-   "type-id": "3667d8d9-9fe4-4df0-873b-4dc00a886d80",
-   "type": "SOBODAYCOM ID",
-   "value": "4044854"
+   "type": "SOCAN ID",
+   "type-id": "00370bc6-7388-34a1-aa5b-b0e081ccb53d",
+   "value": "212299795"
   },
   {
+   "type": "SOBODAYCOM ID",
+   "value": "4044854",
+   "type-id": "3667d8d9-9fe4-4df0-873b-4dc00a886d80"
+  },
+  {
+   "type": "SIAE ID",
    "type-id": "2e4f9e12-d094-4bd0-b4dd-a560cc5c4977",
-   "value": "76101746900",
-   "type": "SIAE ID"
+   "value": "76101746900"
   },
   {
    "type-id": "6a200b13-ca08-3b32-87a9-7aaa46368d75",
@@ -1061,29 +41,29 @@
    "type": "SGAE ID"
   },
   {
-   "value": "4044854",
    "type": "SGACEDOM ID",
-   "type-id": "33fe1f90-d812-48ef-839f-bc151afecaca"
-  },
-  {
-   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
-   "type": "SAYCO ID",
-   "value": "1370134"
+   "type-id": "33fe1f90-d812-48ef-839f-bc151afecaca",
+   "value": "4044854"
   },
   {
    "value": "1370134",
-   "type": "SAYCE ID",
-   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef"
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
+   "type": "SAYCO ID"
+  },
+  {
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "value": "1370134",
+   "type": "SAYCE ID"
   },
   {
    "value": "241800",
-   "type": "SADAIC ID",
-   "type-id": "d8aa6512-314a-478d-bd30-e8d7411509cb"
+   "type-id": "d8aa6512-314a-478d-bd30-e8d7411509cb",
+   "type": "SADAIC ID"
   },
   {
    "type": "SACVEN ID",
-   "value": "3980247",
-   "type-id": "91064561-0c00-4574-ad18-247c7216675f"
+   "type-id": "91064561-0c00-4574-ad18-247c7216675f",
+   "value": "3980247"
   },
   {
    "type-id": "43b74305-291f-4ae3-9e59-0dca457c00fe",
@@ -1091,8 +71,8 @@
    "type": "SACIM ID"
   },
   {
-   "type-id": "d08147e2-d167-3c2b-bbe4-af6643a194f9",
    "type": "SACEM ID",
+   "type-id": "d08147e2-d167-3c2b-bbe4-af6643a194f9",
    "value": "74 011 362 11"
   },
   {
@@ -1101,19 +81,19 @@
    "type": "SABAM ID"
   },
   {
+   "type": "PRS tune code",
    "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
-   "value": "233328A",
-   "type": "PRS tune code"
+   "value": "233328A"
   },
   {
-   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
    "value": "561541EU",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
    "type": "PRS tune code"
   },
   {
    "value": "I000.34.01.32",
-   "type": "OSA ID",
-   "type-id": "2f9f66e4-c32c-4215-b7f4-4a146d0b2a0e"
+   "type-id": "2f9f66e4-c32c-4215-b7f4-4a146d0b2a0e",
+   "type": "OSA ID"
   },
   {
    "type": "NICAUTOR ID",
@@ -1122,23 +102,23 @@
   },
   {
    "type": "JASRAC ID",
-   "value": "0S1-6908-8",
-   "type-id": "31048fcc-3dbb-3979-8f85-805afb933e0c"
+   "type-id": "31048fcc-3dbb-3979-8f85-805afb933e0c",
+   "value": "0S1-6908-8"
   },
   {
    "type": "GEMA ID",
-   "value": "636767-001",
-   "type-id": "01eeee67-f514-3801-bdce-279e04872f91"
+   "type-id": "01eeee67-f514-3801-bdce-279e04872f91",
+   "value": "636767-001"
   },
   {
    "value": "121349",
-   "type": "ECAD ID",
-   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990"
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "type": "ECAD ID"
   },
   {
-   "type": "ECAD ID",
    "value": "10847494",
-   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990"
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "type": "ECAD ID"
   },
   {
    "type": "COMPASS ID",
@@ -1146,24 +126,24 @@
    "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
   },
   {
-   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "value": "5227253"
   },
   {
-   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "value": "8342507",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "type": "COMPASS ID"
   },
   {
-   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
    "value": "13348720"
   },
   {
+   "type": "CASH ID",
    "type-id": "9e0765a1-1505-3ca9-9147-8dcbb0aa9cec",
-   "value": "C-1255860094",
-   "type": "CASH ID"
+   "value": "C-1255860094"
   },
   {
    "type-id": "a6492434-b847-4f1b-9869-9184ade990ed",
@@ -1171,19 +151,19 @@
    "type": "BUMA/STEMRA ID"
   },
   {
-   "type": "APRA ID",
+   "type-id": "bdf50af8-0881-322a-8ab7-f031a4935d04",
    "value": "GW02331287",
-   "type-id": "bdf50af8-0881-322a-8ab7-f031a4935d04"
+   "type": "APRA ID"
   },
   {
-   "type": "APDAYC ID",
    "value": "9628584",
-   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8"
+   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8",
+   "type": "APDAYC ID"
   },
   {
+   "type": "APA ID",
    "type-id": "84afca1d-80dc-4d44-8d7a-e1e84e70aa65",
-   "value": "5840677",
-   "type": "APA ID"
+   "value": "5840677"
   },
   {
    "type-id": "eee68598-7f51-44a7-bd5a-fc728f1854d2",
@@ -1191,31 +171,1051 @@
    "type": "AKM ID"
   },
   {
+   "value": "4044854",
    "type-id": "d12e548d-4579-4ddd-abb6-9ffa4fee6826",
-   "type": "AEI ID",
-   "value": "4044854"
+   "type": "AEI ID"
   },
   {
-   "value": "4044855",
    "type": "ACAM ID",
+   "value": "4044855",
    "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c"
+  },
+  {
+   "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c",
+   "value": "4044854",
+   "type": "ACAM ID"
   },
   {
    "value": "4044854",
-   "type": "ACAM ID",
-   "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c"
-  },
-  {
    "type-id": "a9551cb7-ee2c-4b05-87b6-18ef0e549865",
-   "type": "AACIMH ID",
-   "value": "4044854"
+   "type": "AACIMH ID"
   },
   {
-   "type": "ASCAP ID",
    "value": "490320597",
-   "type-id": "d833318c-6c6a-370e-8b16-9cb15873ba76"
+   "type-id": "d833318c-6c6a-370e-8b16-9cb15873ba76",
+   "type": "ASCAP ID"
   }
  ],
+ "disambiguation": "",
  "id": "0061f7cb-a681-4701-89a4-673ea660f0b7",
- "disambiguation": ""
+ "language": "eng",
+ "relations": [
+  {
+   "end": null,
+   "attribute-values": {},
+   "attribute-ids": {},
+   "attributes": [],
+   "begin": null,
+   "ended": false,
+   "direction": "backward",
+   "source-credit": "",
+   "artist": {
+    "disambiguation": "",
+    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+    "type": "Person",
+    "sort-name": "Lightfoot, Gordon",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "name": "Gordon Lightfoot"
+   },
+   "target-credit": "",
+   "type": "composer",
+   "target-type": "artist",
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f"
+  },
+  {
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "attribute-values": {},
+   "attribute-ids": {},
+   "end": null,
+   "artist": {
+    "sort-name": "Lightfoot, Gordon",
+    "country": "CA",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Gordon Lightfoot",
+    "type": "Person",
+    "disambiguation": "",
+    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
+   },
+   "source-credit": "",
+   "direction": "backward",
+   "target-type": "artist",
+   "type": "lyricist",
+   "target-credit": "",
+   "type-id": "3e48faba-ec01-47fd-8e89-30e81161661c"
+  },
+  {
+   "target-type": "recording",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "name": "Gordon Lightfoot",
+       "sort-name": "Lightfoot, Gordon",
+       "country": "CA",
+       "type-id": null,
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+       "disambiguation": ""
+      },
+      "name": "Gordon Lightfoot",
+      "joinphrase": ""
+     }
+    ],
+    "id": "c722ff73-97b4-4a90-b879-4b1b147d544c",
+    "disambiguation": "live, 1979‐09‐08: WTTW’s Grainger Studio, Chicago, IL, USA",
+    "video": false,
+    "title": "Sundown",
+    "length": 225000
+   },
+   "target-credit": "",
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": true,
+   "attributes": [
+    "live"
+   ],
+   "begin": "1979-09-08",
+   "end": "1979-09-08",
+   "attribute-values": {},
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "direction": "backward",
+   "source-credit": ""
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "recording": {
+    "video": false,
+    "id": "d0d439f9-5324-4728-8706-2da39adb89c5",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+       "disambiguation": "",
+       "name": "Gordon Lightfoot",
+       "country": "CA",
+       "type-id": null,
+       "sort-name": "Lightfoot, Gordon",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Gordon Lightfoot"
+     }
+    ],
+    "disambiguation": "live, 1998-05-07: Massey Hall, Toronto, ON, Canada",
+    "length": 184000,
+    "title": "Sundown"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": "1998-05-07",
+   "attribute-values": {},
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "begin": "1998-05-07",
+   "attributes": [
+    "live"
+   ],
+   "ended": true,
+   "direction": "backward",
+   "source-credit": ""
+  },
+  {
+   "direction": "backward",
+   "source-credit": "",
+   "begin": "2000-04",
+   "attributes": [
+    "live"
+   ],
+   "ended": true,
+   "end": "2000-04",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "title": "Sundown",
+    "length": 201485,
+    "id": "8871ced7-a79c-4bbb-9210-af2ba2871864",
+    "disambiguation": "live, 2000-04: Pioneer Theater, Reno, NV, USA",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Gordon Lightfoot",
+       "type-id": null,
+       "country": "CA",
+       "sort-name": "Lightfoot, Gordon",
+       "type": null,
+       "disambiguation": "",
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
+      },
+      "joinphrase": "",
+      "name": "Gordon Lightfoot"
+     }
+    ],
+    "video": true
+   },
+   "target-credit": "",
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "b10405b5-36e5-4081-86bb-f6b02da69a44",
+       "disambiguation": "Prince Elwood Strickland III & Brian Boland project/collaboration",
+       "country": "US",
+       "type-id": null,
+       "sort-name": "Elwood",
+       "name": "Elwood",
+       "type": null
+      },
+      "name": "Elwood",
+      "joinphrase": ""
+     }
+    ],
+    "id": "50ead7a2-525e-4306-a4a4-90e66d345b4e",
+    "disambiguation": "",
+    "length": 238720,
+    "title": "Sundown"
+   },
+   "direction": "backward",
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "begin": null
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "title": "Sundown",
+    "length": 215640,
+    "video": false,
+    "id": "c4599250-9001-400a-831a-1f7c31b5f781",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "",
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+       "name": "Gordon Lightfoot",
+       "country": "CA",
+       "type-id": null,
+       "sort-name": "Lightfoot, Gordon",
+       "type": null
+      },
+      "name": "Gordon Lightfoot",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "end": null,
+   "attributes": [],
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "length": 191146,
+    "title": "Sundown",
+    "id": "ef3b3b0a-0b6c-47e1-bd13-e3a3fe93902d",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Jesse Winchester",
+      "artist": {
+       "id": "455911db-b472-4702-bf0d-ae4f87c922bd",
+       "disambiguation": "singer-songwriter, producer",
+       "type": null,
+       "name": "Jesse Winchester",
+       "sort-name": "Winchester, Jesse",
+       "type-id": null,
+       "country": "US"
+      }
+     }
+    ],
+    "video": false
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "target-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "recording": {
+    "video": false,
+    "id": "3f32ef63-af1d-4e21-b2ea-c8b4a7986309",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "",
+       "id": "b197e9e3-762b-465a-b761-86f5fb38a192",
+       "type": null,
+       "sort-name": "Towers, Lee",
+       "type-id": null,
+       "country": "NL",
+       "name": "Lee Towers"
+      },
+      "joinphrase": "",
+      "name": "Lee Towers"
+     }
+    ],
+    "title": "Sundown",
+    "length": 185200
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "begin": null,
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "direction": "backward",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [
+    "cover"
+   ],
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "title": "Sundown",
+    "length": 280906,
+    "id": "131f6baa-6b47-4aaf-a919-e79e41c736df",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "country": "AU",
+       "sort-name": "Kuepper, Ed",
+       "name": "Ed Kuepper",
+       "disambiguation": "",
+       "id": "75b51945-e1fe-43cd-92d9-a5e372972eef"
+      },
+      "joinphrase": "",
+      "name": "Ed Kuepper"
+     }
+    ],
+    "video": false
+   },
+   "target-type": "recording",
+   "type": "performance",
+   "target-credit": ""
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "id": "fb765e01-dd1a-49f7-bd22-c1fea5566acf",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Scott Walker",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "singer‐songwriter, musician and producer",
+       "id": "99524243-dc2e-4bf3-82c0-72395391d21f",
+       "type": null,
+       "name": "Scott Walker",
+       "sort-name": "Walker, Scott",
+       "country": "GB",
+       "type-id": null
+      }
+     }
+    ],
+    "video": false,
+    "length": 289360,
+    "title": "Sundown"
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "ended": false,
+   "begin": null
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "title": "Sundown",
+    "length": 215000,
+    "id": "f97d021a-ee18-4f27-96b7-d8c5be5b5591",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "James Last",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "German big band leader & composer, 1929–2015",
+       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
+       "name": "James Last",
+       "type-id": null,
+       "country": "DE",
+       "sort-name": "Last, James",
+       "type": null
+      }
+     }
+    ],
+    "video": false
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "begin": null
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "id": "4185d50a-2ef2-4edf-8711-f46eb62c72ce",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "James Last",
+      "artist": {
+       "type": null,
+       "name": "James Last",
+       "sort-name": "Last, James",
+       "country": "DE",
+       "type-id": null,
+       "disambiguation": "German big band leader & composer, 1929–2015",
+       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76"
+      }
+     }
+    ],
+    "video": false,
+    "title": "Sundown",
+    "length": 218000
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "id": "f9577dc6-40c3-4763-83b7-c4bab4943ec9",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "German big band leader & composer, 1929–2015",
+       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
+       "type": null,
+       "name": "James Last",
+       "type-id": null,
+       "country": "DE",
+       "sort-name": "Last, James"
+      },
+      "joinphrase": "",
+      "name": "James Last"
+     }
+    ],
+    "video": false,
+    "length": 221000,
+    "title": "Sundown"
+   },
+   "target-type": "recording",
+   "type": "performance",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "attribute-ids": {},
+   "attribute-values": {},
+   "end": null,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "disambiguation": "",
+    "id": "778e881e-9820-49ce-bd26-c22734056d11",
+    "artist-credit": [
+     {
+      "name": "James Last",
+      "joinphrase": "",
+      "artist": {
+       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
+       "disambiguation": "German big band leader & composer, 1929–2015",
+       "name": "James Last",
+       "sort-name": "Last, James",
+       "type-id": null,
+       "country": "DE",
+       "type": null
+      }
+     }
+    ],
+    "video": false,
+    "length": 216607,
+    "title": "Sundown"
+   },
+   "target-type": "recording",
+   "type": "performance",
+   "target-credit": "",
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [],
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "attribute-ids": {},
+   "end": null
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "video": false,
+    "id": "f1f92469-37ac-48cb-aba0-b2f42f80dd6e",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "01107224-83f1-4edb-933f-cc7a5395310e",
+       "disambiguation": "",
+       "sort-name": "Eager, Vince",
+       "country": "GB",
+       "type-id": null,
+       "name": "Vince Eager",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Vince Eager"
+     }
+    ],
+    "disambiguation": "",
+    "length": null,
+    "title": "Sundown"
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "id": "8d29e8e4-120c-46ac-b2d2-75007f8119e7",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Franklin’s Mint",
+      "artist": {
+       "type": null,
+       "type-id": null,
+       "country": "AU",
+       "sort-name": "Franklin’s Mint",
+       "name": "Franklin’s Mint",
+       "id": "f2ff90f4-1f11-4ae1-9b82-f6021c938321",
+       "disambiguation": "project of Phil Franklin from Sunburned Hand of the Man"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "title": "Sundown",
+    "length": 234840
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "end": null,
+   "begin": null,
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "ended": false,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "title": "Sundown",
+    "length": 143500,
+    "video": false,
+    "id": "c87476dc-4554-46e2-b52e-fc320d097b76",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Gabriel Birnbaum",
+      "artist": {
+       "disambiguation": "",
+       "id": "01c0f89e-ffb6-4e7f-a8d1-24dda0f8ad0f",
+       "type": null,
+       "name": "Gabriel Birnbaum",
+       "country": "US",
+       "type-id": null,
+       "sort-name": "Birnbaum, Gabriel"
+      }
+     }
+    ]
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "begin": null,
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "id": "a6660dca-4c93-4213-9a71-61ecf98e0481",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Conniff, Ray",
+       "type-id": null,
+       "country": "US",
+       "name": "Ray Conniff",
+       "type": null,
+       "id": "b84dfb67-c437-4ccc-b512-1073fd4612eb",
+       "disambiguation": ""
+      },
+      "joinphrase": "",
+      "name": "Ray Conniff"
+     }
+    ],
+    "video": false,
+    "title": "Sundown",
+    "length": null
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "attribute-values": {},
+   "end": null,
+   "attributes": [],
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "direction": "backward",
+   "source-credit": "",
+   "end": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "ended": false,
+   "attributes": [
+    "cover"
+   ],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "recording": {
+    "length": 202449,
+    "title": "Sundown",
+    "video": false,
+    "disambiguation": "",
+    "id": "e8d52a93-7f41-445a-b48c-ac5a58380fc6",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Langhorne Slim",
+       "type-id": null,
+       "country": "US",
+       "name": "Langhorne Slim",
+       "type": null,
+       "disambiguation": "",
+       "id": "0bc5259b-bf08-40ad-9f6a-20462f652e83"
+      },
+      "name": "Langhorne Slim",
+      "joinphrase": ""
+     }
+    ]
+   }
+  },
+  {
+   "ended": false,
+   "attributes": [
+    "cover"
+   ],
+   "begin": null,
+   "attribute-values": {},
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "source-credit": "",
+   "direction": "backward",
+   "recording": {
+    "title": "Sundown",
+    "length": 212000,
+    "video": false,
+    "disambiguation": "",
+    "id": "a459c9b7-c3ef-4069-97ba-6c2c08919d72",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "country": "NO",
+       "type-id": null,
+       "sort-name": "Darling West",
+       "name": "Darling West",
+       "disambiguation": "",
+       "id": "06993a2f-645d-4359-b848-88203f81db92"
+      },
+      "name": "Darling West",
+      "joinphrase": ""
+     }
+    ]
+   },
+   "target-type": "recording",
+   "type": "performance",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "begin": null,
+   "attributes": [
+    "cover"
+   ],
+   "ended": false,
+   "end": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "direction": "backward",
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "id": "4bc0939a-54e8-4d11-9e88-3f1459b786d2",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "name": "Charles Wesley Godwin",
+       "sort-name": "Godwin, Charles Wesley",
+       "country": "US",
+       "type-id": null,
+       "disambiguation": "",
+       "id": "082e1531-e8ff-43ef-8f1c-7c6600b0c00d"
+      },
+      "joinphrase": "",
+      "name": "Charles Wesley Godwin"
+     }
+    ],
+    "video": false,
+    "length": 216000,
+    "title": "Sundown"
+   },
+   "target-credit": "",
+   "type": "performance",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "title": "Sundown",
+    "length": 217000,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "German big band leader & composer, 1929–2015",
+       "id": "0b7ee619-16ed-4e60-b871-6a2111c12b76",
+       "sort-name": "Last, James",
+       "type-id": null,
+       "country": "DE",
+       "name": "James Last",
+       "type": null
+      },
+      "name": "James Last",
+      "joinphrase": ""
+     }
+    ],
+    "id": "2b6fb626-9f91-4a15-b6e5-4c2566a822c0",
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "type": "performance",
+   "direction": "backward",
+   "source-credit": "",
+   "begin": null,
+   "attributes": [],
+   "ended": false,
+   "end": null,
+   "attribute-ids": {},
+   "attribute-values": {}
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "type": "performance",
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "id": "05403097-62c3-4965-90ce-d6eb80b0f466",
+    "artist-credit": [
+     {
+      "name": "Gordon Lightfoot",
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Gordon Lightfoot",
+       "sort-name": "Lightfoot, Gordon",
+       "type-id": null,
+       "country": "CA",
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+       "disambiguation": ""
+      }
+     }
+    ],
+    "video": false,
+    "title": "Sundown",
+    "length": 216960
+   },
+   "direction": "backward",
+   "source-credit": "",
+   "end": null,
+   "attribute-values": {},
+   "attribute-ids": {},
+   "attributes": [],
+   "ended": false,
+   "begin": null
+  },
+  {
+   "type": "performance",
+   "target-credit": "",
+   "recording": {
+    "length": 211520,
+    "title": "Sundown",
+    "video": false,
+    "disambiguation": "",
+    "id": "a6b8231e-957a-4553-9d8c-530c9863723f",
+    "artist-credit": [
+     {
+      "name": "Gordon Lightfoot",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+       "type-id": null,
+       "country": "CA",
+       "sort-name": "Lightfoot, Gordon",
+       "name": "Gordon Lightfoot",
+       "type": null
+      }
+     }
+    ]
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "attribute-ids": {},
+   "end": null,
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward"
+  },
+  {
+   "direction": "backward",
+   "source-credit": "",
+   "ended": false,
+   "attributes": [],
+   "begin": null,
+   "end": null,
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "id": "39922de2-ab58-4885-8c96-ad4417b6876b",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "New Jersey power pop band",
+       "id": "fae2cd4c-f847-4cb3-b311-60c8906cdb0b",
+       "type": null,
+       "name": "The Smithereens",
+       "country": "US",
+       "type-id": null,
+       "sort-name": "Smithereens, The"
+      },
+      "joinphrase": "",
+      "name": "The Smithereens"
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "length": 209000,
+    "title": "Sundown (demo)"
+   },
+   "target-credit": "",
+   "type": "performance"
+  },
+  {
+   "type": "secondhandsongs",
+   "url": {
+    "resource": "https://secondhandsongs.com/work/26675",
+    "id": "ae93774f-24e2-4939-9cc7-69b7a4a7486c"
+   },
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "target-type": "url",
+   "target-credit": "",
+   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52",
+   "attributes": [],
+   "begin": null,
+   "end": null,
+   "attribute-values": {},
+   "source-credit": ""
+  },
+  {
+   "attributes": [],
+   "begin": null,
+   "attribute-values": {},
+   "end": null,
+   "source-credit": "",
+   "target-type": "url",
+   "target-credit": "",
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "ended": false,
+   "attribute-ids": {},
+   "direction": "backward",
+   "url": {
+    "id": "203df72e-2c72-4dc2-a509-d96dc2eeabc0",
+    "resource": "https://www.wikidata.org/wiki/Q7639816"
+   },
+   "type": "wikidata"
+  }
+ ],
+ "title": "Sundown",
+ "languages": [
+  "eng"
+ ],
+ "type": "Song",
+ "iswcs": [
+  "T-071.513.877-4"
+ ],
+ "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
 }

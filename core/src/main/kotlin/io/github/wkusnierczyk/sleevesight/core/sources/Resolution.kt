@@ -29,6 +29,14 @@ import io.github.wkusnierczyk.sleevesight.core.model.Outcome
  * @property cover whether this recording is a cover or version of a song first recorded by someone
  *   else: MusicBrainz marks the performance as a cover, or the work has a recording by another
  *   artist dated before every recording of it by the track's artists, all of which are dated.
+ * @property earliest whether the track's artists (those the player names, with the bands whose
+ *   leader is confirmed as one of them; not a collaborator credited beside them) recorded the work
+ *   first, as far as MusicBrainz
+ *   dates it: their earliest recording of it with a recording date is before every dated recording
+ *   of it by anyone else, of which there is at least one, and it is not a cover. Release dates do
+ *   not count here, since MusicBrainz gives none for the others' recordings of a work. An earlier
+ *   recording cannot be a cover of a later one, so the identity check takes the work's linked
+ *   item as the track's own song (#76); undated recordings count for nothing either way.
  * @property credits the people credited on the recording and the work (writers, producers,
  *   performers), in MusicBrainz's order, for the templated evidence (D1).
  * @property wikidataIds Wikidata items MusicBrainz links to the recording and its work, for the
@@ -44,6 +52,7 @@ data class Resolution(
     val work: ResolvedWork? = null,
     val original: OriginalRecording? = null,
     val cover: Boolean = false,
+    val earliest: Boolean = false,
     val credits: List<Credit> = emptyList(),
     val wikidataIds: List<String> = emptyList(),
 ) {

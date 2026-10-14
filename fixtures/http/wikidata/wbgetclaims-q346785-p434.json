@@ -1,0 +1,84 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "84fbc9c437335dfd45f97985ed3ed0545c25626d",
+     "datavalue": {
+      "value": "cc6115aa-379c-4133-9f46-5743a4a341d0",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "qualifiers": {
+     "P1810": [
+      {
+       "snaktype": "value",
+       "property": "P1810",
+       "hash": "76b0aa6b85dca08bd6e1c1632e8fecfe5960c2e9",
+       "datavalue": {
+        "value": "Dick Dale (surf guitarist)",
+        "type": "string"
+       },
+       "datatype": "string"
+      }
+     ]
+    },
+    "qualifiers-order": [
+     "P1810"
+    ],
+    "id": "q346785$5B01D0A9-544E-4B54-B068-0867F86F3361",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "8ffd303c2b638b7265d3780674f72cdcba960d39",
+      "snaks": {
+       "P248": [
+        {
+         "snaktype": "value",
+         "property": "P248",
+         "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 14005,
+           "id": "Q14005"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "3c4777cc1ee15920f3c1eb6a6b0ef406fca51889",
+         "datavalue": {
+          "value": {
+           "time": "+2022-01-14T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P248",
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

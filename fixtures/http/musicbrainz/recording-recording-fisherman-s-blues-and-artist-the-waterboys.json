@@ -1,8 +1,1341 @@
 {
- "created": "2026-10-13T23:39:10.096Z",
+ "created": "2026-10-14T18:06:47.046Z",
  "count": 62,
  "offset": 0,
  "recordings": [
+  {
+   "id": "70b67f33-416a-4c29-ad26-8e9588782f1a",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 431000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1987",
+   "releases": [
+    {
+     "id": "7ad06302-ef75-47ff-9eb6-b7bc41ae4ee4",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "Unleashing the Tethered Ones",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "9112fb24-a362-3045-beb9-e9c798fa78e5",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Unleashing the Tethered Ones",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 9,
+     "media": [
+      {
+       "id": "e986ac2e-9faf-3ff7-a768-84c90d7cfcbb",
+       "position": 1,
+       "format": "Vinyl",
+       "track": [
+        {
+         "id": "b2024e1e-d51f-3eed-b863-542b4be2146b",
+         "number": "3",
+         "title": "Fisherman's Blues",
+         "length": 431000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "49bf40e7-4ab1-4df4-949a-e8f7bb784318",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "6e04296f-6363-45db-bbd4-8eacdea9922c",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "1989-06-18: Glastonbury, UK",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "05d5b6eb-8f73-3995-b373-4f5b6883065e",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1989-06-18: Glastonbury, UK",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 17,
+     "media": [
+      {
+       "id": "8d67b988-8e4a-3564-9289-1e88fa5f5cd3",
+       "position": 1,
+       "track": [
+        {
+         "id": "23cfa887-e553-375d-a534-6fd9a0a3a0f6",
+         "number": "14",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 17,
+       "track-offset": 13
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "407daaf9-d03e-46c1-bc97-d6c13c3c1aab",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "a689e3be-142e-4bb6-addf-4c29cf80bd08",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "1988-12-16: Tralee, Ireland",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "178166cc-a217-3aa0-9b62-1c0c78371a43",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1988-12-16: Tralee, Ireland",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 16,
+     "media": [
+      {
+       "id": "53012370-f90c-389a-8a91-70775c84d639",
+       "position": 1,
+       "track": [
+        {
+         "id": "49a493b4-be2d-351f-a062-abf741499ba8",
+         "number": "3",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2c10cd21-fbfc-4e86-977d-8f49713dfaeb",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "bae54bb3-28db-46b1-9499-31c52362ce21",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "1989-11-12: Swedish Adventures: Kulturmejeriet, Lund, Sweden",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "8321c2d1-6069-3341-8f06-d2e53a16bf2d",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1989-11-12: Swedish Adventures: Kulturmejeriet, Lund, Sweden",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 36,
+     "media": [
+      {
+       "id": "2c02f741-87a3-3b62-b962-07cdb6a6fb6d",
+       "position": 2,
+       "track": [
+        {
+         "id": "930d0621-5f98-3136-a697-5168fc9b4cf6",
+         "number": "5",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5fa234b1-eef5-4977-9538-ffb3e7185542",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "cf4ce6be-078d-460c-a6c5-44af14b68edf",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "2003-06-19: Wrexham, UK",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "7a4a5d43-da14-3657-a3ea-d4465ccc0d2f",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "2003-06-19: Wrexham, UK",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 11,
+     "media": [
+      {
+       "id": "a3b0c527-1535-3c82-91fd-f14444694cff",
+       "position": 1,
+       "track": [
+        {
+         "id": "e89fc96a-ea0b-3380-bc51-119260656e99",
+         "number": "10",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 11,
+       "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1dc0cf1f-442d-4c49-bb62-029a46fdb16e",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "3a7c9ca5-e179-469c-b54e-3cfff8c5fd4c",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "2001-03-22: New York City, NY, USA",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "30eb7269-ec42-336b-b5a5-2f1352685ec4",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "2001-03-22: New York City, NY, USA",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 10,
+     "media": [
+      {
+       "id": "919ec269-4fb4-3d00-8728-f71c142dcc31",
+       "position": 1,
+       "track": [
+        {
+         "id": "465d0caa-b3f8-3465-9077-b25686fa5dad",
+         "number": "5",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "8867e918-c140-4761-b86f-f741d38875a0",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 293000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2002",
+   "releases": [
+    {
+     "id": "d96615a7-248f-42b5-9633-f80d1a9d106b",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "At the BBC: 1983 - 2002",
+     "status": "Bootleg",
+     "disambiguation": "remastered",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "51f4fcca-a349-3afc-867b-5edfe340d030",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Waterboys at the BBC",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 34,
+     "media": [
+      {
+       "id": "b17ec683-5fae-3c10-91da-ac0ea2be8d77",
+       "position": 2,
+       "format": "CD-R",
+       "track": [
+        {
+         "id": "c6f980e2-c4a5-414c-8dac-a445c060a291",
+         "number": "15",
+         "title": "Fisherman's Blues",
+         "length": 293000
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 14
+      }
+     ]
+    },
+    {
+     "id": "63205355-16e8-45d5-9f09-fc040f7b06d2",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "The Waterboys at the BBC",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "51f4fcca-a349-3afc-867b-5edfe340d030",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Waterboys at the BBC",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 34,
+     "media": [
+      {
+       "id": "2188e75d-47d3-3bb7-b6ae-a51e9f54112e",
+       "position": 2,
+       "track": [
+        {
+         "id": "f82aa35d-94ae-3ece-af43-6db0c2cb3df2",
+         "number": "15",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "86f92078-6e20-4935-8070-2bf466d0d3de",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 250560,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1996-04-01",
+   "releases": [
+    {
+     "id": "7d9ed971-a3f1-4952-bdc7-d615149db2b0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Untitled",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6d24a0a5-dd5a-3d09-817f-580fc7784f54",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Untitled",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1996-04",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1996-04",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "a105bd1f-c5b1-30a5-acd8-2adeafca8d66",
+       "position": 2,
+       "format": "Cassette",
+       "track": [
+        {
+         "id": "a01f0bf2-f4dd-48aa-94b7-260d4576926f",
+         "number": "D2",
+         "title": "Fisherman’s Blues",
+         "length": 250560
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 11
+      }
+     ]
+    },
+    {
+     "id": "0cc5d317-88f0-473d-822b-2ce8fa237f7c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Untitled",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "6d24a0a5-dd5a-3d09-817f-580fc7784f54",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Untitled",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1996-04-01",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1996-04-01",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "5453bd9b-4b12-309c-9dd8-5c7f621a7960",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "15cdc614-5358-36b7-9827-6cade9b15ca8",
+         "number": "12",
+         "title": "Fisherman’s Blues",
+         "length": 250560
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 11
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "65b512d1-c69c-46bd-8821-c7b41fda250a",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 244760,
+   "disambiguation": "live, Cities 97 Studio C, St. Louis Park, MN, USA",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2008-11-18",
+   "releases": [
+    {
+     "id": "e1d724d1-a9ae-440f-9a20-bc1273079415",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Cities 97 Sampler, Volume 20",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "e2141a74-1953-3b99-b321-97c80b5eb43d",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Cities 97 Sampler, Volume 20",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2008-11-18",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2008-11-18",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 31,
+     "media": [
+      {
+       "id": "398f98c3-be40-3cda-ac5b-b0e2b6b227ab",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "9c30b3b1-f6c5-328a-b088-2d7f1fc70d31",
+         "number": "10",
+         "title": "Fisherman's Blues",
+         "length": 244760
+        }
+       ],
+       "track-count": 15,
+       "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "b2e273f2-1f7f-454a-b752-01d4f818c298",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 265640,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "db2fdd9f-d6b4-4320-8326-98e7a26b12e0",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "The Very Best of Singers‐Songwriters",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3a710582-1edd-410b-811f-e907883cf279",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Very Best of Singers‐Songwriters",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 40,
+     "media": [
+      {
+       "id": "e1a55a3c-52bc-31b1-9b0c-4040019ffd2e",
+       "position": 1,
+       "track": [
+        {
+         "id": "a35d773e-9ce6-3231-9fa9-eb794f140a3b",
+         "number": "15",
+         "title": "Fisherman’s Blues",
+         "length": 265640
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "f879df9d-16d4-489d-8730-3b4e600da0c3",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 411000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2002-06-27",
+   "releases": [
+    {
+     "id": "32a8a228-d2e4-455e-a433-07a566b85b3f",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "Promise of Pleasure",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5bc1c8ad-32d1-4133-b677-8d3f187ce56c",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Promise of Pleasure",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2002-06-27",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "2002-06-27",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 17,
+     "media": [
+      {
+       "id": "35f1e20a-b66a-3e93-ae6e-70e18f5dc8c6",
+       "position": 2,
+       "track": [
+        {
+         "id": "74b5df6c-3e40-3710-b1c6-4dd38e5c3877",
+         "number": "4",
+         "title": "Fisherman’s Blues",
+         "length": 411000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4ad93c63-18c3-4708-98a9-6c8a8ccfeeb9",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 265960,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1996",
+   "releases": [
+    {
+     "id": "1fdb5542-bddb-48d2-adc7-7d182ad2e292",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Celtic Roots",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "2f797b09-64c4-45a8-9338-883a83b16eea",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Celtic Roots",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 36,
+     "media": [
+      {
+       "id": "30ca3094-a150-374a-bda7-699db831742f",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "9b1a0e3e-67fe-4aa3-a135-46a4b2141e33",
+         "number": "1",
+         "title": "Fisherman’s Blues",
+         "length": 265960
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4ddc75a1-292b-4079-ab43-c61bed5e136a",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 255000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2010-05-14",
+   "releases": [
+    {
+     "id": "ca1b03f8-deed-401b-8637-23e714ddd42b",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Scotland! Scotland! Scotland! Remember 67",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ecc6f701-5bc7-42ff-b848-ac80d339afa9",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Scotland! Scotland! Scotland! Remember 67",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2010-05-14",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "2010-05-14",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 22,
+     "media": [
+      {
+       "id": "11184045-a5a6-3110-a912-6a6c63c5c695",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "7f908d0f-64d5-4d16-bae6-6d8300b40507",
+         "number": "14",
+         "title": "Fisherman’s Blues",
+         "length": 255000
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 13
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2264ce8e-a26f-4023-9477-398d923e4924",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 259000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2001",
+   "releases": [
+    {
+     "id": "369f94f8-b71c-4b47-8015-b904f70d7d6a",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "There She Goes",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "3d308d19-a57a-496a-a163-31f976500383",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "There She Goes",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2001",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "2001",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 20,
+     "media": [
+      {
+       "id": "5efc7ef4-ce55-4c6e-8d83-8c83712fd023",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "59863f61-19f4-48e4-8147-a35d83784c4f",
+         "number": "10",
+         "title": "Fisherman’s Blues",
+         "length": 259000
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
   {
    "id": "f4ade58d-e00a-4993-b621-ac867216ec5a",
    "score": 100,
@@ -1444,6 +2777,1279 @@
    ],
    "isrcs": [
     "GBAYK0600044"
+   ]
+  },
+  {
+   "id": "237d05f3-1d52-4b91-9629-8fcea20d75fe",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 298600,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1988-06",
+   "releases": [
+    {
+     "id": "999e09b1-55f0-4d55-8d96-d83a6c57ba3b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "The Live Adventures of the Waterboys",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "76e31923-7114-38b8-8faf-12db407a5573",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Live Adventures of the Waterboys",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1998",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1998",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "5b17c74b-fe78-3aa4-9f70-4dc0ecef615d",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "352c9493-ab17-4be1-b6d6-f26d4905dbf9",
+         "number": "4",
+         "title": "Fisherman's Blues",
+         "length": 298600
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "d33cfc2f-6797-40a4-b2a2-6b9b4341e178",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 3,
+     "title": "The Live Adventures of the Waterboys",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "76e31923-7114-38b8-8faf-12db407a5573",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Live Adventures of the Waterboys",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1988-06",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1988-06",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "847befbe-cdf5-3392-9d55-3a02bc016c02",
+       "position": 1,
+       "format": "Vinyl",
+       "track": [
+        {
+         "id": "f6a68df8-a076-3fc3-bcb3-ceb1b65dbff0",
+         "number": "4",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "8b829d58-6b2d-438f-a2d2-67b606442544",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "The Live Adventures of the Waterboys",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "76e31923-7114-38b8-8faf-12db407a5573",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Live Adventures of the Waterboys",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1998-08-25",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1998-08-25",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "b13f3c6f-0b2d-375a-b33d-b4982caae536",
+       "position": 1,
+       "track": [
+        {
+         "id": "2f393b0f-b4ad-3e38-9c59-69852ee3fe47",
+         "number": "4",
+         "title": "Fisherman's Blues",
+         "length": 298600
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "94020a58-450e-3e08-9fd4-1a878c1dc6bf",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 2,
+     "title": "The Live Adventures of the Waterboys",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "76e31923-7114-38b8-8faf-12db407a5573",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Live Adventures of the Waterboys",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "1998-06",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1998-06",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "4e7c8751-6287-3b62-ac4a-be70a0610ec6",
+       "position": 1,
+       "track": [
+        {
+         "id": "e8420970-7433-3207-959e-505662fdb6fd",
+         "number": "4",
+         "title": "Fisherman's Blues",
+         "length": 298600
+        }
+       ],
+       "track-count": 10,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "de4bc958-410e-4c41-bf51-9ed187361de4",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "5a371a1d-486d-4701-9029-b88a28751951",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "1988-12-20: Londonderry, UK",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "41115dcb-9083-36f9-8d93-d35052b6501a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1988-12-20: Londonderry, UK",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 17,
+     "media": [
+      {
+       "id": "214dfd17-0548-3d89-86e4-2d3686da3c36",
+       "position": 1,
+       "track": [
+        {
+         "id": "6935b4c7-c4c3-3077-a42b-935d08a9141b",
+         "number": "1",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 17,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9979045f-9907-411a-abfd-16a011fdd06d",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "b04296a1-de9b-4f42-8f30-140c3d44bb3e",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "1989-12-21: Londonderry, UK",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "1753d6b3-9f2f-36c5-a7a1-d7a196eafef6",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1989-12-21: Londonderry, UK",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 25,
+     "media": [
+      {
+       "id": "5e8080bf-3cc4-3dd1-a7f6-df0c5ab436b6",
+       "position": 1,
+       "track": [
+        {
+         "id": "3a95f716-f9a3-3363-acc7-ffae70216d97",
+         "number": "20",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 25,
+       "track-offset": 19
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "4f1eed94-22f4-4b6b-b247-e29db885f61a",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "15f3653f-e1f4-4d58-974f-fbb1df0047c7",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "1986-05-19: Geleen, Netherlands",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "b60882fb-0b56-3dcf-bee3-ceab1b61b04a",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "1986-05-19: Geleen, Netherlands",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 14,
+     "media": [
+      {
+       "id": "9d2735a0-7136-323b-a5f8-8b88ba849dd7",
+       "position": 1,
+       "track": [
+        {
+         "id": "5bbf54e7-ec89-3bb2-a2f3-d7af9438f752",
+         "number": "4",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 14,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ee240e34-7445-4894-980f-800e50d8e305",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 376386,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "44934130-4be6-444a-b528-7ecfdeafcb56",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "The Whole of the Moon",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "794a0c11-a202-3b99-94fc-927bdccb9e4d",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Whole of the Moon",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 16,
+     "media": [
+      {
+       "id": "c5ca9e4e-9ca2-3a58-8cc4-c7796ade8de2",
+       "position": 1,
+       "track": [
+        {
+         "id": "91e880f0-c508-3c02-b8b4-ece957382d5e",
+         "number": "3",
+         "title": "Fisherman's Blues",
+         "length": 376386
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "6219b489-a5e4-49e7-ae53-192d563bbce6",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "length": 259240,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2007-09-11",
+   "releases": [
+    {
+     "id": "f84501a6-a9c7-4c90-87ca-711fb96d3cc3",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 4,
+     "title": "Four Decades of Folk Rock",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "584e4927-ac6e-4827-87cf-fe9d22a12ddf",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Four Decades of Folk Rock",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2007-09-11",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2007-09-11",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 71,
+     "media": [
+      {
+       "id": "6131b87f-4864-3ca4-8c46-4c8dde873db8",
+       "position": 3,
+       "format": "CD",
+       "track": [
+        {
+         "id": "d0e135a6-e096-3b88-a832-393e9f59b26e",
+         "number": "14",
+         "title": "Fisherman's Blues",
+         "length": 259240
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 13
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "eed69e52-7105-43c3-803f-b1fba84d439d",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 256000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2010",
+   "releases": [
+    {
+     "id": "ff138175-233a-45d2-b8f6-5aa1c91a5761",
+     "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "P4 80&90 Tallsparty",
+     "status": "Promotion",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "16e1b66e-9564-4ad0-bbf0-e2f48f08eedd",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "P4 80&90 Tallsparty",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2010",
+     "country": "NO",
+     "release-events": [
+      {
+       "date": "2010",
+       "area": {
+        "id": "6743d351-6f37-3049-9724-5041161fff4d",
+        "name": "Norway",
+        "sort-name": "Norway",
+        "iso-3166-1-codes": [
+         "NO"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "b7556dd0-9446-3a1b-b45d-c2523d76f79f",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "e61826e5-80da-4ff1-ab83-b434ebf899e7",
+         "number": "20",
+         "title": "Fisherman’s Blues",
+         "length": 256000
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 19
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5d3481fa-fc87-413a-b7a6-d0a8863412ca",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1996",
+   "releases": [
+    {
+     "id": "470d3d9a-91a1-43ea-9182-f31005d5bb7b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Pride 2",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "4e28d4c2-adf9-4d71-b179-b1b10c30037c",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Pride 2",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1996",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1996",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 37,
+     "media": [
+      {
+       "id": "939d126a-2bd2-3ca7-8f08-5fbbe4dc94a4",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "6b27ba39-791f-4e96-9dff-cf76f2c36342",
+         "number": "8",
+         "title": "Fisherman’s Blues"
+        }
+       ],
+       "track-count": 37,
+       "track-offset": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "80b1f19f-5cb7-449f-909c-a0485593eb10",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 264413,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2011",
+   "releases": [
+    {
+     "id": "28755c08-36d4-49b5-8f4e-7bc98c6f6213",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 3,
+     "title": "Les 50 plus belles chansons Celtes",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "c14eb789-0bef-42fa-9de9-6af5864cc754",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Les 50 plus belles chansons Celtes",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2011",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "2011",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 50,
+     "media": [
+      {
+       "id": "66139690-8400-3f81-b54e-9a32364caaf1",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "075ecb77-ffff-47d2-aec5-db76e04edcee",
+         "number": "6",
+         "title": "Fisherman’s Blues",
+         "length": 264413
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ab76a909-c664-459c-8eee-45ecc58a6704",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman's Blues",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2013",
+   "releases": [
+    {
+     "id": "40cbbff3-5619-48ed-a40c-5f28745b61e9",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 1,
+     "title": "2013-12-10: Barrowlands Ballroom, Glasgow, UK",
+     "status": "Bootleg",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "dd9b1071-6eef-40d5-a73e-5e1773a71581",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "2013-12-10: Barrowlands Ballroom, Glasgow, UK",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 11,
+     "media": [
+      {
+       "id": "0daedddf-c3ec-36f6-9491-b703c6a7e6fa",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "f1d04f4f-62d4-4c3e-881f-9913e593d3a6",
+         "number": "10",
+         "title": "Fisherman's Blues"
+        }
+       ],
+       "track-count": 11,
+       "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "3c895642-5863-4c94-ad76-38f5ecd4c450",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 260000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2006",
+   "releases": [
+    {
+     "id": "15da6129-0cd4-440e-9109-a37e91b2654a",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Celtic Legends",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "b23c576a-e33b-4196-97df-511ccb56db58",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Celtic Legends",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2006",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "2006",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 35,
+     "media": [
+      {
+       "id": "4cebc7a2-1019-3138-8c67-7e5786bd4c42",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "0deb5285-5219-4883-bf4b-822a990b336f",
+         "number": "5",
+         "title": "Fisherman’s Blues",
+         "length": 260000
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "59bd40c0-aa13-41a4-b887-109cd9fa2b57",
+   "score": 100,
+   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+   "title": "Fisherman’s Blues",
+   "length": 267000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "The Waterboys",
+     "artist": {
+      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+      "name": "The Waterboys",
+      "sort-name": "Waterboys, The",
+      "disambiguation": "folk-rock",
+      "aliases": [
+       {
+        "sort-name": "Waterboys",
+        "name": "Waterboys",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2006",
+   "releases": [
+    {
+     "id": "2cabe1b6-cd95-4e39-9a92-8b303bda0c3c",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Acoustic Rock",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "abe2113c-c690-4ef7-af7c-a2b6f601fa39",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Acoustic Rock",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2006",
+     "country": "IT",
+     "release-events": [
+      {
+       "date": "2006",
+       "area": {
+        "id": "c6500277-9a3d-349b-bf30-41afdbf42add",
+        "name": "Italy",
+        "sort-name": "Italy",
+        "iso-3166-1-codes": [
+         "IT"
+        ]
+       }
+      }
+     ],
+     "track-count": 31,
+     "media": [
+      {
+       "id": "997ecb43-430d-479b-ab64-6aca370318a0",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "3f63f36f-0286-45aa-8acd-276666a97045",
+         "number": "1",
+         "title": "Fisherman’s Blues",
+         "length": 267000
+        }
+       ],
+       "track-count": 15,
+       "track-offset": 0
+      }
+     ]
+    }
    ]
   },
   {
@@ -7783,11 +10389,11 @@
    ]
   },
   {
-   "id": "70b67f33-416a-4c29-ad26-8e9588782f1a",
-   "score": 99,
+   "id": "6d9b4010-58b2-4fe5-8f58-7c54b1f6be54",
+   "score": 87,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 431000,
+   "title": "Fisherman’s Blues (2nd version)",
+   "length": 348920,
    "video": null,
    "artist-credit": [
     {
@@ -7811,15 +10417,15 @@
      }
     }
    ],
-   "first-release-date": "1987",
+   "first-release-date": "2013-10",
    "releases": [
     {
-     "id": "7ad06302-ef75-47ff-9eb6-b7bc41ae4ee4",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "id": "530faa33-54d8-4e3e-9d51-bd154ff410d7",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
      "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "Unleashing the Tethered Ones",
-     "status": "Bootleg",
+     "count": 6,
+     "title": "Fisherman’s Box",
+     "status": "Official",
      "artist-credit": [
       {
        "name": "The Waterboys",
@@ -7832,44 +10438,60 @@
       }
      ],
      "release-group": {
-      "id": "9112fb24-a362-3045-beb9-e9c798fa78e5",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "id": "6924c5aa-170a-4227-be4d-4416f92daecb",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Unleashing the Tethered Ones",
+      "title": "Fisherman’s Box",
       "primary-type": "Album",
       "secondary-types": [
-       "Live"
+       "Compilation"
       ],
       "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
       ]
      },
-     "track-count": 9,
+     "date": "2013-10",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2013-10",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 121,
      "media": [
       {
-       "id": "e986ac2e-9faf-3ff7-a768-84c90d7cfcbb",
-       "position": 1,
-       "format": "Vinyl",
+       "id": "bc220fbc-a230-322e-b67f-09fd0be55b13",
+       "position": 5,
+       "format": "CD",
        "track": [
         {
-         "id": "b2024e1e-d51f-3eed-b863-542b4be2146b",
-         "number": "3",
-         "title": "Fisherman's Blues",
-         "length": 431000
+         "id": "78caf8b3-04fa-473c-96c4-1038d968e435",
+         "number": "15",
+         "title": "Fisherman’s Blues (2nd version)",
+         "length": 348920
         }
        ],
-       "track-count": 9,
-       "track-offset": 2
+       "track-count": 21,
+       "track-offset": 14
       }
      ]
     }
    ]
   },
   {
-   "id": "49bf40e7-4ab1-4df4-949a-e8f7bb784318",
-   "score": 99,
+   "id": "7662f986-503c-41db-82d5-841f6c02d8d6",
+   "score": 87,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
+   "title": "Fisherman’s Blues (piano version)",
+   "length": 322706,
    "video": null,
    "artist-credit": [
     {
@@ -7893,14 +10515,15 @@
      }
     }
    ],
+   "first-release-date": "2013-10",
    "releases": [
     {
-     "id": "6e04296f-6363-45db-bbd4-8eacdea9922c",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "id": "530faa33-54d8-4e3e-9d51-bd154ff410d7",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
      "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "1989-06-18: Glastonbury, UK",
-     "status": "Bootleg",
+     "count": 6,
+     "title": "Fisherman’s Box",
+     "status": "Official",
      "artist-credit": [
       {
        "name": "The Waterboys",
@@ -7913,925 +10536,48 @@
       }
      ],
      "release-group": {
-      "id": "05d5b6eb-8f73-3995-b373-4f5b6883065e",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "id": "6924c5aa-170a-4227-be4d-4416f92daecb",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "1989-06-18: Glastonbury, UK",
+      "title": "Fisherman’s Box",
       "primary-type": "Album",
       "secondary-types": [
-       "Live"
+       "Compilation"
       ],
       "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
       ]
      },
-     "track-count": 17,
-     "media": [
+     "date": "2013-10",
+     "country": "XE",
+     "release-events": [
       {
-       "id": "8d67b988-8e4a-3564-9289-1e88fa5f5cd3",
-       "position": 1,
-       "track": [
-        {
-         "id": "23cfa887-e553-375d-a534-6fd9a0a3a0f6",
-         "number": "14",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 17,
-       "track-offset": 13
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "407daaf9-d03e-46c1-bc97-d6c13c3c1aab",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "a689e3be-142e-4bb6-addf-4c29cf80bd08",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "1988-12-16: Tralee, Ireland",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
+       "date": "2013-10",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
        }
       }
      ],
-     "release-group": {
-      "id": "178166cc-a217-3aa0-9b62-1c0c78371a43",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "1988-12-16: Tralee, Ireland",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 16,
+     "track-count": 121,
      "media": [
       {
-       "id": "53012370-f90c-389a-8a91-70775c84d639",
+       "id": "e114529a-de14-3332-8e9f-ffb874085f17",
        "position": 1,
+       "format": "CD",
        "track": [
         {
-         "id": "49a493b4-be2d-351f-a062-abf741499ba8",
-         "number": "3",
-         "title": "Fisherman's Blues"
+         "id": "f813c518-e6d3-4a59-b2bb-0a7854b3569a",
+         "number": "4",
+         "title": "Fisherman’s Blues (piano version)",
+         "length": 322706
         }
        ],
        "track-count": 16,
-       "track-offset": 2
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "2c10cd21-fbfc-4e86-977d-8f49713dfaeb",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "bae54bb3-28db-46b1-9499-31c52362ce21",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "1989-11-12: Swedish Adventures: Kulturmejeriet, Lund, Sweden",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "8321c2d1-6069-3341-8f06-d2e53a16bf2d",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "1989-11-12: Swedish Adventures: Kulturmejeriet, Lund, Sweden",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 36,
-     "media": [
-      {
-       "id": "2c02f741-87a3-3b62-b962-07cdb6a6fb6d",
-       "position": 2,
-       "track": [
-        {
-         "id": "930d0621-5f98-3136-a697-5168fc9b4cf6",
-         "number": "5",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 18,
-       "track-offset": 4
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "5fa234b1-eef5-4977-9538-ffb3e7185542",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "cf4ce6be-078d-460c-a6c5-44af14b68edf",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "2003-06-19: Wrexham, UK",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "7a4a5d43-da14-3657-a3ea-d4465ccc0d2f",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "2003-06-19: Wrexham, UK",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 11,
-     "media": [
-      {
-       "id": "a3b0c527-1535-3c82-91fd-f14444694cff",
-       "position": 1,
-       "track": [
-        {
-         "id": "e89fc96a-ea0b-3380-bc51-119260656e99",
-         "number": "10",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 11,
-       "track-offset": 9
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "1dc0cf1f-442d-4c49-bb62-029a46fdb16e",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "3a7c9ca5-e179-469c-b54e-3cfff8c5fd4c",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "2001-03-22: New York City, NY, USA",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "30eb7269-ec42-336b-b5a5-2f1352685ec4",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "2001-03-22: New York City, NY, USA",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 10,
-     "media": [
-      {
-       "id": "919ec269-4fb4-3d00-8728-f71c142dcc31",
-       "position": 1,
-       "track": [
-        {
-         "id": "465d0caa-b3f8-3465-9077-b25686fa5dad",
-         "number": "5",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 10,
-       "track-offset": 4
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "8867e918-c140-4761-b86f-f741d38875a0",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 293000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2002",
-   "releases": [
-    {
-     "id": "d96615a7-248f-42b5-9633-f80d1a9d106b",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "At the BBC: 1983 - 2002",
-     "status": "Bootleg",
-     "disambiguation": "remastered",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "51f4fcca-a349-3afc-867b-5edfe340d030",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Waterboys at the BBC",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation",
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 34,
-     "media": [
-      {
-       "id": "b17ec683-5fae-3c10-91da-ac0ea2be8d77",
-       "position": 2,
-       "format": "CD-R",
-       "track": [
-        {
-         "id": "c6f980e2-c4a5-414c-8dac-a445c060a291",
-         "number": "15",
-         "title": "Fisherman's Blues",
-         "length": 293000
-        }
-       ],
-       "track-count": 18,
-       "track-offset": 14
-      }
-     ]
-    },
-    {
-     "id": "63205355-16e8-45d5-9f09-fc040f7b06d2",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "The Waterboys at the BBC",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "51f4fcca-a349-3afc-867b-5edfe340d030",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Waterboys at the BBC",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation",
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 34,
-     "media": [
-      {
-       "id": "2188e75d-47d3-3bb7-b6ae-a51e9f54112e",
-       "position": 2,
-       "track": [
-        {
-         "id": "f82aa35d-94ae-3ece-af43-6db0c2cb3df2",
-         "number": "15",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 18,
-       "track-offset": 14
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "86f92078-6e20-4935-8070-2bf466d0d3de",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 250560,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1996-04-01",
-   "releases": [
-    {
-     "id": "7d9ed971-a3f1-4952-bdc7-d615149db2b0",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Untitled",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "6d24a0a5-dd5a-3d09-817f-580fc7784f54",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Untitled",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1996-04",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1996-04",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 40,
-     "media": [
-      {
-       "id": "a105bd1f-c5b1-30a5-acd8-2adeafca8d66",
-       "position": 2,
-       "format": "Cassette",
-       "track": [
-        {
-         "id": "a01f0bf2-f4dd-48aa-94b7-260d4576926f",
-         "number": "D2",
-         "title": "Fisherman’s Blues",
-         "length": 250560
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 11
-      }
-     ]
-    },
-    {
-     "id": "0cc5d317-88f0-473d-822b-2ce8fa237f7c",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Untitled",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "6d24a0a5-dd5a-3d09-817f-580fc7784f54",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Untitled",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1996-04-01",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1996-04-01",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 40,
-     "media": [
-      {
-       "id": "5453bd9b-4b12-309c-9dd8-5c7f621a7960",
-       "position": 2,
-       "format": "CD",
-       "track": [
-        {
-         "id": "15cdc614-5358-36b7-9827-6cade9b15ca8",
-         "number": "12",
-         "title": "Fisherman’s Blues",
-         "length": 250560
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 11
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "65b512d1-c69c-46bd-8821-c7b41fda250a",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 244760,
-   "disambiguation": "live, Cities 97 Studio C, St. Louis Park, MN, USA",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2008-11-18",
-   "releases": [
-    {
-     "id": "e1d724d1-a9ae-440f-9a20-bc1273079415",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Cities 97 Sampler, Volume 20",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "e2141a74-1953-3b99-b321-97c80b5eb43d",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Cities 97 Sampler, Volume 20",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation",
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "2008-11-18",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "2008-11-18",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 31,
-     "media": [
-      {
-       "id": "398f98c3-be40-3cda-ac5b-b0e2b6b227ab",
-       "position": 2,
-       "format": "CD",
-       "track": [
-        {
-         "id": "9c30b3b1-f6c5-328a-b088-2d7f1fc70d31",
-         "number": "10",
-         "title": "Fisherman's Blues",
-         "length": 244760
-        }
-       ],
-       "track-count": 15,
-       "track-offset": 9
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "b2e273f2-1f7f-454a-b752-01d4f818c298",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 265640,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "db2fdd9f-d6b4-4320-8326-98e7a26b12e0",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "The Very Best of Singers‐Songwriters",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "3a710582-1edd-410b-811f-e907883cf279",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Very Best of Singers‐Songwriters",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "track-count": 40,
-     "media": [
-      {
-       "id": "e1a55a3c-52bc-31b1-9b0c-4040019ffd2e",
-       "position": 1,
-       "track": [
-        {
-         "id": "a35d773e-9ce6-3231-9fa9-eb794f140a3b",
-         "number": "15",
-         "title": "Fisherman’s Blues",
-         "length": 265640
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 14
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "f879df9d-16d4-489d-8730-3b4e600da0c3",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 411000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2002-06-27",
-   "releases": [
-    {
-     "id": "32a8a228-d2e4-455e-a433-07a566b85b3f",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "Promise of Pleasure",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "5bc1c8ad-32d1-4133-b677-8d3f187ce56c",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Promise of Pleasure",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "2002-06-27",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "2002-06-27",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 17,
-     "media": [
-      {
-       "id": "35f1e20a-b66a-3e93-ae6e-70e18f5dc8c6",
-       "position": 2,
-       "track": [
-        {
-         "id": "74b5df6c-3e40-3710-b1c6-4dd38e5c3877",
-         "number": "4",
-         "title": "Fisherman’s Blues",
-         "length": 411000
-        }
-       ],
-       "track-count": 9,
        "track-offset": 3
       }
      ]
@@ -8839,12 +10585,11 @@
    ]
   },
   {
-   "id": "4ad93c63-18c3-4708-98a9-6c8a8ccfeeb9",
-   "score": 99,
+   "id": "6ec40e1c-a8e7-42c6-a2d9-f1b0e04595f5",
+   "score": 87,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 265960,
-   "video": null,
+   "title": "Fisherman’s Blues (Glastonbury 1989)",
+   "video": true,
    "artist-credit": [
     {
      "name": "The Waterboys",
@@ -8867,31 +10612,31 @@
      }
     }
    ],
-   "first-release-date": "1996",
+   "first-release-date": "2021-12-03",
    "releases": [
     {
-     "id": "1fdb5542-bddb-48d2-adc7-7d182ad2e292",
+     "id": "390f068d-1972-4af0-87ee-476cab239c89",
      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Celtic Roots",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 6,
+     "title": "THE MAGNIFICENT SEVEN: The Waterboys Fisherman’s Blues / Room To Roam band, 1989–90",
      "status": "Official",
      "artist-credit": [
       {
-       "name": "Various Artists",
+       "name": "The Waterboys",
        "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
        }
       }
      ],
      "release-group": {
-      "id": "2f797b09-64c4-45a8-9338-883a83b16eea",
+      "id": "7753264b-7799-4033-ad1d-83a43ee8abdd",
       "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Celtic Roots",
+      "title": "The Magnificent Seven: The Waterboys Fisherman’s Blues / Room to Roam Band, 1989–90",
       "primary-type": "Album",
       "secondary-types": [
        "Compilation"
@@ -8900,674 +10645,46 @@
        "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
       ]
      },
-     "track-count": 36,
+     "date": "2021-12-03",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2021-12-03",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 148,
      "media": [
       {
-       "id": "30ca3094-a150-374a-bda7-699db831742f",
-       "position": 1,
-       "format": "CD",
+       "id": "fc09bf12-86c2-3d8f-8a67-5ca4124a71b9",
+       "position": 6,
+       "format": "DVD-Video",
        "track": [
         {
-         "id": "9b1a0e3e-67fe-4aa3-a135-46a4b2141e33",
-         "number": "1",
-         "title": "Fisherman’s Blues",
-         "length": 265960
+         "id": "c833dcd0-ade4-4d36-b0a7-32f476beb541",
+         "number": "13",
+         "title": "Fisherman’s Blues (Glastonbury 1989)"
         }
        ],
-       "track-count": 18,
-       "track-offset": 0
+       "track-count": 45,
+       "track-offset": 12
       }
      ]
     }
    ]
   },
   {
-   "id": "4ddc75a1-292b-4079-ab43-c61bed5e136a",
-   "score": 99,
+   "id": "c1b30cf1-fe62-4eba-a81d-b1ec4d96c052",
+   "score": 83,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 255000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2010-05-14",
-   "releases": [
-    {
-     "id": "ca1b03f8-deed-401b-8637-23e714ddd42b",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "Scotland! Scotland! Scotland! Remember 67",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "ecc6f701-5bc7-42ff-b848-ac80d339afa9",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Scotland! Scotland! Scotland! Remember 67",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "2010-05-14",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "2010-05-14",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 22,
-     "media": [
-      {
-       "id": "11184045-a5a6-3110-a912-6a6c63c5c695",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "7f908d0f-64d5-4d16-bae6-6d8300b40507",
-         "number": "14",
-         "title": "Fisherman’s Blues",
-         "length": 255000
-        }
-       ],
-       "track-count": 22,
-       "track-offset": 13
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "2264ce8e-a26f-4023-9477-398d923e4924",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman’s Blues",
-   "length": 259000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2001",
-   "releases": [
-    {
-     "id": "369f94f8-b71c-4b47-8015-b904f70d7d6a",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "There She Goes",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "3d308d19-a57a-496a-a163-31f976500383",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "There She Goes",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "2001",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "2001",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 20,
-     "media": [
-      {
-       "id": "5efc7ef4-ce55-4c6e-8d83-8c83712fd023",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "59863f61-19f4-48e4-8147-a35d83784c4f",
-         "number": "10",
-         "title": "Fisherman’s Blues",
-         "length": 259000
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 9
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "237d05f3-1d52-4b91-9629-8fcea20d75fe",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 298600,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1988-06",
-   "releases": [
-    {
-     "id": "999e09b1-55f0-4d55-8d96-d83a6c57ba3b",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "The Live Adventures of the Waterboys",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "76e31923-7114-38b8-8faf-12db407a5573",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Live Adventures of the Waterboys",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1998",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1998",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 18,
-     "media": [
-      {
-       "id": "5b17c74b-fe78-3aa4-9f70-4dc0ecef615d",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "352c9493-ab17-4be1-b6d6-f26d4905dbf9",
-         "number": "4",
-         "title": "Fisherman's Blues",
-         "length": 298600
-        }
-       ],
-       "track-count": 10,
-       "track-offset": 3
-      }
-     ]
-    },
-    {
-     "id": "d33cfc2f-6797-40a4-b2a2-6b9b4341e178",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 3,
-     "title": "The Live Adventures of the Waterboys",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "76e31923-7114-38b8-8faf-12db407a5573",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Live Adventures of the Waterboys",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1988-06",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1988-06",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 19,
-     "media": [
-      {
-       "id": "847befbe-cdf5-3392-9d55-3a02bc016c02",
-       "position": 1,
-       "format": "Vinyl",
-       "track": [
-        {
-         "id": "f6a68df8-a076-3fc3-bcb3-ceb1b65dbff0",
-         "number": "4",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 8,
-       "track-offset": 3
-      }
-     ]
-    },
-    {
-     "id": "8b829d58-6b2d-438f-a2d2-67b606442544",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "The Live Adventures of the Waterboys",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "76e31923-7114-38b8-8faf-12db407a5573",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Live Adventures of the Waterboys",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1998-08-25",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "1998-08-25",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 18,
-     "media": [
-      {
-       "id": "b13f3c6f-0b2d-375a-b33d-b4982caae536",
-       "position": 1,
-       "track": [
-        {
-         "id": "2f393b0f-b4ad-3e38-9c59-69852ee3fe47",
-         "number": "4",
-         "title": "Fisherman's Blues",
-         "length": 298600
-        }
-       ],
-       "track-count": 10,
-       "track-offset": 3
-      }
-     ]
-    },
-    {
-     "id": "94020a58-450e-3e08-9fd4-1a878c1dc6bf",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 2,
-     "title": "The Live Adventures of the Waterboys",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "76e31923-7114-38b8-8faf-12db407a5573",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Live Adventures of the Waterboys",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "1998-06",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1998-06",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 18,
-     "media": [
-      {
-       "id": "4e7c8751-6287-3b62-ac4a-be70a0610ec6",
-       "position": 1,
-       "track": [
-        {
-         "id": "e8420970-7433-3207-959e-505662fdb6fd",
-         "number": "4",
-         "title": "Fisherman's Blues",
-         "length": 298600
-        }
-       ],
-       "track-count": 10,
-       "track-offset": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "de4bc958-410e-4c41-bf51-9ed187361de4",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "5a371a1d-486d-4701-9029-b88a28751951",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "1988-12-20: Londonderry, UK",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "41115dcb-9083-36f9-8d93-d35052b6501a",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "1988-12-20: Londonderry, UK",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 17,
-     "media": [
-      {
-       "id": "214dfd17-0548-3d89-86e4-2d3686da3c36",
-       "position": 1,
-       "track": [
-        {
-         "id": "6935b4c7-c4c3-3077-a42b-935d08a9141b",
-         "number": "1",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 17,
-       "track-offset": 0
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "9979045f-9907-411a-abfd-16a011fdd06d",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "The Waterboys",
-     "artist": {
-      "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-      "name": "The Waterboys",
-      "sort-name": "Waterboys, The",
-      "disambiguation": "folk-rock",
-      "aliases": [
-       {
-        "sort-name": "Waterboys",
-        "name": "Waterboys",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "b04296a1-de9b-4f42-8f30-140c3d44bb3e",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "1989-12-21: Londonderry, UK",
-     "status": "Bootleg",
-     "artist-credit": [
-      {
-       "name": "The Waterboys",
-       "artist": {
-        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-        "name": "The Waterboys",
-        "sort-name": "Waterboys, The",
-        "disambiguation": "folk-rock"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "1753d6b3-9f2f-36c5-a7a1-d7a196eafef6",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "1989-12-21: Londonderry, UK",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 25,
-     "media": [
-      {
-       "id": "5e8080bf-3cc4-3dd1-a7f6-df0c5ab436b6",
-       "position": 1,
-       "track": [
-        {
-         "id": "3a95f716-f9a3-3363-acc7-ffae70216d97",
-         "number": "20",
-         "title": "Fisherman's Blues"
-        }
-       ],
-       "track-count": 25,
-       "track-offset": 19
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "4f1eed94-22f4-4b6b-b247-e29db885f61a",
-   "score": 99,
-   "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
+   "title": "Fisherman's Blues (1986-07-06: Werchter, Belgium)",
    "video": null,
    "artist-credit": [
     {
@@ -9630,25 +10747,24 @@
        "position": 1,
        "track": [
         {
-         "id": "5bbf54e7-ec89-3bb2-a2f3-d7af9438f752",
-         "number": "4",
-         "title": "Fisherman's Blues"
+         "id": "28f26f79-8676-3074-9a7e-cac02a3062ec",
+         "number": "12",
+         "title": "Fisherman's Blues (1986-07-06: Werchter, Belgium)"
         }
        ],
        "track-count": 14,
-       "track-offset": 3
+       "track-offset": 11
       }
      ]
     }
    ]
   },
   {
-   "id": "ee240e34-7445-4894-980f-800e50d8e305",
-   "score": 99,
+   "id": "760a3647-df8f-4903-966b-869d6d39b273",
+   "score": 76,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 376386,
-   "video": null,
+   "title": "Fisherman’s Blues (Teatro Orfeo, Milan, Italy, 1989)",
+   "video": true,
    "artist-credit": [
     {
      "name": "The Waterboys",
@@ -9671,14 +10787,15 @@
      }
     }
    ],
+   "first-release-date": "2021-12-03",
    "releases": [
     {
-     "id": "44934130-4be6-444a-b528-7ecfdeafcb56",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "id": "390f068d-1972-4af0-87ee-476cab239c89",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
      "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-     "count": 1,
-     "title": "The Whole of the Moon",
-     "status": "Bootleg",
+     "count": 6,
+     "title": "THE MAGNIFICENT SEVEN: The Waterboys Fisherman’s Blues / Room To Roam band, 1989–90",
+     "status": "Official",
      "artist-credit": [
       {
        "name": "The Waterboys",
@@ -9691,44 +10808,59 @@
       }
      ],
      "release-group": {
-      "id": "794a0c11-a202-3b99-94fc-927bdccb9e4d",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "id": "7753264b-7799-4033-ad1d-83a43ee8abdd",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Whole of the Moon",
+      "title": "The Magnificent Seven: The Waterboys Fisherman’s Blues / Room to Roam Band, 1989–90",
       "primary-type": "Album",
       "secondary-types": [
-       "Live"
+       "Compilation"
       ],
       "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
       ]
      },
-     "track-count": 16,
+     "date": "2021-12-03",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2021-12-03",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 148,
      "media": [
       {
-       "id": "c5ca9e4e-9ca2-3a58-8cc4-c7796ade8de2",
-       "position": 1,
+       "id": "fc09bf12-86c2-3d8f-8a67-5ca4124a71b9",
+       "position": 6,
+       "format": "DVD-Video",
        "track": [
         {
-         "id": "91e880f0-c508-3c02-b8b4-ece957382d5e",
-         "number": "3",
-         "title": "Fisherman's Blues",
-         "length": 376386
+         "id": "8759b3d5-f35b-4a56-9437-4e30a9edd87d",
+         "number": "17",
+         "title": "Fisherman’s Blues (Teatro Orfeo, Milan, Italy, 1989)"
         }
        ],
-       "track-count": 16,
-       "track-offset": 2
+       "track-count": 45,
+       "track-offset": 16
       }
      ]
     }
    ]
   },
   {
-   "id": "6219b489-a5e4-49e7-ae53-192d563bbce6",
-   "score": 99,
+   "id": "d4b2e2ea-1daf-4ea8-8cc0-e9ce8834aeec",
+   "score": 74,
    "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
-   "title": "Fisherman's Blues",
-   "length": 259240,
+   "title": "Fisherman’s Blues (live at Masonic Hall, Toronto 11/10/1989)",
+   "length": 277893,
    "video": null,
    "artist-credit": [
     {
@@ -9752,15 +10884,146 @@
      }
     }
    ],
-   "first-release-date": "2007-09-11",
+   "first-release-date": "2021-10",
    "releases": [
     {
-     "id": "f84501a6-a9c7-4c90-87ca-711fb96d3cc3",
+     "id": "db5aaa8a-8671-4364-beca-d3d3ff11c21d",
      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 4,
-     "title": "Four Decades of Folk Rock",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 6,
+     "title": "The Magnificent Seven: The Waterboys Fisherman’s Blues / Room to Roam Band, 1989–90",
      "status": "Official",
+     "disambiguation": "deluxe edition",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "7753264b-7799-4033-ad1d-83a43ee8abdd",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Magnificent Seven: The Waterboys Fisherman’s Blues / Room to Roam Band, 1989–90",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2021-12-03",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2021-12-03",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 108,
+     "media": [
+      {
+       "id": "a4b688be-59e9-3e4f-b8e3-4a69c236b399",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "cac48ddf-6c71-43be-ac9f-e4df76abe288",
+         "number": "3",
+         "title": "Fisherman's Blues",
+         "length": 277893
+        }
+       ],
+       "track-count": 15,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "390f068d-1972-4af0-87ee-476cab239c89",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "60f7540c-001d-3d86-8d23-63b50b664e8c",
+     "count": 6,
+     "title": "THE MAGNIFICENT SEVEN: The Waterboys Fisherman’s Blues / Room To Roam band, 1989–90",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "The Waterboys",
+       "artist": {
+        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+        "name": "The Waterboys",
+        "sort-name": "Waterboys, The",
+        "disambiguation": "folk-rock"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "7753264b-7799-4033-ad1d-83a43ee8abdd",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Magnificent Seven: The Waterboys Fisherman’s Blues / Room to Roam Band, 1989–90",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2021-12-03",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2021-12-03",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 148,
+     "media": [
+      {
+       "id": "343a070c-5851-3618-90dc-816279c77da1",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "17ff25d9-7c4a-454c-9012-b94ba03fd867",
+         "number": "3",
+         "title": "Fisherman’s Blues (live at Masonic Hall, Toronto 11/10/1989)",
+         "length": 277893
+        }
+       ],
+       "track-count": 15,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "5c4993c5-d991-4690-8cd4-3afb8deb9f73",
+     "status-id": "518ffc83-5cde-34df-8627-81bff5093d92",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Idles present Acts of Resistance",
+     "status": "Promotion",
      "artist-credit": [
       {
        "name": "Various Artists",
@@ -9773,10 +11036,10 @@
       }
      ],
      "release-group": {
-      "id": "584e4927-ac6e-4827-87cf-fe9d22a12ddf",
+      "id": "0afd543c-c8a7-46bd-a375-0fc3d75d04c4",
       "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Four Decades of Folk Rock",
+      "title": "Idles present Acts of Resistance",
       "primary-type": "Album",
       "secondary-types": [
        "Compilation"
@@ -9785,37 +11048,37 @@
        "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
       ]
      },
-     "date": "2007-09-11",
-     "country": "US",
+     "date": "2021-10",
+     "country": "GB",
      "release-events": [
       {
-       "date": "2007-09-11",
+       "date": "2021-10",
        "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
         "iso-3166-1-codes": [
-         "US"
+         "GB"
         ]
        }
       }
      ],
-     "track-count": 71,
+     "track-count": 15,
      "media": [
       {
-       "id": "6131b87f-4864-3ca4-8c46-4c8dde873db8",
-       "position": 3,
+       "id": "964f5cba-0583-39e7-940b-05b3d27cd0bf",
+       "position": 1,
        "format": "CD",
        "track": [
         {
-         "id": "d0e135a6-e096-3b88-a832-393e9f59b26e",
-         "number": "14",
-         "title": "Fisherman's Blues",
-         "length": 259240
+         "id": "12e64ad6-7005-4867-b0ca-f55c1f28db58",
+         "number": "9",
+         "title": "Fisherman's Blues (live in Toronto ’89)",
+         "length": 267573
         }
        ],
-       "track-count": 18,
-       "track-offset": 13
+       "track-count": 15,
+       "track-offset": 8
       }
      ]
     }

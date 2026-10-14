@@ -82,6 +82,38 @@
   "url": "https://en.wikipedia.org/w/api.php",
   "query": {
    "action": "query",
+   "titles": "Chuck Berry",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-chuck-berry.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Dick Dale",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-dick-dale.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
    "titles": "Fisherman's Blues (song)",
    "prop": "extracts",
    "exintro": "1",
@@ -251,6 +283,37 @@
   "url": "https://en.wikipedia.org/w/api.php",
   "query": {
    "action": "query",
+   "titles": "Misirlou (Dick Dale song)|Misirlou (song)|Misirlou|Dick Dale",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-misirlou-dick-dale-song-misirlou-song-misirlou-dick-dale.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Misirlou",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-misirlou.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
    "titles": "New York Groove (Ace Frehley song)|New York Groove (song)|New York Groove|Ace Frehley",
    "redirects": "1",
    "prop": "pageprops",
@@ -292,6 +355,37 @@
   },
   "status": 200,
   "file": "query-ode-to-newfoundland.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Roll Over Beethoven (Chuck Berry song)|Roll Over Beethoven (song)|Roll Over Beethoven|Chuck Berry",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-roll-over-beethoven-chuck-berry-song-roll-over-beethoven-song-roll-over-beethoven-chuck-berry.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Roll Over Beethoven",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-roll-over-beethoven.json"
  },
  {
   "method": "GET",

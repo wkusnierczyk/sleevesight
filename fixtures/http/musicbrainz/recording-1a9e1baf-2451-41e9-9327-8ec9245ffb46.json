@@ -1,0 +1,24 @@
+{
+ "video": false,
+ "first-release-date": "1995",
+ "title": "Misirlou",
+ "relations": [],
+ "length": 137000,
+ "artist-credit": [
+  {
+   "name": "Dick Dale and His Del‐Tones",
+   "joinphrase": "",
+   "artist": {
+    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+    "country": "US",
+    "sort-name": "Dale, Dick and His Del‐Tones",
+    "disambiguation": "",
+    "id": "820263ae-ab51-426d-85e9-bed5a74f00e1",
+    "type": "Group",
+    "name": "Dick Dale and His Del‐Tones"
+   }
+  }
+ ],
+ "disambiguation": "",
+ "id": "1a9e1baf-2451-41e9-9327-8ec9245ffb46"
+}

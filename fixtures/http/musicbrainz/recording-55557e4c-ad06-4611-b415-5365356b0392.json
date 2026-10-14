@@ -1,24 +1,24 @@
 {
+ "relations": [],
  "disambiguation": "",
+ "id": "55557e4c-ad06-4611-b415-5365356b0392",
  "artist-credit": [
   {
-   "artist": {
-    "disambiguation": "",
-    "country": null,
-    "type-id": null,
-    "name": "Alexander S.",
-    "type": null,
-    "id": "85cc55f5-317f-4d3b-8e2f-070a8936229f",
-    "sort-name": "Alexander S."
-   },
    "joinphrase": "",
-   "name": "Alexander S."
+   "name": "Alexander S.",
+   "artist": {
+    "id": "85cc55f5-317f-4d3b-8e2f-070a8936229f",
+    "disambiguation": "",
+    "name": "Alexander S.",
+    "type-id": null,
+    "country": null,
+    "sort-name": "Alexander S.",
+    "type": null
+   }
   }
  ],
  "video": false,
- "length": 77688,
- "title": "Here Comes The Sun",
  "first-release-date": "2023-11-20",
- "relations": [],
- "id": "55557e4c-ad06-4611-b415-5365356b0392"
+ "length": 77688,
+ "title": "Here Comes The Sun"
 }

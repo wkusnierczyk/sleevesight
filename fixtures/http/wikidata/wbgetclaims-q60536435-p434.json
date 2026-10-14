@@ -1,0 +1,67 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "a68a2fc0949e85380278bf0fff0a4dce380f268b",
+     "datavalue": {
+      "value": "9ed00709-4c9e-4cc2-95b6-1db8b638591d",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "qualifiers": {
+     "P1810": [
+      {
+       "snaktype": "value",
+       "property": "P1810",
+       "hash": "763aaa5f0db4428fd2fb75ff7ed22559d9e44c51",
+       "datavalue": {
+        "value": "Chuck Berry and His Combo",
+        "type": "string"
+       },
+       "datatype": "string"
+      }
+     ]
+    },
+    "qualifiers-order": [
+     "P1810"
+    ],
+    "id": "Q60536435$70b7be87-4cb6-f390-416a-433245001862",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "f30359e70cce52d629b9f27cdb8df7243772bef2",
+      "snaks": {
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "2406b9a58798751e5c4e3010b9dc6ac6568a2f4f",
+         "datavalue": {
+          "value": {
+           "time": "+2019-01-10T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

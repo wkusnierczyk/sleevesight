@@ -1,6 +1,16 @@
 [
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/1a9e1baf-2451-41e9-9327-8ec9245ffb46",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-1a9e1baf-2451-41e9-9327-8ec9245ffb46.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording/1c5ee6b9-d209-4763-aab8-2524e6b0d14b",
   "query": {
    "inc": "artist-credits+work-rels+artist-rels+url-rels",
@@ -8,6 +18,16 @@
   },
   "status": 200,
   "file": "recording-1c5ee6b9-d209-4763-aab8-2524e6b0d14b.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/254c0284-4af7-4dd2-bdf4-d0d6d0e83447",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-254c0284-4af7-4dd2-bdf4-d0d6d0e83447.json"
  },
  {
   "method": "GET",
@@ -51,6 +71,26 @@
  },
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/5f574686-4d14-4207-aa72-cc8c8549e264",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-5f574686-4d14-4207-aa72-cc8c8549e264.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/abaf0c2b-2839-435e-a62d-c3e7337d1410",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-abaf0c2b-2839-435e-a62d-c3e7337d1410.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording/c4599250-9001-400a-831a-1f7c31b5f781",
   "query": {
    "inc": "artist-credits+work-rels+artist-rels+url-rels",
@@ -74,7 +114,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Baby, Please Don't Go\" AND artist:\"Them\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -85,7 +125,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Bad Energy\" AND artist:\"Reem\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -96,7 +136,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Fisherman's Blues\" AND artist:\"The Waterboys\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -107,7 +147,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Fishin' In A Dory\" AND artist:\"Ray Johnson And The Sou' Westers\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -118,7 +158,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Forever Young\" AND artist:\"dearoldfriend\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -129,7 +169,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Here Comes The Sun\" AND artist:\"Alexander S.\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -140,7 +180,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"I Will Follow You Into The Dark\" AND artist:\"Yanjoco\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -151,7 +191,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Interstellar - Main Theme\" AND artist:\"I Aimed My Pebble\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -162,7 +202,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Location\" AND artist:\"Peleboy\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -172,8 +212,19 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
+   "query": "recording:\"Misirlou\" AND artist:\"Dick Dale\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-misirlou-and-artist-dick-dale.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
    "query": "recording:\"New York Groove\" AND artist:\"Ace Frehley\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -183,8 +234,19 @@
   "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
+   "query": "recording:\"Roll Over Beethoven\" AND artist:\"Chuck Berry\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-roll-over-beethoven-and-artist-chuck-berry.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
    "query": "recording:\"Snowbird\" AND artist:\"Anne Murray\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -195,7 +257,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Sundown\" AND artist:\"Gordon Lightfoot\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -206,7 +268,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"The Ode To Newfoundland\" AND artist:\"Charles Cavendish Boyle\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -217,7 +279,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"THE VEIL BETWEEN WORLDS\" AND artist:\"DIE HEXEN\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -228,7 +290,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Up Down\" AND artist:\"Peleboy\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -239,7 +301,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"We In Here\" AND artist:\"Peleboy\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -250,7 +312,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"willow\" AND artist:\"Jessiah\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -261,7 +323,7 @@
   "url": "https://musicbrainz.org/ws/2/recording",
   "query": {
    "query": "recording:\"Wonderland\" AND artist:\"Reem\"",
-   "limit": "50",
+   "limit": "100",
    "fmt": "json"
   },
   "status": 200,
@@ -276,6 +338,16 @@
   },
   "status": 200,
   "file": "work-0061f7cb-a681-4701-89a4-673ea660f0b7.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work/3d55b4e1-36f5-3cec-b702-59d1b534611e",
+  "query": {
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-3d55b4e1-36f5-3cec-b702-59d1b534611e.json"
  },
  {
   "method": "GET",
@@ -296,6 +368,16 @@
   },
   "status": 200,
   "file": "work-8d9cf249-1f5c-433c-a0ea-dae54cf38a7e.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/work/98cd98b6-897c-3c8c-9718-98b1206d8927",
+  "query": {
+   "inc": "artist-rels+url-rels+recording-rels+artist-credits",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "work-98cd98b6-897c-3c8c-9718-98b1206d8927.json"
  },
  {
   "method": "GET",

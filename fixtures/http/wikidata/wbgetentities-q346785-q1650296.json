@@ -1,0 +1,25 @@
+{
+ "entities": {
+  "Q346785": {
+   "type": "item",
+   "id": "Q346785",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Dick Dale"
+    }
+   }
+  },
+  "Q1650296": {
+   "type": "item",
+   "id": "Q1650296",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "instrumental rock"
+    }
+   }
+  }
+ },
+ "success": 1
+}
