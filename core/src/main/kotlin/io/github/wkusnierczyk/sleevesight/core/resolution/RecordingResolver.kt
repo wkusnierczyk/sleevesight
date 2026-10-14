@@ -122,11 +122,14 @@ class RecordingResolver(
                         .toSet()
                 }.filterValues { it.isNotEmpty() }
         val named = matching(byName = true)
+        val any = matching(byName = false)
         return Candidate(
             recording = recording,
             titleSimilarity = names.titleSimilarity(track.title, recording.title),
             named = named,
-            led = matching(byName = false).filterKeys { it !in named },
+            // A band credit counts beside a credit by name: "Alex Smith" and "Alex Smith and His
+            // Orchestra" on one recording may be two artists.
+            led = any.mapValues { (artist, ids) -> ids - named[artist].orEmpty() }.filterValues { it.isNotEmpty() },
             durationGap = gap,
         )
     }

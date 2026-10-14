@@ -268,6 +268,33 @@ class RecordingResolverTest {
         }
 
     @Test
+    fun `a band credit beside a credit by name collides unless the band's leader is the same artist`() =
+        runTest {
+            val rejected = Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording")
+            val mixed =
+                recording("mixed", "Song", "Alex Smith", 200, "1970").copy(
+                    credits =
+                        listOf(
+                            credit("Alex Smith", "artist-a"),
+                            credit("Alex Smith and His Orchestra", "band-b"),
+                        ),
+                )
+            // The band's leader is another Alex Smith, or MusicBrainz does not say who leads it.
+            for (performers in listOf(arrayOf("Alex Smith" to "artist-b"), emptyArray())) {
+                val musicBrainz = searching(emptyList(), banded(mixed, *performers))
+                assertEquals(rejected, resolve(musicBrainz, track("Song", "Alex Smith"), 200).outcome)
+            }
+            val same =
+                resolve(
+                    searching(emptyList(), banded(mixed, "Alex Smith" to "artist-a")),
+                    track("Song", "Alex Smith"),
+                    200,
+                )
+            assertEquals(Outcome.SongArticle, same.outcome)
+            assertEquals("artist-a", same.artists.single().mbid)
+        }
+
+    @Test
     fun `a leader confirmed on another of the band's recordings keeps their id on the chosen one`() =
         runTest {
             val musicBrainz =
