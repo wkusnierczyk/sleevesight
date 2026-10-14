@@ -93,17 +93,19 @@ class LastFmBioTest {
             "1) A rapper from Denmark, \"the Dane.\" 2) A singer from Lebanon.",
             "1) a rapper from Denmark<br>2) a singer from Lebanon",
             "There is more than one Reem:<br><br>1. a rapper from Denmark<br>2. a singer from Lebanon",
+            "Several artists share the name Reem<br>1) a rapper from Denmark<br>2) a singer from Lebanon",
+            "Reem may refer to 1) a rapper from Denmark 2) a singer from Lebanon",
         )) {
             assertTrue(LastFmBio.sharedPage(summary), summary)
             assertTrue(LastFmBio.sentences(summary).isEmpty(), summary)
         }
         assertFalse(LastFmBio.sharedPage("Their album sold 1.5 million copies in 2001. It went 2. place."))
-        // Chart positions are no list: the item marks follow an abbreviation, not a sentence end.
+        // The documented limit: detection over-matches, so chart positions read as a list. Safe: the
+        // page is unverified at best and its sentences are dropped.
         val charts =
             "Reem is a rapper from Denmark. Her debut single reached No. 1. Its follow-up reached No. 2. in Sweden."
-        assertFalse(LastFmBio.sharedPage(charts))
-        assertEquals(3, LastFmBio.sentences(charts).size)
-        assertFalse(LastFmBio.sharedPage(charts.replace(". ", ".<br>")), "nor across line breaks")
+        assertTrue(LastFmBio.sharedPage(charts))
+        assertTrue(LastFmBio.sentences(charts).isEmpty())
         assertEquals(
             listOf("Reem is a rapper from Denmark.", "She lives in Copenhagen."),
             LastFmBio.sentences("Reem is a rapper from Denmark.<br>She lives in Copenhagen."),

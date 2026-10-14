@@ -36,11 +36,9 @@ internal object LastFmBio {
         )
 
     // An enumerated list, `1) … 2) …` or `1. … 2. …`; a number such as `1.5` has no space after the
-    // mark. The first item starts the text or follows a sentence end or a colon; the second follows
-    // it after any space, since items on lines of their own (`<br>`, a space in [plainText]) need
-    // no full stop (see [isShared]). A chart position, "No. 1.", is no first item.
-    private val FIRST_ITEM = Regex("1[.)] ")
-    private val SECOND_ITEM = Regex("2[.)] ")
+    // mark. Deliberately loose (see [sharedPage]).
+    private val FIRST_ITEM = Regex("(^|\\s)1[.)] ")
+    private val SECOND_ITEM = Regex("\\s2[.)] ")
 
     private val WHITESPACE = Regex("\\s+")
 
@@ -88,38 +86,25 @@ internal object LastFmBio {
 
     /**
      * Whether [summary] says the page is shared by several artists of one name: it starts "There
-     * are several artists …", says several artists share the name, or enumerates them (`1)` and
-     * `2)`, or `1.` and `2.`, each starting the text or following a sentence end or a colon, so a
-     * chart position, "No. 1.", is no item). Such a page's listeners, tags and similar artists mix
-     * them all.
+     * are several artists …", says several artists share the name, or enumerates them: a `1)` or
+     * `1.` at the start or after a space (a line break counts, see [plainText]), and a `2)` or `2.`
+     * after a space. Such a page's listeners, tags and similar artists mix them all.
+     *
+     * Detection deliberately over-matches, since taking a shared page for one artist's is the
+     * unsafe failure. Known limit: a single artist's bio with chart positions ("No. 1. … No. 2.")
+     * is taken as shared; its match is then unverified at best and its sentences are dropped.
      */
     fun sharedPage(summary: String?): Boolean = isShared(plainText(summary.orEmpty()))
 
-    private fun isShared(text: String): Boolean {
-        // Whether the item at [at] starts the text, or follows `.`, `!`, `?`, `:` or `;` and a space.
-        fun startsItem(at: Int): Boolean {
-            var mark = at - 2
-            while (mark >= 0 && text[mark] in CLOSERS) mark--
-            val afterEnd =
-                text.getOrNull(at - 1) == ' ' &&
-                    mark >= 0 &&
-                    (text[mark] in "!?:;" || (text[mark] == '.' && !shortened(text, mark)))
-            return at == 0 || afterEnd
-        }
-
-        val first =
-            FIRST_ITEM
-                .findAll(text)
-                .firstOrNull { startsItem(it.range.first) }
-                ?.range
-                ?.first
-        val second = first?.let { SECOND_ITEM.findAll(text, it).any { item -> text[item.range.first - 1] == ' ' } }
-        return DISAMBIGUATION.containsMatchIn(text) ||
+    private fun isShared(text: String): Boolean =
+        DISAMBIGUATION.containsMatchIn(text) ||
             SHARED_NAME.containsMatchIn(text) ||
-            second == true
-    }
+            (FIRST_ITEM.containsMatchIn(text) && SECOND_ITEM.containsMatchIn(text))
 
-    /** [html] without tags, Last.fm's "Read more" link and licence note, entities decoded, spaces collapsed. */
+    /**
+     * [html] without tags (a line break or a block's edge leaves a space), Last.fm's "Read more"
+     * link and licence note, entities decoded, spaces collapsed.
+     */
     fun plainText(html: String): String =
         decodeEntities(stripTags(html))
             .replace(LICENCE_NOTE, " ")
@@ -168,16 +153,11 @@ internal object LastFmBio {
         if (end >= text.length) return true
         val next = text.getOrNull(end + 1)
         val startsNext = text[end] == ' ' && next != null && (next.isUpperCase() || next.isDigit() || next in OPENERS)
-        return startsNext && !shortened(text, mark)
-    }
-
-    /** Whether the `.` at [mark] ends an initial (`J. R. R.`) or an abbreviation (`St. John's`), not a sentence. */
-    private fun shortened(
-        text: String,
-        mark: Int,
-    ): Boolean {
         val word = text.substring(0, mark).takeLastWhile { it.isLetterOrDigit() }
-        return text[mark] == '.' && ((word.length == 1 && word[0].isLetter()) || word.lowercase() in ABBREVIATIONS)
+        // An initial (`J. R. R.`) or an abbreviation (`St. John's`) does not end a sentence.
+        val shortened =
+            text[mark] == '.' && ((word.length == 1 && word[0].isLetter()) || word.lowercase() in ABBREVIATIONS)
+        return startsNext && !shortened
     }
 
     private const val OPENERS = "\"“‘'("
