@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.store
 
 import io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceDraft
 import io.github.wkusnierczyk.sleevesight.core.evidence.Scope
+import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
@@ -22,6 +23,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 class RetrievalCacheTest {
@@ -75,14 +77,14 @@ class RetrievalCacheTest {
 
     @Test
     fun `each source's entries expire after its own lifetime`() {
-        for (source in listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.WEB)) {
+        for (source in listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.DISCOGS)) {
             retrieval.put(source, key, 1, sample(Outcome.SongArticle, source))
         }
 
         fixture.clock.advance(1.days - 1.milliseconds)
-        assertNotNull(retrieval.get(SourceId.WEB, key, 1))
+        assertNotNull(retrieval.get(SourceId.DISCOGS, key, 1))
         fixture.clock.advance(1.milliseconds)
-        assertNull(retrieval.get(SourceId.WEB, key, 1), "web search: 1 day")
+        assertNull(retrieval.get(SourceId.DISCOGS, key, 1), "a 1-day source")
         assertNotNull(retrieval.get(SourceId.WIKIPEDIA, key, 1))
 
         fixture.clock.advance(6.days)
@@ -135,7 +137,7 @@ class RetrievalCacheTest {
         assertFalse(retrieval.put(SourceId.PLAYER, key, 1, sample(Outcome.SongArticle, SourceId.PLAYER)))
         assertFalse(retrieval.put(SourceId.MODEL, key, 1, sample(Outcome.SongArticle, SourceId.MODEL)))
         // A line from a source with no lifetime.
-        assertFalse(retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.PLAYER)))
+        assertFalse(retrieval.put(SourceId.DISCOGS, key, 1, sample(Outcome.SongArticle, SourceId.PLAYER)))
 
         assertEquals(0, entries())
     }
@@ -151,22 +153,56 @@ class RetrievalCacheTest {
     fun `a result kept under other extraction rules is a miss`() {
         val old = FakeAdapter(SourceId.LASTFM, extractionVersion = 1)
         val new = FakeAdapter(SourceId.LASTFM, extractionVersion = 2)
-        retrieval.put(old, track, sample(Outcome.ArtistArticle, SourceId.LASTFM))
-        assertNotNull(retrieval.get(old, track))
+        retrieval.put(old, track, null, sample(Outcome.ArtistArticle, SourceId.LASTFM))
+        assertNotNull(retrieval.get(old, track, null))
 
-        assertNull(retrieval.get(new, track))
+        assertNull(retrieval.get(new, track, null))
         assertEquals(0, entries(), "the stale entry is dropped")
 
-        retrieval.put(new, track, sample(Outcome.None, SourceId.LASTFM))
-        assertEquals(Outcome.None, retrieval.get(new, track)?.result?.outcome)
+        retrieval.put(new, track, null, sample(Outcome.None, SourceId.LASTFM))
+        assertEquals(Outcome.None, retrieval.get(new, track, null)?.result?.outcome)
         fixture.assertTotals()
     }
 
     @Test
     fun `an adapter's default extraction version is 1`() {
-        retrieval.put(FakeAdapter(SourceId.WEB), track, sample(Outcome.SongArticle, SourceId.WEB))
+        retrieval.put(FakeAdapter(SourceId.DISCOGS), track, null, sample(Outcome.SongArticle, SourceId.DISCOGS))
 
-        assertNotNull(retrieval.get(SourceId.WEB, retrieval.keyOf(track), 1))
+        assertNotNull(retrieval.get(SourceId.DISCOGS, retrieval.keyOf(track, null), 1))
+    }
+
+    @Test
+    fun `web search's results are never kept, nor any result holding a web line`() {
+        val web =
+            SourceResult(
+                Outcome.SongArticle,
+                listOf(EvidenceDraft(SourceId.WEB, Scope.WEB, "A snippet.", null, fixture.clock.now)),
+                1.milliseconds,
+            )
+        assertFalse(retrieval.put(SourceId.WEB, key, 1, web))
+        assertFalse(retrieval.put(SourceId.WEB, key, 1, sample(Outcome.None, SourceId.DISCOGS)))
+        assertFalse(retrieval.put(SourceId.WIKIPEDIA, key, 1, web))
+        assertFalse(
+            retrieval.put(FakeAdapter(SourceId.WEB), track, null, sample(Outcome.Rejected("no"), SourceId.DISCOGS)),
+        )
+
+        assertEquals(0, entries())
+    }
+
+    @Test
+    fun `the player's length is part of the key, in whole seconds or none`() {
+        val keys = listOf(180.seconds, 300.seconds, null).map { retrieval.keyOf(track, it) }
+        assertEquals(3, keys.distinct().size)
+        assertEquals(retrieval.keyOf(track, 180.seconds), retrieval.keyOf(track, 180.seconds + 400.milliseconds))
+
+        retrieval.put(
+            FakeAdapter(SourceId.MUSICBRAINZ),
+            track,
+            180.seconds,
+            sample(Outcome.SongArticle, SourceId.MUSICBRAINZ),
+        )
+        assertNotNull(retrieval.get(FakeAdapter(SourceId.MUSICBRAINZ), track, 180.seconds))
+        assertNull(retrieval.get(FakeAdapter(SourceId.MUSICBRAINZ), track, 300.seconds))
     }
 
     @Test
@@ -182,16 +218,16 @@ class RetrievalCacheTest {
 
     @Test
     fun `a cleanup after a stale read leaves an entry written meanwhile`() {
-        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        retrieval.put(SourceId.DISCOGS, key, 1, sample(Outcome.SongArticle, SourceId.DISCOGS))
         fixture.clock.advance(2.days)
         // Between this read's select and its delete of the expired row, another call writes afresh.
         fixture.driver.before("DELETE FROM retrieval WHERE id") {
-            retrieval.put(SourceId.WEB, key, 1, sample(Outcome.None, SourceId.WEB))
+            retrieval.put(SourceId.DISCOGS, key, 1, sample(Outcome.None, SourceId.DISCOGS))
         }
 
-        assertNull(retrieval.get(SourceId.WEB, key, 1))
+        assertNull(retrieval.get(SourceId.DISCOGS, key, 1))
 
-        assertEquals(Outcome.None, retrieval.get(SourceId.WEB, key, 1)?.result?.outcome)
+        assertEquals(Outcome.None, retrieval.get(SourceId.DISCOGS, key, 1)?.result?.outcome)
         fixture.assertTotals()
     }
 
@@ -203,11 +239,11 @@ class RetrievalCacheTest {
         assertEquals(plain.lookupKey, featuring.lookupKey)
         assertEquals(plain.lookupKey, from.lookupKey)
 
-        val keys = listOf(plain, featuring, from).map { retrieval.keyOf(it) }
+        val keys = listOf(plain, featuring, from).map { retrieval.keyOf(it, null) }
         assertEquals(3, keys.toSet().size)
         assertEquals(
-            retrieval.keyOf(normalizer.normalize("Song", "A, B")),
-            retrieval.keyOf(normalizer.normalize("Song", "a, b")),
+            retrieval.keyOf(normalizer.normalize("Song", "A, B"), null),
+            retrieval.keyOf(normalizer.normalize("Song", "a, b"), null),
         )
     }
 
@@ -216,7 +252,7 @@ class RetrievalCacheTest {
         val nfc = normalizer.normalize("Song (From Déjà Vu)", "A, Beyoncé")
         val nfd = normalizer.normalize("Song (From De\u0301ja\u0300 Vu)", "a, Beyonce\u0301")
 
-        assertEquals(retrieval.keyOf(nfc), retrieval.keyOf(nfd))
+        assertEquals(retrieval.keyOf(nfc, null), retrieval.keyOf(nfd, null))
     }
 
     @Test
@@ -224,17 +260,17 @@ class RetrievalCacheTest {
         fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WIKIDATA to 1.days))
         val adapter = FakeAdapter(SourceId.WIKIPEDIA, consults = setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
         val rejected = SourceResult(Outcome.Rejected("not a song"), emptyList(), 1.milliseconds)
-        retrieval.put(adapter, track, rejected)
+        retrieval.put(adapter, track, null, rejected)
 
         fixture.clock.advance(1.days - 1.milliseconds)
-        assertNotNull(retrieval.get(adapter, track))
+        assertNotNull(retrieval.get(adapter, track, null))
         fixture.clock.advance(1.milliseconds)
-        assertNull(retrieval.get(adapter, track), "Wikidata's 1 day, though it gave no line")
+        assertNull(retrieval.get(adapter, track, null), "Wikidata's 1 day, though it gave no line")
     }
 
     @Test
     fun `purging deletes the entries of a source the app no longer knows`() {
-        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        retrieval.put(SourceId.DISCOGS, key, 1, sample(Outcome.SongArticle, SourceId.DISCOGS))
         fixture.caches.queries.retrievalInsert("XX", key, " XX ", RetrievalCodec.FORMAT.toLong(), 1, "{}", 0, 0, 10)
 
         assertEquals(1, fixture.caches.purgeExpired())
@@ -244,11 +280,11 @@ class RetrievalCacheTest {
 
     @Test
     fun `purging deletes the entries holding lines of a source the app no longer knows`() {
-        retrieval.put(SourceId.WEB, key, 1, sample(Outcome.SongArticle, SourceId.WEB))
+        retrieval.put(SourceId.DISCOGS, key, 1, sample(Outcome.SongArticle, SourceId.DISCOGS))
         fixture.caches.queries.retrievalInsert("W", key, " W XX ", RetrievalCodec.FORMAT.toLong(), 1, "{}", 0, 0, 10)
 
         assertEquals(1, fixture.caches.purgeExpired())
-        assertNotNull(retrieval.get(SourceId.WEB, key, 1))
+        assertNotNull(retrieval.get(SourceId.DISCOGS, key, 1))
         assertEquals(1, entries())
         fixture.assertTotals()
     }
@@ -256,12 +292,12 @@ class RetrievalCacheTest {
     @Test
     fun `artists and works of symbols only get keys of their own`() {
         assertNotEquals(
-            retrieval.keyOf(normalizer.normalize("Song", "A, !!!")),
-            retrieval.keyOf(normalizer.normalize("Song", "A, †††")),
+            retrieval.keyOf(normalizer.normalize("Song", "A, !!!"), null),
+            retrieval.keyOf(normalizer.normalize("Song", "A, †††"), null),
         )
         assertNotEquals(
-            retrieval.keyOf(normalizer.normalize("Song (From !)", "A")),
-            retrieval.keyOf(normalizer.normalize("Song (From ?)", "A")),
+            retrieval.keyOf(normalizer.normalize("Song (From !)", "A"), null),
+            retrieval.keyOf(normalizer.normalize("Song (From ?)", "A"), null),
         )
     }
 
@@ -270,14 +306,14 @@ class RetrievalCacheTest {
         val adapter = FakeAdapter(SourceId.WIKIPEDIA)
         val utada = normalizer.normalize("First Love", "宇多田ヒカル")
         val sakamoto = normalizer.normalize("First Love", "坂本龍一")
-        retrieval.put(adapter, utada, sample(Outcome.SongArticle))
+        retrieval.put(adapter, utada, null, sample(Outcome.SongArticle))
 
-        assertNotNull(retrieval.get(adapter, utada))
-        assertNull(retrieval.get(adapter, sakamoto))
+        assertNotNull(retrieval.get(adapter, utada, null))
+        assertNull(retrieval.get(adapter, sakamoto, null))
 
         val moi = normalizer.normalize("Мои", "Кино")
-        retrieval.put(adapter, normalizer.normalize("Мой", "Кино"), sample(Outcome.SongArticle))
-        assertNull(retrieval.get(adapter, moi))
+        retrieval.put(adapter, normalizer.normalize("Мой", "Кино"), null, sample(Outcome.SongArticle))
+        assertNull(retrieval.get(adapter, moi, null))
     }
 
     @Test
@@ -317,6 +353,7 @@ class RetrievalCacheTest {
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page")),
+            genres = listOf(GenreLabel("folk rock", "folk", 135, "Folk Rock")),
         )
     }
 

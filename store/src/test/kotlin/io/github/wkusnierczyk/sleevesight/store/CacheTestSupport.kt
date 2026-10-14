@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.settings.Settings
@@ -11,6 +12,7 @@ import io.github.wkusnierczyk.sleevesight.store.db.CacheDatabase
 import kotlin.test.assertEquals
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /** A clock the test moves. */
@@ -57,9 +59,13 @@ class InterleavingDriver(
     }
 }
 
-/** [Caches] over a fresh in-memory SQLite database, with settings and a clock the test controls. */
+/**
+ * [Caches] over a fresh in-memory SQLite database, with settings and a clock the test controls. The
+ * default settings give Discogs a lifetime of one day, so the tests have a short-lived source that
+ * may be kept: web search, which had that lifetime, is never kept (Exa's terms).
+ */
 class CacheFixture(
-    var settings: Settings = Settings(),
+    var settings: Settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.DISCOGS to 1.days)),
     val clock: TestClock = TestClock(),
 ) {
     private val jdbc = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { CacheDatabase.Schema.create(it) }

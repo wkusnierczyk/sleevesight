@@ -42,7 +42,8 @@ CREATE TABLE artist (
 
 CREATE INDEX artist_used_at ON artist (used_at, size_bytes);
 
--- A written insight or card, by the full synthesis key (R2, D14).
+-- A written insight or card, by the full synthesis key (R2, D14), the reasoning effort included
+-- (`low`, `medium`, `high` or `default`).
 CREATE TABLE synthesis (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     kind TEXT NOT NULL,
@@ -53,11 +54,12 @@ CREATE TABLE synthesis (
     provider TEXT NOT NULL,
     model TEXT NOT NULL,
     model_knowledge INTEGER NOT NULL,
+    effort TEXT NOT NULL,
     text TEXT NOT NULL,
     written_at INTEGER NOT NULL,
     used_at INTEGER NOT NULL,
     size_bytes INTEGER NOT NULL,
-    UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge)
+    UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort)
 );
 
 CREATE INDEX synthesis_used_at ON synthesis (used_at, size_bytes);
@@ -169,7 +171,8 @@ WHERE kind = :kind
   AND style_hash = :styleHash
   AND provider = :provider
   AND model = :model
-  AND model_knowledge = :modelKnowledge;
+  AND model_knowledge = :modelKnowledge
+  AND effort = :effort;
 
 synthesisRemoveKey:
 DELETE FROM synthesis
@@ -180,14 +183,15 @@ WHERE kind = :kind
   AND style_hash = :styleHash
   AND provider = :provider
   AND model = :model
-  AND model_knowledge = :modelKnowledge;
+  AND model_knowledge = :modelKnowledge
+  AND effort = :effort;
 
 synthesisInsert:
 INSERT INTO synthesis (
-    kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge,
+    kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge, effort,
     text, written_at, used_at, size_bytes
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 synthesisTouch:
 UPDATE synthesis SET used_at = :usedAt WHERE id = :id;

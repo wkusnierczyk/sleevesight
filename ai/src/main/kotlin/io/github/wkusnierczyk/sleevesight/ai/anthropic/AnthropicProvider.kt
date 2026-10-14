@@ -25,6 +25,7 @@ import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
@@ -33,6 +34,11 @@ import kotlin.time.Instant
  * Anthropic's Messages API, as a small client over `:net` (D3): one streaming call, `POST
  * /v1/messages` with `stream: true`, read as server-sent events; and the model list, `GET
  * /v1/models`. The key goes in `x-api-key`, through `NetSecrets`, so it is never logged.
+ *
+ * [CompletionRequest.effort] becomes `output_config.effort` (`low`, `medium`, `high`) for a model
+ * that takes it ([takesEffort]); without it, or for any other model, the model's default applies.
+ * Thinking is left at the API's default, which current models reason with: it cannot be switched
+ * off on all of them, and the effort is what bounds it.
  *
  * The stream's text deltas become [CompletionEvent.Delta]s; other content (a model's reasoning,
  * which current models do by default and return without its text) is skipped. `message_stop`
@@ -135,6 +141,9 @@ class AnthropicProvider(
                 put("model", request.model)
                 put("max_tokens", request.maxTokens)
                 put("stream", true)
+                request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
+                    putJsonObject("output_config") { put("effort", effort.name.lowercase()) }
+                }
                 putJsonArray("messages") {
                     addJsonObject {
                         put("role", "user")
@@ -156,6 +165,31 @@ class AnthropicProvider(
     private class StopStream : RuntimeException()
 
     companion object {
+        /**
+         * The model families that take `output_config.effort` at `low`, `medium` and `high`, by id
+         * prefix, from Anthropic's API reference on 2026-10-14: Claude Opus 4.5 and later, Sonnet 4.6
+         * and later, Haiku 5.5 and later, Fable and Mythos 5. Older models still listed (Claude Haiku
+         * 4.5, Sonnet 4.5) answer it with an error, so an unknown model gets the request without it.
+         * The model list carries no capabilities to ask instead ([ModelInfo]). A new family is added
+         * here when it is released.
+         */
+        val EFFORT_MODELS: List<String> =
+            listOf(
+                "claude-opus-4-5",
+                "claude-opus-4-6",
+                "claude-opus-4-7",
+                "claude-opus-4-8",
+                "claude-opus-5",
+                "claude-sonnet-4-6",
+                "claude-sonnet-5",
+                "claude-haiku-5",
+                "claude-fable-5",
+                "claude-mythos-5",
+            )
+
+        /** Whether [model] takes `output_config.effort`. */
+        fun takesEffort(model: String): Boolean = EFFORT_MODELS.any { model == it || model.startsWith("$it-") }
+
         const val BASE_URL: String = "https://api.anthropic.com"
 
         /** The API version this client speaks, sent as `anthropic-version`. */

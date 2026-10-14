@@ -202,6 +202,8 @@ class LastFmAdapterTest {
                 listOf(emptyList(), listOf("Rap", "Hip-Hop")),
                 lookup.artists.map { a -> a.genres.map { it.label } },
             )
+            // The result carries the labels of the artists whose data may be shown, for the pipeline.
+            assertEquals(listOf("Rap", "Hip-Hop"), lookup.result.genres.map { it.label })
         }
 
     @Test

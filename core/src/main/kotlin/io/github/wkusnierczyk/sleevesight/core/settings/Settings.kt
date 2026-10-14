@@ -1,5 +1,6 @@
 package io.github.wkusnierczyk.sleevesight.core.settings
 
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.model.ProviderId
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import kotlin.time.Duration
@@ -22,6 +23,8 @@ import kotlin.time.Duration.Companion.seconds
  *   has none or several, is kept (architecture, *Cache and history*: "long, months").
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
+ * @property aiEffort how much the model may reason before it writes, or null for the provider's
+ *   default. See [DEFAULT_AI_EFFORT].
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -37,6 +40,7 @@ data class Settings(
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
+    val aiEffort: ReasoningEffort? = DEFAULT_AI_EFFORT,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -110,6 +114,16 @@ data class Settings(
          * write again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
+
+        /**
+         * Low. An insight narrates a few evidence lines in two to four sentences: it needs little
+         * reasoning, and it is waited for on the now-playing screen, so latency matters more than
+         * depth (Claude Haiku 5.5 reasons by default, at medium effort). What keeps the text honest
+         * is the grounding check, not the model's deliberation. Thinking is not switched off: not
+         * every model allows it (Claude Opus 5.5 refuses), while every current one takes an effort.
+         * A user who prefers more deliberate cards raises it, or chooses the provider's default.
+         */
+        val DEFAULT_AI_EFFORT: ReasoningEffort = ReasoningEffort.LOW
     }
 }
 

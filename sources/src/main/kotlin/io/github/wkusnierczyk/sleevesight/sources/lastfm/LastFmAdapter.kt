@@ -84,6 +84,11 @@ class LastFmAdapter(
                     answers.mapNotNull { answer ->
                         (answer.match as? LastFmMatch.Rejected)?.let { Rejection(answer.credited, it.reason) }
                     },
+                genres =
+                    answers
+                        .flatMap { it.genres }
+                        .distinctBy { it.tag }
+                        .take(GenreVocabulary.MAX_LABELS),
             )
         return LastFmLookup(result, answers)
     }

@@ -10,6 +10,7 @@ import io.github.wkusnierczyk.sleevesight.core.ai.CompletionEvent
 import io.github.wkusnierczyk.sleevesight.core.ai.CompletionRequest
 import io.github.wkusnierczyk.sleevesight.core.ai.ModelInfo
 import io.github.wkusnierczyk.sleevesight.core.ai.ModelList
+import io.github.wkusnierczyk.sleevesight.core.ai.ReasoningEffort
 import io.github.wkusnierczyk.sleevesight.core.ai.StopReason
 import io.github.wkusnierczyk.sleevesight.core.ai.Usage
 import io.github.wkusnierczyk.sleevesight.net.NetError
@@ -89,6 +90,53 @@ class AnthropicProviderTest {
             )
             assertEquals("application/json", sent.body!!.contentType)
             assertFalse("sk-ant" in sent.toString() + sent.url + sent.headers + sent.body!!.text)
+        }
+
+    @Test
+    fun `an effort goes in output_config, and none leaves the model's default`() =
+        runTest {
+            val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+            AnthropicProvider(net).stream(request.copy(effort = ReasoningEffort.LOW), key).toList()
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        net.requests
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals(Json.parseToJsonElement("""{"effort":"low"}"""), body["output_config"])
+            assertEquals(null, body["thinking"])
+        }
+
+    @Test
+    fun `a model not known to take an effort gets none`() =
+        runTest {
+            val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+            val older = request.copy(model = "claude-haiku-4-5", effort = ReasoningEffort.LOW)
+            AnthropicProvider(net).stream(older, key).toList()
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        net.requests
+                            .single()
+                            .body!!
+                            .text,
+                    ).jsonObject
+            assertEquals(null, body["output_config"])
+            for (model in listOf(
+                "claude-haiku-5-5",
+                "claude-opus-5-5",
+                "claude-sonnet-4-6",
+                "claude-opus-4-5-20251101",
+            )) {
+                assertEquals(true, AnthropicProvider.takesEffort(model), model)
+            }
+            for (model in listOf("claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-1", "claude-haiku-50")) {
+                assertEquals(false, AnthropicProvider.takesEffort(model), model)
+            }
         }
 
     @Test
