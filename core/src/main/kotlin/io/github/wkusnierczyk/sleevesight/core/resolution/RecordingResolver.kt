@@ -194,17 +194,25 @@ class RecordingResolver(
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
         } else {
-            withWork(recording, withRecording, link, work)
+            withWork(track, recording, withRecording, link, work)
         }
     }
 
     private fun withWork(
+        track: NormalizedTrack,
         recording: MbRecording,
         withRecording: Resolution,
         link: MbWorkLink,
         work: MbWork,
     ): Resolution {
-        val ours = recording.credits.map { it.artistMbid }.toSet()
+        // The track's artists: their resolved ids and the credits that stand for them, a band they
+        // lead among them. Not every credit: a collaborator the player does not name is not ours, so
+        // their earlier recording of the work is someone else's.
+        val ours =
+            withRecording.artists.mapNotNull { it.mbid }.toSet() +
+                recording.credits
+                    .filter { credit -> track.artists.any { credits(credit, it) } }
+                    .map { it.artistMbid }
         // Our artists' recordings of the work, the chosen one among them: the search finds only some,
         // and MusicBrainz leaves many undated, so the chosen one need not be their first.
         val own = work.performances.filter { performance -> performance.credits.any { it.artistMbid in ours } }
@@ -224,7 +232,11 @@ class RecordingResolver(
         val cover = link.cover || (predates && !ownUndated)
         val named = cover && (predates || (link.cover && ourEarliest == null))
         // Ours first: before every recording by others that MusicBrainz dates, of which there is one.
-        val earliest = original != null && ourEarliest != null && isEarlier(ourEarliest, original.date)
+        // Recording dates only, on both sides: others' recordings carry no release date, so the
+        // chosen one's release date standing in would favour ours. Never for a cover.
+        val ourFirstSession = own.mapNotNull { it.date }.minOrNull()
+        val earliest =
+            !cover && original != null && ourFirstSession != null && isEarlier(ourFirstSession, original.date)
         return withRecording.copy(
             work = ResolvedWork(work.mbid, work.title),
             cover = cover,
