@@ -126,8 +126,11 @@ object GroundingCheck {
      * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
      * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials
      * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`). The simulator split
-     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. The cost: a
-     * sentence that does end in one (`... moved to the U.S. He ...`) is joined to the next.
+     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. Initials before a
+     * word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit in the U.S. It ...`) still
+     * end one. The cost: a sentence that ends in initials before another word (`... toured the U.S.
+     * Billboard named ...`), or in one of [ABBREVIATIONS], is joined to the next, and if it was
+     * uncited, the next one's citation hides that.
      */
     fun splitSentences(text: String): List<String> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
@@ -212,7 +215,8 @@ object GroundingCheck {
 
     /**
      * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
-     * after any opening `(`, `"` or `“`, is a run of capital initials or one of [ABBREVIATIONS].
+     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
+     * not followed by one of [SENTENCE_OPENERS].
      */
     private fun endsAbbreviation(
         t: String,
@@ -223,8 +227,57 @@ object GroundingCheck {
         while (start > 0 && !isJsWhitespace(t[start - 1])) start--
         while (start < end && t[start] in WORD_OPENERS) start++
         val word = t.substring(start, end)
-        return INITIALS.matches(word) || word.dropLast(1) in ABBREVIATIONS
+        // The next word, after the whitespace and any opening `(`, `"` or `“`.
+        var next = end
+        while (next < t.length && (isJsWhitespace(t[next]) || t[next] in WORD_OPENERS)) next++
+        var stop = next
+        while (stop < t.length && !isJsWhitespace(t[stop])) stop++
+        val opens = t.substring(next, stop).trimEnd(',', ';', ':') in SENTENCE_OPENERS
+        return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
     }
+
+    /**
+     * Words that open a sentence far more often than they follow initials within one: after
+     * `the U.S.`, `It reached …` is a new sentence, `Billboard …` most likely not. Matched with
+     * their case.
+     */
+    private val SENTENCE_OPENERS: Set<String> =
+        setOf(
+            "A",
+            "An",
+            "The",
+            "It",
+            "Its",
+            "It's",
+            "He",
+            "She",
+            "They",
+            "We",
+            "This",
+            "That",
+            "These",
+            "Those",
+            "His",
+            "Her",
+            "Their",
+            "There",
+            "In",
+            "On",
+            "At",
+            "By",
+            "For",
+            "From",
+            "With",
+            "After",
+            "Before",
+            "When",
+            "While",
+            "As",
+            "But",
+            "And",
+            "Later",
+            "Then",
+        )
 
     /**
      * Words that end in `.` without ending a sentence, as written before a name or a title: the

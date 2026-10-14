@@ -104,6 +104,27 @@ class GroundingCheckTest {
     }
 
     @Test
+    fun `initials before a word that opens a sentence end one, so an uncited sentence shows`() {
+        val reply =
+            "The band toured the U.S. It reached number one. [W1] It appeared on side B. The film used it. [W2] " +
+                "It reached the U.S. Billboard Hot 100. [W3]"
+        assertEquals(
+            listOf(
+                "The band toured the U.S.",
+                "It reached number one. [W1]",
+                "It appeared on side B.",
+                "The film used it. [W2]",
+                "It reached the U.S. Billboard Hot 100. [W3]",
+            ),
+            GroundingCheck.splitSentences(reply),
+        )
+        val written =
+            assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("W1", "W2", "W3"), allowModel = false))
+        assertEquals(3, written.grounded.counts.ok)
+        assertEquals(2, written.grounded.counts.uncited)
+    }
+
+    @Test
     fun `a stop after an ordinary word still ends a sentence`() {
         val reply = "It went gold in the US. Plans changed. [W1] Then it went to No. 1 (vs. two). [W2]"
         assertEquals(
