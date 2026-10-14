@@ -124,13 +124,22 @@ class InsightPromptTest {
         // Six rules, and the last, NO_EVIDENCE; the tone and the model-knowledge rules are conditional.
         val fixed = rules.lines().filter { it.startsWith("- ") && "\${" !in it }
         assertEquals(7, fixed.size, "the simulator's fixed rules")
+        // The one deviation (#46): the rule on a gap names the sentence the grounding check accepts.
+        assertTrue(SIMULATOR_GAP_RULE in fixed, "the simulator's rule on a gap")
         for (allowModel in listOf(false, true)) {
             val contract = InsightPrompt.contract(allowModel).lines()
-            fixed.forEach { assertTrue(it in contract, it) }
+            (fixed - SIMULATOR_GAP_RULE).forEach { assertTrue(it in contract, it) }
+            assertTrue(SIMULATOR_GAP_RULE !in contract)
+            val gap = contract.single { it.startsWith("- If the evidence covers only part") }
+            assertTrue(GroundingCheck.GAP_SENTENCE in gap, gap)
         }
         assertTrue("- Do not use your own knowledge.\\n" in rules)
         assertTrue("- Do not use your own knowledge." in InsightPrompt.contract(false))
         val model = Regex("\"(- You may add[^\"]*)\\\\n\"").find(rules)!!.groupValues[1]
         assertTrue(model in InsightPrompt.contract(true))
+    }
+
+    private companion object {
+        const val SIMULATOR_GAP_RULE = "- If little is documented, say so plainly in one sentence, without a citation."
     }
 }

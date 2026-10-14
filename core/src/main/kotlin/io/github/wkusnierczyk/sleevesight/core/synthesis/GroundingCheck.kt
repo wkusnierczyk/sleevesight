@@ -71,8 +71,10 @@ sealed interface InsightReply {
 /**
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
- * its `NO_EVIDENCE` test, rule for rule; the tests compare it with the simulator's own code on the
- * same replies (`core/src/test/resources/grounding/`).
+ * its `NO_EVIDENCE` test, rule for rule but for two deviations from the Phase 0.5 gate (#46): an
+ * abbreviation does not end a sentence ([splitSentences]), and the prompt's fixed sentence for a
+ * gap, [GAP_SENTENCE], is a hedge. The tests compare it with the simulator's own code on the same
+ * replies (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -81,6 +83,14 @@ sealed interface InsightReply {
 object GroundingCheck {
     /** The model's id for its own knowledge. */
     const val MODEL_ID: String = "M"
+
+    /**
+     * The one sentence a reply may end with, uncited, to state that the evidence covers only part
+     * of what it would say: the insight prompt asks for exactly this (#46). A hedge when it is the
+     * whole sentence, as written; other wordings of a gap are hedges only as the simulator's
+     * patterns allow.
+     */
+    const val GAP_SENTENCE: String = "Little else is documented."
 
     /** The reply that says there is no usable evidence. */
     const val NO_EVIDENCE: String = "NO_EVIDENCE"
@@ -111,8 +121,16 @@ object GroundingCheck {
     /**
      * Splits [text] into sentences, as the simulator does: spaces and tabs collapse to one space,
      * and a sentence ends at whitespace that follows `.`, `!` or `?` (and any citations after it,
-     * like `. [W1][G2]`) and comes before a capital letter, `"`, `“` or `(`. So `Dr. Smith` splits
-     * too, as it does in the simulator.
+     * like `. [W1][G2]`) and comes before a capital letter, `"`, `“` or `(`.
+     *
+     * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
+     * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials
+     * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`). The simulator split
+     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. Initials before a
+     * word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit in the U.S. It ...`) still
+     * end one. The cost: a sentence that ends in initials before another word (`... toured the U.S.
+     * Billboard named ...`), or in one of [ABBREVIATIONS], is joined to the next, and if it was
+     * uncited, the next one's citation hides that.
      */
     fun splitSentences(text: String): List<String> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
@@ -147,7 +165,8 @@ object GroundingCheck {
             when {
                 bad -> SentenceStatus.UNKNOWN
                 cites.isNotEmpty() -> if (MODEL_ID in cites) SentenceStatus.MODEL else SentenceStatus.OK
-                HEDGE.containsMatchIn(sentence.asciiLowercase()) -> SentenceStatus.HEDGE
+                sentence.trimJs() == GAP_SENTENCE || HEDGE.containsMatchIn(sentence.asciiLowercase()) ->
+                    SentenceStatus.HEDGE
                 else -> SentenceStatus.UNCITED
             }
         return CheckedSentence(sentence, cites, status)
@@ -164,6 +183,7 @@ object GroundingCheck {
     /**
      * Whether the text before [end] ends a sentence: the simulator's lookbehind
      * `(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)`, read backwards over the citations.
+     * An abbreviation's `.` directly before [end] does not end one ([splitSentences]).
      */
     private fun endsSentence(
         t: String,
@@ -176,7 +196,8 @@ object GroundingCheck {
             val open = citationBefore(t, k)
             when {
                 c != null && c in ".!?" -> {
-                    ends = true
+                    // An abbreviation's `.` ends nothing, unless citations follow it (#46).
+                    ends = k != end || !endsAbbreviation(t, end)
                 }
 
                 open == null -> {
@@ -191,6 +212,80 @@ object GroundingCheck {
         }
         return ends
     }
+
+    /**
+     * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
+     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
+     * not followed by one of [SENTENCE_OPENERS].
+     */
+    private fun endsAbbreviation(
+        t: String,
+        end: Int,
+    ): Boolean {
+        if (t.getOrNull(end - 1) != '.') return false
+        var start = end - 1
+        while (start > 0 && !isJsWhitespace(t[start - 1])) start--
+        while (start < end && t[start] in WORD_OPENERS) start++
+        val word = t.substring(start, end)
+        // The next word, after the whitespace and any opening `(`, `"` or `“`.
+        var next = end
+        while (next < t.length && (isJsWhitespace(t[next]) || t[next] in WORD_OPENERS)) next++
+        var stop = next
+        while (stop < t.length && !isJsWhitespace(t[stop])) stop++
+        val opens = t.substring(next, stop).trimEnd(',', ';', ':') in SENTENCE_OPENERS
+        return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
+    }
+
+    /**
+     * Words that open a sentence far more often than they follow initials within one: after
+     * `the U.S.`, `It reached …` is a new sentence, `Billboard …` most likely not. Matched with
+     * their case.
+     */
+    private val SENTENCE_OPENERS: Set<String> =
+        setOf(
+            "A",
+            "An",
+            "The",
+            "It",
+            "Its",
+            "It's",
+            "He",
+            "She",
+            "They",
+            "We",
+            "This",
+            "That",
+            "These",
+            "Those",
+            "His",
+            "Her",
+            "Their",
+            "There",
+            "In",
+            "On",
+            "At",
+            "By",
+            "For",
+            "From",
+            "With",
+            "After",
+            "Before",
+            "When",
+            "While",
+            "As",
+            "But",
+            "And",
+            "Later",
+            "Then",
+        )
+
+    /**
+     * Words that end in `.` without ending a sentence, as written before a name or a title: the
+     * replies name people (`Dr. Dre`), places (`St. John's`) and featured artists (`feat. Van
+     * Morrison`). Matched with their case.
+     */
+    private val ABBREVIATIONS: Set<String> =
+        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs")
 
     /** Where the citation (`[W1]`, `[MB12]`, `[M]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
@@ -212,9 +307,12 @@ object GroundingCheck {
     private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
 
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
+    private const val WORD_OPENERS = "\"“("
+    private val INITIALS = Regex("(?:[A-Z]\\.)+")
     private val SPACES_AND_TABS = Regex("[ \\t]+")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
+
     private val HEDGE =
         Regex(
             "little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|" +
