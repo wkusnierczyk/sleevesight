@@ -15,7 +15,8 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  * - a performer (P175) matching a credited artist makes it the track's own song ([Scope.SONG]): by
  *   MusicBrainz artist id (P434) when resolution has one for that artist; by normalized name
  *   otherwise, and then only a performer with no P434, since one MusicBrainz knows is not shown to
- *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer;
+ *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer,
+ *   except on the item MusicBrainz links, where a credited writer decides the scope (below);
  * - a performer matching the original recording's artist (a cover, step 4) makes it the original
  *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
  *   original song for a cover, or when it names performers, none of them a credited artist (by
@@ -173,6 +174,7 @@ class IdentityCheck(
                 matches(performers, context.credited, labels, anonymousOnly = true) -> Scope.SONG
                 // A writer confirms only a song no one is named performing (an anthem): with
                 // performers, the item's facts are theirs (a songwriter's song made famous by others).
+                // On MusicBrainz's link, a credited writer still decides the scope (`linkedScope`).
                 performers.isEmpty() && matches(writers, context.credited, labels) -> Scope.SONG
                 original.isNotEmpty() && matches(performers, original, labels) -> Scope.ORIGINAL_SONG
                 context.route == Route.MUSICBRAINZ ->
