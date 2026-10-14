@@ -378,6 +378,82 @@ A JVM Kotlin command-line tool sharing the pipeline module: normalizer, resoluti
 
 **Gate:** on the test playlist, zero `unknown` citations, uncited sentences under 5 percent, every same-name collision either rejected or correctly resolved, and the coverage numbers reviewed.
 
+#### Gate run (#46): findings, for the owner's review
+
+Not passed yet: the owner decides. Run on 2026-10-14 with `:cli live --tracks all` (80 positions, 78 unique tracks) and the owner's keys: MusicBrainz, Wikipedia with Wikidata, web search (Exa, `instant`), and Claude Haiku 5.5 at the app's default effort (low). Last.fm was off: no key exists. The reports stay in the gitignored scratchpad, since 72 of the 78 insights were written from web lines (*Web search provider (D11)*, *Open on the terms*); what follows is counts.
+
+**Cost.** Three runs: the first live throughout; the second the same run from its cache, the insights re-checked unchanged after the grounding fix; the third with a changed prompt (below). Anthropic, first and third runs (the second's insights came from the cache): 117,700 and 121,242 tokens in, 31,677 and 40,084 out, about $0.06 at $0.10 and $0.50 per million. Exa: 80 searches a run (web results are never cached), 240 in all, $0.96 at Exa's $0.004 per `instant` search; if highlights turn out to be billed per result (the open question under D11), up to $3.36. About $1.02 in all on Exa's own per-search estimates.
+
+**The criteria.**
+
+| Criterion | First run | After the grounding fix (`2b25013`) | With the prompt change too (not committed) |
+|---|---|---|---|
+| Zero `unknown` citations | Pass: 0 of 265 sentences | Pass: 0 of 262 | Pass: 0 of 258 |
+| Uncited under 5 percent | **Fail**: 35 of 265 (13.2 %) | **Fail**: 18 of 262 (6.8 %) | Pass: 4 of 258 (1.5 %) |
+| Same-name collisions rejected or correctly resolved | Pass: 8 of 8 checks (tracks 8 and 22, 12 and 20, 45, 48, 76, 61; Wikipedia's; Last.fm's for 61 not checked, the source being off) | Pass | Pass |
+| Coverage reviewed | The owner's (below) | | |
+
+**Uncited sentences, by cause** (first run, 35):
+
+- *A gap stated in other words* (25): the prompt asks for one uncited sentence when little is documented, and the model wrote "Beyond that, little else is documented about this recording", "little more is documented", "the sources say little about…", "the evidence doesn't document much else". The check knew only "little is documented" and a few fixed phrases.
+- *An abbreviation read as a sentence end* (3): "the U.S. Billboard Hot 100", and a writer's middle initial twice, as the simulator splits them.
+- *Commentary on the evidence* (3): two sources disagree on a date, or may describe another version, and the reply says so without a citation. Uncited by the contract; arguably fair.
+- *The model's reasoning in the reply* (3 sentences, one track, 77): a reply that corrected itself in the open and then wrote its insight. The check flags it, as it should; nothing in the check can prevent it.
+- *A restatement* (1): a reply that said again, uncited, that its only fact was the release.
+
+**The fix in code** (`2b25013`, the grounding check): an abbreviation (`U.S.`, `R.E.M.`, a middle initial, `Dr.`, `St.`, `feat.`, `vs.`) directly before the next word does not end a sentence; and a stated gap may say "little else" or "little more" (also "not much more", "nothing more"). Both deviate from the simulator on purpose; the simulator's test case that splits after `Dr.` is listed as a deviation and every other stored reply still agrees with it. Re-checking the same 78 replies gives 18 uncited of 262 (6.8 %): 12 gaps in yet other words, 2 commentary, the restatement, and the 3 of track 77's reasoning.
+
+**What would pass it, for the owner to choose** (not committed): name the hedge in the prompt. The contract line "If little is documented, say so plainly in one sentence, without a citation" became "…in one sentence without a citation, in these words: \"Little else is documented.\", or \"Little is documented.\" when nothing is." (prompt version 2). On a fresh run of all 78 insights: 47 hedges, 4 uncited of 258 sentences (1.5 %): one fact without its id, one paraphrased quote, one commentary, one remark on a title's variant. It changes the prompt contract in the appendix (*Insight*) and the stored prompts its tests compare. The alternative, widening the check's phrase list to every way of saying it, makes the check guess, and a guessing check lets uncited claims through as hedges. Recommendation: the prompt change, with the code fix above.
+
+**Collisions, in detail.** Wikipedia gave no song article for the Peleboy track (8, 22), whose namesake is DMX's song; no artist article for the wrong Reem (12, 20); no song lines for the covers 45 and 48 (rejected: the articles are the original songs, and MusicBrainz does not mark these recordings as covers) or 76 (none found); no song article for Jessiah's "willow" (61). MusicBrainz's one rejection was track 50: the recording that matches its title and length is credited to "Mr. A Balladeer", and the player says "a balladeer". Probably the same act under another form of its name, so a false rejection, in the safe direction: a rejection shows, a wrong match would mislead. The album title on 61 ("Taylor Swift Covers") was not weighed: nothing reads it, and the gate passes without it.
+
+**A wrong original-song label, outside the listed collisions.** Wikipedia gave `original_song` on three tracks. Two are right: 40 (Siouxsie and the Banshees' "The Passenger", Iggy Pop's song) and 79 (a cover of "Dancing in the Dark"). The third is wrong: 55, Chuck Berry's own "Roll Over Beethoven". MusicBrainz links the recording's work to the Wikidata item of the song, whose performers (P175) are the Beatles and three other performers; Chuck Berry is on the item only as composer and lyricist. The identity check reads an item whose performers include no credited artist as the original song (`architecture.md`, step 5), so the article's lines went to the model scoped as another recording's, against a song that is this one. A rule to consider: a credited artist who is the item's composer or lyricist, on a recording MusicBrainz does not mark as a cover, makes it the track's own song. Not a gate criterion; for a follow-up.
+
+**Thresholds** (`ResolutionThresholds`; the search size is `MusicBrainzClient.SEARCH_LIMIT`). Evidence from each unique track's MusicBrainz search (78 searches, every candidate's title similarity, length gap and credited artists), replayed through the resolver's rules at other settings:
+
+- *Title similarity* (0.85): every accepted track's best candidate scores 1.0, and no candidate with a credited artist and a fitting length scores between 0.7 and 1.0. Any value from 0.7 to 1.0 accepts the same 42 tracks, with the same choices; 0.6 would accept, for track 50, its instrumental version, 1 s off the player's length, where the plain recording matches the length too: probably the wrong one. **Unchanged**; the data neither needs nor tests it.
+- *Duration tolerance* (7 s): the closest candidate of each accepted track is within 1.5 s, but one within 4.8 s. Any value from 2 to 15 s accepts the same 42 tracks, but the choice moves: at 2 or 3 s, on up to seven tracks, to a recording with no length or a later one; at 10 or 15 s, on one or two, to an earlier recording of another length, which may be another take. 20 s would accept a 43rd, track 50's 2011 recording with Reyn Ouwehand, 18 s shorter: another version. The near misses beyond it are other versions too: a demo against the album take (36 s), a different recording of a folk song (50 s). **Unchanged.**
+- *Search size* (50): six searches filled all 50 results, and the chosen recording is often far down: at rank 31 to 42 on four tracks, so 25 would change four choices and 10 twelve, each to a later release. MusicBrainz's ranking also varies from one request to the next: in the gate run, track 55 ("Roll Over Beethoven") found Chuck Berry's May 1956 recording; in the tuning searches, a little later, it was not among the first 50 and the same rules chose a 1985 release, the very error *Entity resolution* warns of. Asked for 100 (MusicBrainz's maximum), it was at rank 44. **A reason to raise it to 100**, not done here: the request changes, so the recorded MusicBrainz responses in `fixtures/http/` must be re-recorded with it. Left to the owner as a follow-up.
+- *Not a threshold, found on the way*: track 62 ("Misirlou", Dick Dale) chose a 2012 release because the 1962 original is credited to "Dick Dale and His Del-Tones", which does not match the player's "Dick Dale" by name. Matching a credited artist to a band named after them is a resolution rule to consider, not a tuning.
+
+**D4 profile** (first run; the CLI runs tracks one after another, so MusicBrainz's one request a second is never shared between tracks; each latency counts from the start of the track's lookups):
+
+| | Median | 90th percentile | Max |
+|---|---|---|---|
+| MusicBrainz resolution (and its own lines) | 1.09 s | 2.28 s | 3.11 s |
+| Wikipedia with Wikidata, verified | 1.60 s | 4.24 s | 5.22 s |
+| Web search (Exa) | 0.56 s | 0.72 s | 0.90 s |
+| First source result | 0.51 s | 0.63 s | 0.90 s |
+| Last source result | 1.60 s | 4.24 s | 5.22 s |
+| The insight call (Haiku 5.5), after the last source | 2.16 s | 4.39 s | 8.23 s |
+
+Waiting for MusicBrainz first would make the first result MusicBrainz's own, at 1.09 s median and 2.28 s at the 90th percentile, against 0.51 s and 0.63 s in parallel; web search would land at resolution plus its own time, 1.61 s median and 2.88 s at the 90th percentile. Wikipedia lands after resolution in either design, since it awaits the ids to verify: it finished a median 0.87 s after resolution, more than 0.5 s after it on 49 of 78 tracks. The events give each source's total, not its requests, so how much of Wikipedia's by-name work the parallel design overlaps with resolution is not measured; the last result is no later in parallel, and the first is twice as early or better. D4 stands. The insight waits for every source, so the time to the insight is the last source's plus the call's: about 3.8 s median.
+
+**Coverage** (first run, all 80 positions):
+
+| Source | song | artist | original song | rejected | none | Cited lines |
+|---|---|---|---|---|---|---|
+| MusicBrainz | 42 | | | 1 | 37 | 132 |
+| Wikipedia (W) and Wikidata (WD) | 18 | 15 | 3 | 34 | 10 | 79 W, 151 WD |
+| Web search | 72 | | | 8 | | 249 |
+| Last.fm | off (no key) | | | | | |
+
+Per track, 678 cited lines in all (with 67 `P` lines), 0 to 26 a track: none on 2 positions (the duplicate pair 4 and 24, a `NO_EVIDENCE` reply each), 1 to 3 on 30, 4 to 9 on 20, 10 or more on 28. By kind: curated lines (MusicBrainz, Wikipedia or Wikidata) and web lines on 40 positions, web lines alone on 32, curated alone on 1, only the player's release or nothing on 7. So web search carries the thin tracks: without it, 39 positions would have nothing beyond the player's own release. No genre labels: they come from Last.fm alone.
+
+**D12: MusicBrainz tags against Last.fm alone.** The comparison the issue asks for needs Last.fm live, and there is no key, so it was made against the simulator's frozen Last.fm tags (`facts.json`), for the one artist it looked up per track. MusicBrainz tags were fetched for evaluation only (`inc=tags` on each artist the resolver gave an id), kept in the gitignored scratchpad, and mapped through `GenreVocabulary`; what follows is counts (*MusicBrainz tags and genres (#9)*, *Conditions*). Of the 78 unique tracks:
+
+| | Tracks with labels | Without |
+|---|---|---|
+| Last.fm (simulator's tags) | 48 | 30 |
+| MusicBrainz tags alone | 29 | 49 |
+| Either | 51 | 27 |
+
+- MusicBrainz tags reach only the artists resolution gives an id: 44 artists on 42 tracks. 31 of them have tags, 30 a tag in the vocabulary. The tracks without Last.fm labels are mostly the small acts MusicBrainz does not know either, so MusicBrainz fills 3 of Last.fm's 30 gaps.
+- Where both give labels (26 tracks), they share at least one label on all 26: 60 shared of 99 Last.fm labels and 92 MusicBrainz labels.
+- MusicBrainz is keyless; Last.fm needs the user's own key. For a user without one, MusicBrainz tags would label 29 of 78 tracks instead of none.
+
+Recommendation (the decision is the owner's): **do not adopt them to fill Last.fm's gaps**, which they barely do (3 of 30), and the licence conditions (*Conditions*) and an extra request per artist at one a second would be paid for that. **Consider them as the keyless source of labels when Last.fm is off**, for labels only and not in prompts, which keeps clear of the provider-terms question still open under #9; decide that with the genre labels in Phase 2, after MetaBrainz answers the inquiry. The Last.fm side of the comparison is from frozen data and awaits a Last.fm key: Last.fm's live tags, after its verification (`architecture.md`, *Last.fm verification*), may label fewer tracks than the simulator's 48.
+
 ### Phase 1. Android MVP
 
 Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
