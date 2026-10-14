@@ -36,7 +36,9 @@ internal object LastFmBio {
         )
 
     // An enumerated list, `1) … 2) …` or `1. … 2. …`; a number such as `1.5` has no space after the
-    // mark. An item starts the text or follows a sentence end or a colon (see [isShared]).
+    // mark. The first item starts the text or follows a sentence end or a colon; the second follows
+    // it after any space, since items on lines of their own (`<br>`, a space in [plainText]) need
+    // no full stop (see [isShared]). A chart position, "No. 1.", is no first item.
     private val FIRST_ITEM = Regex("1[.)] ")
     private val SECOND_ITEM = Regex("2[.)] ")
 
@@ -105,10 +107,16 @@ internal object LastFmBio {
             return at == 0 || afterEnd
         }
 
-        fun listed(item: Regex): Boolean = item.findAll(text).any { startsItem(it.range.first) }
+        val first =
+            FIRST_ITEM
+                .findAll(text)
+                .firstOrNull { startsItem(it.range.first) }
+                ?.range
+                ?.first
+        val second = first?.let { SECOND_ITEM.findAll(text, it).any { item -> text[item.range.first - 1] == ' ' } }
         return DISAMBIGUATION.containsMatchIn(text) ||
             SHARED_NAME.containsMatchIn(text) ||
-            (listed(FIRST_ITEM) && listed(SECOND_ITEM))
+            second == true
     }
 
     /** [html] without tags, Last.fm's "Read more" link and licence note, entities decoded, spaces collapsed. */
@@ -174,18 +182,38 @@ internal object LastFmBio {
 
     private const val OPENERS = "\"“‘'("
 
+    // Tags removed; a line break or a block's edge (`<br>`, `<p>`, `</li>`) leaves a space, so the
+    // words on either side stay apart.
     private fun stripTags(html: String): String {
         val out = StringBuilder(html.length)
+        val tag = StringBuilder()
         var inTag = false
         for (c in html) {
             when {
-                c == '<' -> inTag = true
-                c == '>' && inTag -> inTag = false
-                !inTag -> out.append(c)
+                c == '<' -> {
+                    inTag = true
+                    tag.clear()
+                }
+
+                c == '>' && inTag -> {
+                    inTag = false
+                    val name =
+                        tag
+                            .trimStart('/')
+                            .takeWhile { it.isLetterOrDigit() }
+                            .toString()
+                            .lowercase()
+                    if (name in BREAKING_TAGS) out.append(' ')
+                }
+
+                inTag -> tag.append(c)
+                else -> out.append(c)
             }
         }
         return out.toString()
     }
+
+    private val BREAKING_TAGS = setOf("br", "p", "div", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6")
 
     private val ENTITY = Regex("&(#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z]+);")
 

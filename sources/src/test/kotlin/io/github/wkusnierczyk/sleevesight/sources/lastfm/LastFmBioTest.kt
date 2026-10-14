@@ -91,6 +91,8 @@ class LastFmBioTest {
             "1. Reem is a rapper from Denmark. 2. Reem is a singer.",
             "The name is used by: 1) a rapper from Denmark; 2) a singer from Lebanon.",
             "1) A rapper from Denmark, \"the Dane.\" 2) A singer from Lebanon.",
+            "1) a rapper from Denmark<br>2) a singer from Lebanon",
+            "There is more than one Reem:<br><br>1. a rapper from Denmark<br>2. a singer from Lebanon",
         )) {
             assertTrue(LastFmBio.sharedPage(summary), summary)
             assertTrue(LastFmBio.sentences(summary).isEmpty(), summary)
@@ -101,6 +103,12 @@ class LastFmBioTest {
             "Reem is a rapper from Denmark. Her debut single reached No. 1. Its follow-up reached No. 2. in Sweden."
         assertFalse(LastFmBio.sharedPage(charts))
         assertEquals(3, LastFmBio.sentences(charts).size)
+        assertFalse(LastFmBio.sharedPage(charts.replace(". ", ".<br>")), "nor across line breaks")
+        assertEquals(
+            listOf("Reem is a rapper from Denmark.", "She lives in Copenhagen."),
+            LastFmBio.sentences("Reem is a rapper from Denmark.<br>She lives in Copenhagen."),
+            "a line break separates sentences",
+        )
     }
 
     @Test
