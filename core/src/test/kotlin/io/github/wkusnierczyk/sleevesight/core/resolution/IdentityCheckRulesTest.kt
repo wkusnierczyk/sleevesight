@@ -192,6 +192,100 @@ class IdentityCheckRulesTest {
         }
 
     @Test
+    fun `the item MusicBrainz links, performed by others, is the track's own song when a credited artist wrote it`() =
+        runTest {
+            // Chuck Berry's "Roll Over Beethoven": the item names later performers, him as writer (#76).
+            val written =
+                WdEntity(
+                    "Q8",
+                    "Song",
+                    "Song",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q10"),
+                        Wd.COMPOSER to listOf("Q80"),
+                        Wd.LYRICIST to listOf("Q81"),
+                    ),
+                )
+            val wikidata =
+                FakeWikidata(
+                    mapOf("Q8" to written),
+                    mapOf("Q10" to "Original Act", "Q80" to "Cover Act", "Q81" to "Lyricist"),
+                    mapOf("Q10" to listOf("mbid-original"), "Q80" to listOf("mbid-cover")),
+                )
+            val linked = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q8"))
+            val names = NameMatcher(JvmAccentFolder)
+            val verdict = IdentityCheck(wikidata, names).song("Q8", track, linked, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+            // By name, for an unresolved artist, through the lyricist.
+            val lyricist = Normalizer(JvmAccentFolder).normalize("Song", "Lyricist")
+            val unresolved = linked.copy(artists = emptyList())
+            val byName = IdentityCheck(wikidata, names).song("Q8", lyricist, unresolved, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(byName)
+            assertEquals(Scope.SONG, byName.scope)
+            // A cover MusicBrainz marks stays the original song, whoever wrote it.
+            val marked = IdentityCheck(wikidata, names).song("Q8", track, linked.copy(cover = true), Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(marked)
+            assertEquals(Scope.ORIGINAL_SONG, marked.scope)
+        }
+
+    @Test
+    fun `the item MusicBrainz links is the track's own song when the track's artists recorded the work first`() =
+        runTest {
+            // Performed by others, written by no credited artist: the dates alone decide (#76).
+            val first =
+                resolved.copy(
+                    work = ResolvedWork("w", "Song"),
+                    cover = false,
+                    earliest = true,
+                    wikidataIds = listOf("Q1"),
+                )
+            val verdict = check.song("Q1", track, first, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+            // MusicBrainz's cover mark still wins.
+            val marked = check.song("Q1", track, first.copy(cover = true), Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(marked)
+            assertEquals(Scope.ORIGINAL_SONG, marked.scope)
+        }
+
+    @Test
+    fun `an unmarked cover, performed and written by others, is still the original song`() =
+        runTest {
+            val others =
+                WdEntity(
+                    "Q9",
+                    "Song",
+                    "Song",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q10"),
+                        Wd.COMPOSER to listOf("Q90"),
+                        Wd.LYRICIST to listOf("Q91"),
+                    ),
+                )
+            val wikidata =
+                FakeWikidata(
+                    mapOf("Q9" to others),
+                    mapOf("Q10" to "Original Act", "Q90" to "Composer", "Q91" to "Lyricist"),
+                    mapOf("Q10" to listOf("mbid-original"), "Q90" to listOf("mbid-composer")),
+                )
+            // An earlier dated recording by another artist exists: not the track's artists' first.
+            val unmarked =
+                resolved.copy(
+                    work = ResolvedWork("w", "Song"),
+                    cover = false,
+                    earliest = false,
+                    wikidataIds = listOf("Q9"),
+                )
+            val check = IdentityCheck(wikidata, NameMatcher(JvmAccentFolder))
+            val verdict = check.song("Q9", track, unmarked, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.ORIGINAL_SONG, verdict.scope)
+        }
+
+    @Test
     fun `the item MusicBrainz links, naming no performer, is the track's own song`() =
         runTest {
             val unperformed = WdEntity("Q5", "Song", "Song", mapOf(Wd.INSTANCE_OF to listOf("Q7366")))

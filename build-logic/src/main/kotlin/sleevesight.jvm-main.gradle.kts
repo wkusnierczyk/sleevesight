@@ -52,8 +52,7 @@ val checkJvmMainDependencies =
         description = "Fails when jvmMain's classpaths resolve artifacts that main's do not, or the reverse."
         val names = listOf("compileClasspath", "jvmMainCompileClasspath", "runtimeClasspath", "jvmMainRuntimeClasspath")
         for (name in names) {
-            unresolved.addAll(CheckJvmMainDependencies.unresolvedOf(configurations.named(name)))
-            unresolved.addAll(CheckJvmMainDependencies.artifactFailuresOf(configurations.named(name)))
+            unresolved.addAll(CheckJvmMainDependencies.failuresOf(configurations.named(name)))
         }
         // `main`'s own classes, which the association puts on `jvmMain`'s classpaths.
         val own = sourceSets.getByName("main").output

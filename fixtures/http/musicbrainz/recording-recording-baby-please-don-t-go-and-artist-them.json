@@ -1,2183 +1,8 @@
 {
- "created": "2026-10-13T23:38:38.788Z",
+ "created": "2026-10-14T18:11:51.460Z",
  "count": 31,
  "offset": 0,
  "recordings": [
-  {
-   "id": "fa87e5a5-5647-4e66-aa67-26120dc8363f",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 161000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1991",
-   "releases": [
-    {
-     "id": "6af06d64-7df8-48c2-a2cb-35ed89041054",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Gloria",
-     "status": "Official",
-     "disambiguation": "limited edition",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "f6d31bc4-fa67-48c5-a548-49bdc887e89a",
-      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "title": "Gloria",
-      "primary-type": "Single"
-     },
-     "date": "1991",
-     "country": "FR",
-     "release-events": [
-      {
-       "date": "1991",
-       "area": {
-        "id": "08310658-51eb-3801-80de-5a0739207115",
-        "name": "France",
-        "sort-name": "France",
-        "iso-3166-1-codes": [
-         "FR"
-        ]
-       }
-      }
-     ],
-     "track-count": 4,
-     "media": [
-      {
-       "id": "7a09a5b4-7bf1-353c-84bf-d41aa2b752c8",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "71e5b46c-6926-4429-bfe7-9bfabc199f84",
-         "number": "2",
-         "title": "Baby Please Don’t Go",
-         "length": 161000
-        }
-       ],
-       "track-count": 4,
-       "track-offset": 1
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "658355bc-de49-4ba2-abc8-f371b959810b",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 162560,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1996",
-   "releases": [
-    {
-     "id": "5ab0ad25-5679-473c-ae91-3bc9b4218874",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Dancing in the Street",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "dfcba1bd-8c13-319e-9f43-7fec23e82a84",
-      "type-id": "22a628ad-c082-3c4f-b1b6-d41665107b88",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Dancing in the Street",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Soundtrack"
-      ],
-      "secondary-type-ids": [
-       "22a628ad-c082-3c4f-b1b6-d41665107b88"
-      ]
-     },
-     "date": "1996",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1996",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 40,
-     "media": [
-      {
-       "id": "2535d278-c1ea-3892-9048-1cefdac0f051",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "c781a29e-8046-3ffd-9f16-498ede754fcc",
-         "number": "20",
-         "title": "Baby Please Don’t Go",
-         "length": 162560
-        }
-       ],
-       "track-count": 23,
-       "track-offset": 19
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "f8a25030-ba8b-431a-afd6-85e2eb9bca15",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 165000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1988",
-   "releases": [
-    {
-     "id": "1e863767-024f-4ec6-a5e5-0f2b718b6a39",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "Baby Boomer Classics: Sixties, Volume 3",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "f93fddef-7a4e-3b14-9da0-f238ae4eddf3",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Baby Boomer Classics: Sixties, Volume 3",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1988",
-     "country": "DE",
-     "release-events": [
-      {
-       "date": "1988",
-       "area": {
-        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
-        "name": "Germany",
-        "sort-name": "Germany",
-        "iso-3166-1-codes": [
-         "DE"
-        ]
-       }
-      }
-     ],
-     "track-count": 20,
-     "media": [
-      {
-       "id": "627f16e6-d24c-33f1-80c5-fa25a1a33067",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "b4ced9d5-24ec-31a7-a603-660badc7e65a",
-         "number": "4",
-         "title": "Baby Please Don’t Go",
-         "length": 165000
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "11bf1245-7c7c-4a10-9697-86f641443ac3",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 165800,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "3b417aae-78d3-4f88-97ee-27b68f2f160b",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "The Sixties, Volume 3",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "092844e6-7b73-3ac1-9fc6-d001405d6310",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Sixties, Volume 3",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "track-count": 20,
-     "media": [
-      {
-       "id": "7b8491df-1179-366c-8059-dbc4846a9f71",
-       "position": 1,
-       "track": [
-        {
-         "id": "7dd8043c-f559-39d8-b2e0-506f8b7cea06",
-         "number": "4",
-         "title": "Baby Please Don’t Go",
-         "length": 165800
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 3
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "125c93b4-a430-4351-a5e0-4d1736a42314",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don't Go",
-   "length": 164000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1991",
-   "releases": [
-    {
-     "id": "87358d76-6a07-4d3e-9665-65f01cee553b",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "The Spirit of the 60s: 1965: The Hits Don't Stop",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "c9b61577-136e-4dc7-90d7-d45901c2eb61",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Spirit of the 60s: 1965: The Hits Don't Stop",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1991",
-     "country": "XE",
-     "release-events": [
-      {
-       "date": "1991",
-       "area": {
-        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
-        "name": "Europe",
-        "sort-name": "Europe",
-        "iso-3166-1-codes": [
-         "XE"
-        ]
-       }
-      }
-     ],
-     "track-count": 24,
-     "media": [
-      {
-       "id": "2cf9b019-b286-37be-a660-2afabf34a896",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "7f4cfd54-86a7-3e60-8411-d332e811c99b",
-         "number": "10",
-         "title": "Baby Please Don't Go",
-         "length": 164000
-        }
-       ],
-       "track-count": 24,
-       "track-offset": 9
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "9414270e-6f4d-4b29-affa-ee430a323641",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 163133,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1990",
-   "releases": [
-    {
-     "id": "62cd3691-9ec4-4357-a283-fc91521ee70d",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "20 of the Greatest Hits of 1965",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "ea533462-1631-40a8-be7e-64b6ab5f26f3",
-      "title": "20 of the Greatest Hits of 1965",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1990",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1990",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 20,
-     "media": [
-      {
-       "id": "c278cfc4-746c-3adf-a115-20c3cbb72cbd",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "c2c87dac-46db-48b6-b1b3-d935c0ea5fe5",
-         "number": "18",
-         "title": "Baby Please Don’t Go",
-         "length": 163133
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 17
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "5a8b3a51-e974-4dfe-8b41-ee33edaa8c43",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 163000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1986",
-   "releases": [
-    {
-     "id": "c15f5b53-b71a-4843-98d2-3fd2c905546e",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "4d683d7f-a302-3eec-98a5-2b33cded1ff7",
-     "count": 2,
-     "title": "Them",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "joinphrase": " feat. ",
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      },
-      {
-       "name": "Van Morrison",
-       "artist": {
-        "id": "a41ac10f-0a56-4672-9161-b83f9b223559",
-        "name": "Van Morrison",
-        "sort-name": "Morrison, Van"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "b7569a9d-6551-31a1-87ac-322fb65d4f4b",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Them",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1990",
-     "country": "DE",
-     "release-events": [
-      {
-       "date": "1990",
-       "area": {
-        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
-        "name": "Germany",
-        "sort-name": "Germany",
-        "iso-3166-1-codes": [
-         "DE"
-        ]
-       }
-      }
-     ],
-     "track-count": 45,
-     "media": [
-      {
-       "id": "498be966-d029-3511-850f-11445962f29f",
-       "position": 2,
-       "format": "CD",
-       "track": [
-        {
-         "id": "fac475d4-90ea-3054-832c-fe77626bd163",
-         "number": "16",
-         "title": "Baby Please Don’t Go",
-         "length": 164000
-        }
-       ],
-       "track-count": 22,
-       "track-offset": 15
-      }
-     ]
-    },
-    {
-     "id": "7ce4e8bf-e140-44eb-964b-4cb492163799",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "5448635a-4efd-3698-a1cc-5a78e9e27bce",
-     "count": 2,
-     "title": "The Collection",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them featuring Van Morrison",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "69bad5ef-d5e5-4aa3-8556-4648397c4d23",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Collection",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1986",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1986",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      },
-      {
-       "date": "1986",
-       "area": {
-        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
-        "name": "Europe",
-        "sort-name": "Europe",
-        "iso-3166-1-codes": [
-         "XE"
-        ]
-       }
-      }
-     ],
-     "track-count": 24,
-     "media": [
-      {
-       "id": "fe9607d1-4c87-36ea-a0c5-f0f02d3890a7",
-       "position": 1,
-       "format": "12\" Vinyl",
-       "track": [
-        {
-         "id": "cdf7dd18-cb2e-487d-8d9e-24be6c7f16b0",
-         "number": "A1",
-         "title": "Baby Please Don’t Go"
-        }
-       ],
-       "track-count": 12,
-       "track-offset": 0
-      }
-     ]
-    },
-    {
-     "id": "b277c590-dbe1-4640-8c97-c45de3f5a606",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "0b5ac2ef-c9ae-3a26-8fd9-1a4f6c98f4f4",
-     "count": 1,
-     "title": "The Collection",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "joinphrase": " featuring Van Morrison",
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "69bad5ef-d5e5-4aa3-8556-4648397c4d23",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Collection",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1992",
-     "country": "XE",
-     "release-events": [
-      {
-       "date": "1992",
-       "area": {
-        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
-        "name": "Europe",
-        "sort-name": "Europe",
-        "iso-3166-1-codes": [
-         "XE"
-        ]
-       }
-      }
-     ],
-     "track-count": 24,
-     "media": [
-      {
-       "id": "3649d62c-d415-3350-991c-c81a28bd02c6",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "132e1946-2938-4735-8d0e-fd21d38ba05e",
-         "number": "1",
-         "title": "Baby Please Don’t Go",
-         "length": 163000
-        }
-       ],
-       "track-count": 24,
-       "track-offset": 0
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "e99a93c2-6f63-40e6-b52d-050b85ac53ce",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby, Please Don’t Go",
-   "length": 160000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1964-11-06",
-   "releases": [
-    {
-     "id": "1303e909-8e33-403c-921a-22d6957a3d55",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Gloria / Baby Please Don’t Go",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
-      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "title": "Baby Please Don't Go / Gloria",
-      "primary-type": "Single"
-     },
-     "date": "1973",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "1973",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 2,
-     "media": [
-      {
-       "id": "14ade0fb-0f79-3b49-ac82-b62055607d7f",
-       "position": 1,
-       "format": "7\" Vinyl",
-       "track": [
-        {
-         "id": "a8f38577-c190-3722-be83-0374e539537b",
-         "number": "B",
-         "title": "Baby Please Don’t Go"
-        }
-       ],
-       "track-count": 2,
-       "track-offset": 1
-      }
-     ]
-    },
-    {
-     "id": "1dbea42c-1180-4daf-8d31-d168f3c72f79",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Gloria / Nena, no te vayas",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
-      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "title": "Baby Please Don't Go / Gloria",
-      "primary-type": "Single"
-     },
-     "date": "1965",
-     "country": "MX",
-     "release-events": [
-      {
-       "date": "1965",
-       "area": {
-        "id": "3e08b2cd-69f3-317c-b1e4-e71be581839e",
-        "name": "Mexico",
-        "sort-name": "Mexico",
-        "iso-3166-1-codes": [
-         "MX"
-        ]
-       }
-      }
-     ],
-     "track-count": 2,
-     "media": [
-      {
-       "id": "25bcbc31-5ebe-37bd-bb70-b4b719fbf72f",
-       "position": 1,
-       "format": "7\" Vinyl",
-       "track": [
-        {
-         "id": "2e482232-46bc-4926-a61f-69174b1ea6e3",
-         "number": "B",
-         "title": "Nena, no te vayas",
-         "length": 160000
-        }
-       ],
-       "track-count": 2,
-       "track-offset": 1
-      }
-     ]
-    },
-    {
-     "id": "89838685-56c4-414b-8cf5-a734ebb39782",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Here Comes the Night",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "d39eb565-316e-4f27-9f99-14d16619b75e",
-      "type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
-      "primary-type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
-      "title": "Here Comes the Night",
-      "primary-type": "EP"
-     },
-     "date": "1965",
-     "country": "MX",
-     "release-events": [
-      {
-       "date": "1965",
-       "area": {
-        "id": "3e08b2cd-69f3-317c-b1e4-e71be581839e",
-        "name": "Mexico",
-        "sort-name": "Mexico",
-        "iso-3166-1-codes": [
-         "MX"
-        ]
-       }
-      }
-     ],
-     "track-count": 4,
-     "media": [
-      {
-       "id": "5650e1cb-74c1-3a63-bf25-3f89e1414744",
-       "position": 1,
-       "format": "7\" Vinyl",
-       "track": [
-        {
-         "id": "de84624a-74ed-4432-a03d-2b553bedd156",
-         "number": "B2",
-         "title": "Baby, Please Don’t Go"
-        }
-       ],
-       "track-count": 4,
-       "track-offset": 3
-      }
-     ]
-    },
-    {
-     "id": "6481a043-8f97-301d-9bf8-1275265fa74e",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Gloria / Baby Please Don't Go",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
-      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
-      "title": "Baby Please Don't Go / Gloria",
-      "primary-type": "Single"
-     },
-     "date": "1964-11-06",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1964-11-06",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 2,
-     "media": [
-      {
-       "id": "be8b62b0-9c38-3dd0-8bbc-d52635ea6ce4",
-       "position": 1,
-       "format": "7\" Vinyl",
-       "track": [
-        {
-         "id": "b58c7638-7061-3ce5-8293-5d84f75f06f0",
-         "number": "1",
-         "title": "Baby Please Don't Go",
-         "length": 160000
-        }
-       ],
-       "track-count": 2,
-       "track-offset": 0
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "b60e732e-a700-4506-8451-a7fa81fec09a",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 166066,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "releases": [
-    {
-     "id": "1eea4c84-e7c2-4d8d-b21e-bdf7c2c34643",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "Now Hear This!",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "10a15b32-fd0b-381d-8d74-94647155ff3f",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Now Hear This!",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "track-count": 20,
-     "media": [
-      {
-       "id": "4e9c8b55-7216-3bbc-9963-1c9684ec9e72",
-       "position": 1,
-       "track": [
-        {
-         "id": "e8888ded-a172-3454-8ce9-45c2b0d1e27c",
-         "number": "1",
-         "title": "Baby Please Don’t Go",
-         "length": 166066
-        }
-       ],
-       "track-count": 20,
-       "track-offset": 0
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "576d8522-4052-47a2-8467-951825761e29",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 161173,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1998-11-13",
-   "releases": [
-    {
-     "id": "ef063d65-60aa-4ac6-8900-24328c7d58d8",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Ready Steady Go! The Number One Sixties Album, Volume II",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "badc27dc-434d-45de-bb56-01391b7274ef",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Ready Steady Go! The Number One Sixties Album, Volume II",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1998-11-13",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1998-11-13",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 50,
-     "media": [
-      {
-       "id": "07282fda-f1b4-3faa-99cb-6d788d0af4ec",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "c4d4986a-5ed5-3142-8d5b-be7f5d5d33c1",
-         "number": "15",
-         "title": "Baby Please Don’t Go",
-         "length": 161173
-        }
-       ],
-       "track-count": 25,
-       "track-offset": 14
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "bdf1eb2b-6e4e-4a0d-9b77-0a9b73e8a421",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 162066,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1987",
-   "releases": [
-    {
-     "id": "d8a8a25d-fd04-403a-892b-a539fd9e691c",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "Hits of the Sixties",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "fc158dac-7e53-4909-86d4-11289db11ef4",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Hits of the Sixties",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1987",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1987",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 18,
-     "media": [
-      {
-       "id": "b83dfa3c-49e3-31ab-b927-b8dc3b626a07",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "af1e937a-44a1-4304-ac0c-9cc0e528b823",
-         "number": "2",
-         "title": "Baby Please Don’t Go",
-         "length": 162066
-        }
-       ],
-       "track-count": 18,
-       "track-offset": 1
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "bf5b18cd-2144-4198-bff5-4a62cab6e4f6",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 163538,
-   "disambiguation": "original mono studio mix",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2015-12-04",
-   "releases": [
-    {
-     "id": "b458a262-46d7-4738-8f4e-1a2a7e1b7afb",
-     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 3,
-     "title": "The Even More Complete Them (1964–1966)",
-     "status": "Bootleg",
-     "disambiguation": "A Prof. Stoned Comp",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Complete Them (1964–1967)",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "",
-     "country": "XW",
-     "release-events": [
-      {
-       "date": "",
-       "area": {
-        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
-        "name": "[Worldwide]",
-        "sort-name": "[Worldwide]",
-        "iso-3166-1-codes": [
-         "XW"
-        ]
-       }
-      }
-     ],
-     "track-count": 83,
-     "media": [
-      {
-       "id": "dc3f3e2f-7962-3d7c-9ad9-0f644996a95a",
-       "position": 1,
-       "format": "Digital Media",
-       "track": [
-        {
-         "id": "c0b2d55f-6db1-41c2-bdd4-ac6246b26627",
-         "number": "5",
-         "title": "Baby Please Don’t Go",
-         "length": 163538
-        }
-       ],
-       "track-count": 49,
-       "track-offset": 4
-      }
-     ]
-    },
-    {
-     "id": "af9fde08-35d7-4d61-8baa-08edf8cced45",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 3,
-     "title": "The Complete Them (1964–1967)",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Complete Them (1964–1967)",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "2015-12-04",
-     "country": "XE",
-     "release-events": [
-      {
-       "date": "2015-12-04",
-       "area": {
-        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
-        "name": "Europe",
-        "sort-name": "Europe",
-        "iso-3166-1-codes": [
-         "XE"
-        ]
-       }
-      }
-     ],
-     "track-count": 69,
-     "media": [
-      {
-       "id": "22db2060-4ccd-33b7-955b-4df5a931a544",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "182ec241-9576-4a3d-afaf-741c0ae3b52f",
-         "number": "3",
-         "title": "Baby Please Don’t Go",
-         "length": 163533
-        }
-       ],
-       "track-count": 23,
-       "track-offset": 2
-      }
-     ]
-    },
-    {
-     "id": "428f1133-1344-4616-a254-6fd9d25245c7",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "Complete Them (1964–1967)",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The Complete Them (1964–1967)",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "2015-12-04",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "2015-12-04",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 69,
-     "media": [
-      {
-       "id": "50a79c78-1cc3-3dd5-8259-a66fe00b940e",
-       "position": 1,
-       "format": "Digital Media",
-       "track": [
-        {
-         "id": "6cc1123d-3808-4961-9225-585118548d20",
-         "number": "3",
-         "title": "Baby Please Don’t Go",
-         "length": 163538
-        }
-       ],
-       "track-count": 69,
-       "track-offset": 2
-      }
-     ]
-    }
-   ],
-   "isrcs": [
-    "USQX91501701"
-   ]
-  },
-  {
-   "id": "3584311e-0b2e-4c1f-9260-7c65d490b5c6",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1982",
-   "releases": [
-    {
-     "id": "a2f42950-410d-485c-a821-16ae3dea938f",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "e67421fb-f7f3-45b8-b82b-002887f03c9e",
-     "count": 1,
-     "title": "The History of Rock, Volume Eleven",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "joinphrase": " / ",
-       "name": "John Mayall & the Bluesbreakers",
-       "artist": {
-        "id": "4756395c-57ed-4a63-afb2-01117f14dff6",
-        "name": "John Mayall & the Bluesbreakers",
-        "sort-name": "Mayall, John & the Bluesbreakers"
-       }
-      },
-      {
-       "joinphrase": " / ",
-       "name": "Small Faces",
-       "artist": {
-        "id": "7771a68c-ef6a-400f-978d-64050d45a54c",
-        "name": "Small Faces",
-        "sort-name": "Small Faces"
-       }
-      },
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "77da7022-c1c3-38c9-99ce-a37af5d216c4",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The History of Rock, Volume Eleven",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1982",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1982",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 18,
-     "media": [
-      {
-       "id": "09edfced-26a2-3f83-90e4-7bc089a389e1",
-       "position": 1,
-       "format": "12\" Vinyl",
-       "track": [
-        {
-         "id": "a493cf2b-bcb8-3bd2-9228-1c106e7a6bc3",
-         "number": "B6",
-         "title": "Baby Please Don’t Go"
-        }
-       ],
-       "track-count": 18,
-       "track-offset": 13
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "c6a36b13-4561-4211-8588-6df77582643a",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "length": 159000,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2024-10",
-   "releases": [
-    {
-     "id": "cce7f5b0-20c1-4738-b5a9-ee98cf014f00",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 1,
-     "title": "Hard to Find Jukebox Classics - Stereo Explosion Volume 12: The British Invasion",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "cddb387e-730a-4502-a183-4e24958ede3a",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Hard to Find Jukebox Classics - Stereo Explosion Volume 12: The British Invasion",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "2024-10",
-     "country": "CA",
-     "release-events": [
-      {
-       "date": "2024-10",
-       "area": {
-        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
-        "name": "Canada",
-        "sort-name": "Canada",
-        "iso-3166-1-codes": [
-         "CA"
-        ]
-       }
-      },
-      {
-       "date": "2024-10",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 27,
-     "media": [
-      {
-       "id": "37a74c9a-4511-463f-9121-dcc908aa4078",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "28113149-88a8-44fa-a703-1d36bcc3e27f",
-         "number": "8",
-         "title": "Baby Please Don’t Go",
-         "length": 159000
-        }
-       ],
-       "track-count": 27,
-       "track-offset": 7
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "f530712b-dcdf-4b5d-b686-411c430d28f9",
-   "score": 100,
-   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-   "title": "Baby Please Don’t Go",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Them",
-     "artist": {
-      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-      "name": "Them",
-      "sort-name": "Them",
-      "disambiguation": "Northern Irish group originally feat. Van Morrison",
-      "aliases": [
-       {
-        "sort-name": "Them Feat. Van Morrison",
-        "name": "Them Feat. Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Them featuring Van Morrison",
-        "name": "Them featuring Van Morrison",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "THEM",
-        "name": "THEM",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1970",
-   "releases": [
-    {
-     "id": "9031a638-456b-40f0-82b5-7ebbc3e8ddaa",
-     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
-     "count": 1,
-     "title": "The World of Them",
-     "artist-credit": [
-      {
-       "name": "Them",
-       "artist": {
-        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
-        "name": "Them",
-        "sort-name": "Them",
-        "disambiguation": "Northern Irish group originally feat. Van Morrison"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "01f09f7f-5e6b-4e06-ad79-8261de34ba27",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "The World of Them",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1970",
-     "country": "GB",
-     "release-events": [
-      {
-       "date": "1970",
-       "area": {
-        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
-        "name": "United Kingdom",
-        "sort-name": "United Kingdom",
-        "iso-3166-1-codes": [
-         "GB"
-        ]
-       }
-      }
-     ],
-     "track-count": 12,
-     "media": [
-      {
-       "id": "addbbd82-a161-4975-8ded-8412e4e52af9",
-       "position": 1,
-       "format": "12\" Vinyl",
-       "track": [
-        {
-         "id": "ab645219-bf2f-4049-a99d-77a968b8217d",
-         "number": "A2",
-         "title": "Baby Please Don’t Go"
-        }
-       ],
-       "track-count": 12,
-       "track-offset": 1
-      }
-     ]
-    }
-   ]
-  },
   {
    "id": "50063359-e3b1-4e4b-81c9-edf7c2b0461f",
    "score": 100,
@@ -5016,6 +2841,959 @@
    ]
   },
   {
+   "id": "b60e732e-a700-4506-8451-a7fa81fec09a",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 166066,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "1eea4c84-e7c2-4d8d-b21e-bdf7c2c34643",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Now Hear This!",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "10a15b32-fd0b-381d-8d74-94647155ff3f",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Now Hear This!",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 20,
+     "media": [
+      {
+       "id": "4e9c8b55-7216-3bbc-9963-1c9684ec9e72",
+       "position": 1,
+       "track": [
+        {
+         "id": "e8888ded-a172-3454-8ce9-45c2b0d1e27c",
+         "number": "1",
+         "title": "Baby Please Don’t Go",
+         "length": 166066
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "576d8522-4052-47a2-8467-951825761e29",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 161173,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1998-11-13",
+   "releases": [
+    {
+     "id": "ef063d65-60aa-4ac6-8900-24328c7d58d8",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Ready Steady Go! The Number One Sixties Album, Volume II",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "badc27dc-434d-45de-bb56-01391b7274ef",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Ready Steady Go! The Number One Sixties Album, Volume II",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1998-11-13",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1998-11-13",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 50,
+     "media": [
+      {
+       "id": "07282fda-f1b4-3faa-99cb-6d788d0af4ec",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "c4d4986a-5ed5-3142-8d5b-be7f5d5d33c1",
+         "number": "15",
+         "title": "Baby Please Don’t Go",
+         "length": 161173
+        }
+       ],
+       "track-count": 25,
+       "track-offset": 14
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bdf1eb2b-6e4e-4a0d-9b77-0a9b73e8a421",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 162066,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1987",
+   "releases": [
+    {
+     "id": "d8a8a25d-fd04-403a-892b-a539fd9e691c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Hits of the Sixties",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "fc158dac-7e53-4909-86d4-11289db11ef4",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Hits of the Sixties",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1987",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1987",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "b83dfa3c-49e3-31ab-b927-b8dc3b626a07",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "af1e937a-44a1-4304-ac0c-9cc0e528b823",
+         "number": "2",
+         "title": "Baby Please Don’t Go",
+         "length": 162066
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bf5b18cd-2144-4198-bff5-4a62cab6e4f6",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 163538,
+   "disambiguation": "original mono studio mix",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2015-12-04",
+   "releases": [
+    {
+     "id": "b458a262-46d7-4738-8f4e-1a2a7e1b7afb",
+     "status-id": "1156806e-d06a-38bd-83f0-cf2284a808b9",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 3,
+     "title": "The Even More Complete Them (1964–1966)",
+     "status": "Bootleg",
+     "disambiguation": "A Prof. Stoned Comp",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Complete Them (1964–1967)",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 83,
+     "media": [
+      {
+       "id": "dc3f3e2f-7962-3d7c-9ad9-0f644996a95a",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "c0b2d55f-6db1-41c2-bdd4-ac6246b26627",
+         "number": "5",
+         "title": "Baby Please Don’t Go",
+         "length": 163538
+        }
+       ],
+       "track-count": 49,
+       "track-offset": 4
+      }
+     ]
+    },
+    {
+     "id": "af9fde08-35d7-4d61-8baa-08edf8cced45",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 3,
+     "title": "The Complete Them (1964–1967)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Complete Them (1964–1967)",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2015-12-04",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "2015-12-04",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 69,
+     "media": [
+      {
+       "id": "22db2060-4ccd-33b7-955b-4df5a931a544",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "182ec241-9576-4a3d-afaf-741c0ae3b52f",
+         "number": "3",
+         "title": "Baby Please Don’t Go",
+         "length": 163533
+        }
+       ],
+       "track-count": 23,
+       "track-offset": 2
+      }
+     ]
+    },
+    {
+     "id": "428f1133-1344-4616-a254-6fd9d25245c7",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Complete Them (1964–1967)",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d8fe6d21-2039-4970-b3f3-40824a186292",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Complete Them (1964–1967)",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2015-12-04",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2015-12-04",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 69,
+     "media": [
+      {
+       "id": "50a79c78-1cc3-3dd5-8259-a66fe00b940e",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "6cc1123d-3808-4961-9225-585118548d20",
+         "number": "3",
+         "title": "Baby Please Don’t Go",
+         "length": 163538
+        }
+       ],
+       "track-count": 69,
+       "track-offset": 2
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "USQX91501701"
+   ]
+  },
+  {
+   "id": "3584311e-0b2e-4c1f-9260-7c65d490b5c6",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1982",
+   "releases": [
+    {
+     "id": "a2f42950-410d-485c-a821-16ae3dea938f",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "e67421fb-f7f3-45b8-b82b-002887f03c9e",
+     "count": 1,
+     "title": "The History of Rock, Volume Eleven",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " / ",
+       "name": "John Mayall & the Bluesbreakers",
+       "artist": {
+        "id": "4756395c-57ed-4a63-afb2-01117f14dff6",
+        "name": "John Mayall & the Bluesbreakers",
+        "sort-name": "Mayall, John & the Bluesbreakers"
+       }
+      },
+      {
+       "joinphrase": " / ",
+       "name": "Small Faces",
+       "artist": {
+        "id": "7771a68c-ef6a-400f-978d-64050d45a54c",
+        "name": "Small Faces",
+        "sort-name": "Small Faces"
+       }
+      },
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "77da7022-c1c3-38c9-99ce-a37af5d216c4",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The History of Rock, Volume Eleven",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1982",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1982",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "09edfced-26a2-3f83-90e4-7bc089a389e1",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "a493cf2b-bcb8-3bd2-9228-1c106e7a6bc3",
+         "number": "B6",
+         "title": "Baby Please Don’t Go"
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 13
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c6a36b13-4561-4211-8588-6df77582643a",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 159000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2024-10",
+   "releases": [
+    {
+     "id": "cce7f5b0-20c1-4738-b5a9-ee98cf014f00",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Hard to Find Jukebox Classics - Stereo Explosion Volume 12: The British Invasion",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "cddb387e-730a-4502-a183-4e24958ede3a",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Hard to Find Jukebox Classics - Stereo Explosion Volume 12: The British Invasion",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2024-10",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "2024-10",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      },
+      {
+       "date": "2024-10",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 27,
+     "media": [
+      {
+       "id": "37a74c9a-4511-463f-9121-dcc908aa4078",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "28113149-88a8-44fa-a703-1d36bcc3e27f",
+         "number": "8",
+         "title": "Baby Please Don’t Go",
+         "length": 159000
+        }
+       ],
+       "track-count": 27,
+       "track-offset": 7
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "f530712b-dcdf-4b5d-b686-411c430d28f9",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1970",
+   "releases": [
+    {
+     "id": "9031a638-456b-40f0-82b5-7ebbc3e8ddaa",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "The World of Them",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "01f09f7f-5e6b-4e06-ad79-8261de34ba27",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The World of Them",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1970",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1970",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 12,
+     "media": [
+      {
+       "id": "addbbd82-a161-4975-8ded-8412e4e52af9",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "ab645219-bf2f-4049-a99d-77a968b8217d",
+         "number": "A2",
+         "title": "Baby Please Don’t Go"
+        }
+       ],
+       "track-count": 12,
+       "track-offset": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
    "id": "1a8d9186-d497-45e9-8237-591ad238825b",
    "score": 100,
    "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
@@ -7003,6 +5781,1228 @@
        ],
        "track-count": 18,
        "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fa87e5a5-5647-4e66-aa67-26120dc8363f",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 161000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1991",
+   "releases": [
+    {
+     "id": "6af06d64-7df8-48c2-a2cb-35ed89041054",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Gloria",
+     "status": "Official",
+     "disambiguation": "limited edition",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f6d31bc4-fa67-48c5-a548-49bdc887e89a",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Gloria",
+      "primary-type": "Single"
+     },
+     "date": "1991",
+     "country": "FR",
+     "release-events": [
+      {
+       "date": "1991",
+       "area": {
+        "id": "08310658-51eb-3801-80de-5a0739207115",
+        "name": "France",
+        "sort-name": "France",
+        "iso-3166-1-codes": [
+         "FR"
+        ]
+       }
+      }
+     ],
+     "track-count": 4,
+     "media": [
+      {
+       "id": "7a09a5b4-7bf1-353c-84bf-d41aa2b752c8",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "71e5b46c-6926-4429-bfe7-9bfabc199f84",
+         "number": "2",
+         "title": "Baby Please Don’t Go",
+         "length": 161000
+        }
+       ],
+       "track-count": 4,
+       "track-offset": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "658355bc-de49-4ba2-abc8-f371b959810b",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 162560,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1996",
+   "releases": [
+    {
+     "id": "5ab0ad25-5679-473c-ae91-3bc9b4218874",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Dancing in the Street",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "dfcba1bd-8c13-319e-9f43-7fec23e82a84",
+      "type-id": "22a628ad-c082-3c4f-b1b6-d41665107b88",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Dancing in the Street",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Soundtrack"
+      ],
+      "secondary-type-ids": [
+       "22a628ad-c082-3c4f-b1b6-d41665107b88"
+      ]
+     },
+     "date": "1996",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1996",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 40,
+     "media": [
+      {
+       "id": "2535d278-c1ea-3892-9048-1cefdac0f051",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "c781a29e-8046-3ffd-9f16-498ede754fcc",
+         "number": "20",
+         "title": "Baby Please Don’t Go",
+         "length": 162560
+        }
+       ],
+       "track-count": 23,
+       "track-offset": 19
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "f8a25030-ba8b-431a-afd6-85e2eb9bca15",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 165000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1988",
+   "releases": [
+    {
+     "id": "1e863767-024f-4ec6-a5e5-0f2b718b6a39",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "Baby Boomer Classics: Sixties, Volume 3",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "f93fddef-7a4e-3b14-9da0-f238ae4eddf3",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Baby Boomer Classics: Sixties, Volume 3",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1988",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1988",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 20,
+     "media": [
+      {
+       "id": "627f16e6-d24c-33f1-80c5-fa25a1a33067",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "b4ced9d5-24ec-31a7-a603-660badc7e65a",
+         "number": "4",
+         "title": "Baby Please Don’t Go",
+         "length": 165000
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "11bf1245-7c7c-4a10-9697-86f641443ac3",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 165800,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "releases": [
+    {
+     "id": "3b417aae-78d3-4f88-97ee-27b68f2f160b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "The Sixties, Volume 3",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "092844e6-7b73-3ac1-9fc6-d001405d6310",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Sixties, Volume 3",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "track-count": 20,
+     "media": [
+      {
+       "id": "7b8491df-1179-366c-8059-dbc4846a9f71",
+       "position": 1,
+       "track": [
+        {
+         "id": "7dd8043c-f559-39d8-b2e0-506f8b7cea06",
+         "number": "4",
+         "title": "Baby Please Don’t Go",
+         "length": 165800
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "125c93b4-a430-4351-a5e0-4d1736a42314",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don't Go",
+   "length": 164000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1991",
+   "releases": [
+    {
+     "id": "87358d76-6a07-4d3e-9665-65f01cee553b",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "The Spirit of the 60s: 1965: The Hits Don't Stop",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "c9b61577-136e-4dc7-90d7-d45901c2eb61",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Spirit of the 60s: 1965: The Hits Don't Stop",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1991",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "1991",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 24,
+     "media": [
+      {
+       "id": "2cf9b019-b286-37be-a660-2afabf34a896",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "7f4cfd54-86a7-3e60-8411-d332e811c99b",
+         "number": "10",
+         "title": "Baby Please Don't Go",
+         "length": 164000
+        }
+       ],
+       "track-count": 24,
+       "track-offset": 9
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9414270e-6f4d-4b29-affa-ee430a323641",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 163133,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1990",
+   "releases": [
+    {
+     "id": "62cd3691-9ec4-4357-a283-fc91521ee70d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 1,
+     "title": "20 of the Greatest Hits of 1965",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "ea533462-1631-40a8-be7e-64b6ab5f26f3",
+      "title": "20 of the Greatest Hits of 1965",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1990",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1990",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 20,
+     "media": [
+      {
+       "id": "c278cfc4-746c-3adf-a115-20c3cbb72cbd",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "c2c87dac-46db-48b6-b1b3-d935c0ea5fe5",
+         "number": "18",
+         "title": "Baby Please Don’t Go",
+         "length": 163133
+        }
+       ],
+       "track-count": 20,
+       "track-offset": 17
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "5a8b3a51-e974-4dfe-8b41-ee33edaa8c43",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby Please Don’t Go",
+   "length": 163000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1986",
+   "releases": [
+    {
+     "id": "c15f5b53-b71a-4843-98d2-3fd2c905546e",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "4d683d7f-a302-3eec-98a5-2b33cded1ff7",
+     "count": 2,
+     "title": "Them",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " feat. ",
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      },
+      {
+       "name": "Van Morrison",
+       "artist": {
+        "id": "a41ac10f-0a56-4672-9161-b83f9b223559",
+        "name": "Van Morrison",
+        "sort-name": "Morrison, Van"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "b7569a9d-6551-31a1-87ac-322fb65d4f4b",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Them",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1990",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1990",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 45,
+     "media": [
+      {
+       "id": "498be966-d029-3511-850f-11445962f29f",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "fac475d4-90ea-3054-832c-fe77626bd163",
+         "number": "16",
+         "title": "Baby Please Don’t Go",
+         "length": 164000
+        }
+       ],
+       "track-count": 22,
+       "track-offset": 15
+      }
+     ]
+    },
+    {
+     "id": "7ce4e8bf-e140-44eb-964b-4cb492163799",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "5448635a-4efd-3698-a1cc-5a78e9e27bce",
+     "count": 2,
+     "title": "The Collection",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them featuring Van Morrison",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "69bad5ef-d5e5-4aa3-8556-4648397c4d23",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Collection",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1986",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1986",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      },
+      {
+       "date": "1986",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 24,
+     "media": [
+      {
+       "id": "fe9607d1-4c87-36ea-a0c5-f0f02d3890a7",
+       "position": 1,
+       "format": "12\" Vinyl",
+       "track": [
+        {
+         "id": "cdf7dd18-cb2e-487d-8d9e-24be6c7f16b0",
+         "number": "A1",
+         "title": "Baby Please Don’t Go"
+        }
+       ],
+       "track-count": 12,
+       "track-offset": 0
+      }
+     ]
+    },
+    {
+     "id": "b277c590-dbe1-4640-8c97-c45de3f5a606",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "0b5ac2ef-c9ae-3a26-8fd9-1a4f6c98f4f4",
+     "count": 1,
+     "title": "The Collection",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " featuring Van Morrison",
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "69bad5ef-d5e5-4aa3-8556-4648397c4d23",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "The Collection",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "1992",
+     "country": "XE",
+     "release-events": [
+      {
+       "date": "1992",
+       "area": {
+        "id": "89a675c2-3e37-3518-b83c-418bad59a85a",
+        "name": "Europe",
+        "sort-name": "Europe",
+        "iso-3166-1-codes": [
+         "XE"
+        ]
+       }
+      }
+     ],
+     "track-count": 24,
+     "media": [
+      {
+       "id": "3649d62c-d415-3350-991c-c81a28bd02c6",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "132e1946-2938-4735-8d0e-fd21d38ba05e",
+         "number": "1",
+         "title": "Baby Please Don’t Go",
+         "length": 163000
+        }
+       ],
+       "track-count": 24,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "e99a93c2-6f63-40e6-b52d-050b85ac53ce",
+   "score": 100,
+   "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+   "title": "Baby, Please Don’t Go",
+   "length": 160000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Them",
+     "artist": {
+      "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "name": "Them",
+      "sort-name": "Them",
+      "disambiguation": "Northern Irish group originally feat. Van Morrison",
+      "aliases": [
+       {
+        "sort-name": "Them Feat. Van Morrison",
+        "name": "Them Feat. Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Them featuring Van Morrison",
+        "name": "Them featuring Van Morrison",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "THEM",
+        "name": "THEM",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1964-11-06",
+   "releases": [
+    {
+     "id": "1303e909-8e33-403c-921a-22d6957a3d55",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Gloria / Baby Please Don’t Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Baby Please Don't Go / Gloria",
+      "primary-type": "Single"
+     },
+     "date": "1973",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "1973",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 2,
+     "media": [
+      {
+       "id": "14ade0fb-0f79-3b49-ac82-b62055607d7f",
+       "position": 1,
+       "format": "7\" Vinyl",
+       "track": [
+        {
+         "id": "a8f38577-c190-3722-be83-0374e539537b",
+         "number": "B",
+         "title": "Baby Please Don’t Go"
+        }
+       ],
+       "track-count": 2,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "1dbea42c-1180-4daf-8d31-d168f3c72f79",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Gloria / Nena, no te vayas",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Baby Please Don't Go / Gloria",
+      "primary-type": "Single"
+     },
+     "date": "1965",
+     "country": "MX",
+     "release-events": [
+      {
+       "date": "1965",
+       "area": {
+        "id": "3e08b2cd-69f3-317c-b1e4-e71be581839e",
+        "name": "Mexico",
+        "sort-name": "Mexico",
+        "iso-3166-1-codes": [
+         "MX"
+        ]
+       }
+      }
+     ],
+     "track-count": 2,
+     "media": [
+      {
+       "id": "25bcbc31-5ebe-37bd-bb70-b4b719fbf72f",
+       "position": 1,
+       "format": "7\" Vinyl",
+       "track": [
+        {
+         "id": "2e482232-46bc-4926-a61f-69174b1ea6e3",
+         "number": "B",
+         "title": "Nena, no te vayas",
+         "length": 160000
+        }
+       ],
+       "track-count": 2,
+       "track-offset": 1
+      }
+     ]
+    },
+    {
+     "id": "89838685-56c4-414b-8cf5-a734ebb39782",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Here Comes the Night",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "d39eb565-316e-4f27-9f99-14d16619b75e",
+      "type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "primary-type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "title": "Here Comes the Night",
+      "primary-type": "EP"
+     },
+     "date": "1965",
+     "country": "MX",
+     "release-events": [
+      {
+       "date": "1965",
+       "area": {
+        "id": "3e08b2cd-69f3-317c-b1e4-e71be581839e",
+        "name": "Mexico",
+        "sort-name": "Mexico",
+        "iso-3166-1-codes": [
+         "MX"
+        ]
+       }
+      }
+     ],
+     "track-count": 4,
+     "media": [
+      {
+       "id": "5650e1cb-74c1-3a63-bf25-3f89e1414744",
+       "position": 1,
+       "format": "7\" Vinyl",
+       "track": [
+        {
+         "id": "de84624a-74ed-4432-a03d-2b553bedd156",
+         "number": "B2",
+         "title": "Baby, Please Don’t Go"
+        }
+       ],
+       "track-count": 4,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "6481a043-8f97-301d-9bf8-1275265fa74e",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "05f323c0-1e70-3815-a276-db49f258dc42",
+     "count": 1,
+     "title": "Gloria / Baby Please Don't Go",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Them",
+       "artist": {
+        "id": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+        "name": "Them",
+        "sort-name": "Them",
+        "disambiguation": "Northern Irish group originally feat. Van Morrison"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "61aefdd1-fb32-42fe-93cc-81756c7b385d",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Baby Please Don't Go / Gloria",
+      "primary-type": "Single"
+     },
+     "date": "1964-11-06",
+     "country": "GB",
+     "release-events": [
+      {
+       "date": "1964-11-06",
+       "area": {
+        "id": "8a754a16-0027-3a29-b6d7-2b40ea0481ed",
+        "name": "United Kingdom",
+        "sort-name": "United Kingdom",
+        "iso-3166-1-codes": [
+         "GB"
+        ]
+       }
+      }
+     ],
+     "track-count": 2,
+     "media": [
+      {
+       "id": "be8b62b0-9c38-3dd0-8bbc-d52635ea6ce4",
+       "position": 1,
+       "format": "7\" Vinyl",
+       "track": [
+        {
+         "id": "b58c7638-7061-3ce5-8293-5d84f75f06f0",
+         "number": "1",
+         "title": "Baby Please Don't Go",
+         "length": 160000
+        }
+       ],
+       "track-count": 2,
+       "track-offset": 0
       }
      ]
     }

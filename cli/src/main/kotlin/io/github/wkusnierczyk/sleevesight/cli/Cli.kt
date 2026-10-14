@@ -195,7 +195,7 @@ class Cli(
             val off =
                 when {
                     options.mode == Mode.REPLAY -> "off: its fixtures are synthetic (Exa's terms), not facts"
-                    options.mode == Mode.RECORD -> "off: Exa's results may not be stored (§4.2(a))"
+                    options.mode == Mode.RECORD -> "off: Exa's results are not committed (§4.2(a))"
                     !options.web -> "off: --no-web"
                     key == null -> "off: no ${Keys.EXA}"
                     else -> null

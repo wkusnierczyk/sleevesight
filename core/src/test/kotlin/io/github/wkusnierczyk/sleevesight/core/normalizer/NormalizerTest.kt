@@ -221,6 +221,9 @@ class NormalizerTest {
         assertEquals("!!!|song", key("Song", "!!!"))
         assertEquals("a|song", key("Song 😀", "A"), "a part that keeps something is folded as before")
         assertEquals("|song", key("Song", ""), "a blank part stays empty")
+        assertEquals(key("★", "A"), key("★\uFE0F", "A"), "a variation selector is dropped here too")
+        assertEquals("a|★", key("★\u20DD", "A"), "and an enclosing mark")
+        assertEquals("|song", key("Song", "\uFE0F"), "a part of selectors only keys as empty")
     }
 
     @Test

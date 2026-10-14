@@ -237,7 +237,9 @@ class WikipediaSource(
             return sentences
         }
 
-        // A straight `"` directly after a digit: an inch mark, or the end of a quoted numeric title.
+        // A closing quote, straight `"` or curly `”`, directly after any Unicode number (`7"`,
+        // `7½"`): an inch mark, or the end of a quoted numeric title. `\p{N}` works on the JVM and
+        // Kotlin/JS; check Kotlin/Native's regex before `:sources` goes multiplatform.
         private val DIGIT_QUOTE = Regex("\\p{N}[\"”]")
 
         // Whether every quotation a piece opens it also closes.

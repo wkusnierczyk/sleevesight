@@ -7,6 +7,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -219,6 +220,8 @@ class JvmMainSourceSetTest {
         val failed = runner(":lib:checkJvmMainDependencies").buildAndFail()
         assertTrue("Dependencies that do not resolve" in failed.output, failed.output)
         assertTrue("jvmMainRuntimeClasspath: org.example.missing:nothing:1.0" in failed.output, failed.output)
+        // Once: the lenient artifact view's failure for the same dependency is not listed again.
+        assertFalse("jvmMainRuntimeClasspath: Could not find" in failed.output, failed.output)
     }
 
     @Test

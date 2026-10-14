@@ -9,7 +9,9 @@ import io.github.wkusnierczyk.sleevesight.core.resolution.IdentityCheck
 import io.github.wkusnierczyk.sleevesight.core.resolution.IdentityCheck.Verdict
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
 import io.github.wkusnierczyk.sleevesight.core.resolution.RecordingResolver
+import io.github.wkusnierczyk.sleevesight.core.resolution.Wd
 import io.github.wkusnierczyk.sleevesight.core.resolution.WikidataEvidence
+import io.github.wkusnierczyk.sleevesight.core.resolution.WikidataLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
 import io.github.wkusnierczyk.sleevesight.fixtures.RegressionCase
@@ -96,6 +98,45 @@ class IdentityCheckTest {
                 Verdict.Rejected("Q104092599", "“Willow” is by Taylor Swift, not by Jessiah"),
                 verdict(case(61)),
             )
+        }
+
+    @Test
+    fun `track 55 is Chuck Berry's own song by the dates alone, writers left out`() =
+        runTest {
+            val resolution = resolution(55)
+            assertTrue(resolution.earliest, "$resolution")
+            // The same Wikidata with the song's writer (Chuck Berry, Q5921) made unrecognisable, no
+            // label and no MusicBrainz id, so the writer rule cannot match and only the dates decide.
+            // The requests are the recorded ones; only the answers are filtered.
+            val wikidata = WikidataClient(net)
+            val writer = "Q5921"
+            val writerless =
+                object : WikidataLookup by wikidata {
+                    override suspend fun labels(ids: List<String>): Lookup<Map<String, String>> =
+                        when (val found = wikidata.labels(ids)) {
+                            is Lookup.Found -> Lookup.Found(found.value - writer)
+                            else -> found
+                        }
+
+                    override suspend fun claimValues(
+                        id: String,
+                        property: String,
+                    ): Lookup<List<String>> =
+                        if (id ==
+                            writer
+                        ) {
+                            Lookup.Found(emptyList())
+                        } else {
+                            wikidata.claimValues(id, property)
+                        }
+                }
+            val verdict =
+                IdentityCheck(writerless, RecordedTracks.names)
+                    .song("Q1437885", RecordedTracks.track(55), resolution, IdentityCheck.Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+            assertEquals(listOf(writer), verdict.item.values(Wd.COMPOSER))
+            assertTrue(writer !in verdict.labels)
         }
 
     @Test

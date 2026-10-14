@@ -3,7 +3,8 @@
 Real responses of the keyless sources for the fixture playlist's regression cases (`design/design.md`,
 *Test fixtures*), which the adapter tests replay so CI never calls a live service
 (`design/architecture.md`, *Testing*). Only what the tests need is recorded: the requests the code
-makes for the first occurrence of each regression track (`RecordedTracks` in `:sources`' tests).
+makes for the first occurrence of each regression track, and for the tracks on which the Phase 0.5
+gate run found resolution errors (`RecordedTracks` in `:sources`' tests).
 
 | Directory | Source | Licence of the content |
 |---|---|---|
@@ -46,7 +47,7 @@ does (MusicBrainz without `tags` and `genres`):
 ./gradlew :cli:run --args="replay"
 ```
 
-It does not prune. Web search is never recorded: Exa's results may not be stored (`web/README.md`).
+It does not prune. Web search is never recorded: Exa's results are not committed (`web/README.md`).
 `--record anthropic` records the model's replies to the pipeline's prompts, with the developer's key
 in the environment, into `anthropic/` (an `index.json` whose entries also carry the request body's
 SHA-256, `bodySha256`, since every prompt goes to the same URL; each reply as `messages-<hash>.sse`

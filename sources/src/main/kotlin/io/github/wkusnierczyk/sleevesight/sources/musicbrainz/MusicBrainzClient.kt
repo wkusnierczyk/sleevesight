@@ -110,8 +110,12 @@ class MusicBrainzClient(
     companion object {
         const val BASE: String = "https://musicbrainz.org/ws/2"
 
-        /** Enough for a song a band recorded many times (Them's "Baby, Please Don't Go": 31 recordings). */
-        const val SEARCH_LIMIT: Int = 50
+        /**
+         * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,
+         * and the search ranks the original far down, differently from one request to the next:
+         * with 50, Chuck Berry's 1956 "Roll Over Beethoven" was sometimes not among them (#78).
+         */
+        const val SEARCH_LIMIT: Int = 100
 
         const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels"
 
