@@ -1,655 +1,655 @@
 {
- "id": "c4efc5eb-9904-309a-97a4-675a73a9494f",
- "attributes": [
-  {
-   "type": "BMI ID",
-   "value": "421651",
-   "type-id": "c8ac7e55-fd45-3002-9f89-e8b43911a479"
-  }
- ],
- "iswcs": [
-  "T-010.157.503-4"
- ],
- "language": "eng",
  "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+ "type": "Song",
+ "title": "Fisherman’s Blues",
  "languages": [
   "eng"
  ],
+ "attributes": [
+  {
+   "value": "421651",
+   "type-id": "c8ac7e55-fd45-3002-9f89-e8b43911a479",
+   "type": "BMI ID"
+  }
+ ],
+ "disambiguation": "",
  "relations": [
   {
-   "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
-   "ended": false,
-   "end": null,
-   "attribute-ids": {},
-   "type": "writer",
-   "source-credit": "",
    "artist": {
     "sort-name": "Scott, Mike",
-    "country": "GB",
-    "disambiguation": "The Waterboys",
-    "id": "36deef3e-384d-4cdd-9a8e-f63aa3e16878",
+    "type": "Person",
     "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "GB",
     "name": "Mike Scott",
+    "id": "36deef3e-384d-4cdd-9a8e-f63aa3e16878",
+    "disambiguation": "The Waterboys"
+   },
+   "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "attribute-values": {},
+   "target-type": "artist",
+   "attribute-ids": {},
+   "ended": false,
+   "direction": "backward",
+   "type": "writer",
+   "attributes": [],
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {},
+   "target-type": "artist",
+   "target-credit": "",
+   "end": null,
+   "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
+   "artist": {
+    "disambiguation": "",
+    "name": "Steve Wickham",
+    "id": "fed16045-b97d-4708-8bf7-aae4da46c240",
+    "country": "IE",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Wickham, Steve",
     "type": "Person"
    },
-   "target-credit": "",
-   "direction": "backward",
-   "target-type": "artist",
-   "attributes": [],
    "begin": null,
-   "attribute-values": {}
-  },
-  {
-   "direction": "backward",
-   "target-type": "artist",
    "attributes": [],
-   "begin": null,
-   "attribute-values": {},
-   "ended": false,
-   "type-id": "a255bca1-b157-4518-9108-7b147dc3fc68",
-   "end": null,
-   "attribute-ids": {},
-   "type": "writer",
    "source-credit": "",
-   "artist": {
-    "name": "Steve Wickham",
-    "type": "Person",
-    "id": "fed16045-b97d-4708-8bf7-aae4da46c240",
-    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
-    "disambiguation": "",
-    "country": "IE",
-    "sort-name": "Wickham, Steve"
-   },
-   "target-credit": ""
+   "direction": "backward",
+   "type": "writer"
   },
   {
-   "end": "1986-01-23",
    "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": true,
-   "source-credit": "",
-   "type": "performance",
-   "attribute-ids": {},
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "name": "The Waterboys",
-      "joinphrase": "",
-      "artist": {
-       "country": "GB",
-       "disambiguation": "folk-rock",
-       "sort-name": "Waterboys, The",
-       "name": "The Waterboys",
-       "type": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type-id": null
-      }
-     }
-    ],
-    "disambiguation": "",
-    "title": "Fisherman’s Blues",
-    "length": 263560,
-    "id": "51b75c9a-8990-42d6-ad81-228d65805070"
-   },
-   "target-credit": "",
-   "direction": "backward",
-   "target-type": "recording",
-   "attributes": [],
    "begin": "1986-01-23",
-   "attribute-values": {}
-  },
-  {
-   "direction": "backward",
+   "target-credit": "",
+   "end": "1986-01-23",
    "target-type": "recording",
-   "attributes": [
-    "live"
-   ],
-   "begin": "1987-04-02",
-   "attribute-values": {},
    "ended": true,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": "1987-04-02",
-   "type": "performance",
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
-   "source-credit": "",
-   "recording": {
-    "length": 431000,
-    "id": "70b67f33-416a-4c29-ad26-8e9588782f1a",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "joinphrase": "",
-      "name": "The Waterboys",
-      "artist": {
-       "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type": null,
-       "name": "The Waterboys",
-       "sort-name": "Waterboys, The",
-       "disambiguation": "folk-rock",
-       "country": "GB"
-      }
-     }
-    ],
-    "title": "Fisherman's Blues",
-    "video": false
-   },
-   "target-credit": ""
-  },
-  {
-   "attribute-values": {},
-   "begin": "2002-01-25",
-   "target-type": "recording",
-   "attributes": [
-    "live"
-   ],
-   "direction": "backward",
-   "target-credit": "",
-   "recording": {
-    "video": false,
-    "title": "Fisherman's Blues",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "artist": {
-       "sort-name": "Waterboys, The",
-       "disambiguation": "folk-rock",
-       "country": "GB",
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type-id": null,
-       "name": "The Waterboys",
-       "type": null
-      },
-      "name": "The Waterboys",
-      "joinphrase": ""
-     }
-    ],
-    "length": 293000,
-    "id": "8867e918-c140-4761-b86f-f741d38875a0"
-   },
-   "source-credit": "",
-   "type": "performance",
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
-   "end": "2002-01-25",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": true
-  },
-  {
-   "target-credit": "",
-   "recording": {
-    "title": "Fisherman's Blues",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "artist": {
-       "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type": null,
-       "name": "The Waterboys",
-       "sort-name": "Waterboys, The",
-       "disambiguation": "folk-rock",
-       "country": "GB"
-      },
-      "name": "The Waterboys",
-      "joinphrase": ""
-     }
-    ],
-    "video": false,
-    "length": 304706,
-    "id": "f4ade58d-e00a-4993-b621-ac867216ec5a"
-   },
-   "source-credit": "",
-   "type": "performance",
    "attribute-ids": {},
-   "end": null,
-   "ended": false,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
    "attribute-values": {},
-   "begin": null,
-   "attributes": [],
-   "target-type": "recording",
-   "direction": "backward"
+   "type": "performance",
+   "direction": "backward",
+   "recording": {
+    "id": "51b75c9a-8990-42d6-ad81-228d65805070",
+    "length": 263560,
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "sort-name": "Waterboys, The",
+       "type-id": null,
+       "country": "GB",
+       "disambiguation": "folk-rock",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys"
+      },
+      "name": "The Waterboys",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "title": "Fisherman’s Blues"
+   },
+   "source-credit": "",
+   "attributes": []
   },
   {
-   "attributes": [
-    "live"
-   ],
-   "target-type": "recording",
-   "direction": "backward",
-   "attribute-values": {},
-   "begin": null,
-   "attribute-ids": {
-    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
-   },
    "type": "performance",
-   "source-credit": "",
-   "ended": false,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": null,
-   "target-credit": "",
+   "direction": "backward",
    "recording": {
-    "disambiguation": "",
     "artist-credit": [
      {
       "joinphrase": "",
       "name": "The Waterboys",
       "artist": {
-       "type": null,
-       "name": "The Waterboys",
-       "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
        "disambiguation": "folk-rock",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys",
        "country": "GB",
+       "type-id": null,
+       "type": null,
        "sort-name": "Waterboys, The"
       }
      }
     ],
-    "title": "Fisherman's Blues",
+    "disambiguation": "",
     "video": false,
-    "id": "237d05f3-1d52-4b91-9629-8fcea20d75fe",
-    "length": 298600
-   }
+    "length": 431000,
+    "id": "70b67f33-416a-4c29-ad26-8e9588782f1a",
+    "title": "Fisherman's Blues"
+   },
+   "source-credit": "",
+   "attributes": [
+    "live"
+   ],
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": "1987-04-02",
+   "target-credit": "",
+   "end": "1987-04-02",
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attribute-values": {}
   },
   {
-   "begin": null,
-   "attribute-values": {},
-   "direction": "backward",
-   "target-type": "recording",
-   "attributes": [],
+   "attributes": [
+    "live"
+   ],
    "recording": {
+    "id": "8867e918-c140-4761-b86f-f741d38875a0",
+    "length": 293000,
     "video": false,
     "artist-credit": [
      {
-      "joinphrase": "",
-      "name": "The Waterboys",
       "artist": {
        "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
        "type": null,
-       "name": "The Waterboys",
        "sort-name": "Waterboys, The",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys",
        "disambiguation": "folk-rock",
+       "country": "GB"
+      },
+      "name": "The Waterboys",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Fisherman's Blues"
+   },
+   "source-credit": "",
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "target-type": "recording",
+   "ended": true,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "begin": "2002-01-25",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": "2002-01-25",
+   "target-credit": ""
+  },
+  {
+   "recording": {
+    "length": 304706,
+    "id": "f4ade58d-e00a-4993-b621-ac867216ec5a",
+    "artist-credit": [
+     {
+      "name": "The Waterboys",
+      "joinphrase": "",
+      "artist": {
+       "name": "The Waterboys",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "disambiguation": "folk-rock",
+       "country": "GB",
+       "type-id": null,
+       "sort-name": "Waterboys, The",
+       "type": null
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "title": "Fisherman's Blues"
+   },
+   "source-credit": "",
+   "attributes": [],
+   "type": "performance",
+   "direction": "backward",
+   "target-type": "recording",
+   "attribute-ids": {},
+   "ended": false,
+   "attribute-values": {},
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "type": "performance",
+   "attributes": [
+    "live"
+   ],
+   "recording": {
+    "title": "Fisherman's Blues",
+    "artist-credit": [
+     {
+      "name": "The Waterboys",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "sort-name": "Waterboys, The",
+       "type": null,
+       "disambiguation": "folk-rock",
+       "name": "The Waterboys",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
        "country": "GB"
       }
      }
     ],
     "disambiguation": "",
-    "title": "Fisherman's Blues",
-    "id": "16fa6212-1feb-4d5d-ab61-0921d0769635",
-    "length": null
+    "video": false,
+    "length": 298600,
+    "id": "237d05f3-1d52-4b91-9629-8fcea20d75fe"
    },
-   "target-credit": "",
-   "end": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
    "source-credit": "",
-   "attribute-ids": {},
-   "type": "performance"
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "target-credit": "",
+   "attribute-values": {},
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
   },
   {
+   "source-credit": "",
    "recording": {
-    "title": "Fisherman's Blues",
+    "id": "16fa6212-1feb-4d5d-ab61-0921d0769635",
+    "length": null,
     "disambiguation": "",
     "artist-credit": [
      {
-      "joinphrase": "",
-      "name": "Dave Stewart",
       "artist": {
-       "type-id": null,
-       "id": "77c20400-148e-4631-ab76-f7d49528642c",
+       "country": "GB",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys",
+       "disambiguation": "folk-rock",
        "type": null,
+       "sort-name": "Waterboys, The",
+       "type-id": null
+      },
+      "name": "The Waterboys",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "title": "Fisherman's Blues"
+   },
+   "attributes": [],
+   "type": "performance",
+   "direction": "backward",
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attribute-values": {},
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Dave Stewart",
+      "joinphrase": "",
+      "artist": {
+       "country": "SE",
+       "id": "77c20400-148e-4631-ab76-f7d49528642c",
        "name": "Dave Stewart",
-       "sort-name": "Stewart, Dave",
        "disambiguation": "Street musician playing mostly in Sweden",
-       "country": "SE"
+       "type": null,
+       "sort-name": "Stewart, Dave",
+       "type-id": null
       }
      }
     ],
     "video": false,
+    "disambiguation": "",
+    "id": "9fefb22a-a252-4cbf-a74a-6a38f3ef0a5a",
     "length": 203040,
-    "id": "9fefb22a-a252-4cbf-a74a-6a38f3ef0a5a"
+    "title": "Fisherman's Blues"
    },
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "direction": "backward",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "attribute-values": {},
    "target-credit": "",
    "end": null,
    "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
-   "source-credit": "",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "type": "performance",
-   "begin": null,
-   "attribute-values": {},
-   "direction": "backward",
-   "attributes": [
-    "cover"
-   ],
-   "target-type": "recording"
+   "begin": null
   },
   {
    "direction": "backward",
+   "type": "performance",
    "attributes": [
     "cover"
    ],
-   "target-type": "recording",
-   "begin": null,
-   "attribute-values": {},
-   "end": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
-   "source-credit": "",
-   "type": "performance",
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
    "recording": {
     "video": false,
-    "disambiguation": "",
     "artist-credit": [
      {
       "artist": {
+       "type-id": null,
+       "type": null,
        "sort-name": "Vad Vuc, The",
        "disambiguation": "",
-       "country": "CH",
        "id": "aef856d9-d164-425d-a421-609fb7e47c86",
-       "type-id": null,
        "name": "The Vad Vuc",
-       "type": null
+       "country": "CH"
       },
       "joinphrase": "",
       "name": "The Vad Vuc"
      }
     ],
-    "title": "Fisherman's Blues",
+    "disambiguation": "",
+    "length": 263000,
     "id": "7f8817a0-6729-486e-99df-48bdb4c3e999",
-    "length": 263000
+    "title": "Fisherman's Blues"
    },
-   "target-credit": ""
-  },
-  {
-   "target-type": "recording",
-   "attributes": [
-    "cover"
-   ],
-   "direction": "backward",
-   "attribute-values": {},
-   "begin": null,
-   "attribute-ids": {
-    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
-   },
-   "type": "performance",
    "source-credit": "",
    "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
-   "end": null,
+   "begin": null,
    "target-credit": "",
+   "end": null,
+   "attribute-values": {},
+   "target-type": "recording",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "type": "performance",
+   "direction": "backward",
+   "source-credit": "",
    "recording": {
-    "id": "c2b6e415-d4c2-4380-9bcc-90e4a8094dae",
-    "length": 301000,
-    "video": false,
     "title": "Fisherman's Blues",
-    "disambiguation": "",
     "artist-credit": [
      {
       "artist": {
        "type-id": null,
-       "id": "54730ac7-7d23-4841-afb3-4d3d6eba52dd",
-       "type": null,
-       "name": "Barb Jungr",
        "sort-name": "Jungr, Barb",
-       "country": "GB",
-       "disambiguation": ""
+       "type": null,
+       "disambiguation": "",
+       "name": "Barb Jungr",
+       "id": "54730ac7-7d23-4841-afb3-4d3d6eba52dd",
+       "country": "GB"
       },
-      "name": "Barb Jungr",
-      "joinphrase": ""
+      "joinphrase": "",
+      "name": "Barb Jungr"
      }
-    ]
-   }
-  },
-  {
-   "direction": "backward",
-   "target-type": "recording",
-   "attributes": [],
+    ],
+    "disambiguation": "",
+    "video": false,
+    "id": "c2b6e415-d4c2-4380-9bcc-90e4a8094dae",
+    "length": 301000
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
    "begin": null,
-   "attribute-values": {},
    "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
    "ended": false,
-   "end": null,
-   "attribute-ids": {},
-   "type": "performance",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "attribute-values": {}
+  },
+  {
+   "attributes": [],
    "source-credit": "",
    "recording": {
+    "artist-credit": [
+     {
+      "name": "The Waterboys",
+      "joinphrase": "",
+      "artist": {
+       "country": "GB",
+       "disambiguation": "folk-rock",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys",
+       "type": null,
+       "sort-name": "Waterboys, The",
+       "type-id": null
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
     "length": 259079,
     "id": "9625e8f9-6b82-4500-8367-ce0416aafac2",
-    "video": false,
-    "title": "Fisherman’s Blues",
+    "title": "Fisherman’s Blues"
+   },
+   "direction": "backward",
+   "type": "performance",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "end": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "recording",
+   "attribute-values": {},
+   "type": "performance",
+   "direction": "backward",
+   "source-credit": "",
+   "recording": {
+    "id": "2e5b14c3-e296-48cd-baa1-8631f51d8359",
+    "length": 262067,
     "artist-credit": [
      {
       "joinphrase": "",
       "name": "The Waterboys",
       "artist": {
+       "sort-name": "Waterboys, The",
        "type": null,
-       "name": "The Waterboys",
        "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
        "country": "GB",
        "disambiguation": "folk-rock",
+       "name": "The Waterboys",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "video": false,
+    "title": "Fisherman’s Blues"
+   },
+   "attributes": []
+  },
+  {
+   "direction": "backward",
+   "type": "performance",
+   "attributes": [],
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "The Waterboys",
+      "artist": {
+       "type-id": null,
+       "sort-name": "Waterboys, The",
+       "type": null,
+       "disambiguation": "folk-rock",
+       "name": "The Waterboys",
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "country": "GB"
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "eed69e52-7105-43c3-803f-b1fba84d439d",
+    "length": 256000,
+    "title": "Fisherman’s Blues"
+   },
+   "source-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "attribute-values": {},
+   "target-type": "recording",
+   "attribute-ids": {},
+   "ended": false
+  },
+  {
+   "type": "performance",
+   "direction": "backward",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "The Waterboys",
+      "joinphrase": "",
+      "artist": {
+       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
+       "name": "The Waterboys",
+       "disambiguation": "folk-rock",
+       "country": "GB",
+       "type-id": null,
+       "type": null,
        "sort-name": "Waterboys, The"
       }
      }
     ],
-    "disambiguation": ""
-   },
-   "target-credit": ""
-  },
-  {
-   "target-credit": "",
-   "recording": {
-    "video": false,
-    "artist-credit": [
-     {
-      "artist": {
-       "sort-name": "Waterboys, The",
-       "disambiguation": "folk-rock",
-       "country": "GB",
-       "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type": null,
-       "name": "The Waterboys"
-      },
-      "joinphrase": "",
-      "name": "The Waterboys"
-     }
-    ],
     "disambiguation": "",
-    "title": "Fisherman’s Blues",
-    "length": 262067,
-    "id": "2e5b14c3-e296-48cd-baa1-8631f51d8359"
-   },
-   "source-credit": "",
-   "attribute-ids": {},
-   "type": "performance",
-   "end": null,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
-   "attribute-values": {},
-   "begin": null,
-   "attributes": [],
-   "target-type": "recording",
-   "direction": "backward"
-  },
-  {
-   "source-credit": "",
-   "type": "performance",
-   "attribute-ids": {},
-   "end": null,
-   "ended": false,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "target-credit": "",
-   "recording": {
-    "title": "Fisherman’s Blues",
-    "artist-credit": [
-     {
-      "name": "The Waterboys",
-      "joinphrase": "",
-      "artist": {
-       "sort-name": "Waterboys, The",
-       "disambiguation": "folk-rock",
-       "country": "GB",
-       "type-id": null,
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type": null,
-       "name": "The Waterboys"
-      }
-     }
-    ],
-    "disambiguation": "",
-    "video": false,
-    "length": 256000,
-    "id": "eed69e52-7105-43c3-803f-b1fba84d439d"
-   },
-   "target-type": "recording",
-   "attributes": [],
-   "direction": "backward",
-   "attribute-values": {},
-   "begin": null
-  },
-  {
-   "target-type": "recording",
-   "attributes": [],
-   "direction": "backward",
-   "attribute-values": {},
-   "begin": null,
-   "attribute-ids": {},
-   "type": "performance",
-   "source-credit": "",
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "ended": false,
-   "end": null,
-   "target-credit": "",
-   "recording": {
-    "id": "2264ce8e-a26f-4023-9477-398d923e4924",
     "length": 259000,
-    "video": false,
-    "title": "Fisherman’s Blues",
-    "disambiguation": "",
-    "artist-credit": [
-     {
-      "name": "The Waterboys",
-      "joinphrase": "",
-      "artist": {
-       "sort-name": "Waterboys, The",
-       "country": "GB",
-       "disambiguation": "folk-rock",
-       "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type-id": null,
-       "name": "The Waterboys",
-       "type": null
-      }
-     }
-    ]
-   }
+    "id": "2264ce8e-a26f-4023-9477-398d923e4924",
+    "title": "Fisherman’s Blues"
+   },
+   "source-credit": "",
+   "attributes": [],
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "target-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {},
+   "ended": false,
+   "attribute-values": {}
   },
   {
-   "begin": null,
-   "attribute-values": {},
    "direction": "backward",
+   "type": "performance",
    "attributes": [
     "cover"
    ],
-   "target-type": "recording",
+   "source-credit": "",
    "recording": {
-    "length": 285348,
-    "id": "49f61978-4f4d-4dd1-a7f6-03859266c762",
-    "video": false,
     "title": "Fisherman’s Blues",
+    "id": "49f61978-4f4d-4dd1-a7f6-03859266c762",
+    "length": 285348,
     "artist-credit": [
      {
-      "joinphrase": "",
-      "name": "Steve Basham",
       "artist": {
-       "disambiguation": "",
-       "country": "CA",
-       "sort-name": "Basham, Steve",
        "type": null,
-       "name": "Steve Basham",
+       "sort-name": "Basham, Steve",
        "type-id": null,
-       "id": "2229507c-0b80-4409-9cd5-d69138fcecc7"
-      }
+       "country": "CA",
+       "disambiguation": "",
+       "id": "2229507c-0b80-4409-9cd5-d69138fcecc7",
+       "name": "Steve Basham"
+      },
+      "joinphrase": "",
+      "name": "Steve Basham"
      }
     ],
-    "disambiguation": ""
+    "disambiguation": "",
+    "video": false
    },
-   "target-credit": "",
-   "ended": false,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
    "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
    "attribute-ids": {
     "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
    },
-   "type": "performance",
-   "source-credit": ""
+   "target-type": "recording"
   },
   {
-   "attribute-ids": {},
-   "type": "performance",
+   "attributes": [],
    "source-credit": "",
-   "ended": false,
-   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-   "end": null,
-   "target-credit": "",
    "recording": {
+    "video": false,
     "artist-credit": [
      {
-      "name": "The Waterboys",
       "joinphrase": "",
+      "name": "The Waterboys",
       "artist": {
        "id": "21666405-49f8-44f6-94bb-e064f202f7ba",
-       "type-id": null,
        "name": "The Waterboys",
-       "type": null,
-       "sort-name": "Waterboys, The",
+       "disambiguation": "folk-rock",
        "country": "GB",
-       "disambiguation": "folk-rock"
+       "type-id": null,
+       "type": null,
+       "sort-name": "Waterboys, The"
       }
      }
     ],
     "disambiguation": "",
-    "title": "Fisherman’s Blues (piano version)",
-    "video": false,
+    "length": 322706,
     "id": "7662f986-503c-41db-82d5-841f6c02d8d6",
-    "length": 322706
+    "title": "Fisherman’s Blues (piano version)"
    },
-   "attributes": [],
-   "target-type": "recording",
    "direction": "backward",
+   "type": "performance",
    "attribute-values": {},
-   "begin": null
+   "ended": false,
+   "attribute-ids": {},
+   "target-type": "recording",
+   "end": null,
+   "target-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
   },
   {
-   "attributes": [],
-   "ended": false,
-   "end": null,
-   "attribute-ids": {},
-   "source-credit": "",
-   "target-credit": "",
-   "direction": "backward",
-   "target-type": "url",
-   "begin": null,
    "attribute-values": {},
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "url",
+   "target-credit": "",
+   "end": null,
    "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "begin": null,
    "url": {
-    "id": "46bf7bd2-f2f1-4abb-86f2-9e85fbfeba46",
-    "resource": "https://www.wikidata.org/wiki/Q65088638"
+    "resource": "https://www.wikidata.org/wiki/Q65088638",
+    "id": "46bf7bd2-f2f1-4abb-86f2-9e85fbfeba46"
    },
+   "attributes": [],
+   "source-credit": "",
+   "direction": "backward",
    "type": "wikidata"
   }
  ],
- "type": "Song",
- "title": "Fisherman’s Blues",
- "disambiguation": ""
+ "id": "c4efc5eb-9904-309a-97a4-675a73a9494f",
+ "language": "eng",
+ "iswcs": [
+  "T-010.157.503-4"
+ ]
 }

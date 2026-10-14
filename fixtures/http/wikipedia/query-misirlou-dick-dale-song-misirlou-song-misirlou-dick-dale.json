@@ -1,0 +1,33 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Misirlou (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Misirlou (Dick Dale song)",
+    "missing": true
+   },
+   {
+    "pageid": 167278,
+    "ns": 0,
+    "title": "Dick Dale",
+    "pageprops": {
+     "wikibase_item": "Q346785"
+    }
+   },
+   {
+    "pageid": 942478,
+    "ns": 0,
+    "title": "Misirlou",
+    "pageprops": {
+     "wikibase_item": "Q1497786"
+    }
+   }
+  ]
+ }
+}

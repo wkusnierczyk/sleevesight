@@ -1,14 +1,14 @@
 {
- "created": "2026-10-13T23:39:05.671Z",
+ "created": "2026-10-14T18:06:43.398Z",
  "count": 10,
  "offset": 0,
  "recordings": [
   {
-   "id": "05403097-62c3-4965-90ce-d6eb80b0f466",
+   "id": "6f08c5bb-92b8-41ae-a964-f082c1505b0c",
    "score": 100,
    "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
    "title": "Sundown",
-   "length": 216960,
+   "length": 223893,
    "video": null,
    "artist-credit": [
     {
@@ -41,14 +41,392 @@
      }
     }
    ],
-   "first-release-date": "1992",
+   "first-release-date": "2023-07-28",
    "releases": [
     {
-     "id": "3fea356a-9dbd-462a-9a4b-26f00671796c",
+     "id": "246b5492-b141-40a3-9fd5-f5704eab3053",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+     "count": 2,
+     "title": "At Royal Albert Hall",
+     "status": "Official",
+     "disambiguation": "misprint",
+     "artist-credit": [
+      {
+       "name": "Gordon Lightfoot",
+       "artist": {
+        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+        "name": "Gordon Lightfoot",
+        "sort-name": "Lightfoot, Gordon"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "2b489937-10c6-43f0-974d-eaa55a1d95a9",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "At Royal Albert Hall",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2023-07-28",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "2023-07-28",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 26,
+     "media": [
+      {
+       "id": "bbc5cda1-ab0f-3b8b-98eb-d7cf133cf982",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "2e3c827b-fa3e-45c0-88a7-d95d960b7a3a",
+         "number": "14",
+         "title": "Sundown",
+         "length": 224893
+        }
+       ],
+       "track-count": 14,
+       "track-offset": 13
+      }
+     ]
+    },
+    {
+     "id": "73cbc876-91e5-4999-9ace-f1b7443dbcf2",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+     "count": 2,
+     "title": "At Royal Albert Hall",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Gordon Lightfoot",
+       "artist": {
+        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+        "name": "Gordon Lightfoot",
+        "sort-name": "Lightfoot, Gordon"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "2b489937-10c6-43f0-974d-eaa55a1d95a9",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "At Royal Albert Hall",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 26,
+     "media": [
+      {
+       "id": "38ceb2be-e9bb-3b52-afc0-ed3fd5d9b3af",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "e6f85283-8eaf-4a89-92c7-a751103bf7ee",
+         "number": "14",
+         "title": "Sundown",
+         "length": 223893
+        }
+       ],
+       "track-count": 14,
+       "track-offset": 13
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "d0d439f9-5324-4728-8706-2da39adb89c5",
+   "score": 100,
+   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+   "title": "Sundown",
+   "length": 184000,
+   "disambiguation": "live, 1998-05-07: Massey Hall, Toronto, ON, Canada",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Gordon Lightfoot",
+     "artist": {
+      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+      "name": "Gordon Lightfoot",
+      "sort-name": "Lightfoot, Gordon",
+      "aliases": [
+       {
+        "sort-name": "Lightfoot, Gordon",
+        "name": "Lightfoot, Gordon",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Lightfoot, Gordon Meredith",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Gordon Meredith Lightfoot",
+        "locale": null,
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2012-04-17",
+   "releases": [
+    {
+     "id": "d731b83e-f8a4-41fe-a9b3-82acf56c786c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+     "count": 1,
+     "title": "All Live",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Gordon Lightfoot",
+       "artist": {
+        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+        "name": "Gordon Lightfoot",
+        "sort-name": "Lightfoot, Gordon"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "All Live",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "track-count": 19,
+     "media": [
+      {
+       "id": "76a56fd7-7cb2-42a5-8393-da2da217b0d4",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "069fc2c6-d31b-470b-acbc-37af5f45991e",
+         "number": "11",
+         "title": "Sundown",
+         "length": 183626
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 10
+      }
+     ]
+    },
+    {
+     "id": "5fe5fc9d-d930-4335-9194-d0f8f42ead9c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+     "count": 1,
+     "title": "All Live",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Gordon Lightfoot",
+       "artist": {
+        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+        "name": "Gordon Lightfoot",
+        "sort-name": "Lightfoot, Gordon"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "All Live",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2012",
+     "country": "US",
+     "release-events": [
+      {
+       "date": "2012",
+       "area": {
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
+        "iso-3166-1-codes": [
+         "US"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "d30432fb-a964-3827-92c6-6d5ac0832f7b",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "afb17ccc-31eb-4348-8a49-f93ba6ba7fc6",
+         "number": "11",
+         "title": "Sundown",
+         "length": 184000
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 10
+      }
+     ]
+    },
+    {
+     "id": "0c008d76-2bc9-44a3-854b-0a08cde89337",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+     "count": 1,
+     "title": "All Live",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Gordon Lightfoot",
+       "artist": {
+        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+        "name": "Gordon Lightfoot",
+        "sort-name": "Lightfoot, Gordon"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
+      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "All Live",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ],
+      "secondary-type-ids": [
+       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
+      ]
+     },
+     "date": "2012-04-24",
+     "country": "CA",
+     "release-events": [
+      {
+       "date": "2012-04-24",
+       "area": {
+        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
+        "name": "Canada",
+        "sort-name": "Canada",
+        "iso-3166-1-codes": [
+         "CA"
+        ]
+       }
+      }
+     ],
+     "track-count": 19,
+     "media": [
+      {
+       "id": "2cc3f8a8-50c7-3918-bb58-0ed71184e5a7",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "9b644d16-9189-353c-9b38-f248f9b5cba5",
+         "number": "11",
+         "title": "Sundown",
+         "length": 184000
+        }
+       ],
+       "track-count": 19,
+       "track-offset": 10
+      }
+     ]
+    }
+   ],
+   "isrcs": [
+    "CAW111100207"
+   ]
+  },
+  {
+   "id": "23efc8c1-b3c7-48e3-9811-3ee5cb67d406",
+   "score": 100,
+   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+   "title": "Sundown",
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Gordon Lightfoot",
+     "artist": {
+      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+      "name": "Gordon Lightfoot",
+      "sort-name": "Lightfoot, Gordon",
+      "aliases": [
+       {
+        "sort-name": "Lightfoot, Gordon",
+        "name": "Lightfoot, Gordon",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Lightfoot, Gordon Meredith",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Gordon Meredith Lightfoot",
+        "locale": null,
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1988",
+   "releases": [
+    {
+     "id": "38a07027-456e-4152-8ffd-23b3f01ee714",
      "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
      "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 2,
-     "title": "Traumhaft 2: More Feelings for You",
+     "count": 4,
+     "title": "Blowin' in the Wind",
      "status": "Official",
      "artist-credit": [
       {
@@ -62,42 +440,47 @@
       }
      ],
      "release-group": {
-      "id": "c82555e3-a9f4-47ae-89d9-09636144e095",
-      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "id": "1f0f9252-19ff-46b1-b74a-039fd9218f8b",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
       "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Traumhaft 2: More Feelings for You",
-      "primary-type": "Album"
+      "title": "Blowin' in the Wind",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
      },
-     "date": "1992",
-     "country": "DE",
+     "date": "1988",
+     "country": "US",
      "release-events": [
       {
-       "date": "1992",
+       "date": "1988",
        "area": {
-        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
-        "name": "Germany",
-        "sort-name": "Germany",
+        "id": "489ce91b-6658-3307-9877-795b68554c98",
+        "name": "United States",
+        "sort-name": "United States",
         "iso-3166-1-codes": [
-         "DE"
+         "US"
         ]
        }
       }
      ],
-     "track-count": 32,
+     "track-count": 80,
      "media": [
       {
-       "id": "40e637a3-8f05-40a8-bf0c-c2d9a9b5fe27",
-       "position": 2,
+       "id": "20ce7f87-7f1e-4fc2-ad86-21796331771c",
+       "position": 1,
        "format": "CD",
        "track": [
         {
-         "id": "c87b3a58-5f60-4fa8-b64f-92db927195ef",
-         "number": "11",
-         "title": "Sundown",
-         "length": 216960
+         "id": "a469c8dc-334b-48fa-9cad-ee0cd14dd529",
+         "number": "1-11",
+         "title": "Sundown"
         }
        ],
-       "track-count": 16,
+       "track-count": 23,
        "track-offset": 10
       }
      ]
@@ -106,7 +489,7 @@
   },
   {
    "id": "8871ced7-a79c-4bbb-9210-af2ba2871864",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
    "title": "Sundown",
    "length": 201485,
@@ -198,7 +581,7 @@
   },
   {
    "id": "a6b8231e-957a-4553-9d8c-530c9863723f",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
    "title": "Sundown",
    "length": 211520,
@@ -305,7 +688,7 @@
   },
   {
    "id": "c4599250-9001-400a-831a-1f7c31b5f781",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
    "title": "Sundown",
    "length": 215640,
@@ -20130,492 +20513,8 @@
    ]
   },
   {
-   "id": "6f08c5bb-92b8-41ae-a964-f082c1505b0c",
-   "score": 99,
-   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-   "title": "Sundown",
-   "length": 223893,
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Gordon Lightfoot",
-     "artist": {
-      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-      "name": "Gordon Lightfoot",
-      "sort-name": "Lightfoot, Gordon",
-      "aliases": [
-       {
-        "sort-name": "Lightfoot, Gordon",
-        "name": "Lightfoot, Gordon",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Lightfoot, Gordon Meredith",
-        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
-        "name": "Gordon Meredith Lightfoot",
-        "locale": null,
-        "type": "Legal name",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2023-07-28",
-   "releases": [
-    {
-     "id": "246b5492-b141-40a3-9fd5-f5704eab3053",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-     "count": 2,
-     "title": "At Royal Albert Hall",
-     "status": "Official",
-     "disambiguation": "misprint",
-     "artist-credit": [
-      {
-       "name": "Gordon Lightfoot",
-       "artist": {
-        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-        "name": "Gordon Lightfoot",
-        "sort-name": "Lightfoot, Gordon"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "2b489937-10c6-43f0-974d-eaa55a1d95a9",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "At Royal Albert Hall",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "2023-07-28",
-     "country": "CA",
-     "release-events": [
-      {
-       "date": "2023-07-28",
-       "area": {
-        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
-        "name": "Canada",
-        "sort-name": "Canada",
-        "iso-3166-1-codes": [
-         "CA"
-        ]
-       }
-      }
-     ],
-     "track-count": 26,
-     "media": [
-      {
-       "id": "bbc5cda1-ab0f-3b8b-98eb-d7cf133cf982",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "2e3c827b-fa3e-45c0-88a7-d95d960b7a3a",
-         "number": "14",
-         "title": "Sundown",
-         "length": 224893
-        }
-       ],
-       "track-count": 14,
-       "track-offset": 13
-      }
-     ]
-    },
-    {
-     "id": "73cbc876-91e5-4999-9ace-f1b7443dbcf2",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-     "count": 2,
-     "title": "At Royal Albert Hall",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Gordon Lightfoot",
-       "artist": {
-        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-        "name": "Gordon Lightfoot",
-        "sort-name": "Lightfoot, Gordon"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "2b489937-10c6-43f0-974d-eaa55a1d95a9",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "At Royal Albert Hall",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 26,
-     "media": [
-      {
-       "id": "38ceb2be-e9bb-3b52-afc0-ed3fd5d9b3af",
-       "position": 1,
-       "format": "Digital Media",
-       "track": [
-        {
-         "id": "e6f85283-8eaf-4a89-92c7-a751103bf7ee",
-         "number": "14",
-         "title": "Sundown",
-         "length": 223893
-        }
-       ],
-       "track-count": 14,
-       "track-offset": 13
-      }
-     ]
-    }
-   ]
-  },
-  {
-   "id": "d0d439f9-5324-4728-8706-2da39adb89c5",
-   "score": 99,
-   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-   "title": "Sundown",
-   "length": 184000,
-   "disambiguation": "live, 1998-05-07: Massey Hall, Toronto, ON, Canada",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Gordon Lightfoot",
-     "artist": {
-      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-      "name": "Gordon Lightfoot",
-      "sort-name": "Lightfoot, Gordon",
-      "aliases": [
-       {
-        "sort-name": "Lightfoot, Gordon",
-        "name": "Lightfoot, Gordon",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Lightfoot, Gordon Meredith",
-        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
-        "name": "Gordon Meredith Lightfoot",
-        "locale": null,
-        "type": "Legal name",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "2012-04-17",
-   "releases": [
-    {
-     "id": "d731b83e-f8a4-41fe-a9b3-82acf56c786c",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-     "count": 1,
-     "title": "All Live",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Gordon Lightfoot",
-       "artist": {
-        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-        "name": "Gordon Lightfoot",
-        "sort-name": "Lightfoot, Gordon"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "All Live",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "track-count": 19,
-     "media": [
-      {
-       "id": "76a56fd7-7cb2-42a5-8393-da2da217b0d4",
-       "position": 1,
-       "format": "Digital Media",
-       "track": [
-        {
-         "id": "069fc2c6-d31b-470b-acbc-37af5f45991e",
-         "number": "11",
-         "title": "Sundown",
-         "length": 183626
-        }
-       ],
-       "track-count": 19,
-       "track-offset": 10
-      }
-     ]
-    },
-    {
-     "id": "5fe5fc9d-d930-4335-9194-d0f8f42ead9c",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-     "count": 1,
-     "title": "All Live",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Gordon Lightfoot",
-       "artist": {
-        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-        "name": "Gordon Lightfoot",
-        "sort-name": "Lightfoot, Gordon"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "All Live",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "2012",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "2012",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 19,
-     "media": [
-      {
-       "id": "d30432fb-a964-3827-92c6-6d5ac0832f7b",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "afb17ccc-31eb-4348-8a49-f93ba6ba7fc6",
-         "number": "11",
-         "title": "Sundown",
-         "length": 184000
-        }
-       ],
-       "track-count": 19,
-       "track-offset": 10
-      }
-     ]
-    },
-    {
-     "id": "0c008d76-2bc9-44a3-854b-0a08cde89337",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-     "count": 1,
-     "title": "All Live",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Gordon Lightfoot",
-       "artist": {
-        "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-        "name": "Gordon Lightfoot",
-        "sort-name": "Lightfoot, Gordon"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "0a5d5f33-8e9d-4fa4-b622-a95e4218a3c4",
-      "type-id": "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "All Live",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Live"
-      ],
-      "secondary-type-ids": [
-       "6fd474e2-6b58-3102-9d17-d6f7eb7da0a0"
-      ]
-     },
-     "date": "2012-04-24",
-     "country": "CA",
-     "release-events": [
-      {
-       "date": "2012-04-24",
-       "area": {
-        "id": "71bbafaa-e825-3e15-8ca9-017dcad1748b",
-        "name": "Canada",
-        "sort-name": "Canada",
-        "iso-3166-1-codes": [
-         "CA"
-        ]
-       }
-      }
-     ],
-     "track-count": 19,
-     "media": [
-      {
-       "id": "2cc3f8a8-50c7-3918-bb58-0ed71184e5a7",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "9b644d16-9189-353c-9b38-f248f9b5cba5",
-         "number": "11",
-         "title": "Sundown",
-         "length": 184000
-        }
-       ],
-       "track-count": 19,
-       "track-offset": 10
-      }
-     ]
-    }
-   ],
-   "isrcs": [
-    "CAW111100207"
-   ]
-  },
-  {
-   "id": "23efc8c1-b3c7-48e3-9811-3ee5cb67d406",
-   "score": 99,
-   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
-   "title": "Sundown",
-   "video": null,
-   "artist-credit": [
-    {
-     "name": "Gordon Lightfoot",
-     "artist": {
-      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
-      "name": "Gordon Lightfoot",
-      "sort-name": "Lightfoot, Gordon",
-      "aliases": [
-       {
-        "sort-name": "Lightfoot, Gordon",
-        "name": "Lightfoot, Gordon",
-        "locale": null,
-        "type": null,
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       },
-       {
-        "sort-name": "Lightfoot, Gordon Meredith",
-        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
-        "name": "Gordon Meredith Lightfoot",
-        "locale": null,
-        "type": "Legal name",
-        "primary": null,
-        "begin-date": null,
-        "end-date": null
-       }
-      ]
-     }
-    }
-   ],
-   "first-release-date": "1988",
-   "releases": [
-    {
-     "id": "38a07027-456e-4152-8ffd-23b3f01ee714",
-     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
-     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
-     "count": 4,
-     "title": "Blowin' in the Wind",
-     "status": "Official",
-     "artist-credit": [
-      {
-       "name": "Various Artists",
-       "artist": {
-        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
-        "name": "Various Artists",
-        "sort-name": "Various Artists",
-        "disambiguation": "add compilations to this artist"
-       }
-      }
-     ],
-     "release-group": {
-      "id": "1f0f9252-19ff-46b1-b74a-039fd9218f8b",
-      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
-      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
-      "title": "Blowin' in the Wind",
-      "primary-type": "Album",
-      "secondary-types": [
-       "Compilation"
-      ],
-      "secondary-type-ids": [
-       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
-      ]
-     },
-     "date": "1988",
-     "country": "US",
-     "release-events": [
-      {
-       "date": "1988",
-       "area": {
-        "id": "489ce91b-6658-3307-9877-795b68554c98",
-        "name": "United States",
-        "sort-name": "United States",
-        "iso-3166-1-codes": [
-         "US"
-        ]
-       }
-      }
-     ],
-     "track-count": 80,
-     "media": [
-      {
-       "id": "20ce7f87-7f1e-4fc2-ad86-21796331771c",
-       "position": 1,
-       "format": "CD",
-       "track": [
-        {
-         "id": "a469c8dc-334b-48fa-9cad-ee0cd14dd529",
-         "number": "1-11",
-         "title": "Sundown"
-        }
-       ],
-       "track-count": 23,
-       "track-offset": 10
-      }
-     ]
-    }
-   ]
-  },
-  {
    "id": "c722ff73-97b4-4a90-b879-4b1b147d544c",
-   "score": 99,
+   "score": 100,
    "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
    "title": "Sundown",
    "length": 225000,
@@ -25278,6 +25177,107 @@
    ],
    "isrcs": [
     "GBSMU5775171"
+   ]
+  },
+  {
+   "id": "05403097-62c3-4965-90ce-d6eb80b0f466",
+   "score": 100,
+   "artist-credit-id": "a8d8d055-e246-3d1d-a62f-4dc40de6d305",
+   "title": "Sundown",
+   "length": 216960,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Gordon Lightfoot",
+     "artist": {
+      "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+      "name": "Gordon Lightfoot",
+      "sort-name": "Lightfoot, Gordon",
+      "aliases": [
+       {
+        "sort-name": "Lightfoot, Gordon",
+        "name": "Lightfoot, Gordon",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       },
+       {
+        "sort-name": "Lightfoot, Gordon Meredith",
+        "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+        "name": "Gordon Meredith Lightfoot",
+        "locale": null,
+        "type": "Legal name",
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "1992",
+   "releases": [
+    {
+     "id": "3fea356a-9dbd-462a-9a4b-26f00671796c",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "949a7fd5-fe73-3e8f-922e-01ff4ca958f7",
+     "count": 2,
+     "title": "Traumhaft 2: More Feelings for You",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Various Artists",
+       "artist": {
+        "id": "89ad4ac3-39f7-470e-963a-56509c546377",
+        "name": "Various Artists",
+        "sort-name": "Various Artists",
+        "disambiguation": "add compilations to this artist"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "c82555e3-a9f4-47ae-89d9-09636144e095",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Traumhaft 2: More Feelings for You",
+      "primary-type": "Album"
+     },
+     "date": "1992",
+     "country": "DE",
+     "release-events": [
+      {
+       "date": "1992",
+       "area": {
+        "id": "85752fda-13c4-31a3-bee5-0e5cb1f51dad",
+        "name": "Germany",
+        "sort-name": "Germany",
+        "iso-3166-1-codes": [
+         "DE"
+        ]
+       }
+      }
+     ],
+     "track-count": 32,
+     "media": [
+      {
+       "id": "40e637a3-8f05-40a8-bf0c-c2d9a9b5fe27",
+       "position": 2,
+       "format": "CD",
+       "track": [
+        {
+         "id": "c87b3a58-5f60-4fa8-b64f-92db927195ef",
+         "number": "11",
+         "title": "Sundown",
+         "length": 216960
+        }
+       ],
+       "track-count": 16,
+       "track-offset": 10
+      }
+     ]
+    }
    ]
   },
   {

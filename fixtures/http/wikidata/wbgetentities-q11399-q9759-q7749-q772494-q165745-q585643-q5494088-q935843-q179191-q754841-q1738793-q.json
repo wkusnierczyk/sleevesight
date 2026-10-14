@@ -1,0 +1,125 @@
+{
+ "entities": {
+  "Q11399": {
+   "type": "item",
+   "id": "Q11399",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "rock music"
+    }
+   }
+  },
+  "Q9759": {
+   "type": "item",
+   "id": "Q9759",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "blues"
+    }
+   }
+  },
+  "Q7749": {
+   "type": "item",
+   "id": "Q7749",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "rock and roll"
+    }
+   }
+  },
+  "Q772494": {
+   "type": "item",
+   "id": "Q772494",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Chess Records"
+    }
+   }
+  },
+  "Q165745": {
+   "type": "item",
+   "id": "Q165745",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Mercury Records"
+    }
+   }
+  },
+  "Q585643": {
+   "type": "item",
+   "id": "Q585643",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Atco Records"
+    }
+   }
+  },
+  "Q5494088": {
+   "type": "item",
+   "id": "Q5494088",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Dualtone Records"
+    }
+   }
+  },
+  "Q935843": {
+   "type": "item",
+   "id": "Q935843",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Grammy Lifetime Achievement Award"
+    }
+   }
+  },
+  "Q179191": {
+   "type": "item",
+   "id": "Q179191",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Rock and Roll Hall of Fame"
+    }
+   }
+  },
+  "Q754841": {
+   "type": "item",
+   "id": "Q754841",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Polar Music Prize"
+    }
+   }
+  },
+  "Q1738793": {
+   "type": "item",
+   "id": "Q1738793",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Kennedy Center Honors"
+    }
+   }
+  },
+  "Q17985761": {
+   "type": "item",
+   "id": "Q17985761",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "star on Hollywood Walk of Fame"
+    }
+   }
+  }
+ },
+ "success": 1
+}

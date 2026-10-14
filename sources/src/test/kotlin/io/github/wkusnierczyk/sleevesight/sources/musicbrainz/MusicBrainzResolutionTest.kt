@@ -110,6 +110,16 @@ class MusicBrainzResolutionTest {
         }
 
     @Test
+    fun `a much-recorded song - Chuck Berry's 1956 Roll Over Beethoven, far down the 100 results`() =
+        runTest {
+            val resolution = resolve(55)
+            assertEquals("5f574686-4d14-4207-aa72-cc8c8549e264", resolution.recordingMbid)
+            assertEquals("1956-05", resolution.firstReleaseDate)
+            assertEquals("Roll Over Beethoven / Drifting Heart", resolution.firstRelease?.title)
+            assertEquals("100", net.sent.first().query["limit"])
+        }
+
+    @Test
     fun `the search sends the normalized title and the primary artist, and never asks for tags or genres`() =
         runTest {
             resolve(RegressionCase.VERSION_SUFFIX.tracks.single())

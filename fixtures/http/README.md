@@ -3,7 +3,8 @@
 Real responses of the keyless sources for the fixture playlist's regression cases (`design/design.md`,
 *Test fixtures*), which the adapter tests replay so CI never calls a live service
 (`design/architecture.md`, *Testing*). Only what the tests need is recorded: the requests the code
-makes for the first occurrence of each regression track (`RecordedTracks` in `:sources`' tests).
+makes for the first occurrence of each regression track, and for the tracks on which the Phase 0.5
+gate run found resolution errors (`RecordedTracks` in `:sources`' tests).
 
 | Directory | Source | Licence of the content |
 |---|---|---|
