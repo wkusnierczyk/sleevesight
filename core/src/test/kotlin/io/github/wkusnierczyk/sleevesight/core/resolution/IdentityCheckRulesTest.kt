@@ -204,6 +204,48 @@ class IdentityCheckRulesTest {
         }
 
     @Test
+    fun `the item MusicBrainz links stays the track's own song when a performer is a credited artist by name`() =
+        runTest {
+            val ownPerformer =
+                WdEntity(
+                    "Q6",
+                    "Song",
+                    "Song",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q60"),
+                    ),
+                )
+            // An own-name performer with no P434, against a resolved artist.
+            val noId = FakeWikidata(mapOf("Q6" to ownPerformer), mapOf("Q60" to "Cover Act"))
+            val linked = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q6"))
+            val verdict = IdentityCheck(noId, NameMatcher(JvmAccentFolder)).song("Q6", track, linked, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+            // An unresolved co-artist whose performer item has a P434.
+            val coArtist = Normalizer(JvmAccentFolder).normalize("Song", "Band, Singer")
+            val withId =
+                FakeWikidata(
+                    mapOf("Q6" to ownPerformer),
+                    mapOf("Q60" to "Singer"),
+                    mapOf(
+                        "Q60" to listOf("mbid-singer"),
+                    ),
+                )
+            val partly =
+                linked.copy(
+                    artists = listOf(ResolvedArtist("Band", "mbid-band"), ResolvedArtist("Singer", null)),
+                )
+            val coVerdict =
+                IdentityCheck(
+                    withId,
+                    NameMatcher(JvmAccentFolder),
+                ).song("Q6", coArtist, partly, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(coVerdict)
+            assertEquals(Scope.SONG, coVerdict.scope)
+        }
+
+    @Test
     fun `Wikidata not answering is unreachable, not a rejection`() =
         runTest {
             val down = IdentityCheck(FakeWikidata(emptyMap(), emptyMap(), failing = true), NameMatcher(JvmAccentFolder))
