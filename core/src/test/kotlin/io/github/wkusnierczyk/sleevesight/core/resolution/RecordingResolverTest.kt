@@ -473,6 +473,7 @@ class RecordingResolverTest {
             val musicBrainz = FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail), mapOf("w" to work))
             val resolution = resolve(musicBrainz, track("Song", "Cover Act"))
             assertTrue(resolution.cover)
+            assertFalse(resolution.earliest)
             assertEquals("first", resolution.original?.recordingMbid)
             assertEquals("Original Act", resolution.original?.artistCredit)
             assertEquals(listOf("Q1", "Q2"), resolution.wikidataIds)
@@ -507,6 +508,8 @@ class RecordingResolverTest {
                 )
             assertFalse(resolution.cover)
             assertNull(resolution.original)
+            // 1974, before the only other dated recording (1990): the artist's own, first.
+            assertTrue(resolution.earliest)
         }
 
     private fun ownSong(performances: List<MbPerformance>): FakeMusicBrainz {

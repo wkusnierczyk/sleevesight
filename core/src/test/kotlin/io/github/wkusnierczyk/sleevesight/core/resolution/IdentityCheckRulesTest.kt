@@ -231,6 +231,26 @@ class IdentityCheckRulesTest {
         }
 
     @Test
+    fun `the item MusicBrainz links is the track's own song when the track's artists recorded the work first`() =
+        runTest {
+            // Performed by others, written by no credited artist: the dates alone decide (#76).
+            val first =
+                resolved.copy(
+                    work = ResolvedWork("w", "Song"),
+                    cover = false,
+                    earliest = true,
+                    wikidataIds = listOf("Q1"),
+                )
+            val verdict = check.song("Q1", track, first, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.SONG, verdict.scope)
+            // MusicBrainz's cover mark still wins.
+            val marked = check.song("Q1", track, first.copy(cover = true), Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(marked)
+            assertEquals(Scope.ORIGINAL_SONG, marked.scope)
+        }
+
+    @Test
     fun `an unmarked cover, performed and written by others, is still the original song`() =
         runTest {
             val others =
@@ -251,7 +271,14 @@ class IdentityCheckRulesTest {
                     mapOf("Q10" to "Original Act", "Q90" to "Composer", "Q91" to "Lyricist"),
                     mapOf("Q10" to listOf("mbid-original"), "Q90" to listOf("mbid-composer")),
                 )
-            val unmarked = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q9"))
+            // An earlier dated recording by another artist exists: not the track's artists' first.
+            val unmarked =
+                resolved.copy(
+                    work = ResolvedWork("w", "Song"),
+                    cover = false,
+                    earliest = false,
+                    wikidataIds = listOf("Q9"),
+                )
             val check = IdentityCheck(wikidata, NameMatcher(JvmAccentFolder))
             val verdict = check.song("Q9", track, unmarked, Route.MUSICBRAINZ)
             assertIs<Verdict.Accepted>(verdict)

@@ -223,9 +223,12 @@ class RecordingResolver(
         // undated one may be the original; otherwise MusicBrainz's cover mark alone decides.
         val cover = link.cover || (predates && !ownUndated)
         val named = cover && (predates || (link.cover && ourEarliest == null))
+        // Ours first: before every recording by others that MusicBrainz dates, of which there is one.
+        val earliest = original != null && ourEarliest != null && isEarlier(ourEarliest, original.date)
         return withRecording.copy(
             work = ResolvedWork(work.mbid, work.title),
             cover = cover,
+            earliest = earliest,
             original = original?.takeIf { named },
             credits = workCredits(work.artistRelations) + withRecording.credits,
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),

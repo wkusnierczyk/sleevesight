@@ -21,8 +21,10 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
  *   original song for a cover, or when it names performers, none of them a credited artist (by
  *   name for an unresolved artist; for a resolved one, by name only a performer with no P434),
- *   and no credited artist among its writers either (#76: Chuck Berry's own "Roll Over
- *   Beethoven", whose item names only later performers); else the track's own song;
+ *   and the track's artists did not record the work first ([Resolution.earliest]: an earlier
+ *   recording cannot be a cover of a later one) and no credited artist is among its writers
+ *   either (#76: Chuck Berry's own "Roll Over Beethoven", whose item names only later
+ *   performers); else the track's own song;
  * - anything else is rejected, with the reason. A song by someone else found by name alone is
  *   rejected even when its title is the track's: a same-title song and a cover cannot be told
  *   apart without MusicBrainz (Peleboy's "We In Here" is not DMX's), so only MusicBrainz's cover
@@ -134,11 +136,13 @@ class IdentityCheck(
             resolution.artists.ifEmpty { track.artists.map { ResolvedArtist(it, null) } }
 
         // MusicBrainz ties the item to the recording: the original song for a cover, or when none of
-        // its performers is a credited artist (MusicBrainz rarely dates enough to infer a cover) and
-        // none of its writers is either: a credited writer makes it the artist's own song, whose
-        // item lists only the later performers who made it famous again. Otherwise the track's own
-        // song. Here a name counts even for an artist the P434 check missed, but never against a
-        // conflicting id: a resolved artist's name matches only a person with no P434.
+        // its performers is a credited artist (MusicBrainz rarely dates enough to infer a cover),
+        // unless the track's artists recorded the work before anyone else MusicBrainz dates, or one
+        // of them wrote it: then it is the artist's own song, whose item lists only the later
+        // performers who made it famous again (the writer covers an author's later re-recording).
+        // Otherwise the track's own song. Here a name counts even for an artist the P434 check
+        // missed, but never against a conflicting id: a resolved artist's name matches only a
+        // person with no P434.
         suspend fun linkedScope(
             performers: List<String>,
             writers: List<String>,
@@ -150,6 +154,7 @@ class IdentityCheck(
             val others =
                 performers.isNotEmpty() &&
                     !ownPerformer &&
+                    !resolution.earliest &&
                     !(match(writers, credited, false) || match(writers, byName, true))
             return if (resolution.cover || others) Scope.ORIGINAL_SONG else Scope.SONG
         }
