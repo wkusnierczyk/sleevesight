@@ -1,0 +1,149 @@
+-- The caches (architecture, *Cache and history*). Times are epoch milliseconds. `used_at` is the
+-- last read or write, for evicting the least recently used rows under the size limit; `size_bytes`
+-- is the UTF-8 size of the row's keys and value, which the limit counts.
+
+-- What one source lookup gave the pipeline: the `SourceResult`, serialised (`payload`), never the
+-- raw response. `format` is the payload's encoding (`RetrievalCodec.FORMAT`), `extraction` the
+-- adapter's extraction rules (`SourceAdapter.extractionVersion`); a row with either different is a
+-- miss.
+CREATE TABLE retrieval (
+    id INTEGER NOT NULL PRIMARY KEY,
+    source TEXT NOT NULL,
+    lookup_key TEXT NOT NULL,
+    format INTEGER NOT NULL,
+    extraction INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    stored_at INTEGER NOT NULL,
+    used_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    UNIQUE (source, lookup_key)
+);
+
+CREATE INDEX retrieval_used_at ON retrieval (used_at);
+
+-- A credited artist's MusicBrainz id by normalized name: `resolved` with `mbid`, `none`, or
+-- `ambiguous` with the candidates' ids in `mbid`, space-separated.
+CREATE TABLE artist (
+    id INTEGER NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    state TEXT NOT NULL,
+    mbid TEXT,
+    stored_at INTEGER NOT NULL,
+    used_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL
+);
+
+-- A written insight or card, by the full synthesis key (R2, D14).
+CREATE TABLE synthesis (
+    id INTEGER NOT NULL PRIMARY KEY,
+    kind TEXT NOT NULL,
+    entity_key TEXT NOT NULL,
+    evidence_fingerprint TEXT NOT NULL,
+    prompt_version INTEGER NOT NULL,
+    style_hash TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_knowledge INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    written_at INTEGER NOT NULL,
+    used_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    UNIQUE (kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge)
+);
+
+CREATE INDEX synthesis_used_at ON synthesis (used_at);
+
+-- Retrieval
+
+retrievalGet:
+SELECT id, format, extraction, payload, stored_at
+FROM retrieval
+WHERE source = :source AND lookup_key = :lookupKey;
+
+retrievalPut:
+INSERT OR REPLACE INTO retrieval (source, lookup_key, format, extraction, payload, stored_at, used_at, size_bytes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+retrievalTouch:
+UPDATE retrieval SET used_at = :usedAt WHERE id = :id;
+
+retrievalDelete:
+DELETE FROM retrieval WHERE id = :id;
+
+retrievalPurgeSource:
+DELETE FROM retrieval WHERE source = :source AND stored_at <= :storedAtOrBefore;
+
+retrievalPurgeOtherSources:
+DELETE FROM retrieval WHERE source NOT IN :sources;
+
+retrievalPurgeFormat:
+DELETE FROM retrieval WHERE format <> :format;
+
+-- Artist resolution
+
+artistGet:
+SELECT id, state, mbid, stored_at
+FROM artist
+WHERE name = :name;
+
+artistPut:
+INSERT OR REPLACE INTO artist (name, state, mbid, stored_at, used_at, size_bytes)
+VALUES (?, ?, ?, ?, ?, ?);
+
+artistTouch:
+UPDATE artist SET used_at = :usedAt WHERE id = :id;
+
+artistDelete:
+DELETE FROM artist WHERE id = :id;
+
+artistPurge:
+DELETE FROM artist WHERE stored_at <= :storedAtOrBefore;
+
+-- Synthesis
+
+synthesisGet:
+SELECT id, text, written_at
+FROM synthesis
+WHERE kind = :kind
+  AND entity_key = :entityKey
+  AND evidence_fingerprint = :evidenceFingerprint
+  AND prompt_version = :promptVersion
+  AND style_hash = :styleHash
+  AND provider = :provider
+  AND model = :model
+  AND model_knowledge = :modelKnowledge;
+
+synthesisPut:
+INSERT OR REPLACE INTO synthesis (
+    kind, entity_key, evidence_fingerprint, prompt_version, style_hash, provider, model, model_knowledge,
+    text, written_at, used_at, size_bytes
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+synthesisTouch:
+UPDATE synthesis SET used_at = :usedAt WHERE id = :id;
+
+synthesisDelete:
+DELETE FROM synthesis WHERE id = :id;
+
+-- Size and eviction
+
+tableSizes:
+SELECT 'retrieval' AS name, count(*) AS rows, coalesce(sum(size_bytes), 0) AS bytes FROM retrieval
+UNION ALL
+SELECT 'artist', count(*), coalesce(sum(size_bytes), 0) FROM artist
+UNION ALL
+SELECT 'synthesis', count(*), coalesce(sum(size_bytes), 0) FROM synthesis;
+
+-- Retrieval and synthesis rows, least recently used first; artist rows are evicted only after them.
+leastRecentlyUsed:
+SELECT 'retrieval' AS name, id, size_bytes, used_at FROM retrieval
+UNION ALL
+SELECT 'synthesis', id, size_bytes, used_at FROM synthesis
+ORDER BY used_at, name, id
+LIMIT :limit;
+
+leastRecentlyUsedArtists:
+SELECT id, size_bytes FROM artist
+ORDER BY used_at, id
+LIMIT :limit;

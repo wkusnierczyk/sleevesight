@@ -289,16 +289,24 @@ For the Phase 0.5 gate's judgement (D12, #46), `GenreAgreement` compares the lab
 | Table | Key | Lifetime |
 |---|---|---|
 | Retrieval | source, lookup key | Days, per source; a user setting (D9) |
-| Artist resolution | normalized artist name | Long, months |
+| Artist resolution | normalized artist name | Long, months; a user setting (90 days) |
 | Synthesis | kind, entity key, evidence fingerprint, prompt-template version, style hash (D14), provider, model, model-knowledge switch | Until evicted by size |
 | Session history | time | Local only, user-clearable |
 | Track changes (D15) | player, time | Local only, cleared with the session history |
 
 Offline: cached tracks work fully; uncached lookups are `unreachable`.
 
+How the three caches are made (#41, `Caches`), where the table leaves room:
+
+- **Retrieval keeps results, not responses**: the `SourceResult` the pipeline uses (outcome, evidence and unverified lines, rejections, latency), as JSON, never the raw HTTP body. It stays small, and text the app does not show (the rest of an article, a whole bio) stays out of storage. Since a result depends on the adapter's extraction rules as well as the response, each entry carries `SourceAdapter.extractionVersion` (default 1, raised when an adapter's rules change) and the encoding's own version, and an entry under another version is a miss, not a stale hit. Not kept: an `unreachable` or `source_off` result, and the pseudo-sources, which have no lifetime. A result verified against a resolution that could not be made stays out too, the orchestration's call (#44), since it would stay unverified after MusicBrainz is back.
+- **Expiry**: a read never returns an entry past its lifetime, measured against the settings at the time of the read, so a shortened lifetime applies at once. `purgeExpired` deletes such entries (and those of a source that no longer has a lifetime); `:cli` calls it at start, and the app will on start.
+- **Artist resolution** maps the caller's normalized name to `resolved` (the MBID), `none` or `ambiguous` (the candidates' ids); the last two are kept so they are not asked again. Its lifetime, *long, months*, is a setting (`Settings.artistCacheLifetime`, 90 days: three MusicBrainz lifetimes, so an artist MusicBrainz adds, or a namesake that makes a name ambiguous, is picked up within a season).
+- **Size**: one limit for all three, a setting (`Settings.cacheSizeLimit`, 50 MB; the reasoning is in its KDoc and the design's *Settings*), counted as the UTF-8 bytes of keys and values, not the file size. Past it, the least recently used entries are evicted after each write and on purge: retrieval and synthesis in one order, artist entries, small and long-lived, only when no other entry is left. A read counts as a use. `Caches.stats()` gives entries and bytes per cache, for the diagnostics screen and the gate's measurements (#46).
+- Time comes from an injected `kotlin.time.Clock`; the database from an injected `SqlDriver`, with `CacheDatabase.Schema` created on it.
+
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 
@@ -482,6 +490,7 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 
 - **Fixtures.** The simulator's three JSON blocks (`playlist-data`, `facts-data`, `albums-data`) move to `fixtures/below-soundtrack/`, and the design's regression cases become named tests. The `facts-data` resolution outcomes are the expected outcomes of the resolution tests; its fact lines are reference facts the extraction tests check for by content, not wording.
 - **Unit tests** in `:core`: normalizer, scoring, genre vocabulary, evidence ids and fingerprint, grounding check, prompt builders against stored prompts.
+- **Store tests** in `:store`, on an in-memory SQLite database through the JDBC driver, with a clock the test moves: each cache's round trip, expiry per source, purging, eviction under the size limit in least-recently-used order, every part of the synthesis key, and versioned invalidation.
 - **Adapter tests** against recorded HTTP responses in `fixtures/http/`. Tests replay them through `ReplayNetClient`, a `NetClient` in `:sources`' test fixtures that serves the recorded files (#36): `NetClient` is an interface, so the adapters need no Ktor `MockEngine`, which Detekt keeps inside `:net`. Until `:cli record` exists, a recording run of the same lookups prints each exchange and a script writes the files (`fixtures/http/README.md`). CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.

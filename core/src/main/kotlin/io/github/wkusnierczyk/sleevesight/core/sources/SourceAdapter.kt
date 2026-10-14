@@ -24,6 +24,14 @@ interface SourceAdapter {
     val id: SourceId
 
     /**
+     * The version of this adapter's evidence extraction. The retrieval cache keeps results, not
+     * responses (`:store`), so a change to what an adapter makes of a response (which lines, their
+     * wording, the verification) raises this, and the results cached under the old rules are
+     * missed instead of served.
+     */
+    val extractionVersion: Int get() = 1
+
+    /**
      * Looks [track] up. Lines in the result must come in a deterministic order for the same
      * response, since [io.github.wkusnierczyk.sleevesight.core.evidence.EvidenceSet] keeps it
      * when assigning ids. Each draft names its own source, which decides its id; an adapter may
