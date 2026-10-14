@@ -209,9 +209,13 @@ class WikipediaSource(
         /**
          * [paragraph]'s sentences, never ending inside a quotation: the Last.fm splitter's pieces
          * (`LastFmBio.split`) are joined while a quotation they open is not closed, and a piece left
-         * with an open quotation at the end of the paragraph is dropped.
+         * with an open quotation at the end of the paragraph is dropped. Every straight `"` counts as
+         * a quotation mark, and a paragraph whose quotation marks do not balance gives no sentences:
+         * an inch mark (`a 7" single`) drops its paragraph, a known limit that loses sentences but
+         * never emits one cut inside a quotation.
          */
         internal fun split(paragraph: String): List<String> {
+            if (!balanced(paragraph)) return emptyList()
             val sentences = mutableListOf<String>()
             var open: String? = null
             for (piece in LastFmBio.split(paragraph)) {
@@ -226,15 +230,10 @@ class WikipediaSource(
             return sentences
         }
 
-        // Outside a quotation, a `"` right after a digit is an inch mark (`a 7" single`); inside one,
-        // it closes it (`"1999" is a song`).
-        private fun balanced(text: String): Boolean {
-            var inside = false
-            for (i in text.indices) {
-                if (text[i] == '"' && (inside || text.getOrNull(i - 1)?.isDigit() != true)) inside = !inside
-            }
-            return !inside && text.count { it == '“' } == text.count { it == '”' }
-        }
+        // Every straight `"` opens or closes a quotation; one used as an inch mark (`a 7" single`)
+        // unbalances its paragraph, which is then dropped. Wikipedia mostly writes "7-inch".
+        private fun balanced(text: String): Boolean =
+            text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 
         private fun tidy(paragraph: String): String =
             paragraph.replace(ORPHANED_PUNCTUATION, "(").replace(SPACES, " ").trim()
