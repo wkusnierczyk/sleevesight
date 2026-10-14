@@ -71,24 +71,12 @@ class RecordingResolver(
         val confirmed =
             leaders.confirm(searched.filter { it.titleMatches && it.durationMatches && it.led.isNotEmpty() })
                 ?: return Resolution.UNREACHABLE
-        // A band credit counts only as its confirmed leader; an unconfirmed one does not credit the artist.
-        val candidates =
-            searched.map { c ->
-                val confirmedLeaders =
-                    c.led.mapNotNull { (artist, band) ->
-                        confirmed[artist to band]?.let {
-                            artist to
-                                it
-                        }
-                    }
-                c.copy(ids = c.ids + confirmedLeaders)
-            }
-        val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.creditedArtists > 0 }
-        // With the player's length, a candidate whose length is known and fits beats one with no
-        // length, however early: a lengthless recording may be a demo, a bootleg or a live take.
-        val measured = fitting.filter { it.durationGap != null }
-        val accepted = if (duration != null && measured.isNotEmpty()) measured else fitting
-        val ambiguous = ambiguousArtist(track, accepted)
+        val candidates = searched.map { it.identified(confirmed) }
+        // Every candidate whose title and length fit and that names one of the track's artists, by
+        // name or as a band's leader, confirmed or not: the same-name check weighs them all.
+        val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.ids.isNotEmpty() }
+        val accepted = narrowed(fitting.filter { it.creditedArtists > 0 }, duration)
+        val ambiguous = ambiguousArtist(track, (narrowed(fitting, duration) + accepted).distinct())
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
             ambiguous != null ->
@@ -99,20 +87,21 @@ class RecordingResolver(
                         ),
                 )
             chosen == null -> unmatched(track, candidates)
-            else -> accept(track, chosen.recording, leaders.details[chosen.recording.mbid])
+            else -> accept(track, chosen, leaders.details[chosen.recording.mbid])
         }
     }
 
-    // A credited name that the accepted candidates, after the length has narrowed them, give to more
-    // than one MusicBrainz artist cannot be resolved: it is a same-name collision. A band credit
-    // counts as its confirmed leader, so a namesake's solo recording and the real leader's band, or
-    // two bands whose leaders are different artists of that name, collide too.
+    // A credited name that the candidates, after the length has narrowed them, give to more than one
+    // MusicBrainz artist cannot be resolved: it is a same-name collision. A band credit counts as
+    // every leader of that name found on the band's recordings, or, with none found, as an unknown
+    // artist: a namesake's solo recording beside the real leader's band is a collision, whether or
+    // not MusicBrainz shows the leader.
     private fun ambiguousArtist(
         track: NormalizedTrack,
-        accepted: List<Candidate>,
+        pool: List<Candidate>,
     ): String? =
         track.artists.firstOrNull { artist ->
-            accepted.mapNotNull { it.ids[artist] }.distinct().size > 1
+            pool.flatMap { it.ids[artist].orEmpty() }.toSet().size > 1
         }
 
     private fun candidate(
@@ -122,23 +111,22 @@ class RecordingResolver(
     ): Candidate {
         val length = recording.lengthMs?.milliseconds
         val gap = if (duration == null || length == null) null else (length - duration).absoluteValue
-        val ids =
+
+        // Every matching credit's id, so two same-name artists on one recording are both seen.
+        fun matching(byName: Boolean): Map<String, Set<String>> =
             track.artists
-                .mapNotNull { artist ->
-                    val credit = recording.credits.firstOrNull { credits(it, artist, byName = true) }
-                    credit?.let { artist to it.artistMbid }
-                }.toMap()
-        val led =
-            track.artists
-                .filter { it !in ids }
-                .mapNotNull { artist ->
-                    recording.credits.firstOrNull { credits(it, artist) }?.let { artist to it.artistMbid }
-                }.toMap()
+                .associateWith { artist ->
+                    recording.credits
+                        .filter { credits(it, artist, byName) }
+                        .map { it.artistMbid }
+                        .toSet()
+                }.filterValues { it.isNotEmpty() }
+        val named = matching(byName = true)
         return Candidate(
             recording = recording,
             titleSimilarity = names.titleSimilarity(track.title, recording.title),
-            ids = ids,
-            led = led,
+            named = named,
+            led = matching(byName = false).filterKeys { it !in named },
             durationGap = gap,
         )
     }
@@ -162,9 +150,15 @@ class RecordingResolver(
 
     private suspend fun accept(
         track: NormalizedTrack,
-        recording: MbRecording,
+        chosen: Candidate,
         fetched: MbRecordingDetail?,
     ): Resolution {
+        val recording = chosen.recording
+        // The artist's id as the choice established it, for a leader confirmed on another of the band's recordings.
+        val known =
+            chosen.ids.mapValues { (_, ids) ->
+                ids.singleOrNull()?.takeUnless { it.startsWith(Candidate.BAND) }
+            }
         val base =
             Resolution(
                 outcome = Outcome.SongArticle,
@@ -173,12 +167,12 @@ class RecordingResolver(
                 artistCredit = creditString(recording.credits),
                 artists =
                     track.artists.map { artist ->
-                        ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList()))
+                        ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList(), known[artist]))
                     },
                 firstRelease = firstRelease(recording),
             )
         val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
-        return if (detail == null) base else withDetail(track, recording, base, detail)
+        return if (detail == null) base else withDetail(track, recording, base, detail, known)
     }
 
     private suspend fun withDetail(
@@ -186,10 +180,11 @@ class RecordingResolver(
         recording: MbRecording,
         base: Resolution,
         detail: MbRecordingDetail,
+        known: Map<String, String?>,
     ): Resolution {
         val artists =
             track.artists.map { artist ->
-                ResolvedArtist(artist, artistMbid(artist, recording.credits, detail.artistRelations))
+                ResolvedArtist(artist, artistMbid(artist, recording.credits, detail.artistRelations, known[artist]))
             }
         val recordingCredits = recordingCredits(detail.artistRelations)
         val link = detail.works.firstOrNull()
@@ -249,41 +244,63 @@ class RecordingResolver(
         }
 
     // The credit by name first; else a performer relationship of the recording ("Them" is credited, Van
-    // Morrison sings). A band the artist leads is not the artist, so its id is never theirs.
+    // Morrison sings); else [known], the id the choice established (a band's leader confirmed on another
+    // of its recordings). A band the artist leads is not the artist, so its id is never theirs.
     private fun artistMbid(
         artist: String,
         credits: List<MbCredit>,
         relations: List<MbArtistRelation>,
+        known: String?,
     ): String? =
         credits.firstOrNull { credits(it, artist, byName = true) }?.artistMbid
             ?: relations.firstOrNull { it.type in PERFORMER_TYPES && names.sameName(it.artistName, artist) }?.artistMbid
+            ?: known
 
     /**
-     * A search result as a candidate: [ids] maps each track artist it credits to that artist's
-     * MusicBrainz id; [led] each one credited only through a band they would lead to the band's id,
-     * until [Leaders] confirms them.
+     * A search result as a candidate: [named] maps each track artist it credits by name to the
+     * credits' MusicBrainz ids; [led] each one credited only through a band they would lead to the
+     * bands' ids. Once [identified], [ids] maps each artist to who they are on this recording (the
+     * credits' ids, a band's leaders, or the band as an unknown artist), and [creditedArtists]
+     * counts those credited by name or as a confirmed leader.
      */
     private data class Candidate(
         val recording: MbRecording,
         val titleSimilarity: Double,
-        val ids: Map<String, String>,
-        val led: Map<String, String>,
+        val named: Map<String, Set<String>>,
+        val led: Map<String, Set<String>>,
         val durationGap: Duration?,
+        val ids: Map<String, Set<String>> = emptyMap(),
+        val creditedArtists: Int = 0,
     ) {
-        val creditedArtists: Int get() = ids.size
+        /** With [leaders], the leader ids found for each (artist, band id), none when unconfirmed. */
+        fun identified(leaders: Map<Pair<String, String>, Set<String>>): Candidate {
+            val byBand =
+                led.mapValues { (artist, bands) ->
+                    bands.flatMap { band -> leaders[artist to band].orEmpty().ifEmpty { setOf(BAND + band) } }.toSet()
+                }
+            val all = (named.keys + byBand.keys).associateWith { named[it].orEmpty() + byBand[it].orEmpty() }
+            return copy(ids = all, creditedArtists = all.count { (_, ids) -> ids.any { !it.startsWith(BAND) } })
+        }
 
         val titleMatches: Boolean get() = titleSimilarity >= ResolutionThresholds.TITLE_SIMILARITY
         val durationMatches: Boolean get() =
             durationGap == null ||
                 durationGap <= ResolutionThresholds.DURATION_TOLERANCE
+
+        companion object {
+            /** The prefix of a band's id standing for its unconfirmed leader, an unknown artist. */
+            const val BAND = "band:"
+        }
     }
 
     /**
      * Confirms band credits (#77): a band credit (`X and His …`) stands for the track's artist X
      * only when a recording of that band among the candidates names X in a performer relationship;
-     * the wording alone would let "Echo" match Echo & the Bunnymen. The relationship gives X's own
-     * id, which the same-name check then counts. Each band is tried on its preferred candidates,
-     * at most [TRIES] of them, so an unconfirmed band costs a few requests, not one per recording.
+     * the wording alone would let "Echo" match Echo & the Bunnymen. The relationships give X's own
+     * ids, which the same-name check then counts. Each band is tried on its preferred candidates,
+     * at most [TRIES] of them, so an unconfirmed band costs a few requests, not one per recording;
+     * since the cap proves nothing, an unconfirmed band still counts in that check, as an unknown
+     * artist.
      */
     private class Leaders(
         private val musicBrainz: MusicBrainzLookup,
@@ -293,16 +310,19 @@ class RecordingResolver(
         val details: MutableMap<String, MbRecordingDetail> = mutableMapOf()
 
         /**
-         * For each (artist, band id) of [candidates]' band credits, the artist's id when confirmed;
-         * null when MusicBrainz did not answer, since a band left unchecked could hide a collision.
+         * For each (artist, band id) of [candidates]' band credits, every id of a performer of the
+         * artist's name on the band's preferred recordings, at most [TRIES] of them: none when
+         * unconfirmed, two when two artists of that name lead it. Null when MusicBrainz did not
+         * answer, since a band left unchecked could hide a collision.
          */
-        suspend fun confirm(candidates: List<Candidate>): Map<Pair<String, String>, String>? {
+        suspend fun confirm(candidates: List<Candidate>): Map<Pair<String, String>, Set<String>>? {
             val bands =
                 candidates
-                    .flatMap { c -> c.led.entries.map { (artist, band) -> (artist to band) to c } }
+                    .flatMap { c -> c.led.flatMap { (artist, bands) -> bands.map { (artist to it) to c } } }
                     .groupBy({ it.first }, { it.second })
-            val confirmed = mutableMapOf<Pair<String, String>, String>()
+            val confirmed = mutableMapOf<Pair<String, String>, Set<String>>()
             for ((key, recordings) in bands) {
+                val leaders = mutableSetOf<String>()
                 for (candidate in recordings.sortedWith(PREFERENCE).take(TRIES)) {
                     val relations =
                         when (val detail = detail(candidate.recording.mbid)) {
@@ -310,13 +330,12 @@ class RecordingResolver(
                             is Lookup.NotFound -> emptyList()
                             is Lookup.Failed -> return null
                         }
-                    val leader =
-                        relations.firstOrNull { it.type in PERFORMER_TYPES && names.sameName(it.artistName, key.first) }
-                    if (leader != null) {
-                        confirmed[key] = leader.artistMbid
-                        break
-                    }
+                    leaders +=
+                        relations
+                            .filter { it.type in PERFORMER_TYPES && names.sameName(it.artistName, key.first) }
+                            .map { it.artistMbid }
                 }
+                confirmed[key] = leaders
             }
             return confirmed
         }
@@ -351,6 +370,16 @@ class RecordingResolver(
                 .thenBy { it.durationGap ?: Duration.INFINITE }
                 .thenByDescending { it.creditedArtists }
                 .thenBy { it.recording.mbid }
+
+        // With the player's length, a candidate whose length is known and fits beats one with no
+        // length, however early: a lengthless recording may be a demo, a bootleg or a live take.
+        private fun narrowed(
+            candidates: List<Candidate>,
+            duration: Duration?,
+        ): List<Candidate> {
+            val measured = candidates.filter { it.durationGap != null }
+            return if (duration != null && measured.isNotEmpty()) measured else candidates
+        }
 
         // Sorts after every date MusicBrainz gives.
         private const val UNDATED = "9999"

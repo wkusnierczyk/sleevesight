@@ -133,10 +133,13 @@ class RecordingResolverTest {
             assertEquals("Dick Dale and His Del-Tones", resolution.artistCredit)
             // From the performer relationship; never the band's own id.
             assertEquals(listOf(ResolvedArtist("Dick Dale", "mbid-Dick Dale")), resolution.artists)
-            // Without a recording that shows Dick Dale in the band, the band credit is not his.
+            // Without a recording that shows Dick Dale in the band, the band is an unknown artist of
+            // his name beside his solo recording: a possible collision, rejected.
             val unconfirmed = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Misirlou", "Dick Dale"), 135)
-            assertEquals("solo", unconfirmed.recordingMbid)
-            assertEquals(listOf(ResolvedArtist("Dick Dale", "mbid-Dick Dale")), unconfirmed.artists)
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Dick Dale have a matching recording"),
+                unconfirmed.outcome,
+            )
         }
 
     // [recording] (credited to a band), whose detail names [performers] (name to id) as performing on it.
@@ -164,7 +167,7 @@ class RecordingResolverTest {
     )
 
     @Test
-    fun `a band whose recording does not show the artist is not theirs - Echo is not Echo and the Bunnymen`() =
+    fun `a band whose recording does not show the artist is not theirs, but may still collide`() =
         runTest {
             val musicBrainz =
                 searching(
@@ -174,9 +177,13 @@ class RecordingResolverTest {
                         "Ian McCulloch" to "mbid-ian",
                     ),
                 )
+            // Echo & the Bunnymen's recording does not show an Echo, so it cannot credit the singer
+            // Echo; nor can it be ruled out as another Echo's (its leader may be unlisted): rejected.
             val resolution = resolve(musicBrainz, track("The Killing Moon", "Echo"), 335)
-            assertEquals("echo", resolution.recordingMbid)
-            assertEquals(listOf(ResolvedArtist("Echo", "mbid-Echo")), resolution.artists)
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Echo have a matching recording"),
+                resolution.outcome,
+            )
             // Alone, the band's recording is a near miss, as before band credits counted.
             val bandOnly =
                 searching(
@@ -230,7 +237,7 @@ class RecordingResolverTest {
                 Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording"),
                 resolve(smith, track("Song", "Alex Smith"), 200).outcome,
             )
-            // An orchestra whose recording names no Alex Smith is not his: the solo recording stands.
+            // An orchestra whose recording names no Alex Smith is not confirmed his, nor ruled out.
             val unrelated =
                 searching(
                     listOf(alexSmith),
@@ -239,7 +246,103 @@ class RecordingResolverTest {
                         "Someone Else" to "mbid-else",
                     ),
                 )
-            assertEquals("solo", resolve(unrelated, track("Song", "Alex Smith"), 200).recordingMbid)
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording"),
+                resolve(unrelated, track("Song", "Alex Smith"), 200).outcome,
+            )
+        }
+
+    @Test
+    fun `a leader under a variant of the name does not confirm the band`() =
+        runTest {
+            val alexSmith =
+                recording(
+                    "solo",
+                    "Song",
+                    "Alex Smith",
+                    200,
+                    "2000",
+                ).copy(credits = listOf(credit("Alex Smith", "artist-a")))
+            // The orchestra's leader as "Alexander Smith": unconfirmed, so a possible collision.
+            val variant =
+                searching(
+                    listOf(alexSmith),
+                    banded(
+                        recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Alexander Smith" to "artist-b",
+                    ),
+                )
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording"),
+                resolve(variant, track("Song", "Alex Smith"), 200).outcome,
+            )
+        }
+
+    @Test
+    fun `a namesake's solo recording beside the real leader's band unconfirmed within the cap collides`() =
+        runTest {
+            val rejected = Outcome.Rejected("several MusicBrainz artists named Bill Haley have a matching recording")
+            val namesake = recording("namesake", "Rock Around the Clock", "Bill Haley", 130, "2020")
+            // A Comets recording with no performers listed.
+            val bare =
+                searching(
+                    listOf(namesake),
+                    banded(recording("comets", "Rock Around the Clock", "Bill Haley & His Comets", 130, "1954")),
+                )
+            assertEquals(rejected, resolve(bare, track("Rock Around the Clock", "Bill Haley"), 130).outcome)
+            // Four Comets recordings, Bill Haley listed only on the fourth, beyond the three tried.
+            val comets =
+                (1..4).map { n ->
+                    banded(
+                        recording("comets-$n", "Rock Around the Clock", "Bill Haley & His Comets", 130, "195$n"),
+                        *(if (n == 4) arrayOf("Bill Haley" to "mbid-real-haley") else emptyArray()),
+                    )
+                }
+            val capped = searching(listOf(namesake), *comets.toTypedArray())
+            assertEquals(rejected, resolve(capped, track("Rock Around the Clock", "Bill Haley"), 130).outcome)
+        }
+
+    @Test
+    fun `two same-name artists on one recording, or two leaders of one band, collide`() =
+        runTest {
+            val rejected = Outcome.Rejected("several MusicBrainz artists named Alex Smith have a matching recording")
+            val joint =
+                recording("joint", "Song", "Alex Smith", 200, "1970")
+                    .copy(credits = listOf(credit("Alex Smith", "artist-a"), credit("Alex Smith", "artist-b")))
+            assertEquals(
+                rejected,
+                resolve(FakeMusicBrainz(Lookup.Found(listOf(joint))), track("Song", "Alex Smith"), 200).outcome,
+            )
+            val twoLeaders =
+                searching(
+                    emptyList(),
+                    banded(
+                        recording("first", "Song", "Alex Smith and His Orchestra", 200, "1960"),
+                        "Alex Smith" to "artist-a",
+                    ),
+                    banded(
+                        recording("second", "Song", "Alex Smith and His Orchestra", 200, "1961"),
+                        "Alex Smith" to "artist-b",
+                    ),
+                )
+            assertEquals(rejected, resolve(twoLeaders, track("Song", "Alex Smith"), 200).outcome)
+        }
+
+    @Test
+    fun `a leader confirmed on another of the band's recordings keeps their id on the chosen one`() =
+        runTest {
+            val musicBrainz =
+                searching(
+                    emptyList(),
+                    banded(recording("first", "Song", "Alex Smith and His Orchestra", 200, "1960")),
+                    banded(
+                        recording("second", "Song", "Alex Smith and His Orchestra", 200, "1961"),
+                        "Alex Smith" to "artist-a",
+                    ),
+                )
+            val resolution = resolve(musicBrainz, track("Song", "Alex Smith"), 200)
+            assertEquals("first", resolution.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Alex Smith", "artist-a")), resolution.artists)
         }
 
     @Test
