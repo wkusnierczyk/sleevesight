@@ -61,6 +61,19 @@ Requires JDK 17 or later. The Android SDK (`ANDROID_HOME`, or `sdk.dir` in `loca
 
 The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`, checked by `checkManifest` once the app exists), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`.
 
+## Pipeline CLI (Phase 0.5)
+
+`:cli` runs the pipeline over the test playlist (`fixtures/below-soundtrack/`) and prints a coverage report: per source the count of each outcome, per track the evidence lines and genre labels, the insights with their grounding-check counts, the Phase 0.5 gate's criteria, and the diagnostics log. The exit status is 1 when a gate criterion fails.
+
+```sh
+./gradlew :cli:run --args="replay"                         # recorded responses only: no network, no keys
+./gradlew :cli:run --args="live --tracks 1,63"             # live sources and AI, with your keys
+./gradlew :cli:run --args="live --tracks all --out .dev/coverage.md"
+./gradlew :cli:run --args="record --record musicbrainz"    # refresh fixtures/http/ from the live service
+```
+
+`replay` runs the design's regression tracks (the default `--tracks regression`) from `fixtures/http/`, and fails on any request with no recording; the build runs it as a test. `live` reads `SLEEVESIGHT_ANTHROPIC_API_KEY`, `SLEEVESIGHT_EXA_API_KEY` and `SLEEVESIGHT_LASTFM_API_KEY` from the environment or from `~/.config/sleevesight/keys.env`; a source or the AI without a key is reported as off. Each insight is a paid call on your key, and each web search a paid search. The report never quotes a web search snippet (Exa's terms), and it marks the insights written from web results, which are not to be committed or posted. Run it with no arguments for the options.
+
 ## License
 
 [GPL-3.0](LICENSE).

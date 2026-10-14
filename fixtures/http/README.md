@@ -32,4 +32,26 @@ longer made. Prune only after a run whose test passed: a lookup that failed was 
 pruning would remove its old recording. Without the variable the test does nothing. Re-recording changes
 responses as the sources' data changes, so the tests' expectations are checked again after it.
 
-Recorded 2026-10-14. `:cli record` (architecture, *Testing*) is to take this over.
+Recorded 2026-10-14.
+
+### With the CLI
+
+`:cli record` (architecture, *Testing*) makes the pipeline's own requests for the playlist positions
+given, live for the sources named and replayed for the others, and writes what the live ones answer
+here, replacing earlier recordings of the same requests and updating the indexes as `record.py`
+does (MusicBrainz without `tags` and `genres`):
+
+```
+./gradlew :cli:run --args="record --record musicbrainz,wikidata,wikipedia --tracks regression"
+./gradlew :cli:run --args="replay"
+```
+
+It does not prune. Web search is never recorded: Exa's results may not be stored (`web/README.md`).
+`--record anthropic` records the model's replies to the pipeline's prompts, with the developer's key
+in the environment, into `anthropic/` (an `index.json` whose entries also carry the request body's
+SHA-256, `bodySha256`, since every prompt goes to the same URL; each reply as `messages-<hash>.sse`
+with its request body beside it, the message id replaced, and no header kept). No such recording is
+committed yet: the first ones (tracks 1 and 63, 2026-10-14) would fail the gate's uncited criterion
+on a sentence the check splits at "U.S." (#46), and a re-recorded source changes the prompts they
+answer. A reply the replay does not find is reported, not fatal; a source's request it does not find
+fails the run.

@@ -85,6 +85,7 @@ flowchart TD
   cli --> sources
   cli --> ai
   cli --> store
+  cli --> net
   sources[":sources (JVM)"] --> core
   sources --> net
   ai[":ai (JVM)"] --> core
@@ -101,10 +102,10 @@ flowchart TD
 | `:sources` | Kotlin JVM | One adapter per source (MusicBrainz, Wikipedia and Wikidata, Last.fm, Discogs, web search), each implementing the `:core` client interfaces and `SourceAdapter`, with its evidence extraction. Also the other outbound clients that are not sources: the Spotify Web API client (Phase 3) and an album-art fetcher for `http` art URIs | `:core`, `:net` |
 | `:ai` | Kotlin JVM | `AiProvider` implementations: Anthropic, OpenAI, Google, Ollama. Streaming, model listing, error mapping | `:core`, `:net` |
 | `:store` | Kotlin JVM | Retrieval cache, synthesis cache, artist-resolution cache, session history, track-change records (D15). SQLDelight schema and queries over an injected `SqlDriver`: `:cli` supplies the SQLite JDBC driver, `:app` the Android driver (an AAR, which a JVM module cannot depend on) | `:core`, SQLDelight runtime |
-| `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, SQLDelight JDBC driver |
+| `:cli` | Kotlin JVM application | Phase 0.5: runs the pipeline over a playlist fixture; writes the coverage report and the insights; records HTTP responses for tests | `:core`, `:sources`, `:ai`, `:store`, `:net` (to create the process's one `NetClient` and register the adapters' host policies, #45), SQLDelight JDBC driver |
 | `:app` | Android application | Session layer (`NotificationListenerService`, `MediaSessionManager`); Compose UI; settings (DataStore); secrets (Keystore); wiring; diagnostics screen | `:core`, `:sources`, `:ai`, `:store`, SQLDelight Android driver |
 
-The boundaries do the enforcing. `:core` cannot reach the network because it has no HTTP dependency; only `:sources` and `:ai` see `:net`; and `:app` gets network results only through them. The checks under [Structural constraints](#structural-constraints) make that a build failure rather than a convention.
+The boundaries do the enforcing. `:core` cannot reach the network because it has no HTTP dependency; only `:sources` and `:ai` see `:net`, besides `:cli`, which creates the one client but makes no request of its own; and `:app` gets network results only through them. The checks under [Structural constraints](#structural-constraints) make that a build failure rather than a convention.
 
 ## Runtime
 
@@ -412,7 +413,7 @@ A user setting, *Prepare the next track*:
 |---|---|
 | No analytics, crash-reporting or ads SDKs | Gradle dependency locking, plus a `checkDependencies` task that fails on any resolved group outside an allowlist file. A new dependency is a reviewed edit to that file |
 | No permissions beyond the expected set | A `checkManifest` task parses each variant's merged manifest and fails on any `uses-permission` not in an allowlist file: `INTERNET`, and the app-private `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` that `androidx.core` merges in. Other extras get `tools:node="remove"`, or a reviewed allowlist entry |
-| Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources` and `:ai` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
+| Network only through adapters and providers | Module graph: only `:net` depends on Ktor or OkHttp, only `:sources`, `:ai` and `:cli` on `:net`; a `checkModuleGraph` task asserts it. Detekt forbids `java.net.URL`, `HttpURLConnection` and socket APIs outside `:net` |
 | Pipeline stays Multiplatform-ready (D2) | Detekt `ForbiddenImport`, `ForbiddenMethodCall` and `ForbiddenAnnotation` in the pipeline modules, as listed under [Multiplatform readiness](#multiplatform-readiness) |
 | Keys never logged | The `Secret` type in `:core`, revealed only into `:net`'s `NetSecrets`, and a log line that holds no value and no header or secret name, and for a hidden hop neither path nor query names; the contract that a key goes in a URL only with `sensitiveUrl`; unit tests log requests carrying a key in each of these places and compare the complete lines, which hold no key. No SLF4J binding ships (the allowlist admits `slf4j-api` alone), so Ktor's own trace logs, which print URLs, go nowhere |
 
@@ -509,6 +510,13 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.
 - **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action; preparing the next track (D13) in each of its modes, including a dropped preparation when the queue changes; and a style (D14) changing the prompt but not the restated contract.
 - **Phase 0.5 gate** (from the design) is a `:cli` run with assertions: zero `unknown` citations, uncited under 5 percent, every listed collision rejected or correctly resolved.
+
+How the CLI is made (#45), where the design leaves room:
+
+- **Modes.** `replay` answers every request from `fixtures/http/` and fails on a source's request with no recording; `CliReplayTest` runs it over the regression tracks in every build, so CI runs the CLI end to end without network or keys. `live` uses the developer's keys from the environment or `~/.config/sleevesight/keys.env`. `record` is live for the sources named and replayed for the others, and writes the live answers into `fixtures/http/` (`fixtures/http/README.md`). The tracks run one after another, each through `Pipeline.run`, with the cache a fresh temporary database in replay (so the playlist's duplicates hit it), `.dev/cli/cache.db` live, and none when recording.
+- **What runs where.** Web search runs only live: its fixtures are synthetic (Exa's terms), so replaying them would put invented text in a coverage report, and recording would store Exa's results. Last.fm runs only live and with a key, which does not exist yet; it is reported as off. The AI replays from recorded replies, matched by the request body's hash; none is committed yet (`fixtures/http/README.md`).
+- **The gate's criteria** (`Gate`): the two citation criteria over every written insight, not checked when none is written; the collisions are the design's regression cases with a same-name or same-title namesake (tracks 8 and 22, 12 and 20, 45, 48 and 76, 61), each with what a right answer looks like per source (no Wikipedia song lines for the covers, whose original-song lines are right; no artist lines for the wrong Reem; Last.fm rejected for Jessiah), checked only where the source ran. The exit status is 1 when a criterion fails, 2 for a usage error or a source's request with no recording.
+- **The report** quotes Wikipedia's sentences with their links and MusicBrainz's and Wikidata's templated lines; never an Exa snippet (counts and URLs only), and it marks an insight written from web lines as one not to commit or post. MusicBrainz tags are not fetched. It ends with the diagnostics events, one line each.
 - **UI**: Compose previews for every state; screenshot tests once the UI settles (Phase 1).
 
 ## CI
