@@ -1,0 +1,5789 @@
+{
+ "title": "Snowbird",
+ "disambiguation": "",
+ "attributes": [
+  {
+   "value": "000184 301 12",
+   "type-id": "034f35ae-d250-3749-95e7-854e606d5960",
+   "type": "SUISA ID"
+  },
+  {
+   "type": "SPA ID",
+   "type-id": "f15e9a05-231e-415b-8b7d-8ec44c736bde",
+   "value": "8501083"
+  },
+  {
+   "value": "12433779",
+   "type-id": "00370bc6-7388-34a1-aa5b-b0e081ccb53d",
+   "type": "SOCAN ID"
+  },
+  {
+   "type": "SIAE ID",
+   "type-id": "2e4f9e12-d094-4bd0-b4dd-a560cc5c4977",
+   "value": "71201316100"
+  },
+  {
+   "type-id": "6a200b13-ca08-3b32-87a9-7aaa46368d75",
+   "value": "51.522",
+   "type": "SGAE ID"
+  },
+  {
+   "type-id": "4439b1a5-47da-4774-9caa-8b8589129297",
+   "value": "1370133",
+   "type": "SAYCO ID"
+  },
+  {
+   "type": "SAYCE ID",
+   "type-id": "4bcbb212-a973-46ee-8160-e9f0f89ca6ef",
+   "value": "1370133"
+  },
+  {
+   "type": "SADAIC ID",
+   "type-id": "d8aa6512-314a-478d-bd30-e8d7411509cb",
+   "value": "261087"
+  },
+  {
+   "type": "SACVEN ID",
+   "type-id": "91064561-0c00-4574-ad18-247c7216675f",
+   "value": "3863253"
+  },
+  {
+   "type": "SACM ID",
+   "value": "016040826",
+   "type-id": "519f3860-0b48-4532-8752-25984f662360"
+  },
+  {
+   "type": "PRS tune code",
+   "value": "110536P",
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6"
+  },
+  {
+   "type-id": "cd76035f-b94e-4e47-850d-aa2cd825d1a6",
+   "value": "6996KN",
+   "type": "PRS tune code"
+  },
+  {
+   "value": "59122",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "type": "ECAD ID"
+  },
+  {
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990",
+   "value": "13594533",
+   "type": "ECAD ID"
+  },
+  {
+   "type": "ECAD ID",
+   "value": "29851765",
+   "type-id": "d37a8c27-8f83-47c7-954d-175d35759990"
+  },
+  {
+   "type": "COMPASS ID",
+   "value": "1973566",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641"
+  },
+  {
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "value": "4575851"
+  },
+  {
+   "type": "COMPASS ID",
+   "type-id": "5ea37343-be89-4cd0-8a37-f471738df641",
+   "value": "8842000"
+  },
+  {
+   "type": "BUMA/STEMRA ID",
+   "type-id": "a6492434-b847-4f1b-9869-9184ade990ed",
+   "value": "W-000071757"
+  },
+  {
+   "type": "BMI ID",
+   "type-id": "c8ac7e55-fd45-3002-9f89-e8b43911a479",
+   "value": "813169"
+  },
+  {
+   "type": "ASCAP ID",
+   "type-id": "d833318c-6c6a-370e-8b16-9cb15873ba76",
+   "value": "490370060"
+  },
+  {
+   "type-id": "b66d6f47-2a58-4bc1-ac75-b44c47a198f8",
+   "value": "2990380",
+   "type": "APDAYC ID"
+  },
+  {
+   "type": "AGADU ID",
+   "value": "6147114",
+   "type-id": "27ea7f59-9f9c-4aee-b31a-61109ac03819"
+  },
+  {
+   "value": "4049659",
+   "type-id": "955305a2-58ec-4c64-94f7-7fb9b209416c",
+   "type": "ACAM ID"
+  },
+  {
+   "type-id": "01eeee67-f514-3801-bdce-279e04872f91",
+   "value": "656846-001",
+   "type": "GEMA ID"
+  },
+  {
+   "type": "JASRAC ID",
+   "value": "0G5-2797-7",
+   "type-id": "31048fcc-3dbb-3979-8f85-805afb933e0c"
+  },
+  {
+   "value": "GW00070364",
+   "type-id": "bdf50af8-0881-322a-8ab7-f031a4935d04",
+   "type": "APRA ID"
+  },
+  {
+   "value": "1362401",
+   "type-id": "c8ac7e55-fd45-3002-9f89-e8b43911a479",
+   "type": "BMI ID"
+  }
+ ],
+ "languages": [
+  "eng"
+ ],
+ "language": "eng",
+ "iswcs": [
+  "T-072.147.417-4"
+ ],
+ "relations": [
+  {
+   "attributes": [],
+   "end": null,
+   "artist": {
+    "country": "CA",
+    "disambiguation": "",
+    "sort-name": "MacLellan, Gene",
+    "id": "5f28f051-79ba-48f2-b179-ca7d4fc7e8ec",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "name": "Gene MacLellan"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {},
+   "target-type": "artist",
+   "source-credit": "",
+   "begin": null,
+   "type": "composer"
+  },
+  {
+   "target-type": "artist",
+   "source-credit": "",
+   "begin": null,
+   "type": "lyricist",
+   "attributes": [],
+   "end": null,
+   "artist": {
+    "id": "5f28f051-79ba-48f2-b179-ca7d4fc7e8ec",
+    "sort-name": "MacLellan, Gene",
+    "name": "Gene MacLellan",
+    "type": "Person",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "3e48faba-ec01-47fd-8e89-30e81161661c",
+   "attribute-ids": {}
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": "1970-09-22",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": true,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 124120,
+    "id": "366f5573-e54c-48cc-a76b-71364a51b471",
+    "title": "Snowbird"
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": "1970-09-22",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "begin": "1970-09-22",
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 124000,
+    "title": "Snowbird",
+    "id": "f1717efb-1b56-4c56-b1f4-980cfcf50669",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      }
+     }
+    ]
+   },
+   "ended": true,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": "1970-09-22",
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": true,
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley",
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "length": 150000,
+    "title": "Snowbird (takes 4, 5 & 2)",
+    "id": "a1f892c5-d55f-4f8c-a487-a70de0c3176a"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": "1970-09",
+   "type": "performance",
+   "target-type": "recording",
+   "begin": "1970-09",
+   "source-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "begin": "1971-01-29",
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1971-01-29",
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "live, 1971-01-29 (dinner): International Hotel, Las Vegas, NV, USA",
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "length": 212760,
+    "id": "17d44208-9d29-4248-80f8-fa66cc47cf81",
+    "title": "Snowbird"
+   }
+  },
+  {
+   "type": "performance",
+   "begin": "1971-01-29",
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley",
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "length": 180480,
+    "id": "c86cabda-1af3-472f-8e63-a463b85e359e",
+    "title": "Snowbird"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": "1971-01-29",
+   "attributes": [
+    "cover",
+    "live"
+   ]
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": "1972-04-10",
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 109000,
+    "id": "e4aae789-5243-42c7-9815-55bb4bd1170d",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "US fiddler",
+       "id": "2ac9d57b-2211-4827-a71f-134104ce5af2",
+       "sort-name": "Baker, Kenny",
+       "type-id": null,
+       "name": "Kenny Baker",
+       "type": null
+      },
+      "joinphrase": " & ",
+      "name": "Kenny Baker"
+     },
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "0eb03552-e8aa-4004-8fde-f1463f3edc2b",
+       "sort-name": "Graves, Josh",
+       "type": null,
+       "name": "Josh Graves",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "name": "Josh Graves"
+     }
+    ],
+    "video": false
+   },
+   "target-type": "recording",
+   "begin": "1972-04-10",
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": "1974-11-01",
+   "ended": true,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Doc & Merle Watson",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "name": "Doc & Merle Watson",
+       "type": null,
+       "id": "8826a2b1-7dbf-4ab6-9baf-329372691a29",
+       "sort-name": "Watson, Doc & Merle",
+       "disambiguation": "",
+       "country": "US"
+      }
+     }
+    ],
+    "length": 173499,
+    "title": "Snowbird",
+    "id": "da608d09-bed7-4e48-962c-923543fb9634"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": "1974-11-02"
+  },
+  {
+   "recording": {
+    "title": "Snowbird",
+    "id": "2ab149cd-d3f4-46d8-ab8a-5ecbc2436675",
+    "length": 212813,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "artist": {
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      },
+      "joinphrase": " with "
+     },
+     {
+      "name": "Jann Arden",
+      "artist": {
+       "id": "31930c85-3e0e-488e-8407-46a0d73fa816",
+       "sort-name": "Arden, Jann",
+       "type-id": null,
+       "name": "Jann Arden",
+       "type": null,
+       "country": "CA",
+       "disambiguation": "Canadian singer‐songwriter"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, 1996-12-18: Halifax Metro Centre, Halifax, NS, Canada"
+   },
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": true,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": "1996-12-18",
+   "attributes": [
+    "live"
+   ],
+   "type": "performance",
+   "begin": "1996-12-18",
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 266866,
+    "title": "Snowbird",
+    "id": "fd72d0e7-fbc0-4421-a8f1-f12d544e0bfa",
+    "disambiguation": "",
+    "video": true,
+    "artist-credit": [
+     {
+      "name": "Catherine MacLellan",
+      "artist": {
+       "disambiguation": "",
+       "country": "CA",
+       "type-id": null,
+       "name": "Catherine MacLellan",
+       "type": null,
+       "id": "0a792aaa-1fb8-4afd-8654-eed71a391232",
+       "sort-name": "MacLellan, Catherine"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "2012-01-14",
+   "type": "performance",
+   "target-type": "recording",
+   "begin": "2012-01-14",
+   "source-credit": ""
+  },
+  {
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "2012-01",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 266866,
+    "title": "Snowbird",
+    "id": "76e2aaf3-929b-4196-9f20-ba3772246b76",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Catherine MacLellan",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "",
+       "id": "0a792aaa-1fb8-4afd-8654-eed71a391232",
+       "sort-name": "MacLellan, Catherine",
+       "type-id": null,
+       "type": null,
+       "name": "Catherine MacLellan"
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": "2012-01",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {},
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA",
+       "type-id": null,
+       "name": "Anne Murray",
+       "type": null,
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne"
+      },
+      "name": "Anne Murray"
+     }
+    ],
+    "length": 131866,
+    "title": "Snow Bird",
+    "id": "f33ab0c0-7fec-4253-bf43-9eca214b84e8"
+   },
+   "attributes": [],
+   "end": null
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      }
+     }
+    ],
+    "length": 129000,
+    "title": "Snow Bird",
+    "id": "b412e6d1-79d0-45ef-9baa-3022d1f3eb6e"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "id": "45249142-8125-45ce-92ad-4afec5a040fa",
+    "title": "Snowbird",
+    "length": 131000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Anne Murray",
+       "type": null,
+       "type-id": null,
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne",
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA"
+      },
+      "name": "Anne Murray"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {}
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "id": "5810667a-9db6-4fd0-abac-667cdac5d415",
+       "sort-name": "Atkins, Chet",
+       "type-id": null,
+       "name": "Chet Atkins",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Chet Atkins"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "1513be42-38b0-4b29-ae9d-4ed95a08f2c9",
+    "title": "Snowbird",
+    "length": 138333
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 225000,
+    "id": "da1a1471-4d40-4d78-8e38-9c4fd4f7cb32",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Mark Eitzel",
+      "artist": {
+       "id": "80b694db-8f5e-485f-b589-17d7853140b0",
+       "sort-name": "Eitzel, Mark",
+       "type": null,
+       "name": "Mark Eitzel",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "length": 125000,
+    "id": "380ce02e-7548-4d4c-9d24-ff2f326585d7",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”",
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "recording": {
+    "length": 174560,
+    "id": "3ff78bd3-3af3-4d78-aab6-eee1c93f0aa9",
+    "title": "Snowbird",
+    "disambiguation": "live, 1996-12-18: Halifax Metro Centre, Halifax, NS, Canada",
+    "artist-credit": [
+     {
+      "joinphrase": " feat. ",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray"
+      },
+      "name": "Anne Murray"
+     },
+     {
+      "name": "Jann Arden",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "Canadian singer‐songwriter",
+       "sort-name": "Arden, Jann",
+       "id": "31930c85-3e0e-488e-8407-46a0d73fa816",
+       "name": "Jann Arden",
+       "type": null,
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "attributes": [
+    "live"
+   ],
+   "end": null
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 127934,
+    "title": "Snowbird",
+    "id": "490964ff-c86e-4bf9-845b-3f4b7dd792c4",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ]
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type": null,
+       "name": "Hank Snow",
+       "type-id": null,
+       "id": "c328faea-ae26-4988-85f5-e9a8dc322bb1",
+       "sort-name": "Snow, Hank"
+      },
+      "name": "Hank Snow"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "e2fb3f58-4268-48c6-a260-eb6e0ca39a56",
+    "length": 141000
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "length": 178400,
+    "title": "Snowbird",
+    "id": "c2b0f50a-f553-4a8c-9538-fa929df4e212",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Crosby, Bing",
+       "id": "2437980f-513a-44fc-80f1-b90d9d7fcf8f",
+       "type-id": null,
+       "name": "Bing Crosby",
+       "type": null
+      },
+      "name": "Bing Crosby"
+     }
+    ]
+   },
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": []
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "joinphrase": "",
+      "artist": {
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      }
+     }
+    ],
+    "video": false,
+    "length": 137694,
+    "id": "35668a2f-38cd-4780-9181-fce17850309b",
+    "title": "Snowbird"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {},
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "country": null,
+       "type": null,
+       "name": "Liv Maessen",
+       "type-id": null,
+       "id": "90eb5a2d-972d-40c5-9d77-8a9c8645d729",
+       "sort-name": "Maessen, Liv"
+      },
+      "name": "Liv Maessen"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "80f731ef-459d-48c3-b128-ad515e00250b",
+    "length": 121906
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "end": null,
+   "attributes": []
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 173000,
+    "title": "Snowbird",
+    "id": "0b7f17bf-500f-4f6b-8a70-6eda7df9d425",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "c136759e-c98e-4dc0-b5d2-1922943da8a2",
+       "sort-name": "Winner, Dana",
+       "type": null,
+       "name": "Dana Winner",
+       "type-id": null,
+       "country": "BE",
+       "disambiguation": ""
+      },
+      "joinphrase": "",
+      "name": "Dana Winner"
+     }
+    ]
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "recording": {
+    "title": "Snowbird",
+    "id": "c56bd49a-274b-4f7d-81f6-d4b23d7fb3dc",
+    "length": 178666,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Bing Crosby",
+      "joinphrase": " & ",
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Crosby, Bing",
+       "id": "2437980f-513a-44fc-80f1-b90d9d7fcf8f",
+       "type": null,
+       "name": "Bing Crosby",
+       "type-id": null
+      }
+     },
+     {
+      "artist": {
+       "sort-name": "Basie, Count",
+       "id": "0dbd6300-efdc-420b-857e-895e18fad317",
+       "type-id": null,
+       "name": "Count Basie",
+       "type": null,
+       "country": "US",
+       "disambiguation": "pianist"
+      },
+      "joinphrase": "",
+      "name": "Count Basie"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "14577444-e59b-420d-abed-cc421d89ca37",
+    "title": "Snowbird",
+    "length": 126013
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "id": "75f3dfc0-3150-40ce-83b0-b492b653b395",
+    "title": "Snowbird",
+    "length": null,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US pop singer & TV personality, 1912–2001",
+       "country": "US",
+       "type": null,
+       "name": "Perry Como",
+       "type-id": null,
+       "id": "0182474b-8a1d-46d0-9d0f-e6df353335ea",
+       "sort-name": "Como, Perry"
+      },
+      "joinphrase": "",
+      "name": "Perry Como"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "ffcaa84d-088c-4e01-91af-dac27c6d21cd",
+    "title": "Snowbird",
+    "length": 141000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type-id": null,
+       "name": "Loretta Lynn",
+       "type": null,
+       "sort-name": "Lynn, Loretta",
+       "id": "613260c3-d620-4645-94cd-33cd55f29b1e"
+      },
+      "name": "Loretta Lynn"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [],
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {},
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "joinphrase": " & ",
+      "artist": {
+       "name": "Anne Murray",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA"
+      }
+     },
+     {
+      "artist": {
+       "disambiguation": "",
+       "country": "GB",
+       "type": null,
+       "name": "Sarah Brightman",
+       "type-id": null,
+       "sort-name": "Brightman, Sarah",
+       "id": "896f0194-8ab2-4278-81e0-c56a0444b569"
+      },
+      "joinphrase": "",
+      "name": "Sarah Brightman"
+     }
+    ],
+    "video": false,
+    "length": 136000,
+    "id": "3fb3ef60-2678-4355-a6b0-8d03cea3d363",
+    "title": "Snowbird"
+   }
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Bing Crosby",
+      "joinphrase": " & ",
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Bing Crosby",
+       "sort-name": "Crosby, Bing",
+       "id": "2437980f-513a-44fc-80f1-b90d9d7fcf8f",
+       "disambiguation": "",
+       "country": "US"
+      }
+     },
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "pianist",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Count Basie",
+       "sort-name": "Basie, Count",
+       "id": "0dbd6300-efdc-420b-857e-895e18fad317"
+      },
+      "name": "Count Basie"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "2fe0c5ae-f0bd-4d3e-98d2-90e7d3f816d5",
+    "title": "Snowbird",
+    "length": 177626
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US pop singer & TV personality, 1912–2001",
+       "sort-name": "Como, Perry",
+       "id": "0182474b-8a1d-46d0-9d0f-e6df353335ea",
+       "type-id": null,
+       "name": "Perry Como",
+       "type": null
+      },
+      "name": "Perry Como"
+     }
+    ],
+    "length": 183973,
+    "title": "Snowbird",
+    "id": "16be5a38-e024-4a71-bfb6-83c2b290c44f"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [],
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Bert Kaempfert & His Orchestra",
+      "joinphrase": " feat. ",
+      "artist": {
+       "sort-name": "Kaempfert, Bert & His Orchestra",
+       "id": "642e61c8-878c-4a7c-84e2-2a8a384a8f8e",
+       "name": "Bert Kaempfert & His Orchestra",
+       "type": null,
+       "type-id": null,
+       "country": "DE",
+       "disambiguation": ""
+      }
+     },
+     {
+      "name": "Sylvia Vrethammar",
+      "joinphrase": "",
+      "artist": {
+       "country": "SE",
+       "disambiguation": "",
+       "sort-name": "Vrethammar, Sylvia",
+       "id": "d1cc9e23-7ba4-499f-833f-36303f289585",
+       "type": null,
+       "name": "Sylvia Vrethammar",
+       "type-id": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "bc5c6179-7d58-4bdb-9a40-af5875d72de1",
+    "length": 146000
+   },
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward"
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "40d0712a-9ffb-4824-973c-e30ce6d64bd4",
+    "length": 174200,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Winner, Dana",
+       "id": "c136759e-c98e-4dc0-b5d2-1922943da8a2",
+       "type-id": null,
+       "name": "Dana Winner",
+       "type": null,
+       "country": "BE",
+       "disambiguation": ""
+      },
+      "name": "Dana Winner"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "",
+       "country": "JM",
+       "name": "Dennis Walks",
+       "type": null,
+       "type-id": null,
+       "id": "b977ad66-01bd-4e1f-b719-c376fea5cbdf",
+       "sort-name": "Walks, Dennis"
+      },
+      "joinphrase": "",
+      "name": "Dennis Walks"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "f9447821-b98e-4839-9cb6-a49f767e6b60",
+    "title": "Snowbird",
+    "length": 173000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Krüger Brothers",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type-id": null,
+       "name": "Krüger Brothers",
+       "type": null,
+       "sort-name": "Krüger Brothers",
+       "id": "1edbf7ea-4275-4f53-b454-b42816bf1a8c"
+      }
+     }
+    ],
+    "length": 190000,
+    "title": "Snowbird",
+    "id": "3cda8bef-186f-4531-9c6d-838dea025122"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "title": "Snowbird",
+    "id": "7c7e74f0-e7de-441b-bfc3-12136353f2d2",
+    "length": 127426,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 146000,
+    "id": "d34e16be-593d-4838-bef0-5ac6354dee6a",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Roy Clark",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Clark, Roy",
+       "id": "88f8eb8f-1da4-455b-8a7f-229e5c59ff52",
+       "type-id": null,
+       "name": "Roy Clark",
+       "type": null,
+       "country": "US",
+       "disambiguation": "American singer and musician"
+      }
+     }
+    ],
+    "video": false
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Chet Atkins",
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "id": "5810667a-9db6-4fd0-abac-667cdac5d415",
+       "sort-name": "Atkins, Chet",
+       "name": "Chet Atkins",
+       "type": null,
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 130000,
+    "id": "dcf136b4-9fd8-48dd-8ab6-05303c15a24e",
+    "title": "Snowbird"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Ray Conniff",
+       "sort-name": "Conniff, Ray",
+       "id": "b84dfb67-c437-4ccc-b512-1073fd4612eb",
+       "disambiguation": "",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Ray Conniff"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "1c271fa7-ad5e-4f3c-a4cc-4d6a96d02e04",
+    "title": "Snowbird",
+    "length": 124000
+   },
+   "attribute-ids": {},
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": " & ",
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Loretta Lynn",
+       "sort-name": "Lynn, Loretta",
+       "id": "613260c3-d620-4645-94cd-33cd55f29b1e",
+       "disambiguation": "",
+       "country": "US"
+      },
+      "name": "Loretta Lynn"
+     },
+     {
+      "name": "Conway Twitty",
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Twitty, Conway",
+       "id": "a3c60d26-90d6-4788-ba9b-a89693fc396d",
+       "type-id": null,
+       "type": null,
+       "name": "Conway Twitty"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "36c002db-c2f1-4ad6-a635-46ba3a603d7d",
+    "title": "Snowbird",
+    "length": 139000
+   },
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "",
+       "sort-name": "MacLellan, Catherine",
+       "id": "0a792aaa-1fb8-4afd-8654-eed71a391232",
+       "name": "Catherine MacLellan",
+       "type": null,
+       "type-id": null
+      },
+      "name": "Catherine MacLellan"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "25367e9b-703b-4ff2-86e1-aa4eb0135643",
+    "title": "Snowbird",
+    "length": 271000
+   }
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "sort-name": "Spears, Billie Jo",
+       "type-id": null,
+       "type": null,
+       "name": "Billie Jo Spears",
+       "country": "US",
+       "disambiguation": "American country music singer"
+      },
+      "joinphrase": "",
+      "name": "Billie Jo Spears"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "dd85ef34-9d2e-4038-a8b1-5f1b1f5a43d3",
+    "length": 131000
+   }
+  },
+  {
+   "attributes": [],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Anne Murray",
+       "type-id": null,
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA"
+      }
+     }
+    ],
+    "video": false,
+    "length": 129906,
+    "id": "582dc6a9-ea47-4114-ba9e-474a74e82502",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {},
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [],
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "8a4b1253-7ce2-488a-8149-c306f149cde8",
+    "length": 127000
+   },
+   "attribute-ids": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Billie Jo Spears",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Spears, Billie Jo",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "name": "Billie Jo Spears",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "American country music singer"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "56a42ae1-d831-4814-add4-0e2c56eea4e5",
+    "length": 134000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "c328faea-ae26-4988-85f5-e9a8dc322bb1",
+       "sort-name": "Snow, Hank",
+       "type": null,
+       "name": "Hank Snow",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "name": "Hank Snow"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "cddb8a49-2a4a-47b7-ba8e-9b483bd60685",
+    "length": 146000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "attribute-ids": {},
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "type-id": null,
+       "name": "Anne Murray",
+       "type": null,
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      },
+      "joinphrase": "",
+      "name": "Anne Murray"
+     }
+    ],
+    "length": 134000,
+    "title": "Snowbird",
+    "id": "8dc56ea7-17ab-4248-9947-1ac8ef6e2b7e"
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "length": null,
+    "id": "c10b8d60-5fa4-476b-b19e-e3b33490de16",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance"
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "10ea9d0e-26c2-4301-a294-84f4d14e7753",
+    "length": null,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Billie Jo Spears",
+      "artist": {
+       "disambiguation": "American country music singer",
+       "country": "US",
+       "name": "Billie Jo Spears",
+       "type": null,
+       "type-id": null,
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "sort-name": "Spears, Billie Jo"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "recording": {
+    "id": "582cdc78-72bd-4a2b-b09e-b6140edba2b2",
+    "title": "Snowbird",
+    "length": 125000,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "recording": {
+    "id": "9aa871fa-8f67-413d-a229-bb94d6ba4934",
+    "title": "Snowbird",
+    "length": 136000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "id": "a2163285-46ee-40a3-b48d-31569c73f485",
+    "title": "Snowbird",
+    "length": 121960,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null,
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "1f828455-7737-4718-97ae-89f1a16aa29d",
+    "length": 129769,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "recording": {
+    "title": "Snowbird",
+    "id": "ee28cb6a-eea4-4285-86ab-cc9a0521928b",
+    "length": 137773,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "name": "Elvis Presley",
+       "type": null,
+       "type-id": null,
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis"
+      },
+      "name": "Elvis Presley"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "2a784e3b-efd6-46b9-8c75-69f4fff2e8bf",
+    "length": 127826,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 226586,
+    "title": "Snowbird",
+    "id": "c4065853-2d90-4a67-8fce-75b82db14190",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Tara MacLean",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "name": "Tara MacLean",
+       "type": null,
+       "id": "65589165-c8ce-43bc-b795-f9fdaf5fffe5",
+       "sort-name": "MacLean, Tara",
+       "disambiguation": "",
+       "country": "CA"
+      }
+     }
+    ]
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "target-credit": ""
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "recording": {
+    "length": 134000,
+    "title": "Snowbird",
+    "id": "a6bab934-1fe4-4cd2-b670-f6e497a9fa7c",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "sort-name": "Spears, Billie Jo",
+       "name": "Billie Jo Spears",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "American country music singer"
+      },
+      "name": "Billie Jo Spears"
+     }
+    ]
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "recording": {
+    "length": 129533,
+    "id": "5923d4f5-52b5-4164-b22e-cb7f82f8baf7",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "country": "US",
+       "disambiguation": "US country singer"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "recording": {
+    "title": "Snowbird",
+    "id": "31de6f1d-c9e6-45b3-b3de-2cf88e2e627a",
+    "length": 176000,
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": " & ",
+      "artist": {
+       "sort-name": "Basie, Count",
+       "id": "0dbd6300-efdc-420b-857e-895e18fad317",
+       "name": "Count Basie",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "pianist"
+      },
+      "name": "Count Basie"
+     },
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Bing Crosby",
+       "type-id": null,
+       "id": "2437980f-513a-44fc-80f1-b90d9d7fcf8f",
+       "sort-name": "Crosby, Bing",
+       "disambiguation": "",
+       "country": "US"
+      },
+      "name": "Bing Crosby"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "length": 173000,
+    "id": "5e7e97b1-5339-45f5-a17d-915c7990d34b",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Ossie Scott",
+       "type": null,
+       "type-id": null,
+       "id": "65cf428e-494c-48d6-9371-a9d2cab1d887",
+       "sort-name": "Scott, Ossie",
+       "disambiguation": "saxophonist",
+       "country": null
+      },
+      "name": "Ossie Scott"
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "instrumental": "c031ed4f-c9bb-4394-8cf5-e8ce4db512ae",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover",
+    "instrumental"
+   ],
+   "end": null
+  },
+  {
+   "attributes": [
+    "cover",
+    "instrumental"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "title": "Snowbird",
+    "id": "1d6e26f5-2a87-435b-901c-85f71f43bda0",
+    "length": null,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "CA",
+       "disambiguation": "",
+       "id": "23b0b857-ee1a-41a4-9896-1ff25b6e50f8",
+       "sort-name": "Bennett, Jo Jo",
+       "type-id": null,
+       "type": null,
+       "name": "Jo Jo Bennett"
+      },
+      "joinphrase": "",
+      "name": "Jo Jo Bennett All Stars"
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "instrumental": "c031ed4f-c9bb-4394-8cf5-e8ce4db512ae",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley",
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "62ed5d57-5689-40be-9db0-956e230bcb6b",
+    "title": "Snowbird",
+    "length": 125000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”",
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 126306,
+    "title": "Snowbird",
+    "id": "d5b3c381-2f9e-42e3-8bd8-a475e74cf331"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Gene MacLellan",
+      "joinphrase": "",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "",
+       "sort-name": "MacLellan, Gene",
+       "id": "5f28f051-79ba-48f2-b179-ca7d4fc7e8ec",
+       "name": "Gene MacLellan",
+       "type": null,
+       "type-id": null
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "1b2f17d4-dfe4-4aa1-b763-66e6e762a537",
+    "title": "Snowbird",
+    "length": 149066
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {},
+   "recording": {
+    "length": 130933,
+    "id": "08979bb7-f828-4cd9-bfff-c4aff18a22ea",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      },
+      "name": "Anne Murray"
+     }
+    ],
+    "video": false
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": []
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "0a0bb42d-449c-4494-bf20-a35257e79515",
+    "length": 139000,
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "disambiguation": ""
+   }
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Tompall and The Glaser Brothers",
+       "id": "f6697421-61ca-4002-853d-4858701dcfdc",
+       "type-id": null,
+       "type": null,
+       "name": "Tompall and The Glaser Brothers",
+       "country": "US",
+       "disambiguation": ""
+      },
+      "name": "Tompall Glaser & The Glaser Brothers"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "63b9d465-dce5-4e2e-8558-78797c3b9fbc",
+    "title": "Snowbird",
+    "length": null
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "title": "Snowbird",
+    "id": "fc9009e1-3d85-41a4-8071-cd3748942856",
+    "length": 133320,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      }
+     }
+    ],
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "recording": {
+    "length": null,
+    "title": "Snowbird",
+    "id": "a4a13c8a-69a8-4c37-9803-dff39ce30c5b",
+    "disambiguation": "live on Musikladen",
+    "video": true,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      },
+      "joinphrase": "",
+      "name": "Anne Murray"
+     }
+    ]
+   },
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "live"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”",
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null
+      }
+     }
+    ],
+    "length": 139000,
+    "title": "Snowbird",
+    "id": "ea165b87-0988-46be-9aff-8f1e9193c55f"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "recording": {
+    "id": "7947401f-01c3-4570-860a-26d2417c08d9",
+    "title": "Snowbird",
+    "length": 130986,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "artist": {
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA",
+       "type": null,
+       "name": "Anne Murray",
+       "type-id": null,
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {},
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer",
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "name": "Anne Murray",
+       "type": null,
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Anne Murray"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "a581d813-cf10-4ce3-ac73-f9b19b6f0a0d",
+    "length": 132000
+   },
+   "attributes": [],
+   "end": null
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [],
+   "end": null,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "id": "20c7f26c-0bcb-4bc5-87df-0425b748642e",
+    "title": "Snowbird",
+    "length": 130000,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "artist": {
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "sort-name": "Murray, Anne"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {}
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "id": "a64174f3-4a95-4a2c-80bc-58a6d9df0a1d",
+    "title": "Snowbird",
+    "length": 130000,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "sort-name": "Jim and Jesse",
+       "id": "09410112-c24e-405d-a0d3-cbe5b737f3cb",
+       "name": "Jim and Jesse",
+       "type": null,
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Jim and Jesse"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      },
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "disambiguation": "1970 Nashville session",
+    "id": "3ac88252-483c-43c4-84a9-faf098ac0187",
+    "title": "Snowbird",
+    "length": 126306
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "eca2f602-c1e8-4f75-8036-3e6c04434248",
+    "length": null
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "length": 201000,
+    "id": "90eebdf4-0293-4cfd-ad96-80a1b05faf19",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "The Abeels",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Abeels, The",
+       "id": "830634e0-d3c3-475d-aec0-51b6d369a344",
+       "type-id": null,
+       "type": null,
+       "name": "The Abeels",
+       "country": "US",
+       "disambiguation": "Disputanta, Virginia bluegrass act"
+      }
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "78bbf846-a3e3-41bc-ae64-c7bd5c1e739c",
+    "title": "Snowbird",
+    "length": 126200
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "American country music singer",
+       "country": "US",
+       "type": null,
+       "name": "Billie Jo Spears",
+       "type-id": null,
+       "sort-name": "Spears, Billie Jo",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e"
+      },
+      "name": "Billie Jo Spears"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "a843b1a3-c12b-4a8d-ae17-4daa34c6093a",
+    "length": null
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Billie Jo Spears",
+      "artist": {
+       "sort-name": "Spears, Billie Jo",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "name": "Billie Jo Spears",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "American country music singer"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "ef7bd967-465e-4afd-820f-a0b7bee87dea",
+    "length": null
+   }
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "American country music singer",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "sort-name": "Spears, Billie Jo",
+       "type-id": null,
+       "name": "Billie Jo Spears",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Billie Jo Spears"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "de7b9dfa-837d-43a3-9889-c18c379766c9",
+    "title": "Snowbird",
+    "length": null
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 133893,
+    "id": "af4e3dee-2fa2-4b33-b08a-e0b7b28036f8",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Billie Jo Spears",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Spears, Billie Jo",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "disambiguation": "American country music singer",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Billie Jo Spears"
+     }
+    ],
+    "video": false
+   }
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Billie Jo Spears",
+      "artist": {
+       "country": "US",
+       "disambiguation": "American country music singer",
+       "id": "615d51ca-3d06-43dc-b956-4d76099f4b5e",
+       "sort-name": "Spears, Billie Jo",
+       "type": null,
+       "name": "Billie Jo Spears",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": null,
+    "title": "Snowbird",
+    "id": "30d820c8-ff3e-443e-b764-559b03980a09"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "d681fe8c-7aa1-4ecb-913b-44c7d9027589",
+    "title": "Snowbird",
+    "length": 129386,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "807d3717-3459-449f-b3c3-12faba000e9f",
+    "title": "Snowbird",
+    "length": 125386,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "US country singer"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "a064f4fc-4f8e-4caf-8a63-096057311771",
+    "length": 129586,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance"
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "recording": {
+    "length": 139000,
+    "title": "Snowbird",
+    "id": "0a8b5834-af49-456c-b7c4-ce14ad1bed3e",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Missy Werner",
+      "joinphrase": "",
+      "artist": {
+       "id": "576538da-798c-4957-b5cb-20fc51d3e8dc",
+       "sort-name": "Werner, Missy",
+       "type": null,
+       "name": "Missy Werner",
+       "type-id": null,
+       "country": null,
+       "disambiguation": ""
+      }
+     }
+    ]
+   },
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "length": 126000,
+    "title": "Snowbird",
+    "id": "e08b93af-61a6-4cb5-af4b-83a43cf8fb8b",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "",
+       "id": "c2348d06-40cc-4a29-953a-5fb753905844",
+       "sort-name": "Husky, Ferlin",
+       "type": null,
+       "name": "Ferlin Husky",
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Ferlin Husky"
+     }
+    ]
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false
+  },
+  {
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”",
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "length": null,
+    "id": "b8583419-d3e3-4908-9cc7-5e244bc31e98",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "id": "f95e418f-23a4-40d8-bde5-941c16e1ce99",
+    "title": "Snowbird",
+    "length": 125000,
+    "artist-credit": [
+     {
+      "name": "Linn Anderson",
+      "artist": {
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "country": "US",
+       "disambiguation": "US country singer"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "length": null,
+    "id": "bbb46629-8752-4bf1-a2ac-2b15371001da",
+    "title": "Snowbird"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "length": 125000,
+    "title": "Snowbird",
+    "id": "623017e5-3214-447a-9cc9-ee5c71c5cba1",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "name": "Lynn Anderson"
+     }
+    ]
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 131000,
+    "title": "Snowbird",
+    "id": "2ae37a16-3a86-47e4-8166-d100adc5cfcc"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson"
+      }
+     }
+    ],
+    "length": 129000,
+    "title": "Snowbird",
+    "id": "50a58bd0-f546-47db-80a2-32904aaafd70"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "f8e43ec7-7857-4ec1-9fdd-8a4f290a054d",
+    "title": "Snowbird",
+    "length": 129000,
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": null,
+    "id": "e3d993d7-27a5-4256-aca2-7470657a8ab3",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      }
+     }
+    ],
+    "length": null,
+    "title": "Snowbird",
+    "id": "191b8b4c-ae6d-4874-a1de-7655b4ac4617"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "04bec346-933f-4d1d-a13f-7caa91525563",
+    "title": "Snowbird",
+    "length": 129000,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": null,
+    "title": "Snowbird",
+    "id": "74fdc6be-a52a-4550-b6a2-4e7fc4bb4cdb"
+   },
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "d2c728c0-d7d7-48e1-9e02-1af71f027e1f",
+    "length": 125000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "length": 130293,
+    "id": "026afe7d-d07e-4d30-9668-c881ca1d93f6",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": null,
+    "id": "e6f2ccec-2348-47a7-84bc-3ab2a7d513f0",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   }
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "length": 126000,
+    "id": "7889f91c-3631-4b79-b8a8-9d66001f44e2",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "country": "US",
+       "disambiguation": "US country singer"
+      }
+     }
+    ],
+    "video": false,
+    "length": 126000,
+    "id": "18ccd226-c2b4-4aa3-a592-035bdafded93",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "recording": {
+    "length": 126000,
+    "title": "Snowbird",
+    "id": "a8a558b2-e7e4-4d23-b009-8b1a963b37b6",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ]
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "US country singer"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "b66725a9-6e5f-442b-a840-5f06092c1c3c",
+    "length": 131666
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "87712ef3-0938-418d-9e30-9bc6fa298b48",
+    "length": null,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "US country singer"
+      }
+     }
+    ],
+    "disambiguation": ""
+   }
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 127000,
+    "title": "Snowbird",
+    "id": "27513782-ccc0-4969-bcc8-de5ae139aafc",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ]
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "409ddb89-0493-4ae5-abf2-ca58b2a5e34a",
+    "length": 126000
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": ""
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "disambiguation": "US country singer",
+       "country": "US"
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "d6ac8513-4f25-4f0d-a287-d55ba13aa369",
+    "title": "Snowbird",
+    "length": null
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "f556da11-a9cb-4ce5-a293-8d8ff50d2d67",
+    "length": null
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "US country singer"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": null,
+    "title": "Snowbird",
+    "id": "369b701a-3c8c-4689-82ef-917a0e082de3"
+   }
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": null,
+    "id": "9353364c-ddcf-4d64-a030-fcf5b5b0ccb7",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "disambiguation": "US country singer",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "length": null,
+    "title": "Snowbird",
+    "id": "37d23276-8039-4b31-afed-10958975cbf3",
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      }
+     }
+    ]
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": null,
+    "id": "d443bade-c966-4fc6-b33f-d9fd67086a66",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "US",
+       "disambiguation": "US country singer",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn",
+       "type": null,
+       "name": "Lynn Anderson",
+       "type-id": null
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "recording": {
+    "length": null,
+    "id": "bd9b0649-56b6-4caa-bfa2-3b60b49fc127",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      }
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "97172dd3-cb73-473d-807c-54b3b8e424d2",
+    "title": "Snowbird",
+    "length": 213066,
+    "artist-credit": [
+     {
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Special Consensus",
+       "sort-name": "Special Consensus",
+       "id": "88ac0688-278a-42cf-bdd3-4c23427173fc",
+       "disambiguation": "",
+       "country": "US"
+      },
+      "joinphrase": "",
+      "name": "Special Consensus"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   }
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "1f5b6697-b76f-4c97-9709-948f0f3f500f",
+    "title": "Snowbird",
+    "length": 174000,
+    "artist-credit": [
+     {
+      "name": "Chris Connor",
+      "artist": {
+       "type": null,
+       "name": "Chris Connor",
+       "type-id": null,
+       "id": "92434230-412b-4097-a223-ee67f84cba3d",
+       "sort-name": "Connor, Chris",
+       "disambiguation": "jazz singer",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "9b15dd57-b43b-479b-9cdc-942ab8af0484",
+    "length": 127853
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "type-id": null,
+       "name": "Lynn Anderson",
+       "type": null,
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf"
+      },
+      "name": "Lynn Anderson"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "d5115de7-50ff-4606-a073-f65f7a31b965",
+    "title": "Snowbird",
+    "length": 129000
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "length": 127000,
+    "id": "ab3d0e1c-2d3c-457e-9e87-231810636f40",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      }
+     }
+    ],
+    "video": false
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "id": "7bd5e5fe-79b8-42ea-824f-fa1ab01f6535",
+    "title": "Snowbird",
+    "length": 161000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "2fc657cf-2dc2-4ba8-ad43-4bf34f875046",
+       "sort-name": "Glare, The",
+       "type": null,
+       "name": "The Glare",
+       "type-id": null,
+       "country": null,
+       "disambiguation": ""
+      },
+      "name": "The Glare"
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Burl Ives",
+       "type": null,
+       "type-id": null,
+       "sort-name": "Ives, Burl",
+       "id": "086c1936-9eaa-4091-b140-ad33a51a3b71",
+       "disambiguation": "",
+       "country": "US"
+      },
+      "name": "Burl Ives"
+     }
+    ],
+    "video": false,
+    "length": 235000,
+    "id": "ea64f873-2bb2-4fa4-abc2-ee6aebb9c280",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "title": "Snowbird",
+    "id": "cd6e1aef-19ed-44f1-ad03-4062a41b85d3",
+    "length": 144946,
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Dottie West",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type-id": null,
+       "name": "Dottie West",
+       "type": null,
+       "sort-name": "West, Dottie",
+       "id": "edfa1708-f764-43b1-867f-6dd363cca3f1"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": ""
+   },
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance"
+  },
+  {
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Lynn Anderson",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Anderson, Lynn",
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "type-id": null,
+       "type": null,
+       "name": "Lynn Anderson",
+       "country": "US",
+       "disambiguation": "US country singer"
+      }
+     }
+    ],
+    "video": false,
+    "length": 132160,
+    "id": "7802c05f-917b-440a-8317-4879a85dc3b1",
+    "title": "Snowbird"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Dottie West",
+      "joinphrase": "",
+      "artist": {
+       "id": "edfa1708-f764-43b1-867f-6dd363cca3f1",
+       "sort-name": "West, Dottie",
+       "type": null,
+       "name": "Dottie West",
+       "type-id": null,
+       "country": "US",
+       "disambiguation": ""
+      }
+     }
+    ],
+    "length": 140000,
+    "title": "Snowbird",
+    "id": "b9fd0d6b-9ba4-4934-a629-84ee73831ae2"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "type": "performance",
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "recording": {
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "name": "Elvis Presley",
+       "type": null,
+       "type-id": null,
+       "country": "US",
+       "disambiguation": "“The King of Rock and Roll”"
+      },
+      "name": "Elvis Presley"
+     }
+    ],
+    "video": false,
+    "length": 124000,
+    "id": "4911adcb-010d-47b4-ab6f-a158084c7204",
+    "title": "Snowbird"
+   },
+   "attribute-ids": {},
+   "target-credit": "",
+   "direction": "backward",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "name": "Trevor Wilson",
+       "type-id": null,
+       "sort-name": "Wilson, Trevor",
+       "id": "531400e4-1c4a-42cf-93e3-50ecebfcaa6a",
+       "disambiguation": "New Zealand country",
+       "country": "NZ"
+      },
+      "name": "Trevor Wilson"
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "a5569af9-53dc-42d9-a37a-40250154d003",
+    "title": "Snowbird",
+    "length": 127266
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance",
+   "attributes": [],
+   "end": null,
+   "target-credit": "",
+   "direction": "backward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "artist": {
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "type": null,
+       "name": "Anne Murray",
+       "type-id": null,
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 129573,
+    "title": "Snowbird",
+    "id": "7d06f097-6a7a-4040-a80f-f9aae330736f"
+   },
+   "attribute-ids": {}
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "name": "Elvis Presley",
+       "type": null,
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "662ed827-b157-4a64-ab3b-a87068d8d947",
+    "length": null
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording",
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "source-credit": "",
+   "begin": null,
+   "type": "performance",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "length": 142000,
+    "id": "7fdc3f07-6c75-467c-aee1-6bec1a2b8122",
+    "title": "Snowbird",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "613260c3-d620-4645-94cd-33cd55f29b1e",
+       "sort-name": "Lynn, Loretta",
+       "type-id": null,
+       "name": "Loretta Lynn",
+       "type": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "name": "Loretta Lynn"
+     }
+    ],
+    "video": false
+   }
+  },
+  {
+   "attributes": [],
+   "end": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "artist": {
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer",
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 129000,
+    "title": "Snowbird",
+    "id": "be7dd45d-9444-4ae7-912c-e11f05f225ad"
+   },
+   "attribute-ids": {},
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type": "performance"
+  },
+  {
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US country singer",
+       "country": "US",
+       "name": "Lynn Anderson",
+       "type": null,
+       "type-id": null,
+       "id": "354812d4-2dfb-4611-9a8f-8f8e795e48bf",
+       "sort-name": "Anderson, Lynn"
+      },
+      "joinphrase": "",
+      "name": "Lynn Anderson"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird",
+    "id": "3926291d-a393-4325-8260-0f0e55c2f8ad",
+    "length": 127560
+   },
+   "attribute-ids": {},
+   "direction": "backward",
+   "target-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "end": null,
+   "attributes": [],
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "type-id": null,
+       "name": "Anne Murray",
+       "type": null,
+       "country": "CA",
+       "disambiguation": "Canadian pop/country singer"
+      }
+     }
+    ],
+    "length": 121266,
+    "title": "Snowbird (Alternate Version)",
+    "id": "4fd2bd56-4ee5-4c64-8c60-766b892d9237"
+   },
+   "attribute-ids": {},
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": []
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "ended": false,
+   "target-credit": "",
+   "direction": "backward",
+   "recording": {
+    "id": "2cec551e-ca14-4256-b7b9-a8f678f1ce13",
+    "title": "Snowbird (Quickstep, 50mpm)",
+    "length": 139000,
+    "artist-credit": [
+     {
+      "name": "Anne Murray",
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "type": null,
+       "name": "Anne Murray",
+       "sort-name": "Murray, Anne",
+       "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+       "disambiguation": "Canadian pop/country singer",
+       "country": "CA"
+      }
+     }
+    ],
+    "video": false,
+    "disambiguation": ""
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null
+  },
+  {
+   "type": "performance",
+   "target-type": "recording",
+   "begin": null,
+   "source-credit": "",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null,
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird (rehearsal & take 1)",
+    "id": "23b322be-049d-413b-b548-c49af47a09d0",
+    "length": 204000
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null
+  },
+  {
+   "recording": {
+    "disambiguation": "",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "name": "Elvis Presley",
+       "type": null,
+       "type-id": null,
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis",
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 137000,
+    "title": "Snowbird (take 1)",
+    "id": "8219dae2-b251-4d69-b255-a48783082660"
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Elvis Presley",
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "type-id": null,
+       "type": null,
+       "name": "Elvis Presley",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be",
+       "sort-name": "Presley, Elvis"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "disambiguation": "",
+    "id": "7b84425d-719a-4a17-9a67-0ed276446131",
+    "title": "Snowbird (take 1)",
+    "length": 154719
+   },
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "direction": "backward",
+   "target-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "type": "performance",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "begin": null,
+   "target-type": "recording",
+   "type": "performance",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "recording": {
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "“The King of Rock and Roll”",
+       "country": "US",
+       "type": null,
+       "name": "Elvis Presley",
+       "type-id": null,
+       "sort-name": "Presley, Elvis",
+       "id": "01809552-4f87-45b0-afff-2c6f0730a3be"
+      },
+      "joinphrase": "",
+      "name": "Elvis Presley"
+     }
+    ],
+    "disambiguation": "",
+    "title": "Snowbird (take 1)",
+    "id": "1c119821-ab60-4ec1-8c10-1e566b336d3e",
+    "length": null
+   },
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-credit": "",
+   "direction": "backward"
+  },
+  {
+   "target-type": "url",
+   "source-credit": "",
+   "begin": null,
+   "type": "lyrics",
+   "attributes": [],
+   "end": null,
+   "type-id": "e38e65aa-75e0-42ba-ace0-072aeb91a538",
+   "attribute-values": {},
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "url": {
+    "resource": "https://genius.com/Anne-murray-snowbird-lyrics",
+    "id": "27b46610-adc3-45c9-b89c-093918d2d3ab"
+   },
+   "attribute-ids": {}
+  },
+  {
+   "type": "secondhandsongs",
+   "target-type": "url",
+   "begin": null,
+   "source-credit": "",
+   "attribute-values": {},
+   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52",
+   "ended": false,
+   "direction": "backward",
+   "target-credit": "",
+   "url": {
+    "resource": "https://secondhandsongs.com/work/8521",
+    "id": "ad8a0c7a-5a76-494d-86e4-2997e4034621"
+   },
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null
+  },
+  {
+   "attribute-ids": {},
+   "url": {
+    "id": "6da229f9-b0d3-489f-b3ce-38f83cbb29ca",
+    "resource": "https://www.wikidata.org/wiki/Q12001651"
+   },
+   "direction": "backward",
+   "target-credit": "",
+   "attribute-values": {},
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "ended": false,
+   "end": null,
+   "attributes": [],
+   "type": "wikidata",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "url"
+  }
+ ],
+ "id": "f17eefd3-54ad-371a-90da-488571c94f99",
+ "type": "Song",
+ "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6"
+}

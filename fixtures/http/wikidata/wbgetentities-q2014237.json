@@ -1,0 +1,196 @@
+{
+ "entities": {
+  "Q2014237": {
+   "type": "item",
+   "id": "Q2014237",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Ode to Newfoundland"
+    }
+   },
+   "claims": {
+    "P676": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P676",
+       "hash": "0fd780753e8d162654f8661abb80f9eb5488e751",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 5076154,
+         "id": "Q5076154"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q2014237$B3B4008A-8ADD-4E75-B4C9-1785924EE0FD",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P86": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P86",
+       "hash": "8a01e5060b251b1a8c6b27e6852abf3f0d1bfefc",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 354250,
+         "id": "Q354250"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q2014237$07F7A563-8956-489E-9D7C-151DEC4C5354",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "f2f13d97d4f352f265b35c51c8236010c8f18824",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 23691,
+         "id": "Q23691"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q2014237$1FECA1B1-9983-4024-BE14-13A7099846BC",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "5be109d8a3cbbd062357a9d210d4ef00ef25244e",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 105543609,
+         "id": "Q105543609"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q2014237$5F73A31F-2564-4F09-A0F1-F3144BF2C930",
+      "rank": "normal"
+     }
+    ],
+    "P646": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P646",
+       "hash": "a623f7e5bce1eb9cd4ad036927a7d1be781b1d99",
+       "datavalue": {
+        "value": "/m/033w2c",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q2014237$7FA3E535-9CFE-41F6-B24D-1D50D8ED2A9F",
+      "rank": "normal"
+     }
+    ],
+    "P7937": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7937",
+       "hash": "95c182f3c475d9df12743fde55dc93e0a76efa11",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 7366,
+         "id": "Q7366"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q2014237$202B3B17-1CE8-4E8B-9F75-F3CBCB847BFE",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Ode to Newfoundland",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

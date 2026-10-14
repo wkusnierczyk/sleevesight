@@ -1,0 +1,874 @@
+{
+ "entities": {
+  "Q18552823": {
+   "type": "item",
+   "id": "Q18552823",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Interstellar: Original Motion Picture Soundtrack"
+    }
+   },
+   "claims": {
+    "P436": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P436",
+       "hash": "81852f0a47242af76ef82b54fe2a5ebd2258beeb",
+       "datavalue": {
+        "value": "4513c7b9-854e-457f-81d6-3dbeb001beb8",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q18552823$BA8D3BAC-D07C-494E-8DE8-1251675FDF99",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "706208b3024200fd0a39ad499808dd0d98d74065",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248"
+        ]
+       }
+      ]
+     }
+    ],
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "dc16d32b615bf1c6edf1919941065eedccacb8e4",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 482994,
+         "id": "Q482994"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$2C228154-B9B2-4C97-84B9-B60E6A9F684A",
+      "rank": "normal"
+     }
+    ],
+    "P1729": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1729",
+       "hash": "56879fe4b06cf86f4aef8adf1992d1ef55cb7535",
+       "datavalue": {
+        "value": "mw0002770179",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P2093": [
+        {
+         "snaktype": "value",
+         "property": "P2093",
+         "hash": "9a51d0ffecc2abafb47f609e9db9290beee3b0b2",
+         "datavalue": {
+          "value": "Timothy Monger",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P2093"
+      ],
+      "id": "Q18552823$72E92096-3680-4376-B4F5-F48FA49758F2",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "f2fdc3c16952bb8a2b8c2a14a7ce24a9f6b0879c",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "1507274827eae48e5a0fa0ea0c1616a4af6900cb",
+           "datavalue": {
+            "value": {
+             "time": "+2015-09-11T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P1954": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1954",
+       "hash": "fe7aad6770709ab88e5e20f1ef3ce140a4ca04b3",
+       "datavalue": {
+        "value": "761723",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q18552823$A8EC30EA-1C92-40DC-AAF4-C24CA149D07F",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "f2fdc3c16952bb8a2b8c2a14a7ce24a9f6b0879c",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "1507274827eae48e5a0fa0ea0c1616a4af6900cb",
+           "datavalue": {
+            "value": {
+             "time": "+2015-09-11T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P175": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P175",
+       "hash": "4eb11063345fd060d13ba637fbf5ed02d981466f",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 76364,
+         "id": "Q76364"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$FC25DE8E-889E-4685-A627-73430F14539D",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "732ec1c90a6f0694c7db9a71bf09fe7f2b674172",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "9123b0de1cc9c3954366ba797d598e4e1ea4146f",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 10000,
+             "id": "Q10000"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P577": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P577",
+       "hash": "778036c94bcd494bb7efdf84b69d7acef1d1dfaa",
+       "datavalue": {
+        "value": {
+         "time": "+2014-00-00T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 9,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q18552823$CF19DC62-1DC2-4127-896A-238A9CF49A11",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P155": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P155",
+       "hash": "ee8fd9c1fddedcf37e348da597f02223c0d85e92",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 16659034,
+         "id": "Q16659034"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$76B88583-F0DD-4443-916E-561C1FCB9349",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "bfd229ba786ff7b2167c42c2d932a0a4bf18f92e",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "e88de0e211be6635aa95386c596d76e296cf7174",
+           "datavalue": {
+            "value": "https://en.wikipedia.org/w/index.php?title=Interstellar_(soundtrack)&oldid=856877326",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P156": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P156",
+       "hash": "0bfe40488ac17faa11bf356514c813ca864ac791",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 15209986,
+         "id": "Q15209986"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$AE3FEE3F-C956-4E34-8EA5-11602A79C55E",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "bfd229ba786ff7b2167c42c2d932a0a4bf18f92e",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "e88de0e211be6635aa95386c596d76e296cf7174",
+           "datavalue": {
+            "value": "https://en.wikipedia.org/w/index.php?title=Interstellar_(soundtrack)&oldid=856877326",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P264": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P264",
+       "hash": "b014524f620cc13eab807a7cbb56b5b5849af9ac",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4887811,
+         "id": "Q4887811"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$4ac50c92-0812-4b72-8bc6-74f89840b864",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P646": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P646",
+       "hash": "426c17893fd57655cef21cd414fe3ea4e70274be",
+       "datavalue": {
+        "value": "/m/01284190",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q18552823$63E87AA7-CCCF-4DB7-91DE-F5AF949E0394",
+      "rank": "normal"
+     }
+    ],
+    "P7937": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7937",
+       "hash": "36578e578b1062b75844611545496f66808d1351",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 4176708,
+         "id": "Q4176708"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$4ECD5986-66B3-4739-BED1-B7E00F4ACDB0",
+      "rank": "normal"
+     }
+    ],
+    "P136": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "faa610613757ea8f2ff1bce3dc0fa1d396536358",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 492264,
+         "id": "Q492264"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$5f9c9a98-4cd4-29a6-a628-4219c61f37f8",
+      "rank": "normal"
+     }
+    ],
+    "P9899": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P9899",
+       "hash": "29befff595c4868c5ca211d7f7496370b392392b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 13417189,
+         "id": "Q13417189"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$19c47ddf-4a54-14fe-f94f-4d4689b32a83",
+      "rank": "normal"
+     }
+    ],
+    "P435": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P435",
+       "hash": "869e171937235b7e5a8f305d0a5a5aedb3e66cff",
+       "datavalue": {
+        "value": "1f67c4af-511a-40fc-a851-308be3a533a1",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "3f8e60cbb21c237bd40c980843b06b981f80b2b0",
+         "datavalue": {
+          "value": "Interstellar",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810"
+      ],
+      "id": "Q18552823$a6e928e6-1c36-4687-9ba9-b1ea8dab01a1",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "c26e3b1f47116e71611f3d57661503733378e288",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "3b697d051b20512f538d73cc25a46f4444586e77",
+           "datavalue": {
+            "value": {
+             "time": "+2025-02-03T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P9234": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P9234",
+       "hash": "aace6f87a31ff847a9c6af9ef58b12e564486127",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 13417189,
+         "id": "Q13417189"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$A330F717-EB6B-409A-BC17-74F8039EF3A8",
+      "rank": "normal"
+     }
+    ],
+    "P7067": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7067",
+       "hash": "e76f4cfca0c8171f1a6a3cc6654d4b380be52dba",
+       "datavalue": {
+        "value": "23435",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q18552823$79DB0F12-1ABA-4F2F-A3C7-21288578D756",
+      "rank": "normal"
+     }
+    ],
+    "P407": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P407",
+       "hash": "daf1c4fcb58181b02dff9cc89deb084004ddae4b",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 1860,
+         "id": "Q1860"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$a232f376-4533-e0a2-27a4-473d082bd905",
+      "rank": "normal"
+     }
+    ],
+    "P1476": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1476",
+       "hash": "696a5976dfd27e616d0b4c1afa75c5fab7fc781b",
+       "datavalue": {
+        "value": {
+         "text": "Interstellar",
+         "language": "en"
+        },
+        "type": "monolingualtext"
+       },
+       "datatype": "monolingualtext"
+      },
+      "type": "statement",
+      "id": "Q18552823$c7e7845d-4b71-21d7-61c8-cf8c17106f3a",
+      "rank": "normal"
+     }
+    ],
+    "P361": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P361",
+       "hash": "36297e544c7114c756fb097cc790932df0e63e98",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 5650854,
+         "id": "Q5650854"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$e3abddf2-43ad-7a00-98bb-b6dce5629d6d",
+      "rank": "normal"
+     }
+    ],
+    "P658": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P658",
+       "hash": "6ca0a2ac36e82ebdac5c7c42e38c2d924f486caf",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 139737378,
+         "id": "Q139737378"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1545": [
+        {
+         "snaktype": "value",
+         "property": "P1545",
+         "hash": "90f27deffdaf18bf6bb3ab47516d6ba0987f946a",
+         "datavalue": {
+          "value": "02",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1545"
+      ],
+      "id": "Q18552823$35de0f48-4d31-83a7-91ee-952f60f98840",
+      "rank": "normal"
+     }
+    ],
+    "P2635": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2635",
+       "hash": "44aee68ffa9e156c3f6544cdafedef89a8faf18e",
+       "datavalue": {
+        "value": {
+         "amount": "+16",
+         "unit": "http://www.wikidata.org/entity/Q7302866"
+        },
+        "type": "quantity"
+       },
+       "datatype": "quantity"
+      },
+      "type": "statement",
+      "id": "Q18552823$8feb04c1-4384-a964-f676-c6a7ac21331d",
+      "rank": "normal"
+     }
+    ],
+    "P291": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P291",
+       "hash": "d030038c836f9ed0d37c69cb8c389d689ebeb05a",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 30,
+         "id": "Q30"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$3234e91b-4655-3fdb-0cff-4e61026548ba",
+      "rank": "normal"
+     }
+    ],
+    "P437": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "a9e6303ba7f6a25dd0ce03e6c75f3c9e02b5f449",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 34467,
+         "id": "Q34467"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$52ad0489-47ad-c46b-770a-d3fbe6cffeb5",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P437",
+       "hash": "3237b53c4d3ec4ece3e5d87f4d44bf89b53fc119",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 6473564,
+         "id": "Q6473564"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q18552823$870bad57-45b4-8ab8-7b11-b6d1a43a60b0",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Interstellar (soundtrack)",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

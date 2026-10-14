@@ -446,7 +446,7 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 | 14 Up Down, Peleboy, Tony K | Multiple credited artists |
 | 37 The Ode To Newfoundland | Three credited artists |
 | 45, 48, 76 | Covers; Wikipedia only describes the original song |
-| 61 willow, Jessiah | Last.fm name resolves to an unrelated band |
+| 61 willow, Jessiah | Last.fm name resolves to an unrelated band. Also a cover of Taylor Swift's "willow" (its album is "Taylor Swift Covers (single)"), which nothing the identity check reads confirms; the album title is a signal for the Phase 0.5 gate (#46) to weigh |
 | 63 Baby, Please Don't Go (feat. Van Morrison) | Featured artist in the title |
 | 13 New York Groove, 36 Snowbird | Release year is a compilation's, not the song's |
 | 23, 30, 77 | Almost nothing documented anywhere; the card must say so |

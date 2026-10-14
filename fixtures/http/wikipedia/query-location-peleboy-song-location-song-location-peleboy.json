@@ -1,0 +1,41 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Location (song)",
+    "to": "Location (disambiguation)",
+    "tofragment": "Arts and entertainment"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Peleboy",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Location (Peleboy song)",
+    "missing": true
+   },
+   {
+    "pageid": 66099,
+    "ns": 0,
+    "title": "Location (disambiguation)",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q1051594"
+    }
+   },
+   {
+    "pageid": 2393292,
+    "ns": 0,
+    "title": "Location",
+    "pageprops": {
+     "wikibase_item": "Q2221906"
+    }
+   }
+  ]
+ }
+}

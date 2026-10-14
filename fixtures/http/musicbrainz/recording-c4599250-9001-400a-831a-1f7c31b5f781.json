@@ -1,0 +1,244 @@
+{
+ "disambiguation": "",
+ "id": "c4599250-9001-400a-831a-1f7c31b5f781",
+ "artist-credit": [
+  {
+   "joinphrase": "",
+   "name": "Gordon Lightfoot",
+   "artist": {
+    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+    "disambiguation": "",
+    "country": "CA",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Lightfoot, Gordon",
+    "name": "Gordon Lightfoot",
+    "type": "Person"
+   }
+  }
+ ],
+ "title": "Sundown",
+ "relations": [
+  {
+   "direction": "backward",
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "type-id": "5dcc52af-7064-4051-8d62-7d80f4c3c907",
+   "type": "engineer",
+   "attribute-values": {},
+   "artist": {
+    "name": "Chris Skene",
+    "type": "Person",
+    "disambiguation": "",
+    "id": "a0c7fa98-946d-45b8-bc89-495941446dbe",
+    "sort-name": "Skene, Chris",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": null
+   },
+   "ended": false,
+   "source-credit": "",
+   "attribute-ids": {
+    "assistant": "8c4196b1-7053-4b16-921a-f22b2898ed44"
+   },
+   "attributes": [
+    "assistant"
+   ],
+   "target-credit": ""
+  },
+  {
+   "direction": "backward",
+   "end": null,
+   "begin": null,
+   "target-type": "artist",
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "attribute-values": {},
+   "type": "instrument",
+   "ended": false,
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "sort-name": "Clements, Terry",
+    "id": "74427e33-706c-4e00-8f23-36e4bd4f3cc2",
+    "disambiguation": "",
+    "type": "Person",
+    "name": "Terry Clements"
+   },
+   "attribute-ids": {
+    "acoustic guitar": "00beaf8e-a781-431c-8130-7c2871696b7d"
+   },
+   "attributes": [
+    "acoustic guitar"
+   ],
+   "source-credit": "",
+   "attribute-credits": {},
+   "target-credit": ""
+  },
+  {
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "end": null,
+   "begin": null,
+   "target-type": "artist",
+   "direction": "backward",
+   "attribute-credits": {},
+   "target-credit": "",
+   "source-credit": "",
+   "attributes": [
+    "drums (drum set)"
+   ],
+   "attribute-ids": {
+    "drums (drum set)": "12092505-6ee1-46af-a15a-b5b468b6b155"
+   },
+   "artist": {
+    "name": "Jim Gordon",
+    "type": "Person",
+    "sort-name": "Gordon, Jim",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "disambiguation": "US drummer with Derek and the Dominos",
+    "id": "f5ee63be-2ffa-479e-afb9-a89201c3b1f0"
+   },
+   "ended": false,
+   "type": "instrument",
+   "attribute-values": {}
+  },
+  {
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "direction": "backward",
+   "attribute-credits": {},
+   "target-credit": "",
+   "source-credit": "",
+   "attribute-ids": {
+    "acoustic guitar": "00beaf8e-a781-431c-8130-7c2871696b7d"
+   },
+   "attributes": [
+    "acoustic guitar"
+   ],
+   "artist": {
+    "name": "Gordon Lightfoot",
+    "type": "Person",
+    "sort-name": "Lightfoot, Gordon",
+    "country": "CA",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "id": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+    "disambiguation": ""
+   },
+   "ended": false,
+   "type": "instrument",
+   "attribute-values": {}
+  },
+  {
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461",
+   "begin": null,
+   "end": null,
+   "target-type": "artist",
+   "direction": "backward",
+   "attribute-credits": {},
+   "target-credit": "",
+   "source-credit": "",
+   "attribute-ids": {
+    "electric guitar": "7ee8ebf5-3aed-4fc8-8004-49f4a8c45a87"
+   },
+   "attributes": [
+    "electric guitar"
+   ],
+   "artist": {
+    "disambiguation": "",
+    "id": "b4c9b2bf-af84-410f-ae17-632eb2063bd4",
+    "sort-name": "Shea, Red",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "type": "Person",
+    "name": "Red Shea"
+   },
+   "ended": false,
+   "type": "instrument",
+   "attribute-values": {}
+  },
+  {
+   "type": "instrument",
+   "attribute-values": {},
+   "artist": {
+    "id": "11ab53be-f9bc-4a17-86f5-b5bb7413c52d",
+    "disambiguation": "",
+    "sort-name": "Stockfish, John",
+    "country": "CA",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "John Stockfish",
+    "type": "Person"
+   },
+   "ended": false,
+   "source-credit": "",
+   "attributes": [
+    "bass guitar"
+   ],
+   "attribute-ids": {
+    "bass guitar": "17f9f065-2312-4a24-8309-6f6dd63e2e33"
+   },
+   "target-credit": "",
+   "attribute-credits": {},
+   "direction": "backward",
+   "target-type": "artist",
+   "end": null,
+   "begin": null,
+   "type-id": "59054b12-01ac-43ee-a618-285fd397e461"
+  },
+  {
+   "target-type": "artist",
+   "end": null,
+   "begin": null,
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "direction": "backward",
+   "attributes": [],
+   "attribute-ids": {},
+   "source-credit": "",
+   "target-credit": "",
+   "attribute-values": {},
+   "type": "producer",
+   "ended": false,
+   "artist": {
+    "type": "Person",
+    "name": "Lenny Waronker",
+    "id": "72d225ab-087a-4920-bf4b-75fe32ed8157",
+    "disambiguation": "",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "sort-name": "Waronker, Lenny"
+   }
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "work",
+   "begin": null,
+   "end": null,
+   "direction": "forward",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attributes": [],
+   "source-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type": "performance",
+   "work": {
+    "title": "Sundown",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "language": "eng",
+    "languages": [
+     "eng"
+    ],
+    "attributes": [],
+    "id": "0061f7cb-a681-4701-89a4-673ea660f0b7",
+    "disambiguation": "",
+    "iswcs": [
+     "T-071.513.877-4"
+    ],
+    "type": "Song"
+   }
+  }
+ ],
+ "length": 215640,
+ "video": false,
+ "first-release-date": "1974-01"
+}

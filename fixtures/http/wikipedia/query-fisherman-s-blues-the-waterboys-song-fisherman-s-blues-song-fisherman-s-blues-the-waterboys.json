@@ -1,0 +1,36 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Fisherman's Blues (The Waterboys song)",
+    "missing": true
+   },
+   {
+    "pageid": 471783,
+    "ns": 0,
+    "title": "The Waterboys",
+    "pageprops": {
+     "wikibase_item": "Q1422720"
+    }
+   },
+   {
+    "pageid": 930832,
+    "ns": 0,
+    "title": "Fisherman's Blues",
+    "pageprops": {
+     "wikibase_item": "Q384780"
+    }
+   },
+   {
+    "pageid": 3075246,
+    "ns": 0,
+    "title": "Fisherman's Blues (song)",
+    "pageprops": {
+     "wikibase_item": "Q65088638"
+    }
+   }
+  ]
+ }
+}

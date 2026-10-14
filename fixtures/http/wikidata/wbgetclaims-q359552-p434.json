@@ -1,0 +1,97 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "c9fe828465dd15e5de040ea2056ca568896019be",
+     "datavalue": {
+      "value": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "id": "q359552$99539ABE-10B7-458A-8286-F796995B0833",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "d962e9f8813c4f39c34296a8dd26ce48eace0a3d",
+      "snaks": {
+       "P248": [
+        {
+         "snaktype": "value",
+         "property": "P248",
+         "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 14005,
+           "id": "Q14005"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P887": [
+        {
+         "snaktype": "value",
+         "property": "P887",
+         "hash": "f3e99660a4a99c505f45b32a146e9aba87ef75ef",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 1266546,
+           "id": "Q1266546"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P434": [
+        {
+         "snaktype": "value",
+         "property": "P434",
+         "hash": "c9fe828465dd15e5de040ea2056ca568896019be",
+         "datavalue": {
+          "value": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+          "type": "string"
+         },
+         "datatype": "external-id"
+        }
+       ],
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "75146ab7328d618f85365adfa2fa2e5f69010cc4",
+         "datavalue": {
+          "value": {
+           "time": "+2021-08-23T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P248",
+       "P887",
+       "P434",
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

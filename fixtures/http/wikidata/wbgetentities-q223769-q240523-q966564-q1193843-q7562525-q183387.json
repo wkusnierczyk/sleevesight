@@ -1,0 +1,55 @@
+{
+ "entities": {
+  "Q223769": {
+   "type": "item",
+   "id": "Q223769",
+   "labels": {}
+  },
+  "Q240523": {
+   "type": "item",
+   "id": "Q240523",
+   "labels": {}
+  },
+  "Q966564": {
+   "type": "item",
+   "id": "Q966564",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "hardcore hip-hop"
+    }
+   }
+  },
+  "Q1193843": {
+   "type": "item",
+   "id": "Q1193843",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Ruff Ryders Entertainment"
+    }
+   }
+  },
+  "Q7562525": {
+   "type": "item",
+   "id": "Q7562525",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Sony Urban Music"
+    }
+   }
+  },
+  "Q183387": {
+   "type": "item",
+   "id": "Q183387",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Columbia Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

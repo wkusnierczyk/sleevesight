@@ -1,0 +1,65 @@
+{
+ "entities": {
+  "Q62026424": {
+   "type": "item",
+   "id": "Q62026424",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Joe Williams' Washboard Blues Singers"
+    }
+   }
+  },
+  "Q27593": {
+   "type": "item",
+   "id": "Q27593",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "AC/DC"
+    }
+   }
+  },
+  "Q1338638": {
+   "type": "item",
+   "id": "Q1338638",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Them"
+    }
+   }
+  },
+  "Q126826": {
+   "type": "item",
+   "id": "Q126826",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Aerosmith"
+    }
+   }
+  },
+  "Q519289": {
+   "type": "item",
+   "id": "Q519289",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Big Joe Williams"
+    }
+   }
+  },
+  "Q9759": {
+   "type": "item",
+   "id": "Q9759",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "blues"
+    }
+   }
+  }
+ },
+ "success": 1
+}

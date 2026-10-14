@@ -1,0 +1,46 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "We In Here",
+    "to": "We in Here"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Peleboy",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "We in Here (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "We in Here (Peleboy song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "We In Here (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "We In Here (Peleboy song)",
+    "missing": true
+   },
+   {
+    "pageid": 6376626,
+    "ns": 0,
+    "title": "We in Here",
+    "pageprops": {
+     "wikibase_item": "Q7977892"
+    }
+   }
+  ]
+ }
+}

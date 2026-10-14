@@ -1,0 +1,27 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "pages": [
+   {
+    "ns": 0,
+    "title": "DIE HEXEN",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "THE VEIL BETWEEN WORLDS",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "THE VEIL BETWEEN WORLDS (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "THE VEIL BETWEEN WORLDS (DIE HEXEN song)",
+    "missing": true
+   }
+  ]
+ }
+}

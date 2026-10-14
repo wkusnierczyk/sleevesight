@@ -1,0 +1,40 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Bad Energy",
+    "to": "Legends Never Die (Juice Wrld album)"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Bad Energy (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Bad Energy (Reem song)",
+    "missing": true
+   },
+   {
+    "pageid": 17757008,
+    "ns": 0,
+    "title": "Reem",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q4091249"
+    }
+   },
+   {
+    "pageid": 64479281,
+    "ns": 0,
+    "title": "Legends Never Die (Juice Wrld album)",
+    "pageprops": {
+     "wikibase_item": "Q97015538"
+    }
+   }
+  ]
+ }
+}

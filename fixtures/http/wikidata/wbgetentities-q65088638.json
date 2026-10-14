@@ -1,0 +1,303 @@
+{
+ "entities": {
+  "Q65088638": {
+   "type": "item",
+   "id": "Q65088638",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Fisherman's Blues"
+    }
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "5be109d8a3cbbd062357a9d210d4ef00ef25244e",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 105543609,
+         "id": "Q105543609"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q65088638$8D56F0C1-E763-4DD1-B4C9-83008F55E45C",
+      "rank": "normal"
+     }
+    ],
+    "P577": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P577",
+       "hash": "741e132d36991fe1e046e55f885932b4fee8be65",
+       "datavalue": {
+        "value": {
+         "time": "+1988-00-00T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 9,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q65088638$23ea0b2c-9f29-44f9-8cec-789bb5fe8253",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P175": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P175",
+       "hash": "8dec99d99df91938b1c13581c8fceba1a15ef729",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 1422720,
+         "id": "Q1422720"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q65088638$81c41f80-d5c2-4a55-926d-45f92cc6f00a",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P361": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P361",
+       "hash": "2019496b78a63127eeb8be66cdbbcdcd26c80f01",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 384780,
+         "id": "Q384780"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q65088638$D620B22A-DEAB-473B-AA1C-55A1ADD6D57A",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "f9096bbec3ac03b343769b5cb05e3764dee5748d",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P4656": [
+          {
+           "snaktype": "value",
+           "property": "P4656",
+           "hash": "260a2965ccb7e0b7a2270936aa06e9eeccb5e31b",
+           "datavalue": {
+            "value": "https://en.wikipedia.org/w/index.php?title=Fisherman's_Blues_(song)&oldid=953890600",
+            "type": "string"
+           },
+           "datatype": "url"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143",
+         "P4656"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2671": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2671",
+       "hash": "585f22c1a72a94ad0b9a418d9085b441d9415c5d",
+       "datavalue": {
+        "value": "/g/11fjtyqp9c",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q65088638$704FD150-9C93-4637-B75B-AEECB6E183CC",
+      "rank": "normal"
+     }
+    ],
+    "P7937": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P7937",
+       "hash": "95c182f3c475d9df12743fde55dc93e0a76efa11",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 7366,
+         "id": "Q7366"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q65088638$C5F7C433-4AF8-4422-991F-718101457EAB",
+      "rank": "normal"
+     }
+    ],
+    "P435": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P435",
+       "hash": "2c8b46325409209c309a67675255bf1a5de70e82",
+       "datavalue": {
+        "value": "c4efc5eb-9904-309a-97a4-675a73a9494f",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q65088638$76b8caf2-c52c-40b5-b8ee-cae861cfbeb3",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "7580da9d184042eb8c29696c6b7e7aefbe012140",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "ebe323b18ae6412b96bd69bbe00aca8b0b285dbb",
+           "datavalue": {
+            "value": {
+             "time": "+2022-08-30T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Fisherman's Blues (song)",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

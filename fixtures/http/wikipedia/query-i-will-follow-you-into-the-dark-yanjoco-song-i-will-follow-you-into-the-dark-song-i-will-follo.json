@@ -1,0 +1,46 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "I Will Follow You Into The Dark",
+    "to": "I Will Follow You into the Dark"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Yanjoco",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "I Will Follow You into the Dark (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "I Will Follow You into the Dark (Yanjoco song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "I Will Follow You Into The Dark (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "I Will Follow You Into The Dark (Yanjoco song)",
+    "missing": true
+   },
+   {
+    "pageid": 5549393,
+    "ns": 0,
+    "title": "I Will Follow You into the Dark",
+    "pageprops": {
+     "wikibase_item": "Q5979792"
+    }
+   }
+  ]
+ }
+}

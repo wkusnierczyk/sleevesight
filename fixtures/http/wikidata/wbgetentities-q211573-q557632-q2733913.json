@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q211573": {
+   "type": "item",
+   "id": "Q211573",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "garage rock"
+    }
+   }
+  },
+  "Q557632": {
+   "type": "item",
+   "id": "Q557632",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Decca"
+    }
+   }
+  },
+  "Q2733913": {
+   "type": "item",
+   "id": "Q2733913",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Deram"
+    }
+   }
+  }
+ },
+ "success": 1
+}

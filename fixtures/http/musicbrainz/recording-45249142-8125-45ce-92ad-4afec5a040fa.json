@@ -1,0 +1,100 @@
+{
+ "relations": [
+  {
+   "attribute-ids": {},
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "22661fb8-cdb7-4f67-8385-b2a8be6c9f0d",
+   "end": null,
+   "artist": {
+    "id": "a74e2541-669b-4574-ae16-5deee3066d51",
+    "sort-name": "Ahern, Brian",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "name": "Brian Ahern",
+    "country": "CA",
+    "disambiguation": ""
+   },
+   "attributes": [],
+   "type": "arranger",
+   "begin": null,
+   "source-credit": "",
+   "target-type": "artist"
+  },
+  {
+   "attribute-values": {},
+   "ended": false,
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "target-credit": "",
+   "direction": "backward",
+   "attribute-ids": {},
+   "attributes": [],
+   "artist": {
+    "country": "CA",
+    "disambiguation": "",
+    "sort-name": "Ahern, Brian",
+    "id": "a74e2541-669b-4574-ae16-5deee3066d51",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Brian Ahern",
+    "type": "Person"
+   },
+   "end": null,
+   "type": "producer",
+   "target-type": "artist",
+   "source-credit": "",
+   "begin": null
+  },
+  {
+   "end": null,
+   "work": {
+    "disambiguation": "",
+    "attributes": [],
+    "title": "Snowbird",
+    "type": "Song",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "languages": [
+     "eng"
+    ],
+    "language": "eng",
+    "iswcs": [
+     "T-072.147.417-4"
+    ],
+    "id": "f17eefd3-54ad-371a-90da-488571c94f99"
+   },
+   "attributes": [],
+   "attribute-ids": {},
+   "direction": "forward",
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "source-credit": "",
+   "begin": null,
+   "target-type": "work",
+   "type": "performance"
+  }
+ ],
+ "id": "45249142-8125-45ce-92ad-4afec5a040fa",
+ "length": 131000,
+ "first-release-date": "1969",
+ "title": "Snowbird",
+ "disambiguation": "",
+ "video": false,
+ "artist-credit": [
+  {
+   "name": "Anne Murray",
+   "artist": {
+    "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+    "sort-name": "Murray, Anne",
+    "type": "Person",
+    "name": "Anne Murray",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "CA",
+    "disambiguation": "Canadian pop/country singer"
+   },
+   "joinphrase": ""
+  }
+ ]
+}

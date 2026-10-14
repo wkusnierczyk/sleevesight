@@ -1,0 +1,15 @@
+{
+ "entities": {
+  "Q1422720": {
+   "type": "item",
+   "id": "Q1422720",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "The Waterboys"
+    }
+   }
+  }
+ },
+ "success": 1
+}

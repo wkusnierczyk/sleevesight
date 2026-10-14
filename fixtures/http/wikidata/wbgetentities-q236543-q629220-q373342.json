@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q236543": {
+   "type": "item",
+   "id": "Q236543",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Anne Murray"
+    }
+   }
+  },
+  "Q629220": {
+   "type": "item",
+   "id": "Q629220",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Gene MacLellan"
+    }
+   }
+  },
+  "Q373342": {
+   "type": "item",
+   "id": "Q373342",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "popular music"
+    }
+   }
+  }
+ },
+ "success": 1
+}

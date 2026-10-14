@@ -1,0 +1,45 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "normalized": [
+   {
+    "fromencoded": false,
+    "from": "dearoldfriend",
+    "to": "Dearoldfriend"
+   }
+  ],
+  "redirects": [
+   {
+    "from": "Forever Young (song)",
+    "to": "Forever Young",
+    "tofragment": "Music"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Winston Hunte",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Dearoldfriend",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Forever Young (dearoldfriend song)",
+    "missing": true
+   },
+   {
+    "pageid": 311933,
+    "ns": 0,
+    "title": "Forever Young",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q293753"
+    }
+   }
+  ]
+ }
+}
