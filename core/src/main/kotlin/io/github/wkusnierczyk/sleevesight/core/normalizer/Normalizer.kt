@@ -9,13 +9,24 @@ import io.github.wkusnierczyk.sleevesight.core.text.trimJs
  * Turns a player's title and artist strings into the song's plain title, its credited artists
  * and a lookup key, keeping what it removed (`design/design.md`, *Normalizer*).
  *
- * A port of the simulator's `normalize`, rule for rule, with two deviations:
+ * A port of the simulator's `normalize`, rule for rule, with three deviations:
  * - The design's table says a `(feat. X)` in the title moves X to the artists, and the simulator
  *   only noted it; here X is added after the credited artists unless it is one of them already.
  *   On the fixture playlist the result is the same, since its one featured artist is credited.
  * - An empty artist string gives an empty [NormalizedTrack.primary] and a key starting `|`, where
  *   the simulator gave `undefined` and `undefined|`. With a `(feat. X)` in the title, X becomes the
  *   primary artist and goes into the key.
+ * - The lookup key keeps every letter and digit, in any script, and `+` (#72). The simulator kept
+ *   ASCII letters and digits only, so every Japanese, Cyrillic or Greek title and artist keyed as
+ *   `|`, "First Love" by two Japanese artists shared one key, and "C++" and "C" by AC/DC shared
+ *   another; as a cache key, one track would be served another's evidence. `+` is kept because it
+ *   is part of a title ("C++", "1+1") where other punctuation is not. Kept as well: combining marks
+ *   outside the Latin accents folded away (Japanese voicing marks, Indic vowel signs), since
+ *   dropping them would merge different words (`ガラス`, `カラス`), and supplementary characters
+ *   (surrogate pairs) whole, as the standard library's character classes do not cover them. The
+ *   folded text is lowercased again, so a compatibility form such as a fullwidth `Ａ` keys as `a`.
+ *   For ASCII input, and for every fixture track, the key is the simulator's; it differs only where
+ *   the simulator dropped a non-ASCII character (`lıve`, dotless, keys as `lıve`, not `lve`).
  *
  * The patterns spell out JavaScript's `\s`, `\w`, `\d` and `\b`, trimming uses JavaScript's
  * whitespace, and case is matched in ASCII only, as JavaScript's `/i` without `u` does (no
@@ -72,14 +83,31 @@ class Normalizer(
         )
     }
 
-    // Lowercase, decompose, drop the combining marks, keep ASCII letters, digits and the `|`.
+    // Lowercase, decompose, drop the Latin combining accents, lowercase again; then each run of
+    // characters that are not key characters becomes one space, trimmed at the ends. Character
+    // classes rather than a `\p{L}` regex, which is not portable (architecture, Multiplatform
+    // readiness).
     private fun lookupKey(
         primary: String,
         title: String,
     ): String {
-        val decomposed = accentFolder.decompose("$primary|$title".lowercase())
-        return decomposed.replace(COMBINING_MARKS, "").replace(NOT_KEY, " ").trim()
+        val folded = accentFolder.decompose("$primary|$title".lowercase()).replace(COMBINING_MARKS, "").lowercase()
+        val key = StringBuilder(folded.length)
+        var gap = false
+        for (c in folded) {
+            if (!isKeyChar(c)) {
+                gap = true
+                continue
+            }
+            if (gap && key.isNotEmpty()) key.append(' ')
+            gap = false
+            key.append(c)
+        }
+        return key.toString()
     }
+
+    private fun isKeyChar(c: Char): Boolean =
+        c == '|' || c == '+' || c.isLetterOrDigit() || c.isSurrogate() || c.category in MARKS
 
     private fun splitArtists(artists: String): List<String> = artists.split(ARTIST_SEPARATOR).filter { it.isNotEmpty() }
 
@@ -104,7 +132,8 @@ class Normalizer(
             )
         val ARTIST_SEPARATOR = Regex("$S*,$S*")
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
-        val NOT_KEY = Regex("[^a-z0-9|]+")
+        val MARKS =
+            setOf(CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK)
 
         // An ASCII letter matches either case, as in JavaScript's `/i` without `u`: `ci("mono")` is
         // `[mM][oO][nN][oO]`. Other characters stand for themselves.

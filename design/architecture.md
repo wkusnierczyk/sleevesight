@@ -174,7 +174,7 @@ data class TrackState(
 
 ### Normalizer (`:core`)
 
-A port of the simulator's `normalize`, unchanged in behaviour, with the design's table and every fixture title as unit tests. Accent folding (Unicode NFKD) sits behind a small interface, since `java.text.Normalizer` is JVM-only (D2). Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
+A port of the simulator's `normalize`, with the design's table and every fixture title as unit tests, and the deviations listed in `Normalizer`'s KDoc. One of them is the lookup key (#72): it keeps letters and digits in any script, and `+`, where the simulator kept ASCII letters and digits only, so non-Latin tracks shared a key (every Japanese, Cyrillic or Greek track keyed as `|`) and, as the cache key, would get one another's evidence. Combining marks other than the folded Latin accents stay (Japanese voicing marks, Indic vowel signs), so different words do not merge; the test is by character class, not a `\p{L}` regex, which is not portable. Every fixture track keeps the simulator's key. Accent folding (Unicode NFKD) sits behind a small interface, since `java.text.Normalizer` is JVM-only (D2). Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
 
 ### Entity resolution (`:core` logic, `:sources` clients)
 

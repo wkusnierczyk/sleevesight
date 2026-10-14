@@ -135,10 +135,51 @@ class NormalizerTest {
         val expected = Json.decodeFromString<List<Expected>>(resource("/normalizer/edge-cases.normalized.json"))
         val inputs = Json.decodeFromString<List<Input>>(resource("/normalizer/edge-cases.json"))
         assertEquals(inputs.map { it.title to it.artist }, expected.map { it.title to it.artist })
+        // The one documented deviation (#72, see `Normalizer`): the key keeps the dotless `ı`, which
+        // the simulator dropped.
+        val keyDeviations = mapOf(1 to "a|song lıve")
         for (entry in expected) {
-            assertMatches(entry.normalized, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
+            val want = keyDeviations[entry.n]?.let { entry.normalized.copy(key = it) } ?: entry.normalized
+            assertMatches(want, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
         }
         assertEquals("Song - ſingle edit", normalizer.normalize("Song - ſingle edit", "A").title)
+    }
+
+    // #72: the key keeps letters and digits in any script, and `+`.
+
+    @Test
+    fun `non-Latin titles and artists give distinct keys`() {
+        val tracks =
+            listOf(
+                "ファースト・ラヴ" to "宇多田ヒカル",
+                "戦場のメリークリスマス" to "坂本龍一",
+                "Группа крови" to "Кино",
+                "Σ'αγαπώ" to "Νίκος",
+                "First Love" to "宇多田ヒカル",
+                "First Love" to "坂本龍一",
+                "C++" to "AC/DC",
+                "C" to "AC DC",
+                "ガラス" to "A",
+                "カラス" to "A",
+            )
+        val keys = tracks.map { (title, artist) -> normalizer.normalize(title, artist).lookupKey }
+
+        assertEquals(keys.size, keys.toSet().size, keys.joinToString())
+        assertEquals("宇多田ヒカル|ファースト ラヴ", keys[0])
+        assertEquals("кино|группа крови", keys[2])
+        assertEquals("νικος|σ αγαπω", keys[3])
+        assertEquals("ac dc|c++", keys[6])
+        assertEquals("ac dc|c", keys[7])
+    }
+
+    @Test
+    fun `a compatibility form keys as its plain letter`() {
+        assertEquals("a|song", normalizer.normalize("Ｓｏｎｇ", "Ａ").lookupKey)
+    }
+
+    @Test
+    fun `supplementary characters are kept whole`() {
+        assertEquals("a|\uD840\uDC0B", normalizer.normalize("\uD840\uDC0B", "A").lookupKey)
     }
 
     private fun assertMatches(
