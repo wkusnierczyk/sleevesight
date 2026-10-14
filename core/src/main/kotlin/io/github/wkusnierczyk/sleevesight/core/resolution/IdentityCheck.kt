@@ -18,8 +18,9 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer;
  * - a performer matching the original recording's artist (a cover, step 4) makes it the original
  *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
- *   original song for a cover or when it names performers, none of them the credited artists by
- *   name, else the track's own song;
+ *   original song for a cover or when it names performers, none of them a credited artist (by
+ *   name for an unresolved artist; for a resolved one, by name only a performer with no P434),
+ *   else the track's own song;
  * - anything else is rejected, with the reason. A song by someone else found by name alone is
  *   rejected even when its title is the track's: a same-title song and a cover cannot be told
  *   apart without MusicBrainz (Peleboy's "We In Here" is not DMX's), so only MusicBrainz's cover
@@ -129,6 +130,21 @@ class IdentityCheck(
         // The track's artists with the ids resolution found; by name alone when it found none.
         val credited: List<ResolvedArtist> =
             resolution.artists.ifEmpty { track.artists.map { ResolvedArtist(it, null) } }
+
+        // MusicBrainz ties the item to the recording: the original song for a cover, or when none of
+        // its performers is a credited artist (MusicBrainz rarely dates enough to infer a cover);
+        // otherwise the track's own song. Here a name counts even for an artist the P434 check
+        // missed, but never against a conflicting id: a resolved artist's name matches only a
+        // performer with no P434.
+        suspend fun linkedScope(
+            performers: List<String>,
+            match: suspend (artists: List<ResolvedArtist>, anonymousOnly: Boolean) -> Boolean,
+        ): Scope {
+            val (withId, withoutId) = credited.partition { it.mbid != null }
+            val own = match(withoutId, false) || match(withId.map { ResolvedArtist(it.name, null) }, true)
+            val others = performers.isNotEmpty() && !own
+            return if (resolution.cover || others) Scope.ORIGINAL_SONG else Scope.SONG
+        }
     }
 
     private suspend fun judgeSong(
@@ -152,15 +168,10 @@ class IdentityCheck(
                 // performers, the item's facts are theirs (a songwriter's song made famous by others).
                 performers.isEmpty() && matches(writers, context.credited, labels) -> Scope.SONG
                 original.isNotEmpty() && matches(performers, original, labels) -> Scope.ORIGINAL_SONG
-                // MusicBrainz ties this item to the recording, so a name match carries no same-name
-                // risk here: the original song for a cover, or when it names performers none of whom
-                // is a credited artist by name (MusicBrainz rarely dates enough to infer a cover);
-                // otherwise the track's own song.
-                context.route == Route.MUSICBRAINZ -> {
-                    val byName = context.credited.map { ResolvedArtist(it.name, null) }
-                    val others = performers.isNotEmpty() && !matches(performers, byName, labels)
-                    if (context.resolution.cover || others) Scope.ORIGINAL_SONG else Scope.SONG
-                }
+                context.route == Route.MUSICBRAINZ ->
+                    context.linkedScope(
+                        performers,
+                    ) { artists, anonymousOnly -> matches(performers, artists, labels, anonymousOnly) }
                 else -> null
             }
         return if (scope != null) {

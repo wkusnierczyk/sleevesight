@@ -246,6 +246,57 @@ class IdentityCheckRulesTest {
         }
 
     @Test
+    fun `on MusicBrainz's link, a namesake performer with another MusicBrainz id is not the credited artist`() =
+        runTest {
+            // A track by "Smith" (mbid-A); the linked item's performer is another Smith (mbid-B).
+            val smith = Normalizer(JvmAccentFolder).normalize("Song", "Smith")
+            val item =
+                WdEntity(
+                    "Q7",
+                    "Song",
+                    "Song",
+                    mapOf(
+                        Wd.INSTANCE_OF to listOf("Q7366"),
+                        Wd.PERFORMER to listOf("Q70"),
+                    ),
+                )
+            val wikidata = FakeWikidata(mapOf("Q7" to item), mapOf("Q70" to "Smith"), mapOf("Q70" to listOf("mbid-B")))
+            val linked =
+                Resolution(
+                    outcome = Outcome.SongArticle,
+                    recordingMbid = "r",
+                    artists = listOf(ResolvedArtist("Smith", "mbid-A")),
+                    work = ResolvedWork("w", "Song"),
+                    cover = false,
+                    wikidataIds = listOf("Q7"),
+                )
+            val verdict =
+                IdentityCheck(
+                    wikidata,
+                    NameMatcher(JvmAccentFolder),
+                ).song("Q7", smith, linked, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(verdict)
+            assertEquals(Scope.ORIGINAL_SONG, verdict.scope)
+            // The same with the "Cover Act" of the other tests.
+            val namesake =
+                FakeWikidata(
+                    mapOf("Q1" to song),
+                    mapOf("Q10" to "Cover Act"),
+                    mapOf(
+                        "Q10" to listOf("mbid-other"),
+                    ),
+                )
+            val own = resolved.copy(work = ResolvedWork("w", "Song"), cover = false, wikidataIds = listOf("Q1"))
+            val coverAct =
+                IdentityCheck(
+                    namesake,
+                    NameMatcher(JvmAccentFolder),
+                ).song("Q1", track, own, Route.MUSICBRAINZ)
+            assertIs<Verdict.Accepted>(coverAct)
+            assertEquals(Scope.ORIGINAL_SONG, coverAct.scope)
+        }
+
+    @Test
     fun `Wikidata not answering is unreachable, not a rejection`() =
         runTest {
             val down = IdentityCheck(FakeWikidata(emptyMap(), emptyMap(), failing = true), NameMatcher(JvmAccentFolder))
