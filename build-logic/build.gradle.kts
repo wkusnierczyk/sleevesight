@@ -7,6 +7,8 @@ dependencies {
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlin.serialization.plugin)
     implementation(libs.detekt.gradle.plugin)
+    // `:store`'s schema and queries (architecture, *Cache and history*).
+    implementation(libs.sqldelight.gradle.plugin)
     implementation(libs.ktlint.gradle.plugin)
     // Reads class files for `checkNetworkReferences`. BSD-3-Clause; build-time only, so outside
     // the app's dependency allowlist.

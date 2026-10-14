@@ -161,7 +161,7 @@ Players report a song the way their catalogue files it, which is often not how s
 | `(felt piano)`, `(acoustic)` | Strip, record as a variant | "And Dream Of Sheep (felt piano)" |
 | `A, B, C` in the artist field | Split into credited artists | "Peleboy, Tony K" |
 
-The key is the lowercased, accent-folded primary artist plus the normalized title. Duplicates in a playlist hit the cache.
+The key is the lowercased, accent-folded primary artist plus the normalized title, keeping letters and digits in any script, and `+` ("C++" is not "C"); other punctuation, symbols and emoji become a space, unless they are all there is (a title `★` keys as `★`). Accents are folded on Latin and Greek letters only: Cyrillic `й` is not `и`. Duplicates in a playlist hit the cache.
 
 ### Entity resolution
 
@@ -270,7 +270,7 @@ Prompt contracts are in the appendix.
 
 ### Caching and offline
 
-- Retrieval is cached per source and lookup key; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
+- Retrieval is cached per source and lookup key, as the evidence and outcome the app uses, never the raw response; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
 - Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default goes with preparing the next track ahead (D13), so the card is usually ready when the track starts.
 
@@ -327,6 +327,10 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
 | Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
+| Lookups | Cache lifetime of artist identities | 90 days |
+| Lookups | Cache size limit | 50 MB |
+
+The cache size limit covers the evidence and the written insights. A track's evidence is about 5 to 15 KB and each written card 1 to 3 KB (estimates, measured at the Phase 0.5 gate), so 50 MB holds about 2,500 tracks with their insights. Evidence expires within 30 days, so on its own it reaches the limit only for someone playing over 80 new tracks a day; written insights never expire, so they accumulate until the limit, which every listener reaches in time (some 25,000 cards). From then on the least recently used entries go first: the insights of the tracks not played for longest. It is not lower because an evicted insight costs a paid call to write again.
 
 Source switches decide what the model may use. The filter chips in the Sources section only change what is displayed.
 

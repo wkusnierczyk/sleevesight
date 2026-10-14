@@ -16,7 +16,12 @@ import kotlin.time.Duration.Companion.seconds
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
- * @property cacheLifetimes the retrieval cache lifetime per source (D9).
+ * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
+ *   pseudo-sources, which retrieve nothing) is not cached.
+ * @property artistCacheLifetime how long a credited artist's MusicBrainz id, or the finding that it
+ *   has none or several, is kept (architecture, *Cache and history*: "long, months").
+ * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
+ *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -30,7 +35,13 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE_AND_INSIGHT,
     val lookUpInBackground: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
+    val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
+    val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
 ) {
+    init {
+        require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
+    }
+
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
     fun follows(player: String): Boolean = followedPlayers[player] ?: false
 
@@ -71,6 +82,34 @@ data class Settings(
                 SourceId.LASTFM to ARTICLE_DAYS.days,
                 SourceId.WEB to WEB_DAYS.days,
             )
+
+        private const val ARTIST_DAYS = 90
+
+        /**
+         * 90 days. An artist's MusicBrainz id is stable (a merged id redirects), so the entry can
+         * live long; what changes is MusicBrainz itself, which may add an artist that was missing
+         * (`none`) or a namesake that makes one ambiguous. Three times the MusicBrainz retrieval
+         * lifetime (D9) picks such changes up within a season, at no cost a listener would notice:
+         * the lookup it saves is one MusicBrainz request at one per second.
+         */
+        val DEFAULT_ARTIST_CACHE_LIFETIME: Duration = ARTIST_DAYS.days
+
+        private const val MEGABYTE = 1_000_000L
+        private const val CACHE_MEGABYTES = 50
+
+        /**
+         * 50 MB. A track's retrieval cache holds only the evidence lines and outcomes the pipeline
+         * uses, about 5 to 15 KB across its sources, and each written card 1 to 3 KB (estimates, to
+         * be measured at the Phase 0.5 gate, #46): some 20 KB a track with its insights, so 50 MB
+         * holds about 2,500 tracks, and more when only evidence is cached. Retrieval entries expire
+         * within 30 days (D9), so evidence alone reaches the limit only for someone playing over 80
+         * new tracks a day. Written cards never expire, though: they accumulate until the limit,
+         * which every listener reaches in time (at about 2 KB a card, after some 25,000 cards), and
+         * from then on the least recently used go first, the cards of tracks not played for longest.
+         * 50 MB is small beside the players' own caches, and an evicted card costs a paid call to
+         * write again, which is why it is not lower.
+         */
+        const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
     }
 }
 

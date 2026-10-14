@@ -174,7 +174,7 @@ data class TrackState(
 
 ### Normalizer (`:core`)
 
-A port of the simulator's `normalize`, unchanged in behaviour, with the design's table and every fixture title as unit tests. Accent folding (Unicode NFKD) sits behind a small interface, since `java.text.Normalizer` is JVM-only (D2). Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
+A port of the simulator's `normalize`, with the design's table and every fixture title as unit tests, and the deviations listed in `Normalizer`'s KDoc. One of them is the lookup key (#72): it keeps letters and digits in any script, and `+`, where the simulator kept ASCII letters and digits only, so non-Latin tracks shared a key (every Japanese, Cyrillic or Greek track keyed as `|`) and, as the cache key, would get one another's evidence. Accents are folded away only on Latin and Greek letters; elsewhere a combining mark stays with its letter (the breve of Cyrillic `й`, Japanese voicing marks, Indic vowel signs), so different words do not merge. Symbols and emoji are dropped in either plane (supplementary ones by block, which the portable character classes do not classify); variation selectors, tags and enclosing marks are dropped without separating the letters around them. A title, artist or work of symbols only, which would fold to nothing, keys as its own characters, so `😀` and `😢` differ. `Normalizer.foldForKey` applies the same folding to the other parts of a cache key; the test is by character class, not a `\p{L}` regex, which is not portable. Every fixture track keeps the simulator's key. Accent folding (Unicode NFKD) sits behind a small interface, since `java.text.Normalizer` is JVM-only (D2). Output: `NormalizedTrack(title, artists, primary, from, variant, notes, lookupKey)`.
 
 ### Entity resolution (`:core` logic, `:sources` clients)
 
@@ -288,17 +288,27 @@ For the Phase 0.5 gate's judgement (D12, #46), `GenreAgreement` compares the lab
 
 | Table | Key | Lifetime |
 |---|---|---|
-| Retrieval | source, lookup key | Days, per source; a user setting (D9) |
-| Artist resolution | normalized artist name | Long, months |
+| Retrieval | source, track (lookup key, credited artists, source work) | Days, per source; a user setting (D9) |
+| Artist resolution | normalized artist name | Long, months; a user setting (90 days) |
 | Synthesis | kind, entity key, evidence fingerprint, prompt-template version, style hash (D14), provider, model, model-knowledge switch | Until evicted by size |
 | Session history | time | Local only, user-clearable |
 | Track changes (D15) | player, time | Local only, cleared with the session history |
 
 Offline: cached tracks work fully; uncached lookups are `unreachable`.
 
+How the three caches are made (#41, `Caches`), where the table leaves room:
+
+- **The retrieval key** is the source and `RetrievalCache.keyOf(track)`: the lookup key, the credited artists (sorted) and the work the track is from, each folded as the lookup key is (`Normalizer.foldForKey`, so NFC and NFD spellings agree, and an artist or work of symbols only keys as itself), since the adapters read the artists and the work too; "Song (feat. X)" and "Song" get entries of their own. The synthesis cache's entity key for a track is the same.
+- **Retrieval keeps results, not responses**: the `SourceResult` the pipeline uses (outcome, evidence and unverified lines, rejections, latency), as JSON, never the raw HTTP body. It stays small, and text the app does not show (the rest of an article, a whole bio) stays out of storage. Since a result depends on the adapter's extraction rules as well as the response, each entry carries `SourceAdapter.extractionVersion` (default 1, raised when an adapter's rules change) and the encoding's own version, and an entry under another version is a miss, not a stale hit. Not kept: an `unreachable` or `source_off` result, and the pseudo-sources, which have no lifetime. A result verified against a resolution that could not be made stays out too, the orchestration's call (#44), since it would stay unverified after MusicBrainz is back.
+- **Expiry**: an entry lives for the shortest lifetime among the sources it holds lines from and the sources its adapter consults (`SourceAdapter.consults`): the Wikipedia adapter's result holds Wikidata's lines, and its rejection comes from Wikidata's identity check, so it expires with whichever is shorter. A read never returns an entry past it, measured against the settings at the time of the read, so a shortened lifetime applies at once. `purgeExpired` deletes such entries (and those holding a source that no longer has a lifetime, or holding a source the app no longer knows, as the adapter's or among the sources of its lines); `:cli` calls it at start, and the app will on start. An entry under an older extraction version is not expired: it goes when read, replaced or evicted.
+- **Concurrency**: ids are `AUTOINCREMENT`, never reused, and a read that finds a stale entry deletes only the row it saw (by id and storage time), so it cannot delete an entry another call wrote in between. Concurrent calls are safe on a file-backed database (the JDBC driver on a file, the Android driver), not on the JDBC driver's in-memory database, which is for single-threaded tests.
+- **Artist resolution** maps the caller's normalized name to `resolved` (the MBID), `none` or `ambiguous` (the candidates' ids); the last two are kept so they are not asked again. Its lifetime, *long, months*, is a setting (`Settings.artistCacheLifetime`, 90 days: three MusicBrainz lifetimes, so an artist MusicBrainz adds, or a namesake that makes a name ambiguous, is picked up within a season).
+- **Size**: one limit for all three, a setting (`Settings.cacheSizeLimit`, 50 MB; the reasoning is in its KDoc and the design's *Settings*), counted as the UTF-8 bytes of keys and values, not the file size, and kept as running totals by triggers in the same transaction as each write, so a write does not scan the cache. An entry larger than the whole limit is not kept, and evicts nothing. Past the limit, the least recently used entries are evicted after each write and on purge: retrieval and synthesis in one order, artist entries, small and long-lived, only when no other entry is left. A read counts as a use. `Caches.stats()` gives entries and bytes per cache, for the diagnostics screen and the gate's measurements (#46).
+- Time comes from an injected `kotlin.time.Clock`; the database from an injected `SqlDriver`, with `CacheDatabase.Schema` created on it.
+
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 
@@ -482,6 +492,7 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 
 - **Fixtures.** The simulator's three JSON blocks (`playlist-data`, `facts-data`, `albums-data`) move to `fixtures/below-soundtrack/`, and the design's regression cases become named tests. The `facts-data` resolution outcomes are the expected outcomes of the resolution tests; its fact lines are reference facts the extraction tests check for by content, not wording.
 - **Unit tests** in `:core`: normalizer, scoring, genre vocabulary, evidence ids and fingerprint, grounding check, prompt builders against stored prompts.
+- **Store tests** in `:store`, on an in-memory SQLite database through the JDBC driver, with a clock the test moves: each cache's round trip, expiry per source, purging, eviction under the size limit in least-recently-used order, every part of the synthesis key, and versioned invalidation.
 - **Adapter tests** against recorded HTTP responses in `fixtures/http/`. Tests replay them through `ReplayNetClient`, a `NetClient` in `:sources`' test fixtures that serves the recorded files (#36): `NetClient` is an interface, so the adapters need no Ktor `MockEngine`, which Detekt keeps inside `:net`. Until `:cli record` exists, a recording run of the same lookups prints each exchange and a script writes the files (`fixtures/http/README.md`). CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.

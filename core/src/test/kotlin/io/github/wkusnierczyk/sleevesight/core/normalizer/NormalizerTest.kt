@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class NormalizerTest {
@@ -135,10 +136,101 @@ class NormalizerTest {
         val expected = Json.decodeFromString<List<Expected>>(resource("/normalizer/edge-cases.normalized.json"))
         val inputs = Json.decodeFromString<List<Input>>(resource("/normalizer/edge-cases.json"))
         assertEquals(inputs.map { it.title to it.artist }, expected.map { it.title to it.artist })
+        // The one documented deviation (#72, see `Normalizer`): the key keeps the dotless `ı`, which
+        // the simulator dropped.
+        val keyDeviations = mapOf(1 to "a|song lıve")
         for (entry in expected) {
-            assertMatches(entry.normalized, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
+            val want = keyDeviations[entry.n]?.let { entry.normalized.copy(key = it) } ?: entry.normalized
+            assertMatches(want, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
         }
         assertEquals("Song - ſingle edit", normalizer.normalize("Song - ſingle edit", "A").title)
+    }
+
+    // #72: the key keeps letters and digits in any script, and `+`.
+
+    @Test
+    fun `non-Latin titles and artists give distinct keys`() {
+        val tracks =
+            listOf(
+                "ファースト・ラヴ" to "宇多田ヒカル",
+                "戦場のメリークリスマス" to "坂本龍一",
+                "Группа крови" to "Кино",
+                "Σ'αγαπώ" to "Νίκος",
+                "First Love" to "宇多田ヒカル",
+                "First Love" to "坂本龍一",
+                "C++" to "AC/DC",
+                "C" to "AC DC",
+                "ガラス" to "A",
+                "カラス" to "A",
+            )
+        val keys = tracks.map { (title, artist) -> normalizer.normalize(title, artist).lookupKey }
+
+        assertEquals(keys.size, keys.toSet().size, keys.joinToString())
+        assertEquals("宇多田ヒカル|ファースト ラヴ", keys[0])
+        assertEquals("кино|группа крови", keys[2])
+        assertEquals("νικος|σ αγαπω", keys[3])
+        assertEquals("ac dc|c++", keys[6])
+        assertEquals("ac dc|c", keys[7])
+    }
+
+    @Test
+    fun `a mark that tells letters apart outside Latin and Greek is kept`() {
+        val key = { title: String -> normalizer.normalize(title, "Кино").lookupKey }
+
+        assertEquals("кино|мои\u0306", key("Мой"))
+        assertEquals("кино|мои", key("Мои"))
+        assertEquals(key("Мой"), key("Мои\u0306"), "precomposed and decomposed й agree")
+        assertNotEquals(key("ў"), key("у"))
+        assertNotEquals(key("ї"), key("і"))
+        // Latin and Greek accents still fold.
+        assertEquals("beyonce|deja vu", normalizer.normalize("Déjà Vu", "Beyoncé").lookupKey)
+        assertEquals("beyonce|deja vu", normalizer.normalize("De\u0301ja\u0300 Vu", "Beyonce\u0301").lookupKey)
+        assertEquals("νικος|σ αγαπω", normalizer.normalize("Σ'αγαπώ", "Νίκος").lookupKey)
+    }
+
+    @Test
+    fun `symbols and emoji are dropped in either plane`() {
+        for (title in listOf("Song ★", "Song 😀", "Song ❤️", "Song 👍🏽", "Song 𝄞")) {
+            assertEquals("a|song", normalizer.normalize(title, "A").lookupKey, title)
+        }
+    }
+
+    @Test
+    fun `variation selectors and tags leave the letters around them as they were`() {
+        assertEquals(
+            normalizer.normalize("葛飾", "A").lookupKey,
+            normalizer.normalize("葛\uDB40\uDD00飾", "A").lookupKey,
+        )
+        val key = { title: String -> normalizer.normalize(title, "Кино").lookupKey }
+        assertEquals(key("Мой"), key("Мои\uDB40\uDD00\u0306"), "the breve after the selector stays")
+        assertNotEquals(key("Мои"), key("Мои\uDB40\uDD00\u0306"))
+    }
+
+    @Test
+    fun `an enclosing mark is dropped`() {
+        assertEquals("a|1", normalizer.normalize("1\uFE0F\u20E3", "A").lookupKey)
+    }
+
+    @Test
+    fun `a title or artist of symbols only keys as itself`() {
+        val key = { title: String, artist: String -> normalizer.normalize(title, artist).lookupKey }
+
+        assertNotEquals(key("😀", "A"), key("😢", "A"))
+        assertNotEquals(key("★", "A"), key("☆", "A"))
+        assertEquals("a|★", key("★", "A"))
+        assertEquals("!!!|song", key("Song", "!!!"))
+        assertEquals("a|song", key("Song 😀", "A"), "a part that keeps something is folded as before")
+        assertEquals("|song", key("Song", ""), "a blank part stays empty")
+    }
+
+    @Test
+    fun `a compatibility form keys as its plain letter`() {
+        assertEquals("a|song", normalizer.normalize("Ｓｏｎｇ", "Ａ").lookupKey)
+    }
+
+    @Test
+    fun `supplementary characters are kept whole`() {
+        assertEquals("a|\uD840\uDC0B", normalizer.normalize("\uD840\uDC0B", "A").lookupKey)
     }
 
     private fun assertMatches(
