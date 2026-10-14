@@ -18,9 +18,10 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  *   be the unresolved artist; a writer (P86, P676) does so only when the item names no performer;
  * - a performer matching the original recording's artist (a cover, step 4) makes it the original
  *   song ([Scope.ORIGINAL_SONG]); the item MusicBrainz links to the recording or its work is the
- *   original song for a cover or when it names performers, none of them a credited artist (by
+ *   original song for a cover, or when it names performers, none of them a credited artist (by
  *   name for an unresolved artist; for a resolved one, by name only a performer with no P434),
- *   else the track's own song;
+ *   and no credited artist among its writers either (#76: Chuck Berry's own "Roll Over
+ *   Beethoven", whose item names only later performers); else the track's own song;
  * - anything else is rejected, with the reason. A song by someone else found by name alone is
  *   rejected even when its title is the track's: a same-title song and a cover cannot be told
  *   apart without MusicBrainz (Peleboy's "We In Here" is not DMX's), so only MusicBrainz's cover
@@ -132,17 +133,23 @@ class IdentityCheck(
             resolution.artists.ifEmpty { track.artists.map { ResolvedArtist(it, null) } }
 
         // MusicBrainz ties the item to the recording: the original song for a cover, or when none of
-        // its performers is a credited artist (MusicBrainz rarely dates enough to infer a cover);
-        // otherwise the track's own song. Here a name counts even for an artist the P434 check
-        // missed, but never against a conflicting id: a resolved artist's name matches only a
-        // performer with no P434.
+        // its performers is a credited artist (MusicBrainz rarely dates enough to infer a cover) and
+        // none of its writers is either: a credited writer makes it the artist's own song, whose
+        // item lists only the later performers who made it famous again. Otherwise the track's own
+        // song. Here a name counts even for an artist the P434 check missed, but never against a
+        // conflicting id: a resolved artist's name matches only a person with no P434.
         suspend fun linkedScope(
             performers: List<String>,
-            match: suspend (artists: List<ResolvedArtist>, anonymousOnly: Boolean) -> Boolean,
+            writers: List<String>,
+            match: suspend (people: List<String>, artists: List<ResolvedArtist>, anonymousOnly: Boolean) -> Boolean,
         ): Scope {
             val (withId, withoutId) = credited.partition { it.mbid != null }
-            val own = match(withoutId, false) || match(withId.map { ResolvedArtist(it.name, null) }, true)
-            val others = performers.isNotEmpty() && !own
+            val byName = withId.map { ResolvedArtist(it.name, null) }
+            val ownPerformer = match(performers, withoutId, false) || match(performers, byName, true)
+            val others =
+                performers.isNotEmpty() &&
+                    !ownPerformer &&
+                    !(match(writers, credited, false) || match(writers, byName, true))
             return if (resolution.cover || others) Scope.ORIGINAL_SONG else Scope.SONG
         }
     }
@@ -171,7 +178,8 @@ class IdentityCheck(
                 context.route == Route.MUSICBRAINZ ->
                     context.linkedScope(
                         performers,
-                    ) { artists, anonymousOnly -> matches(performers, artists, labels, anonymousOnly) }
+                        writers,
+                    ) { people, artists, anonymousOnly -> matches(people, artists, labels, anonymousOnly) }
                 else -> null
             }
         return if (scope != null) {

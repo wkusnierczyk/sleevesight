@@ -90,6 +90,18 @@ class WikipediaSourceTest {
         }
 
     @Test
+    fun `an artist's own song whose item names only later performers is scoped as the track's song`() =
+        runTest {
+            // Chuck Berry's "Roll Over Beethoven": Wikidata names him as its writer only (#76).
+            val result = lookup(55)
+            assertEquals(Outcome.SongArticle, result.outcome)
+            val song = result.evidence.filter { it.url == "https://en.wikipedia.org/wiki/Roll_Over_Beethoven" }
+            assertTrue(song.isNotEmpty(), "${result.evidence}")
+            assertTrue(song.all { it.scope == Scope.SONG }, "$song")
+            assertTrue(result.evidence.none { it.scope == Scope.ORIGINAL_SONG }, "${result.evidence}")
+        }
+
+    @Test
     fun `same-name artist - the wrong Reem is rejected, with no lines`() =
         runTest {
             for (n in RegressionCase.SAME_NAME_ARTIST.tracks) {
