@@ -71,8 +71,10 @@ sealed interface InsightReply {
 /**
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
- * its `NO_EVIDENCE` test, rule for rule; the tests compare it with the simulator's own code on the
- * same replies (`core/src/test/resources/grounding/`).
+ * its `NO_EVIDENCE` test, rule for rule but for two deviations from the Phase 0.5 gate (#46): an
+ * abbreviation does not end a sentence ([splitSentences]), and a stated gap may say "little else"
+ * or "little more". The tests compare it with the simulator's own code on the same replies
+ * (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -111,8 +113,13 @@ object GroundingCheck {
     /**
      * Splits [text] into sentences, as the simulator does: spaces and tabs collapse to one space,
      * and a sentence ends at whitespace that follows `.`, `!` or `?` (and any citations after it,
-     * like `. [W1][G2]`) and comes before a capital letter, `"`, `“` or `(`. So `Dr. Smith` splits
-     * too, as it does in the simulator.
+     * like `. [W1][G2]`) and comes before a capital letter, `"`, `“` or `(`.
+     *
+     * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
+     * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials
+     * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`). The simulator split
+     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. The cost: a
+     * sentence that does end in one (`... moved to the U.S. He ...`) is joined to the next.
      */
     fun splitSentences(text: String): List<String> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
@@ -164,6 +171,7 @@ object GroundingCheck {
     /**
      * Whether the text before [end] ends a sentence: the simulator's lookbehind
      * `(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)`, read backwards over the citations.
+     * An abbreviation's `.` directly before [end] does not end one ([splitSentences]).
      */
     private fun endsSentence(
         t: String,
@@ -176,7 +184,8 @@ object GroundingCheck {
             val open = citationBefore(t, k)
             when {
                 c != null && c in ".!?" -> {
-                    ends = true
+                    // An abbreviation's `.` ends nothing, unless citations follow it (#46).
+                    ends = k != end || !endsAbbreviation(t, end)
                 }
 
                 open == null -> {
@@ -191,6 +200,30 @@ object GroundingCheck {
         }
         return ends
     }
+
+    /**
+     * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
+     * after any opening `(`, `"` or `“`, is a run of capital initials or one of [ABBREVIATIONS].
+     */
+    private fun endsAbbreviation(
+        t: String,
+        end: Int,
+    ): Boolean {
+        if (t.getOrNull(end - 1) != '.') return false
+        var start = end - 1
+        while (start > 0 && !isJsWhitespace(t[start - 1])) start--
+        while (start < end && t[start] in WORD_OPENERS) start++
+        val word = t.substring(start, end)
+        return INITIALS.matches(word) || word.dropLast(1) in ABBREVIATIONS
+    }
+
+    /**
+     * Words that end in `.` without ending a sentence, as written before a name or a title: the
+     * replies name people (`Dr. Dre`), places (`St. John's`) and featured artists (`feat. Van
+     * Morrison`). Matched with their case.
+     */
+    private val ABBREVIATIONS: Set<String> =
+        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs")
 
     /** Where the citation (`[W1]`, `[MB12]`, `[M]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
@@ -212,12 +245,18 @@ object GroundingCheck {
     private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
 
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
+    private const val WORD_OPENERS = "\"“("
+    private val INITIALS = Regex("(?:[A-Z]\\.)+")
     private val SPACES_AND_TABS = Regex("[ \\t]+")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
     private val CITATION = Regex("\\[([A-Z]{1,2}[0-9]*)\\]")
+
+    // The simulator's, with "else" and "more" allowed after "little", "not much" and "nothing" (#46):
+    // the prompt asks for "little is documented", and the model writes "little else is documented".
     private val HEDGE =
         Regex(
-            "little is (known|documented)|not much is (known|documented)|no (further )?(details|information)|" +
-                "isn't much|is not much|nothing (else )?is (known|documented)",
+            "little (else |more )?is (known|documented)|not much (else |more )?is (known|documented)|" +
+                "no (further )?(details|information)|isn't much|is not much|" +
+                "nothing (else |more )?is (known|documented)",
         )
 }
