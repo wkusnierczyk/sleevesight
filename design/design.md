@@ -161,7 +161,7 @@ Players report a song the way their catalogue files it, which is often not how s
 | `(felt piano)`, `(acoustic)` | Strip, record as a variant | "And Dream Of Sheep (felt piano)" |
 | `A, B, C` in the artist field | Split into credited artists | "Peleboy, Tony K" |
 
-The key is the lowercased, accent-folded primary artist plus the normalized title, keeping letters and digits in any script, and `+` ("C++" is not "C"); other punctuation becomes a space. Duplicates in a playlist hit the cache.
+The key is the lowercased, accent-folded primary artist plus the normalized title, keeping letters and digits in any script, and `+` ("C++" is not "C"); other punctuation, symbols and emoji become a space. Accents are folded on Latin and Greek letters only: Cyrillic `й` is not `и`. Duplicates in a playlist hit the cache.
 
 ### Entity resolution
 

@@ -20,11 +20,7 @@ import io.github.wkusnierczyk.sleevesight.core.text.trimJs
  *   ASCII letters and digits only, so every Japanese, Cyrillic or Greek title and artist keyed as
  *   `|`, "First Love" by two Japanese artists shared one key, and "C++" and "C" by AC/DC shared
  *   another; as a cache key, one track would be served another's evidence. `+` is kept because it
- *   is part of a title ("C++", "1+1") where other punctuation is not. Kept as well: combining marks
- *   outside the Latin accents folded away (Japanese voicing marks, Indic vowel signs), since
- *   dropping them would merge different words (`ガラス`, `カラス`), and supplementary characters
- *   (surrogate pairs) whole, as the standard library's character classes do not cover them. The
- *   folded text is lowercased again, so a compatibility form such as a fullwidth `Ａ` keys as `a`.
+ *   is part of a title ("C++", "1+1") where other punctuation is not. See [foldForKey].
  *   For ASCII input, and for every fixture track, the key is the simulator's; it differs only where
  *   the simulator dropped a non-ASCII character (`lıve`, dotless, keys as `lıve`, not `lve`).
  *
@@ -83,31 +79,94 @@ class Normalizer(
         )
     }
 
-    // Lowercase, decompose, drop the Latin combining accents, lowercase again; then each run of
-    // characters that are not key characters becomes one space, trimmed at the ends. Character
-    // classes rather than a `\p{L}` regex, which is not portable (architecture, Multiplatform
-    // readiness).
     private fun lookupKey(
         primary: String,
         title: String,
-    ): String {
-        val folded = accentFolder.decompose("$primary|$title".lowercase()).replace(COMBINING_MARKS, "").lowercase()
-        val key = StringBuilder(folded.length)
-        var gap = false
-        for (c in folded) {
-            if (!isKeyChar(c)) {
-                gap = true
-                continue
+    ): String = foldForKey("$primary|$title")
+
+    /**
+     * [text] as keys spell it, for [NormalizedTrack.lookupKey] and for the other parts of a cache
+     * key (the retrieval cache's artists and source work), so that equivalent spellings (NFC and
+     * NFD, fullwidth and plain, any case) give one key and different words do not.
+     *
+     * Lowercased, decomposed (NFKD) and lowercased again, so a compatibility form such as a
+     * fullwidth `Ａ` keys as `a`. Then kept: letters and digits in any script, `+` and `|`; each run
+     * of anything else becomes one space, trimmed at the ends. A combining mark is kept with the
+     * letter it follows, except the accents U+0300 to U+036F on a Latin or Greek letter, which are
+     * folded away (`é` keys as `e`, `ώ` as `ω`): elsewhere a mark tells letters apart, as the
+     * breve does Cyrillic `й` from `и` and the voicing mark `ガ` from `カ`. A mark on a character
+     * that is not kept goes with it, so an emoji's variation selector does not stay behind.
+     *
+     * Supplementary characters (surrogate pairs) are kept whole, except in the symbol and emoji
+     * blocks (U+1D000 to U+1D24F, U+1F000 to U+1FAFF, U+E0000 to U+E01EF), which are dropped like
+     * the symbols of the Basic Multilingual Plane: the standard library's portable character
+     * classes do not classify them, so the blocks are listed instead. Character classes, not a
+     * `\p{L}` regex, which is not portable (architecture, Multiplatform readiness).
+     */
+    fun foldForKey(text: String): String {
+        val folded = accentFolder.decompose(text.lowercase()).lowercase()
+        val key = KeyBuilder(folded.length)
+        var i = 0
+        while (i < folded.length) {
+            val c = folded[i]
+            val pair = c.isHighSurrogate() && i + 1 < folded.length && folded[i + 1].isLowSurrogate()
+            when {
+                pair -> key.base(folded.substring(i, i + 2), !inSymbolBlocks(codePoint(c, folded[i + 1])), false)
+                c.category in MARKS -> key.mark(c)
+                else -> key.base(c.toString(), isKeyChar(c), foldsAccents(c))
             }
-            if (gap && key.isNotEmpty()) key.append(' ')
-            gap = false
-            key.append(c)
+            i += if (pair) 2 else 1
         }
         return key.toString()
     }
 
-    private fun isKeyChar(c: Char): Boolean =
-        c == '|' || c == '+' || c.isLetterOrDigit() || c.isSurrogate() || c.category in MARKS
+    // The key as it is built: kept characters, one space for each run of dropped ones, and each mark
+    // kept or dropped by the character it follows.
+    private class KeyBuilder(
+        capacity: Int,
+    ) {
+        private val key = StringBuilder(capacity)
+        private var gap = false
+        private var baseKept = false
+        private var baseFolds = false
+
+        fun base(
+            text: String,
+            kept: Boolean,
+            folds: Boolean,
+        ) {
+            baseKept = kept
+            baseFolds = folds
+            if (!kept) {
+                gap = true
+                return
+            }
+            if (gap && key.isNotEmpty()) key.append(' ')
+            gap = false
+            key.append(text)
+        }
+
+        fun mark(c: Char) {
+            val folded = baseFolds && c in FOLDED_ACCENTS
+            if (baseKept && !folded && c !in VARIATION_SELECTORS) key.append(c)
+        }
+
+        override fun toString(): String = key.toString()
+    }
+
+    private fun isKeyChar(c: Char): Boolean = c == '|' || c == '+' || c.isLetterOrDigit()
+
+    // Latin (with ASCII digits and punctuation) and Greek letters, whose accents are folded away.
+    private fun foldsAccents(c: Char): Boolean =
+        c.code < LATIN_END || c.code in LATIN_ADDITIONAL || c.code in GREEK || c.code in GREEK_EXTENDED
+
+    private fun codePoint(
+        high: Char,
+        low: Char,
+    ): Int =
+        SUPPLEMENTARY_BASE + ((high.code - HIGH_SURROGATE_BASE) shl SURROGATE_BITS) + (low.code - LOW_SURROGATE_BASE)
+
+    private fun inSymbolBlocks(codePoint: Int): Boolean = SYMBOL_BLOCKS.any { codePoint in it }
 
     private fun splitArtists(artists: String): List<String> = artists.split(ARTIST_SEPARATOR).filter { it.isNotEmpty() }
 
@@ -131,7 +190,22 @@ class Normalizer(
                 "$S*\\(([^)]*(?:${ci("piano")}|${ci("acoustic")}|${ci("cover")}|${ci("strange game")})[^)]*)\\)",
             )
         val ARTIST_SEPARATOR = Regex("$S*,$S*")
-        val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
+        val FOLDED_ACCENTS = '\u0300'..'\u036F'
+        val VARIATION_SELECTORS = '\uFE00'..'\uFE0F'
+
+        // Latin Extended-B ends before U+0250.
+        const val LATIN_END = 0x0250
+        val LATIN_ADDITIONAL = 0x1E00..0x1EFF
+        val GREEK = 0x0370..0x03FF
+        val GREEK_EXTENDED = 0x1F00..0x1FFF
+
+        // Musical symbols; the emoji, pictograph and other symbol blocks; tags and variation selectors.
+        val SYMBOL_BLOCKS = listOf(0x1D000..0x1D24F, 0x1F000..0x1FAFF, 0xE0000..0xE01EF)
+
+        const val SUPPLEMENTARY_BASE = 0x10000
+        const val HIGH_SURROGATE_BASE = 0xD800
+        const val LOW_SURROGATE_BASE = 0xDC00
+        const val SURROGATE_BITS = 10
         val MARKS =
             setOf(CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK)
 

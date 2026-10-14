@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class NormalizerTest {
@@ -170,6 +171,28 @@ class NormalizerTest {
         assertEquals("νικος|σ αγαπω", keys[3])
         assertEquals("ac dc|c++", keys[6])
         assertEquals("ac dc|c", keys[7])
+    }
+
+    @Test
+    fun `a mark that tells letters apart outside Latin and Greek is kept`() {
+        val key = { title: String -> normalizer.normalize(title, "Кино").lookupKey }
+
+        assertEquals("кино|мои\u0306", key("Мой"))
+        assertEquals("кино|мои", key("Мои"))
+        assertEquals(key("Мой"), key("Мои\u0306"), "precomposed and decomposed й agree")
+        assertNotEquals(key("ў"), key("у"))
+        assertNotEquals(key("ї"), key("і"))
+        // Latin and Greek accents still fold.
+        assertEquals("beyonce|deja vu", normalizer.normalize("Déjà Vu", "Beyoncé").lookupKey)
+        assertEquals("beyonce|deja vu", normalizer.normalize("De\u0301ja\u0300 Vu", "Beyonce\u0301").lookupKey)
+        assertEquals("νικος|σ αγαπω", normalizer.normalize("Σ'αγαπώ", "Νίκος").lookupKey)
+    }
+
+    @Test
+    fun `symbols and emoji are dropped in either plane`() {
+        for (title in listOf("Song ★", "Song 😀", "Song ❤️", "Song 👍🏽", "Song 𝄞")) {
+            assertEquals("a|song", normalizer.normalize(title, "A").lookupKey, title)
+        }
     }
 
     @Test
