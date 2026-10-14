@@ -211,15 +211,13 @@ class WikipediaSource(
          * (`LastFmBio.split`) are joined while a quotation they open is not closed, and a piece left
          * with an open quotation at the end of the paragraph is dropped.
          *
-         * A paragraph gives no sentences when its straight quotes do not pair up, scanning from its
-         * start: a `"` that would open a quotation right after a letter or digit (an inch mark, `a 7"
-         * single`), or a quotation still open at its end. A `"` after a digit may still close one
-         * (`"1999" is a song`). So every straight `"` in a paragraph that gives sentences opens or
-         * closes a quotation in turn, and no sentence ends inside one; a paragraph with an inch mark
-         * outside a quotation is lost whole, a known limit. Curly quotes need only balance in count.
+         * Every straight `"` opens or closes a quotation in turn. A `"` directly after a digit may be
+         * an inch mark (`a 7" single`), which would throw that pairing off, so a paragraph holding one
+         * gives no sentences at all. The cost, a known limit: such paragraphs are lost whole, quoted
+         * numeric titles among them (`"1999" is a song`). Curly quotes need only balance in count.
          */
         internal fun split(paragraph: String): List<String> {
-            if (!quotesPair(paragraph)) return emptyList()
+            if (DIGIT_QUOTE.containsMatchIn(paragraph)) return emptyList()
             val sentences = mutableListOf<String>()
             var open: String? = null
             for (piece in LastFmBio.split(paragraph)) {
@@ -234,19 +232,10 @@ class WikipediaSource(
             return sentences
         }
 
-        // Whether [text]'s straight quotes pair up, scanning: no `"` opens a quotation right after a
-        // letter or digit (an inch mark), and none is left open at the end.
-        private fun quotesPair(text: String): Boolean {
-            var inside = false
-            for (i in text.indices) {
-                if (text[i] != '"') continue
-                if (!inside && text.getOrNull(i - 1)?.isLetterOrDigit() == true) return false
-                inside = !inside
-            }
-            return !inside && text.count { it == '“' } == text.count { it == '”' }
-        }
+        // A straight `"` directly after a digit: an inch mark, or the end of a quoted numeric title.
+        private val DIGIT_QUOTE = Regex("[0-9]\"")
 
-        // A piece's quotes balance by count; [quotesPair] has already checked the paragraph's order.
+        // Whether every quotation a piece opens it also closes.
         private fun balanced(text: String): Boolean =
             text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 

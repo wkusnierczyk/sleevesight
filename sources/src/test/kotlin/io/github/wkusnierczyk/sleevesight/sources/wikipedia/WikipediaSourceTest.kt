@@ -151,6 +151,19 @@ class WikipediaSourceTest {
         }
 
     @Test
+    fun `compilation release year - Snowbird keeps its sentences in a paragraph with a nested quotation`() =
+        runTest {
+            val texts = lookup(36).evidence.map { it.text }
+            assertTrue(
+                texts.any {
+                    it.startsWith("Anne Murray and Gene MacLellan had met while both were regulars") &&
+                        it.endsWith("This Way Is My Way, in 1969.")
+                },
+                "$texts",
+            )
+        }
+
+    @Test
     fun `nothing documented gives none`() =
         runTest {
             for (n in listOf(23, 30)) assertEquals(Outcome.None, lookup(n).outcome, "track $n")
@@ -173,43 +186,38 @@ class WikipediaSourceTest {
         }
 
     @Test
-    fun `a quotation is never cut, and a paragraph left with one open is dropped`() {
+    fun `a quotation is never cut, and a piece left open is dropped`() {
         assertEquals(
             listOf("Dylan said, \"I like it. I really do.\"", "It charted."),
             WikipediaSource.split("Dylan said, \"I like it. I really do.\" It charted."),
         )
-        // A paragraph left with an open quotation is dropped whole.
-        assertEquals(emptyList(), WikipediaSource.split("It charted. He said, \"No. Never."))
-        // A known limit: an inch mark unbalances its paragraph, which is dropped whole.
-        assertEquals(emptyList(), WikipediaSource.split("It came out as a 7\" single. It charted."))
-        val dylan = WikipediaSource.split("Dylan said, \"It came out on a 7\" single. I like it.\" It charted.")
-        assertEquals(emptyList(), dylan)
-        // Two inch marks pair up by count, but not as quotation marks.
+        assertEquals(listOf("It charted."), WikipediaSource.split("It charted. He said, \"No. Never."))
+        // A nested quotation, as in Snowbird's lead, keeps its sentence whole.
         assertEquals(
-            emptyList(),
+            listOf("Murray would recall: \"Gene told me he wrote [\"Snowbird\"] in twenty minutes.\"", "It sold well."),
             WikipediaSource.split(
+                "Murray would recall: \"Gene told me he wrote [\"Snowbird\"] in twenty minutes.\" It sold well.",
+            ),
+        )
+    }
+
+    @Test
+    fun `a paragraph with a straight quote right after a digit gives nothing`() {
+        val dropped =
+            listOf(
+                "It came out as a 7\" single. It charted.",
+                "Dylan said, \"It came out on a 7\" single. I like it.\" It charted.",
+                "Dylan said, \"It came out on a 7\" single. Later we released a 12\" mix.\" It charted.",
                 "Foo came out on a 7\" single. Critics called Foo \"a gem. A true gem.\" " +
                     "Foo was also issued as a 12\" single.",
-            ),
-        )
-        assertEquals(
-            emptyList(),
-            WikipediaSource.split(
-                "Dylan said, \"It came out on a 7\" single. Later we released a 12\" mix.\" It charted.",
-            ),
-        )
-        assertEquals(
-            listOf("\"1999\" is a song by American musician Prince.", "It was released in 1982."),
-            WikipediaSource.split("\"1999\" is a song by American musician Prince. It was released in 1982."),
-        )
-        assertEquals(
-            listOf("\"Summer of '69\" is a song by Bryan Adams.", "It charted."),
-            WikipediaSource.split("\"Summer of '69\" is a song by Bryan Adams. It charted."),
-        )
-        assertEquals(
-            listOf("Prince is a musician.", "His hits include \"1999\" and \"Kiss\".", "He died in 2016."),
-            WikipediaSource.split("Prince is a musician. His hits include \"1999\" and \"Kiss\". He died in 2016."),
-        )
+                "He said, \"It was a 7\" single. I loved it.\" Fans bought the 12\" version.",
+                "He said, \"It was a 7\" single. I loved it.\"; fans bought the 12\" one.",
+                // The cost: quoted titles ending in a digit go too.
+                "\"1999\" is a song by American musician Prince. It was released in 1982.",
+                "\"Summer of '69\" is a song by Bryan Adams. It charted.",
+                "Prince is a musician. His hits include \"1999\" and \"Kiss\". He died in 2016.",
+            )
+        for (paragraph in dropped) assertEquals(emptyList(), WikipediaSource.split(paragraph), paragraph)
     }
 
     @Test
