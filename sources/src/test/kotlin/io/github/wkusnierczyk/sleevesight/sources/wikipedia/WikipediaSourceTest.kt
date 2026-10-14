@@ -212,6 +212,8 @@ class WikipediaSourceTest {
                     "Foo was also issued as a 12\" single.",
                 "He said, \"It was a 7\" single. I loved it.\" Fans bought the 12\" version.",
                 "He said, \"It was a 7\" single. I loved it.\"; fans bought the 12\" one.",
+                "It came out as a 7½\" single. He said, \"Yes. Sure.\" It charted.",
+                "He said, “It was a 7” single. I loved it.” It charted.",
                 // The cost: quoted titles ending in a digit go too.
                 "\"1999\" is a song by American musician Prince. It was released in 1982.",
                 "\"Summer of '69\" is a song by Bryan Adams. It charted.",

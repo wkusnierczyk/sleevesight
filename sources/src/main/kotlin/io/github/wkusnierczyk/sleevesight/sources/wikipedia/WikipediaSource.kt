@@ -211,9 +211,10 @@ class WikipediaSource(
          * (`LastFmBio.split`) are joined while a quotation they open is not closed, and a piece left
          * with an open quotation at the end of the paragraph is dropped.
          *
-         * Every straight `"` opens or closes a quotation in turn. A `"` directly after a digit may be
-         * an inch mark (`a 7" single`), which would throw that pairing off, so a paragraph holding one
-         * gives no sentences at all. The cost, a known limit: such paragraphs are lost whole, quoted
+         * Every straight `"` opens or closes a quotation in turn. A straight `"` or a closing
+         * curly `”` directly after a digit (any Unicode number, `7½`) may be an inch mark
+         * (`a 7" single`), which would throw that pairing off, so a paragraph holding one gives
+         * no sentences at all. The cost, a known limit: such paragraphs are lost whole, quoted
          * numeric titles among them (`"1999" is a song`). Curly quotes need only balance in count.
          */
         internal fun split(paragraph: String): List<String> {
@@ -233,7 +234,7 @@ class WikipediaSource(
         }
 
         // A straight `"` directly after a digit: an inch mark, or the end of a quoted numeric title.
-        private val DIGIT_QUOTE = Regex("[0-9]\"")
+        private val DIGIT_QUOTE = Regex("\\p{N}[\"”]")
 
         // Whether every quotation a piece opens it also closes.
         private fun balanced(text: String): Boolean =
