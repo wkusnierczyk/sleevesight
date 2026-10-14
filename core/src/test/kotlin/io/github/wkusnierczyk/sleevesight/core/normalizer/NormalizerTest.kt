@@ -196,6 +196,34 @@ class NormalizerTest {
     }
 
     @Test
+    fun `variation selectors and tags leave the letters around them as they were`() {
+        assertEquals(
+            normalizer.normalize("葛飾", "A").lookupKey,
+            normalizer.normalize("葛\uDB40\uDD00飾", "A").lookupKey,
+        )
+        val key = { title: String -> normalizer.normalize(title, "Кино").lookupKey }
+        assertEquals(key("Мой"), key("Мои\uDB40\uDD00\u0306"), "the breve after the selector stays")
+        assertNotEquals(key("Мои"), key("Мои\uDB40\uDD00\u0306"))
+    }
+
+    @Test
+    fun `an enclosing mark is dropped`() {
+        assertEquals("a|1", normalizer.normalize("1\uFE0F\u20E3", "A").lookupKey)
+    }
+
+    @Test
+    fun `a title or artist of symbols only keys as itself`() {
+        val key = { title: String, artist: String -> normalizer.normalize(title, artist).lookupKey }
+
+        assertNotEquals(key("😀", "A"), key("😢", "A"))
+        assertNotEquals(key("★", "A"), key("☆", "A"))
+        assertEquals("a|★", key("★", "A"))
+        assertEquals("!!!|song", key("Song", "!!!"))
+        assertEquals("a|song", key("Song 😀", "A"), "a part that keeps something is folded as before")
+        assertEquals("|song", key("Song", ""), "a blank part stays empty")
+    }
+
+    @Test
     fun `a compatibility form keys as its plain letter`() {
         assertEquals("a|song", normalizer.normalize("Ｓｏｎｇ", "Ａ").lookupKey)
     }

@@ -82,7 +82,14 @@ class Normalizer(
     private fun lookupKey(
         primary: String,
         title: String,
-    ): String = foldForKey("$primary|$title")
+    ): String {
+        // Folded together, so the space between a dropped trailing character and `|` stays as the
+        // simulator has it; part by part only when a part keeps nothing (see [foldForKey]).
+        val whole = foldCore("$primary|$title")
+        val emptyPart =
+            foldCore(primary).isEmpty() && primary.isNotBlank() || foldCore(title).isEmpty() && title.isNotBlank()
+        return if (emptyPart) foldForKey(primary) + "|" + foldForKey(title) else whole
+    }
 
     /**
      * [text] as keys spell it, for [NormalizedTrack.lookupKey] and for the other parts of a cache
@@ -96,22 +103,36 @@ class Normalizer(
      * folded away (`é` keys as `e`, `ώ` as `ω`): elsewhere a mark tells letters apart, as the
      * breve does Cyrillic `й` from `и` and the voicing mark `ガ` from `カ`. A mark on a character
      * that is not kept goes with it, so an emoji's variation selector does not stay behind.
+     * Variation selectors and tags (U+FE00 to U+FE0F, U+E0000 to U+E007F, U+E0100 to U+E01EF) and
+     * enclosing marks (the keycap of `1️⃣`) are dropped wherever they are, leaving the letter before
+     * them and any mark after it as they were: `葛󠄀飾` keys as `葛飾`.
      *
      * Supplementary characters (surrogate pairs) are kept whole, except in the symbol and emoji
-     * blocks (U+1D000 to U+1D24F, U+1F000 to U+1FAFF, U+E0000 to U+E01EF), which are dropped like
-     * the symbols of the Basic Multilingual Plane: the standard library's portable character
-     * classes do not classify them, so the blocks are listed instead. Character classes, not a
-     * `\p{L}` regex, which is not portable (architecture, Multiplatform readiness).
+     * blocks (U+1D000 to U+1D24F, U+1F000 to U+1FAFF), which are dropped like the symbols of the
+     * Basic Multilingual Plane: the standard library's portable character classes do not classify
+     * them, so the blocks are listed instead. Character classes, not a `\p{L}` regex, which is not
+     * portable (architecture, Multiplatform readiness).
+     *
+     * Text that keeps nothing by these rules but is not blank (a title of emoji or symbols only,
+     * `😀`, `★`, an artist `!!!`) keys as its own characters, lowercased, without whitespace, so two
+     * such tracks do not share a key.
      */
     fun foldForKey(text: String): String {
+        val folded = foldCore(text)
+        return if (folded.isEmpty() && text.isNotBlank()) text.lowercase().filterNot { it.isWhitespace() } else folded
+    }
+
+    private fun foldCore(text: String): String {
         val folded = accentFolder.decompose(text.lowercase()).lowercase()
         val key = KeyBuilder(folded.length)
         var i = 0
         while (i < folded.length) {
             val c = folded[i]
             val pair = c.isHighSurrogate() && i + 1 < folded.length && folded[i + 1].isLowSurrogate()
+            val code = if (pair) codePoint(c, folded[i + 1]) else c.code
             when {
-                pair -> key.base(folded.substring(i, i + 2), !inSymbolBlocks(codePoint(c, folded[i + 1])), false)
+                IGNORED.any { code in it } || c.category == CharCategory.ENCLOSING_MARK -> Unit
+                pair -> key.base(folded.substring(i, i + 2), !inSymbolBlocks(code), false)
                 c.category in MARKS -> key.mark(c)
                 else -> key.base(c.toString(), isKeyChar(c), foldsAccents(c))
             }
@@ -148,7 +169,7 @@ class Normalizer(
 
         fun mark(c: Char) {
             val folded = baseFolds && c in FOLDED_ACCENTS
-            if (baseKept && !folded && c !in VARIATION_SELECTORS) key.append(c)
+            if (baseKept && !folded) key.append(c)
         }
 
         override fun toString(): String = key.toString()
@@ -191,7 +212,9 @@ class Normalizer(
             )
         val ARTIST_SEPARATOR = Regex("$S*,$S*")
         val FOLDED_ACCENTS = '\u0300'..'\u036F'
-        val VARIATION_SELECTORS = '\uFE00'..'\uFE0F'
+
+        // Variation selectors and tags: dropped without touching the letter before them.
+        val IGNORED = listOf(0xFE00..0xFE0F, 0xE0000..0xE007F, 0xE0100..0xE01EF)
 
         // Latin Extended-B ends before U+0250.
         const val LATIN_END = 0x0250
@@ -199,8 +222,8 @@ class Normalizer(
         val GREEK = 0x0370..0x03FF
         val GREEK_EXTENDED = 0x1F00..0x1FFF
 
-        // Musical symbols; the emoji, pictograph and other symbol blocks; tags and variation selectors.
-        val SYMBOL_BLOCKS = listOf(0x1D000..0x1D24F, 0x1F000..0x1FAFF, 0xE0000..0xE01EF)
+        // Musical symbols; the emoji, pictograph and other symbol blocks.
+        val SYMBOL_BLOCKS = listOf(0x1D000..0x1D24F, 0x1F000..0x1FAFF)
 
         const val SUPPLEMENTARY_BASE = 0x10000
         const val HIGH_SURROGATE_BASE = 0xD800
