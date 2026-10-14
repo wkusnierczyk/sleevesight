@@ -142,8 +142,7 @@ class LastFmAdapter(
             is LastFmAnswer.Found -> {
                 val artist = info.value
                 val match = check.judge(credited, artist, check.resolvedFor(credited, resolution.artists))
-                val shown = match == LastFmMatch.Verified || match == LastFmMatch.Unverified
-                val genres = if (shown) vocabulary.labelsFor(genreTags(artist, fetched.topTags)) else emptyList()
+                val genres = if (match.shows) vocabulary.labelsFor(genreTags(artist, fetched.topTags)) else emptyList()
                 LastFmArtistLookup(credited, match, artist, genres)
             }
 

@@ -114,12 +114,13 @@ class Normalizer(
      * portable (architecture, Multiplatform readiness).
      *
      * Text that keeps nothing by these rules but is not blank (a title of emoji or symbols only,
-     * `😀`, `★`, an artist `!!!`) keys as its own characters, lowercased, without whitespace, so two
-     * such tracks do not share a key.
+     * `😀`, `★`, an artist `!!!`) keys as its own characters, lowercased, without whitespace,
+     * variation selectors, tags and enclosing marks, so two such tracks do not share a key, and
+     * `★` and `★` with an emoji variation selector share one.
      */
     fun foldForKey(text: String): String {
         val folded = foldCore(text)
-        return if (folded.isEmpty() && text.isNotBlank()) text.lowercase().filterNot { it.isWhitespace() } else folded
+        return if (folded.isEmpty() && text.isNotBlank()) ownCharacters(text) else folded
     }
 
     private fun foldCore(text: String): String {
@@ -131,7 +132,7 @@ class Normalizer(
             val pair = c.isHighSurrogate() && i + 1 < folded.length && folded[i + 1].isLowSurrogate()
             val code = if (pair) codePoint(c, folded[i + 1]) else c.code
             when {
-                IGNORED.any { code in it } || c.category == CharCategory.ENCLOSING_MARK -> Unit
+                ignored(code, c) -> Unit
                 pair -> key.base(folded.substring(i, i + 2), !inSymbolBlocks(code), false)
                 c.category in MARKS -> key.mark(c)
                 else -> key.base(c.toString(), isKeyChar(c), foldsAccents(c))
@@ -181,12 +182,6 @@ class Normalizer(
     private fun foldsAccents(c: Char): Boolean =
         c.code < LATIN_END || c.code in LATIN_ADDITIONAL || c.code in GREEK || c.code in GREEK_EXTENDED
 
-    private fun codePoint(
-        high: Char,
-        low: Char,
-    ): Int =
-        SUPPLEMENTARY_BASE + ((high.code - HIGH_SURROGATE_BASE) shl SURROGATE_BITS) + (low.code - LOW_SURROGATE_BASE)
-
     private fun inSymbolBlocks(codePoint: Int): Boolean = SYMBOL_BLOCKS.any { codePoint in it }
 
     private fun splitArtists(artists: String): List<String> = artists.split(ARTIST_SEPARATOR).filter { it.isNotEmpty() }
@@ -215,6 +210,35 @@ class Normalizer(
 
         // Variation selectors and tags: dropped without touching the letter before them.
         val IGNORED = listOf(0xFE00..0xFE0F, 0xE0000..0xE007F, 0xE0100..0xE01EF)
+
+        // Variation selectors, tags and enclosing marks, dropped wherever they are.
+        fun ignored(
+            code: Int,
+            c: Char,
+        ): Boolean = IGNORED.any { code in it } || c.category == CharCategory.ENCLOSING_MARK
+
+        // [text] lowercased, without whitespace and without the characters [foldCore] ignores.
+        fun ownCharacters(text: String): String {
+            val lower = text.lowercase()
+            val out = StringBuilder(lower.length)
+            var i = 0
+            while (i < lower.length) {
+                val c = lower[i]
+                val pair = c.isHighSurrogate() && i + 1 < lower.length && lower[i + 1].isLowSurrogate()
+                val code = if (pair) codePoint(c, lower[i + 1]) else c.code
+                val end = if (pair) i + 2 else i + 1
+                if (!c.isWhitespace() && !ignored(code, c)) out.append(lower, i, end)
+                i = end
+            }
+            return out.toString()
+        }
+
+        fun codePoint(
+            high: Char,
+            low: Char,
+        ): Int =
+            SUPPLEMENTARY_BASE + ((high.code - HIGH_SURROGATE_BASE) shl SURROGATE_BITS) +
+                (low.code - LOW_SURROGATE_BASE)
 
         // Latin Extended-B ends before U+0250.
         const val LATIN_END = 0x0250

@@ -107,11 +107,14 @@ class RecordingFilter(
         return out.toString()
     }
 
-    // Whether the apostrophe at [i] is followed by an `s` that ends the word: `lightfoot's`.
+    // Whether the apostrophe at [i] is followed by an `s` that ends the word: `lightfoot's`. [text]
+    // is decomposed, so an accented `s` is an `s` and a combining mark, which does not end it.
     private fun isPossessive(
         text: String,
         i: Int,
-    ): Boolean = text.getOrNull(i + 1) == 's' && text.getOrNull(i + 2)?.isLetterOrDigit() != true
+    ): Boolean =
+        text.getOrNull(i + 1) == 's' &&
+            text.getOrNull(i + 2).let { it == null || !(it.isLetterOrDigit() || it in COMBINING_MARKS) }
 
     companion object {
         /**

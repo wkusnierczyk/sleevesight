@@ -73,6 +73,13 @@ class LastFmBioTest {
             listOf("A complete first sentence here."),
             LastFmBio.sentences("A complete first sentence here. Then they toured Europe and..."),
         )
+        for (closed in listOf("\"we toured Europe and...\"", "(and they toured Europe and…)")) {
+            assertEquals(
+                listOf("A complete first sentence here."),
+                LastFmBio.sentences("A complete first sentence here. They said $closed"),
+                "an ellipsis inside closing quotes or brackets",
+            )
+        }
     }
 
     @Test
@@ -82,11 +89,18 @@ class LastFmBioTest {
             "Multiple artists share this name. A rapper from Denmark.",
             "1) Reem is a rapper from Denmark. 2) Reem is a singer.",
             "1. Reem is a rapper from Denmark. 2. Reem is a singer.",
+            "The name is used by: 1) a rapper from Denmark; 2) a singer from Lebanon.",
+            "1) A rapper from Denmark, \"the Dane.\" 2) A singer from Lebanon.",
         )) {
             assertTrue(LastFmBio.sharedPage(summary), summary)
             assertTrue(LastFmBio.sentences(summary).isEmpty(), summary)
         }
         assertFalse(LastFmBio.sharedPage("Their album sold 1.5 million copies in 2001. It went 2. place."))
+        // Chart positions are no list: the item marks follow an abbreviation, not a sentence end.
+        val charts =
+            "Reem is a rapper from Denmark. Her debut single reached No. 1. Its follow-up reached No. 2. in Sweden."
+        assertFalse(LastFmBio.sharedPage(charts))
+        assertEquals(3, LastFmBio.sentences(charts).size)
     }
 
     @Test

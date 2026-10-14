@@ -10,10 +10,11 @@ detekt {
     config.from(rootProject.file("config/detekt/net.yml"))
 }
 
-// For the same reason, the class-file check has no network package to forbid here: `:net` wraps
-// Ktor and OkHttp, and its engine factory and `ProtocolException` handling use `java.net`.
+// For the same reason, the class-file check allows Ktor, OkHttp and `java.net` here: `:net` wraps
+// Ktor and OkHttp, and its engine factory's `ProtocolException` handling uses `java.net`. It still
+// forbids `javax.net`, which `:net` does not need (TLS is OkHttp's).
 tasks.named<CheckNetworkReferences>("checkNetworkReferences") {
-    forbiddenPrefixes.set(emptyList())
+    forbiddenPrefixes.set(listOf("javax/net/"))
 }
 
 dependencies {

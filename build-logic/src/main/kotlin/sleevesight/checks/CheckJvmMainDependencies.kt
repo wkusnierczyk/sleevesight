@@ -20,8 +20,9 @@ import java.io.File
  * Fails when `jvmMain`'s classpaths resolve different artifacts from `main`'s: its compile
  * classpath must resolve exactly the artifacts of `main`'s, and its runtime classpath those of
  * `main`'s, apart from `main`'s own classes, which `jvmMain` compiles against. Each artifact is
- * its component and file name, so declarations, inherited configurations, constraints and
- * platforms, project and file dependencies, classifiers and variants all count. `jvmMain` ships in
+ * its component and file name, or, for a file dependency, its path relative to the root project,
+ * so declarations, inherited configurations, constraints and platforms, project and file
+ * dependencies, classifiers and variants all count. `jvmMain` ships in
  * `main`'s jar and its consumers get only `main`'s dependencies, which the dependency allowlist
  * and the module graph check cover; with equal artifacts, `jvmMain` also uses the versions `main`
  * has locked. A graph that does not resolve fails first, with its own message.
@@ -99,15 +100,24 @@ abstract class CheckJvmMainDependencies : DefaultTask() {
                     artifacts.filterNot { it.file in ownFiles }.map { identity(it, rootDir) }.distinct().sorted()
                 }
 
-        /** `configuration: failure` for each artifact [configuration] could not resolve, such as a missing file. */
-        fun artifactFailuresOf(configuration: Provider<Configuration>): Provider<List<String>> =
+        /**
+         * Each unresolved dependency [configuration] has, as `configuration: requested: failure`; or,
+         * when its graph resolves, each artifact it could not resolve, such as a missing file, as
+         * `configuration: failure`. The lenient artifact view reports an unresolved dependency again
+         * in other words, so its failures count only once the graph resolves.
+         */
+        fun failuresOf(configuration: Provider<Configuration>): Provider<List<String>> =
+            unresolvedOf(configuration).zip(artifactFailuresOf(configuration)) { unresolved, artifacts ->
+                unresolved.ifEmpty { artifacts }
+            }
+
+        private fun artifactFailuresOf(configuration: Provider<Configuration>): Provider<List<String>> =
             configuration.flatMap { conf ->
                 val artifacts = conf.incoming.artifactView { lenient(true) }.artifacts
                 artifacts.resolvedArtifacts.map { artifacts.failures.map { "${conf.name}: ${it.message}" }.distinct() }
             }
 
-        /** `configuration: requested: failure` for each unresolved dependency [configuration] has. */
-        fun unresolvedOf(configuration: Provider<Configuration>): Provider<List<String>> =
+        private fun unresolvedOf(configuration: Provider<Configuration>): Provider<List<String>> =
             configuration.flatMap { conf ->
                 conf.incoming.resolutionResult.rootComponent.map { root ->
                     CheckDependencies.reachable(root)
