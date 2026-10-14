@@ -279,14 +279,33 @@ class RecordingResolverTest {
                             credit("Alex Smith and His Orchestra", "band-b"),
                         ),
                 )
-            // The band's leader is another Alex Smith, or MusicBrainz does not say who leads it.
-            for (performers in listOf(arrayOf("Alex Smith" to "artist-b"), emptyArray())) {
+            // The band's leader is another Alex Smith; MusicBrainz does not say who leads it; or the
+            // only Alex Smith it shows is the one credited by name, which shows nothing of the band.
+            for (performers in listOf(
+                arrayOf("Alex Smith" to "artist-b"),
+                emptyArray(),
+                arrayOf(
+                    "Alex Smith" to "artist-a",
+                ),
+            )) {
                 val musicBrainz = searching(emptyList(), banded(mixed, *performers))
                 assertEquals(rejected, resolve(musicBrainz, track("Song", "Alex Smith"), 200).outcome)
             }
+            // Another of the band's recordings, crediting the band alone, shows Alex Smith leading it.
+            val band =
+                recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1960").copy(
+                    credits = listOf(credit("Alex Smith and His Orchestra", "band-b")),
+                )
             val same =
                 resolve(
-                    searching(emptyList(), banded(mixed, "Alex Smith" to "artist-a")),
+                    searching(
+                        emptyList(),
+                        banded(mixed, "Alex Smith" to "artist-a"),
+                        banded(
+                            band,
+                            "Alex Smith" to "artist-a",
+                        ),
+                    ),
                     track("Song", "Alex Smith"),
                     200,
                 )

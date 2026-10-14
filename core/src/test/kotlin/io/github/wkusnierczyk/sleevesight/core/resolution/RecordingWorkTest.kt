@@ -124,6 +124,52 @@ class RecordingWorkTest {
         }
 
     @Test
+    fun `a band only worded like the player's artist is not one of the track's artists`() =
+        runTest {
+            // The player names Cover Act and Alex Smith; the recording credits Cover Act and "Alex Smith
+            // and His Orchestra", which shows no Alex Smith. The band's 1960 recording is someone else's.
+            val credits = listOf(credit("Cover Act"), credit("Alex Smith and His Orchestra", "band-x"))
+            val search = listOf(recording("ours", "Song", "Cover Act", 200, "2000").copy(credits = credits))
+            val detail =
+                MbRecordingDetail(
+                    "ours",
+                    "Song",
+                    credits,
+                    "2000",
+                    listOf(MbWorkLink("w", "Song", cover = false)),
+                    emptyList(),
+                    emptyList(),
+                )
+            val work =
+                MbWork(
+                    "w",
+                    "Song",
+                    emptyList(),
+                    emptyList(),
+                    listOf(
+                        MbPerformance("ours", "Song", credits, "2000", emptyList()),
+                        MbPerformance(
+                            "x",
+                            "Song",
+                            listOf(credit("Alex Smith and His Orchestra", "band-x")),
+                            "1960",
+                            emptyList(),
+                        ),
+                        MbPerformance("c", "Song", listOf(credit("C")), "1980", emptyList()),
+                    ),
+                )
+            val resolution =
+                resolve(
+                    FakeMusicBrainz(Lookup.Found(search), mapOf("ours" to detail), mapOf("w" to work)),
+                    track("Song", "Cover Act, Alex Smith"),
+                )
+            assertEquals("ours", resolution.recordingMbid)
+            assertFalse(resolution.earliest)
+            assertTrue(resolution.cover)
+            assertEquals("x", resolution.original?.recordingMbid)
+        }
+
+    @Test
     fun `a release date alone does not make the track's artists first`() =
         runTest {
             // Released 1974 but undated as a recording: others' recordings carry no release date to set
