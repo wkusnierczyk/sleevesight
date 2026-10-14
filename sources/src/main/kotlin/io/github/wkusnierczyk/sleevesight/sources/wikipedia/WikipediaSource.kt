@@ -209,13 +209,17 @@ class WikipediaSource(
         /**
          * [paragraph]'s sentences, never ending inside a quotation: the Last.fm splitter's pieces
          * (`LastFmBio.split`) are joined while a quotation they open is not closed, and a piece left
-         * with an open quotation at the end of the paragraph is dropped. Every straight `"` counts as
-         * a quotation mark, and a paragraph whose quotation marks do not balance gives no sentences:
-         * an inch mark (`a 7" single`) drops its paragraph, a known limit that loses sentences but
-         * never emits one cut inside a quotation.
+         * with an open quotation at the end of the paragraph is dropped.
+         *
+         * A paragraph gives no sentences when its straight quotes do not pair up, scanning from its
+         * start: a `"` that would open a quotation right after a letter or digit (an inch mark, `a 7"
+         * single`), or a quotation still open at its end. A `"` after a digit may still close one
+         * (`"1999" is a song`). So every straight `"` in a paragraph that gives sentences opens or
+         * closes a quotation in turn, and no sentence ends inside one; a paragraph with an inch mark
+         * outside a quotation is lost whole, a known limit. Curly quotes need only balance in count.
          */
         internal fun split(paragraph: String): List<String> {
-            if (!balanced(paragraph)) return emptyList()
+            if (!quotesPair(paragraph)) return emptyList()
             val sentences = mutableListOf<String>()
             var open: String? = null
             for (piece in LastFmBio.split(paragraph)) {
@@ -230,8 +234,19 @@ class WikipediaSource(
             return sentences
         }
 
-        // Every straight `"` opens or closes a quotation; one used as an inch mark (`a 7" single`)
-        // unbalances its paragraph, which is then dropped. Wikipedia mostly writes "7-inch".
+        // Whether [text]'s straight quotes pair up, scanning: no `"` opens a quotation right after a
+        // letter or digit (an inch mark), and none is left open at the end.
+        private fun quotesPair(text: String): Boolean {
+            var inside = false
+            for (i in text.indices) {
+                if (text[i] != '"') continue
+                if (!inside && text.getOrNull(i - 1)?.isLetterOrDigit() == true) return false
+                inside = !inside
+            }
+            return !inside && text.count { it == '“' } == text.count { it == '”' }
+        }
+
+        // A piece's quotes balance by count; [quotesPair] has already checked the paragraph's order.
         private fun balanced(text: String): Boolean =
             text.count { it == '"' } % 2 == 0 && text.count { it == '“' } == text.count { it == '”' }
 

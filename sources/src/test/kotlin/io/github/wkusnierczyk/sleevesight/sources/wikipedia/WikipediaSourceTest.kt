@@ -184,6 +184,20 @@ class WikipediaSourceTest {
         assertEquals(emptyList(), WikipediaSource.split("It came out as a 7\" single. It charted."))
         val dylan = WikipediaSource.split("Dylan said, \"It came out on a 7\" single. I like it.\" It charted.")
         assertEquals(emptyList(), dylan)
+        // Two inch marks pair up by count, but not as quotation marks.
+        assertEquals(
+            emptyList(),
+            WikipediaSource.split(
+                "Foo came out on a 7\" single. Critics called Foo \"a gem. A true gem.\" " +
+                    "Foo was also issued as a 12\" single.",
+            ),
+        )
+        assertEquals(
+            emptyList(),
+            WikipediaSource.split(
+                "Dylan said, \"It came out on a 7\" single. Later we released a 12\" mix.\" It charted.",
+            ),
+        )
         assertEquals(
             listOf("\"1999\" is a song by American musician Prince.", "It was released in 1982."),
             WikipediaSource.split("\"1999\" is a song by American musician Prince. It was released in 1982."),
