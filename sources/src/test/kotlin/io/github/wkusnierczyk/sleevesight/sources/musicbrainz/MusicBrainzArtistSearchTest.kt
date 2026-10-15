@@ -1,0 +1,52 @@
+package io.github.wkusnierczyk.sleevesight.sources.musicbrainz
+
+import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
+import io.github.wkusnierczyk.sleevesight.net.NetError
+import io.github.wkusnierczyk.sleevesight.sources.web.ReplayNetClient
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+
+/** `MusicBrainzClient.searchArtists`, on answers in the shape of MusicBrainz's artist search. */
+class MusicBrainzArtistSearchTest {
+    @Test
+    fun `the search asks by name, quoted, and reads each artist's id and own name`() =
+        runTest {
+            val net = ReplayNetClient.ok(BODY)
+            val found = MusicBrainzClient(net).searchArtists("Reem \"R\"")
+
+            assertEquals(
+                listOf(MbArtist("a-1", "Reem"), MbArtist("a-2", "Reem"), MbArtist("a-3", "Reem Kelani")),
+                assertIs<Lookup.Found<List<MbArtist>>>(found).value,
+            )
+            val request = net.sent.single()
+            assertEquals("${MusicBrainzClient.BASE}/artist", request.url)
+            assertEquals(
+                mapOf("query" to "artist:\"Reem \\\"R\\\"\"", "limit" to "100", "fmt" to "json"),
+                request.query,
+            )
+        }
+
+    @Test
+    fun `no artists, or a failed request`() =
+        runTest {
+            val empty = MusicBrainzClient(ReplayNetClient.ok("""{"count":0,"offset":0,"artists":[]}"""))
+            assertEquals(Lookup.Found(emptyList()), empty.searchArtists("Nobody Here"))
+            val offline = MusicBrainzClient(ReplayNetClient.failing(NetError.Offline("UnknownHostException")))
+            assertIs<Lookup.Failed>(offline.searchArtists("Reem"))
+            assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.status(503, "")).searchArtists("Reem"))
+        }
+
+    private companion object {
+        // Hand-written in the search's shape: aliases are not the artist's own name and are not read.
+        const val BODY =
+            """{"created":"2026-10-15T00:00:00.000Z","count":3,"offset":0,"artists":[
+              {"id":"a-1","type":"Person","score":100,"name":"Reem","sort-name":"Reem",
+               "disambiguation":"Danish rapper","aliases":[{"name":"REEM","sort-name":"REEM"}]},
+              {"id":"a-2","type":"Person","score":100,"name":"Reem","sort-name":"Reem",
+               "disambiguation":"Lebanese singer"},
+              {"id":"a-3","type":"Person","score":81,"name":"Reem Kelani","sort-name":"Kelani, Reem"}]}"""
+    }
+}

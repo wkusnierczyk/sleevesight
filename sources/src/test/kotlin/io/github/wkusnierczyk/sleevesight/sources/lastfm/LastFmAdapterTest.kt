@@ -9,6 +9,12 @@ import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.normalizer.Normalizer
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmResourceReader
+import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbRecording
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbRecordingDetail
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbWork
+import io.github.wkusnierczyk.sleevesight.core.resolution.MusicBrainzLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
@@ -40,8 +46,12 @@ class LastFmAdapterTest {
             override fun now(): Instant = now
         }
 
-    private fun adapter(net: NetClient = LastFmStubClient()) =
-        LastFmAdapter(net, Secret(KEY), vocabulary, JvmAccentFolder, clock)
+    private val musicBrainz = ArtistSearchStub()
+
+    private fun adapter(
+        net: NetClient = LastFmStubClient(),
+        artists: ArtistSearchStub = musicBrainz,
+    ) = LastFmAdapter(net, artists, Secret(KEY), vocabulary, JvmAccentFolder, clock)
 
     private fun fixtureTrack(n: Int): NormalizedTrack =
         BelowSoundtrack.track(n).let { normalizer.normalize(it.title, it.artist) }
@@ -223,6 +233,96 @@ class LastFmAdapterTest {
         }
 
     @Test
+    fun `a page MusicBrainz gives another artist of its name is unverified, though its bio does not say so`() =
+        runTest {
+            // Shared pages the bio's wording misses: a list numbered in brackets, and a bio about one
+            // of the artists only.
+            val bios =
+                listOf(
+                    "(1) Reem is a rapper from Denmark with Moroccan roots. (2) Reem is a singer from Lebanon.",
+                    "Reem is a rapper from Denmark with Moroccan roots, whose debut single came out in 2019.",
+                )
+            for (bio in bios) {
+                val body = Fixtures.text("http/lastfm/artist.getinfo/reem.json").replace(REEM_BIO, bio)
+                val net =
+                    LastFmStubClient(override = { request ->
+                        LastFmStubClient.ok(body).takeIf { request.query["method"] == "artist.getinfo" }
+                    })
+                val artists = ArtistSearchStub()
+                val lookup =
+                    adapter(net, artists).lookupArtists(
+                        normalizer.normalize("Bad Energy", "Reem"),
+                        resolved("Reem" to REEM),
+                    )
+
+                val reem = lookup.artists.single()
+                assertFalse(reem.artist!!.sharedPage, bio)
+                assertEquals(LastFmMatch.Unverified, reem.match, bio)
+                assertEquals(listOf("Reem"), artists.searches, bio)
+                assertTrue(lookup.result.evidence.isEmpty(), bio)
+                assertTrue(lookup.result.unverified.isNotEmpty(), bio)
+            }
+        }
+
+    @Test
+    fun `a namesake counts by name key, a longer name does not`() =
+        runTest {
+            val track = fixtureTrack(1)
+            val gordon = MbArtist(GORDON_LIGHTFOOT, "Gordon Lightfoot")
+            val cases =
+                listOf(
+                    listOf(gordon, MbArtist(OTHER, "Gordon Lightfoot Tribute Band")) to LastFmMatch.Verified,
+                    listOf(MbArtist(OTHER, "Gordon Lightfoot Jr."), gordon) to LastFmMatch.Verified,
+                    emptyList<MbArtist>() to LastFmMatch.Verified,
+                    listOf(gordon, MbArtist(OTHER, "GORDON LIGHTFOOT")) to LastFmMatch.Unverified,
+                    listOf(MbArtist(OTHER, "Gördon Light-foot"), gordon) to LastFmMatch.Unverified,
+                )
+            for ((found, expected) in cases) {
+                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to Lookup.Found(found)))
+                val resolution = resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT)
+                val lookup = adapter(artists = artists).lookupArtists(track, resolution)
+                assertEquals(expected, lookup.artists.single().match, "$found")
+            }
+        }
+
+    @Test
+    fun `a MusicBrainz search that fails leaves the match unverified`() =
+        runTest {
+            for (failure in listOf(Lookup.Failed("Offline"), Lookup.NotFound)) {
+                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to failure))
+                val lookup =
+                    adapter(artists = artists).lookupArtists(
+                        fixtureTrack(1),
+                        resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT),
+                    )
+                assertEquals(LastFmMatch.Unverified, lookup.artists.single().match, "$failure")
+                assertTrue(lookup.result.evidence.isEmpty(), "$failure")
+                assertEquals(6, lookup.result.unverified.size, "$failure")
+            }
+        }
+
+    @Test
+    fun `MusicBrainz is searched only for a page with the resolved id, under the page's name`() =
+        runTest {
+            val corrected = ArtistSearchStub()
+            val willow = normalizer.normalize("willow", "Jessiah")
+            adapter(artists = corrected).lookup(willow, resolved("Jessiah" to JESAIAH))
+            assertEquals(listOf("Jesaiah"), corrected.searches)
+
+            for ((track, resolution) in listOf(
+                fixtureTrack(1) to none,
+                fixtureTrack(1) to resolved("Gordon Lightfoot" to null),
+                normalizer.normalize("willow", "Jessiah") to resolved("Jessiah" to JESSIAH),
+                // The bio already says the page is shared.
+                normalizer.normalize("Bad Energy", "Reem") to resolved("Reem" to REEM),
+            )) {
+                val artists = ArtistSearchStub()
+                adapter(artists = artists).lookup(track, resolution)
+                assertTrue(artists.searches.isEmpty(), "${track.artists}")
+            }
+        }
+
+    @Test
     fun `one credited artist verified and one rejected, the rejection kept with its reason`() =
         runTest {
             val n = RegressionCase.MULTIPLE_ARTISTS.tracks.single()
@@ -329,11 +429,43 @@ class LastFmAdapterTest {
         }
 
     @Test
+    fun `the adapter's version and the sources it consults`() {
+        // Raised when the verification became structural (#75): results cached under 1 are missed.
+        assertEquals(2, adapter().extractionVersion)
+        assertEquals(setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ), adapter().consults)
+    }
+
+    @Test
     fun `listener counts are grouped by thousands`() {
         assertEquals(
             listOf("0", "2", "999", "1,000", "5,325", "683,942", "1,840,320"),
             listOf(0L, 2L, 999L, 1000L, 5325L, 683942L, 1840320L).map(LastFmAdapter::grouped),
         )
+    }
+
+    /**
+     * MusicBrainz's artist search, answered from [artists] by the name asked; every name is kept in
+     * [searches]. By default each stubbed Last.fm artist is the only one of its name, except Reem,
+     * whose name two artists have. Resolution's calls are not expected.
+     */
+    private class ArtistSearchStub(
+        private val artists: Map<String, Lookup<List<MbArtist>>> = DEFAULT_ARTISTS,
+    ) : MusicBrainzLookup {
+        val searches = mutableListOf<String>()
+
+        override suspend fun searchArtists(name: String): Lookup<List<MbArtist>> {
+            searches += name
+            return checkNotNull(artists[name]) { "no artist search stub for $name" }
+        }
+
+        override suspend fun searchRecordings(
+            title: String,
+            artist: String,
+        ): Lookup<List<MbRecording>> = error("unexpected recording search")
+
+        override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")
+
+        override suspend fun work(mbid: String): Lookup<MbWork> = error("unexpected work")
     }
 
     private companion object {
@@ -345,5 +477,17 @@ class LastFmAdapterTest {
         const val REEM = "00000000-0000-4000-8000-000000000012"
         const val OTHER_TONY_K = "00000000-0000-4000-8000-0000000001ff"
         const val TONY_K_REASON = "Last.fm's Tony K is a different MusicBrainz artist from Tony K"
+        const val OTHER = "00000000-0000-4000-8000-0000000002ff"
+        const val REEM_BIO =
+            "There are several artists named Reem. 1) Reem is a rapper from Denmark with Moroccan roots. " +
+                "2) Reem is another artist of the same name."
+
+        val DEFAULT_ARTISTS: Map<String, Lookup<List<MbArtist>>> =
+            mapOf(
+                "Gordon Lightfoot" to listOf(MbArtist(GORDON_LIGHTFOOT, "Gordon Lightfoot")),
+                "PeleBoy" to listOf(MbArtist(PELEBOY, "PeleBoy")),
+                "Jesaiah" to listOf(MbArtist(JESAIAH, "Jesaiah")),
+                "Reem" to listOf(MbArtist(REEM, "Reem"), MbArtist(OTHER, "Reem"), MbArtist(OTHER, "Reem Kelani")),
+            ).mapValues { (_, found) -> Lookup.Found(found) }
     }
 }

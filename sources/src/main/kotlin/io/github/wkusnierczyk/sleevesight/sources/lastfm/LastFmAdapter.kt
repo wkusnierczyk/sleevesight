@@ -8,6 +8,7 @@ import io.github.wkusnierczyk.sleevesight.core.model.NormalizedTrack
 import io.github.wkusnierczyk.sleevesight.core.model.Outcome
 import io.github.wkusnierczyk.sleevesight.core.model.SourceId
 import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
+import io.github.wkusnierczyk.sleevesight.core.resolution.MusicBrainzLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.Rejection
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.core.sources.SourceAdapter
@@ -35,12 +36,16 @@ import kotlin.time.TimeSource
  * Per D4 each credited artist is looked up by name at once (`artist.getInfo` and
  * `artist.getTopTags`, with `autocorrect=1`), and the [Resolution] is awaited only to judge the
  * answer ([ArtistCheck]): verified lines go in [SourceResult.evidence], unverified ones in
- * [SourceResult.unverified], and a rejected or unknown artist gives none.
+ * [SourceResult.unverified], and a rejected or unknown artist gives none. A page with the resolved
+ * artist's MusicBrainz id is verified only if MusicBrainz ([musicBrainz]) knows no other artist of
+ * its name, which costs one MusicBrainz search per such artist, after the resolution.
  *
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
  */
+@Suppress("LongParameterList") // Seven independent dependencies; the clocks are defaulted, for tests.
 class LastFmAdapter(
     private val net: NetClient,
+    musicBrainz: MusicBrainzLookup,
     private val apiKey: Secret,
     private val vocabulary: GenreVocabulary,
     accentFolder: AccentFolder,
@@ -49,7 +54,13 @@ class LastFmAdapter(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.LASTFM
 
-    private val check = ArtistCheck(accentFolder)
+    /** 2: a page other MusicBrainz artists of its name may share is no longer verified (#75). */
+    override val extractionVersion: Int = 2
+
+    /** The verification asks MusicBrainz for the artists of a name. */
+    override val consults: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ)
+
+    private val check = ArtistCheck(accentFolder, musicBrainz)
 
     override suspend fun lookup(
         track: NormalizedTrack,
@@ -133,7 +144,7 @@ class LastFmAdapter(
         return answer
     }
 
-    private fun judge(
+    private suspend fun judge(
         credited: String,
         fetched: Fetched,
         resolution: Resolution,

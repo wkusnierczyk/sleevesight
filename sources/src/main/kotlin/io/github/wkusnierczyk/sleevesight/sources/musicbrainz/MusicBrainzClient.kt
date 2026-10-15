@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.sources.musicbrainz
 
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistRelation
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbCredit
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbPerformance
@@ -107,8 +108,26 @@ class MusicBrainzClient(
         }
     }
 
+    override suspend fun searchArtists(name: String): Lookup<List<MbArtist>> {
+        val request =
+            NetRequest(
+                "$BASE/artist",
+                query = mapOf("query" to "artist:${phrase(name)}", "limit" to "$ARTIST_SEARCH_LIMIT", "fmt" to "json"),
+            )
+        return net.lookup(request) { response ->
+            parseObject(response.body).array("artists").map { MbArtist(it.required("id"), it.required("name")) }
+        }
+    }
+
     companion object {
         const val BASE: String = "https://musicbrainz.org/ws/2"
+
+        /**
+         * MusicBrainz's maximum. The search does not rank the artists of exactly the name asked for
+         * first: of the 2,150 artists matching "Fred", the ten named Fred ranked from 25th to 97th
+         * (2026-10-15). An artist of the name ranked beyond the limit is missed.
+         */
+        const val ARTIST_SEARCH_LIMIT: Int = 100
 
         /**
          * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,

@@ -2,6 +2,8 @@ package io.github.wkusnierczyk.sleevesight.sources.lastfm
 
 import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
+import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MusicBrainzLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
 
 /**
@@ -9,10 +11,16 @@ import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
  * adapters*, *Last.fm verification*).
  */
 sealed interface LastFmMatch {
-    /** Last.fm's artist has the MusicBrainz id resolution gave the credited artist: its lines may be cited. */
+    /**
+     * Last.fm's artist has the MusicBrainz id resolution gave the credited artist, and no other
+     * artist shares its page: its lines may be cited.
+     */
     data object Verified : LastFmMatch
 
-    /** Same name, and nothing to check it against: its lines are shown, never cited (D4). */
+    /**
+     * Same name, and nothing to check it against, or a page other artists of the name may share:
+     * its lines are shown, never cited (D4).
+     */
     data object Unverified : LastFmMatch
 
     /** Last.fm answered with another artist: a different MusicBrainz id, or a corrected name nothing confirms. */
@@ -55,21 +63,23 @@ data class LastFmArtistLookup(
 /**
  * The check of Last.fm's [artist] against the credited name and the resolved artist, in this order:
  *
- * 1. Both have a MusicBrainz id: the same id verifies the match, even under a corrected name; a
- *    different one rejects it.
+ * 1. Both have a MusicBrainz id: a different one rejects the match. The same id, even under a
+ *    corrected name, verifies it only if the page is the artist's alone: Last.fm keeps one page per
+ *    name, so every artist of that name shares it, and its listeners, tags and similar artists mix
+ *    them. The page is taken as the artist's alone when MusicBrainz knows no other artist of the
+ *    page's name ([ownsName]) and the bio does not say the name is shared
+ *    ([LastFmArtist.sharedPage]); otherwise the match is unverified.
  * 2. Otherwise a name Last.fm corrected (it differs beyond case, accents, spacing and punctuation)
  *    is rejected: autocorrection is how a small act's name lands on an unrelated band's page.
  * 3. Otherwise the match is unverified.
- *
- * A page several artists share ([LastFmArtist.sharedPage]) is unverified at best, even with the
- * resolved artist's id: its data mixes them.
  *
  * Name matching folds case and accents and keeps letters and digits only.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
+    private val musicBrainz: MusicBrainzLookup,
 ) {
-    fun judge(
+    suspend fun judge(
         credited: String,
         artist: LastFmArtist,
         resolved: ResolvedArtist?,
@@ -78,10 +88,17 @@ internal class ArtistCheck(
         val lastFmMbid = artist.mbid
         return when {
             resolvedMbid != null && lastFmMbid != null -> {
-                if (resolvedMbid.equals(lastFmMbid, ignoreCase = true)) {
-                    if (artist.sharedPage) LastFmMatch.Unverified else LastFmMatch.Verified
-                } else {
-                    LastFmMatch.Rejected("Last.fm's ${artist.name} is a different MusicBrainz artist from $credited")
+                when {
+                    !resolvedMbid.equals(lastFmMbid, ignoreCase = true) -> {
+                        LastFmMatch.Rejected(
+                            "Last.fm's ${artist.name} is a different MusicBrainz artist from $credited",
+                        )
+                    }
+
+                    // The bio is read first: it costs no request.
+                    artist.sharedPage || !ownsName(resolvedMbid, artist.name) -> LastFmMatch.Unverified
+
+                    else -> LastFmMatch.Verified
                 }
             }
 
@@ -93,6 +110,18 @@ internal class ArtistCheck(
                 LastFmMatch.Unverified
             }
         }
+    }
+
+    /**
+     * Whether MusicBrainz's search for [name] finds no artist but [mbid] of that name (by name
+     * key). A search that fails proves nothing, so the name is not taken as owned.
+     */
+    private suspend fun ownsName(
+        mbid: String,
+        name: String,
+    ): Boolean {
+        val found = musicBrainz.searchArtists(name) as? Lookup.Found ?: return false
+        return found.value.none { !it.mbid.equals(mbid, ignoreCase = true) && key(it.name) == key(name) }
     }
 
     /** The resolved artist for [credited]: the one of that name, or of the same name key. */
