@@ -1,6 +1,7 @@
 package io.github.wkusnierczyk.sleevesight.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -23,6 +24,8 @@ data object Home
  * The app's destinations. It opens on [FirstRun] until the user has continued past it and
  * notification access is on, and on [Home] after that. Continuing needs access on, so the
  * first-run screen is seen even when access was granted in Settings before the app was opened.
+ * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
+ * (a deep link, a restored back stack) skips it.
  */
 @Composable
 fun SleevesightNavHost(
@@ -50,10 +53,18 @@ fun SleevesightNavHost(
             )
         }
         composable<Home> {
-            HomeScreen(
-                accessGranted = granted,
-                onOpenFirstRun = { navController.navigate(FirstRun) },
-            )
+            if (firstRun.acknowledged) {
+                HomeScreen(
+                    accessGranted = granted,
+                    onOpenFirstRun = { navController.navigate(FirstRun) },
+                )
+            } else {
+                // However Home was reached (a deep link, a restored back stack), the first-run
+                // screen comes first, and replaces everything on the stack.
+                LaunchedEffect(Unit) {
+                    navController.navigate(FirstRun) { popUpTo(navController.graph.id) { inclusive = true } }
+                }
+            }
         }
     }
 }

@@ -17,6 +17,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // The app declares no deep links, and the activity is exported (it is the launcher), so
+        // another app could send Navigation's explicit deep-link extras to open a destination
+        // directly. They are dropped before the navigation graph reads the intent.
+        DEEP_LINK_EXTRAS.forEach(intent::removeExtra)
         setContent {
             SleevesightTheme {
                 SleevesightNavHost(
@@ -51,5 +55,10 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TAG = "Sleevesight"
+
+        // `NavController`'s `KEY_DEEP_LINK_*` keys, which are restricted to its library group, so
+        // spelled out; `NavDeepLinkBuilder` writes them.
+        val DEEP_LINK_EXTRAS =
+            listOf("Ids", "Args", "Extras", "Intent").map { "android-support-nav:controller:deepLink$it" }
     }
 }

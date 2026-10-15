@@ -9,9 +9,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavController
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import io.github.wkusnierczyk.sleevesight.app.session.SleevesightListenerService
+import io.github.wkusnierczyk.sleevesight.app.ui.Home
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -38,6 +40,22 @@ class FirstRunFlowTest {
     }
 
     private fun launch(): ActivityScenario<MainActivity> = ActivityScenario.launch(MainActivity::class.java)
+
+    /** A launch with Navigation's explicit deep link to [Home], as another app could send it. */
+    private fun launchDeepLinkedToHome(): ActivityScenario<MainActivity> {
+        // The graph `NavHost` builds has no route, so id 0; a typed destination's id is the hash of
+        // its serial name.
+        val graphId = 0
+        val homeId =
+            Home
+                .serializer()
+                .descriptor.serialName
+                .hashCode()
+        val intent =
+            Intent(app, MainActivity::class.java)
+                .putExtra(NavController.KEY_DEEP_LINK_IDS, intArrayOf(graphId, homeId))
+        return ActivityScenario.launch(intent)
+    }
 
     /** As after an earlier run in which the user continued past the first-run screen. */
     private fun acknowledgeFirstRun() = FirstRunAcknowledgement(app).acknowledge()
@@ -119,11 +137,30 @@ class FirstRunFlowTest {
     }
 
     @Test
+    fun aDeepLinkToHomeDoesNotSkipTheFirstRunScreen() {
+        setAccess(granted = true)
+        launchDeepLinkedToHome().use {
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun aDeepLinkToHomeAfterTheFirstRunOpensHome() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launchDeepLinkedToHome().use {
+            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun homeLeadsBackToTheFirstRunScreen() {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
             compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+            // Robolectric runs out of touch mode, so Continue takes focus and is scrolled into view
+            // when Home opens the first-run screen; the heading is scrolled back to.
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
