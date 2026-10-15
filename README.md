@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** Phase 1, Android MVP, is next. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design; the app itself is not written yet. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
+> **Status:** Phase 1, Android MVP, is under way. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design. The app so far is a skeleton: its first-run screen says what leaves the phone and leads to notification access, and it does not yet show what is playing. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
 
 ## What it does
 
@@ -39,7 +39,7 @@ Track, artist and album names, for the playing track and, by default, the next o
 |---|---|---|
 | 0. Platform spike | Verified behavior of media sessions, queues, transport controls and deep links on real players | Done |
 | 0.5. Pipeline CLI | Coverage report and generated insights over a test playlist, from the shared pipeline module | Done |
-| 1. Android MVP | Now-playing screen, sources, grounded insight, settings | Next |
+| 1. Android MVP | Now-playing screen, sources, grounded insight, settings | Under way |
 | 1.5. Play release | Signed app bundle, store listing and privacy policy, Google Play's review | |
 | 2. Detail and discovery | Song, artist and album insight; genre and sounds-like cards; layout setting; player controls | |
 | 3. Context and reach | Optional Spotify account, more players, more AI providers and local models, Discogs | |
@@ -52,14 +52,15 @@ Android only. iOS does not let one app read what another app is playing. Sleeves
 
 ## Building
 
-Requires JDK 17 or later. The Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`) is needed again once the app module exists.
+Requires JDK 17 or later and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
 
 ```sh
-./gradlew build                                # compile, tests, Detekt, ktlint
-./gradlew checkDependencies checkModuleGraph   # the structural checks
+./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint
+./gradlew checkDependencies checkManifest checkModuleGraph   # the structural checks
+./gradlew :app:assembleDebug                                 # the debug APK, in app/build/outputs/apk/debug/
 ```
 
-The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`, checked by `checkManifest` once the app exists), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`.
+The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run as a workflow artifact, `sleevesight-debug-apk`.
 
 ## Pipeline CLI
 
