@@ -125,6 +125,17 @@ class GroundingCheckTest {
     }
 
     @Test
+    fun `an opener with a curly apostrophe ends a sentence after initials, as a straight one does`() {
+        for (opener in listOf("It’s", "It's")) {
+            val reply = "It was a hit in the U.S. $opener a cover. [W1]"
+            assertEquals(
+                listOf("It was a hit in the U.S.", "$opener a cover. [W1]"),
+                GroundingCheck.splitSentences(reply),
+            )
+        }
+    }
+
+    @Test
     fun `a stop after an ordinary word still ends a sentence`() {
         val reply = "It went gold in the US. Plans changed. [W1] Then it went to No. 1 (vs. two). [W2]"
         assertEquals(
