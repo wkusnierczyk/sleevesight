@@ -332,10 +332,10 @@ class RecordingResolver(
      * the wording alone would let "Echo" match Echo & the Bunnymen. The relationships give X's own
      * ids, which the same-name check then counts. A performer the recording also credits by name
      * confirms nothing: beside "Alex Smith", a vocal by that Alex Smith does not show who leads "Alex
-     * Smith and His Orchestra". Each band is tried on its preferred candidates,
-     * at most [TRIES] of them, so an unconfirmed band costs a few requests, not one per recording;
-     * since the cap proves nothing, an unconfirmed band still counts in that check, as an unknown
-     * artist.
+     * Smith and His Orchestra". So the band's recordings that do not credit X by name are tried
+     * first, then the others, each group in order of preference, at most [TRIES] in all: an
+     * unconfirmed band costs a few requests, not one per recording. Since the cap proves nothing, an
+     * unconfirmed band still counts in that check, as an unknown artist.
      */
     private class Leaders(
         private val musicBrainz: MusicBrainzLookup,
@@ -346,7 +346,7 @@ class RecordingResolver(
 
         /**
          * For each (artist, band id) of [candidates]' band credits, every id of a performer of the
-         * artist's name on the band's preferred recordings, at most [TRIES] of them: none when
+         * artist's name on up to [TRIES] of the band's recordings, chosen as above: none when
          * unconfirmed, two when two artists of that name lead it. Null when MusicBrainz did not
          * answer, since a band left unchecked could hide a collision.
          */
@@ -358,7 +358,11 @@ class RecordingResolver(
             val confirmed = mutableMapOf<Pair<String, String>, Set<String>>()
             for ((key, recordings) in bands) {
                 val leaders = mutableSetOf<String>()
-                for (candidate in recordings.sortedWith(PREFERENCE).take(TRIES)) {
+                val tried =
+                    recordings
+                        .sortedWith(compareBy<Candidate> { !it.named[key.first].isNullOrEmpty() }.then(PREFERENCE))
+                        .take(TRIES)
+                for (candidate in tried) {
                     val relations =
                         when (val detail = detail(candidate.recording.mbid)) {
                             is Lookup.Found -> detail.value.artistRelations

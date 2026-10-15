@@ -314,6 +314,37 @@ class RecordingResolverTest {
         }
 
     @Test
+    fun `a band-only recording is tried before mixed credits, however many come first`() =
+        runTest {
+            // Three mixed credits, released first, would use up the cap and confirm nothing.
+            val mixed =
+                (1..3).map { n ->
+                    banded(
+                        recording("mixed-$n", "Song", "Alex Smith", 200, "196$n").copy(
+                            credits =
+                                listOf(
+                                    credit("Alex Smith", "artist-a"),
+                                    credit("Alex Smith and His Orchestra", "band-b"),
+                                ),
+                        ),
+                        "Alex Smith" to "artist-a",
+                    )
+                }
+            val band =
+                banded(
+                    recording("orchestra", "Song", "Alex Smith and His Orchestra", 200, "1970").copy(
+                        credits = listOf(credit("Alex Smith and His Orchestra", "band-b")),
+                    ),
+                    "Alex Smith" to "artist-a",
+                )
+            val resolution =
+                resolve(searching(emptyList(), *(mixed + band).toTypedArray()), track("Song", "Alex Smith"), 200)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("mixed-1", resolution.recordingMbid)
+            assertEquals("artist-a", resolution.artists.single().mbid)
+        }
+
+    @Test
     fun `a leader confirmed on another of the band's recordings keeps their id on the chosen one`() =
         runTest {
             val musicBrainz =
