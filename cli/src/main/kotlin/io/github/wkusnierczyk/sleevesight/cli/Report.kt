@@ -46,7 +46,7 @@ class RunSummary(
  * their links. Never an Exa snippet: web results are shown as counts and URLs only (Exa's terms,
  * §4.2(a)), and an insight written from web lines is marked as one not to commit or post until
  * Exa's terms are confirmed. MusicBrainz tags are not fetched, so none is listed (CC BY-NC-SA 3.0;
- * aggregates only, if D12 adopts them).
+ * aggregates only, if Phase 2 adopts them as labels, D12).
  */
 class Report(
     private val run: RunSummary,
