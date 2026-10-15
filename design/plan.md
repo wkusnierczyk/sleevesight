@@ -116,7 +116,7 @@ flowchart TD
   i100 --> i101
 ```
 
-- **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0.
+- **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0. [#80][80] and [#100][100] need nothing either, and are best started early.
 - **Two tracks.** [#47][47] and [#29][29] need only [#30][30], and [#48][48] and [#50][50] also only the domain types and `Settings` from [#33][33], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]), [#51][51] (the pipeline from [#44][44]) and [#55][55] (the gate, [#46][46]).
 - **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55] → [#58][58]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
 
