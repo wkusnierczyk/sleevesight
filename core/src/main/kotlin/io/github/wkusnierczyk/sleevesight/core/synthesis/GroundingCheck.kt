@@ -240,7 +240,8 @@ object GroundingCheck {
     /**
      * Words that open a sentence far more often than they follow initials within one: after
      * `the U.S.`, `It reached …` is a new sentence, `Billboard …` most likely not. Matched with
-     * their case, with straight apostrophes.
+     * their case; stored with straight apostrophes, and a curly one in the next word is read as
+     * straight ([endsAbbreviation]).
      */
     private val SENTENCE_OPENERS: Set<String> =
         setOf(
