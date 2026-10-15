@@ -161,7 +161,7 @@ Players report a song the way their catalogue files it, which is often not how s
 | `(felt piano)`, `(acoustic)` | Strip, record as a variant | "And Dream Of Sheep (felt piano)" |
 | `A, B, C` in the artist field | Split into credited artists | "Peleboy, Tony K" |
 
-The key is the lowercased, accent-folded primary artist plus the normalized title. Duplicates in a playlist hit the cache.
+The key is the lowercased, accent-folded primary artist plus the normalized title, keeping letters and digits in any script, and `+` ("C++" is not "C"); other punctuation, symbols and emoji become a space, unless they are all there is (a title `★` keys as `★`). Accents are folded on Latin and Greek letters only: Cyrillic `й` is not `и`. Duplicates in a playlist hit the cache.
 
 ### Entity resolution
 
@@ -191,21 +191,49 @@ One interface, one adapter per source:
 
 ```kotlin
 interface SourceAdapter {
-    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA, LASTFM, DISCOGS, WEB
-    val tag: String                  // MB, W, L, D, G
-    suspend fun lookup(entity: ResolvedEntity): SourceResult  // typed outcome + evidence lines
+    val id: SourceId                 // MUSICBRAINZ, WIKIPEDIA (also emits WIKIDATA lines), LASTFM, DISCOGS, WEB
+    suspend fun lookup(track: NormalizedTrack, resolution: Deferred<Resolution>): SourceResult  // typed outcome + evidence lines; see architecture.md, Source adapters
 }
+
+val SourceAdapter.tag: String get() = id.tag   // MB, W (and WD), L, D, G
 ```
 
 | Source | Role | Notes |
 |---|---|---|
-| MusicBrainz | Recordings, releases, credits, relationships, first release dates | Rate limit about one request per second; descriptive User-Agent with contact info is required. No key. |
+| MusicBrainz | Recordings, releases, credits, relationships, first release dates | Rate limit about one request per second; descriptive User-Agent with contact info is required. No key. Core data is CC0; tags and genre associations are CC BY-NC-SA 3.0 (`architecture.md`, *Licensing*). |
 | Wikipedia and Wikidata | Song and artist articles | Reach the article through the MusicBrainz Wikidata link where possible, to avoid same-name collisions. No key. |
 | Last.fm | Artist bio, listener count, tags, similar artists | User's own API key. Tags are crowd-applied and noisy; similar artists come from listening overlap, not audio. |
 | Discogs | Releases and personnel | User's own token. |
-| Web search | Generic RAG over the open web | Provider chosen by the user, with their key. Results may describe a different song with the same title. |
+| Web search | Generic RAG over the open web | User's own key; Exa first (D11, below). Results may describe a different song with the same title, so they are filtered. |
 
 The model's own knowledge is modelled as a pseudo-source with tag `M`: it retrieves nothing, and when enabled it lets the model add at most one claim, marked unverified.
+
+#### Web search provider (D11)
+
+**Exa first** ([#40](https://github.com/wkusnierczyk/sleevesight/issues/40), 2026-10-14). The user brings the key, so the deciding points are what a key costs them to get and keep, and whether the results are worth an evidence line. Exa's free tier needs no card and renews monthly; on the fixture's thin tracks it found real listings where the simulator's search found nothing; and its terms, though strict, are no worse than the others'. Only Exa was tested live: it is the only key the project holds. The others were compared on their official pages (2026-10-14):
+
+| Provider | Free tier | Card for the free tier | Price per 1000 searches | Rate limit | Terms on results |
+|---|---|---|---|---|---|
+| **Exa** | $10 of credit a month, "up to 2,500 Instant searches" | No | $4 `instant`, $7 `auto`, for up to 10 results; whether highlights cost more is ambiguous (below) | 10 per second for `/search` | §4.2(a): no copying, distributing or displaying information obtained through the services beyond the terms or Exa's written leave; no attribution clause |
+| Brave Search API | $5 of credit a month | Yes ("to verify identity", not charged) | $5 | 50 per second | Storing results needs a plan with storage rights; grants no rights in the third-party pages |
+| Tavily | 1000 credits a month (a basic search is 1 credit) | Pricing page says no; the owner was asked for one at sign-up | $8 (pay as you go) | 100 a minute on a development key | For integration in the customer's own applications; no attribution clause |
+| Linkup | $20 of credit, topped up monthly, for a professional email | Not stated | $5 (standard search) | Not stated | Not reviewed |
+| You.com | $100 of credit at sign-up | Not stated | $5 | Not stated | Not reviewed |
+| Serper, SerpApi | 2500 queries once; 250 a month | No; not stated | $0.30 to $1; $25 for 1000 a month | 50 per second; 50 an hour | They resell Google's results page, scraped: not a sound basis |
+| Google Custom Search JSON API | Closed to new customers, ends 2027-01-01 | | | | |
+| Bing Web Search API | Retired in 2025 | | | | |
+
+**What a search with highlights costs is not settled by Exa's documents** (checked 2026-10-14). The [pricing page](https://exa.ai/pricing) and [pricing docs](https://exa.ai/docs/admin/pricing) say a `/search` price covers up to 10 results and that "Additional results and Exa-generated page summaries are billed on top"; they price contents at "$1 / 1k pages, per content type" in the `/contents` row, and say nothing on text or highlights requested within `/search`. The [search reference](https://exa.ai/docs/reference/search) describes `costDollars.contents` as the cost of "standalone content retrieval", with text, highlights and summaries "billed outside the bundled search price", and calls `costDollars` an estimate, "not an invoice record". In the spike every `instant` search with 10 highlighted results reported $0.004 and no contents charge. So a month's free credit is 2500 searches if highlights are included, as the spike's estimates suggest, and about 700 if each highlighted result costs $0.001 on top ($14 per 1000); the dashboard's usage settles it. The adapter keeps `numResults` at 10: the filter kept 0 to 4 of 10 on the thin and same-title tracks, so fewer candidates would cost lines where they are scarcest. If highlights turn out to be billed per result, 5 would halve that charge.
+
+**The live test** (20 calls, about $0.10 by Exa's estimates): tracks 1, 12, 23, 30, 45, 61 and 77, with `auto` and `instant`. `instant` was as relevant as `auto` at a tenth of the latency (0.3 s against 3 s) and a little over half the price, so the adapter uses it. On the thin tracks Exa found what the simulator's search did not: for 23, a library catalogue entry naming the composers and the album, a soundtrack listing with the scene, and two song-database pages; for 30, a soundtrack listing and a CritiqueBrainz page; for 77, only Alphaville's and Rod Stewart's songs, which the filter rejects. For 12 it mixed Reem's song with Juice WRLD's of the same name and returned one undecodable page; for 61 one Spotify page for Jessiah's recording among other artists' "willow"s; for 45, Yanjoco's own listings and a Spotify page for another Yanjoco song whose list of the artist's tracks named the title, the case behind the filter's rule on result titles below. This is a summary; no result text is kept in the repository (*Open on the terms*). The app's and the CLI's retrieval cache does keep web search results on the device, for web search's lifetime (D9: 1 day), like any other source's: during development, by the owner's decision of 2026-10-14 ([#81](https://github.com/wkusnierczyk/sleevesight/issues/81)), which reversed the #44 review's refusal, since without it every repeat lookup is a paid search.
+
+**Keeping results about the right recording.** The query is `"<title>" from <work> by <artists>, song`, the `from` part only when the player names the work (track 34, `Theme` from Coronation Street), which suits Exa's neural search; highlights of at most 300 characters, steered by the same words, are the snippet. A track with no credited artist is not searched, since no result could be checked. Ten results are asked for, and at most five kept, in Exa's order. Phrases are matched whole in the result's title and snippet, after folding case, accents and punctuation, with `&` read as `and` and apostrophes dropped ("Don't" and "Dont" agree) except before a possessive "s", which stays a word of its own ("Lightfoot's" still names Lightfoot). A track whose title or artists fold to nothing (an artist named "!!!") is not searched either. A result is kept only if:
+
+- it names the title, and the work it is from when there is one;
+- it names a credited artist, and a distinctive one when the track has one: an artist named only with common words (Them, To Twelve) counts only when no credited artist is distinctive, so track 63 needs Van Morrison;
+- its own title does not name such an artist without the song. A page titled after the artist alone is about the artist or another of their recordings (Yanjoco's "Caravan" page, which lists the song among the artist's others), so a mention in its snippet does not count. A page titled after neither, such as a catalogue entry or a soundtrack listing, is judged on its snippet, which keeps the thin tracks' best results. Results from the sources the pipeline reads through their own adapters (Wikipedia and its mirror Wikiwand, Wikidata, MusicBrainz, Last.fm, Discogs) are excluded in the query and dropped again by the filter, so their text arrives only through the adapter that verifies it. Kept results give `song_article`; results that all fail give `rejected`; no results give `none`. Known limits: an artist named only with common words, when no other credited artist is distinctive, is matched by those words; a result can quote lyrics; a page about another recording that names the song and the artist in passing still passes; and a listing titled with several artists, this one among them, but not the song (a soundtrack page titled "Ray Johnson And The Sou' Westers, Die Hexen and others") is dropped, even when it lists the song.
+
+**Open on the terms.** Exa's §4.2(a) forbids, without its written permission, to "download, modify, copy, distribute, transmit, display, perform, reproduce, duplicate, publish, license, create derivative works from, or offer for sale any information" obtained through its services. Read literally, it covers what the app does with a result on the user's own key: it displays the highlight, transmits it to the user's AI provider in the prompt, and creates a derivative work from it, the written insight. Showing results is what the API is for (§1.1 grants use "for the limited purposes set forth in the documentation"), but the terms do not say so of these uses. Before release, confirm with Exa that the app's use is within the terms, including the on-device retrieval cache, which keeps web search results for a day during development (owner, 2026-10-14); the question is tracked in [#80](https://github.com/wkusnierczyk/sleevesight/issues/80) and must be settled before the app is published. Because the same clause covers stored copies, the test fixtures in `fixtures/http/web/` are synthetic: the requests are the adapter's own, the responses have Exa's shape with titles, URLs and highlights written by the project; live checks go through `ExaLiveTest`, which keeps nothing. A second provider can be added behind the same `SourceAdapter`, with the filter shared.
 
 ### Evidence model
 
@@ -226,7 +254,7 @@ data class EvidenceLine(
 
 - **Provider abstraction.** `AiProvider` with implementations for Anthropic, OpenAI, Google and a local model through Ollama. The user picks provider and model and supplies the key.
 - **Role of the model.** It narrates retrieved evidence. It does not resolve entities, rank sources, or decide what is true.
-- **Citation contract.** Every factual sentence ends with the ids of the evidence lines that support it. No names, dates, places or numbers outside the evidence. A sentence that states a documentation gap may go uncited. If there is no usable evidence, the model replies `NO_EVIDENCE` and the UI says that little is documented.
+- **Citation contract.** Every factual sentence ends with the ids of the evidence lines that support it. No names, dates, places or numbers outside the evidence. A sentence that states a documentation gap may go uncited: the fixed sentence `Little else is documented.` (prompt version 2, #46). If there is no usable evidence, the model replies `NO_EVIDENCE` and the UI says that little is documented.
 - **Grounding check, in code, before display.** Each sentence is classified as `ok`, `hedge` (states a gap), `model` (cites `M`), `uncited`, or `unknown` (cites an id that does not exist, or cites `M` when model knowledge is off). Uncited and unknown sentences are underlined; the counts are logged.
 - **Cards that use general knowledge.** Genre descriptions, artist comparisons and suggestions have no retrieved source today. They are generated as structured JSON, rendered in a separately labelled "general knowledge" section, and never mixed into the grounded text. See Open questions.
 
@@ -237,11 +265,12 @@ Prompt contracts are in the appendix.
 - Derived from Last.fm artist tags filtered through a fixed genre vocabulary. Tags outside the vocabulary (places, decades, "seen live", noise such as "bagel" or "under 2000 listeners") are dropped.
 - Each vocabulary entry belongs to a family with a fixed hue: folk 135, rock 8, pop 328, hip-hop 30, soul and R&B 48, reggae 92, electronic 190, soundtrack and classical 262, jazz and blues 215.
 - Labels are artist-level, and the UI says so.
+- MusicBrainz tags may feed the same filter if D12 adopts them. A label supported by MusicBrainz tags links and credits MusicBrainz ("MusicBrainz contributors, CC BY-NC-SA 3.0"), alongside Last.fm where both contribute (`architecture.md`, *MusicBrainz tags and genres*). The vocabulary may take names from MusicBrainz's genre list, which is CC0.
 - In the test playlist, 30 of 78 unique tracks got no genre labels because their artists have no usable tags.
 
 ### Caching and offline
 
-- Retrieval is cached per source and lookup key; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
+- Retrieval is cached per source and lookup key, as the evidence and outcome the app uses, never the raw response; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
 - Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default goes with preparing the next track ahead (D13), so the card is usually ready when the track starts.
 
@@ -287,7 +316,8 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Group | Setting | Default |
 |---|---|---|
 | Layout | Separate pages or expandable boxes | Separate pages |
-| AI service | Provider, model, API key | None until set |
+| AI service | Provider, model, API key | None until set; the model then defaults per provider (Anthropic: Claude Haiku 5.5, its cheapest current model) |
+| AI service | Reasoning effort: how much the model may reason before it writes (low, medium, high, or the provider's default) | Low: an insight narrates a few lines and is waited for |
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
@@ -297,7 +327,11 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Prepare the next track: off, evidence, or evidence and insight; the insight only where *Write insights automatically* would write it (D13) | Evidence and insight |
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
-| Lookups | Cache lifetime per source (D9) | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
+| Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
+| Lookups | Cache lifetime of artist identities | 90 days |
+| Lookups | Cache size limit | 50 MB |
+
+The cache size limit covers the evidence and the written insights. A track's evidence is about 5 to 15 KB and each written card 1 to 3 KB (estimates, measured at the Phase 0.5 gate), so 50 MB holds about 2,500 tracks with their insights. Evidence expires within 30 days, so on its own it reaches the limit only for someone playing over 80 new tracks a day; written insights never expire, so they accumulate until the limit, which every listener reaches in time (some 25,000 cards). From then on the least recently used entries go first: the insights of the tracks not played for longest. It is not lower because an evicted insight costs a paid call to write again.
 
 Source switches decide what the model may use. The filter chips in the Sources section only change what is displayed.
 
@@ -344,6 +378,84 @@ A JVM Kotlin command-line tool sharing the pipeline module: normalizer, resoluti
 
 **Gate:** on the test playlist, zero `unknown` citations, uncited sentences under 5 percent, every same-name collision either rejected or correctly resolved, and the coverage numbers reviewed.
 
+#### Gate run (#46): findings, for the owner's review
+
+The three criteria the CLI checks pass with insight prompt version 2 (`d0e6986`), which the owner chose after the first runs (below); the review of the coverage numbers, and so the gate, is the owner's. Run on 2026-10-14 with `:cli live --tracks all` (80 positions, 78 unique tracks) and the owner's keys: MusicBrainz, Wikipedia with Wikidata, web search (Exa, `instant`), and Claude Haiku 5.5 at the app's default effort (low). Last.fm was off: no key exists. The reports stay in the gitignored scratchpad, since most insights were written from web lines (on 72 of 80 positions in the first run) (*Web search provider (D11)*, *Open on the terms*); what follows is counts. The run predates the three resolution fixes it led to (#76, #77, #78; PR #83): after them the regression tracks, the listed collisions among them, replay unchanged, and tracks 55 and 62 change as noted below.
+
+**Cost.** Four runs: the first live throughout; the second the same run from its cache, the insights re-checked unchanged after the grounding fix; the third with a trial wording of the prompt; the fourth with prompt version 2 as adopted, its MusicBrainz and Wikipedia answers from the first run's retrieval cache, web search and insights live (one insight, track 70, failed when the model's stream ended early, and was written again alone). Anthropic, first, third and fourth runs (the second's insights came from the cache): 362,363 tokens in, 113,086 out, about $0.09 at $0.10 and $0.50 per million. Exa: 80 searches a run, 321 in all with the retry (web results were not cached at the time; #82 has since added a cache), $1.28 at Exa's $0.004 per `instant` search; if highlights turn out to be billed per result (the open question under D11), up to $4.49. About $1.38 in all on Exa's own per-search estimates.
+
+**The criteria.**
+
+| Criterion | First run (prompt version 1) | Its replies after the split fix (`2b25013`) | Trial wording | **Prompt version 2 (`d0e6986`)** |
+|---|---|---|---|---|
+| Zero `unknown` citations | Pass: 0 of 265 sentences | Pass: 0 of 262 | Pass: 0 of 258 | **Pass: 0 of 282** |
+| Uncited under 5 percent | **Fail**: 35 of 265 (13.2 %) | **Fail**: 18 of 262 (6.9 %) | Pass: 4 of 258 (1.6 %) | **Pass: 0 of 282 (0.0 %)** |
+| Same-name collisions rejected or correctly resolved | Pass: 8 of 8 checks (tracks 8 and 22, 12 and 20, 45, 48, 76, 61; Wikipedia's; Last.fm's for 61 not checked, the source being off) | Pass | Pass | **Pass: 8 of 8** |
+| Coverage reviewed | The owner's (below) | | | |
+
+The second column counted "little else" and "little more" as hedges, a widening `d0e6986` removed again; the fourth counts only the fixed sentence and the simulator's patterns.
+
+**Uncited sentences, by cause** (first run, 35):
+
+- *A gap stated in other words* (25): the prompt asks for one uncited sentence when little is documented, and the model wrote "Beyond that, little else is documented about this recording", "little more is documented", "the sources say little about…", "the evidence doesn't document much else". The check knew only "little is documented" and a few fixed phrases.
+- *An abbreviation read as a sentence end* (3): "the U.S. Billboard Hot 100", and a writer's middle initial twice, as the simulator splits them.
+- *Commentary on the evidence* (3): two sources disagree on a date, or may describe another version, and the reply says so without a citation. Uncited by the contract; arguably fair.
+- *The model's reasoning in the reply* (3 sentences, one track, 77): a reply that corrected itself in the open and then wrote its insight. The check flags it, as it should; nothing in the check can prevent it.
+- *A restatement* (1): a reply that said again, uncited, that its only fact was the release.
+
+**The fix in code** (`2b25013`, the grounding check): an abbreviation (`U.S.`, `R.E.M.`, a middle initial, `Dr.`, `St.`, `feat.`, `vs.`) directly before the next word does not end a sentence, unless initials come before a word that usually opens one (`It`, `The`, `He`; added after the PR #86 reviews). Its cost: a sentence that does end in one before another word (`... toured the U.S. Billboard named ...`) is joined to the next, and if it was uncited the next one's citation hides it. None of the gate's replies ended a sentence that way. It deviates from the simulator on purpose; the simulator's test case that splits after `Dr.` is listed as a deviation and every other stored reply still agrees with it. The same commit let a stated gap say "little else" or "little more"; with it, re-checking the same 78 replies gave 18 uncited of 262 (6.9 %): 12 gaps in yet other words, 2 commentary, the restatement, and the 3 of track 77's reasoning. Widening the check's phrase list to every way of saying a gap makes the check guess, and a guessing check lets uncited claims through as hedges.
+
+**The prompt fix, adopted** (`d0e6986`, prompt version 2; the owner's choice). The contract's rule on a gap now reads: "If the evidence covers only part of what you would say, write the sentences it supports. To state the gap, end with exactly this sentence, without a citation: Little else is documented. Write no other sentence without a citation." The grounding check accepts exactly that sentence as a hedge (`GroundingCheck.GAP_SENTENCE`), and the "little else"/"little more" widening is removed, so the hedge patterns are the simulator's again. A trial wording first ("…in these words: "Little else is documented.", or "Little is documented." when nothing is.") left 4 uncited of 258: a fact without its id, a paraphrased quote, a comment, a remark on a title's variant. With version 2, over all 78 insights: 282 sentences, 212 cited, 70 hedges (69 the fixed sentence, 1 matched by the simulator's patterns), no uncited and no `unknown` sentence; 2 positions (4 and 24) had no usable evidence, as before, and replied `NO_EVIDENCE`. No reply in this run had uncited commentary or reasoning in the open, as the first run's did; a later model or style may bring them back, and the check will flag them.
+
+**Collisions, in detail.** Wikipedia gave no song article for the Peleboy track (8, 22), whose namesake is DMX's song; no artist article for the wrong Reem (12, 20); no song lines for the covers 45 and 48 (rejected: the articles are the original songs, and MusicBrainz does not mark these recordings as covers) or 76 (none found); no song article for Jessiah's "willow" (61). MusicBrainz's one rejection was track 50: the recording that matches its title and length is credited to "Mr. A Balladeer", and the player says "a balladeer". Probably the same act under another form of its name, so a false rejection, in the safe direction: a rejection shows, a wrong match would mislead. The album title on 61 ("Taylor Swift Covers") was not weighed: nothing reads it, and the gate passes without it.
+
+**A wrong original-song label, outside the listed collisions.** Wikipedia gave `original_song` on three tracks. Two are right: 40 (Siouxsie and the Banshees' "The Passenger", Iggy Pop's song) and 79 (a cover of "Dancing in the Dark"). The third is wrong: 55, Chuck Berry's own "Roll Over Beethoven". MusicBrainz links the recording's work to the Wikidata item of the song, whose performers (P175) are the Beatles and three other performers; Chuck Berry is on the item only as composer and lyricist. The identity check reads an item whose performers include no credited artist as the original song (`architecture.md`, step 5), so the article's lines went to the model scoped as another recording's, against a song that is this one. A rule to consider: a credited artist who is the item's composer or lyricist, on a recording MusicBrainz does not mark as a cover, makes it the track's own song. Not a gate criterion; followed up in [#76](https://github.com/wkusnierczyk/sleevesight/issues/76), fixed in PR #83 (a credited writer, or the track's artists' earlier recording of the work, makes the item the track's own song; `architecture.md`, step 5): track 55 is now `song_article`.
+
+**Thresholds** (`ResolutionThresholds`; the search size is `MusicBrainzClient.SEARCH_LIMIT`). Evidence from each unique track's MusicBrainz search (78 searches, every candidate's title similarity, length gap and credited artists), replayed through the resolver's rules at other settings:
+
+- *Title similarity* (0.85): every accepted track's best candidate scores 1.0, and no candidate with a credited artist and a fitting length scores between 0.7 and 1.0. Any value from 0.7 to 1.0 accepts the same 42 tracks, with the same choices; 0.6 would accept, for track 50, its instrumental version, 1 s off the player's length, where the plain recording matches the length too: probably the wrong one. **Unchanged**; the data neither needs nor tests it.
+- *Duration tolerance* (7 s): the closest candidate of each accepted track is within 1.5 s, but one within 4.8 s. Any value from 2 to 15 s accepts the same 42 tracks, but the choice moves: at 2 or 3 s, on up to seven tracks, to a recording with no length or a later one; at 10 or 15 s, on one or two, to an earlier recording of another length, which may be another take. 20 s would accept a 43rd, track 50's 2011 recording with Reyn Ouwehand, 18 s shorter: another version. The near misses beyond it are other versions too: a demo against the album take (36 s), a different recording of a folk song (50 s). **Unchanged.**
+- *Search size* (50): six searches filled all 50 results, and the chosen recording is often far down: at rank 31 to 42 on four tracks, so 25 would change four choices and 10 twelve, each to a later release. MusicBrainz's ranking also varies from one request to the next: in the gate run, track 55 ("Roll Over Beethoven") found Chuck Berry's May 1956 recording; in the tuning searches, a little later, it was not among the first 50 and the same rules chose a 1985 release, the very error *Entity resolution* warns of. Asked for 100 (MusicBrainz's maximum), it was at rank 44. **A reason to raise it to 100**, not done here: the request changes, so the recorded MusicBrainz responses in `fixtures/http/` must be re-recorded with it. Raised to 100 in [#78](https://github.com/wkusnierczyk/sleevesight/issues/78) (PR #83), with the fixtures re-recorded; track 55 resolves to the May 1956 single at rank 87.
+- *Not a threshold, found on the way*: track 62 ("Misirlou", Dick Dale) chose a 2012 release because the 1962 original is credited to "Dick Dale and His Del-Tones", which does not match the player's "Dick Dale" by name. Matching a credited artist to a band named after them is a resolution rule to consider, not a tuning. Added in [#77](https://github.com/wkusnierczyk/sleevesight/issues/77) (PR #83), with the leader confirmed by a performer relationship on the band's recordings: track 62 now resolves to the April 1962 single.
+
+**D4 profile** (first run; the CLI runs tracks one after another, so MusicBrainz's one request a second is never shared between tracks; each latency counts from the start of the track's lookups):
+
+| | Median | 90th percentile | Max |
+|---|---|---|---|
+| MusicBrainz resolution (and its own lines) | 1.09 s | 2.28 s | 3.11 s |
+| Wikipedia with Wikidata, verified | 1.60 s | 4.24 s | 5.22 s |
+| Web search (Exa) | 0.56 s | 0.72 s | 0.90 s |
+| First source result | 0.51 s | 0.63 s | 0.90 s |
+| Last source result | 1.60 s | 4.24 s | 5.22 s |
+| The insight call (Haiku 5.5), after the last source | 2.16 s | 4.39 s | 8.23 s |
+
+Waiting for MusicBrainz first would make the first result MusicBrainz's own, at 1.09 s median and 2.28 s at the 90th percentile, against 0.51 s and 0.63 s in parallel; web search would land at resolution plus its own time, 1.61 s median and 2.88 s at the 90th percentile. Wikipedia lands after resolution in either design, since it awaits the ids to verify: it finished a median 0.87 s after resolution, more than 0.5 s after it on 49 of 78 tracks. The events give each source's total, not its requests, so how much of Wikipedia's by-name work the parallel design overlaps with resolution is not measured; the last result is no later in parallel, and the first is twice as early or better. D4 stands. The insight waits for every source, so the time to the insight is the last source's plus the call's: about 3.8 s median.
+
+**Coverage** (first run, all 80 positions):
+
+| Source | song | artist | original song | rejected | none | Cited lines |
+|---|---|---|---|---|---|---|
+| MusicBrainz | 42 | | | 1 | 37 | 132 |
+| Wikipedia (W) and Wikidata (WD) | 18 | 15 | 3 | 34 | 10 | 79 W, 151 WD |
+| Web search | 72 | | | 8 | | 249 |
+| Last.fm | off (no key) | | | | | |
+
+Per track, 678 cited lines in all (with 67 `P` lines), 0 to 26 a track: none on 2 positions (the duplicate pair 4 and 24, a `NO_EVIDENCE` reply each), 1 to 3 on 30, 4 to 9 on 20, 10 or more on 28. By kind: curated lines (MusicBrainz, Wikipedia or Wikidata) and web lines on 40 positions, web lines alone on 32, curated alone on 1, only the player's release or nothing on 7. So web search carries the thin tracks: without it, 39 positions would have nothing beyond the player's own release. No genre labels: they come from Last.fm alone.
+
+**D12: MusicBrainz tags against Last.fm alone.** The comparison the issue asks for needs Last.fm live, and there is no key, so it was made against the simulator's frozen Last.fm tags (`facts.json`), for the one artist it looked up per track. MusicBrainz tags were fetched for evaluation only (`inc=tags` on each artist the resolver gave an id), kept in the gitignored scratchpad, and mapped through `GenreVocabulary`; what follows is counts (*MusicBrainz tags and genres (#9)*, *Conditions*). Of the 78 unique tracks:
+
+| | Tracks with labels | Without |
+|---|---|---|
+| Last.fm (simulator's tags) | 48 | 30 |
+| MusicBrainz tags alone | 29 | 49 |
+| Either | 51 | 27 |
+
+- MusicBrainz tags reach only the artists resolution gives an id: 44 artists on 42 tracks. 31 of them have tags, 30 a tag in the vocabulary. The tracks without Last.fm labels are mostly the small acts MusicBrainz does not know either, so MusicBrainz fills 3 of Last.fm's 30 gaps.
+- Where both give labels (26 tracks), they share at least one label on all 26: 60 shared of 99 Last.fm labels and 92 MusicBrainz labels.
+- MusicBrainz is keyless; Last.fm needs the user's own key. For a user without one, MusicBrainz tags would label 29 of 78 tracks instead of none.
+
+Recommendation (the decision is the owner's): **do not adopt them to fill Last.fm's gaps**, which they barely do (3 of 30), and the licence conditions (*Conditions*) and an extra request per artist at one a second would be paid for that. **Consider them as the keyless source of labels when Last.fm is off**, for labels only and not in prompts, which keeps clear of the provider-terms question still open under #9; decide that with the genre labels in Phase 2, after MetaBrainz answers the inquiry. The Last.fm side of the comparison is from frozen data and awaits a Last.fm key: Last.fm's live tags, after its verification (`architecture.md`, *Last.fm verification*), may label fewer tracks than the simulator's 48.
+
 ### Phase 1. Android MVP
 
 Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
@@ -387,7 +499,8 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-12 | D9: retrieval cache lifetime a user setting per source | Freshness against requests is the user's trade-off |
 | 2026-10-12 | D10: `minSdk` 26 | Reach; nothing used needs more, and the Keystore floor is 23 |
 | 2026-10-12 | D11: the first web search provider chosen in Phase 0.5 | The adapter interface does not depend on it |
-| 2026-10-12 | D12: MusicBrainz tags and genres judged in the Phase 0.5 pilot; their licence settled before they ship (#9) | Last.fm alone left 30 of 78 tracks without genres |
+| 2026-10-14 | D11: Exa is the first web search provider (#40); results kept only when they name the title and a credited artist | A free tier without a card, renewed monthly; real results for the thin tracks. Only Exa was tested live |
+| 2026-10-12 | D12: MusicBrainz tags and genres judged in the Phase 0.5 pilot; their licence settled before they ship (#9); licence findings in `architecture.md`, *MusicBrainz tags and genres* | Last.fm alone left 30 of 78 tracks without genres |
 | 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
@@ -399,7 +512,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 - **General-knowledge cards and the LLM role.** Genre descriptions, comparisons and "more like this" suggestions come from the model's own knowledge, and the suggestions are the model choosing items at runtime. That sits uneasily with keeping the model to narration. Options: retrieve genre articles from Wikipedia and ground those cards too; build suggestions deterministically from Last.fm similar artists and MusicBrainz relationships, with the model only explaining them; or keep them as labelled general knowledge behind the model-knowledge switch.
 - **Deeper analysis.** What an "Analysis" mode adds beyond the collected insight: musical structure, credits graph, lineage of covers and samples.
 - **Release date semantics.** Show the recording's first release, the release being played, or both.
-- **Web search provider.** Which providers to support first, and how to keep results about the right recording. Chosen in Phase 0.5 (D11).
+- **Web search provider.** Decided: Exa first (D11, 2026-10-14; *Web search provider (D11)* under *Source adapters*). Still open there ([#80](https://github.com/wkusnierczyk/sleevesight/issues/80), to settle before publishing): whether Exa's terms allow the app's use as built (display, transmission to the AI provider, insights written from results, results kept in the on-device cache), what a search with highlights costs, and which provider comes second.
 - **Per-player behavior.** How much of the UI to hide for players that send title only.
 - **Name.** Run the spoken-aloud test on "Sleevesight".
 
@@ -416,7 +529,7 @@ The simulator's data makes a ready fixture: the playlist "Below Soundtrack Netfl
 | 14 Up Down, Peleboy, Tony K | Multiple credited artists |
 | 37 The Ode To Newfoundland | Three credited artists |
 | 45, 48, 76 | Covers; Wikipedia only describes the original song |
-| 61 willow, Jessiah | Last.fm name resolves to an unrelated band |
+| 61 willow, Jessiah | Last.fm name resolves to an unrelated band. Also a cover of Taylor Swift's "willow" (its album is "Taylor Swift Covers (single)"), which nothing the identity check reads confirms; the album title is a signal for the Phase 0.5 gate (#46) to weigh |
 | 63 Baby, Please Don't Go (feat. Van Morrison) | Featured artist in the title |
 | 13 New York Groove, 36 Snowbird | Release year is a compilation's, not the song's |
 | 23, 30, 77 | Almost nothing documented anywhere; the card must say so |
@@ -427,6 +540,8 @@ Each prompt has two parts (D14; `architecture.md`, *Prompt style*):
 
 - **The contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It is restated after the style, so a style cannot override it.
 - **Each card's built-in style**: the lengths and the tone below (sentence and word counts, "plain conversational English"). The user's style (length, tone, focus, audience, free text) adjusts it: shorter or longer relative to the built-in length, and for the JSON cards only in their text fields.
+
+The prompt states the contract, then the style, then the contract again. The data it narrates (the track as the player reports it, and the evidence) is fenced in `<track>` and `<evidence>` blocks that the prompt calls data, not instructions; each field and each evidence line is flattened to one line and its `<` replaced with `‹`, so no text from a player or a web page can write a block's tag or pass for an evidence line of its own (`:core`, `InsightPrompt`).
 
 ### Insight
 
@@ -439,7 +554,7 @@ Input: the now-playing title, artists and album as the player reports them (not 
 - "Original song" lines describe the song as first recorded by someone else; never credit them to this artist.
 - "Artist" lines describe the performer, not this recording.
 - Web lines may be about a different song with the same name; ignore what does not fit.
-- If little is documented, say so in one uncited sentence.
+- If the evidence covers only part of what the insight would say: the sentences it supports, each cited; to state the gap, end with exactly `Little else is documented.`, uncited, and no other uncited sentence (prompt version 2, #46; the simulator let the model word the gap freely).
 - With model knowledge on: at most one sentence from general knowledge, ending with `[M]`. Otherwise none.
 - With no usable evidence: reply exactly `NO_EVIDENCE`.
 

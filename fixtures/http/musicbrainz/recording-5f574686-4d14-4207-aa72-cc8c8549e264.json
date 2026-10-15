@@ -1,0 +1,54 @@
+{
+ "artist-credit": [
+  {
+   "name": "Chuck Berry",
+   "joinphrase": "",
+   "artist": {
+    "type": "Person",
+    "name": "Chuck Berry",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "country": "US",
+    "sort-name": "Berry, Chuck",
+    "disambiguation": "",
+    "id": "592a3b6d-c42b-4567-99c9-ecf63bd66499"
+   }
+  }
+ ],
+ "id": "5f574686-4d14-4207-aa72-cc8c8549e264",
+ "disambiguation": "",
+ "length": 150000,
+ "relations": [
+  {
+   "direction": "forward",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "work",
+   "end": null,
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "work": {
+    "iswcs": [
+     "T-070.940.070-3"
+    ],
+    "type": "Song",
+    "title": "Roll Over Beethoven",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "languages": [
+     "eng"
+    ],
+    "language": "eng",
+    "attributes": [],
+    "id": "3d55b4e1-36f5-3cec-b702-59d1b534611e",
+    "disambiguation": ""
+   },
+   "type": "performance",
+   "target-credit": "",
+   "attribute-ids": {},
+   "attributes": [],
+   "source-credit": ""
+  }
+ ],
+ "title": "Roll Over Beethoven",
+ "first-release-date": "1956-05",
+ "video": false
+}

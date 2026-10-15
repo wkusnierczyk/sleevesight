@@ -20,7 +20,8 @@ import org.gradle.api.tasks.TaskAction
  * dependency allowlist. A new dependency is a reviewed edit to that file, which also records
  * the licence of each group, so analytics, crash-reporting and ads SDKs cannot arrive unseen.
  *
- * An allowlist entry matches its group exactly; `group.*` matches its subgroups as well.
+ * An allowlist entry matches its group exactly; `group.*` matches its subgroups as well, and
+ * `group:name` matches that one module only.
  */
 abstract class CheckDependencies : DefaultTask() {
     @get:InputFile
@@ -47,8 +48,7 @@ abstract class CheckDependencies : DefaultTask() {
                 .map { it.split(Regex("\\s+")).first() }
         val unknown =
             modules.get().filter { module ->
-                val group = module.substringBefore(':')
-                entries.none { entry -> groupMatches(entry, group) }
+                entries.none { entry -> moduleMatches(entry, module) }
             }
         if (unknown.isNotEmpty()) {
             throw GradleException(
@@ -61,6 +61,17 @@ abstract class CheckDependencies : DefaultTask() {
     }
 
     companion object {
+        /** `entry` matches [module] (`group:name:version`): by group, or, written `group:name`, by module. */
+        fun moduleMatches(
+            entry: String,
+            module: String,
+        ): Boolean =
+            if (':' in entry) {
+                module.substringBeforeLast(':') == entry
+            } else {
+                groupMatches(entry, module.substringBefore(':'))
+            }
+
         /** `entry` matches `group` exactly, or, written `prefix.*`, matches `prefix` and its subgroups. */
         fun groupMatches(
             entry: String,

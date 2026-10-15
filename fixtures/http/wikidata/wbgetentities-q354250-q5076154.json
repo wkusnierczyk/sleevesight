@@ -1,0 +1,25 @@
+{
+ "entities": {
+  "Q354250": {
+   "type": "item",
+   "id": "Q354250",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Hubert Parry"
+    }
+   }
+  },
+  "Q5076154": {
+   "type": "item",
+   "id": "Q5076154",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Charles Cavendish Boyle"
+    }
+   }
+  }
+ },
+ "success": 1
+}

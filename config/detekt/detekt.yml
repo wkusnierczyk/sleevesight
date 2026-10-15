@@ -2,8 +2,10 @@
 style:
   MaxLineLength:
     maxLineLength: 120
-  # Network access only through :net (design, Structural constraints). :net gets its own
-  # configuration when it is created.
+  # Network access only through :net (design, Structural constraints). :net has its own
+  # configuration, config/detekt/net.yml. The `checkNetworkReferences` task in
+  # build-logic/src/main/kotlin/sleevesight.pipeline.gradle.kts checks the same packages in the
+  # compiled classes of the pipeline modules; a change to one list is made to the other.
   ForbiddenImport:
     active: true
     imports:

@@ -1,0 +1,15 @@
+{
+ "entities": {
+  "Q83270": {
+   "type": "item",
+   "id": "Q83270",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "hard rock"
+    }
+   }
+  }
+ },
+ "success": 1
+}

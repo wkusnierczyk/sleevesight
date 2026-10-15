@@ -1,0 +1,67 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "d05e4022849be66962dcf431a68cc7a45fde1f31",
+     "datavalue": {
+      "value": "f07506f4-1a89-4205-a1f1-37025787686d",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "qualifiers": {
+     "P1810": [
+      {
+       "snaktype": "value",
+       "property": "P1810",
+       "hash": "9f6e29707dadad60b4779022a4ce9a1fc4b5d3e2",
+       "datavalue": {
+        "value": "Joe Williams' Washboard Blues Singers",
+        "type": "string"
+       },
+       "datatype": "string"
+      }
+     ]
+    },
+    "qualifiers-order": [
+     "P1810"
+    ],
+    "id": "Q62026424$633b93c2-429a-407a-e1ff-e7eed3530888",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "56bdcb04edc1998747cb726af41e5aa3c7f088b5",
+      "snaks": {
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "1d798f542141cf92ce29f61573cff810eda759e0",
+         "datavalue": {
+          "value": {
+           "time": "+2019-03-11T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

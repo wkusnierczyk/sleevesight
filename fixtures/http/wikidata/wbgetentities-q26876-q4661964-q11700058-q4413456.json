@@ -1,0 +1,45 @@
+{
+ "entities": {
+  "Q26876": {
+   "type": "item",
+   "id": "Q26876",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Taylor Swift"
+    }
+   }
+  },
+  "Q4661964": {
+   "type": "item",
+   "id": "Q4661964",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Aaron Dessner"
+    }
+   }
+  },
+  "Q11700058": {
+   "type": "item",
+   "id": "Q11700058",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "folk-pop"
+    }
+   }
+  },
+  "Q4413456": {
+   "type": "item",
+   "id": "Q4413456",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Republic Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

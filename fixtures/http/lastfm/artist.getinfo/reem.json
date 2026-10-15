@@ -1,0 +1,221 @@
+{
+  "artist": {
+    "name": "Reem",
+    "mbid": "00000000-0000-4000-8000-000000000012",
+    "url": "https://www.last.fm/music/Reem",
+    "image": [
+      {
+        "#text": "",
+        "size": "small"
+      },
+      {
+        "#text": "",
+        "size": "medium"
+      },
+      {
+        "#text": "",
+        "size": "large"
+      },
+      {
+        "#text": "",
+        "size": "extralarge"
+      },
+      {
+        "#text": "",
+        "size": "mega"
+      },
+      {
+        "#text": "",
+        "size": ""
+      }
+    ],
+    "streamable": "0",
+    "ontour": "0",
+    "stats": {
+      "listeners": "103170",
+      "playcount": "1840320"
+    },
+    "similar": {
+      "artist": [
+        {
+          "name": "Tony K",
+          "url": "https://www.last.fm/music/Tony+K",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Faouzia",
+          "url": "https://www.last.fm/music/Faouzia",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Tara George",
+          "url": "https://www.last.fm/music/Tara+George",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Becky G",
+          "url": "https://www.last.fm/music/Becky+G",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Jannat",
+          "url": "https://www.last.fm/music/Jannat",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "tag": [
+        {
+          "name": "rap",
+          "url": "https://www.last.fm/tag/rap"
+        },
+        {
+          "name": "denmark",
+          "url": "https://www.last.fm/tag/denmark"
+        },
+        {
+          "name": "moroccan",
+          "url": "https://www.last.fm/tag/moroccan"
+        }
+      ]
+    },
+    "bio": {
+      "links": {
+        "link": {
+          "#text": "",
+          "rel": "original",
+          "href": "https://www.last.fm/music/Reem/+wiki"
+        }
+      },
+      "published": "01 Jan 2010, 00:00",
+      "summary": "There are several artists named Reem. 1) Reem is a rapper from Denmark with Moroccan roots. 2) Reem is another artist of the same name. <a href=\"https://www.last.fm/music/Reem\">Read more on Last.fm</a>",
+      "content": "There are several artists named Reem. 1) Reem is a rapper from Denmark with Moroccan roots. 2) Reem is another artist of the same name. <a href=\"https://www.last.fm/music/Reem\">Read more on Last.fm</a>"
+    }
+  }
+}

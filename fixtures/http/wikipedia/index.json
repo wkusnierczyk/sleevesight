@@ -1,0 +1,590 @@
+[
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Ace Frehley",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-ace-frehley.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Anne Murray",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-anne-murray.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Baby, Please Don't Go (Them song)|Baby, Please Don't Go (song)|Baby, Please Don't Go|Them|Van Morrison",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-baby-please-don-t-go-them-song-baby-please-don-t-go-song-baby-please-don-t-go-them-van-morriso.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Baby, Please Don't Go",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-baby-please-don-t-go.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Bad Energy (Reem song)|Bad Energy (song)|Bad Energy|Reem",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-bad-energy-reem-song-bad-energy-song-bad-energy-reem.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Chuck Berry",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-chuck-berry.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Dick Dale",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-dick-dale.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Fisherman's Blues (song)",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-fisherman-s-blues-song.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Fisherman's Blues (The Waterboys song)|Fisherman's Blues (song)|Fisherman's Blues|The Waterboys",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-fisherman-s-blues-the-waterboys-song-fisherman-s-blues-song-fisherman-s-blues-the-waterboys.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Fishin' In A Dory (Ray Johnson And The Sou' Westers song)|Fishin' In A Dory (song)|Fishin' In A Dory|Fishin' in a Dory (Ray Johnson And The Sou' Westers song)|Fishin' in a Dory (song)|Fishin' in a Dory|Ray Johnson And The Sou' Westers",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-fishin-in-a-dory-ray-johnson-and-the-sou-westers-song-fishin-in-a-dory-song-fishin-in-a-dory-f.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Forever Young (dearoldfriend song)|Forever Young (song)|Forever Young|dearoldfriend|Winston Hunte",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-forever-young-dearoldfriend-song-forever-young-song-forever-young-dearoldfriend-winston-hunte.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Gordon Lightfoot",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-gordon-lightfoot.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Here Comes The Sun (Alexander S. song)|Here Comes The Sun (song)|Here Comes The Sun|Here Comes the Sun (Alexander S. song)|Here Comes the Sun (song)|Here Comes the Sun|Alexander S.",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-here-comes-the-sun-alexander-s-song-here-comes-the-sun-song-here-comes-the-sun-here-comes-the.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Here Comes the Sun",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-here-comes-the-sun.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "I Will Follow You Into The Dark (Yanjoco song)|I Will Follow You Into The Dark (song)|I Will Follow You Into The Dark|I Will Follow You into the Dark (Yanjoco song)|I Will Follow You into the Dark (song)|I Will Follow You into the Dark|Yanjoco",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-i-will-follow-you-into-the-dark-yanjoco-song-i-will-follow-you-into-the-dark-song-i-will-follo.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "I Will Follow You into the Dark",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-i-will-follow-you-into-the-dark.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Interstellar - Main Theme (I Aimed My Pebble song)|Interstellar - Main Theme (song)|Interstellar - Main Theme|I Aimed My Pebble",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-interstellar-main-theme-i-aimed-my-pebble-song-interstellar-main-theme-song-interstellar-main.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Location (Peleboy song)|Location (song)|Location|Peleboy",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-location-peleboy-song-location-song-location-peleboy.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Misirlou (Dick Dale song)|Misirlou (song)|Misirlou|Dick Dale",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-misirlou-dick-dale-song-misirlou-song-misirlou-dick-dale.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Misirlou",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-misirlou.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "New York Groove (Ace Frehley song)|New York Groove (song)|New York Groove|Ace Frehley",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-new-york-groove-ace-frehley-song-new-york-groove-song-new-york-groove-ace-frehley.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "New York Groove",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-new-york-groove.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Ode to Newfoundland",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-ode-to-newfoundland.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Roll Over Beethoven (Chuck Berry song)|Roll Over Beethoven (song)|Roll Over Beethoven|Chuck Berry",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-roll-over-beethoven-chuck-berry-song-roll-over-beethoven-song-roll-over-beethoven-chuck-berry.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Roll Over Beethoven",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-roll-over-beethoven.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Snowbird (Anne Murray song)|Snowbird (song)|Snowbird|Anne Murray",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-snowbird-anne-murray-song-snowbird-song-snowbird-anne-murray.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Snowbird (song)",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-snowbird-song.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Sundown (Gordon Lightfoot song)|Sundown (song)|Sundown|Gordon Lightfoot",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-sundown-gordon-lightfoot-song-sundown-song-sundown-gordon-lightfoot.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Sundown (Gordon Lightfoot song)",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-sundown-gordon-lightfoot-song.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "The Ode To Newfoundland (Charles Cavendish Boyle song)|The Ode To Newfoundland (song)|The Ode To Newfoundland|The Ode to Newfoundland (Charles Cavendish Boyle song)|The Ode to Newfoundland (song)|The Ode to Newfoundland|Ode to Newfoundland (Charles Cavendish Boyle song)|Ode to Newfoundland (song)|Ode to Newfoundland|Charles Cavendish Boyle|Hubert Parry|Cantus Vocum Chamber Choir",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-the-ode-to-newfoundland-charles-cavendish-boyle-song-the-ode-to-newfoundland-song-the-ode-to-n.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "THE VEIL BETWEEN WORLDS (DIE HEXEN song)|THE VEIL BETWEEN WORLDS (song)|THE VEIL BETWEEN WORLDS|DIE HEXEN",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-the-veil-between-worlds-die-hexen-song-the-veil-between-worlds-song-the-veil-between-worlds-di.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "The Waterboys",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-the-waterboys.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Them (band)",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-them-band.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Up Down (Peleboy song)|Up Down (song)|Up Down|Peleboy|Tony K",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-up-down-peleboy-song-up-down-song-up-down-peleboy-tony-k.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "We In Here (Peleboy song)|We In Here (song)|We In Here|We in Here (Peleboy song)|We in Here (song)|We in Here|Peleboy",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-we-in-here-peleboy-song-we-in-here-song-we-in-here-we-in-here-peleboy-song-we-in-here-song-we.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "We in Here",
+   "prop": "extracts",
+   "exintro": "1",
+   "explaintext": "1",
+   "redirects": "1",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-we-in-here.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "willow (Jessiah song)|willow (song)|willow|Willow (Jessiah song)|Willow (song)|Willow|Jessiah",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-willow-jessiah-song-willow-song-willow-willow-jessiah-song-willow-song-willow-jessiah.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
+   "titles": "Wonderland (Reem song)|Wonderland (song)|Wonderland|Reem",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-wonderland-reem-song-wonderland-song-wonderland-reem.json"
+ }
+]

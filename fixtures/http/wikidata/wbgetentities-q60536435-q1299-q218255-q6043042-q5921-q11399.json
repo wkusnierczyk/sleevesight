@@ -1,0 +1,65 @@
+{
+ "entities": {
+  "Q60536435": {
+   "type": "item",
+   "id": "Q60536435",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Chuck Berry & His Combo"
+    }
+   }
+  },
+  "Q1299": {
+   "type": "item",
+   "id": "Q1299",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "The Beatles"
+    }
+   }
+  },
+  "Q218255": {
+   "type": "item",
+   "id": "Q218255",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Electric Light Orchestra"
+    }
+   }
+  },
+  "Q6043042": {
+   "type": "item",
+   "id": "Q6043042",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Janne Persson"
+    }
+   }
+  },
+  "Q5921": {
+   "type": "item",
+   "id": "Q5921",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Chuck Berry"
+    }
+   }
+  },
+  "Q11399": {
+   "type": "item",
+   "id": "Q11399",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "rock music"
+    }
+   }
+  }
+ },
+ "success": 1
+}

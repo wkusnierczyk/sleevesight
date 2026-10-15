@@ -1,0 +1,3895 @@
+{
+ "language": "eng",
+ "attributes": [
+  {
+   "type": "ASCAP ID",
+   "type-id": "d833318c-6c6a-370e-8b16-9cb15873ba76",
+   "value": "440087425"
+  },
+  {
+   "type": "JASRAC ID",
+   "type-id": "31048fcc-3dbb-3979-8f85-805afb933e0c",
+   "value": "0A6-8618-6"
+  },
+  {
+   "type-id": "01eeee67-f514-3801-bdce-279e04872f91",
+   "type": "GEMA ID",
+   "value": "1326023-001"
+  }
+ ],
+ "type": "Song",
+ "title": "New York Groove",
+ "disambiguation": "",
+ "languages": [
+  "eng"
+ ],
+ "relations": [
+  {
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "d59d99ea-23d4-4a80-b066-edca32ee158f",
+   "artist": {
+    "id": "f0bea941-5c7e-4253-ad43-5ba3c5a5f14d",
+    "name": "Russ Ballard",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Ballard, Russ",
+    "country": "GB",
+    "disambiguation": "",
+    "type": "Person"
+   },
+   "target-type": "artist",
+   "type": "composer",
+   "source-credit": ""
+  },
+  {
+   "type": "lyricist",
+   "source-credit": "",
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "target-type": "artist",
+   "type-id": "3e48faba-ec01-47fd-8e89-30e81161661c",
+   "artist": {
+    "type": "Person",
+    "disambiguation": "",
+    "country": "GB",
+    "sort-name": "Ballard, Russ",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "name": "Russ Ballard",
+    "id": "f0bea941-5c7e-4253-ad43-5ba3c5a5f14d"
+   },
+   "attribute-values": {}
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "id": "019979e4-f5a0-4c00-931a-959719b74472",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "KISS",
+      "artist": {
+       "type": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      }
+     }
+    ],
+    "disambiguation": "live, 1979-06-11, Civic Center, Lakeland, FL, USA",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1979-06-11",
+   "direction": "backward",
+   "end": "1979-06-11",
+   "attributes": [
+    "cover",
+    "live"
+   ]
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "disambiguation": "live, 1979-07-07: Capital Centre, Largo, MD, USA",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "KISS",
+      "artist": {
+       "type": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      }
+     }
+    ],
+    "length": null,
+    "id": "76604a93-1bb1-4a0b-bc90-5329ac2d691c",
+    "video": true
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "target-credit": "",
+   "begin": "1979-07-07",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1979-07-07",
+   "direction": "backward"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "id": "1ac846f9-58f8-497b-833f-59b2c38985fa",
+    "length": null,
+    "title": "New York Groove",
+    "disambiguation": "live, 1979-08-06: Montreal Forum, Montreal, QC, Canada",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS",
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "begin": "1979-08-06",
+   "ended": true,
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1979-08-06"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "id": "751a2b43-e322-4217-8209-6263aad82123",
+    "length": null,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1979-11-27: Selland Arena, Fresno, CA, USA"
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1979-11-27",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "begin": "1979-11-27",
+   "target-credit": "",
+   "ended": true
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "US",
+       "disambiguation": "US rock band",
+       "name": "KISS",
+       "type-id": null,
+       "sort-name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      },
+      "name": "KISS"
+     }
+    ],
+    "disambiguation": "live, 1979-11-27: Selland Arena, Fresno, CA, USA",
+    "title": "New York Groove",
+    "length": 276000,
+    "id": "3bde27a7-fc53-4639-b259-82ad3b1a5d71",
+    "video": false
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1979-11-27",
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "begin": "1979-11-27",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1980-08-29",
+   "direction": "backward",
+   "begin": "1980-08-29",
+   "target-credit": "",
+   "ended": true,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": null,
+    "id": "699d2dd8-5bd5-4a6a-ad02-63d6c8c75cfe",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS"
+      },
+      "name": "KISS"
+     }
+    ],
+    "disambiguation": "live, 1980-08-29: Castel Sant’Angelo, Rome, Italy",
+    "title": "New York Groove (Castel St. Angelo, Roma, Italy, August 29 1980)"
+   }
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1980-09-09",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "begin": "1980-09-09",
+   "target-credit": "",
+   "ended": true,
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "video": false,
+    "id": "8692de27-56dc-40d4-8125-b0bd6777ecd0",
+    "title": "New York Groove",
+    "disambiguation": "live, 1980-09-09: Wembley Arena, London, England, UK",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "KISS",
+      "artist": {
+       "type": null,
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type-id": null,
+       "name": "KISS",
+       "sort-name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      }
+     }
+    ]
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": null,
+    "video": false,
+    "id": "067ccfbb-81ab-4537-9add-94506a27a873",
+    "title": "New York Groove",
+    "disambiguation": "live, 1980-09-27: Le Bourget Exhibition Centre, Le Bourget, France",
+    "artist-credit": [
+     {
+      "name": "KISS",
+      "artist": {
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1980-09-27",
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-09-27",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
+  },
+  {
+   "recording": {
+    "length": 220000,
+    "video": false,
+    "id": "11bc4020-13d1-42f6-8881-bfba5208be1e",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "KISS",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "type-id": null,
+       "name": "KISS",
+       "sort-name": "KISS"
+      }
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1980-09-27: Parc des Expositions Paris le Bourget, Le Bourget, France"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "end": "1980-09-27",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-09-27",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS",
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null
+      },
+      "name": "KISS"
+     }
+    ],
+    "disambiguation": "live, 1980-10-05: Groenoordhallen, Leiden, NL",
+    "title": "New York Groove",
+    "length": 227573,
+    "id": "d656a378-29f2-490c-8810-214e8d9b2714",
+    "video": false
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "begin": "1980-10-05",
+   "target-credit": "",
+   "ended": true,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1980-10-05",
+   "direction": "backward"
+  },
+  {
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1980-10-10",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-10-10",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "length": null,
+    "id": "768c9950-cb58-4dc0-b3b5-acc801750af0",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS"
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, 1980-10-10: Scandinavium, Gothenburg, Sweden",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "id": "a42f6eca-24d4-4268-b4cc-a2c4cbc3b9fb",
+    "video": false,
+    "disambiguation": "live, 1980-11-18: Adelaide Oval, Adelaide, SA, Australia",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "KISS",
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "begin": "1980-11-18",
+   "ended": true,
+   "direction": "backward",
+   "end": "1980-11-18",
+   "attributes": [
+    "cover",
+    "live"
+   ]
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": "1980-11-22",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-11-21",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      },
+      "name": "KISS"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1980-11-21/2: Sydney Showground, Sydney, NSW, Australia",
+    "length": 241201,
+    "video": false,
+    "id": "3a595cfd-25e5-45bb-8aa4-450903daba58"
+   }
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1980-11-22",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1980-11-22",
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "id": "f6ecd7be-51fd-4bca-bb13-e53577aef127",
+    "video": false,
+    "disambiguation": "live, 1980-11-22: Sydney Showgrounds, Sydney, NSW, Australia",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type-id": null,
+       "name": "KISS",
+       "sort-name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1980-11-22",
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-11-22",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "name": "KISS",
+       "type-id": null,
+       "sort-name": "KISS",
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type": null
+      },
+      "name": "KISS"
+     }
+    ],
+    "disambiguation": "live, 1980-11-22: Sydney Showground, Sydney, NSW, Australia",
+    "title": "New York Groove",
+    "id": "e26aea76-3f8d-4daa-a5c7-58039a6eff3a",
+    "video": true,
+    "length": null
+   }
+  },
+  {
+   "target-credit": "",
+   "ended": true,
+   "begin": "1980-12-03",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": "1980-12-03",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "recording": {
+    "disambiguation": "live, 1980-12-03: Western Springs Stadium, Auckland, NZ",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "KISS",
+      "artist": {
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "280e0823-af65-4ac7-86a7-e0d25bba802f",
+    "video": false,
+    "length": 286000
+   },
+   "source-credit": ""
+  },
+  {
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-credit": "",
+   "ended": true,
+   "begin": "1985-03-09",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1985-03-09",
+   "direction": "backward",
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "17c74ab0-e73b-426f-9fe0-91a7c366a9d6",
+    "video": false,
+    "length": null,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Frehley’s Comet",
+      "artist": {
+       "id": "77db7b1e-f3e2-47cf-a95a-b1ef364b9f1a",
+       "type-id": null,
+       "name": "Frehley’s Comet",
+       "sort-name": "Frehley’s Comet",
+       "country": "US",
+       "disambiguation": "American hard rock band",
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "live, 1985-03-09: L’Amour, New York, NY, USA",
+    "title": "New York Groove"
+   }
+  },
+  {
+   "direction": "backward",
+   "end": "1987-06-29",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "begin": "1987-06-29",
+   "target-credit": "",
+   "ended": true,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "length": 314520,
+    "video": false,
+    "id": "87b1691b-b248-40d9-bc47-9f7e23b13917",
+    "artist-credit": [
+     {
+      "artist": {
+       "sort-name": "Frehley’s Comet",
+       "type-id": null,
+       "name": "Frehley’s Comet",
+       "id": "77db7b1e-f3e2-47cf-a95a-b1ef364b9f1a",
+       "type": null,
+       "disambiguation": "American hard rock band",
+       "country": "US"
+      },
+      "name": "Ace Frehley’s Comet",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1987-06-29: Summerfest, Milwaukee, WI, USA"
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "sort-name": "Frehley, Ace",
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "type": null
+      },
+      "name": "Ace Frehley",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, 1987-06-29: Summerfest, Milwaukee, WI, USA",
+    "title": "New York Groove",
+    "id": "76049470-c14d-4163-bd95-dd3585a58510",
+    "video": false,
+    "length": 352000
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": true,
+   "target-credit": "",
+   "begin": "1987-06-29",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": "1987-06-29",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "direction": "backward"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Ace Frehley",
+      "artist": {
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "sort-name": "Frehley, Ace",
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1987-09-04: Aragon Ballroom, Chicago, IL, USA",
+    "length": 327000,
+    "video": false,
+    "id": "b114a697-90ee-4210-ab38-fcdf6b97d566"
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1987-09-04",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "target-credit": "",
+   "ended": true,
+   "begin": "1987-09-04"
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1988-03-19",
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1988-03-19",
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "live, 1988-03-19: Hammersmith Apollo, London, England, UK",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "American hard rock band",
+       "country": "US",
+       "type": null,
+       "id": "77db7b1e-f3e2-47cf-a95a-b1ef364b9f1a",
+       "sort-name": "Frehley’s Comet",
+       "name": "Frehley’s Comet",
+       "type-id": null
+      },
+      "name": "Frehley’s Comet"
+     }
+    ],
+    "video": false,
+    "id": "8204c80b-23a2-415e-9b25-ba48d6234eb5",
+    "length": 294000
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "disambiguation": "live, 1989-03-12: Toad’s Place, New Haven, CT, USA",
+    "title": "New York Groove / Crazy Crazy Nights",
+    "artist-credit": [
+     {
+      "name": "Paul Stanley",
+      "artist": {
+       "id": "a2567452-7d11-45a7-98ff-1cbbc8ba0910",
+       "sort-name": "Stanley, Paul",
+       "type-id": null,
+       "name": "Paul Stanley",
+       "disambiguation": "KISS frontman",
+       "country": "US",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "id": "e1135589-5ab9-4bad-a277-0b643cca2e39",
+    "video": false,
+    "length": 380000
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live",
+    "partial"
+   ],
+   "end": "1989-03-12",
+   "direction": "backward",
+   "target-credit": "",
+   "ended": true,
+   "begin": "1989-03-12",
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Ace Frehley",
+      "artist": {
+       "type": null,
+       "disambiguation": "American rock guitarist",
+       "country": "US",
+       "sort-name": "Frehley, Ace",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, 1995-09-27: San Diego, CA, USA",
+    "title": "New York Groove",
+    "length": 322000,
+    "id": "72162a6f-395e-4bf8-9926-df6b07829297",
+    "video": false
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1995-09-27",
+   "direction": "backward",
+   "begin": "1995-09-27",
+   "target-credit": "",
+   "ended": true,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   }
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1996-07-17",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1996-07-17",
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS",
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null
+      },
+      "name": "KISS"
+     }
+    ],
+    "title": "New York Grove",
+    "disambiguation": "live, 1996-07-17: Ervin J. Nutter Center, Fairborn, OH, USA",
+    "video": false,
+    "id": "d8a8bf6a-d33a-45c9-ab01-e8fbdc74a05d",
+    "length": 185861
+   },
+   "type": "performance"
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1996-09-04",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "ended": true,
+   "begin": "1996-09-04",
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "MTV Video Music Awards, 1996-09-04: Brooklyn Bridge, Brooklyn, NY, USA",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "name": "KISS",
+       "type-id": null,
+       "sort-name": "KISS"
+      },
+      "name": "KISS"
+     }
+    ],
+    "length": null,
+    "id": "4275d48c-07fe-48dc-bcbc-27a31fd50741",
+    "video": true
+   },
+   "type": "performance"
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "KISS",
+      "artist": {
+       "type": null,
+       "disambiguation": "US rock band",
+       "country": "US",
+       "sort-name": "KISS",
+       "type-id": null,
+       "name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      }
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1996-11-25: Wembley Arena, London, England, UK",
+    "length": null,
+    "video": false,
+    "id": "bfbd68aa-1d1d-4cec-bacf-737803b2488e"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1996-11-25",
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1996-11-25",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "end": "1996-12-07",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1996-12-07",
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "disambiguation": "US rock band",
+       "country": "US",
+       "type": null,
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "sort-name": "KISS",
+       "name": "KISS",
+       "type-id": null
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "live, 1996-12-07: Scandinavium, Gothenburg, Sweden",
+    "title": "New York Groove",
+    "length": null,
+    "id": "3245c902-5d53-4b53-b252-a5b7165887c0",
+    "video": false
+   },
+   "type": "performance"
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": "1997-06-11",
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a",
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": true,
+   "target-credit": "",
+   "begin": "1997-06-11",
+   "source-credit": "",
+   "recording": {
+    "length": null,
+    "video": false,
+    "id": "3595c945-5e2d-43b6-9e39-b0e561651fad",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "type-id": null,
+       "name": "KISS",
+       "sort-name": "KISS",
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type": null
+      },
+      "name": "KISS",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "live, 1997-06-11: Prins van Oranje Hal, Utrecht, Netherlands"
+   },
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [
+    "cover",
+    "live"
+   ],
+   "direction": "backward",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "video": false,
+    "id": "b5a815e7-b846-4b81-ab46-eaa7b834c15e",
+    "length": 282000,
+    "artist-credit": [
+     {
+      "name": "Ace Frehley",
+      "artist": {
+       "type": null,
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "name": "Ace Frehley",
+       "type-id": null,
+       "sort-name": "Frehley, Ace",
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "Back in the New York Groove",
+    "disambiguation": "live, 1990/1992"
+   }
+  },
+  {
+   "source-credit": "",
+   "ordering-key": 3,
+   "recording": {
+    "id": "902fc2e3-78ab-4b7d-ae10-db88b8b0978d",
+    "video": false,
+    "length": 206000,
+    "disambiguation": "",
+    "title": "Megamix",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      }
+     }
+    ]
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [
+    "medley",
+    "partial"
+   ],
+   "end": null,
+   "attribute-ids": {
+    "partial": "d2b63be6-91ec-426a-987a-30b47f8aae2d",
+    "medley": "37da3398-5d1b-4acb-be25-df95e33e423c"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "disambiguation": "",
+    "title": "N.Y. Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Dead End Kids",
+      "artist": {
+       "sort-name": "Dead End Kids",
+       "type-id": null,
+       "name": "Dead End Kids",
+       "id": "5f93b46a-075c-4a9e-8cf4-0dd426bfb7e7",
+       "type": null,
+       "disambiguation": "USA punk band",
+       "country": "US"
+      }
+     }
+    ],
+    "id": "59f70830-1c2a-4f06-a69f-34fcb59ade4e",
+    "video": false,
+    "length": null
+   },
+   "source-credit": "",
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Goove",
+    "id": "a98e6ad5-e25d-4524-bf4c-2057f6aee832",
+    "video": false,
+    "length": 165640
+   },
+   "type": "performance"
+  },
+  {
+   "recording": {
+    "video": false,
+    "id": "2fb8c627-4368-4b29-ba35-18bcc808e27a",
+    "length": 182000,
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Ace Frehley",
+      "artist": {
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "sort-name": "Frehley, Ace",
+       "name": "Ace Frehley",
+       "type-id": null,
+       "disambiguation": "American rock guitarist",
+       "country": "US",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type": "performance",
+   "source-credit": "",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "direction": "backward",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "length": 167933,
+    "video": false,
+    "id": "ec9515a4-b690-43a5-8efe-d4a35543ca6f"
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": 165999,
+    "id": "da055055-be3c-4f89-89d8-32e26508f115",
+    "video": false,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "artist": {
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ]
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward"
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "id": "905bffc1-04d9-43c7-8a8d-5c37547af070",
+    "video": false,
+    "length": 182000,
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Mummy Dearest",
+       "type-id": null,
+       "sort-name": "Mummy Dearest",
+       "id": "ae82f26b-629b-4e7e-a419-3c4ed511089a",
+       "type": null,
+       "country": null,
+       "disambiguation": ""
+      },
+      "name": "Mummy Dearest",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "source-credit": "",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "795246c6-f024-4878-a112-c7a28d37145c",
+    "video": false,
+    "length": 168200,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "length": 165533,
+    "id": "575d3ed6-27a1-4029-9769-48f09aad759e",
+    "video": false,
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "length": 168280,
+    "video": false,
+    "id": "4fbf429d-cd0b-4026-8770-84b2d1464792"
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      }
+     }
+    ],
+    "length": 166600,
+    "id": "b964745a-965d-402f-84e6-80471ae4dfe3",
+    "video": false
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "length": 166720,
+    "id": "2b0bb5ce-61fb-4629-9335-3f488253b394",
+    "video": false
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "attribute-ids": {}
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "recording": {
+    "length": 167413,
+    "id": "0ee4f830-9d02-449c-a0a0-007b38b277fd",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance"
+  },
+  {
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "recording": {
+    "id": "60bd2b78-0fcf-4cca-b5d6-88fa561fcca6",
+    "video": false,
+    "length": 181773,
+    "artist-credit": [
+     {
+      "name": "Vitamin String Quartet",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type": null,
+       "id": "56cfe6aa-b464-43d2-bec7-8ec52f313e7d",
+       "sort-name": "Vitamin String Quartet",
+       "type-id": null,
+       "name": "Vitamin String Quartet"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello"
+      }
+     }
+    ],
+    "length": 164000,
+    "id": "24e28447-fbd7-4b88-bfb9-92514c639b7a",
+    "video": false
+   },
+   "type": "performance"
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ],
+    "id": "374deb7a-571e-4a2e-981d-ba7cc27b1413",
+    "video": false,
+    "length": 162000
+   },
+   "type": "performance"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "91dfa4bb-0a6a-4251-9691-bf888814f1b7",
+    "video": false,
+    "length": 162000,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   }
+  },
+  {
+   "recording": {
+    "length": 168426,
+    "id": "79302156-b08f-478b-88c5-3e2b31d47690",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "id": "010a8d24-d1ad-4f68-a527-59d21a5aee6a",
+    "video": false,
+    "length": 167626
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "f10d1259-2740-4826-be5a-f4703c85ad0f",
+    "video": false,
+    "length": 167000,
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "direction": "backward"
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "f8fd2121-d876-40a4-bba0-7ed19c54e064",
+    "video": false,
+    "length": 292760,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "Bruce Bouillet",
+      "artist": {
+       "id": "7c19377e-42d0-4284-bcbc-3f6f7ef25f64",
+       "sort-name": "Bouillet, Bruce",
+       "type-id": null,
+       "name": "Bruce Bouillet",
+       "disambiguation": "",
+       "country": "US",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   }
+  },
+  {
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "length": 165000,
+    "id": "401ff8dc-2d12-4636-b2c9-7e7258087f6f",
+    "video": false
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "length": 166000,
+    "video": false,
+    "id": "0eb02d22-6988-4e84-9fda-d76346a6bc74"
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "f2df0f4b-0fab-404e-9d21-19f30a86e80b",
+    "video": false,
+    "length": 162000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "direction": "backward"
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "length": 165573,
+    "video": false,
+    "id": "08a0384d-6166-4274-a5b4-bd874bd4a50c"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0"
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "e85a408d-2ac9-468c-afc7-f48e42a29fb7",
+    "length": 165480
+   },
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "video": false,
+    "id": "f3ceacac-284a-45df-8cc5-ebf768b51bf2",
+    "length": 154786,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "source-credit": "",
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording"
+  },
+  {
+   "recording": {
+    "length": 163506,
+    "video": false,
+    "id": "edbcaac8-31a3-4e70-bf17-c8efbc2f24f9",
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ],
+    "id": "1781c333-76ec-4017-8c3a-150297955bd9",
+    "video": false,
+    "length": null
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "direction": "backward",
+   "end": null,
+   "attributes": []
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "id": "9745dffd-3d12-4437-97e5-ad6e5ad2198b",
+    "length": 232040,
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "129df65c-23f8-440c-b066-4bc064f619a9",
+       "sort-name": "Scott, Andy, Sweet",
+       "name": "Andy Scott’s Sweet",
+       "type-id": null,
+       "disambiguation": "",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Sweet",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ]
+  },
+  {
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "e0722b80-7b7f-4cd9-bcab-9f4d78ac3679",
+    "video": false,
+    "length": 165666,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   }
+  },
+  {
+   "recording": {
+    "length": null,
+    "id": "b2cb55bf-1bb0-4c7e-aea4-c21846ddec63",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "disambiguation": "",
+       "country": "GB",
+       "sort-name": "Sweet Little Band",
+       "name": "Sweet Little Band",
+       "type-id": null,
+       "id": "f18ed420-f81a-43f6-83ff-9c021d5ef1c9"
+      },
+      "name": "Sweet Little Band"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover",
+    "instrumental"
+   ],
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113",
+    "instrumental": "c031ed4f-c9bb-4394-8cf5-e8ce4db512ae"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "video": false,
+    "id": "481811fc-f979-47ad-bb7b-5e5af9d14643",
+    "length": 165626
+   },
+   "source-credit": "",
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "attribute-ids": {},
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "name": "Marty O’Brien",
+      "artist": {
+       "disambiguation": "",
+       "country": "US",
+       "type": null,
+       "id": "fa8b6eba-0ffd-4cb5-aaa3-a80ca2c6b74d",
+       "sort-name": "O’Brien, Marty",
+       "name": "Marty O’Brien",
+       "type-id": null
+      },
+      "joinphrase": " & "
+     },
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "disambiguation": "",
+       "country": "CA",
+       "sort-name": "Slaves on Dope",
+       "name": "Slaves on Dope",
+       "type-id": null,
+       "id": "c95dd14e-6fa8-4a53-932b-2325dd79a704"
+      },
+      "name": "Slaves on Dope"
+     }
+    ],
+    "length": 178000,
+    "video": false,
+    "id": "0490d3ab-e480-4f41-a784-455a2beb3abf"
+   },
+   "source-credit": "",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording"
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "id": "933666e6-cac5-48e5-b1be-bea0dedf2f07",
+    "video": false,
+    "length": 165000
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "id": "cdb2fbd8-15a4-421d-b5d5-99fb50a78670",
+    "video": false,
+    "length": 164000,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      },
+      "name": "Hello"
+     }
+    ]
+   }
+  },
+  {
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello"
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "length": 166000,
+    "id": "b4a167cf-ddd7-4ec1-8117-49a88074a88f",
+    "video": false
+   },
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      },
+      "name": "Hello"
+     }
+    ],
+    "video": false,
+    "id": "ace14328-3ab0-4cdd-8106-a4b63c4c86c5",
+    "length": 256000
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "KISS",
+      "artist": {
+       "type": null,
+       "country": "US",
+       "disambiguation": "US rock band",
+       "type-id": null,
+       "name": "KISS",
+       "sort-name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "id": "cf74ced1-afea-4da4-9132-c53cbc588231",
+    "video": false,
+    "length": null
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "id": "cc4d6f41-78cf-4b46-8197-47cfccfdd016",
+    "length": 161000,
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "direction": "backward",
+   "attributes": [],
+   "end": null
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "id": "87cf1029-5cc9-4826-ad3f-111746ef69d9",
+    "video": false,
+    "length": 166813,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "direction": "backward",
+   "end": null,
+   "attributes": []
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "length": 165973,
+    "video": false,
+    "id": "fc4c0ca3-5727-4700-a18b-a673b520a83c"
+   },
+   "type": "performance"
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "length": 167000,
+    "id": "1ed75a26-bb69-4e74-a01b-0897ddf9e7d6",
+    "video": false
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello"
+      }
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "length": 164000,
+    "video": false,
+    "id": "10ea5bef-08ea-4c1c-bf07-4d369214d5de"
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "source-credit": "",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Reggae KISS",
+      "artist": {
+       "id": "a3b93c8a-af88-4f74-bbce-e53b4ca25ce2",
+       "sort-name": "Reggae KISS",
+       "type-id": null,
+       "name": "Reggae KISS",
+       "disambiguation": "tribute group",
+       "country": "SE",
+       "type": null
+      }
+     }
+    ],
+    "length": 231000,
+    "id": "15d178e9-961d-4be3-9358-84d24d2cfeeb",
+    "video": false
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": 167293,
+    "id": "88714cb0-485f-4ac5-aa77-43ffe3f5c9f8",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "name": "Hello",
+       "type-id": null,
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "attribute-ids": {}
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "video": false,
+    "id": "ad60fbf1-c193-44e1-b6bf-09af0a436276",
+    "length": 164880
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "length": null,
+    "id": "d1dc71e0-72f8-4145-a74d-3b1339c3785d",
+    "video": false
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [],
+   "direction": "backward",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {}
+  },
+  {
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "video": false,
+    "id": "6d34711b-07c3-412d-a5ab-154e96522027",
+    "length": 163000,
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Hello",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null
+      }
+     }
+    ]
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove",
+    "id": "687f3e2d-c643-44cd-85c4-46f7e12ef6b4",
+    "video": false,
+    "length": 166000
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "length": null,
+    "id": "199279dc-5e56-4ff1-9934-c68a3f6bb3ba",
+    "video": false
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "recording": {
+    "length": 165000,
+    "video": false,
+    "id": "7ee3e079-d700-4d87-8ca3-6a03d4dbbd05",
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ]
+   },
+   "source-credit": ""
+  },
+  {
+   "attribute-ids": {},
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "recording": {
+    "id": "5e8ee554-db06-44d5-8679-6a18c942cbf7",
+    "video": false,
+    "length": 223000,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "disambiguation": "",
+       "country": "GB",
+       "type": null,
+       "id": "f0bea941-5c7e-4253-ad43-5ba3c5a5f14d",
+       "sort-name": "Ballard, Russ",
+       "name": "Russ Ballard",
+       "type-id": null
+      },
+      "name": "Russ Ballard"
+     }
+    ]
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "recording": {
+    "length": 164000,
+    "id": "1f1d24a9-6b90-43ab-8c7d-ed44a6586959",
+    "video": false,
+    "artist-credit": [
+     {
+      "artist": {
+       "type": null,
+       "disambiguation": "British glam rock band",
+       "country": "GB",
+       "sort-name": "Hello",
+       "type-id": null,
+       "name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello",
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "length": 167720,
+    "id": "871c5efb-319b-4a3a-a1f0-6b633657ec47",
+    "video": false,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47"
+      },
+      "name": "Hello"
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove"
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false
+  },
+  {
+   "recording": {
+    "length": 167360,
+    "id": "8d1df11f-ddc1-4d87-912c-aa6cba72b9ad",
+    "video": false,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "name": "Hello",
+       "type-id": null,
+       "sort-name": "Hello",
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "attributes": [
+    "live"
+   ],
+   "end": null,
+   "direction": "backward",
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Ace Frehley",
+      "artist": {
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "type": null,
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "sort-name": "Frehley, Ace"
+      }
+     }
+    ],
+    "disambiguation": "live, 1994-10-28: Harpo's, Detroit, MI, USA",
+    "title": "New York Groove",
+    "length": null,
+    "id": "da6a9760-f8be-4e16-b6d4-959015ae7e4a",
+    "video": false
+   }
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Kiss Forever Band",
+      "artist": {
+       "sort-name": "Kiss Forever Band",
+       "type-id": null,
+       "name": "Kiss Forever Band",
+       "id": "ce8f1b41-4333-4765-9a5d-0321e951aa60",
+       "type": null,
+       "disambiguation": "Hungarian KISS tribute band",
+       "country": "HU"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "length": 192132,
+    "video": false,
+    "id": "5d3dca9a-2dd9-4231-8057-5d4807edf9f5"
+   },
+   "source-credit": "",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "id": "a7c9837e-63f0-4b84-9445-30ec8e1b8558",
+    "video": false,
+    "length": 180000,
+    "disambiguation": "",
+    "title": "New York Groove",
+    "artist-credit": [
+     {
+      "name": "Sleeping Timmy",
+      "artist": {
+       "name": "Sleeping Timmy",
+       "type-id": null,
+       "sort-name": "Timmy, Sleeping",
+       "id": "520e4f8b-70ee-4c41-ac03-cb01d79b4740",
+       "type": null,
+       "country": "US",
+       "disambiguation": ""
+      },
+      "joinphrase": ""
+     }
+    ]
+   },
+   "source-credit": "",
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "video": false,
+    "id": "67a741ea-97d9-4802-9a8b-351e560a5847",
+    "length": 165000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "country": "GB",
+       "disambiguation": "British glam rock band",
+       "type": null
+      },
+      "name": "Hello"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "ended": false,
+   "begin": null
+  },
+  {
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "KISS",
+       "type-id": null,
+       "sort-name": "KISS",
+       "id": "e1f1e33e-2e4c-4d43-b91b-7064068d3283",
+       "type": null,
+       "country": "US",
+       "disambiguation": "US rock band"
+      },
+      "name": "KISS"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "video": false,
+    "id": "065551cc-3561-40da-b334-c2d03dec1295",
+    "length": 241013
+   },
+   "type": "performance",
+   "source-credit": "",
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "live"
+   ],
+   "attribute-ids": {
+    "live": "70007db6-a8bc-46d7-a770-80e6a0bb551a"
+   },
+   "begin": null,
+   "target-credit": "",
+   "ended": false,
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording"
+  },
+  {
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "type": "performance",
+   "recording": {
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "Stevie Anders",
+       "type-id": null,
+       "sort-name": "Anders, Stevie",
+       "id": "2a363f74-cfd4-40f4-a50e-f75daa8a374a",
+       "type": null,
+       "country": "IT",
+       "disambiguation": "Italian glam rock"
+      },
+      "name": "Stevie Anders"
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": "",
+    "video": false,
+    "id": "494933f1-a7eb-4d04-97fe-08a5ecd0aacb",
+    "length": 184891
+   },
+   "source-credit": ""
+  },
+  {
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": 124548,
+    "video": false,
+    "id": "cbf39fe7-61ea-4c5a-8b07-787cd860e731",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Rock 'n Rhythm",
+      "artist": {
+       "type": null,
+       "disambiguation": "",
+       "country": null,
+       "sort-name": "Rock 'n Rhythm",
+       "name": "Rock 'n Rhythm",
+       "type-id": null,
+       "id": "74327bfa-8065-45cb-b3ae-4f5881f9be7a"
+      }
+     }
+    ],
+    "title": "New York Groove",
+    "disambiguation": ""
+   },
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "direction": "backward",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   }
+  },
+  {
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "attributes": [],
+   "end": null,
+   "attribute-ids": {},
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Ace Frehley",
+      "artist": {
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "sort-name": "Frehley, Ace",
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "type": null
+      }
+     }
+    ],
+    "video": false,
+    "id": "2f92ab75-59ec-42be-9510-124ead481ed8",
+    "length": 183693
+   },
+   "type": "performance"
+  },
+  {
+   "type": "performance",
+   "recording": {
+    "id": "c2764916-9e0e-499e-bc37-2761c5fe6a35",
+    "video": false,
+    "length": 217000,
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "name": "Sweet",
+      "artist": {
+       "id": "129df65c-23f8-440c-b066-4bc064f619a9",
+       "name": "Andy Scott’s Sweet",
+       "type-id": null,
+       "sort-name": "Scott, Andy, Sweet",
+       "country": "GB",
+       "disambiguation": "",
+       "type": null
+      }
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove (Acoustic)"
+   },
+   "source-credit": "",
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-type": "recording",
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {}
+  },
+  {
+   "target-type": "recording",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "target-credit": "",
+   "ended": false,
+   "begin": null,
+   "direction": "backward",
+   "end": null,
+   "attributes": [
+    "cover"
+   ],
+   "source-credit": "",
+   "recording": {
+    "title": "New York Groove (Audiomachine remix)",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "artist": {
+       "id": "33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+       "type-id": null,
+       "name": "Ace Frehley",
+       "sort-name": "Frehley, Ace",
+       "country": "US",
+       "disambiguation": "American rock guitarist",
+       "type": null
+      },
+      "name": "Ace Frehley",
+      "joinphrase": ""
+     }
+    ],
+    "video": false,
+    "id": "9630f6d5-2b6d-4f46-aaef-83c395aea1ec",
+    "length": 169345
+   },
+   "type": "performance"
+  },
+  {
+   "source-credit": "",
+   "recording": {
+    "artist-credit": [
+     {
+      "name": "Hello",
+      "artist": {
+       "type-id": null,
+       "name": "Hello",
+       "sort-name": "Hello",
+       "id": "1c7bc30f-2c52-4753-9a64-0ddd4818ab47",
+       "type": null,
+       "country": "GB",
+       "disambiguation": "British glam rock band"
+      },
+      "joinphrase": ""
+     }
+    ],
+    "disambiguation": "",
+    "title": "New York Groove (demo)",
+    "id": "8994efb2-475d-4238-a469-b6bdd4d6596c",
+    "video": false,
+    "length": null
+   },
+   "type": "performance",
+   "attribute-values": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "target-type": "recording",
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "ended": false,
+   "target-credit": "",
+   "begin": null
+  },
+  {
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "attribute-values": {},
+   "target-type": "recording",
+   "attributes": [
+    "cover"
+   ],
+   "end": null,
+   "direction": "backward",
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "attribute-ids": {
+    "cover": "1e8536bd-6eda-3822-8e78-1c0f4d3d2113"
+   },
+   "source-credit": "",
+   "type": "performance",
+   "recording": {
+    "length": 204400,
+    "video": false,
+    "id": "3ad77958-be0d-4841-aca9-f80e506bbf28",
+    "title": "New York Groove (Trail mix)",
+    "disambiguation": "",
+    "artist-credit": [
+     {
+      "joinphrase": "",
+      "artist": {
+       "name": "The Impostors 6",
+       "type-id": null,
+       "sort-name": "Impostors 6, The",
+       "id": "6a2159a7-e6ee-4d12-b950-3e7ad8faa870",
+       "type": null,
+       "country": null,
+       "disambiguation": ""
+      },
+      "name": "The Impostors 6"
+     }
+    ]
+   }
+  },
+  {
+   "attribute-ids": {},
+   "target-credit": "",
+   "begin": null,
+   "ended": false,
+   "url": {
+    "resource": "https://secondhandsongs.com/work/61812",
+    "id": "15e4ff2e-1d0c-4864-b489-109d4a892158"
+   },
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "target-type": "url",
+   "attribute-values": {},
+   "type-id": "b80dff64-9560-445a-b824-c8b432d77a52",
+   "type": "secondhandsongs",
+   "source-credit": ""
+  },
+  {
+   "type": "songfacts",
+   "source-credit": "",
+   "attributes": [],
+   "end": null,
+   "direction": "backward",
+   "url": {
+    "resource": "http://www.songfacts.com/detail.php?id=10302",
+    "id": "7f898753-cc70-4607-89c2-015587a0b2e3"
+   },
+   "ended": false,
+   "target-credit": "",
+   "begin": null,
+   "attribute-ids": {},
+   "type-id": "80402bbc-1aec-41d1-a5be-b599b89bc3c3",
+   "attribute-values": {},
+   "target-type": "url"
+  },
+  {
+   "source-credit": "",
+   "type": "wikidata",
+   "attribute-values": {},
+   "type-id": "587fdd8f-080e-46a9-97af-6425ebbcb3a2",
+   "target-type": "url",
+   "url": {
+    "id": "cdeed9eb-79b0-4973-83c0-75b0b36c48ba",
+    "resource": "https://www.wikidata.org/wiki/Q1415482"
+   },
+   "direction": "backward",
+   "end": null,
+   "attributes": [],
+   "attribute-ids": {},
+   "target-credit": "",
+   "ended": false,
+   "begin": null
+  }
+ ],
+ "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+ "iswcs": [
+  "T-900.099.056-7"
+ ],
+ "id": "8d9cf249-1f5c-433c-a0ea-dae54cf38a7e"
+}

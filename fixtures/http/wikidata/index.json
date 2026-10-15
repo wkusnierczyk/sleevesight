@@ -1,0 +1,1053 @@
+[
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=10fe804c-59d3-4ac4-9230-4a0f34124481",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-10fe804c-59d3-4ac4-9230-4a0f34124481.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=21666405-49f8-44f6-94bb-e064f202f7ba",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-21666405-49f8-44f6-94bb-e064f202f7ba.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=33d700ce-064f-44f6-ab9e-60f9eed0fca1",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-33d700ce-064f-44f6-ab9e-60f9eed0fca1.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=592a3b6d-c42b-4567-99c9-ecf63bd66499",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-592a3b6d-c42b-4567-99c9-ecf63bd66499.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=85cc55f5-317f-4d3b-8e2f-070a8936229f",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-85cc55f5-317f-4d3b-8e2f-070a8936229f.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-9d97b077-b28d-4ba8-a3d9-c71926e3b2b6.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=cc6115aa-379c-4133-9f46-5743a4a341d0",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-cc6115aa-379c-4133-9f46-5743a4a341d0.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=cff63c14-b081-4686-9357-eea84d5348fc",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-cff63c14-b081-4686-9357-eea84d5348fc.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
+   "srsearch": "haswbstatement:P434=dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q1299",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q1299-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q1338638",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q1338638-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q1422720",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q1422720-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q1431236",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q1431236-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q174957",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q174957-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q218255",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q218255-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q236543",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q236543-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q2643",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q2643-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q27593",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q27593-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q319610",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q319610-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q346785",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q346785-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q359552",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q359552-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q5921",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q5921-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q6043042",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q6043042-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q60536435",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q60536435-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetclaims",
+   "entity": "Q62026424",
+   "property": "P434",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetclaims-q62026424-p434.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q104092599",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q104092599.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1051594",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1051594.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q11399|Q9759|Q7749|Q772494|Q165745|Q585643|Q5494088|Q935843|Q179191|Q754841|Q1738793|Q17985761",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q11399-q9759-q7749-q772494-q165745-q585643-q5494088-q935843-q179191-q754841-q1738793-q.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q12001651",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q12001651.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1299|Q1431236|Q174957|Q2643|Q373342",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1299-q1431236-q174957-q2643-q373342.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1338638",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1338638.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1415482",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1415482.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1422720",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1422720-2.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1422720",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1422720.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1437885",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1437885.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q1497786",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q1497786.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q16414|Q183504|Q202440",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q16414-q183504-q202440.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q18552823",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q18552823.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q2014237",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q2014237.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q20687410",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q20687410.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q210401",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q210401.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q211573|Q557632|Q2733913",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q211573-q557632-q2733913.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q220830|Q7749|Q1650296|Q193023|Q5754809",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q220830-q7749-q1650296-q193023-q5754809.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q2221906",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q2221906.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q223769|Q240523|Q966564|Q1193843|Q7562525|Q183387",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q223769-q240523-q966564-q1193843-q7562525-q183387.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q236543|Q629220|Q373342",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q236543-q629220-q373342.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q236543",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q236543.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q254638",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q254638.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q26876|Q4661964|Q11700058|Q4413456",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q26876-q4661964-q11700058-q4413456.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q272203",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q272203.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q293753",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q293753.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q319610|Q1355924|Q11399|Q1046707",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q319610-q1355924-q11399-q1046707.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q319610",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q319610.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q346785|Q1650296",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q346785-q1650296.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q346785",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q346785.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q354250|Q5076154",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q354250-q5076154.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q354250",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q354250.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q359552|Q186472|Q645889",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q359552-q186472-q645889.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q359552",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q359552.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q36050",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q36050.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q4006228",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q4006228.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q4091249",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q4091249.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q43343|Q186472|Q83440|Q37073|Q11399|Q6554990|Q645889|Q1542119|Q843402|Q194540|Q861660|Q15278107|Q1032083|Q857933|Q742162|Q3362498|Q6314075|Q6314105|Q3362499|Q3405798|Q28663097|Q5464413",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q43343-q186472-q83440-q37073-q11399-q6554990-q645889-q1542119-q843402-q194540-q861660.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q5076154",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q5076154.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q52151598|Q11401|Q12362064|Q231694",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q52151598-q11401-q12362064-q231694.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q5921",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q5921.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q5979792",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q5979792.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q60536435|Q1299|Q218255|Q6043042|Q5921|Q11399",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q60536435-q1299-q218255-q6043042-q5921-q11399.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q62026424|Q27593|Q1338638|Q126826|Q519289|Q9759",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q62026424-q27593-q1338638-q126826-q519289-q9759.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q65088638",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q65088638.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q76364|Q492264|Q4887811",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q76364-q492264-q4887811.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q7639816",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q7639816.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q7977892",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q7977892.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q797806",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q797806.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q83270",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q83270.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q83440|Q217191|Q37073|Q378988|Q2280497|Q193023|Q1392321|Q183412|Q15278107|Q5593802|Q935283|Q6314054|Q6314103|Q6314042|Q19859744|Q3362499|Q857933|Q17985761|Q377857",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q83440-q217191-q37073-q378988-q2280497-q193023-q1392321-q183412-q15278107-q5593802-q93.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q854451|Q186472|Q231694",
+   "props": "labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q854451-q186472-q231694.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "wbgetentities",
+   "ids": "Q97015538",
+   "props": "claims|sitelinks|labels",
+   "languages": "en",
+   "sitefilter": "enwiki",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "wbgetentities-q97015538.json"
+ }
+]

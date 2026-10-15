@@ -1,0 +1,199 @@
+{
+  "artist": {
+    "name": "Gordon Lightfoot",
+    "mbid": "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6",
+    "url": "https://www.last.fm/music/Gordon+Lightfoot",
+    "image": [
+      {
+        "#text": "",
+        "size": "small"
+      },
+      {
+        "#text": "",
+        "size": "medium"
+      },
+      {
+        "#text": "",
+        "size": "large"
+      },
+      {
+        "#text": "",
+        "size": "extralarge"
+      },
+      {
+        "#text": "",
+        "size": "mega"
+      },
+      {
+        "#text": "",
+        "size": ""
+      }
+    ],
+    "streamable": "0",
+    "ontour": "0",
+    "stats": {
+      "listeners": "683942",
+      "playcount": "9876543"
+    },
+    "similar": {
+      "artist": [
+        {
+          "name": "Jim Croce",
+          "url": "https://www.last.fm/music/Jim+Croce",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "John Denver",
+          "url": "https://www.last.fm/music/John+Denver",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "James Taylor",
+          "url": "https://www.last.fm/music/James+Taylor",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        },
+        {
+          "name": "Harry Chapin",
+          "url": "https://www.last.fm/music/Harry+Chapin",
+          "image": [
+            {
+              "#text": "",
+              "size": "small"
+            },
+            {
+              "#text": "",
+              "size": "medium"
+            },
+            {
+              "#text": "",
+              "size": "large"
+            },
+            {
+              "#text": "",
+              "size": "extralarge"
+            },
+            {
+              "#text": "",
+              "size": "mega"
+            },
+            {
+              "#text": "",
+              "size": ""
+            }
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "tag": [
+        {
+          "name": "folk",
+          "url": "https://www.last.fm/tag/folk"
+        },
+        {
+          "name": "singer-songwriter",
+          "url": "https://www.last.fm/tag/singer-songwriter"
+        },
+        {
+          "name": "70s",
+          "url": "https://www.last.fm/tag/70s"
+        },
+        {
+          "name": "canadian",
+          "url": "https://www.last.fm/tag/canadian"
+        },
+        {
+          "name": "acoustic",
+          "url": "https://www.last.fm/tag/acoustic"
+        }
+      ]
+    },
+    "bio": {
+      "links": {
+        "link": {
+          "#text": "",
+          "rel": "original",
+          "href": "https://www.last.fm/music/Gordon+Lightfoot/+wiki"
+        }
+      },
+      "published": "01 Jan 2010, 00:00",
+      "summary": "Gordon Lightfoot was a Canadian singer-songwriter, born on 17 November 1938 in Orillia, Ontario, who died on 1 May 2023 at the age of 84. He is credited with helping to define the singer-songwriter era of the 1970s, and is counted among Canada&#39;s most influential songwriters. His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers &amp; loneliness. Sundown, released in 1974, was his only number one on the US Hot 100. <a href=\"https://www.last.fm/music/Gordon+Lightfoot\">Read more on Last.fm</a>",
+      "content": "Gordon Lightfoot was a Canadian singer-songwriter. User-contributed text is available under the Creative Commons By-SA License; additional terms may apply."
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+ "first-release-date": "1969",
+ "title": "Snowbird",
+ "length": 131000,
+ "artist-credit": [
+  {
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Murray, Anne",
+    "id": "cff63c14-b081-4686-9357-eea84d5348fc",
+    "name": "Anne Murray",
+    "disambiguation": "Canadian pop/country singer",
+    "country": "CA"
+   },
+   "joinphrase": "",
+   "name": "Anne Murray"
+  }
+ ],
+ "id": "45249142-8125-45ce-92ad-4afec5a040fa",
+ "relations": [
+  {
+   "direction": "backward",
+   "type": "arranger",
+   "attributes": [],
+   "source-credit": "",
+   "target-credit": "",
+   "end": null,
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Ahern, Brian",
+    "disambiguation": "",
+    "id": "a74e2541-669b-4574-ae16-5deee3066d51",
+    "name": "Brian Ahern",
+    "country": "CA"
+   },
+   "type-id": "22661fb8-cdb7-4f67-8385-b2a8be6c9f0d",
+   "begin": null,
+   "attribute-values": {},
+   "attribute-ids": {},
+   "ended": false,
+   "target-type": "artist"
+  },
+  {
+   "attribute-values": {},
+   "target-type": "artist",
+   "attribute-ids": {},
+   "ended": false,
+   "type-id": "5c0ceac3-feb4-41f0-868d-dc06f6e27fc0",
+   "artist": {
+    "id": "a74e2541-669b-4574-ae16-5deee3066d51",
+    "name": "Brian Ahern",
+    "disambiguation": "",
+    "country": "CA",
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "type": "Person",
+    "sort-name": "Ahern, Brian"
+   },
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "attributes": [],
+   "source-credit": "",
+   "direction": "backward",
+   "type": "producer"
+  },
+  {
+   "work": {
+    "type": "Song",
+    "title": "Snowbird",
+    "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+    "iswcs": [
+     "T-072.147.417-4"
+    ],
+    "language": "eng",
+    "attributes": [],
+    "languages": [
+     "eng"
+    ],
+    "disambiguation": "",
+    "id": "f17eefd3-54ad-371a-90da-488571c94f99"
+   },
+   "attribute-values": {},
+   "target-type": "work",
+   "ended": false,
+   "attribute-ids": {},
+   "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
+   "begin": null,
+   "target-credit": "",
+   "end": null,
+   "attributes": [],
+   "source-credit": "",
+   "direction": "forward",
+   "type": "performance"
+  }
+ ],
+ "video": false,
+ "disambiguation": ""
+}

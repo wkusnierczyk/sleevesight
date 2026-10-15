@@ -1,0 +1,804 @@
+{
+ "entities": {
+  "Q5979792": {
+   "type": "item",
+   "id": "Q5979792",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "I Will Follow You into the Dark"
+    }
+   },
+   "claims": {
+    "P175": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P175",
+       "hash": "a3e418ce2f9ac6c38882f78f0b3ca82814b3c24c",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 16414,
+         "id": "Q16414"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "q5979792$96FEB706-8F76-46F4-91A7-B91100414CFE",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P264": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P264",
+       "hash": "2dd3e49be87ae82e8a9edd8fedd0b57b2a7a96e4",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 202440,
+         "id": "Q202440"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "q5979792$CE97E39D-867A-4AB7-8E1D-241639BAD8B4",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P31",
+       "hash": "33d81754a79b2dab75d17c156313b0f8f0f4f086",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 134556,
+         "id": "Q134556"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "q5979792$BBC18D90-20D9-47BA-A7C1-DEA48C174571",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P155": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P155",
+       "hash": "5441d1d474cd90820ee41f5a1da3a911ec831bf8",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 5187860,
+         "id": "Q5187860"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q5979792$C0467AA1-9057-4892-8BE4-5E054DA646E2",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P156": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P156",
+       "hash": "36498e34d60d693073e228c07be51e4684a949f7",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 5979813,
+         "id": "Q5979813"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q5979792$DDB0D49C-378F-4FB3-B0CE-4EE95DB1F91B",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P495": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P495",
+       "hash": "7f985e15819b74ed189d022e004890e66d2ae42e",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 30,
+         "id": "Q30"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q5979792$1044F092-2AAD-42B8-A127-2CA1AE90F175",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P436": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P436",
+       "hash": "cd4cda9ee0f8b2f32bc21bf767398328eb82ff28",
+       "datavalue": {
+        "value": "2166a002-b4de-489b-a1e5-e94a39c70908",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q5979792$57C827DE-D82D-4587-BE43-6E77B23D8907",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "706208b3024200fd0a39ad499808dd0d98d74065",
+        "snaks": {
+         "P248": [
+          {
+           "snaktype": "value",
+           "property": "P248",
+           "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 14005,
+             "id": "Q14005"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P248"
+        ]
+       }
+      ]
+     }
+    ],
+    "P2624": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P2624",
+       "hash": "d14063e9f9387e7300dd46f7da86b6cbb8512b02",
+       "datavalue": {
+        "value": "i-will-follow-you-into-the-dark-lyrics-death-cab-for-cutie",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q5979792$CE003291-BA32-4628-8058-5600887D7AB4",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P136": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P136",
+       "hash": "6e4abe49f0e96500ca923d4535bced4ea177ae66",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 183504,
+         "id": "Q183504"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q5979792$351B7335-EAA1-4690-A187-6BA65BAC327B",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P577": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P577",
+       "hash": "c0848793cfded1c7035708927f9d3859d1647170",
+       "datavalue": {
+        "value": {
+         "time": "+2006-01-01T00:00:00Z",
+         "timezone": 0,
+         "before": 0,
+         "after": 0,
+         "precision": 9,
+         "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+        },
+        "type": "time"
+       },
+       "datatype": "time"
+      },
+      "type": "statement",
+      "id": "Q5979792$89384D64-CA83-49E2-92D3-DDEC142811DD",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "fa278ebfc458360e5aed63d5058cca83c46134f1",
+        "snaks": {
+         "P143": [
+          {
+           "snaktype": "value",
+           "property": "P143",
+           "hash": "e4f6d9441d0600513c4533c672b5ab472dc73694",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 328,
+             "id": "Q328"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P143"
+        ]
+       }
+      ]
+     }
+    ],
+    "P1954": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1954",
+       "hash": "4895eb1424ddd58e9773bbfa789cdb3f681ee6a7",
+       "datavalue": {
+        "value": "27952",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q5979792$3e9c1277-194e-493d-a3a4-b7afc073aca1",
+      "rank": "normal",
+      "references": [
+       {
+        "hash": "dc7ed8692db6ee645a67ce96dbd5ecca768383a1",
+        "snaks": {
+         "P887": [
+          {
+           "snaktype": "value",
+           "property": "P887",
+           "hash": "0ca41c4135639ebe0e0ddac1f02e9b8648203ca7",
+           "datavalue": {
+            "value": {
+             "entity-type": "item",
+             "numeric-id": 11660,
+             "id": "Q11660"
+            },
+            "type": "wikibase-entityid"
+           },
+           "datatype": "wikibase-item"
+          }
+         ],
+         "P813": [
+          {
+           "snaktype": "value",
+           "property": "P813",
+           "hash": "a450999b51bcabb241de9ae30602e93be3f99075",
+           "datavalue": {
+            "value": {
+             "time": "+2019-10-09T00:00:00Z",
+             "timezone": 0,
+             "before": 0,
+             "after": 0,
+             "precision": 11,
+             "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+            },
+            "type": "time"
+           },
+           "datatype": "time"
+          }
+         ]
+        },
+        "snaks-order": [
+         "P887",
+         "P813"
+        ]
+       }
+      ]
+     }
+    ],
+    "P1651": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1651",
+       "hash": "ee304fca8ed81ec2bc48b869c433c073b4d1a113",
+       "datavalue": {
+        "value": "zYTEb7fVdzw",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "710da4f3a20cbe35b5ad078c9ed2a0a95d1ae38a",
+         "datavalue": {
+          "value": "I Will Follow You into the Dark",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ],
+       "P5436": [
+        {
+         "snaktype": "value",
+         "property": "P5436",
+         "hash": "54ad5ed25816b218667a5f68137c9cc3504030f1",
+         "datavalue": {
+          "value": {
+           "amount": "+3277390",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P577": [
+        {
+         "snaktype": "value",
+         "property": "P577",
+         "hash": "90c3ff5268acfa84cf462286ae9d0c2e6efdc147",
+         "datavalue": {
+          "value": {
+           "time": "+2015-09-11T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ],
+       "P2047": [
+        {
+         "snaktype": "value",
+         "property": "P2047",
+         "hash": "737d5bbddb8a7c28053d5b75050fc17308e6fb6b",
+         "datavalue": {
+          "value": {
+           "amount": "+190.0",
+           "unit": "http://www.wikidata.org/entity/Q11574",
+           "upperBound": "+191.0",
+           "lowerBound": "+189.0"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P585": [
+        {
+         "snaktype": "value",
+         "property": "P585",
+         "hash": "ce5b900ea4f1890beaa70730df00a780e3899afc",
+         "datavalue": {
+          "value": {
+           "time": "+2021-03-21T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810",
+       "P5436",
+       "P577",
+       "P2047",
+       "P585"
+      ],
+      "id": "Q5979792$ad2396f4-4516-fdc9-da91-85bb8930e91a",
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P1651",
+       "hash": "e68a40373040db9e27aaae8e11427e0a3bdff438",
+       "datavalue": {
+        "value": "3iV_1ESMHaI",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "qualifiers": {
+       "P1810": [
+        {
+         "snaktype": "value",
+         "property": "P1810",
+         "hash": "aeded8fa81363ff770f2c6dcfee4c672d7e97ef7",
+         "datavalue": {
+          "value": "Death Cab for Cutie - I Will Follow You into the Dark (Official Music Video)",
+          "type": "string"
+         },
+         "datatype": "string"
+        }
+       ],
+       "P5436": [
+        {
+         "snaktype": "value",
+         "property": "P5436",
+         "hash": "f05b0b3d1fd6b96c31b490a163cd7c7b7065355f",
+         "datavalue": {
+          "value": {
+           "amount": "+1141252",
+           "unit": "1"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P577": [
+        {
+         "snaktype": "value",
+         "property": "P577",
+         "hash": "132233f38d38f797b1317d1e3e2c3720114e1ec5",
+         "datavalue": {
+          "value": {
+           "time": "+2007-08-02T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ],
+       "P2047": [
+        {
+         "snaktype": "value",
+         "property": "P2047",
+         "hash": "ba806a5c50850c828b7dbee2a1afa584eeb6730a",
+         "datavalue": {
+          "value": {
+           "amount": "+241.0",
+           "unit": "http://www.wikidata.org/entity/Q11574",
+           "upperBound": "+242.0",
+           "lowerBound": "+240.0"
+          },
+          "type": "quantity"
+         },
+         "datatype": "quantity"
+        }
+       ],
+       "P585": [
+        {
+         "snaktype": "value",
+         "property": "P585",
+         "hash": "ce5b900ea4f1890beaa70730df00a780e3899afc",
+         "datavalue": {
+          "value": {
+           "time": "+2021-03-21T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "qualifiers-order": [
+       "P1810",
+       "P5436",
+       "P577",
+       "P2047",
+       "P585"
+      ],
+      "id": "Q5979792$a84b2516-4e89-26f9-e297-503d9383ebf5",
+      "rank": "normal"
+     }
+    ],
+    "P646": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P646",
+       "hash": "a9e4f9b9b4c2ca5bf547cf7e0ca9bd4d203ec3e1",
+       "datavalue": {
+        "value": "/m/0ds1hz",
+        "type": "string"
+       },
+       "datatype": "external-id"
+      },
+      "type": "statement",
+      "id": "Q5979792$078A8C70-0C99-4049-A323-8974393772F2",
+      "rank": "normal"
+     }
+    ],
+    "P13602": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "property": "P13602",
+       "hash": "81bfe70e392e9ca2bef30d7b9f715ba19daadef0",
+       "datavalue": {
+        "value": {
+         "entity-type": "item",
+         "numeric-id": 16419,
+         "id": "Q16419"
+        },
+        "type": "wikibase-entityid"
+       },
+       "datatype": "wikibase-item"
+      },
+      "type": "statement",
+      "id": "Q5979792$88E0063F-D091-4EAC-9FAB-B6CFC185A682",
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "I Will Follow You into the Dark",
+     "badges": []
+    }
+   }
+  }
+ },
+ "success": 1
+}

@@ -1,0 +1,37 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Wonderland (song)",
+    "to": "Wonderland",
+    "tofragment": "Songs"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Wonderland (Reem song)",
+    "missing": true
+   },
+   {
+    "pageid": 1019170,
+    "ns": 0,
+    "title": "Wonderland",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q254638"
+    }
+   },
+   {
+    "pageid": 17757008,
+    "ns": 0,
+    "title": "Reem",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q4091249"
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,195 @@
+{
+ "entities": {
+  "Q83440": {
+   "type": "item",
+   "id": "Q83440",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "country music"
+    }
+   }
+  },
+  "Q217191": {
+   "type": "item",
+   "id": "Q217191",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "soft rock"
+    }
+   }
+  },
+  "Q37073": {
+   "type": "item",
+   "id": "Q37073",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "pop music"
+    }
+   }
+  },
+  "Q378988": {
+   "type": "item",
+   "id": "Q378988",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "adult contemporary music"
+    }
+   }
+  },
+  "Q2280497": {
+   "type": "item",
+   "id": "Q2280497",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "country pop"
+    }
+   }
+  },
+  "Q193023": {
+   "type": "item",
+   "id": "Q193023",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Capitol Records"
+    }
+   }
+  },
+  "Q1392321": {
+   "type": "item",
+   "id": "Q1392321",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Liberty Records"
+    }
+   }
+  },
+  "Q183412": {
+   "type": "item",
+   "id": "Q183412",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "EMI"
+    }
+   }
+  },
+  "Q15278107": {
+   "type": "item",
+   "id": "Q15278107",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Companion of the Order of Canada"
+    }
+   }
+  },
+  "Q5593802": {
+   "type": "item",
+   "id": "Q5593802",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Grammy Award for Best Female Country Vocal Performance"
+    }
+   }
+  },
+  "Q935283": {
+   "type": "item",
+   "id": "Q935283",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Grammy Award for Best Female Pop Vocal Performance"
+    }
+   }
+  },
+  "Q6314054": {
+   "type": "item",
+   "id": "Q6314054",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Juno Award for Children's Album of the Year"
+    }
+   }
+  },
+  "Q6314103": {
+   "type": "item",
+   "id": "Q6314103",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Juno Award for Single of the Year"
+    }
+   }
+  },
+  "Q6314042": {
+   "type": "item",
+   "id": "Q6314042",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Juno Award for Album of the Year"
+    }
+   }
+  },
+  "Q19859744": {
+   "type": "item",
+   "id": "Q19859744",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Favorite Country Single"
+    }
+   }
+  },
+  "Q3362499": {
+   "type": "item",
+   "id": "Q3362499",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canadian Music Hall of Fame"
+    }
+   }
+  },
+  "Q857933": {
+   "type": "item",
+   "id": "Q857933",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Canada's Walk of Fame"
+    }
+   }
+  },
+  "Q17985761": {
+   "type": "item",
+   "id": "Q17985761",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "star on Hollywood Walk of Fame"
+    }
+   }
+  },
+  "Q377857": {
+   "type": "item",
+   "id": "Q377857",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Order of Nova Scotia"
+    }
+   }
+  }
+ },
+ "success": 1
+}

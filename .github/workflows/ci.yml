@@ -4,16 +4,16 @@ on:
   pull_request:
     paths-ignore:
       - "**/*.md"
-      - "design/**"
   push:
-    branches: [main]
+    branches: [main, "dev-*"]
     paths-ignore:
       - "**/*.md"
-      - "design/**"
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A pull request's runs share a group, so a new push cancels the superseded run. Each branch push
+  # gets a group of its own, so no run of a merge is cancelled or replaced while pending.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -31,9 +31,18 @@ jobs:
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          # Pushes to `main` and `dev-*` write the cache, since an integration branch's
+          # dependencies run ahead of `main`'s.
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Build, test and lint
         run: ./gradlew build --console=plain
+
+      # Nested TestKit builds of the convention plugins; they need Maven Central, so they are not
+      # part of `build`.
+      - name: Functional tests of the build logic
+        run: ./gradlew :build-logic:functionalTest --console=plain
 
       # `checkManifest` and the debug APK come back with `:app` (#47).
       - name: Structural checks

@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q16414": {
+   "type": "item",
+   "id": "Q16414",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Death Cab for Cutie"
+    }
+   }
+  },
+  "Q183504": {
+   "type": "item",
+   "id": "Q183504",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "indie rock"
+    }
+   }
+  },
+  "Q202440": {
+   "type": "item",
+   "id": "Q202440",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Atlantic Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

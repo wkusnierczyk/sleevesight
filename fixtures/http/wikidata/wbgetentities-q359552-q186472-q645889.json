@@ -1,0 +1,35 @@
+{
+ "entities": {
+  "Q359552": {
+   "type": "item",
+   "id": "Q359552",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Gordon Lightfoot"
+    }
+   }
+  },
+  "Q186472": {
+   "type": "item",
+   "id": "Q186472",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "folk rock"
+    }
+   }
+  },
+  "Q645889": {
+   "type": "item",
+   "id": "Q645889",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Reprise Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

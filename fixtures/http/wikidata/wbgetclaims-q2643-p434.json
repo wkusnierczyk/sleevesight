@@ -1,0 +1,84 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "3962352606a9e5039246cc14e0104146dc077358",
+     "datavalue": {
+      "value": "42a8f507-8412-4611-854f-926571049fa0",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "qualifiers": {
+     "P1810": [
+      {
+       "snaktype": "value",
+       "property": "P1810",
+       "hash": "86a800376be90d6f96f815eb5c735b0781be403e",
+       "datavalue": {
+        "value": "George Harrison (The Beatles)",
+        "type": "string"
+       },
+       "datatype": "string"
+      }
+     ]
+    },
+    "qualifiers-order": [
+     "P1810"
+    ],
+    "id": "q2643$7D8BD963-6842-4904-B1AF-D3C0A22D3578",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "a24114093ec38be907851d119128e560a537c6d2",
+      "snaks": {
+       "P248": [
+        {
+         "snaktype": "value",
+         "property": "P248",
+         "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 14005,
+           "id": "Q14005"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "14d055837e38170aa5ae6a3f9ccdc799ac06170f",
+         "datavalue": {
+          "value": {
+           "time": "+2022-01-13T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P248",
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,45 @@
+{
+ "entities": {
+  "Q319610": {
+   "type": "item",
+   "id": "Q319610",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Ace Frehley"
+    }
+   }
+  },
+  "Q1355924": {
+   "type": "item",
+   "id": "Q1355924",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Russ Ballard"
+    }
+   }
+  },
+  "Q11399": {
+   "type": "item",
+   "id": "Q11399",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "rock music"
+    }
+   }
+  },
+  "Q1046707": {
+   "type": "item",
+   "id": "Q1046707",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Casablanca Records"
+    }
+   }
+  }
+ },
+ "success": 1
+}

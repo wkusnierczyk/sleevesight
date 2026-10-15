@@ -1,0 +1,44 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "redirects": [
+   {
+    "from": "Up Down",
+    "to": "Up and Down"
+   },
+   {
+    "from": "Up Down (song)",
+    "to": "Up and Down"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "Peleboy",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "Up Down (Peleboy song)",
+    "missing": true
+   },
+   {
+    "pageid": 13206220,
+    "ns": 0,
+    "title": "Up and Down",
+    "pageprops": {
+     "disambiguation": "",
+     "wikibase_item": "Q4006228"
+    }
+   },
+   {
+    "pageid": 46982499,
+    "ns": 0,
+    "title": "Tony K",
+    "pageprops": {
+     "wikibase_item": "Q20687410"
+    }
+   }
+  ]
+ }
+}

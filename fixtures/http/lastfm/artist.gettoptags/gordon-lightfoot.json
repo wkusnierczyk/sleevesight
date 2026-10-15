@@ -1,0 +1,49 @@
+{
+  "toptags": {
+    "tag": [
+      {
+        "count": 100,
+        "name": "folk",
+        "url": "https://www.last.fm/tag/folk"
+      },
+      {
+        "count": 71,
+        "name": "singer-songwriter",
+        "url": "https://www.last.fm/tag/singer-songwriter"
+      },
+      {
+        "count": 38,
+        "name": "70s",
+        "url": "https://www.last.fm/tag/70s"
+      },
+      {
+        "count": 33,
+        "name": "canadian",
+        "url": "https://www.last.fm/tag/canadian"
+      },
+      {
+        "count": 24,
+        "name": "acoustic",
+        "url": "https://www.last.fm/tag/acoustic"
+      },
+      {
+        "count": 12,
+        "name": "country",
+        "url": "https://www.last.fm/tag/country"
+      },
+      {
+        "count": 8,
+        "name": "soft rock",
+        "url": "https://www.last.fm/tag/soft+rock"
+      },
+      {
+        "count": 3,
+        "name": "seen live",
+        "url": "https://www.last.fm/tag/seen+live"
+      }
+    ],
+    "@attr": {
+      "artist": "Gordon Lightfoot"
+    }
+  }
+}

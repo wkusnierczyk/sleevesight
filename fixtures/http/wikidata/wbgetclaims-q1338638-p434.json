@@ -1,0 +1,47 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "7caa77fb9f364765478d834ee7c77c849a7b8901",
+     "datavalue": {
+      "value": "dbd8e1e8-b3d5-4c5f-9343-bbe5e86380a6",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "id": "q1338638$3ACB214F-7948-4A4A-B301-DA124B5BBED1",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "706208b3024200fd0a39ad499808dd0d98d74065",
+      "snaks": {
+       "P248": [
+        {
+         "snaktype": "value",
+         "property": "P248",
+         "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 14005,
+           "id": "Q14005"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P248"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

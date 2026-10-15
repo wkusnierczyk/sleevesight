@@ -1,0 +1,75 @@
+{
+ "created": "2026-10-14T18:07:08.308Z",
+ "count": 1,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "55557e4c-ad06-4611-b415-5365356b0392",
+   "score": 100,
+   "artist-credit-id": "5db56bdc-d830-4191-8ae6-328bfa2345ec",
+   "title": "Here Comes The Sun",
+   "length": 77688,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Alexander S.",
+     "artist": {
+      "id": "85cc55f5-317f-4d3b-8e2f-070a8936229f",
+      "name": "Alexander S.",
+      "sort-name": "Alexander S."
+     }
+    }
+   ],
+   "first-release-date": "2023-11-20",
+   "releases": [
+    {
+     "id": "ae1c2ec0-d010-48c4-839a-0d699755d57d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "Here Comes The Sun",
+     "status": "Official",
+     "release-group": {
+      "id": "760a5490-7487-4756-8805-8355e6b68c69",
+      "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+      "title": "Here Comes The Sun",
+      "primary-type": "Single"
+     },
+     "date": "2023-11-20",
+     "country": "XW",
+     "release-events": [
+      {
+       "date": "2023-11-20",
+       "area": {
+        "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+        "name": "[Worldwide]",
+        "sort-name": "[Worldwide]",
+        "iso-3166-1-codes": [
+         "XW"
+        ]
+       }
+      }
+     ],
+     "track-count": 1,
+     "media": [
+      {
+       "id": "c2489e00-7775-4ac1-80e8-250f6262f302",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "30881254-b686-473c-ae07-0e10b144a36b",
+         "number": "1",
+         "title": "Here Comes The Sun",
+         "length": 77688
+        }
+       ],
+       "track-count": 1,
+       "track-offset": 0
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

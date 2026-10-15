@@ -1,0 +1,84 @@
+{
+ "claims": {
+  "P434": [
+   {
+    "mainsnak": {
+     "snaktype": "value",
+     "property": "P434",
+     "hash": "776fffe5e4125eeca2b3bee3199be2ca560f4d46",
+     "datavalue": {
+      "value": "592a3b6d-c42b-4567-99c9-ecf63bd66499",
+      "type": "string"
+     },
+     "datatype": "external-id"
+    },
+    "type": "statement",
+    "qualifiers": {
+     "P1810": [
+      {
+       "snaktype": "value",
+       "property": "P1810",
+       "hash": "658947e5a8b4fc4b881f0b9c941c37c867ce1d88",
+       "datavalue": {
+        "value": "Chuck Berry",
+        "type": "string"
+       },
+       "datatype": "string"
+      }
+     ]
+    },
+    "qualifiers-order": [
+     "P1810"
+    ],
+    "id": "q5921$503D9EA8-25C5-49EE-85B8-8D6243463934",
+    "rank": "normal",
+    "references": [
+     {
+      "hash": "a398371414c2f54ef20d17ce9e5ed7cc17401ecd",
+      "snaks": {
+       "P248": [
+        {
+         "snaktype": "value",
+         "property": "P248",
+         "hash": "623cc8f0e2f65afe4d66b91962d354a2f3aa9a27",
+         "datavalue": {
+          "value": {
+           "entity-type": "item",
+           "numeric-id": 14005,
+           "id": "Q14005"
+          },
+          "type": "wikibase-entityid"
+         },
+         "datatype": "wikibase-item"
+        }
+       ],
+       "P813": [
+        {
+         "snaktype": "value",
+         "property": "P813",
+         "hash": "6a90de6101fdafc54818b607665a84b682925f58",
+         "datavalue": {
+          "value": {
+           "time": "+2022-04-17T00:00:00Z",
+           "timezone": 0,
+           "before": 0,
+           "after": 0,
+           "precision": 11,
+           "calendarmodel": "http://www.wikidata.org/entity/Q1985727"
+          },
+          "type": "time"
+         },
+         "datatype": "time"
+        }
+       ]
+      },
+      "snaks-order": [
+       "P248",
+       "P813"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
