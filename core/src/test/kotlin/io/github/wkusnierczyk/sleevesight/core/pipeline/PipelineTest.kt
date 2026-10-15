@@ -244,6 +244,36 @@ class PipelineTest {
         }
 
     @Test
+    fun `a provisional result, left unverified by a failed request, is shown and not cached`() =
+        runTest {
+            val cache = MemoryCache()
+            val lastFm =
+                FakeAdapter(SourceId.LASTFM) { _, _ ->
+                    val lines = listOf(line(SourceId.LASTFM, "Last.fm line."))
+                    SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO, lines, provisional = true)
+                }
+            val pipeline = pipeline(listOf(mb(), lastFm), cache = cache)
+            val events = recording(pipeline)
+
+            val state = pipeline.run(sundown, write = false)
+
+            val shown = assertIs<SourceState.Done>(state.sources[SourceId.LASTFM]).result
+            assertEquals(listOf("Last.fm line."), shown.unverified.map { it.text })
+            assertEquals(
+                setOf(SourceId.MUSICBRAINZ),
+                cache.results.keys
+                    .map { it.first }
+                    .toSet(),
+            )
+            runCurrent()
+            assertTrue(
+                events.any {
+                    it is PipelineEvent.NotCached && it.source == SourceId.LASTFM && it.reason == TrackRun.PROVISIONAL
+                },
+            )
+        }
+
+    @Test
     fun `the player's length is part of the cache key, since resolution chooses the recording by it`() =
         runTest {
             val cache = MemoryCache()

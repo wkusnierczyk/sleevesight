@@ -72,6 +72,10 @@ val SourceAdapter.tag: String get() = id.tag
  * [genres] are the genre labels the source gives the track's artists (Last.fm's tags through the
  * vocabulary, `design/architecture.md`, *Genre labels*), from a verified or unverified match only;
  * empty for a source that gives none.
+ *
+ * [provisional] marks a result that a failed request of the verification left unverified, where a
+ * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
+ * shown, but not kept in the retrieval cache.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -80,6 +84,7 @@ data class SourceResult(
     val unverified: List<EvidenceDraft> = emptyList(),
     val rejections: List<Rejection> = emptyList(),
     val genres: List<GenreLabel> = emptyList(),
+    val provisional: Boolean = false,
 )
 
 /** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */

@@ -183,7 +183,8 @@ class Cli(
             val key = keys.lastFm
             return if (key != null && options.mode == Mode.LIVE) {
                 val vocabulary = GenreVocabulary.load(JvmResourceReader)
-                SourceStatus(SourceId.LASTFM, true, "") to LastFmAdapter(net, key, vocabulary, JvmAccentFolder)
+                SourceStatus(SourceId.LASTFM, true, "") to
+                    LastFmAdapter(net, MusicBrainzClient(net), key, vocabulary, JvmAccentFolder)
             } else {
                 SourceStatus(SourceId.LASTFM, false, "off: no Last.fm key exists yet, so nothing is recorded either") to
                     null

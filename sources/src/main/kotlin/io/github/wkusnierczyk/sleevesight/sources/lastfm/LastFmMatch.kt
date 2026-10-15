@@ -2,17 +2,36 @@ package io.github.wkusnierczyk.sleevesight.sources.lastfm
 
 import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
+import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistSearch
+import io.github.wkusnierczyk.sleevesight.core.resolution.MusicBrainzLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * How Last.fm's answer for one credited artist was judged (`design/architecture.md`, *Source
  * adapters*, *Last.fm verification*).
  */
 sealed interface LastFmMatch {
-    /** Last.fm's artist has the MusicBrainz id resolution gave the credited artist: its lines may be cited. */
+    /**
+     * Last.fm's artist has the MusicBrainz id resolution gave the credited artist, and no other
+     * artist shares its page: its lines may be cited.
+     */
     data object Verified : LastFmMatch
 
-    /** Same name, and nothing to check it against: its lines are shown, never cited (D4). */
+    /**
+     * Last.fm's artist has the resolved MusicBrainz id and its bio does not say the name is shared,
+     * but MusicBrainz does not show the name is the artist's alone: another artist has it, or the
+     * search could not tell. The bio's sentences may be cited; the listeners, tags and similar
+     * artists, which every artist of the name adds to, are shown, never cited.
+     */
+    data object BioVerified : LastFmMatch
+
+    /**
+     * Same name, and nothing to check it against, or a page its bio says several artists share, or
+     * one a failed search left unchecked: its lines are shown, never cited (D4).
+     */
     data object Unverified : LastFmMatch
 
     /** Last.fm answered with another artist: a different MusicBrainz id, or a corrected name nothing confirms. */
@@ -28,9 +47,9 @@ sealed interface LastFmMatch {
         val reason: String,
     ) : LastFmMatch
 
-    /** Whether the artist so judged may be shown: verified or unverified. */
+    /** Whether the artist so judged may be shown: verified, its bio verified, or unverified. */
     val shows: Boolean
-        get() = this == Verified || this == Unverified
+        get() = this == Verified || this == BioVerified || this == Unverified
 }
 
 /**
@@ -40,58 +59,151 @@ sealed interface LastFmMatch {
  * @property artist the artist Last.fm answered with, whatever the judgement. For a
  *   [LastFmMatch.Rejected] match it is another artist, kept for the reason only: show nothing of it.
  *   [shown] is the artist a card may show.
+ * @property provisional a failed MusicBrainz search left the match unverified, where a later lookup
+ *   may verify it.
  */
 data class LastFmArtistLookup(
     val credited: String,
     val match: LastFmMatch,
     val artist: LastFmArtist?,
     val genres: List<GenreLabel>,
+    val provisional: Boolean = false,
 ) {
-    /** [artist] when the match is verified or unverified, the only artist whose data may be shown. */
+    /**
+     * [artist] when the match is verified, bio-verified or unverified ([LastFmMatch.shows]), the
+     * only artist whose data may be shown.
+     */
     val shown: LastFmArtist?
         get() = artist.takeIf { match.shows }
 }
 
 /**
+ * A [match], and whether a failed request left it short of a final judgement, so that a later
+ * lookup may judge it otherwise ([io.github.wkusnierczyk.sleevesight.core.sources.SourceResult.provisional]).
+ */
+internal data class Judgement(
+    val match: LastFmMatch,
+    val provisional: Boolean = false,
+)
+
+/**
  * The check of Last.fm's [artist] against the credited name and the resolved artist, in this order:
  *
- * 1. Both have a MusicBrainz id: the same id verifies the match, even under a corrected name; a
- *    different one rejects it.
+ * 1. Both have a MusicBrainz id: a different one rejects the match. With the same id, even under a
+ *    corrected name: Last.fm keeps one page per name, so every artist of that name shares it.
+ *    - A bio that says the name is shared ([LastFmArtist.sharedPage]) leaves the match unverified.
+ *    - Otherwise MusicBrainz's artist search ([ownership]) decides: the name the artist's alone
+ *      verifies the match; another artist of the name, or a search that cannot tell, verifies the
+ *      bio only ([LastFmMatch.BioVerified]), since the listeners, tags and similar artists mix every
+ *      artist of the name; a search that fails leaves the match unverified, and provisional.
  * 2. Otherwise a name Last.fm corrected (it differs beyond case, accents, spacing and punctuation)
  *    is rejected: autocorrection is how a small act's name lands on an unrelated band's page.
  * 3. Otherwise the match is unverified.
  *
- * A page several artists share ([LastFmArtist.sharedPage]) is unverified at best, even with the
- * resolved artist's id: its data mixes them.
- *
- * Name matching folds case and accents and keeps letters and digits only.
+ * Name matching folds case and accents and keeps letters and digits only. One check serves every
+ * track its adapter looks up, and keeps the search's answers, all but failures, for the most recent
+ * [VERDICTS] names as sent, with the MusicBrainz id, in memory.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
+    private val musicBrainz: MusicBrainzLookup,
 ) {
-    fun judge(
+    private val verdicts = Lru<Pair<String, String>, Ownership>(VERDICTS)
+
+    suspend fun judge(
         credited: String,
         artist: LastFmArtist,
         resolved: ResolvedArtist?,
-    ): LastFmMatch {
+    ): Judgement {
         val resolvedMbid = resolved?.mbid?.takeIf { it.isNotBlank() }
         val lastFmMbid = artist.mbid
         return when {
             resolvedMbid != null && lastFmMbid != null -> {
-                if (resolvedMbid.equals(lastFmMbid, ignoreCase = true)) {
-                    if (artist.sharedPage) LastFmMatch.Unverified else LastFmMatch.Verified
-                } else {
-                    LastFmMatch.Rejected("Last.fm's ${artist.name} is a different MusicBrainz artist from $credited")
+                when {
+                    !resolvedMbid.equals(lastFmMbid, ignoreCase = true) -> {
+                        Judgement(
+                            LastFmMatch.Rejected(
+                                "Last.fm's ${artist.name} is a different MusicBrainz artist from $credited",
+                            ),
+                        )
+                    }
+
+                    // The bio is read first: it costs no request.
+                    artist.sharedPage -> {
+                        Judgement(LastFmMatch.Unverified)
+                    }
+
+                    else -> {
+                        when (ownership(resolvedMbid, artist.name)) {
+                            Ownership.OWNED -> Judgement(LastFmMatch.Verified)
+                            Ownership.FAILED -> Judgement(LastFmMatch.Unverified, provisional = true)
+                            Ownership.SHARED, Ownership.UNKNOWN -> Judgement(LastFmMatch.BioVerified)
+                        }
+                    }
                 }
             }
 
             key(artist.name) != key(credited) -> {
-                LastFmMatch.Rejected("Last.fm corrected $credited to ${artist.name}, and no MusicBrainz id confirms it")
+                Judgement(
+                    LastFmMatch.Rejected(
+                        "Last.fm corrected $credited to ${artist.name}, and no MusicBrainz id confirms it",
+                    ),
+                )
             }
 
             else -> {
-                LastFmMatch.Unverified
+                Judgement(LastFmMatch.Unverified)
             }
+        }
+    }
+
+    /** What MusicBrainz's artist search says of a page's name. */
+    private enum class Ownership {
+        /** The search is complete, and the artist is the only one of the name. */
+        OWNED,
+
+        /** Another artist has the name. */
+        SHARED,
+
+        /** The search answered, but proves neither: its page holds only part of the matches, or not the artist. */
+        UNKNOWN,
+
+        /** A request failed; a later search may answer. Never kept. */
+        FAILED,
+    }
+
+    /**
+     * Whether [name] is the artist [mbid]'s alone, by name key, from one page of MusicBrainz's
+     * artist search: another artist of the name on it shares the name; the artist owns it only when
+     * the page holds every match (no more than [MbArtistSearch.total] exist) and the artist under the
+     * name, alone. Anything else proves neither, as does a name with no letters or digits, which
+     * every name key would match. The answer is kept by the query as sent and the id.
+     */
+    private suspend fun ownership(
+        mbid: String,
+        name: String,
+    ): Ownership {
+        val nameKey = key(name)
+        val verdictKey = name.lowercase() to mbid.lowercase()
+        return when {
+            nameKey.isEmpty() -> Ownership.UNKNOWN
+            else ->
+                verdicts.get(verdictKey)
+                    ?: search(mbid, name, nameKey).also { if (it != Ownership.FAILED) verdicts.put(verdictKey, it) }
+        }
+    }
+
+    private suspend fun search(
+        mbid: String,
+        name: String,
+        nameKey: String,
+    ): Ownership {
+        val page = (musicBrainz.searchArtists(name) as? Lookup.Found)?.value ?: return Ownership.FAILED
+        val named = page.artists.filter { key(it.name) == nameKey }
+        return when {
+            named.any { !it.mbid.equals(mbid, ignoreCase = true) } -> Ownership.SHARED
+            page.total <= page.artists.size && named.isNotEmpty() -> Ownership.OWNED
+            else -> Ownership.UNKNOWN
         }
     }
 
@@ -104,4 +216,33 @@ internal class ArtistCheck(
             ?: artists.firstOrNull { key(it.name) == key(credited) }
 
     private fun key(name: String): String = accentFolder.decompose(name.lowercase()).filter { it.isLetterOrDigit() }
+
+    companion object {
+        /** Searches (name as sent, MusicBrainz id) whose answers are kept in memory. */
+        const val VERDICTS: Int = 1024
+    }
+}
+
+/**
+ * A map of at most [capacity] entries, which drops the least recently used. Portable: an insertion
+ * ordered map, an entry moved to the end when used, behind a [Mutex].
+ */
+@Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
+internal class Lru<K : Any, V : Any>(
+    private val capacity: Int,
+) {
+    private val mutex = Mutex()
+    private val map = LinkedHashMap<K, V>()
+
+    suspend fun get(key: K): V? = mutex.withLock { map.remove(key)?.also { map[key] = it } }
+
+    suspend fun put(
+        key: K,
+        value: V,
+    ): Unit =
+        mutex.withLock {
+            map.remove(key)
+            map[key] = value
+            if (map.size > capacity) map.remove(map.keys.first())
+        }
 }

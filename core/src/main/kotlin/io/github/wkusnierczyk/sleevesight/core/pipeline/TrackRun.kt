@@ -171,12 +171,20 @@ internal class TrackRun(
             }
         land(adapter.id, landed)
         if (landed is SourceState.Done && landed.result.outcome != Outcome.Unreachable) {
-            if (made.await()) {
-                guard.attempt(
-                    "write ${adapter.id.tag}",
-                ) { parts.cache.keep(adapter, track, nowPlaying.duration, landed.result) }
-            } else {
-                emit(PipelineEvent.NotCached(key, adapter.id, NOT_RESOLVED))
+            when {
+                !made.await() -> {
+                    emit(PipelineEvent.NotCached(key, adapter.id, NOT_RESOLVED))
+                }
+
+                landed.result.provisional -> {
+                    emit(PipelineEvent.NotCached(key, adapter.id, PROVISIONAL))
+                }
+
+                else -> {
+                    guard.attempt(
+                        "write ${adapter.id.tag}",
+                    ) { parts.cache.keep(adapter, track, nowPlaying.duration, landed.result) }
+                }
             }
         }
     }
@@ -254,6 +262,8 @@ internal class TrackRun(
             SourceState.Done(SourceResult(Outcome.SourceOff, emptyList(), Duration.ZERO), cached = false)
 
         const val NOT_RESOLVED: String = "the MusicBrainz resolution it was checked against could not be made"
+
+        const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
     }
