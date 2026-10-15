@@ -1,0 +1,24 @@
+{
+ "video": false,
+ "disambiguation": "",
+ "id": "abbdd65b-b588-4291-be50-13407b0f453e",
+ "relations": [],
+ "artist-credit": [
+  {
+   "artist": {
+    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+    "sort-name": "Balladeer, Mr. A",
+    "type": "Person",
+    "name": "Mr. A Balladeer",
+    "id": "7048c955-cee3-44fe-86f2-28ac974fb73d",
+    "disambiguation": "",
+    "country": null
+   },
+   "name": "Mr. A Balladeer",
+   "joinphrase": ""
+  }
+ ],
+ "length": 176000,
+ "title": "When a Law's Been Broken",
+ "first-release-date": "2010-02-12"
+}
