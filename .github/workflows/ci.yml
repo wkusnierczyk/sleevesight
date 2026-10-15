@@ -1,9 +1,9 @@
 name: CI
 
 on:
+  # Every pull request runs `build`, docs-only ones included: `main` requires the check, and a
+  # required check that never reports leaves the pull request unmergeable.
   pull_request:
-    paths-ignore:
-      - "**/*.md"
   push:
     branches: [main, "dev-*"]
     paths-ignore:
