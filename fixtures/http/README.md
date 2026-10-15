@@ -33,7 +33,7 @@ longer made. Prune only after a run whose test passed: a lookup that failed was 
 pruning would remove its old recording. Without the variable the test does nothing. Re-recording changes
 responses as the sources' data changes, so the tests' expectations are checked again after it.
 
-Recorded 2026-10-14.
+Recorded 2026-10-14; track 50 on 2026-10-16, with `:cli record` (#79).
 
 ### With the CLI
 

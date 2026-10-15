@@ -562,6 +562,21 @@
   "url": "https://en.wikipedia.org/w/api.php",
   "query": {
    "action": "query",
+   "titles": "When a Law's Been Broken (a balladeer song)|When a Law's Been Broken (song)|When a Law's Been Broken|a balladeer",
+   "redirects": "1",
+   "prop": "pageprops",
+   "ppprop": "wikibase_item|disambiguation",
+   "format": "json",
+   "formatversion": "2"
+  },
+  "status": 200,
+  "file": "query-when-a-law-s-been-broken-a-balladeer-song-when-a-law-s-been-broken-song-when-a-law-s-been-brok.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://en.wikipedia.org/w/api.php",
+  "query": {
+   "action": "query",
    "titles": "willow (Jessiah song)|willow (song)|willow|Willow (Jessiah song)|Willow (song)|Willow|Jessiah",
    "redirects": "1",
    "prop": "pageprops",

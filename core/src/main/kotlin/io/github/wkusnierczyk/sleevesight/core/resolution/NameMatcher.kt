@@ -4,8 +4,8 @@ import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
 
 /**
  * Compares names and titles as sources write them differently: case, accents, punctuation,
- * typographic apostrophes, `&` for `and`, a leading `The`. Deterministic, and the same on every
- * platform: the one platform part is [AccentFolder].
+ * typographic apostrophes, `&` for `and`, a leading `The`; apart, as a weaker variant, a leading
+ * honorific. Deterministic, and the same on every platform: the one platform part is [AccentFolder].
  */
 class NameMatcher(
     private val accentFolder: AccentFolder,
@@ -43,6 +43,33 @@ class NameMatcher(
     }
 
     /**
+     * Whether [a] and [b] are one name written with and without a leading honorific (`Mr.`, `Mrs.`,
+     * `Ms.`, `Miss`, `Mister`, `Dr.`, `Sir`, `Dame`) on one of them only: `Mr. A Balladeer` and `a
+     * balladeer` (#79). Narrow on purpose, since a variant may be another artist: the rest must be
+     * the other name whole and at least two words as written, split at spaces only, because an
+     * honorific before a single word is usually a stage name of its own (`Dr. John` is not `John`,
+     * nor `Mr. Big` `Big`, nor `Mr. T-Bone` `T-Bone`: a hyphenated word is one word). A leading
+     * article counts as a word: `A Balladeer` is two. Two different honorifics (`Mr. X Y`, `Mrs. X
+     * Y`) are two people. Not [sameName]: a variant is weaker evidence, which the resolver weighs
+     * only when nothing matches by name.
+     */
+    fun honorificVariant(
+        a: String,
+        b: String,
+    ): Boolean = sameRest(a, b) || sameRest(b, a)
+
+    // Whether [variant] is an honorific, then at least two words whose key is [plain]'s.
+    private fun sameRest(
+        variant: String,
+        plain: String,
+    ): Boolean {
+        val words = variant.trim().split(WHITESPACE)
+        if (key(words.first()) !in HONORIFICS || words.size - 1 < VARIANT_MIN_WORDS) return false
+        val rest = key(words.drop(1).joinToString(" "))
+        return rest.isNotEmpty() && rest == key(plain)
+    }
+
+    /**
      * Whether [credit] is [artist] leading a band, in the usual forms: `X and His …`, `X and Her …`,
      * `X & the …` (or `and the`), `X with …`, with more words after them. [artist]'s name must be
      * whole, a leading `the` aside: `Dick Daley and His Del-Tones` is not led by Dick Dale.
@@ -77,6 +104,14 @@ class NameMatcher(
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')
         const val THE = "the "
+
+        val WHITESPACE = Regex("\\s+")
+
+        // As keys: `Mr.` is `mr`.
+        val HONORIFICS = setOf("mr", "mrs", "ms", "miss", "mister", "dr", "sir", "dame")
+
+        // The fewest words a name keeps after an honorific for [honorificVariant] to match.
+        const val VARIANT_MIN_WORDS = 2
 
         // After the leader's name, as keys: `&` is `and`.
         val BAND_FORMS = listOf("and his", "and her", "and the", "with")
