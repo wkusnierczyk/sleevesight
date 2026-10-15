@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -32,9 +33,9 @@ fun SleevesightNavHost(
     notificationAccess: NotificationAccess,
     firstRun: FirstRunAcknowledgement,
     openAccessSettings: () -> Boolean,
+    navController: NavHostController = rememberNavController(),
 ) {
     val granted by notificationAccess.granted.collectAsState()
-    val navController = rememberNavController()
     // Chosen once: a change of access later does not move the user off the screen they are on.
     val start: Any = remember { if (firstRun.acknowledged && notificationAccess.granted.value) Home else FirstRun }
 

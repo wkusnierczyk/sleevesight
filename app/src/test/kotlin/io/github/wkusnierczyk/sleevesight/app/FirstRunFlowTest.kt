@@ -1,19 +1,26 @@
 package io.github.wkusnierczyk.sleevesight.app
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import io.github.wkusnierczyk.sleevesight.app.session.SleevesightListenerService
+import io.github.wkusnierczyk.sleevesight.app.ui.FirstRun
 import io.github.wkusnierczyk.sleevesight.app.ui.Home
+import io.github.wkusnierczyk.sleevesight.app.ui.SleevesightNavHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Rule
@@ -139,13 +146,55 @@ class FirstRunFlowTest {
     @Test
     fun aDeepLinkToHomeDoesNotSkipTheFirstRunScreen() {
         setAccess(granted = true)
-        launchDeepLinkedToHome().use {
+        launchDeepLinkedToHome().use { scenario ->
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+
+            // Dropped before the navigation graph read them.
+            var left = emptyList<String>()
+            scenario.onActivity { activity -> left = DEEP_LINK_EXTRAS.filter { activity.intent.hasExtra(it) } }
+            assertEquals(emptyList<String>(), left)
         }
     }
 
     @Test
-    fun aDeepLinkToHomeAfterTheFirstRunOpensHome() {
+    fun homeSendsTheUserToTheFirstRunScreenUntilItIsAcknowledged() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launch().use { scenario ->
+            lateinit var nav: NavHostController
+            scenario.onActivity { activity ->
+                val graph = (activity.application as SleevesightApplication).graph
+                activity.setContent {
+                    nav = rememberNavController()
+                    SleevesightNavHost(graph.notificationAccess, graph.firstRun, { true }, nav)
+                }
+            }
+            compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+
+            // Home reached with the first run not acknowledged, over a stack of Home and FirstRun,
+            // as a deep link or a restored back stack could leave it, with no deep-link extras.
+            app.getSharedPreferences("first_run", Context.MODE_PRIVATE).edit { clear() }
+            scenario.onActivity { nav.navigate(Home) }
+
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
+            var routes = emptyList<String?>()
+            var handlesBack = true
+            scenario.onActivity { activity ->
+                routes = nav.currentBackStack.value.map { it.destination.route }
+                handlesBack = activity.onBackPressedDispatcher.hasEnabledCallbacks()
+            }
+            assertEquals(listOf(null, FirstRun.serializer().descriptor.serialName), routes)
+            assertFalse(handlesBack)
+
+            compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            scenario.onActivity { routes = nav.currentBackStack.value.map { it.destination.route } }
+            assertEquals(listOf(null, Home.serializer().descriptor.serialName), routes)
+        }
+    }
+
+    @Test
+    fun deepLinkExtrasDoNoHarmAfterTheFirstRun() {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launchDeepLinkedToHome().use {
@@ -165,5 +214,11 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
         }
+    }
+
+    private companion object {
+        /** `NavController`'s `KEY_DEEP_LINK_*` extras, which `MainActivity` drops. */
+        val DEEP_LINK_EXTRAS =
+            listOf("Ids", "Args", "Extras", "Intent").map { "android-support-nav:controller:deepLink$it" }
     }
 }
