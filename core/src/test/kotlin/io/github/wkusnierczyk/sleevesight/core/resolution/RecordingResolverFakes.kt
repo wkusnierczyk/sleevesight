@@ -33,7 +33,10 @@ internal class FakeMusicBrainz(
     override suspend fun work(mbid: String): Lookup<MbWork> = works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
 
     // Resolution never searches for artists.
-    override suspend fun searchArtists(name: String): Lookup<List<MbArtist>> = error("unexpected artist search")
+    override suspend fun searchArtists(
+        name: String,
+        offset: Int,
+    ): Lookup<MbArtistSearch> = error("unexpected artist search")
 }
 
 internal fun credit(

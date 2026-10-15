@@ -2,6 +2,7 @@ package io.github.wkusnierczyk.sleevesight.sources.musicbrainz
 
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistSearch
 import io.github.wkusnierczyk.sleevesight.net.NetError
 import io.github.wkusnierczyk.sleevesight.sources.web.ReplayNetClient
 import kotlinx.coroutines.test.runTest
@@ -12,20 +13,34 @@ import kotlin.test.assertIs
 /** `MusicBrainzClient.searchArtists`, on answers in the shape of MusicBrainz's artist search. */
 class MusicBrainzArtistSearchTest {
     @Test
-    fun `the search asks by name, quoted, and reads each artist's id and own name`() =
+    fun `the search asks by name, quoted, and reads the total and each artist's id and own name`() =
         runTest {
             val net = ReplayNetClient.ok(BODY)
             val found = MusicBrainzClient(net).searchArtists("Reem \"R\"")
 
             assertEquals(
-                listOf(MbArtist("a-1", "Reem"), MbArtist("a-2", "Reem"), MbArtist("a-3", "Reem Kelani")),
-                assertIs<Lookup.Found<List<MbArtist>>>(found).value,
+                MbArtistSearch(
+                    total = 3,
+                    artists = listOf(MbArtist("a-1", "Reem"), MbArtist("a-2", "Reem"), MbArtist("a-3", "Reem Kelani")),
+                ),
+                assertIs<Lookup.Found<MbArtistSearch>>(found).value,
             )
             val request = net.sent.single()
             assertEquals("${MusicBrainzClient.BASE}/artist", request.url)
             assertEquals(
-                mapOf("query" to "artist:\"Reem \\\"R\\\"\"", "limit" to "100", "fmt" to "json"),
+                mapOf("query" to "artist:\"Reem \\\"R\\\"\"", "limit" to "100", "offset" to "0", "fmt" to "json"),
                 request.query,
+            )
+        }
+
+    @Test
+    fun `a backslash is escaped, and a later page asks from its offset`() =
+        runTest {
+            val net = ReplayNetClient.ok(BODY)
+            MusicBrainzClient(net).searchArtists("A\\B \"C\"", offset = 200)
+            assertEquals(
+                mapOf("query" to "artist:\"A\\\\B \\\"C\\\"\"", "limit" to "100", "offset" to "200", "fmt" to "json"),
+                net.sent.single().query,
             )
         }
 
@@ -33,7 +48,9 @@ class MusicBrainzArtistSearchTest {
     fun `no artists, or a failed request`() =
         runTest {
             val empty = MusicBrainzClient(ReplayNetClient.ok("""{"count":0,"offset":0,"artists":[]}"""))
-            assertEquals(Lookup.Found(emptyList()), empty.searchArtists("Nobody Here"))
+            assertEquals(Lookup.Found(MbArtistSearch(0, emptyList())), empty.searchArtists("Nobody Here"))
+            // Without a total the answer cannot show whether it is complete.
+            assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok("""{"artists":[]}""")).searchArtists("Reem"))
             val offline = MusicBrainzClient(ReplayNetClient.failing(NetError.Offline("UnknownHostException")))
             assertIs<Lookup.Failed>(offline.searchArtists("Reem"))
             assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.status(503, "")).searchArtists("Reem"))

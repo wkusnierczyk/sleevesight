@@ -37,8 +37,10 @@ import kotlin.time.TimeSource
  * `artist.getTopTags`, with `autocorrect=1`), and the [Resolution] is awaited only to judge the
  * answer ([ArtistCheck]): verified lines go in [SourceResult.evidence], unverified ones in
  * [SourceResult.unverified], and a rejected or unknown artist gives none. A page with the resolved
- * artist's MusicBrainz id is verified only if MusicBrainz ([musicBrainz]) knows no other artist of
- * its name, which costs one MusicBrainz search per such artist, after the resolution.
+ * artist's MusicBrainz id is verified whole only if MusicBrainz ([musicBrainz]) shows the name is
+ * that artist's alone; otherwise only its bio sentences are ([LastFmMatch.BioVerified]). That costs
+ * up to three MusicBrainz searches per such artist, after the resolution, unless an earlier track's
+ * answer is kept. A failed search makes the result [SourceResult.provisional].
  *
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
  */
@@ -54,7 +56,7 @@ class LastFmAdapter(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.LASTFM
 
-    /** 2: a page other MusicBrainz artists of its name may share is no longer verified (#75). */
+    /** 2: a page other MusicBrainz artists of its name may share has only its bio verified (#75). */
     override val extractionVersion: Int = 2
 
     /** The verification asks MusicBrainz for the artists of a name. */
@@ -83,8 +85,23 @@ class LastFmAdapter(
                 fetches.map { (name, fetch) -> judge(name, fetch.await(), resolved) }
             }
         val retrievedAt = clock.now()
-        val verified = answers.filter { it.match == LastFmMatch.Verified }.flatMap { lines(it, retrievedAt) }
-        val unverified = answers.filter { it.match == LastFmMatch.Unverified }.flatMap { lines(it, retrievedAt) }
+        val lines = answers.map { it.match to lines(it, retrievedAt) }
+        val verified =
+            lines.flatMap { (match, artist) ->
+                when (match) {
+                    LastFmMatch.Verified -> artist.bio + artist.aggregates
+                    LastFmMatch.BioVerified -> artist.bio
+                    else -> emptyList()
+                }
+            }
+        val unverified =
+            lines.flatMap { (match, artist) ->
+                when (match) {
+                    LastFmMatch.Unverified -> artist.bio + artist.aggregates
+                    LastFmMatch.BioVerified -> artist.aggregates
+                    else -> emptyList()
+                }
+            }
         val result =
             SourceResult(
                 outcome = outcome(answers, hasLines = verified.isNotEmpty() || unverified.isNotEmpty()),
@@ -100,6 +117,7 @@ class LastFmAdapter(
                         .flatMap { it.genres }
                         .distinctBy { it.tag }
                         .take(GenreVocabulary.MAX_LABELS),
+                provisional = answers.any { it.provisional },
             )
         return LastFmLookup(result, answers)
     }
@@ -152,9 +170,10 @@ class LastFmAdapter(
         when (val info = fetched.info) {
             is LastFmAnswer.Found -> {
                 val artist = info.value
-                val match = check.judge(credited, artist, check.resolvedFor(credited, resolution.artists))
+                val judgement = check.judge(credited, artist, check.resolvedFor(credited, resolution.artists))
+                val match = judgement.match
                 val genres = if (match.shows) vocabulary.labelsFor(genreTags(artist, fetched.topTags)) else emptyList()
-                LastFmArtistLookup(credited, match, artist, genres)
+                LastFmArtistLookup(credited, match, artist, genres, judgement.provisional)
             }
 
             is LastFmAnswer.Error -> {
@@ -181,17 +200,30 @@ class LastFmAdapter(
         return tags?.filter { it.count >= MIN_TAG_COUNT }?.map { it.name } ?: artist.tags
     }
 
+    /** One artist's lines: the bio's sentences, and the aggregates every artist of the name adds to. */
+    private class ArtistLines(
+        val bio: List<EvidenceDraft>,
+        val aggregates: List<EvidenceDraft>,
+    )
+
     /** The lines for one artist, in a fixed order: bio sentences, listeners, tags, similar artists. */
     private fun lines(
         lookup: LastFmArtistLookup,
         retrievedAt: Instant,
-    ): List<EvidenceDraft> {
-        val artist = lookup.shown ?: return emptyList()
+    ): ArtistLines {
+        val artist = lookup.shown ?: return ArtistLines(emptyList(), emptyList())
         val name = lookup.credited
+        val bio =
+            LastFmBio.sentences(artist.bioSummary).map { sentence ->
+                EvidenceDraft(
+                    id,
+                    Scope.ARTIST,
+                    "The Last.fm biography of $name says: \"$sentence\"",
+                    artist.bioUrl ?: artist.url,
+                    retrievedAt,
+                )
+            }
         val texts = mutableListOf<Pair<String, String?>>()
-        for (sentence in LastFmBio.sentences(artist.bioSummary)) {
-            texts += "The Last.fm biography of $name says: \"$sentence\"" to (artist.bioUrl ?: artist.url)
-        }
         artist.listeners?.takeIf { it > 0 }?.let {
             texts += "Last.fm counts ${grouped(it)} listeners for $name." to artist.url
         }
@@ -202,7 +234,7 @@ class LastFmAdapter(
             val similar = artist.similar.take(MAX_SIMILAR).joinToString(", ") { it.name }
             texts += "Last.fm lists artists similar to $name by listening overlap: $similar." to artist.url
         }
-        return texts.map { (text, url) -> EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt) }
+        return ArtistLines(bio, texts.map { (text, url) -> EvidenceDraft(id, Scope.ARTIST, text, url, retrievedAt) })
     }
 
     companion object {

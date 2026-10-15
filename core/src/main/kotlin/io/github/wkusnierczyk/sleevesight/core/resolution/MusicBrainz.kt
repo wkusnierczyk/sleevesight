@@ -20,11 +20,15 @@ interface MusicBrainzLookup {
     suspend fun work(mbid: String): Lookup<MbWork>
 
     /**
-     * Artists whose name matches [name], as MusicBrainz's search ranks them, each with its own name
-     * (not an alias). The search matches words, so the answer holds longer names too ("Reem Kelani"
-     * for "Reem"), and does not always rank the exact name first.
+     * One page of the artists whose name matches [name], as MusicBrainz's search ranks them,
+     * starting at [offset], each with its own name (not an alias). The search matches words, so the
+     * answer holds longer names too ("Reem Kelani" for "Reem"), and does not always rank the exact
+     * name first.
      */
-    suspend fun searchArtists(name: String): Lookup<List<MbArtist>>
+    suspend fun searchArtists(
+        name: String,
+        offset: Int = 0,
+    ): Lookup<MbArtistSearch>
 }
 
 /**
@@ -91,6 +95,15 @@ data class MbRecording(
 data class MbArtist(
     val mbid: String,
     val name: String,
+)
+
+/**
+ * One page of an artist search: [artists], and [total], how many artists match in all. The search
+ * is complete once the pages fetched hold [total] artists.
+ */
+data class MbArtistSearch(
+    val total: Int,
+    val artists: List<MbArtist>,
 )
 
 /** A relationship between a recording or work and an artist; [type] is MusicBrainz's (`producer`, `vocal`). */

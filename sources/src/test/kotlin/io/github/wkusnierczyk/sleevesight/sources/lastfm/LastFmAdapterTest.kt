@@ -11,6 +11,7 @@ import io.github.wkusnierczyk.sleevesight.core.platform.JvmAccentFolder
 import io.github.wkusnierczyk.sleevesight.core.platform.JvmResourceReader
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistSearch
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbRecording
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbRecordingDetail
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbWork
@@ -60,6 +61,8 @@ class LastFmAdapterTest {
         CompletableDeferred(Resolution(artists = artists.map { (name, mbid) -> ResolvedArtist(name, mbid) }))
 
     private val none = CompletableDeferred(Resolution.NONE)
+
+    private fun gordonResolved() = resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT)
 
     @Test
     fun `a match with the resolved MusicBrainz id is verified, and its lines may be cited`() =
@@ -230,10 +233,11 @@ class LastFmAdapterTest {
             )
             assertTrue(lookup.result.evidence.isEmpty())
             assertTrue(lookup.result.unverified.isNotEmpty())
+            assertFalse(lookup.result.unverified.any { "biography" in it.text })
         }
 
     @Test
-    fun `a page MusicBrainz gives another artist of its name is unverified, though its bio does not say so`() =
+    fun `a shared page the bio's wording misses gets no aggregate verified, only its bio sentences`() =
         runTest {
             // Shared pages the bio's wording misses: a list numbered in brackets, and a bio about one
             // of the artists only.
@@ -257,48 +261,169 @@ class LastFmAdapterTest {
 
                 val reem = lookup.artists.single()
                 assertFalse(reem.artist!!.sharedPage, bio)
-                assertEquals(LastFmMatch.Unverified, reem.match, bio)
+                // MusicBrainz has a second Reem: the listeners, tags and similar artists are not cited.
+                assertEquals(LastFmMatch.BioVerified, reem.match, bio)
                 assertEquals(listOf("Reem"), artists.searches, bio)
-                assertTrue(lookup.result.evidence.isEmpty(), bio)
-                assertTrue(lookup.result.unverified.isNotEmpty(), bio)
+                assertTrue(lookup.result.evidence.isNotEmpty(), bio)
+                assertTrue(lookup.result.evidence.all { "biography" in it.text }, bio)
+                val aggregates = listOf("Last.fm counts ", "Last.fm listeners tag ", "Last.fm lists artists ")
+                assertEquals(aggregates.size, lookup.result.unverified.size, bio)
+                assertTrue(
+                    lookup.result.unverified.zip(aggregates).all { (line, start) ->
+                        line.text.startsWith(start)
+                    },
+                    bio,
+                )
+                assertFalse(lookup.result.provisional, bio)
             }
         }
 
     @Test
-    fun `a namesake counts by name key, a longer name does not`() =
+    fun `a namesake counts by name key, a longer name does not, and the artist must be found`() =
         runTest {
             val track = fixtureTrack(1)
-            val gordon = MbArtist(GORDON_LIGHTFOOT, "Gordon Lightfoot")
             val cases =
                 listOf(
-                    listOf(gordon, MbArtist(OTHER, "Gordon Lightfoot Tribute Band")) to LastFmMatch.Verified,
-                    listOf(MbArtist(OTHER, "Gordon Lightfoot Jr."), gordon) to LastFmMatch.Verified,
-                    emptyList<MbArtist>() to LastFmMatch.Verified,
-                    listOf(gordon, MbArtist(OTHER, "GORDON LIGHTFOOT")) to LastFmMatch.Unverified,
-                    listOf(MbArtist(OTHER, "Gördon Light-foot"), gordon) to LastFmMatch.Unverified,
+                    listOf(GORDON, MbArtist(OTHER, "Gordon Lightfoot Tribute Band")) to LastFmMatch.Verified,
+                    listOf(MbArtist(OTHER, "Gordon Lightfoot Jr."), GORDON) to LastFmMatch.Verified,
+                    listOf(GORDON, MbArtist(OTHER, "GORDON LIGHTFOOT")) to LastFmMatch.BioVerified,
+                    listOf(MbArtist(OTHER, "Gördon Light-foot"), GORDON) to LastFmMatch.BioVerified,
+                    // The search proves nothing about an artist it does not find.
+                    emptyList<MbArtist>() to LastFmMatch.BioVerified,
+                    listOf(MbArtist(OTHER, "Gordon Lightfoot Jr.")) to LastFmMatch.BioVerified,
                 )
             for ((found, expected) in cases) {
-                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to Lookup.Found(found)))
-                val resolution = resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT)
-                val lookup = adapter(artists = artists).lookupArtists(track, resolution)
+                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to found))
+                val lookup = adapter(artists = artists).lookupArtists(track, gordonResolved())
                 assertEquals(expected, lookup.artists.single().match, "$found")
+                assertFalse(lookup.result.provisional, "$found")
             }
         }
 
     @Test
-    fun `a MusicBrainz search that fails leaves the match unverified`() =
+    fun `with a namesake, the bio sentences are cited and the listeners, tags and similar artists only shown`() =
+        runTest {
+            val artists =
+                ArtistSearchStub(
+                    mapOf(
+                        "Gordon Lightfoot" to listOf(GORDON, MbArtist(OTHER, "Gordon Lightfoot")),
+                    ),
+                )
+            val lookup = adapter(artists = artists).lookupArtists(fixtureTrack(1), gordonResolved())
+
+            assertEquals(LastFmMatch.BioVerified, lookup.artists.single().match)
+            assertEquals(Outcome.ArtistArticle, lookup.result.outcome)
+            assertEquals(3, lookup.result.evidence.size)
+            assertTrue(
+                lookup.result.evidence.all { it.text.startsWith("The Last.fm biography of Gordon Lightfoot says:") },
+            )
+            assertEquals(
+                listOf(
+                    "Last.fm counts 683,942 listeners for Gordon Lightfoot.",
+                    "Last.fm listeners tag Gordon Lightfoot as: folk, singer-songwriter, 70s, canadian, acoustic.",
+                ),
+                lookup.result.unverified
+                    .take(2)
+                    .map { it.text },
+            )
+            assertEquals(3, lookup.result.unverified.size)
+            // Genre labels come as for any match that may be shown.
+            assertTrue(
+                lookup.artists
+                    .single()
+                    .genres
+                    .isNotEmpty(),
+            )
+        }
+
+    @Test
+    fun `the search pages until a namesake turns up or it is complete, for at most three pages`() =
+        runTest {
+            val longer = (1..LONGER).map { MbArtist("other-$it", "Gordon Lightfoot Cover Band $it") }
+            val cases =
+                listOf(
+                    // Complete after two pages, no namesake.
+                    Triple(listOf(GORDON) + longer.take(150), null, LastFmMatch.Verified) to listOf(0, 100),
+                    // A namesake on the second page.
+                    Triple(
+                        listOf(GORDON) + longer.take(150) + MbArtist(OTHER, "Gordon Lightfoot"),
+                        null,
+                        LastFmMatch.BioVerified,
+                    ) to listOf(0, 100),
+                    // Still incomplete after three pages: the bio only, though no namesake was seen.
+                    Triple(listOf(GORDON) + longer, 2150, LastFmMatch.BioVerified) to listOf(0, 100, 200),
+                )
+            for ((case, offsets) in cases) {
+                val (found, total, expected) = case
+                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to found), totals = mapOfNotNull(total))
+                val lookup = adapter(artists = artists).lookupArtists(fixtureTrack(1), gordonResolved())
+                assertEquals(expected, lookup.artists.single().match, "$offsets")
+                assertEquals(offsets, artists.offsets, "$offsets")
+                assertFalse(lookup.result.provisional, "$offsets")
+            }
+        }
+
+    @Test
+    fun `a name with no letters or digits proves nothing, and is not searched - the bio only`() =
+        runTest {
+            val body =
+                Fixtures
+                    .text("http/lastfm/artist.getinfo/gordon-lightfoot.json")
+                    .replaceFirst("\"name\": \"Gordon Lightfoot\"", "\"name\": \"!!!\"")
+            val net =
+                LastFmStubClient(override = { request ->
+                    LastFmStubClient.ok(body).takeIf { request.query["method"] == "artist.getinfo" }
+                })
+            val artists = ArtistSearchStub()
+            val lookup = adapter(net, artists).lookupArtists(fixtureTrack(1), gordonResolved())
+            assertEquals(
+                "!!!",
+                lookup.artists
+                    .single()
+                    .artist
+                    ?.name,
+            )
+            assertEquals(LastFmMatch.BioVerified, lookup.artists.single().match)
+            assertTrue(artists.searches.isEmpty())
+        }
+
+    @Test
+    fun `a MusicBrainz search that fails leaves the match unverified and the result provisional`() =
         runTest {
             for (failure in listOf(Lookup.Failed("Offline"), Lookup.NotFound)) {
-                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to failure))
-                val lookup =
-                    adapter(artists = artists).lookupArtists(
-                        fixtureTrack(1),
-                        resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT),
-                    )
+                val artists = ArtistSearchStub(failure = failure)
+                val lookup = adapter(artists = artists).lookupArtists(fixtureTrack(1), gordonResolved())
                 assertEquals(LastFmMatch.Unverified, lookup.artists.single().match, "$failure")
+                assertTrue(lookup.artists.single().provisional, "$failure")
+                assertTrue(lookup.result.provisional, "$failure")
                 assertTrue(lookup.result.evidence.isEmpty(), "$failure")
                 assertEquals(6, lookup.result.unverified.size, "$failure")
             }
+            // A failure on a later page as well.
+            val longer = (1..LONGER).map { MbArtist("other-$it", "Gordon Lightfoot Cover Band $it") }
+            val artists =
+                ArtistSearchStub(
+                    mapOf("Gordon Lightfoot" to listOf(GORDON) + longer),
+                    failure = Lookup.Failed("x"),
+                    failFrom = 100,
+                )
+            val lookup = adapter(artists = artists).lookupArtists(fixtureTrack(1), gordonResolved())
+            assertEquals(LastFmMatch.Unverified, lookup.artists.single().match)
+            assertTrue(lookup.result.provisional)
+        }
+
+    @Test
+    fun `the search's answers are kept across tracks, its failures are not`() =
+        runTest {
+            val artists = ArtistSearchStub()
+            val adapter = adapter(artists = artists)
+            repeat(2) { adapter.lookup(fixtureTrack(1), gordonResolved()) }
+            assertEquals(listOf("Gordon Lightfoot"), artists.searches)
+
+            val failing = ArtistSearchStub(failure = Lookup.Failed("Offline"))
+            val again = adapter(artists = failing)
+            repeat(2) { again.lookup(fixtureTrack(1), gordonResolved()) }
+            assertEquals(listOf("Gordon Lightfoot", "Gordon Lightfoot"), failing.searches)
         }
 
     @Test
@@ -444,18 +569,31 @@ class LastFmAdapterTest {
     }
 
     /**
-     * MusicBrainz's artist search, answered from [artists] by the name asked; every name is kept in
-     * [searches]. By default each stubbed Last.fm artist is the only one of its name, except Reem,
-     * whose name two artists have. Resolution's calls are not expected.
+     * MusicBrainz's artist search, answered from [artists] by the name asked, in pages of 100; the
+     * total is the list's size unless [totals] gives a larger one (a search the list does not hold
+     * whole). From offset [failFrom] on, [failure], when given, answers instead. Every name asked is
+     * kept in [searches], every offset in [offsets]. By default each stubbed Last.fm artist is the
+     * only one of its name, except Reem, whose name two artists have. Resolution's calls are not
+     * expected.
      */
     private class ArtistSearchStub(
-        private val artists: Map<String, Lookup<List<MbArtist>>> = DEFAULT_ARTISTS,
+        private val artists: Map<String, List<MbArtist>> = DEFAULT_ARTISTS,
+        private val totals: Map<String, Int> = emptyMap(),
+        private val failure: Lookup<MbArtistSearch>? = null,
+        private val failFrom: Int = 0,
     ) : MusicBrainzLookup {
         val searches = mutableListOf<String>()
+        val offsets = mutableListOf<Int>()
 
-        override suspend fun searchArtists(name: String): Lookup<List<MbArtist>> {
+        override suspend fun searchArtists(
+            name: String,
+            offset: Int,
+        ): Lookup<MbArtistSearch> {
             searches += name
-            return checkNotNull(artists[name]) { "no artist search stub for $name" }
+            offsets += offset
+            if (failure != null && offset >= failFrom) return failure
+            val all = checkNotNull(artists[name]) { "no artist search stub for $name" }
+            return Lookup.Found(MbArtistSearch(totals[name] ?: all.size, all.drop(offset).take(PAGE)))
         }
 
         override suspend fun searchRecordings(
@@ -482,12 +620,21 @@ class LastFmAdapterTest {
             "There are several artists named Reem. 1) Reem is a rapper from Denmark with Moroccan roots. " +
                 "2) Reem is another artist of the same name."
 
-        val DEFAULT_ARTISTS: Map<String, Lookup<List<MbArtist>>> =
+        const val PAGE = 100
+
+        /** More longer names than three pages hold. */
+        const val LONGER = 320
+
+        val GORDON = MbArtist(GORDON_LIGHTFOOT, "Gordon Lightfoot")
+
+        val DEFAULT_ARTISTS: Map<String, List<MbArtist>> =
             mapOf(
-                "Gordon Lightfoot" to listOf(MbArtist(GORDON_LIGHTFOOT, "Gordon Lightfoot")),
+                "Gordon Lightfoot" to listOf(GORDON),
                 "PeleBoy" to listOf(MbArtist(PELEBOY, "PeleBoy")),
                 "Jesaiah" to listOf(MbArtist(JESAIAH, "Jesaiah")),
                 "Reem" to listOf(MbArtist(REEM, "Reem"), MbArtist(OTHER, "Reem"), MbArtist(OTHER, "Reem Kelani")),
-            ).mapValues { (_, found) -> Lookup.Found(found) }
+            )
+
+        fun mapOfNotNull(total: Int?): Map<String, Int> = total?.let { mapOf("Gordon Lightfoot" to it) } ?: emptyMap()
     }
 }
