@@ -8,7 +8,7 @@ import kotlinx.serialization.json.Json
  * The fixed genre vocabulary (`design/design.md`, *Genre labels*): the tags that become genre
  * labels, each in a family with a fixed hue. Tags outside it (places, decades, "seen live", noise)
  * are dropped. It is source-agnostic: Last.fm's artist tags go through it, and MusicBrainz's would
- * if D12 adopts them.
+ * if Phase 2 makes them the labels when Last.fm is off (D12).
  *
  * The data is the resource [RESOURCE], taken from the simulator's `GENRE_FAMILIES`; a test checks
  * the two agree.

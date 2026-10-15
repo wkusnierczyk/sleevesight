@@ -170,7 +170,7 @@ flowchart TD
 | Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
 | AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap |
 | Web search provider (D11) | [#40][40] | Decided by that spike |
-| MusicBrainz tags as the labels when Last.fm is off (D12) | Phase 2, [#9][9] | Decided with the genre labels; the licence settled before they ship. Not adopted to fill Last.fm's gaps (2026-10-15) |
+| MusicBrainz tags as the labels when Last.fm is off (D12) | [#95][95] | Decided with the genre labels in Phase 2, after MetaBrainz answers the inquiry; licence findings in [#9][9]. Not adopted to fill Last.fm's gaps (2026-10-15) |
 | The name | [#57][57] | The spoken-aloud test on "Sleevesight" before the store listing fixes it |
 | Play developer account | [#58][58] | Personal or organisation; the testing a new account must do before production depends on the type |
 
@@ -227,3 +227,4 @@ flowchart TD
 [56]: https://github.com/wkusnierczyk/sleevesight/issues/56
 [57]: https://github.com/wkusnierczyk/sleevesight/issues/57
 [58]: https://github.com/wkusnierczyk/sleevesight/issues/58
+[95]: https://github.com/wkusnierczyk/sleevesight/issues/95

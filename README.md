@@ -24,7 +24,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 ## You choose
 
 - **Where to look.** Each source is a switch, and the model's own knowledge is a separate one, off by default. MusicBrainz and Wikipedia need no key; Last.fm and web search (Exa first) need your own API key. Discogs comes in Phase 3.
-- **Which AI.** Anthropic, OpenAI, Google, or a local model through Ollama, with your own API key and model. Only Anthropic is built so far; local models come in Phase 3.
+- **Which AI.** Anthropic, OpenAI, Google, or a local model through Ollama, with your own API key and model. Only Anthropic is built so far; the others, local models included, come in Phase 3, unless one more comes in Phase 1.
 - **When and how it writes.** Each insight is a call on your key. By default one is written for every track, and the next track in the queue is prepared ahead so its card is ready when it starts. You can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. In every mode, lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*, and nothing is written after you open the app until your first action in it. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
 - **Which players.** Spotify by default; any player with a media session can be followed.
 - **Spotify account.** Optional. Connecting it, with your own Spotify developer app, lets Sleevesight see the whole playlist or album being played. Without it, the app knows the tracks it has seen play.
@@ -42,7 +42,7 @@ Track, artist and album names, for the playing track and, by default, the next o
 | 1. Android MVP | Now-playing screen, sources, grounded insight, settings | Next |
 | 1.5. Play release | Signed app bundle, store listing and privacy policy, Google Play's review | |
 | 2. Detail and discovery | Song, artist and album insight; genre and sounds-like cards; layout setting; player controls | |
-| 3. Context and reach | Optional Spotify account, more players, local models, Discogs | |
+| 3. Context and reach | Optional Spotify account, more players, more AI providers and local models, Discogs | |
 
 Details and the reasoning behind each decision are in the [design document](design/design.md); the work to the MVP and its release, with its dependencies, is in the [plan](design/plan.md).
 
