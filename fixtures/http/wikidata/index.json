@@ -57,6 +57,19 @@
   "query": {
    "action": "query",
    "list": "search",
+   "srsearch": "haswbstatement:P434=7048c955-cee3-44fe-86f2-28ac974fb73d",
+   "srnamespace": "0",
+   "format": "json"
+  },
+  "status": 200,
+  "file": "query-search-haswbstatement-p434-7048c955-cee3-44fe-86f2-28ac974fb73d.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://www.wikidata.org/w/api.php",
+  "query": {
+   "action": "query",
+   "list": "search",
    "srsearch": "haswbstatement:P434=85cc55f5-317f-4d3b-8e2f-070a8936229f",
    "srnamespace": "0",
    "format": "json"

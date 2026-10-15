@@ -20,9 +20,10 @@ object RecordedTracks {
     /**
      * Tracks outside the regression cases on which the Phase 0.5 gate run (#46) found resolution
      * errors, recorded for their tests: 55, Chuck Berry's own "Roll Over Beethoven" (#78, #76);
-     * 62, "Misirlou", credited on MusicBrainz to "Dick Dale and His Del-Tones" (#77).
+     * 62, "Misirlou", credited on MusicBrainz to "Dick Dale and His Del-Tones" (#77); 50, "When a
+     * Law's Been Broken", credited on MusicBrainz to "Mr. A Balladeer" (#79).
      */
-    val GATE_FINDINGS: List<Int> = listOf(55, 62)
+    val GATE_FINDINGS: List<Int> = listOf(50, 55, 62)
 
     val positions: List<Int> =
         (RegressionCase.entries.flatMap { it.tracks } + GATE_FINDINGS)

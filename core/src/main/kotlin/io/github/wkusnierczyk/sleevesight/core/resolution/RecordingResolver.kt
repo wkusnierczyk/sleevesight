@@ -76,33 +76,37 @@ class RecordingResolver(
         // name or as a band's leader, confirmed or not: the same-name check weighs them all.
         val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.ids.isNotEmpty() }
         val accepted = narrowed(fitting.filter { it.creditedArtists > 0 }, duration)
-        val ambiguous = ambiguousArtist(track, (narrowed(fitting, duration) + accepted).distinct())
+        val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
-            ambiguous != null ->
-                Resolution(
-                    outcome =
-                        Outcome.Rejected(
-                            "several MusicBrainz artists named $ambiguous have a matching recording",
-                        ),
-                )
-            chosen == null -> unmatched(track, candidates)
+            collision != null -> collision
+            chosen == null ->
+                (if (fitting.isEmpty()) byVariant(track, duration, candidates, leaders) else null)
+                    ?: unmatched(track, candidates)
             else -> accept(track, chosen, leaders.details[chosen.recording.mbid])
         }
     }
 
-    // A credited name that the candidates, after the length has narrowed them, give to more than one
-    // MusicBrainz artist cannot be resolved: it is a same-name collision. A band credit counts as
-    // every leader of that name found on the band's recordings, or, with none found, as an unknown
-    // artist: a namesake's solo recording beside the real leader's band is a collision, whether or
-    // not MusicBrainz shows the leader.
-    private fun ambiguousArtist(
+    // A credit under an honorific variant of an artist's name (`Mr. A Balladeer` for `a balladeer`,
+    // #79), weighed only when no candidate whose title and length fit names the track's artists in
+    // any other way, so a variant never stands beside or against a credit by name or a band's. Then
+    // the variant credits are taken as the artists' credits, with the same rules: the earliest of the
+    // fitting is chosen, and a variant two MusicBrainz artists share collides. Null when no candidate
+    // whose title and length fit credits a variant.
+    private suspend fun byVariant(
         track: NormalizedTrack,
-        pool: List<Candidate>,
-    ): String? =
-        track.artists.firstOrNull { artist ->
-            pool.flatMap { it.ids[artist].orEmpty() }.toSet().size > 1
-        }
+        duration: Duration?,
+        candidates: List<Candidate>,
+        leaders: Leaders,
+    ): Resolution? {
+        val fitting =
+            candidates
+                .filter { it.titleMatches && it.durationMatches && it.variants.isNotEmpty() }
+                .map { it.copy(named = it.variants, led = emptyMap()).identified(emptyMap()) }
+        val accepted = narrowed(fitting, duration)
+        val chosen = accepted.minWithOrNull(PREFERENCE) ?: return null
+        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid])
+    }
 
     private fun candidate(
         track: NormalizedTrack,
@@ -113,16 +117,20 @@ class RecordingResolver(
         val gap = if (duration == null || length == null) null else (length - duration).absoluteValue
 
         // Every matching credit's id, so two same-name artists on one recording are both seen.
-        fun matching(byName: Boolean): Map<String, Set<String>> =
+        fun matching(matches: (MbCredit, String) -> Boolean): Map<String, Set<String>> =
             track.artists
                 .associateWith { artist ->
                     recording.credits
-                        .filter { credits(it, artist, byName) }
+                        .filter { matches(it, artist) }
                         .map { it.artistMbid }
                         .toSet()
                 }.filterValues { it.isNotEmpty() }
-        val named = matching(byName = true)
-        val any = matching(byName = false)
+        val named = matching { credit, artist -> credits(credit, artist, byName = true) }
+        val any = matching { credit, artist -> credits(credit, artist) }
+        val variants =
+            matching { credit, artist ->
+                listOf(credit.name, credit.artistName).any { names.honorificVariant(it, artist) }
+            }
         return Candidate(
             recording = recording,
             titleSimilarity = names.titleSimilarity(track.title, recording.title),
@@ -130,6 +138,7 @@ class RecordingResolver(
             // A band credit counts beside a credit by name: "Alex Smith" and "Alex Smith and His
             // Orchestra" on one recording may be two artists.
             led = any.mapValues { (artist, ids) -> ids - named[artist].orEmpty() }.filterValues { it.isNotEmpty() },
+            variants = variants,
             durationGap = gap,
         )
     }
@@ -272,16 +281,18 @@ class RecordingResolver(
     /**
      * A search result as a candidate: [named] maps each track artist it credits by name to the
      * credits' MusicBrainz ids; [led] each one's band credits (a band they would lead) to the bands'
-     * ids, beside any credit by name. Once [identified], [ids] maps each artist to who they are on
-     * this recording (the credits' ids, a band's leaders, or the band as an unknown artist),
-     * [creditedArtists] counts those credited by name or as a confirmed leader, and [bands] holds
-     * the ids of the bands whose leader is confirmed.
+     * ids, beside any credit by name; [variants] each one's credits under an honorific variant of
+     * the name ([NameMatcher.honorificVariant]), for [byVariant]. Once [identified], [ids] maps each
+     * artist to who they are on this recording (the credits' ids, a band's leaders, or the band as
+     * an unknown artist), [creditedArtists] counts those credited by name or as a confirmed leader,
+     * and [bands] holds the ids of the bands whose leader is confirmed.
      */
     private data class Candidate(
         val recording: MbRecording,
         val titleSimilarity: Double,
         val named: Map<String, Set<String>>,
         val led: Map<String, Set<String>>,
+        val variants: Map<String, Set<String>> = emptyMap(),
         val durationGap: Duration?,
         val ids: Map<String, Set<String>> = emptyMap(),
         val creditedArtists: Int = 0,
@@ -420,6 +431,23 @@ class RecordingResolver(
             val measured = candidates.filter { it.durationGap != null }
             return if (duration != null && measured.isNotEmpty()) measured else candidates
         }
+
+        // A credited name that the candidates, after the length has narrowed them, give to more than one
+        // MusicBrainz artist cannot be resolved: it is a same-name collision. A band credit counts as
+        // every leader of that name found on the band's recordings, or, with none found, as an unknown
+        // artist: a namesake's solo recording beside the real leader's band is a collision, whether or
+        // not MusicBrainz shows the leader. Null when there is none.
+        private fun collision(
+            track: NormalizedTrack,
+            pool: List<Candidate>,
+        ): Resolution? =
+            track.artists
+                .firstOrNull { artist -> pool.flatMap { it.ids[artist].orEmpty() }.toSet().size > 1 }
+                ?.let {
+                    Resolution(
+                        outcome = Outcome.Rejected("several MusicBrainz artists named $it have a matching recording"),
+                    )
+                }
 
         // Sorts after every date MusicBrainz gives.
         private const val UNDATED = "9999"

@@ -1,0 +1,43 @@
+{
+ "batchcomplete": true,
+ "query": {
+  "normalized": [
+   {
+    "fromencoded": false,
+    "from": "a balladeer",
+    "to": "A balladeer"
+   }
+  ],
+  "redirects": [
+   {
+    "from": "A balladeer",
+    "to": "A Balladeer"
+   }
+  ],
+  "pages": [
+   {
+    "ns": 0,
+    "title": "When a Law's Been Broken",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "When a Law's Been Broken (song)",
+    "missing": true
+   },
+   {
+    "ns": 0,
+    "title": "When a Law's Been Broken (a balladeer song)",
+    "missing": true
+   },
+   {
+    "pageid": 10119231,
+    "ns": 0,
+    "title": "A Balladeer",
+    "pageprops": {
+     "wikibase_item": "Q4655340"
+    }
+   }
+  ]
+ }
+}

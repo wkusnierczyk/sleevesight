@@ -1,0 +1,373 @@
+{
+ "created": "2026-10-15T22:00:04.951Z",
+ "count": 4,
+ "offset": 0,
+ "recordings": [
+  {
+   "id": "b8f1308e-b745-4c42-aa03-a6ec9478fa92",
+   "score": 100,
+   "artist-credit-id": "78147105-4d76-32b0-90fc-723d17044d7a",
+   "title": "When A Law's Been Broken (Instrumental)",
+   "length": 175000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "a balladeer",
+     "artist": {
+      "id": "8cb0ebc9-db95-4748-81df-8e1e24e70541",
+      "name": "a balladeer",
+      "sort-name": "balladeer, a",
+      "disambiguation": "Dutch band"
+     }
+    }
+   ],
+   "first-release-date": "2010-02-12",
+   "releases": [
+    {
+     "id": "e59dfdef-a861-499d-842d-68aad4316a27",
+     "count": 1,
+     "title": "sorry, kid",
+     "release-group": {
+      "id": "75a7d415-b20d-4668-977b-8b52ff919768",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Sorry, kid (Instrumental)",
+      "primary-type": "Album"
+     },
+     "track-count": 9,
+     "media": [
+      {
+       "id": "b0415bbf-b84c-3a77-a372-70d3fe8d9415",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "f0c4f620-b0fa-4f88-8231-6b74dc133a22",
+         "number": "4",
+         "title": "When A Law's Been Broken (Instrumental)",
+         "length": 175000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 3
+      }
+     ]
+    },
+    {
+     "id": "b581b148-2107-4a68-b0ca-3b88027e68a5",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "Sorry, kid (Instrumental)",
+     "status": "Official",
+     "release-group": {
+      "id": "75a7d415-b20d-4668-977b-8b52ff919768",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Sorry, kid (Instrumental)",
+      "primary-type": "Album"
+     },
+     "track-count": 8,
+     "media": [
+      {
+       "id": "ecdedc4e-3ba9-3e35-81ff-3c08ccd6fe4e",
+       "position": 1,
+       "format": "Digital Media",
+       "track": [
+        {
+         "id": "fc20835f-8a7e-405d-a6d2-d2740d14c84f",
+         "number": "4",
+         "title": "When A Law's Been Broken (Instrumental)",
+         "length": 175000
+        }
+       ],
+       "track-count": 8,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "abbdd65b-b588-4291-be50-13407b0f453e",
+   "score": 99,
+   "artist-credit-id": "c839c6aa-3f56-3c79-93bc-cf0f7d88c113",
+   "title": "When a Law's Been Broken",
+   "length": 176000,
+   "video": null,
+   "artist-credit": [
+    {
+     "name": "Mr. A Balladeer",
+     "artist": {
+      "id": "7048c955-cee3-44fe-86f2-28ac974fb73d",
+      "name": "Mr. A Balladeer",
+      "sort-name": "Balladeer, Mr. A"
+     }
+    }
+   ],
+   "first-release-date": "2010-02-12",
+   "releases": [
+    {
+     "id": "9f84d027-5fba-4a62-975d-8f9c9f4f24b3",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "count": 1,
+     "title": "Sorry, Kid.",
+     "status": "Official",
+     "release-group": {
+      "id": "52f4593c-c90d-4bb0-a4bf-478aac3f04d5",
+      "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Sorry, Kid.",
+      "primary-type": "Album"
+     },
+     "date": "2010-02-12",
+     "country": "NL",
+     "release-events": [
+      {
+       "date": "2010-02-12",
+       "area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "iso-3166-1-codes": [
+         "NL"
+        ]
+       }
+      }
+     ],
+     "track-count": 11,
+     "media": [
+      {
+       "id": "f710c603-422b-3ca0-b93b-b643f4efea5c",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "fcc619f9-67af-33bb-84dc-aaa3f6960278",
+         "number": "4",
+         "title": "When a Law's Been Broken",
+         "length": 176000
+        }
+       ],
+       "track-count": 11,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "b2813af9-87ae-43ee-8ce9-a721a3b52485",
+   "score": 94,
+   "artist-credit-id": "9f0300f5-7744-49de-ad54-d96df3f4e7b6",
+   "title": "When a Law's Been Broken",
+   "length": 158000,
+   "video": null,
+   "artist-credit": [
+    {
+     "joinphrase": ", ",
+     "name": "A Balladeer",
+     "artist": {
+      "id": "8cb0ebc9-db95-4748-81df-8e1e24e70541",
+      "name": "a balladeer",
+      "sort-name": "balladeer, a",
+      "disambiguation": "Dutch band"
+     }
+    },
+    {
+     "name": "Reyn Ouwehand",
+     "artist": {
+      "id": "f8d4dfe2-f675-41cc-9540-3105defa7900",
+      "name": "Reyn Ouwehand",
+      "sort-name": "Ouwehand, Reyn",
+      "aliases": [
+       {
+        "sort-name": "Reyn",
+        "name": "Reyn",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    }
+   ],
+   "first-release-date": "2011-02-20",
+   "releases": [
+    {
+     "id": "ce1efb7d-32fd-41b2-ae53-f9d087cc948d",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "ebf6b3e9-f909-37a7-a0e8-0e6795babc74",
+     "count": 1,
+     "title": "Reyn vs... Season One 2009/2010",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "name": "Reyn",
+       "artist": {
+        "id": "f8d4dfe2-f675-41cc-9540-3105defa7900",
+        "name": "Reyn Ouwehand",
+        "sort-name": "Ouwehand, Reyn"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "5970dc53-7e30-4d2a-9115-ba9f02900b7c",
+      "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+      "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+      "title": "Reyn vs... Season One 2009/2010",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ],
+      "secondary-type-ids": [
+       "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"
+      ]
+     },
+     "date": "2011-02-20",
+     "country": "NL",
+     "release-events": [
+      {
+       "date": "2011-02-20",
+       "area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "iso-3166-1-codes": [
+         "NL"
+        ]
+       }
+      }
+     ],
+     "track-count": 18,
+     "media": [
+      {
+       "id": "924bade1-06ba-36b9-aeaf-34e1becf151d",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "d530f6c7-f3d3-4bc4-bbf9-41c2aec8d602",
+         "number": "3",
+         "title": "When a Law's Been Broken",
+         "length": 158000
+        }
+       ],
+       "track-count": 18,
+       "track-offset": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "200ec973-db76-4df0-a216-e0015368df14",
+   "score": 90,
+   "artist-credit-id": "7e5d68f9-f257-460b-8c1d-8020a093dcf2",
+   "title": "When a Law's Been Broken",
+   "length": 166000,
+   "video": null,
+   "artist-credit": [
+    {
+     "joinphrase": " vs. ",
+     "name": "Reyn",
+     "artist": {
+      "id": "f8d4dfe2-f675-41cc-9540-3105defa7900",
+      "name": "Reyn Ouwehand",
+      "sort-name": "Ouwehand, Reyn",
+      "aliases": [
+       {
+        "sort-name": "Reyn",
+        "name": "Reyn",
+        "locale": null,
+        "type": null,
+        "primary": null,
+        "begin-date": null,
+        "end-date": null
+       }
+      ]
+     }
+    },
+    {
+     "name": "Mr. A Balladeer",
+     "artist": {
+      "id": "7048c955-cee3-44fe-86f2-28ac974fb73d",
+      "name": "Mr. A Balladeer",
+      "sort-name": "Balladeer, Mr. A"
+     }
+    }
+   ],
+   "first-release-date": "2011-03",
+   "releases": [
+    {
+     "id": "632955d6-0cf0-481f-8b95-f704b5440070",
+     "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+     "artist-credit-id": "7e5d68f9-f257-460b-8c1d-8020a093dcf2",
+     "count": 1,
+     "title": "Round 1",
+     "status": "Official",
+     "artist-credit": [
+      {
+       "joinphrase": " vs. ",
+       "name": "Reyn",
+       "artist": {
+        "id": "f8d4dfe2-f675-41cc-9540-3105defa7900",
+        "name": "Reyn Ouwehand",
+        "sort-name": "Ouwehand, Reyn"
+       }
+      },
+      {
+       "name": "Mr. A Balladeer",
+       "artist": {
+        "id": "7048c955-cee3-44fe-86f2-28ac974fb73d",
+        "name": "Mr. A Balladeer",
+        "sort-name": "Balladeer, Mr. A"
+       }
+      }
+     ],
+     "release-group": {
+      "id": "eacc7c0c-32c3-495b-92cf-75bf51ec1dec",
+      "type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "primary-type-id": "6d0c5bf6-7a33-3420-a519-44fc63eedebf",
+      "title": "Round 1",
+      "primary-type": "EP"
+     },
+     "date": "2011-03",
+     "country": "NL",
+     "release-events": [
+      {
+       "date": "2011-03",
+       "area": {
+        "id": "ef1b7cc0-cd26-36f4-8ea0-04d9623786c7",
+        "name": "Netherlands",
+        "sort-name": "Netherlands",
+        "iso-3166-1-codes": [
+         "NL"
+        ]
+       }
+      }
+     ],
+     "track-count": 9,
+     "media": [
+      {
+       "id": "191e5ee7-e031-3aa8-8300-8deacb9c4d63",
+       "position": 1,
+       "format": "CD",
+       "track": [
+        {
+         "id": "1489f2a4-34c8-4ca8-9351-65719286e785",
+         "number": "4",
+         "title": "When a Law's Been Broken",
+         "length": 166000
+        }
+       ],
+       "track-count": 9,
+       "track-offset": 3
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
