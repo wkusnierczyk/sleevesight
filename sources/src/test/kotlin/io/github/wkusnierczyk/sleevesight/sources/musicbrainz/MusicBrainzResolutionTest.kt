@@ -134,6 +134,24 @@ class MusicBrainzResolutionTest {
         }
 
     @Test
+    fun `an honorific variant - When a Law's Been Broken resolves to Mr A Balladeer's 2010 recording`() =
+        runTest {
+            // The player says "a balladeer". MusicBrainz has two artists: "a balladeer", credited on
+            // the same album's instrumental (its title does not fit) and on a 2011 recording 18 s
+            // shorter, and "Mr. A Balladeer", credited on the recording whose title and length fit.
+            val resolution = resolve(50)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("abbdd65b-b588-4291-be50-13407b0f453e", resolution.recordingMbid)
+            assertEquals("2010-02-12", resolution.firstReleaseDate)
+            assertEquals("Sorry, Kid.", resolution.firstRelease?.title)
+            assertEquals("Mr. A Balladeer", resolution.artistCredit)
+            assertEquals(
+                listOf(ResolvedArtist("a balladeer", "7048c955-cee3-44fe-86f2-28ac974fb73d")),
+                resolution.artists,
+            )
+        }
+
+    @Test
     fun `the search sends the normalized title and the primary artist, and never asks for tags or genres`() =
         runTest {
             resolve(RegressionCase.VERSION_SUFFIX.tracks.single())
