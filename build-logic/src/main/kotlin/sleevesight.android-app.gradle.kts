@@ -1,5 +1,6 @@
-// An Android application: SDK levels from the architecture (D10), Java 17, and the shared checks,
-// plus `checkManifest` on each variant's merged manifest.
+// An Android application: SDK levels from the architecture (D10), Java 17, Compose,
+// kotlinx.serialization (Navigation Compose's type-safe routes are serializable), and the shared
+// checks, plus `checkManifest` on each variant's merged manifest.
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import sleevesight.checks.CheckDependencies
@@ -9,6 +10,8 @@ import sleevesight.checks.networkModules
 
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("sleevesight.quality")
     id("sleevesight.locking")
 }
@@ -18,6 +21,9 @@ extensions.configure<ApplicationExtension> {
     defaultConfig {
         minSdk = 26
         targetSdk = 36
+    }
+    buildFeatures {
+        compose = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

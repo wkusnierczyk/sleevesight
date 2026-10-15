@@ -6,6 +6,8 @@ dependencies {
     implementation(libs.android.gradle.plugin)
     implementation(libs.kotlin.gradle.plugin)
     implementation(libs.kotlin.serialization.plugin)
+    // Compose in `:app`.
+    implementation(libs.kotlin.compose.plugin)
     implementation(libs.detekt.gradle.plugin)
     // `:store`'s schema and queries (architecture, *Cache and history*).
     implementation(libs.sqldelight.gradle.plugin)
