@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A record: the disc, a groove, and the label. -->
+  <circle cx="16" cy="16" r="15" fill="#1f2328"/>
+  <circle cx="16" cy="16" r="10.5" fill="none" stroke="#57606a" stroke-width="1"/>
+  <circle cx="16" cy="16" r="5.5" fill="#cf222e"/>
+  <circle cx="16" cy="16" r="1.3" fill="#ffffff"/>
+</svg>
