@@ -477,17 +477,18 @@ class RecordingResolverTest {
             )
         }
 
-    // Track 50 (#79), as the Phase 0.5 gate run found it: the recording whose title and length fit
-    // is credited to "Mr. A Balladeer"; an instrumental fits the length but not the title, and a
-    // recording credited to "a balladeer" by name fits the title but not the length.
+    // Track 50 (#79), as MusicBrainz has it (`fixtures/http/`): the recording whose title and length
+    // fit is credited to "Mr. A Balladeer"; the same album's instrumental, credited to "a balladeer"
+    // by name, fits the length but not the title, and a 2011 recording by "a balladeer" with Reyn
+    // Ouwehand fits the title but not the length.
     private val balladeer =
         listOf(
-            recording("plain", "When a Law’s Been Broken", "Mr. A Balladeer", 176, "2016")
+            recording("plain", "When a Law's Been Broken", "Mr. A Balladeer", 176, "2010-02-12")
                 .copy(credits = listOf(credit("Mr. A Balladeer", "mr-a-balladeer"))),
-            recording("instrumental", "When a Law’s Been Broken (instrumental)", "Mr. A Balladeer", 175, "2016")
-                .copy(credits = listOf(credit("Mr. A Balladeer", "mr-a-balladeer"))),
-            recording("2011", "When a Law’s Been Broken", "a balladeer", 158, "2011")
+            recording("instrumental", "When A Law's Been Broken (Instrumental)", "a balladeer", 175, "2010-02-12")
                 .copy(credits = listOf(credit("a balladeer", "a-balladeer"))),
+            recording("2011", "When a Law's Been Broken", "A Balladeer", 158, "2011-02-20")
+                .copy(credits = listOf(credit("A Balladeer", "a-balladeer"), credit("Reyn Ouwehand"))),
         )
 
     @Test

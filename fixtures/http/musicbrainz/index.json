@@ -91,6 +91,16 @@
  },
  {
   "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording/abbdd65b-b588-4291-be50-13407b0f453e",
+  "query": {
+   "inc": "artist-credits+work-rels+artist-rels+url-rels",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-abbdd65b-b588-4291-be50-13407b0f453e.json"
+ },
+ {
+  "method": "GET",
   "url": "https://musicbrainz.org/ws/2/recording/c4599250-9001-400a-831a-1f7c31b5f781",
   "query": {
    "inc": "artist-credits+work-rels+artist-rels+url-rels",
@@ -306,6 +316,17 @@
   },
   "status": 200,
   "file": "recording-recording-we-in-here-and-artist-peleboy.json"
+ },
+ {
+  "method": "GET",
+  "url": "https://musicbrainz.org/ws/2/recording",
+  "query": {
+   "query": "recording:\"When a Law's Been Broken\" AND artist:\"a balladeer\"",
+   "limit": "100",
+   "fmt": "json"
+  },
+  "status": 200,
+  "file": "recording-recording-when-a-law-s-been-broken-and-artist-a-balladeer.json"
  },
  {
   "method": "GET",
