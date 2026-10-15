@@ -477,6 +477,75 @@ class RecordingResolverTest {
             )
         }
 
+    // Track 50 (#79), as the Phase 0.5 gate run found it: the recording whose title and length fit
+    // is credited to "Mr. A Balladeer"; an instrumental fits the length but not the title, and a
+    // recording credited to "a balladeer" by name fits the title but not the length.
+    private val balladeer =
+        listOf(
+            recording("plain", "When a Law’s Been Broken", "Mr. A Balladeer", 176, "2016")
+                .copy(credits = listOf(credit("Mr. A Balladeer", "mr-a-balladeer"))),
+            recording("instrumental", "When a Law’s Been Broken (instrumental)", "Mr. A Balladeer", 175, "2016")
+                .copy(credits = listOf(credit("Mr. A Balladeer", "mr-a-balladeer"))),
+            recording("2011", "When a Law’s Been Broken", "a balladeer", 158, "2011")
+                .copy(credits = listOf(credit("a balladeer", "a-balladeer"))),
+        )
+
+    @Test
+    fun `a credit under an honorific variant of the name is accepted when nothing fits by name`() =
+        runTest {
+            val resolution =
+                resolve(FakeMusicBrainz(Lookup.Found(balladeer)), track("When a Law's Been Broken", "a balladeer"), 176)
+            assertEquals(Outcome.SongArticle, resolution.outcome)
+            assertEquals("plain", resolution.recordingMbid)
+            assertEquals("Mr. A Balladeer", resolution.artistCredit)
+            assertEquals(listOf(ResolvedArtist("a balladeer", "mr-a-balladeer")), resolution.artists)
+        }
+
+    @Test
+    fun `a variant is not weighed beside a fitting credit by name, and does not collide with it`() =
+        runTest {
+            // The variant's recording is the earlier, so it would be chosen if it counted.
+            val search =
+                listOf(
+                    recording("variant", "Song", "Mr. Jane Smith", 200, "1970")
+                        .copy(credits = listOf(credit("Mr. Jane Smith", "mr-jane-smith"))),
+                    recording("named", "Song", "Jane Smith", 200, "1980"),
+                )
+            val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", "Jane Smith"), 200)
+            assertEquals("named", resolution.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Jane Smith", "mbid-Jane Smith")), resolution.artists)
+        }
+
+    @Test
+    fun `a variant two MusicBrainz artists share collides, and one that does not fit is a near miss`() =
+        runTest {
+            val two =
+                listOf(
+                    recording("mr", "Song", "Mr. Jane Smith", 200, "1970"),
+                    recording("mrs", "Song", "Mrs. Jane Smith", 201, "1971"),
+                )
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Jane Smith have a matching recording"),
+                resolve(FakeMusicBrainz(Lookup.Found(two)), track("Song", "Jane Smith"), 200).outcome,
+            )
+            for ((credited, artist) in listOf("Dr. John" to "John", "Mr. A Balladeer Tribute" to "a balladeer")) {
+                val search = listOf(recording("other", "Song", credited, 200, "1970"))
+                val resolution = resolve(FakeMusicBrainz(Lookup.Found(search)), track("Song", artist), 200)
+                assertEquals(
+                    Outcome.Rejected("MusicBrainz has “Song” by $credited, not by $artist"),
+                    resolution.outcome,
+                    credited,
+                )
+                assertNull(resolution.recordingMbid)
+            }
+            // Outside the length tolerance, a variant is not a match.
+            val long = listOf(recording("long", "Song", "Mr. Jane Smith", 230, "1970"))
+            assertEquals(
+                Resolution.NONE,
+                resolve(FakeMusicBrainz(Lookup.Found(long)), track("Song", "Jane Smith"), 200),
+            )
+        }
+
     private fun reems(
         lengthA: Int?,
         lengthB: Int?,
