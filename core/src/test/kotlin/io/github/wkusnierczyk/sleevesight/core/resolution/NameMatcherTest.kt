@@ -51,12 +51,14 @@ class NameMatcherTest {
         assertTrue(names.honorificVariant("Mr. A Balladeer", "a balladeer"))
         assertTrue(names.honorificVariant("a balladeer", "Mr A Balladeer"))
         assertTrue(names.honorificVariant("Mrs. Jane Smith", "Jane Smith"))
-        assertTrue(names.honorificVariant("Sir Mix-a-Lot", "Mix-A-Lot"))
         // A variant is not the same name: the resolver weighs it apart.
         assertFalse(names.sameName("Mr. A Balladeer", "a balladeer"))
         // One word after the honorific is a stage name of its own.
         assertFalse(names.honorificVariant("Dr. John", "John"))
         assertFalse(names.honorificVariant("Mr. Big", "Big"))
+        // A hyphenated word is one word, however the key splits it.
+        assertFalse(names.honorificVariant("Mr. T-Bone", "T-Bone"))
+        assertFalse(names.honorificVariant("Sir Mix-a-Lot", "Mix-A-Lot"))
         // Two different honorifics; the same name on both sides is a credit by name, not a variant.
         assertFalse(names.honorificVariant("Mr. Jane Smith", "Mrs. Jane Smith"))
         assertFalse(names.honorificVariant("Mr. A Balladeer", "Mr. A Balladeer"))

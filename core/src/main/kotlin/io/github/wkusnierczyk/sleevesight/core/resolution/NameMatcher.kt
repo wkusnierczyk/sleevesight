@@ -46,27 +46,27 @@ class NameMatcher(
      * Whether [a] and [b] are one name written with and without a leading honorific (`Mr.`, `Mrs.`,
      * `Ms.`, `Miss`, `Mister`, `Dr.`, `Sir`, `Dame`) on one of them only: `Mr. A Balladeer` and `a
      * balladeer` (#79). Narrow on purpose, since a variant may be another artist: the rest must be
-     * the other name whole and at least two words, because an honorific before a single word is
-     * usually a stage name of its own (`Dr. John` is not `John`, nor `Mr. Big` `Big`); and two
-     * different honorifics (`Mr. X Y`, `Mrs. X Y`) are two people. Not [sameName]: a variant is
-     * weaker evidence, which the resolver weighs only when nothing matches by name.
+     * the other name whole and at least two words as written, split at spaces only, because an
+     * honorific before a single word is usually a stage name of its own (`Dr. John` is not `John`,
+     * nor `Mr. Big` `Big`, nor `Mr. T-Bone` `T-Bone`: a hyphenated word is one word). A leading
+     * article counts as a word: `A Balladeer` is two. Two different honorifics (`Mr. X Y`, `Mrs. X
+     * Y`) are two people. Not [sameName]: a variant is weaker evidence, which the resolver weighs
+     * only when nothing matches by name.
      */
     fun honorificVariant(
         a: String,
         b: String,
-    ): Boolean {
-        val ka = key(a)
-        val kb = key(b)
-        return withoutHonorific(ka) == kb || withoutHonorific(kb) == ka
-    }
+    ): Boolean = sameRest(a, b) || sameRest(b, a)
 
-    // [key] without its leading honorific, when it has one and the rest is long enough; else null.
-    private fun withoutHonorific(key: String): String? {
-        val words = key.split(' ')
-        return words
-            .takeIf { it.first() in HONORIFICS && it.size - 1 >= VARIANT_MIN_WORDS }
-            ?.drop(1)
-            ?.joinToString(" ")
+    // Whether [variant] is an honorific, then at least two words whose key is [plain]'s.
+    private fun sameRest(
+        variant: String,
+        plain: String,
+    ): Boolean {
+        val words = variant.trim().split(WHITESPACE)
+        if (key(words.first()) !in HONORIFICS || words.size - 1 < VARIANT_MIN_WORDS) return false
+        val rest = key(words.drop(1).joinToString(" "))
+        return rest.isNotEmpty() && rest == key(plain)
     }
 
     /**
@@ -104,6 +104,8 @@ class NameMatcher(
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')
         const val THE = "the "
+
+        val WHITESPACE = Regex("\\s+")
 
         // As keys: `Mr.` is `mr`.
         val HONORIFICS = setOf("mr", "mrs", "ms", "miss", "mister", "dr", "sir", "dame")
