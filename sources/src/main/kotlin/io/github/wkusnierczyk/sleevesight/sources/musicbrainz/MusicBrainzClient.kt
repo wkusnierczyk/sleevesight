@@ -1,7 +1,9 @@
 package io.github.wkusnierczyk.sleevesight.sources.musicbrainz
 
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtist
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistRelation
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistSearch
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbCredit
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbPerformance
 import io.github.wkusnierczyk.sleevesight.core.resolution.MbRecording
@@ -20,6 +22,7 @@ import io.github.wkusnierczyk.sleevesight.sources.lookup
 import io.github.wkusnierczyk.sleevesight.sources.obj
 import io.github.wkusnierczyk.sleevesight.sources.parseObject
 import io.github.wkusnierczyk.sleevesight.sources.string
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -107,8 +110,28 @@ class MusicBrainzClient(
         }
     }
 
+    override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> {
+        val query = mapOf("query" to "artist:${phrase(name)}", "limit" to "$ARTIST_SEARCH_LIMIT", "fmt" to "json")
+        return net.lookup(NetRequest("$BASE/artist", query = query)) { response ->
+            val json = parseObject(response.body)
+            // Both are required: an answer without them cannot show what matches.
+            val artists = json["artists"] as? JsonArray ?: error("no artists")
+            MbArtistSearch(
+                total = json.int("count") ?: error("no count"),
+                artists = artists.map { MbArtist(it.required("id"), it.required("name")) },
+            )
+        }
+    }
+
     companion object {
         const val BASE: String = "https://musicbrainz.org/ws/2"
+
+        /**
+         * Artists in the one page asked for, MusicBrainz's maximum. The search does not rank the
+         * artists of exactly the name asked for first: of the 2,150 artists matching "Fred", the ten
+         * named Fred ranked from 25th to 97th (2026-10-15).
+         */
+        const val ARTIST_SEARCH_LIMIT: Int = 100
 
         /**
          * MusicBrainz's maximum. A much-recorded song has dozens of recordings by the same artist,

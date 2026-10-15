@@ -31,7 +31,8 @@ data class LastFmArtist(
 ) {
     /**
      * The bio says several artists share this page ([LastFmBio.sharedPage]): its listeners, tags
-     * and similar artists mix them, so the match is never verified.
+     * and similar artists mix them, so the match is never verified. The bio is one of two signals
+     * and need not say so: [ArtistCheck] also asks MusicBrainz whether another artist has the name.
      */
     val sharedPage: Boolean
         get() = LastFmBio.sharedPage(bioSummary)
