@@ -1,14 +1,14 @@
 # Sleevesight MVP plan
 
 **Date:** 2026-10-13  
-**Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release  
+**Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release; the Phase 2 issue that waits on Phase 1.5  
 **Tracking:** [#31][31]
 
-The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9]: [#46][46] did not adopt MusicBrainz tags (D12, 2026-10-15), so [#9][9] does not block [#58][58].
+The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9], which led to the MetaBrainz inquiry ([#100][100]); the inquiry's links are native.
 
 ## Dependencies
 
-An arrow points from an issue to the issues it unblocks. The dotted arrows were conditional: [#46][46] decided whether [#9][9] was needed, and [#9][9] would block [#58][58] only if it was. It was not (D12): the tags are not adopted to fill Last.fm's gaps, and their use as labels when Last.fm is off is decided in Phase 2.
+An arrow points from an issue to the issues it unblocks. The dotted arrows were conditional: [#46][46] decided whether [#9][9] was needed, and [#9][9] would hold up [#58][58] only if the tags were used. They are: D12, revised on 2026-10-15, makes MusicBrainz tags a genre label source from Phase 1.0 ([#84][84]). [#9][9]'s findings call for asking MetaBrainz, and that inquiry, [#100][100], blocks [#58][58].
 
 ```mermaid
 flowchart TD
@@ -46,13 +46,20 @@ flowchart TD
     i20["#20 Prepare the next track (D13)"]
     i54["#54 Diagnostics screen"]
     i29["#29 Restricted settings"]
+    i84["#84 Evidence and genre label sources (D12)"]
     i55["#55 Phase 1 exit"]
   end
 
   subgraph P15["Phase 1.5. Play release"]
     i56["#56 Release workflow"]
     i57["#57 Store listing, privacy policy"]
+    i80["#80 Exa's terms (D11)"]
+    i100["#100 MetaBrainz inquiry (D12)"]
     i58["#58 Play review"]
+  end
+
+  subgraph P2["Phase 2. Detail and discovery"]
+    i101["#101 MusicBrainz tags re-evaluated (D12)"]
   end
 
   i32 --> i33 --> i34
@@ -74,7 +81,7 @@ flowchart TD
   i43 --> i44
   i44 --> i45 --> i46
   i46 -.-> i9
-  i9 -.->|"only if the tags were adopted: not (D12)"| i58
+  i9 -.->|"the tags are labels (D12): ask MetaBrainz"| i100
   i46 --> i55
 
   i30 --> i47
@@ -95,6 +102,7 @@ flowchart TD
   i53 --> i20
   i52 --> i55
   i54 --> i55
+  i50 --> i84
   i20 --> i55
   i29 --> i55
 
@@ -103,9 +111,12 @@ flowchart TD
   i55 --> i58
   i56 --> i58
   i57 --> i58
+  i80 --> i58
+  i100 --> i58
+  i100 --> i101
 ```
 
-- **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0.
+- **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0. [#80][80] and [#100][100] need nothing either, and are best started early.
 - **Two tracks.** [#47][47] and [#29][29] need only [#30][30], and [#48][48] and [#50][50] also only the domain types and `Settings` from [#33][33], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]), [#51][51] (the pipeline from [#44][44]) and [#55][55] (the gate, [#46][46]).
 - **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55] → [#58][58]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
 
@@ -136,7 +147,7 @@ flowchart TD
 | [#44][44] | Pipeline orchestration (D4); `PipelineEvent`s | [#38][38], [#39][39], [#40][40], [#41][41], [#43][43] |
 | [#45][45] | `:cli`: coverage report, insights, HTTP recordings | [#44][44] |
 | [#46][46] | The gate: thresholds tuned, MusicBrainz tags judged (D12), coverage reviewed | [#45][45] |
-| [#9][9] | Licence of MusicBrainz tags; needed before [#58][58] only if [#46][46] adopted them, which it did not (D12) | [#46][46] decided it is not needed for the MVP |
+| [#9][9] | Licence of MusicBrainz tags; its findings became the MetaBrainz inquiry, [#100][100], once the tags were a label source (D12, revised) | [#46][46] decided whether it was needed (no native link) |
 
 ### Phase 1. Android MVP
 
@@ -151,6 +162,7 @@ flowchart TD
 | [#53][53] | *Write insights automatically*; skip detection and *Crossfade* (D5) | [#49][49], [#51][51] |
 | [#20][20] | Prepare the next track (D13) | [#53][53] |
 | [#54][54] | Diagnostics screen | [#51][51] |
+| [#84][84] | Settings: evidence sources and genre label sources, MusicBrainz tags among them (D12) | [#50][50] |
 | [#29][29] | Restricted settings, on a device without Advanced Protection | [#47][47] |
 | [#55][55] | Exit: a listening session on a real phone against Spotify | [#52][52], [#54][54], [#20][20], [#29][29], [#46][46] |
 
@@ -160,7 +172,15 @@ flowchart TD
 |---|---|---|
 | [#56][56] | Release workflow: a signed app bundle, the key in a protected environment; R8 and its keep rules | [#47][47] |
 | [#57][57] | Store listing and its graphics, launcher icon, privacy policy, data safety form | [#52][52] |
-| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57] |
+| [#80][80] | Exa's terms for in-app use (D11), settled before publishing | |
+| [#100][100] | MetaBrainz inquiry: MusicBrainz tags as genre labels (D12); the answer recorded and met, or the tags off by default in the release | |
+| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57], [#80][80], [#100][100] |
+
+### Phase 2. Detail and discovery
+
+| Issue | Work | Blocked by |
+|---|---|---|
+| [#101][101] | Re-evaluate MusicBrainz tags as a genre label source (D12), with Last.fm's live tags and the outcome of [#100][100] | [#100][100] |
 
 ## Pending decisions
 
@@ -170,7 +190,7 @@ flowchart TD
 | Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
 | AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap |
 | Web search provider (D11) | [#40][40] | Decided by that spike |
-| MusicBrainz tags as the labels when Last.fm is off (D12) | [#95][95] | Decided with the genre labels in Phase 2, after MetaBrainz answers the inquiry; licence findings in [#9][9]. Not adopted to fill Last.fm's gaps (2026-10-15) |
+| Genre label sources and their default (D12) | [#84][84] | MusicBrainz tags are a label source from Phase 1.0, for labels only and never in prompts (revised 2026-10-15); licence findings in [#9][9]. Recommendation: MusicBrainz on, since it needs no key and a new user has no Last.fm key; Last.fm on once its key is set. How two sources' labels combine is decided in [#84][84]; [#101][101] re-evaluates the choice in Phase 2 |
 | The name | [#57][57] | The spoken-aloud test on "Sleevesight" before the store listing fixes it |
 | Play developer account | [#58][58] | Personal or organisation; the testing a new account must do before production depends on the type |
 
@@ -186,10 +206,11 @@ flowchart TD
 - **Thresholds and tolerances** tuned in [#46][46] are constants, not settings (driver 6).
 - **D4's profiling** (parallel by name against waiting for MusicBrainz) happens in [#46][46]; it also tells whether preparing the next track ([#20][20]) hides MusicBrainz's latency as intended.
 - **Parallel work** on the two tracks means a worktree per agent.
+- **The MetaBrainz inquiry** ([#100][100]) waits on an answer from outside the project, so it is sent early; sent late, it rather than [#55][55] can hold up [#58][58].
 
 ### After implementation
 
-- **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting.
+- **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting; and [#101][101] (D12), once [#100][100] is settled.
 - **Installs outside Play.** Google's rules for apps installed outside Play are tightening; check them when [#29][29] runs, since they decide what a development install or a channel outside Play costs.
 - **Play's testing requirement** for a new developer account can add weeks before production; check it when the account is set up, so [#58][58] is scheduled with it.
 
@@ -227,4 +248,7 @@ flowchart TD
 [56]: https://github.com/wkusnierczyk/sleevesight/issues/56
 [57]: https://github.com/wkusnierczyk/sleevesight/issues/57
 [58]: https://github.com/wkusnierczyk/sleevesight/issues/58
-[95]: https://github.com/wkusnierczyk/sleevesight/issues/95
+[80]: https://github.com/wkusnierczyk/sleevesight/issues/80
+[84]: https://github.com/wkusnierczyk/sleevesight/issues/84
+[100]: https://github.com/wkusnierczyk/sleevesight/issues/100
+[101]: https://github.com/wkusnierczyk/sleevesight/issues/101

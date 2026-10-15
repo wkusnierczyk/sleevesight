@@ -262,11 +262,11 @@ Prompt contracts are in the appendix.
 
 ### Genre labels
 
-- Derived from Last.fm artist tags filtered through a fixed genre vocabulary. Tags outside the vocabulary (places, decades, "seen live", noise such as "bagel" or "under 2000 listeners") are dropped.
+- Derived from artist tags filtered through a fixed genre vocabulary: Last.fm's, and from Phase 1.0 MusicBrainz's (D12). Tags outside the vocabulary (places, decades, "seen live", noise such as "bagel" or "under 2000 listeners") are dropped.
 - Each vocabulary entry belongs to a family with a fixed hue: folk 135, rock 8, pop 328, hip-hop 30, soul and R&B 48, reggae 92, electronic 190, soundtrack and classical 262, jazz and blues 215.
 - Labels are artist-level, and the UI says so.
-- MusicBrainz tags are not used to fill Last.fm's gaps (D12: they fill 3 of 30); whether they feed the same filter as the keyless labels when Last.fm is off is decided with the genre labels in Phase 2 ([#95](https://github.com/wkusnierczyk/sleevesight/issues/95)). If they do, a label supported by MusicBrainz tags links and credits MusicBrainz ("MusicBrainz contributors, CC BY-NC-SA 3.0"), alongside Last.fm where both contribute (`architecture.md`, *MusicBrainz tags and genres*). The vocabulary may take names from MusicBrainz's genre list, which is CC0.
-- In the test playlist, 30 of 78 unique tracks got no genre labels because their artists have no usable tags.
+- MusicBrainz tags are a genre label source from Phase 1.0 (D12, revised 2026-10-15), for labels only: they are never sent in a prompt. Which sources give labels is a user setting ([#84](https://github.com/wkusnierczyk/sleevesight/issues/84)), which also settles how two sources' labels combine; the proposed default has MusicBrainz on, since it needs no key, and Last.fm on once its key is set. A label only MusicBrainz gives is display-only: it opens no AI-written genre card content (no `fits`, no genre card prompt) unless [#101](https://github.com/wkusnierczyk/sleevesight/issues/101) decides otherwise; a label Last.fm also gives is unaffected. The MetaBrainz inquiry ([#100](https://github.com/wkusnierczyk/sleevesight/issues/100)) is settled before the Play release: answered and its terms met, or the tags off by default in the release, with the reason recorded. The choice is re-evaluated in Phase 2 ([#101](https://github.com/wkusnierczyk/sleevesight/issues/101)). A label supported by MusicBrainz tags links and credits MusicBrainz ("MusicBrainz contributors, CC BY-NC-SA 3.0"), alongside Last.fm where both contribute (`architecture.md`, *MusicBrainz tags and genres*). The vocabulary may take names from MusicBrainz's genre list, which is CC0.
+- In the test playlist, 30 of 78 unique tracks got no genre labels from Last.fm because their artists have no usable tags, and 27 got none from Last.fm and MusicBrainz together (*Gate run (#46)*, *D12*).
 
 ### Caching and offline
 
@@ -283,7 +283,7 @@ Material 3, with dynamic color taken from the album art (material-color-utilitie
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
 2. **Album art**, which opens the album in the player. Playback progress under it.
 3. **Key data.** Song title, then artists (each one separately), then album, then "Released YYYY" on its own line.
-4. **Genre labels.** Colored, tappable chips.
+4. **Genre labels.** Colored, tappable chips. A label only MusicBrainz gives opens only its MusicBrainz link and credit (D12, *Genre labels*).
 5. **Why it's interesting.** The grounded insight with citation chips.
 6. **Sounds like.** Similar artists as tappable chips.
 7. **Sources.** Quiet styling, at the bottom: source status chips that double as display filters, the evidence lines, and rejected matches with their reasons. Tapping a citation scrolls here and flashes the line.
@@ -295,7 +295,7 @@ Material 3, with dynamic color taken from the album art (material-color-utilitie
 | Song title | Insight on the recording, Open in player, sources |
 | Each artist | Insight on that artist, tracks by them in the playlist or session, Open in player, sources |
 | Album | Insight on the release, tracks from it, Open in player, sources |
-| Genre label | Why the track fits (grounded), what the genre is (general knowledge), more like this (general knowledge, opens a player search) |
+| Genre label | Why the track fits (grounded), what the genre is (general knowledge), more like this (general knowledge, opens a player search). A label only MusicBrainz gives has no AI-written content (D12, *Genre labels*): it opens only the label's MusicBrainz link and credit |
 | Sounds-like artist | Why they're linked (grounded), how they compare (general knowledge), songs to start with (general knowledge, opens a player search) |
 
 The detail section is called **Insight**. "Analysis" is reserved for a future deeper mode (see Open questions).
@@ -303,7 +303,7 @@ The detail section is called **Insight**. "Analysis" is reserved for a future de
 ### Layout setting
 
 - **Separate pages.** Each item opens a full screen with a back arrow; Android back works throughout.
-- **Expandable boxes.** Song, each artist, and album are boxes on the home screen that expand in place; genre and sounds-like cards open inline under their chips.
+- **Expandable boxes.** Song, each artist, and album are boxes on the home screen that expand in place; genre and sounds-like cards open inline under their chips (a label only MusicBrainz gives has no card: D12, *Genre labels*).
 
 The detail content is one component mounted either way.
 
@@ -321,6 +321,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
+| Genre labels | Label sources: Last.fm, MusicBrainz (Discogs in Phase 3) (D12, #84) | MusicBrainz on; Last.fm on once its key is set (proposed in #84; MusicBrainz off by default in the release if #100 is settled without an answer) |
 | Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
 | Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
 | Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
@@ -454,11 +455,13 @@ Per track, 678 cited lines in all (with 67 `P` lines), 0 to 26 a track: none on 
 - Where both give labels (26 tracks), they share at least one label on all 26: 60 shared of 99 Last.fm labels and 92 MusicBrainz labels.
 - MusicBrainz is keyless; Last.fm needs the user's own key. For a user without one, MusicBrainz tags would label 29 of 78 tracks instead of none.
 
-Recommendation, decided as written on 2026-10-15 (D12 in *Decisions*): **do not adopt them to fill Last.fm's gaps**, which they barely do (3 of 30), and the licence conditions (*Conditions*) and an extra request per artist at one a second would be paid for that. **Consider them as the keyless source of labels when Last.fm is off**, for labels only and not in prompts, which keeps clear of the provider-terms question still open under #9; decide that with the genre labels in Phase 2, after MetaBrainz answers the inquiry. The Last.fm side of the comparison is from frozen data and awaits a Last.fm key: Last.fm's live tags, after its verification (`architecture.md`, *Last.fm verification*), may label fewer tracks than the simulator's 48.
+Recommendation, decided as written on 2026-10-15 and revised the same day (below; D12 in *Decisions*): **do not adopt them to fill Last.fm's gaps**, which they barely do (3 of 30), and the licence conditions (*Conditions*) and an extra request per artist at one a second would be paid for that. **Consider them as the keyless source of labels when Last.fm is off**, for labels only and not in prompts, which keeps clear of the provider-terms question still open under #9; decide that with the genre labels in Phase 2, after MetaBrainz answers the inquiry. The Last.fm side of the comparison is from frozen data and awaits a Last.fm key: Last.fm's live tags, after its verification (`architecture.md`, *Last.fm verification*), may label fewer tracks than the simulator's 48.
+
+**D12 revised, 2026-10-15.** MusicBrainz tags are a genre label source from Phase 1.0 ([#84](https://github.com/wkusnierczyk/sleevesight/issues/84)), for labels only and never in prompts, attributed as `architecture.md` sets out (*Conditions*). Whether 3 of 30 gaps filled, and 29 of 78 tracks labelled for a user without a Last.fm key, are worth another source is a judgement call, so the label sources are a user setting. The MetaBrainz inquiry ([#100](https://github.com/wkusnierczyk/sleevesight/issues/100)) is settled before the Play release: answered and its terms met, or the tags off by default in the release, with the reason recorded. The choice is re-evaluated in Phase 2 ([#101](https://github.com/wkusnierczyk/sleevesight/issues/101)), with Last.fm's live tags.
 
 ### Phase 1. Android MVP
 
-Session layer, home screen, sources section, insight with grounding check, settings for sources and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
+Session layer, home screen, sources section, insight with grounding check, genre labels, settings for sources, genre label sources (D12) and AI service, caching; preparing the next track (D13); recording track changes for learned skip detection (D15).
 
 ### Phase 1.5. Play release
 
@@ -466,7 +469,7 @@ The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signe
 
 ### Phase 2. Detail and discovery
 
-Song, artist and album detail content; genre labels and cards; sounds-like cards; layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
+Song, artist and album detail content; genre cards; sounds-like cards; the re-evaluation of MusicBrainz tags as a genre label source (D12, #101); layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
 
 ### Phase 3. Context and reach
 
@@ -502,6 +505,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-14 | D11: Exa is the first web search provider (#40); results kept only when they name the title and a credited artist | A free tier without a card, renewed monthly; real results for the thin tracks. Only Exa was tested live |
 | 2026-10-12 | D12: MusicBrainz tags and genres judged in the Phase 0.5 pilot; their licence settled before they ship (#9); licence findings in `architecture.md`, *MusicBrainz tags and genres* | Last.fm alone left 30 of 78 tracks without genres |
 | 2026-10-15 | D12: MusicBrainz tags are not adopted to fill Last.fm's gaps; whether they are the keyless labels when Last.fm is off is decided with the genre labels in Phase 2 | They fill 3 of Last.fm's 30 gaps (the gate, #46), at the cost of the licence conditions and a request per artist; with Last.fm off they would label 29 of 78 tracks instead of none. Last.fm's side is the simulator's frozen tags |
+| 2026-10-15 | D12 revised: MusicBrainz tags are a genre label source from Phase 1.0 (#84), labels only and never in prompts, attributed; the label sources are a user setting. The MetaBrainz inquiry (#100) is settled before the Play release: answered and its terms met, or the tags off by default in the release. Re-evaluated in Phase 2 (#101). Replaces the entry above | Whether the gaps they fill, and the 29 of 78 tracks they label without a Last.fm key, are worth another source is a judgement call, so it is the user's. Kept out of prompts, they stay clear of the AI providers' terms question (#9) |
 | 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
@@ -562,6 +566,8 @@ Input: the now-playing title, artists and album as the player reports them (not 
 Detail insights use the same rules, with a built-in style of one or two short paragraphs, at most 130 words, focused on the song, artist or release.
 
 ### Genre card
+
+Only for a label Last.fm gives (D12): a label only MusicBrainz gives opens no AI-written genre card content, so its tags never reach this prompt, unless [#101](https://github.com/wkusnierczyk/sleevesight/issues/101) decides otherwise.
 
 ```json
 {
