@@ -1,0 +1,3 @@
+# GitHub Pages (Jekyll, the default theme) builds the site from `main`: the README and the
+# `design/` documents. The title replaces the repository's name in the page titles and headers.
+title: Sleevesight

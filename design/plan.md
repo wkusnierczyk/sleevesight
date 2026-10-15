@@ -4,11 +4,11 @@
 **Scope:** closing Phase 0; Phase 0.5, Pipeline CLI; Phase 1, Android MVP; Phase 1.5, Play release  
 **Tracking:** [#31][31]
 
-The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9], which become a link from [#9][9] to [#58][58] if [#46][46] adopts MusicBrainz tags.
+The work to the MVP and its release, as issues and their dependencies. What each piece is and why is in [design.md](design.md) and [architecture.md](architecture.md); the issues point to the sections. Each dependency is also a native *blocked by* link on its issue, except the two dotted ones around [#9][9]: [#46][46] did not adopt MusicBrainz tags (D12, 2026-10-15), so [#9][9] does not block [#58][58].
 
 ## Dependencies
 
-An arrow points from an issue to the issues it unblocks. The dotted arrows are conditional: [#46][46] decides whether [#9][9] is needed, and [#9][9] blocks [#58][58] only if it is.
+An arrow points from an issue to the issues it unblocks. The dotted arrows were conditional: [#46][46] decided whether [#9][9] was needed, and [#9][9] would block [#58][58] only if it was. It was not (D12): the tags are not adopted to fill Last.fm's gaps, and their use as labels when Last.fm is off is decided in Phase 2.
 
 ```mermaid
 flowchart TD
@@ -74,7 +74,7 @@ flowchart TD
   i43 --> i44
   i44 --> i45 --> i46
   i46 -.-> i9
-  i9 -.->|"if #46 adopts the tags"| i58
+  i9 -.->|"only if the tags were adopted: not (D12)"| i58
   i46 --> i55
 
   i30 --> i47
@@ -136,7 +136,7 @@ flowchart TD
 | [#44][44] | Pipeline orchestration (D4); `PipelineEvent`s | [#38][38], [#39][39], [#40][40], [#41][41], [#43][43] |
 | [#45][45] | `:cli`: coverage report, insights, HTTP recordings | [#44][44] |
 | [#46][46] | The gate: thresholds tuned, MusicBrainz tags judged (D12), coverage reviewed | [#45][45] |
-| [#9][9] | Licence of MusicBrainz tags; needed before [#58][58] only if [#46][46] adopts them | [#46][46] decides whether it is needed |
+| [#9][9] | Licence of MusicBrainz tags; needed before [#58][58] only if [#46][46] adopted them, which it did not (D12) | [#46][46] decided it is not needed for the MVP |
 
 ### Phase 1. Android MVP
 
@@ -160,7 +160,7 @@ flowchart TD
 |---|---|---|
 | [#56][56] | Release workflow: a signed app bundle, the key in a protected environment; R8 and its keep rules | [#47][47] |
 | [#57][57] | Store listing and its graphics, launcher icon, privacy policy, data safety form | [#52][52] |
-| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57]; [#9][9] if [#46][46] adopts MusicBrainz tags |
+| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57] |
 
 ## Pending decisions
 
@@ -170,7 +170,7 @@ flowchart TD
 | Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
 | AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap |
 | Web search provider (D11) | [#40][40] | Decided by that spike |
-| MusicBrainz tags (D12) | [#46][46], [#9][9] | Judged by the gate; the licence settled before they ship |
+| MusicBrainz tags as the labels when Last.fm is off (D12) | Phase 2, [#9][9] | Decided with the genre labels; the licence settled before they ship. Not adopted to fill Last.fm's gaps (2026-10-15) |
 | The name | [#57][57] | The spoken-aloud test on "Sleevesight" before the store listing fixes it |
 | Play developer account | [#58][58] | Personal or organisation; the testing a new account must do before production depends on the type |
 
