@@ -232,14 +232,15 @@ object GroundingCheck {
         while (next < t.length && (isJsWhitespace(t[next]) || t[next] in WORD_OPENERS)) next++
         var stop = next
         while (stop < t.length && !isJsWhitespace(t[stop])) stop++
-        val opens = t.substring(next, stop).trimEnd(',', ';', ':') in SENTENCE_OPENERS
+        // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
+        val opens = t.substring(next, stop).trimEnd(',', ';', ':').replace('’', '\'') in SENTENCE_OPENERS
         return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
     }
 
     /**
      * Words that open a sentence far more often than they follow initials within one: after
      * `the U.S.`, `It reached …` is a new sentence, `Billboard …` most likely not. Matched with
-     * their case.
+     * their case, with straight apostrophes.
      */
     private val SENTENCE_OPENERS: Set<String> =
         setOf(
