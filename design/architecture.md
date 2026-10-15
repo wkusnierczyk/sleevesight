@@ -320,7 +320,7 @@ How the three caches are made (#41, `Caches`), where the table leaves room:
 
 ### Settings and secrets (`:app`)
 
-- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the AI reasoning effort, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
+- Preferences in DataStore, including the *Write insights* master switch, *Write insights automatically* and its *Crossfade* (D5), *Prepare the next track* (D13), the prompt style and its overrides per card (D14), the genre label sources (D12, #84), the per-source cache lifetimes (D9), the artist cache lifetime and the cache size limit, the AI reasoning effort, the background-lookup switch (D6) and the Ollama host and its pinned certificate (D8).
 - API keys and tokens encrypted with an AES-GCM key held in the Android Keystore, stored in DataStore. Not Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 - `Secret` (defined in `:core`, since `AiProvider` takes it) is a type whose `toString()` is redacted, so a key cannot reach a log by accident.
 

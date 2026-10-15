@@ -180,7 +180,7 @@ flowchart TD
 
 | Issue | Work | Blocked by |
 |---|---|---|
-| [#101][101] | Re-evaluate MusicBrainz tags as a genre label source (D12), with Last.fm's live tags and MetaBrainz's answer | [#100][100] |
+| [#101][101] | Re-evaluate MusicBrainz tags as a genre label source (D12), with Last.fm's live tags and the outcome of [#100][100] | [#100][100] |
 
 ## Pending decisions
 
@@ -210,7 +210,7 @@ flowchart TD
 
 ### After implementation
 
-- **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting; and [#101][101] (D12), once MetaBrainz has answered [#100][100].
+- **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting; and [#101][101] (D12), once [#100][100] is settled.
 - **Installs outside Play.** Google's rules for apps installed outside Play are tightening; check them when [#29][29] runs, since they decide what a development install or a channel outside Play costs.
 - **Play's testing requirement** for a new developer account can add weeks before production; check it when the account is set up, so [#58][58] is scheduled with it.
 

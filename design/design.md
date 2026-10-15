@@ -283,7 +283,7 @@ Material 3, with dynamic color taken from the album art (material-color-utilitie
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
 2. **Album art**, which opens the album in the player. Playback progress under it.
 3. **Key data.** Song title, then artists (each one separately), then album, then "Released YYYY" on its own line.
-4. **Genre labels.** Colored, tappable chips.
+4. **Genre labels.** Colored, tappable chips. A label only MusicBrainz gives opens only its MusicBrainz link and credit (D12, *Genre labels*).
 5. **Why it's interesting.** The grounded insight with citation chips.
 6. **Sounds like.** Similar artists as tappable chips.
 7. **Sources.** Quiet styling, at the bottom: source status chips that double as display filters, the evidence lines, and rejected matches with their reasons. Tapping a citation scrolls here and flashes the line.
@@ -295,7 +295,7 @@ Material 3, with dynamic color taken from the album art (material-color-utilitie
 | Song title | Insight on the recording, Open in player, sources |
 | Each artist | Insight on that artist, tracks by them in the playlist or session, Open in player, sources |
 | Album | Insight on the release, tracks from it, Open in player, sources |
-| Genre label | Why the track fits (grounded), what the genre is (general knowledge), more like this (general knowledge, opens a player search) |
+| Genre label | Why the track fits (grounded), what the genre is (general knowledge), more like this (general knowledge, opens a player search). A label only MusicBrainz gives has no AI-written content (D12, *Genre labels*): it opens only the label's MusicBrainz link and credit |
 | Sounds-like artist | Why they're linked (grounded), how they compare (general knowledge), songs to start with (general knowledge, opens a player search) |
 
 The detail section is called **Insight**. "Analysis" is reserved for a future deeper mode (see Open questions).
@@ -303,7 +303,7 @@ The detail section is called **Insight**. "Analysis" is reserved for a future de
 ### Layout setting
 
 - **Separate pages.** Each item opens a full screen with a back arrow; Android back works throughout.
-- **Expandable boxes.** Song, each artist, and album are boxes on the home screen that expand in place; genre and sounds-like cards open inline under their chips.
+- **Expandable boxes.** Song, each artist, and album are boxes on the home screen that expand in place; genre and sounds-like cards open inline under their chips (a label only MusicBrainz gives has no card: D12, *Genre labels*).
 
 The detail content is one component mounted either way.
 
@@ -321,6 +321,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
+| Genre labels | Label sources: Last.fm, MusicBrainz (Discogs in Phase 3) (D12, #84) | MusicBrainz on; Last.fm on once its key is set (proposed in #84; MusicBrainz off by default in the release if #100 is settled without an answer) |
 | Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
 | Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
 | Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
