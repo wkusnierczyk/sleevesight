@@ -31,7 +31,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 ## Privacy
 
-Track, artist and album names, for the playing track and, by default, the next one in the queue, go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names, for the playing track and, by default, the next one in the queue, go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. When a player gives the cover only as a web address, the app fetches it from the player's image server. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
 
 ## Roadmap
 
@@ -52,7 +52,7 @@ Android only. iOS does not let one app read what another app is playing. Sleeves
 
 ## Building
 
-Requires JDK 17 or later and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
+Requires JDK 21 or later (Robolectric's Android 16 runtime, used by the app's tests, needs it) and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
 
 ```sh
 ./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint

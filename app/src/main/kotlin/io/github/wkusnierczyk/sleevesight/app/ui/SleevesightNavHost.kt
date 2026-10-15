@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import io.github.wkusnierczyk.sleevesight.app.FirstRunAcknowledgement
 import io.github.wkusnierczyk.sleevesight.app.session.NotificationAccess
 import kotlinx.serialization.Serializable
 
@@ -19,18 +20,20 @@ data object FirstRun
 data object Home
 
 /**
- * The app's destinations. It opens on [FirstRun] until notification access is on, so the
- * first-run screen is seen before the app can read anything, and on [Home] after that.
+ * The app's destinations. It opens on [FirstRun] until the user has continued past it and
+ * notification access is on, and on [Home] after that. Continuing needs access on, so the
+ * first-run screen is seen even when access was granted in Settings before the app was opened.
  */
 @Composable
 fun SleevesightNavHost(
     notificationAccess: NotificationAccess,
+    firstRun: FirstRunAcknowledgement,
     openAccessSettings: () -> Boolean,
 ) {
     val granted by notificationAccess.granted.collectAsState()
     val navController = rememberNavController()
     // Chosen once: a change of access later does not move the user off the screen they are on.
-    val start: Any = remember { if (notificationAccess.granted.value) Home else FirstRun }
+    val start: Any = remember { if (firstRun.acknowledged && notificationAccess.granted.value) Home else FirstRun }
 
     NavHost(navController = navController, startDestination = start) {
         composable<FirstRun> {
@@ -38,6 +41,7 @@ fun SleevesightNavHost(
                 accessGranted = granted,
                 openAccessSettings = openAccessSettings,
                 onContinue = {
+                    firstRun.acknowledge()
                     // Back to Home if the user came from there; else Home replaces this screen.
                     if (!navController.popBackStack<Home>(inclusive = false)) {
                         navController.navigate(Home) { popUpTo<FirstRun> { inclusive = true } }

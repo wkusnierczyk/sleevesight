@@ -342,6 +342,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
   - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track and, with *Prepare the next track* on (D13), for the next one in the player's queue.
   - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track and, with *Prepare the next track* set to *Evidence and insight* (the default, D13), for the next one. Each prompt also carries the user's style (D14), including any free text they wrote.
   - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
+  - To the player's image server, when a player gives the album art only as a web address: a request for that image.
 
   Nothing else leaves the phone. The duration, the album art, the session history and the record of track changes used to learn skip detection (D15) stay on it.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.

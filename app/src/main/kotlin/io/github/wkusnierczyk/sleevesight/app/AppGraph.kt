@@ -14,4 +14,6 @@ class AppGraph(
     private val appContext = context.applicationContext
 
     val notificationAccess = NotificationAccess(appContext)
+
+    val firstRun = FirstRunAcknowledgement(appContext)
 }

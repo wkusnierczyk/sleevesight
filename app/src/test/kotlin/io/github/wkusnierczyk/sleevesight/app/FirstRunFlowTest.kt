@@ -39,6 +39,9 @@ class FirstRunFlowTest {
 
     private fun launch(): ActivityScenario<MainActivity> = ActivityScenario.launch(MainActivity::class.java)
 
+    /** As after an earlier run in which the user continued past the first-run screen. */
+    private fun acknowledgeFirstRun() = FirstRunAcknowledgement(app).acknowledge()
+
     @Test
     fun withoutAccessTheFirstRunScreenSaysWhatLeavesThePhone() {
         setAccess(granted = false)
@@ -84,7 +87,22 @@ class FirstRunFlowTest {
     }
 
     @Test
-    fun withAccessTheAppOpensOnHome() {
+    fun accessGrantedBeforeTheFirstRunStillShowsTheFirstRunScreen() {
+        setAccess(granted = true)
+        launch().use {
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+        // Continuing is remembered: the next start opens on Home.
+        launch().use {
+            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun afterTheFirstRunAndWithAccessTheAppOpensOnHome() {
+        acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
@@ -92,11 +110,21 @@ class FirstRunFlowTest {
     }
 
     @Test
+    fun afterTheFirstRunButWithoutAccessTheAppOpensOnTheFirstRunScreen() {
+        acknowledgeFirstRun()
+        setAccess(granted = false)
+        launch().use {
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun homeLeadsBackToTheFirstRunScreen() {
+        acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
             compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
         }

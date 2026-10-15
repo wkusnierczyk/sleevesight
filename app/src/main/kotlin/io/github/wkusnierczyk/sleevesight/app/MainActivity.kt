@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
             SleevesightTheme {
                 SleevesightNavHost(
                     notificationAccess = graph.notificationAccess,
+                    firstRun = graph.firstRun,
                     openAccessSettings = ::openAccessSettings,
                 )
             }
