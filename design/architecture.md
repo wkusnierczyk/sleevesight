@@ -541,8 +541,6 @@ GitHub Actions from the first code PR. On every pull request, and every push to 
 2. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
 3. `assembleDebug`, with the APK uploaded as a workflow artifact.
 
-While no Android module exists (from the removal of `:spike` until `:app`), Android lint, `checkManifest` and `assembleDebug` have nothing to run, and CI leaves the last two out.
-
 `main` requires the `build` check, so every pull request runs it, Markdown-only ones included: a required check that never reports leaves the pull request unmergeable. A push to `main` or a `dev-*` branch that changes only Markdown runs no CI. `design/simulator.html` is not Markdown, so a change to it does run CI, and a `:core` test checks that its embedded data agrees with the fixtures.
 
 A release workflow (a signed app bundle for Google Play, D7) comes with the first release; the signing key goes in a protected environment, not a repository secret.

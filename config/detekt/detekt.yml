@@ -1,5 +1,12 @@
 # Additions to Detekt's default configuration, for every module.
+naming:
+  # Composable functions are named like types (Compose's API guidelines).
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
 style:
+  # A preview is private and called only by the IDE.
+  UnusedPrivateMember:
+    ignoreAnnotated: ['Preview']
   MaxLineLength:
     maxLineLength: 120
   # Network access only through :net (design, Structural constraints). :net has its own

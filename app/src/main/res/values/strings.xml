@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sleevesight</string>
+
+    <!-- First-run screen: what leaves the phone, and to whom (design, Privacy and security). -->
+    <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
+
+    <string name="first_run_reads_title">What it reads</string>
+    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing: the title, artists, album, length and cover. It ignores the notifications themselves, and it never touches the audio.</string>
+
+    <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists, cleaned of tags such as “2006 Remaster”, and the album name. This is for the playing track and, while “Prepare the next track” is on, for the next one in the player’s queue.</string>
+    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, what the sources found, and your style setting, including any text you write there. This is for the playing track and, by default, for the next one in the queue.</string>
+    <string name="first_run_to_spotify">To Spotify, only if you connect a Spotify account: requests for the playlist or album being played, made with your own token.</string>
+    <string name="first_run_to_art_host">To the server named in that web address, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
+    <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
+
+    <string name="first_run_stays_title">What stays on the phone</string>
+    <string name="first_run_stays">Nothing else leaves the phone. The length and cover of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
+    <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting, no analytics, no ads.</string>
+
+    <string name="access_off">Notification access is off.</string>
+    <string name="access_off_hint">In the settings that open, turn on Sleevesight, then come back here.</string>
+    <string name="no_access_settings">No settings screen for notification access opened. Look for it under Settings, Apps, Special app access.</string>
+    <string name="access_on">Notification access is on.</string>
+    <string name="open_access_settings">Open notification access</string>
+    <string name="first_run_continue">Continue</string>
+
+    <!-- Home, until the now-playing screen exists. -->
+    <string name="home_placeholder">This build does not show what is playing yet.</string>
+    <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
+    <string name="home_turn_on_access">Turn on notification access</string>
+    <string name="home_what_leaves">What leaves the phone</string>
+</resources>

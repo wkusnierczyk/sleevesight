@@ -44,6 +44,17 @@ jobs:
       - name: Functional tests of the build logic
         run: ./gradlew :build-logic:functionalTest --console=plain
 
-      # `checkManifest` and the debug APK come back with `:app` (#47).
       - name: Structural checks
-        run: ./gradlew checkDependencies checkModuleGraph --console=plain
+        run: ./gradlew checkDependencies checkManifest checkModuleGraph --console=plain
+
+      # `build` has assembled it already; this names the step that makes it.
+      - name: Debug APK
+        run: ./gradlew :app:assembleDebug --console=plain
+
+      # For installing on a phone or an emulator, such as the restricted-settings test (#29).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sleevesight-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
