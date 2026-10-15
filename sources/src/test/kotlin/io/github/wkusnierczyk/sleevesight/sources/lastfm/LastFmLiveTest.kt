@@ -9,6 +9,7 @@ import io.github.wkusnierczyk.sleevesight.core.platform.JvmResourceReader
 import io.github.wkusnierczyk.sleevesight.core.sources.Resolution
 import io.github.wkusnierczyk.sleevesight.net.NetClient
 import io.github.wkusnierczyk.sleevesight.net.NetConfig
+import io.github.wkusnierczyk.sleevesight.sources.musicbrainz.MusicBrainzClient
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -30,7 +31,13 @@ class LastFmLiveTest {
         runBlocking {
             NetClient(NetConfig(appVersion = "0.0-live-test")).use { net ->
                 val adapter =
-                    LastFmAdapter(net, Secret(key), GenreVocabulary.load(JvmResourceReader), JvmAccentFolder)
+                    LastFmAdapter(
+                        net,
+                        MusicBrainzClient(net),
+                        Secret(key),
+                        GenreVocabulary.load(JvmResourceReader),
+                        JvmAccentFolder,
+                    )
                 val normalizer = Normalizer(JvmAccentFolder)
                 val none = CompletableDeferred(Resolution.NONE)
 
