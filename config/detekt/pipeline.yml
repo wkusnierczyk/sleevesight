@@ -44,6 +44,16 @@ style:
         reason: 'Use kotlin.math.'
       - value: 'java.lang.Math.random'
         reason: 'Use kotlin.random.'
+      # The access-order LinkedHashMap constructor (the others are common) and `synchronized`. Detekt
+      # 1.23.8 on Kotlin 2.4 matches the constructor written as `java.util.LinkedHashMap(…)` only: like
+      # `kotlin.text.format`, the `kotlin.collections.LinkedHashMap` alias and `kotlin.synchronized`
+      # are not matched (checked by adding each to the code). Kept for a later Detekt that resolves them.
+      - value: 'java.util.LinkedHashMap.<init>(kotlin.Int, kotlin.Float, kotlin.Boolean)'
+        reason: 'JVM-only; keep insertion order and move an entry to the end when it is used.'
+      - value: 'kotlin.collections.LinkedHashMap.<init>(kotlin.Int, kotlin.Float, kotlin.Boolean)'
+        reason: 'JVM-only; keep insertion order and move an entry to the end when it is used.'
+      - value: 'kotlin.synchronized'
+        reason: 'JVM-only; use kotlinx.coroutines.sync.Mutex.'
   ForbiddenAnnotation:
     active: true
     annotations:

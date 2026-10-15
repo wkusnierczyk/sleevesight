@@ -22,6 +22,7 @@ import io.github.wkusnierczyk.sleevesight.sources.lookup
 import io.github.wkusnierczyk.sleevesight.sources.obj
 import io.github.wkusnierczyk.sleevesight.sources.parseObject
 import io.github.wkusnierczyk.sleevesight.sources.string
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -109,22 +110,15 @@ class MusicBrainzClient(
         }
     }
 
-    override suspend fun searchArtists(
-        name: String,
-        offset: Int,
-    ): Lookup<MbArtistSearch> {
-        val query =
-            mapOf(
-                "query" to "artist:${phrase(name)}",
-                "limit" to "$ARTIST_SEARCH_LIMIT",
-                "offset" to "$offset",
-                "fmt" to "json",
-            )
+    override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> {
+        val query = mapOf("query" to "artist:${phrase(name)}", "limit" to "$ARTIST_SEARCH_LIMIT", "fmt" to "json")
         return net.lookup(NetRequest("$BASE/artist", query = query)) { response ->
             val json = parseObject(response.body)
+            // Both are required: an answer without them cannot show what matches.
+            val artists = json["artists"] as? JsonArray ?: error("no artists")
             MbArtistSearch(
                 total = json.int("count") ?: error("no count"),
-                artists = json.array("artists").map { MbArtist(it.required("id"), it.required("name")) },
+                artists = artists.map { MbArtist(it.required("id"), it.required("name")) },
             )
         }
     }
@@ -133,9 +127,9 @@ class MusicBrainzClient(
         const val BASE: String = "https://musicbrainz.org/ws/2"
 
         /**
-         * Artists per page, MusicBrainz's maximum. The search does not rank the artists of exactly
-         * the name asked for first: of the 2,150 artists matching "Fred", the ten named Fred ranked
-         * from 25th to 97th (2026-10-15), so a caller pages until the search is complete.
+         * Artists in the one page asked for, MusicBrainz's maximum. The search does not rank the
+         * artists of exactly the name asked for first: of the 2,150 artists matching "Fred", the ten
+         * named Fred ranked from 25th to 97th (2026-10-15).
          */
         const val ARTIST_SEARCH_LIMIT: Int = 100
 

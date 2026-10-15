@@ -3,8 +3,11 @@ package io.github.wkusnierczyk.sleevesight.sources.lastfm
 import io.github.wkusnierczyk.sleevesight.core.genres.GenreLabel
 import io.github.wkusnierczyk.sleevesight.core.normalizer.AccentFolder
 import io.github.wkusnierczyk.sleevesight.core.resolution.Lookup
+import io.github.wkusnierczyk.sleevesight.core.resolution.MbArtistSearch
 import io.github.wkusnierczyk.sleevesight.core.resolution.MusicBrainzLookup
 import io.github.wkusnierczyk.sleevesight.core.sources.ResolvedArtist
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * How Last.fm's answer for one credited artist was judged (`design/architecture.md`, *Source
@@ -66,7 +69,10 @@ data class LastFmArtistLookup(
     val genres: List<GenreLabel>,
     val provisional: Boolean = false,
 ) {
-    /** [artist] when the match is verified or unverified, the only artist whose data may be shown. */
+    /**
+     * [artist] when the match is verified, bio-verified or unverified ([LastFmMatch.shows]), the
+     * only artist whose data may be shown.
+     */
     val shown: LastFmArtist?
         get() = artist.takeIf { match.shows }
 }
@@ -95,8 +101,8 @@ internal data class Judgement(
  * 3. Otherwise the match is unverified.
  *
  * Name matching folds case and accents and keeps letters and digits only. One check serves every
- * track its adapter looks up, and keeps the search's conclusive answers for the most recent
- * [VERDICTS] names, in memory.
+ * track its adapter looks up, and keeps the search's answers, all but failures, for the most recent
+ * [VERDICTS] names as sent, with the MusicBrainz id, in memory.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
@@ -159,7 +165,7 @@ internal class ArtistCheck(
         /** Another artist has the name. */
         SHARED,
 
-        /** The search answered, but proves neither: it stayed incomplete, or the artist is not in it. */
+        /** The search answered, but proves neither: its page holds only part of the matches, or not the artist. */
         UNKNOWN,
 
         /** A request failed; a later search may answer. Never kept. */
@@ -167,22 +173,23 @@ internal class ArtistCheck(
     }
 
     /**
-     * Whether [name] is the artist [mbid]'s alone, by name key: the search finds that artist under
-     * the name and no other, and is complete. It pages until another artist of the name turns up or
-     * the search is complete, for at most [MAX_PAGES] pages. A name with no letters or digits, which
-     * every name key would match, proves nothing.
+     * Whether [name] is the artist [mbid]'s alone, by name key, from one page of MusicBrainz's
+     * artist search: another artist of the name on it shares the name; the artist owns it only when
+     * the page holds every match (no more than [MbArtistSearch.total] exist) and the artist under the
+     * name, alone. Anything else proves neither, as does a name with no letters or digits, which
+     * every name key would match. The answer is kept by the query as sent and the id.
      */
     private suspend fun ownership(
         mbid: String,
         name: String,
     ): Ownership {
         val nameKey = key(name)
-        val verdictKey = nameKey to mbid.lowercase()
+        val verdictKey = name.lowercase() to mbid.lowercase()
         return when {
             nameKey.isEmpty() -> Ownership.UNKNOWN
             else ->
-                verdicts[verdictKey]
-                    ?: search(mbid, name, nameKey).also { if (it != Ownership.FAILED) verdicts[verdictKey] = it }
+                verdicts.get(verdictKey)
+                    ?: search(mbid, name, nameKey).also { if (it != Ownership.FAILED) verdicts.put(verdictKey, it) }
         }
     }
 
@@ -191,25 +198,13 @@ internal class ArtistCheck(
         name: String,
         nameKey: String,
     ): Ownership {
-        var fetched = 0
-        var pages = 0
-        var seen = false
-        var verdict: Ownership? = null
-        while (verdict == null && pages < MAX_PAGES) {
-            pages++
-            val page = (musicBrainz.searchArtists(name, fetched) as? Lookup.Found)?.value ?: return Ownership.FAILED
-            val named = page.artists.filter { key(it.name) == nameKey }
-            seen = seen || named.isNotEmpty()
-            fetched += page.artists.size
-            verdict =
-                when {
-                    named.any { !it.mbid.equals(mbid, ignoreCase = true) } -> Ownership.SHARED
-                    fetched >= page.total -> if (seen) Ownership.OWNED else Ownership.UNKNOWN
-                    page.artists.isEmpty() -> Ownership.UNKNOWN
-                    else -> null
-                }
+        val page = (musicBrainz.searchArtists(name) as? Lookup.Found)?.value ?: return Ownership.FAILED
+        val named = page.artists.filter { key(it.name) == nameKey }
+        return when {
+            named.any { !it.mbid.equals(mbid, ignoreCase = true) } -> Ownership.SHARED
+            page.total <= page.artists.size && named.isNotEmpty() -> Ownership.OWNED
+            else -> Ownership.UNKNOWN
         }
-        return verdict ?: Ownership.UNKNOWN
     }
 
     /** The resolved artist for [credited]: the one of that name, or of the same name key. */
@@ -223,32 +218,31 @@ internal class ArtistCheck(
     private fun key(name: String): String = accentFolder.decompose(name.lowercase()).filter { it.isLetterOrDigit() }
 
     companion object {
-        /** Pages of the artist search, of 100 artists each, before it counts as incomplete. */
-        const val MAX_PAGES: Int = 3
-
-        /** Names whose search answers are kept in memory. */
+        /** Searches (name as sent, MusicBrainz id) whose answers are kept in memory. */
         const val VERDICTS: Int = 1024
     }
 }
 
-/** A map of at most [capacity] entries, which drops the least recently used; safe across threads. */
+/**
+ * A map of at most [capacity] entries, which drops the least recently used. Portable: an insertion
+ * ordered map, an entry moved to the end when used, behind a [Mutex].
+ */
+@Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
 internal class Lru<K : Any, V : Any>(
     private val capacity: Int,
 ) {
-    private val map = LinkedHashMap<K, V>(capacity, LOAD_FACTOR, true)
+    private val mutex = Mutex()
+    private val map = LinkedHashMap<K, V>()
 
-    operator fun get(key: K): V? = synchronized(map) { map[key] }
+    suspend fun get(key: K): V? = mutex.withLock { map.remove(key)?.also { map[key] = it } }
 
-    operator fun set(
+    suspend fun put(
         key: K,
         value: V,
     ): Unit =
-        synchronized(map) {
+        mutex.withLock {
+            map.remove(key)
             map[key] = value
             if (map.size > capacity) map.remove(map.keys.first())
         }
-
-    private companion object {
-        const val LOAD_FACTOR = 0.75f
-    }
 }

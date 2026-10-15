@@ -39,8 +39,8 @@ import kotlin.time.TimeSource
  * [SourceResult.unverified], and a rejected or unknown artist gives none. A page with the resolved
  * artist's MusicBrainz id is verified whole only if MusicBrainz ([musicBrainz]) shows the name is
  * that artist's alone; otherwise only its bio sentences are ([LastFmMatch.BioVerified]). That costs
- * up to three MusicBrainz searches per such artist, after the resolution, unless an earlier track's
- * answer is kept. A failed search makes the result [SourceResult.provisional].
+ * one MusicBrainz search per such artist, after the resolution, unless an earlier track's answer
+ * is kept. A failed search makes the result [SourceResult.provisional].
  *
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
  */

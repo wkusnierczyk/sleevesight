@@ -28,18 +28,18 @@ class MusicBrainzArtistSearchTest {
             val request = net.sent.single()
             assertEquals("${MusicBrainzClient.BASE}/artist", request.url)
             assertEquals(
-                mapOf("query" to "artist:\"Reem \\\"R\\\"\"", "limit" to "100", "offset" to "0", "fmt" to "json"),
+                mapOf("query" to "artist:\"Reem \\\"R\\\"\"", "limit" to "100", "fmt" to "json"),
                 request.query,
             )
         }
 
     @Test
-    fun `a backslash is escaped, and a later page asks from its offset`() =
+    fun `a backslash is escaped`() =
         runTest {
             val net = ReplayNetClient.ok(BODY)
-            MusicBrainzClient(net).searchArtists("A\\B \"C\"", offset = 200)
+            MusicBrainzClient(net).searchArtists("A\\B \"C\"")
             assertEquals(
-                mapOf("query" to "artist:\"A\\\\B \\\"C\\\"\"", "limit" to "100", "offset" to "200", "fmt" to "json"),
+                mapOf("query" to "artist:\"A\\\\B \\\"C\\\"\"", "limit" to "100", "fmt" to "json"),
                 net.sent.single().query,
             )
         }
@@ -49,8 +49,12 @@ class MusicBrainzArtistSearchTest {
         runTest {
             val empty = MusicBrainzClient(ReplayNetClient.ok("""{"count":0,"offset":0,"artists":[]}"""))
             assertEquals(Lookup.Found(MbArtistSearch(0, emptyList())), empty.searchArtists("Nobody Here"))
-            // Without a total the answer cannot show whether it is complete.
+            // Without a total, or without the artists, the answer cannot show what matches.
             assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok("""{"artists":[]}""")).searchArtists("Reem"))
+            assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok("""{"count":5}""")).searchArtists("Reem"))
+            assertIs<Lookup.Failed>(
+                MusicBrainzClient(ReplayNetClient.ok("""{"count":5,"artists":{}}""")).searchArtists("Reem"),
+            )
             val offline = MusicBrainzClient(ReplayNetClient.failing(NetError.Offline("UnknownHostException")))
             assertIs<Lookup.Failed>(offline.searchArtists("Reem"))
             assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.status(503, "")).searchArtists("Reem"))
