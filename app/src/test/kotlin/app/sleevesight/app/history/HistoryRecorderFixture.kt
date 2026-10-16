@@ -1,0 +1,120 @@
+package app.sleevesight.app.history
+
+import android.database.SQLException
+import android.media.MediaMetadata
+import android.media.session.PlaybackState
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import app.sleevesight.app.session.FakeSession
+import app.sleevesight.app.session.SessionRepositoryFixture
+import app.sleevesight.app.session.Sessions
+import app.sleevesight.app.session.Sessions.metadata
+import app.sleevesight.app.session.Sessions.state
+import app.sleevesight.store.PlayedTrack
+import app.sleevesight.store.SessionHistory
+import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.launch
+import org.junit.After
+import org.junit.Before
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
+
+/**
+ * The real session layer, recorder and history together, in virtual time, with no screen: as the
+ * listener service runs them. The wall clock reads [base] plus the virtual time.
+ */
+internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
+    private val jdbc = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { HistoryDatabase.Schema.create(it) }
+    protected val driver = FailingDriver(jdbc)
+    protected val history = SessionHistory(driver)
+    protected val warnings = mutableListOf<String>()
+    protected val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
+    private val wall =
+        object : Clock {
+            override fun now(): Instant = base + scheduler.currentTime.milliseconds
+        }
+
+    @Before
+    fun record() {
+        val recorder =
+            HistoryRecorder(
+                repository,
+                history,
+                io = EmptyCoroutineContext,
+                elapsed = { scheduler.currentTime },
+                wall = wall,
+                warn = { warnings += it },
+            )
+        scope.launch { recorder.run() }
+    }
+
+    @After
+    fun close() = jdbc.close()
+
+    /** Follows [session] alone and starts the session layer on it. */
+    fun begin(session: FakeSession): FakeSession {
+        followed.value = setOf(session.player)
+        system.active = listOf(session)
+        repository.start()
+        return session
+    }
+
+    /** Spotify playing [metadata], or in [playbackState]. */
+    fun spotify(
+        metadata: MediaMetadata = metadata(durationMs = 225_000),
+        playbackState: PlaybackState = state(),
+    ): FakeSession = begin(FakeSession(Sessions.SPOTIFY, metadata = metadata, playbackState = playbackState))
+
+    fun stopLayer() = repository.stop()
+
+    fun startLayer() = repository.start()
+
+    /** Moves virtual time on to [ms], running what is due before it. */
+    fun at(ms: Long) = scheduler.advanceTimeBy((ms - scheduler.currentTime).milliseconds)
+
+    /** Sends [metadata] and lets it settle. */
+    fun FakeSession.report(metadata: MediaMetadata) {
+        send(metadata)
+        settle()
+    }
+
+    /** Sends [state] and lets it settle. */
+    fun FakeSession.report(state: PlaybackState) {
+        send(state)
+        settle()
+    }
+
+    /** Lets what was sent settle. */
+    fun settleAll() = settle()
+
+    /** Every row of the history, oldest first. */
+    fun allRows(): List<PlayedTrack> =
+        generateSequence(1L) {
+            it + 1
+        }.map(history::session).takeWhile { it.isNotEmpty() }.flatten().toList()
+
+    /** A driver whose next statement starting with [failNext] fails, as a full disk would. */
+    class FailingDriver(
+        private val driver: SqlDriver,
+    ) : SqlDriver by driver {
+        var failNext: String? = null
+
+        override fun execute(
+            identifier: Int?,
+            sql: String,
+            parameters: Int,
+            binders: (SqlPreparedStatement.() -> Unit)?,
+        ): QueryResult<Long> {
+            val prefix = failNext
+            if (prefix != null && sql.trimStart().startsWith(prefix)) {
+                failNext = null
+                throw SQLException("disk full")
+            }
+            return driver.execute(identifier, sql, parameters, binders)
+        }
+    }
+}

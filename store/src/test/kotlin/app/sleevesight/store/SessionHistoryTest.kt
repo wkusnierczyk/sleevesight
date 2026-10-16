@@ -35,7 +35,7 @@ class SessionHistoryTest {
     private fun play(
         track: NowPlaying,
         at: Instant,
-    ) = history.played(track, at) { it.title == track.title }
+    ) = history.started(track, at) { it.title == track.title }
 
     @Test
     fun `tracks come back in the order they played, as they were kept`() {
@@ -87,6 +87,31 @@ class SessionHistoryTest {
     }
 
     @Test
+    fun `a track that plays on takes its updates however long it has played`() {
+        // A stream with no length, updated with an album 40 minutes in: still the first session.
+        play(carefree, start)
+
+        val updated =
+            history.continued(
+                carefree.copy(album = "Live"),
+                start + 40.minutes,
+            ) { it.title == carefree.title }
+
+        assertEquals(PlayedTrack(updated.id, 1, start, carefree.copy(album = "Live")), history.latestSession().single())
+    }
+
+    @Test
+    fun `a track that plays on without a row of its own starts`() {
+        // The write that added it failed: the last row is the track before.
+        play(sundown, start)
+
+        val added = history.continued(carefree, start + 4.minutes) { it.title == carefree.title }
+
+        assertEquals(listOf(sundown, carefree), history.latestSession().map { it.track })
+        assertEquals(start + 4.minutes, added.playedAt)
+    }
+
+    @Test
     fun `a resume after a break longer than the gap begins a new session with the resumed track`() {
         play(sundown, start)
         history.stopped(start + 10.seconds)
@@ -117,12 +142,12 @@ class SessionHistoryTest {
     fun `a track without a length is timed from its start`() {
         val gap = 10.minutes
         val short = SessionHistory(driver, sessionGap = gap)
-        short.played(carefree, start) { false }
+        short.started(carefree, start) { false }
 
-        assertEquals(1L, short.played(sundown, start + gap) { false }.session)
+        assertEquals(1L, short.started(sundown, start + gap) { false }.session)
         // Sundown should have ended 225 s after it began.
         val afterSundown = start + gap + 225.seconds
-        assertEquals(2L, short.played(carefree, afterSundown + gap + 1.milliseconds) { false }.session)
+        assertEquals(2L, short.started(carefree, afterSundown + gap + 1.milliseconds) { false }.session)
     }
 
     @Test

@@ -19,13 +19,27 @@ import kotlin.time.Instant
  * Both stay on the phone, are never evicted by the caches' size limit, and are cleared together
  * ([clear]).
  *
- * - [played]: each track the session layer saw play, in order, grouped in listening sessions: the
- *   default track list, "Played this session".
+ * - The session history: each track the session layer saw play, in order, grouped in listening
+ *   sessions: the default track list, "Played this session".
  * - [changed]: each change from one track to another, with the features skip detection will learn
  *   from per player.
  *
- * A track that starts, or resumes, more than [sessionGap] after the track before was last heard
- * ([PlayedTrack.heardUntil]) begins a new listening session.
+ * The caller says what happened to the history, and these are its rules:
+ *
+ * 1. [started]: a track began to play: a new one, a resume after a pause or a stop, or one found
+ *    playing when the app starts. Only here is a listening session decided. The break is the time
+ *    since the last row was last heard ([PlayedTrack.heardUntil]).
+ *    - The same track as the last row, and a break of at most [sessionGap]: that row again, playing.
+ *    - Otherwise a new row: in the last row's session if the break is at most [sessionGap], else
+ *      in the next one.
+ * 2. [continued]: the track of the last row plays on without a break, as the player updated it
+ *    (artists sent after the title, an album, a new length): the row takes the update, however
+ *    long it has played. No session is decided. If the last row is not that track (its write
+ *    failed), this is a start.
+ * 3. [stopped]: the last row stopped playing (paused, stopped, or another track began); the first
+ *    stop is kept until it plays again.
+ *
+ * The art is never kept.
  *
  * Calls are blocking database calls: the app makes them off the main thread, from one writer.
  */
@@ -36,65 +50,54 @@ class SessionHistory(
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
 
     /**
-     * Adds [track], which began or resumed playing at [at], to the history, unless [sameTrack] says
-     * it is the track added last and it is still the same listening session: a resume after a pause,
-     * the same track shown again after a restart, and an update of it (artists sent after the
-     * title, a new length) are no new entry; the entry then takes the update and is playing again.
-     * The art is not kept. Returns the entry that now holds the track.
+     * [track] began to play at [at] (rule 1); [sameTrack] says whether a row holds it. Returns the
+     * row that now holds it.
      */
-    fun played(
+    fun started(
+        track: NowPlaying,
+        at: Instant,
+        sameTrack: (NowPlaying) -> Boolean,
+    ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sameTrack) }
+
+    /**
+     * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says whether
+     * a row holds it, and [at] is the time it began if none does. Returns the row that now holds it.
+     */
+    fun continued(
         track: NowPlaying,
         at: Instant,
         sameTrack: (NowPlaying) -> Boolean,
     ): PlayedTrack =
         queries.transactionWithResult {
             val kept = track.copy(artUri = null)
-            val last = queries.lastPlayed().executeAsOneOrNull()?.let(::playedTrack)
-            val session =
-                when {
-                    last == null -> 1L
-                    at - last.heardUntil > sessionGap -> last.session + 1
-                    else -> last.session
-                }
-            if (last != null && session == last.session && sameTrack(last.track)) {
-                if (last.track != kept || last.stoppedAt != null) update(last.id, kept)
-                last.copy(track = kept, stoppedAt = null)
-            } else {
-                queries.playedInsert(
-                    session = session,
-                    played_at = at.toEpochMilliseconds(),
-                    player = kept.player,
-                    title = kept.title,
-                    artists = kept.artists,
-                    album = kept.album,
-                    duration_ms = kept.duration?.inWholeMilliseconds,
-                    media_id = kept.mediaId,
-                    queue_item = kept.queueItemId,
-                )
-                PlayedTrack(queries.lastInsertedId().executeAsOne(), session, at, kept)
-            }
+            val last = queries.last()
+            if (last != null && sameTrack(last.track)) playing(last, kept) else start(kept, at, sameTrack)
         }
 
-    private fun update(
-        id: Long,
-        track: NowPlaying,
-    ) {
-        queries.playedUpdate(
-            title = track.title,
-            artists = track.artists,
-            album = track.album,
-            duration_ms = track.duration?.inWholeMilliseconds,
-            media_id = track.mediaId,
-            queue_item = track.queueItemId,
-            id = id,
-        )
+    private fun start(
+        kept: NowPlaying,
+        at: Instant,
+        sameTrack: (NowPlaying) -> Boolean,
+    ): PlayedTrack {
+        val last = queries.last() ?: return queries.insert(kept, at, session = 1)
+        val withinGap = at - last.heardUntil <= sessionGap
+        return when {
+            withinGap && sameTrack(last.track) -> playing(last, kept)
+            withinGap -> queries.insert(kept, at, last.session)
+            else -> queries.insert(kept, at, last.session + 1)
+        }
     }
 
-    /**
-     * Notes that the track added last stopped playing at [at] (paused, stopped, or followed by
-     * another), which the next listening session counts from. A track already stopped keeps the
-     * time it first stopped.
-     */
+    /** [last], holding [track] and playing. */
+    private fun playing(
+        last: PlayedTrack,
+        track: NowPlaying,
+    ): PlayedTrack {
+        if (last.track != track || last.stoppedAt != null) queries.update(last.id, track)
+        return last.copy(track = track, stoppedAt = null)
+    }
+
+    /** The last row stopped playing at [at] (rule 3). */
     fun stopped(at: Instant) {
         queries.playedStopped(at.toEpochMilliseconds())
     }
@@ -148,48 +151,6 @@ class SessionHistory(
         queries.clear()
     }
 
-    private fun playedTrack(row: Played): PlayedTrack =
-        PlayedTrack(
-            id = row.id,
-            session = row.session,
-            playedAt = Instant.fromEpochMilliseconds(row.played_at),
-            track =
-                NowPlaying(
-                    title = row.title,
-                    artists = row.artists,
-                    album = row.album,
-                    duration = row.duration_ms?.milliseconds,
-                    player = row.player,
-                    mediaId = row.media_id,
-                    queueItemId = row.queue_item,
-                ),
-            stoppedAt = row.stopped_at?.let(Instant::fromEpochMilliseconds),
-        )
-
-    private fun trackChange(
-        row: Track_change,
-        states: List<Track_change_state>,
-    ): TrackChangeRecord =
-        TrackChangeRecord(
-            player = row.player,
-            changedAt = Instant.fromEpochMilliseconds(row.changed_at),
-            from = row.from_title?.let { TrackRef(it, row.from_media_id) },
-            to = TrackRef(row.to_title, row.to_media_id),
-            timeLeft = row.time_left_ms?.milliseconds,
-            states =
-                states.map {
-                    PlaybackStateRecord(
-                        receivedBefore = it.received_before_ms.milliseconds,
-                        status = it.status,
-                        position = it.position_ms?.milliseconds,
-                        positionBefore = it.position_before_ms?.milliseconds,
-                        speed = it.speed.toFloat(),
-                    )
-                },
-            sinceLastAction = row.since_action_ms?.milliseconds,
-            learnedCrossfade = row.learned_crossfade_ms?.milliseconds,
-        )
-
     companion object {
         /**
          * How long a break in listening ends a listening session: longer than a pause to answer the
@@ -199,6 +160,84 @@ class SessionHistory(
         val DEFAULT_SESSION_GAP: Duration = 30.minutes
     }
 }
+
+private fun HistoryQueries.last(): PlayedTrack? = lastPlayed().executeAsOneOrNull()?.let(::playedTrack)
+
+private fun HistoryQueries.insert(
+    kept: NowPlaying,
+    at: Instant,
+    session: Long,
+): PlayedTrack {
+    playedInsert(
+        session = session,
+        played_at = at.toEpochMilliseconds(),
+        player = kept.player,
+        title = kept.title,
+        artists = kept.artists,
+        album = kept.album,
+        duration_ms = kept.duration?.inWholeMilliseconds,
+        media_id = kept.mediaId,
+        queue_item = kept.queueItemId,
+    )
+    return PlayedTrack(lastInsertedId().executeAsOne(), session, at, kept)
+}
+
+private fun HistoryQueries.update(
+    id: Long,
+    track: NowPlaying,
+) {
+    playedUpdate(
+        title = track.title,
+        artists = track.artists,
+        album = track.album,
+        duration_ms = track.duration?.inWholeMilliseconds,
+        media_id = track.mediaId,
+        queue_item = track.queueItemId,
+        id = id,
+    )
+}
+
+private fun playedTrack(row: Played): PlayedTrack =
+    PlayedTrack(
+        id = row.id,
+        session = row.session,
+        playedAt = Instant.fromEpochMilliseconds(row.played_at),
+        track =
+            NowPlaying(
+                title = row.title,
+                artists = row.artists,
+                album = row.album,
+                duration = row.duration_ms?.milliseconds,
+                player = row.player,
+                mediaId = row.media_id,
+                queueItemId = row.queue_item,
+            ),
+        stoppedAt = row.stopped_at?.let(Instant::fromEpochMilliseconds),
+    )
+
+private fun trackChange(
+    row: Track_change,
+    states: List<Track_change_state>,
+): TrackChangeRecord =
+    TrackChangeRecord(
+        player = row.player,
+        changedAt = Instant.fromEpochMilliseconds(row.changed_at),
+        from = row.from_title?.let { TrackRef(it, row.from_media_id) },
+        to = TrackRef(row.to_title, row.to_media_id),
+        timeLeft = row.time_left_ms?.milliseconds,
+        states =
+            states.map {
+                PlaybackStateRecord(
+                    receivedBefore = it.received_before_ms.milliseconds,
+                    status = it.status,
+                    position = it.position_ms?.milliseconds,
+                    positionBefore = it.position_before_ms?.milliseconds,
+                    speed = it.speed.toFloat(),
+                )
+            },
+        sinceLastAction = row.since_action_ms?.milliseconds,
+        learnedCrossfade = row.learned_crossfade_ms?.milliseconds,
+    )
 
 /**
  * A track in the session history.

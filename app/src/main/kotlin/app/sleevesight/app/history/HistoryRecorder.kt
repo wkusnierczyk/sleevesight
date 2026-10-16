@@ -9,6 +9,7 @@ import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.PlaybackStateRecord
+import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
@@ -30,14 +31,16 @@ import kotlin.time.Instant
  * the session layer runs while the listener service is bound, screen or no screen. Nothing reaches
  * it before the first run is acknowledged, since the session layer publishes nothing until then.
  *
- * - **The history**: each track shown once it is seen playing ([SessionRepository.playing], a
- *   settled track and state), so a track only paused on screen (a player's last track, found at
- *   start) is not one played, nor is it when the next track's state arrives before its metadata.
- *   When it stops playing (paused, stopped, the session layer stopped, or another track), that is
- *   noted, and the next listening session counts from it. While it is the track added last, in
- *   the same listening session, it is not added again: a resume, an update of it (artists sent
- *   after the title, a new length) and the same track shown after a restart update its entry. A
- *   resume after a break longer than the session gap begins a new session with it.
+ * - **The history**, from [SessionRepository.playing] (a settled track and state), so a track
+ *   only paused on screen (a player's last track, found at start) is not one played, nor is it
+ *   when the next track's state arrives before its metadata. Each value is one of three events,
+ *   which [SessionHistory] turns into rows by its rules:
+ *   - the same track as the one playing before ([sameAsLast]), updated: it *continues*, and its
+ *     row takes the update however long it has played;
+ *   - another track, or a track after none (a resume, a restart, the session layer started): the
+ *     one before, if any, *stopped*, and this one *started*, which alone decides whether a new
+ *     listening session begins;
+ *   - none: the one before *stopped* (paused, stopped, the session layer stopped).
  * - **Times in the history** are when the recorder sees them: a track's start when it is first seen
  *   playing, its stop when it is first seen to stop, both as [SessionRepository.playing] publishes
  *   them, after the player's reports have settled. So they lag the reports by up to the settle
@@ -79,12 +82,20 @@ class HistoryRecorder(
                 sessions.playing.collect { track ->
                     val at = wall.now()
                     val playedBefore = before
-                    // By the rule that adds a track, so a track that gets a row of its own stops the one before.
-                    if (playedBefore != null && (track == null || !sameAsLast(playedBefore, track))) {
+                    val same = { row: NowPlaying -> track != null && sameAsLast(row, track) }
+                    // A track that plays on is updated; any other ends the one before and starts.
+                    val continues = playedBefore != null && same(playedBefore)
+                    if (playedBefore != null && !continues) {
                         writes.trySend(Write("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        writes.trySend(Write("a track played") { history.played(track, at) { sameAsLast(it, track) } })
+                        val write: () -> PlayedTrack =
+                            if (continues) {
+                                { history.continued(track, at, same) }
+                            } else {
+                                { history.started(track, at, same) }
+                            }
+                        writes.trySend(Write("a track played") { write() })
                     }
                     before = track
                 }
@@ -124,7 +135,10 @@ class HistoryRecorder(
     private fun positionBefore(
         changedAt: Long,
         state: PlaybackInfo,
-    ): Duration? = (changedAt - state.updatedAt).milliseconds.takeIf { state.position != null && state.updatedAt > 0 }
+    ): Duration? {
+        val known = state.position != null && state.updatedAt > 0
+        return if (known) (changedAt - state.updatedAt).milliseconds else null
+    }
 
     /** [at], on the [elapsed] clock, as a wall-clock time. */
     private fun wallTime(at: Long): Instant = wall.now() - (elapsed() - at).milliseconds
