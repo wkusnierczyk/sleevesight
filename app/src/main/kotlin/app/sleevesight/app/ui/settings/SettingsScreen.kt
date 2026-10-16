@@ -34,7 +34,6 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.days
@@ -42,17 +41,20 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
- * where to look and the keyed sources' keys, the insight settings (D5, D13), and the lookup
- * settings (D6, D9). Each change is saved at once.
+ * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
+ * #84), the insight settings (D5, D13), and the lookup settings (D6, D9); at the end, the way to
+ * the credits. Each change is saved at once.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
- * its default model only. [playerLabel] names a player by its package.
+ * its default model only. [onOpenCredits] opens the credits screen. [playerLabel] names a player by
+ * its package.
  */
 @Composable
 fun SettingsScreen(
     settingsStore: SettingsStore,
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
+    onOpenCredits: () -> Unit = {},
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -66,7 +68,7 @@ fun SettingsScreen(
 
     Surface(modifier = Modifier.fillMaxSize()) {
         settings?.let { current ->
-            SettingsContent(current, keys, playerLabel, update) { dialog = it }
+            SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
         }
     }
 
@@ -108,7 +110,7 @@ fun SettingsScreen(
 }
 
 /** Saves a change to the settings. */
-private typealias Update = ((Settings) -> Settings) -> Unit
+internal typealias Update = ((Settings) -> Settings) -> Unit
 
 /** The dialogs the screen opens, one at a time. */
 internal sealed interface SettingsDialog {
@@ -131,6 +133,12 @@ internal sealed interface SettingsDialog {
     data object ResetKeys : SettingsDialog
 }
 
+/** How the screen names players, and where it leads. */
+private class Navigation(
+    val playerLabel: (String) -> String,
+    val openCredits: () -> Unit,
+)
+
 /** The saved keys' states, and whether to offer *Reset saved keys*. */
 internal class KeysShown(
     val states: Map<SecretId, SecretState>,
@@ -142,16 +150,6 @@ internal class KeysShown(
  * *AI providers in the MVP* recommends Anthropic only); the others come with their clients.
  */
 private val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC)
-
-/** The *Where to look* switches of the sources with an adapter; Discogs comes in Phase 3. */
-private val SHOWN_SWITCHES =
-    listOf(
-        SourceSwitch.MUSICBRAINZ to R.string.settings_source_musicbrainz,
-        SourceSwitch.WIKIPEDIA to R.string.settings_source_wikipedia,
-        SourceSwitch.LASTFM to R.string.settings_source_lastfm,
-        SourceSwitch.WEB to R.string.settings_source_web,
-        SourceSwitch.MODEL to R.string.settings_source_model,
-    )
 
 /** The cache lifetimes of the sources with an adapter (D9); Discogs's comes with it. */
 private val SHOWN_LIFETIMES =
@@ -175,7 +173,7 @@ private val MAX_CROSSFADE_SECONDS =
 private fun SettingsContent(
     settings: Settings,
     keys: KeysShown,
-    playerLabel: (String) -> String,
+    navigation: Navigation,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
@@ -200,10 +198,17 @@ private fun SettingsContent(
         SectionHeading(R.string.settings_section_ai)
         AiServiceRows(settings, secrets, update, open)
         AiModelRows(settings, update, open)
-        PlayersSection(settings, playerLabel, update)
+        PlayersSection(settings, navigation.playerLabel, update)
         SourcesSection(settings, secrets, update, open)
+        LabelsSection(settings, secrets, update)
         InsightsSection(settings, update, open)
         LookupsSection(settings, update, open)
+        SectionHeading(R.string.settings_section_about)
+        ValueRow(
+            title = stringResource(R.string.credits_title),
+            value = stringResource(R.string.settings_credits_value),
+            onClick = navigation.openCredits,
+        )
     }
 }
 
@@ -289,35 +294,6 @@ private fun PlayersSection(
     for ((player, followed) in settings.followedPlayers.toSortedMap()) {
         SwitchRow(title = playerLabel(player), summary = player, checked = followed) { on ->
             update { it.copy(followedPlayers = it.followedPlayers + (player to on)) }
-        }
-    }
-}
-
-@Composable
-private fun SourcesSection(
-    settings: Settings,
-    secrets: Map<SecretId, SecretState>,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    SectionHeading(R.string.settings_section_sources)
-    Hint(R.string.settings_sources_hint)
-    val modelSummary = stringResource(R.string.settings_source_model_summary)
-    for ((switch, name) in SHOWN_SWITCHES) {
-        SwitchRow(
-            title = stringResource(name),
-            summary = modelSummary.takeIf { switch == SourceSwitch.MODEL },
-            checked = switch in settings.enabledSources,
-        ) { on ->
-            update { it.copy(enabledSources = if (on) it.enabledSources + switch else it.enabledSources - switch) }
-        }
-        sourceKey(switch)?.let { id ->
-            ValueRow(
-                title = stringResource(keyName(id)),
-                value = keyState(secrets[id]),
-                indent = true,
-                onClick = { open(SettingsDialog.Key(id)) },
-            )
         }
     }
 }

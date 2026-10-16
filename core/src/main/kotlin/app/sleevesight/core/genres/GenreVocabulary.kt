@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 /**
  * The fixed genre vocabulary (`design/design.md`, *Genre labels*): the tags that become genre
  * labels, each in a family with a fixed hue. Tags outside it (places, decades, "seen live", noise)
- * are dropped. It is source-agnostic: Last.fm's artist tags go through it, and MusicBrainz's would
- * if Phase 2 makes them the labels when Last.fm is off (D12).
+ * are dropped. It is source-agnostic: Last.fm's artist tags go through it, and from Phase 1.0
+ * MusicBrainz's (D12, #84; [MusicBrainzLabels]), whose labels [combineLabels] joins to Last.fm's.
  *
  * The data is the resource [RESOURCE], taken from the simulator's `GENRE_FAMILIES`; a test checks
  * the two agree.
@@ -55,18 +55,24 @@ class GenreVocabulary(
      * The genre labels for [tags], in their order (the source's, most applied first), at most
      * [MAX_LABELS]: each tag lowercased and trimmed, kept if it is in the vocabulary, once per
      * [identity]: two spellings of one genre (`hip-hop` and `hip hop`, `r&b` and `rnb`) give one
-     * label, the first. As the simulator's `genresFrom`, except for that.
+     * label, the first. As the simulator's `genresFrom`, except for that. [url] is the page the tags
+     * are from (the artist's, at the source), for the label's credit; null when there is none.
      */
-    fun labelsFor(tags: List<String>): List<GenreLabel> {
+    fun labelsFor(
+        tags: List<String>,
+        url: String? = null,
+    ): List<GenreLabel> {
         val seen = mutableSetOf<String>()
         return tags
             .asSequence()
             .map(::key)
             .mapNotNull { tag -> familyOf[tag]?.let { tag to it } }
-            .filter { (tag, _) -> seen.add(synonymOf[tag] ?: spelling(tag)) }
+            .map { (tag, family) -> Triple(tag, family, synonymOf[tag] ?: spelling(tag)) }
+            .filter { (_, _, identity) -> seen.add(identity) }
             .take(MAX_LABELS)
-            .map { (tag, family) -> GenreLabel(tag, family.id, family.hue, labelOverrides[tag] ?: titleCase(tag)) }
-            .toList()
+            .map { (tag, family, identity) ->
+                GenreLabel(tag, family.id, family.hue, labelOverrides[tag] ?: titleCase(tag), identity, url)
+            }.toList()
     }
 
     companion object {
@@ -120,12 +126,19 @@ data class GenreFamily(
 /**
  * A genre label: the vocabulary [tag] it came from, its [family] and [hue], and the [label] shown.
  * Labels are artist-level: they come from the artist's tags, not the recording's.
+ *
+ * @property identity the genre it stands for ([GenreVocabulary.identity]), by which labels from two
+ *   sources, or two artists, are the same label (`hip-hop` and `hip hop`).
+ * @property url the page of the artist whose tags gave it, at the source (Last.fm's artist page,
+ *   MusicBrainz's), which the label links for its credit; null when the source gave none.
  */
 data class GenreLabel(
     val tag: String,
     val family: String,
     val hue: Int,
     val label: String,
+    val identity: String,
+    val url: String? = null,
 )
 
 @Serializable

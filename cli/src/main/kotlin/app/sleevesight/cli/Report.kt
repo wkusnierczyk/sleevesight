@@ -45,9 +45,10 @@ class RunSummary(
  * with their article links, MusicBrainz's and Wikidata's templated facts (CC0), Last.fm's lines with
  * their links. Never an Exa snippet: web results are shown as counts and URLs only (Exa's terms,
  * §4.2(a)), and an insight written from web lines is marked as one not to commit or post until
- * Exa's terms are confirmed. MusicBrainz tags are not fetched, so none is listed; if Phase 2 adopts
- * them as labels (D12), this report gives aggregates only (CC BY-NC-SA 3.0, `architecture.md`,
- * *Conditions*).
+ * Exa's terms are confirmed. MusicBrainz tags are not fetched, so none is listed: the app takes
+ * them as genre labels (D12, #84), but this report lists each track's labels, and a list of them
+ * would be CC BY-NC-SA 3.0 to commit or post (`architecture.md`, *Conditions*), so the CLI keeps
+ * them off, and has no recordings of them either.
  */
 class Report(
     private val run: RunSummary,
@@ -253,7 +254,7 @@ private class TrackSection(
             rejections()
             evidence()
             appendLine()
-            appendLine("Genre labels: ${state.genres.joinToString(", ") { it.label }.ifEmpty { "none" }}.")
+            appendLine("Genre labels: ${state.genres.joinToString(", ") { it.genre.label }.ifEmpty { "none" }}.")
             appendLine()
             insight()
         }

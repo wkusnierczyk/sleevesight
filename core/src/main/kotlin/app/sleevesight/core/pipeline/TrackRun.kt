@@ -3,7 +3,6 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -68,10 +67,13 @@ internal class TrackRun(
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
+    private val labels = TrackLabels(parts.musicBrainzLabels, settings, key, this)
 
     /**
      * Gathers the evidence, then the insight: written at once when [autoWrite]; else, when
-     * [waitForTap], once the user taps Write; else not at all.
+     * [waitForTap], once the user taps Write; else not at all. MusicBrainz's genre labels are asked
+     * for beside the insight, after the evidence, so it does not wait for them; the run ends when
+     * both have.
      */
     suspend fun run(
         autoWrite: Boolean,
@@ -82,12 +84,15 @@ internal class TrackRun(
             emit(PipelineEvent.Received(nowPlaying))
             emit(PipelineEvent.Normalized(track))
             publish(state.value)
-            gather()
-            val evidence = assemble()
-            InsightWriter(parts, time, input, evidence, guard, this).write(
-                autoWrite = autoWrite,
-                tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
-            )
+            coroutineScope {
+                gather()
+                val evidence = assemble()
+                launch { labels.addMusicBrainz(state.value) }
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(
+                    autoWrite = autoWrite,
+                    tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
+                )
+            }
             return state.value
         } catch (e: CancellationException) {
             emit(PipelineEvent.Superseded(key))
@@ -218,18 +223,14 @@ internal class TrackRun(
 
     // The cited lines: the player's release, then each enabled source's verified lines, in the
     // adapters' order, so the same retrieval gives the same ids whatever order the sources land in.
+    // The genre labels: those of the label sources switched on, combined; never evidence.
     private fun assemble(): EvidenceSet {
         val results =
             parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
         val drafts =
             playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
-        val genres =
-            results
-                .flatMap { it.genres }
-                .distinctBy { it.tag }
-                .take(GenreVocabulary.MAX_LABELS)
-        update { it.copy(evidence = evidence, genres = genres) }
+        update { it.copy(evidence = evidence, genres = labels.of(it)) }
         emit(
             PipelineEvent.EvidenceAssembled(
                 key = key,

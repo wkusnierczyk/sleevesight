@@ -15,6 +15,10 @@ import kotlin.time.TimeSource
  * ([app.sleevesight.core.resolution.RecordingResolver], which the pipeline runs
  * once per track and hands every adapter): this adapter waits for it, takes its outcome, and
  * templates its lines ([MusicBrainzEvidence]). Its latency is the wait.
+ *
+ * Its result also names the resolved artists ([SourceResult.labelArtists]), whose tags give
+ * MusicBrainz's genre labels (#84); it asks for no tags itself. The pipeline does, after the
+ * evidence, so the insight never waits for them and the tags never reach a line.
  */
 class MusicBrainzSource(
     private val clock: Clock = Clock.System,
@@ -22,12 +26,20 @@ class MusicBrainzSource(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.MUSICBRAINZ
 
+    /** 2: the result names the resolved artists, for the genre labels (#84). */
+    override val extractionVersion: Int = 2
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
     ): SourceResult {
         val start = timeSource.markNow()
         val resolved = resolution.await()
-        return SourceResult(resolved.outcome, MusicBrainzEvidence.lines(resolved, clock.now()), start.elapsedNow())
+        return SourceResult(
+            outcome = resolved.outcome,
+            evidence = MusicBrainzEvidence.lines(resolved, clock.now()),
+            latency = start.elapsedNow(),
+            labelArtists = resolved.artists.mapNotNull { it.mbid }.distinct(),
+        )
     }
 }
