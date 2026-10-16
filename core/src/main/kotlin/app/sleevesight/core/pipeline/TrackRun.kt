@@ -3,8 +3,6 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.genres.LabelSource
-import app.sleevesight.core.genres.combineLabels
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -55,25 +53,27 @@ internal class TrackRun(
     private val nowPlaying = input.nowPlaying
     private val track = input.track
     private val key = track.lookupKey
-    private val adapters = parts.adapters.map { it.configuredFor(settings) }
-    private val enabled = adapters.filter { settings.isEnabled(it.id) }
+    private val enabled = parts.adapters.filter { settings.isEnabled(it.id) }
     private val state =
         MutableStateFlow(
             TrackState(
                 nowPlaying = nowPlaying,
                 normalized = track,
                 sources =
-                    adapters.associate { adapter ->
+                    parts.adapters.associate { adapter ->
                         adapter.id to if (adapter in enabled) SourceState.Pending else SOURCE_OFF
                     },
             ),
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
+    private val labels = TrackLabels(parts.musicBrainzLabels, settings, key, this)
 
     /**
      * Gathers the evidence, then the insight: written at once when [autoWrite]; else, when
-     * [waitForTap], once the user taps Write; else not at all.
+     * [waitForTap], once the user taps Write; else not at all. MusicBrainz's genre labels are asked
+     * for beside the insight, after the evidence, so it does not wait for them; the run ends when
+     * both have.
      */
     suspend fun run(
         autoWrite: Boolean,
@@ -84,12 +84,15 @@ internal class TrackRun(
             emit(PipelineEvent.Received(nowPlaying))
             emit(PipelineEvent.Normalized(track))
             publish(state.value)
-            gather()
-            val evidence = assemble()
-            InsightWriter(parts, time, input, evidence, guard, this).write(
-                autoWrite = autoWrite,
-                tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
-            )
+            coroutineScope {
+                gather()
+                val evidence = assemble()
+                launch { labels.addMusicBrainz(state.value) }
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(
+                    autoWrite = autoWrite,
+                    tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
+                )
+            }
             return state.value
         } catch (e: CancellationException) {
             emit(PipelineEvent.Superseded(key))
@@ -223,20 +226,11 @@ internal class TrackRun(
     // The genre labels: those of the label sources switched on, combined; never evidence.
     private fun assemble(): EvidenceSet {
         val results =
-            adapters.mapNotNull { adapter ->
-                (state.value.sources[adapter.id] as? SourceState.Done)?.let { adapter.id to it.result }
-            }
+            parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
         val drafts =
-            playerLines() + results.flatMap { it.second.evidence }.filter { settings.isEnabled(it.source) }
+            playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
-        val bySource = results.toMap()
-        val genres =
-            combineLabels(
-                LabelSource.entries
-                    .filter(settings::givesLabels)
-                    .associateWith { bySource[it.source]?.genres.orEmpty() },
-            )
-        update { it.copy(evidence = evidence, genres = genres) }
+        update { it.copy(evidence = evidence, genres = labels.of(it)) }
         emit(
             PipelineEvent.EvidenceAssembled(
                 key = key,
