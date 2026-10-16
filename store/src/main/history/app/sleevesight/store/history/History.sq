@@ -1,0 +1,123 @@
+-- The session history and the record of track changes (architecture, *Cache and history* and
+-- *Learning skip detection*, D15): on the phone only, outside the caches' size limit, and cleared
+-- together (`clear`). Times are epoch milliseconds, lengths and offsets milliseconds. Ids are
+-- `AUTOINCREMENT`, so rows keep the order they were written in, and an id is never reused, even
+-- after `clear`.
+
+-- Each track the session layer saw play, once (a track repeated right away is the same track): the
+-- default track list, "Played this session". `session` numbers the listening sessions, from 1: a
+-- track that starts, or resumes, more than the session gap after the track before was last heard
+-- begins the next. A track was last heard at `stopped_at`, when it was last seen to stop playing
+-- (paused, stopped, or followed by another), null while it plays; failing that (the process ended
+-- while it played), at `played_at` plus `duration_ms`. `played_at` and `stopped_at` are when the
+-- app saw the track start and stop playing, once the player's reports had settled: up to the
+-- settle window after the reports, longer while a track buffers before it plays. A change's precise
+-- time is in `track_change`, when the session layer recorded one: a new title under one media id
+-- (a stream) is a new row with no change. The artists are the player's string, as sent.
+-- `queue_item` is the active queue item, kept so the track is known again after a restart.
+CREATE TABLE played (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    session INTEGER NOT NULL,
+    played_at INTEGER NOT NULL,
+    player TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artists TEXT NOT NULL,
+    album TEXT,
+    duration_ms INTEGER,
+    media_id TEXT,
+    queue_item INTEGER,
+    stopped_at INTEGER
+);
+
+CREATE INDEX played_session ON played (session, id);
+
+-- Each change from one track to another, with the features skip detection learns from (D15):
+-- when it began (`changed_at`), the player, the time the previous track had left, the time since
+-- the user's last action in Sleevesight, and the crossfade learned by then. A feature that could
+-- not be measured, or has no source yet, is null. The tracks it left (`from_`) and entered (`to_`)
+-- are named by title and media id rather than linked to `played`: a track skipped past while
+-- paused never enters `played`, and the change is written before the new track is seen playing.
+CREATE TABLE track_change (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    player TEXT NOT NULL,
+    changed_at INTEGER NOT NULL,
+    from_title TEXT,
+    from_media_id TEXT,
+    to_title TEXT NOT NULL,
+    to_media_id TEXT,
+    time_left_ms INTEGER,
+    since_action_ms INTEGER,
+    learned_crossfade_ms INTEGER
+);
+
+CREATE INDEX track_change_player ON track_change (player, changed_at);
+
+-- The playback states the player reported before a change, in the order they came (`seq`, from
+-- 0): the pattern of states, as Spotify's clusters before a natural end. `received_before_ms` is
+-- how long before the change each came; `position_ms` the position it reported, taken
+-- `position_before_ms` before the change (negative if after it; null with no position, or no time
+-- for it); `status` the session layer's name for its state, `PlaybackStatus.name` (`PLAYING`,
+-- `PAUSED`, ...): renaming one of those changes what older rows mean.
+CREATE TABLE track_change_state (
+    change_id INTEGER NOT NULL REFERENCES track_change (id),
+    seq INTEGER NOT NULL,
+    received_before_ms INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    position_ms INTEGER,
+    position_before_ms INTEGER,
+    speed REAL NOT NULL,
+    PRIMARY KEY (change_id, seq)
+);
+
+-- Played
+
+lastPlayed:
+SELECT * FROM played ORDER BY id DESC LIMIT 1;
+
+playedInsert:
+INSERT INTO played (session, played_at, player, title, artists, album, duration_ms, media_id, queue_item)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- The same track, as the player filled it in later (artists sent after the title, a new length),
+-- or playing again after a pause: no longer stopped.
+playedUpdate:
+UPDATE played
+SET title = :title, artists = :artists, album = :album, duration_ms = :duration_ms, media_id = :media_id,
+    queue_item = :queue_item, stopped_at = NULL
+WHERE id = :id;
+
+-- The track added last stopped playing.
+playedStopped:
+UPDATE played SET stopped_at = :stoppedAt WHERE id = (SELECT max(id) FROM played) AND stopped_at IS NULL;
+
+playedInSession:
+SELECT * FROM played WHERE session = :session ORDER BY id;
+
+-- Track changes
+
+trackChangeInsert:
+INSERT INTO track_change (
+    player, changed_at, from_title, from_media_id, to_title, to_media_id, time_left_ms, since_action_ms,
+    learned_crossfade_ms
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+lastInsertedId:
+SELECT last_insert_rowid();
+
+stateInsert:
+INSERT INTO track_change_state (change_id, seq, received_before_ms, status, position_ms, position_before_ms, speed)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+trackChanges:
+SELECT * FROM track_change ORDER BY id;
+
+states:
+SELECT * FROM track_change_state ORDER BY change_id, seq;
+
+-- Both, in one transaction.
+clear {
+    DELETE FROM track_change_state;
+    DELETE FROM track_change;
+    DELETE FROM played;
+}

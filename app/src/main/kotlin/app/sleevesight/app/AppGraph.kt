@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretStore
@@ -21,6 +23,8 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.store.SessionHistory
+import app.sleevesight.store.history.HistoryDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -72,9 +76,18 @@ class AppGraph(
             followed = settings.followedPlayers,
         )
 
+    /**
+     * The session history and the record of track changes (D15), in a database of their own under
+     * the app's `databases/`, which the backup and transfer rules exclude. Cleared together by
+     * `SessionHistory.clear`.
+     */
+    val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
+
     init {
         // Each player the session layer sees appears under *Players to follow*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
+        // What the session layer sees is recorded whether or not the app is visible.
+        mainScope.launch { HistoryRecorder(sessions, history, Dispatchers.IO).run() }
     }
 
     /** A player's name as the phone knows it, else as the design knows it, else its package. */
@@ -91,6 +104,7 @@ class AppGraph(
     private companion object {
         const val SETTINGS_FILE = "settings"
         const val SECRETS_FILE = "secrets"
+        const val HISTORY_DATABASE = "history.db"
 
         val KNOWN_PLAYERS = mapOf(Settings.SPOTIFY to "Spotify")
 
