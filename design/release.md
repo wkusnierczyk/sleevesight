@@ -127,12 +127,14 @@ There are two rulesets because a bypass applies to every rule of its ruleset, an
 
 ### 4. The secrets
 
+The commands run where the `.p12` is, outside the repository, so each names the repository.
+
 ```sh
-base64 < sleevesight-upload.p12 | tr -d '\n' | gh secret set UPLOAD_KEYSTORE_BASE64 --env release
-gh secret set UPLOAD_STORE_PASSWORD --env release   # asks for the value
-gh secret set UPLOAD_KEY_PASSWORD --env release     # the same password
-gh secret set UPLOAD_KEY_ALIAS --env release --body upload
-gh secret list --env release
+base64 < sleevesight-upload.p12 | tr -d '\n' | gh secret set UPLOAD_KEYSTORE_BASE64 --env release --repo wkusnierczyk/sleevesight
+gh secret set UPLOAD_STORE_PASSWORD --env release --repo wkusnierczyk/sleevesight   # asks for the value
+gh secret set UPLOAD_KEY_PASSWORD --env release --repo wkusnierczyk/sleevesight     # the same password
+gh secret set UPLOAD_KEY_ALIAS --env release --repo wkusnierczyk/sleevesight --body upload
+gh secret list --env release --repo wkusnierczyk/sleevesight
 ```
 
 ### 5. Play App Signing
@@ -146,7 +148,7 @@ In Play Console, once the developer account exists:
 5. Record it as a variable of the environment, not a secret (a certificate's fingerprint is public), so that every later run fails if the bundle is signed with any other key. Colons and case do not matter:
 
    ```sh
-   gh variable set UPLOAD_CERT_SHA256 --env release --body '<the SHA-256 fingerprint>'
+   gh variable set UPLOAD_CERT_SHA256 --env release --repo wkusnierczyk/sleevesight --body '<the SHA-256 fingerprint>'
    ```
 
 A bundle Play Console takes there closes [#56](https://github.com/wkusnierczyk/sleevesight/issues/56); rolling it out to testers is [#58](https://github.com/wkusnierczyk/sleevesight/issues/58).
@@ -159,4 +161,4 @@ The app signing key stays with Google, so the upload key can be replaced. Genera
 keytool -export -rfc -keystore sleevesight-upload-new.p12 -alias upload -file upload_certificate.pem
 ```
 
-Once Play has accepted it, replace the four secrets and set `UPLOAD_CERT_SHA256` to the new certificate's fingerprint. A leaked key's secrets are removed at once (`gh secret delete <name> --env release`), so no run can sign with it while the reset is pending.
+Once Play has accepted it, replace the four secrets and set `UPLOAD_CERT_SHA256` to the new certificate's fingerprint. A leaked key's secrets are removed at once (`gh secret delete <name> --env release --repo wkusnierczyk/sleevesight`), so no run can sign with it while the reset is pending.
