@@ -40,6 +40,12 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // The user may have changed notification access in Settings while the app was away.
         graph.notificationAccess.refresh()
+        // The listener service starts the session layer when the system binds it, which it does
+        // not always do again after a force stop or an update; the session list needs the
+        // listener enabled, not bound, so the app starts it too. It still waits for the first run
+        // to be acknowledged, and starting it twice does nothing. Started here, it would not be
+        // stopped by the listener's unbinding, so access revoked meanwhile stops it here.
+        if (graph.notificationAccess.granted.value) graph.sessions.start() else graph.sessions.stop()
     }
 
     /** Opens the first settings screen for notification access that exists; false if none does. */

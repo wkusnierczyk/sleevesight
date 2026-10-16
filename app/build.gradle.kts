@@ -30,7 +30,8 @@ android {
 }
 
 dependencies {
-    // `Settings`, `Secret` and the `AiProvider` interface the settings screen lists models through.
+    // The domain types the session layer maps to (`NowPlaying`), and `Settings`, `Secret` and the
+    // `AiProvider` interface the settings screen lists models through.
     implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -39,6 +40,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
+    // Navigation's typed routes compile against it; declared so compile and runtime agree with
+    // the version `:core` brings at runtime.
+    implementation(libs.kotlinx.serialization.core)
     // Renders the previews in the IDE; debug only.
     debugImplementation(libs.androidx.compose.ui.tooling)
 
@@ -46,6 +50,7 @@ dependencies {
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit4)
+    // Virtual time for the session layer's settle window.
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
 }
