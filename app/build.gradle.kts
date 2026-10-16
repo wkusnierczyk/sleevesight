@@ -42,5 +42,7 @@ dependencies {
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit4)
+    // Virtual time for the session layer's settle window.
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
 }

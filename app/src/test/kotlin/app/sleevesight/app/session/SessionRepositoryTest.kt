@@ -19,6 +19,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -29,12 +31,16 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLog
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class SessionRepositoryTest {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+    private val scheduler = TestCoroutineScheduler()
+
+    /** Runs callbacks at once, and the settle window in virtual time ([settle]). */
+    private val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(scheduler))
     private val acknowledged = MutableStateFlow(true)
     private val followed = MutableStateFlow(setOf(SPOTIFY))
     private val system = FakeActiveSessions()
@@ -51,6 +57,19 @@ class SessionRepositoryTest {
 
     @After
     fun tearDown() = scope.cancel()
+
+    /** Lets the settle window pass. */
+    private fun settle() = scheduler.advanceUntilIdle()
+
+    private fun FakeSession.settled(metadata: android.media.MediaMetadata) {
+        send(metadata)
+        settle()
+    }
+
+    private fun FakeSession.settled(state: PlaybackState) {
+        send(state)
+        settle()
+    }
 
     private fun ignoredLines() =
         ShadowLog.getLogsForTag("Sleevesight").filter {
@@ -115,7 +134,7 @@ class SessionRepositoryTest {
 
         repository.start()
         system.change(listOf(youtube, spotify))
-        youtube.send(state(PlaybackState.STATE_PLAYING))
+        youtube.settled(state(PlaybackState.STATE_PLAYING))
 
         assertEquals(sundown, repository.nowPlaying.value)
         assertTrue(youtube.callbacks.isEmpty())
@@ -157,7 +176,7 @@ class SessionRepositoryTest {
         repository.start()
         assertEquals(SPOTIFY, repository.nowPlaying.value?.player)
 
-        playing.send(state(PlaybackState.STATE_PAUSED))
+        playing.settled(state(PlaybackState.STATE_PAUSED))
         // Neither plays: the one the system ranks first.
         assertEquals(YOUTUBE_MUSIC, repository.nowPlaying.value?.player)
     }
@@ -168,11 +187,11 @@ class SessionRepositoryTest {
         system.active = listOf(spotify)
         repository.start()
 
-        spotify.send(metadata(title = "Carefree Highway"))
+        spotify.settled(metadata(title = "Carefree Highway"))
         assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
 
         val track = repository.nowPlaying.value
-        spotify.send(state(PlaybackState.STATE_PAUSED, positionMs = 30_000, speed = 0f))
+        spotify.settled(state(PlaybackState.STATE_PAUSED, positionMs = 30_000, speed = 0f))
         assertSame(track, repository.nowPlaying.value)
         assertEquals(PlaybackStatus.PAUSED, repository.playback.value.status)
 
@@ -254,15 +273,15 @@ class SessionRepositoryTest {
         assertEquals(Color.RED, shown?.getPixel(0, 0))
 
         // The same track with new art: the old art stays until the new one arrives.
-        spotify.send(metadata(mediaId = "1", artUri = "https://cdn/1-large"))
+        spotify.settled(metadata(mediaId = "1", artUri = "https://cdn/1-large"))
         assertSame(shown, repository.art.value)
         fetches.last().second.complete(png(Color.BLUE))
         assertEquals(Color.BLUE, repository.art.value?.getPixel(0, 0))
 
         // Another track: no art until its own arrives, and a late answer for a superseded one is dropped.
-        spotify.send(metadata(mediaId = "2", title = "Carefree Highway", artUri = "https://cdn/2"))
+        spotify.settled(metadata(mediaId = "2", title = "Carefree Highway", artUri = "https://cdn/2"))
         assertNull(repository.art.value)
-        spotify.send(metadata(mediaId = "3", title = "Rainy Day People", artUri = "https://cdn/3"))
+        spotify.settled(metadata(mediaId = "3", title = "Rainy Day People", artUri = "https://cdn/3"))
         fetches.first { it.first == "https://cdn/2" }.second.complete(png(Color.GREEN))
         assertNull(repository.art.value)
         fetches.last().second.complete(png(Color.YELLOW))
@@ -276,7 +295,7 @@ class SessionRepositoryTest {
         repository.start()
         fetches.single().second.complete(png(Color.RED))
 
-        spotify.send(metadata(mediaId = "1", artUri = "https://cdn/1"))
+        spotify.settled(metadata(mediaId = "1", artUri = "https://cdn/1"))
         assertEquals(1, fetches.size)
     }
 
@@ -294,13 +313,18 @@ class SessionRepositoryTest {
 
     private fun fetchesFor(uri: String) = fetches.filter { it.first == uri }.map { it.second }
 
-    /** YouTube Music playing Sundown as item 4, with its "Up next" published or not. */
-    private fun youtubeMusic(queue: Boolean): FakeSession {
+    /** A YouTube Music session playing [metadata] as [item], with its "Up next" published or not. */
+    private fun youtubeMusic(
+        queue: Boolean = false,
+        metadata: android.media.MediaMetadata? = metadata(),
+        item: Long = 4,
+    ): FakeSession {
         followed.value = setOf(YOUTUBE_MUSIC)
         val session =
             FakeSession(
                 YOUTUBE_MUSIC,
-                playbackState = state(queueItem = 4),
+                metadata = metadata,
+                playbackState = state(queueItem = item),
                 queue = if (queue) listOf(queueItem(4, "Sundown"), queueItem(5, "Carefree Highway")) else null,
             )
         system.active = listOf(session)
@@ -310,15 +334,15 @@ class SessionRepositoryTest {
 
     /**
      * YouTube Music stopped in the background (no item), then moved on: its new state (item 5)
-     * comes before its new metadata. Every report but the last carries Sundown's metadata.
+     * comes just before its new metadata.
      */
     private fun aChangeAfterAStop(queue: Boolean) {
         val youtube = youtubeMusic(queue)
         val tracks = recordTracks()
 
-        youtube.send(state(PlaybackState.STATE_STOPPED, queueItem = -1))
+        youtube.settled(state(PlaybackState.STATE_STOPPED, queueItem = -1))
         youtube.send(state(queueItem = 5))
-        youtube.send(carefree)
+        youtube.settled(carefree)
 
         assertEquals(1, changes(tracks))
         assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
@@ -332,56 +356,144 @@ class SessionRepositoryTest {
     fun aChangeAfterAStopIsOneChangeWithoutAQueue() = aChangeAfterAStop(queue = false)
 
     @Test
-    fun theNewTracksStateBeforeItsMetadataLeavesTheOldTrackAsItWas() {
-        val youtube = youtubeMusic(queue = true)
-        val before = repository.nowPlaying.value
+    fun theNewTracksStateBeforeItsMetadataIsOneChangeWithNoTransient() {
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
 
         youtube.send(state(queueItem = 5))
-        assertSame(before, repository.nowPlaying.value)
-        assertEquals(4L, repository.nowPlaying.value?.queueItemId)
-
+        scheduler.advanceTimeBy(SessionRepository.SETTLE / 2)
         youtube.send(carefree)
+        settle()
+
+        assertEquals(1, changes(tracks))
         assertEquals(
-            sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
-            repository.nowPlaying.value,
+            listOf(
+                sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
+                sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
+            ),
+            tracks,
         )
     }
 
     @Test
-    fun aStopAndResumeChangesNoTrack() {
-        val youtube = youtubeMusic(queue = false)
+    fun theNewTracksMetadataBeforeItsStateIsOneChange() {
+        val youtube = youtubeMusic()
         val tracks = recordTracks()
 
-        youtube.send(state(PlaybackState.STATE_STOPPED, queueItem = -1))
-        youtube.send(metadata())
-        youtube.send(state(queueItem = -1))
-        youtube.send(state(queueItem = 4))
+        youtube.send(carefree)
+        youtube.send(state(queueItem = 5))
+        settle()
+
+        assertEquals(1, changes(tracks))
+        assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
+    }
+
+    @Test
+    fun aStopAndResumeChangesNoTrack() {
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.settled(state(PlaybackState.STATE_STOPPED, queueItem = -1))
+        youtube.settled(metadata())
+        youtube.settled(state(queueItem = -1))
+        youtube.settled(state(queueItem = 4))
 
         assertEquals(1, tracks.size)
         assertEquals(PlaybackStatus.PLAYING, repository.playback.value.status)
     }
 
     @Test
-    fun metadataBeforeTheStateIsStillAChange() {
-        val youtube = youtubeMusic(queue = false)
+    fun aSongQueuedTwiceIsOneChange() {
+        val youtube = youtubeMusic()
         val tracks = recordTracks()
 
-        youtube.send(carefree)
-        youtube.send(state(queueItem = 5))
+        youtube.settled(state(queueItem = 5))
+        youtube.settled(metadata())
 
         assertEquals(1, changes(tracks))
-        assertEquals(listOf(4L, null, 5L), tracks.map { it?.queueItemId })
+        assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
     }
 
     @Test
-    fun aSongQueuedTwiceIsAChangeWhenItsMetadataIsSentAgain() {
-        val youtube = youtubeMusic(queue = false)
+    fun decoratedQueueTitlesStillTellCopiesApart() {
+        // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown".
+        val youtube = youtubeMusic(metadata = carefree, item = 3)
+        youtube.queue =
+            listOf(
+                queueItem(3, "Carefree Highway"),
+                queueItem(4, "Sundown (Remastered)"),
+                queueItem(5, "Sundown (Remastered)"),
+            )
         val tracks = recordTracks()
 
+        youtube.send(state(queueItem = 4))
+        youtube.settled(metadata())
         youtube.send(state(queueItem = 5))
-        youtube.send(metadata())
+        youtube.settled(metadata())
+
+        assertEquals(2, changes(tracks))
+        assertEquals(listOf(3L, 4L, 5L), tracks.map { it?.queueItemId })
+    }
+
+    @Test
+    fun youtubeMusicsStartupFillingInTheArtistIsNoChange() {
+        // Recorded at the start of a session: the title first, then its artist and album, item 1 throughout.
+        val youtube = youtubeMusic(metadata = metadata(title = "Last King standing", artist = null), item = 1)
+        val tracks = recordTracks()
+
+        youtube.settled(metadata(title = "Last King standing", artist = "We Are Jazz", album = "Last King standing"))
+
+        assertEquals(0, changes(tracks))
+        assertEquals("We Are Jazz", repository.nowPlaying.value?.artists)
+        assertEquals(1L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun theArtistFilledInWithoutAQueueItemIsNoChange() {
+        val youtube = youtubeMusic(metadata = metadata(artist = null), item = -1)
+        val tracks = recordTracks()
+
+        youtube.settled(metadata())
+
+        assertEquals(2, tracks.size)
+        assertEquals(0, changes(tracks))
+    }
+
+    @Test
+    fun metadataSentTwiceBeforeTheStateMovesIsOneChange() {
+        // A player that sends the new metadata first, twice, while its state still names the old item.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.settled(carefree)
+        youtube.settled(carefree)
+        youtube.settled(state(queueItem = 5))
+        youtube.settled(metadata(title = "Carefree Highway", album = "Sundown"))
 
         assertEquals(1, changes(tracks))
+        assertEquals(5L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun aSessionAttachedBeforeItsFirstMetadataGivesTheTrackItsItem() {
+        val youtube = youtubeMusic(metadata = null, item = 5)
+        assertNull(repository.nowPlaying.value)
+
+        youtube.settled(carefree)
+        assertEquals(5L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun playbackIsPublishedAtOnceAndTheTrackOnlyOnceSettled() {
+        val youtube = youtubeMusic()
+
+        youtube.send(state(PlaybackState.STATE_PAUSED, positionMs = 1_000, speed = 0f, queueItem = 5))
+        youtube.send(carefree)
+        assertEquals(PlaybackStatus.PAUSED, repository.playback.value.status)
+        assertEquals("Sundown", repository.nowPlaying.value?.title)
+
+        scheduler.advanceTimeBy(SessionRepository.SETTLE + 1.milliseconds)
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
     }
 
     @Test
@@ -418,7 +530,7 @@ class SessionRepositoryTest {
         repository.start()
         val pending = fetchesFor("https://cdn/now").single()
 
-        spotify.send(metadata(mediaId = "2", title = "Carefree Highway", artUri = "https://cdn/now"))
+        spotify.settled(metadata(mediaId = "2", title = "Carefree Highway", artUri = "https://cdn/now"))
         assertNull(repository.art.value)
         val reload = fetchesFor("https://cdn/now")
         assertEquals(2, reload.size)
@@ -437,7 +549,7 @@ class SessionRepositoryTest {
         fetches.single().second.complete(png(Color.RED))
         val shown = repository.art.value
 
-        spotify.send(metadata(mediaId = "1", artUri = "https://cdn/1-large"))
+        spotify.settled(metadata(mediaId = "1", artUri = "https://cdn/1-large"))
         fetches.last().second.complete(null)
         assertSame(shown, repository.art.value)
     }

@@ -19,8 +19,8 @@ object SessionMapping {
      *
      * The title is `TITLE`, else `DISPLAY_TITLE`; the artists are `ARTIST` as sent, one string the
      * normalizer splits, and empty when the player sends none (a player that sends only a title
-     * still runs the pipeline). Blank values are absent. [queueItemId] is the active queue item as
-     * [QueueItemTracker] reconciles it with the metadata.
+     * still runs the pipeline). Blank values are absent. [queueItemId] is the active queue item, as
+     * the repository settles it with the metadata.
      */
     fun nowPlaying(
         player: String,
@@ -42,21 +42,9 @@ object SessionMapping {
         }
     }
 
-    /** The track's title as [nowPlaying] reads it, for reconciling the queue item. */
+    /** The track's title as [nowPlaying] reads it. */
     fun title(metadata: MediaMetadata?): String? =
         metadata?.let { it.text(MediaMetadata.METADATA_KEY_TITLE) ?: it.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) }
-
-    /**
-     * What tells one track's metadata from another's, for [QueueItemTracker]: the values identity
-     * and lookups read, without the length or art, which a player re-sends for the same track.
-     */
-    fun metadataKey(metadata: MediaMetadata?): Any =
-        listOf(
-            title(metadata),
-            metadata?.text(MediaMetadata.METADATA_KEY_ARTIST),
-            metadata?.text(MediaMetadata.METADATA_KEY_ALBUM),
-            metadata?.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
-        )
 
     /** The active queue item the playback state names; the session's −1 ("no item") is null. */
     fun activeItem(state: PlaybackState?): Long? =

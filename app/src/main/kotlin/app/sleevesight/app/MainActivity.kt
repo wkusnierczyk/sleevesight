@@ -34,10 +34,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // The user may have changed notification access in Settings while the app was away; and
-        // a listener left unbound (after a force stop or an update) is bound again.
+        // The user may have changed notification access in Settings while the app was away.
         graph.notificationAccess.refresh()
-        graph.notificationAccess.requestRebind()
+        // The listener service starts the session layer when the system binds it, which it does
+        // not always do again after a force stop or an update; the session list needs the
+        // listener enabled, not bound, so the app starts it too. It still waits for the first run
+        // to be acknowledged, and starting it twice does nothing.
+        if (graph.notificationAccess.granted.value) graph.sessions.start()
     }
 
     /** Opens the first settings screen for notification access that exists; false if none does. */

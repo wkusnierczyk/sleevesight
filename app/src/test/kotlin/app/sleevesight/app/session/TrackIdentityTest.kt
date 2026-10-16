@@ -50,6 +50,20 @@ class TrackIdentityTest {
     }
 
     @Test
+    fun aReportWithoutArtistsMatchesAnyArtists() {
+        // YouTube Music at the start of a session: the title first, its artists a moment later.
+        assertTrue(TrackIdentity.same(sundown.copy(artists = ""), sundown))
+        assertTrue(TrackIdentity.same(sundown, sundown.copy(artists = "")))
+        assertFalse(TrackIdentity.same(sundown.copy(artists = ""), sundown.copy(title = "Carefree Highway")))
+    }
+
+    @Test
+    fun equalQueueItemsAreOneTrackWhateverElseIsFilledIn() {
+        val a = sundown.copy(player = YOUTUBE_MUSIC, artists = "", queueItemId = 1)
+        assertTrue(TrackIdentity.same(a, a.copy(artists = "Gordon Lightfoot", album = "Sundown")))
+    }
+
+    @Test
     fun tracksOfDifferentPlayersDiffer() {
         assertFalse(TrackIdentity.same(sundown, sundown.copy(player = YOUTUBE_MUSIC)))
     }

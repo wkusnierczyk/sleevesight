@@ -3,6 +3,10 @@ package app.sleevesight.app
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
@@ -29,7 +33,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowNotificationListenerService
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -217,16 +220,40 @@ class FirstRunFlowTest {
         }
     }
 
+    /** A media session of a player not followed, so starting the session layer reads only the list. */
+    private fun addSession(player: String) {
+        val controller = MediaController(app, MediaSession(app, "test").sessionToken)
+        shadowOf(controller).setPackageName(player)
+        shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
+    }
+
     @Test
-    fun theAppAsksForTheListenerToBeBoundWhenAccessIsGranted() {
-        // An unbound listener (after a force stop or an update) would never start the session layer.
+    fun theAppStartsTheSessionLayerWithoutTheListenerBound() {
+        // As after a force stop or an update: access granted, but the system has not bound the
+        // listener again, so nothing calls `onListenerConnected`.
+        acknowledgeFirstRun()
         setAccess(granted = false)
+        addSession("com.example.player")
         launch().use { scenario ->
-            assertEquals(0, ShadowNotificationListenerService.getRebindRequestCount())
+            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
             setAccess(granted = true)
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            assertEquals(1, ShadowNotificationListenerService.getRebindRequestCount())
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
+        }
+    }
+
+    @Test
+    fun theSessionLayerStartedByTheAppStillWaitsForTheFirstRun() {
+        setAccess(granted = true)
+        addSession("com.example.player")
+        launch().use {
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
+            compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
         }
     }
 

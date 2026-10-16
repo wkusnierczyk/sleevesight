@@ -87,19 +87,6 @@ class SessionMappingTest {
     }
 
     @Test
-    fun theMetadataKeyLeavesOutLengthAndArt() {
-        assertEquals(
-            SessionMapping.metadataKey(metadata(durationMs = 106_000)),
-            SessionMapping.metadataKey(metadata(durationMs = 278_800, albumArt = bitmap(Color.RED))),
-        )
-        assertNotEquals(
-            SessionMapping.metadataKey(metadata()),
-            SessionMapping.metadataKey(metadata(title = "Carefree Highway")),
-        )
-        assertNotEquals(SessionMapping.metadataKey(metadata()), SessionMapping.metadataKey(metadata(mediaId = "1")))
-    }
-
-    @Test
     fun theArtUriIsTheAlbumArtUriElseTheArtUri() {
         assertEquals("https://a/1", SessionMapping.nowPlaying(SPOTIFY, metadata(artUri = "https://a/1"), null)?.artUri)
         assertEquals(
