@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.PriorityQueue
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The coordinator's rules (#51; D5, D6), pure: each sequence from the reviews of PR #155 runs
@@ -51,9 +52,20 @@ class PipelineCoordinatorTest {
         var holdKeys = false
         var buildFails = false
 
-        fun key(title: String): RunKey = RunKey.of(normalizer, nowPlaying(title))
+        fun key(
+            title: String,
+            seconds: Long? = null,
+        ): RunKey = RunKey.of(normalizer, nowPlaying(title, seconds))
 
-        fun nowPlaying(title: String) = NowPlaying(title = title, artists = "Artist", player = "com.spotify.music")
+        fun nowPlaying(
+            title: String,
+            seconds: Long? = null,
+        ) = NowPlaying(
+            title = title,
+            artists = "Artist",
+            duration = seconds?.seconds,
+            player = "com.spotify.music",
+        )
 
         fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
 
@@ -85,7 +97,8 @@ class PipelineCoordinatorTest {
 
         private fun cancel(run: RunId) {
             cancelled += run
-            // A call cut off reports its end from its `finally`.
+            // The run's job ends, and says so from its `finally`; a call cut off reports its end too.
+            schedule(0, CoordinatorEvent.RunEnded(run))
             if (calling.remove(run)) {
                 cut += titles.getValue(run)
                 schedule(0, CoordinatorEvent.StepEnded(run, RunStep.MODEL_CALL))
@@ -146,8 +159,9 @@ class PipelineCoordinatorTest {
     private fun World.play(
         title: String,
         cause: ChangeCause = ChangeCause.NATURAL_END,
+        seconds: Long? = null,
     ) {
-        send(CoordinatorEvent.Reported(key(title), nowPlaying(title), cause))
+        send(CoordinatorEvent.Reported(key(title, seconds), nowPlaying(title, seconds), cause))
         advance(0)
     }
 
@@ -468,6 +482,52 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
+                "a new length of a written track runs its lookups again, and decides nothing again",
+                mapOf("A" to 1),
+                listOf("A", "A"),
+                "A",
+            ) {
+                play("A", seconds = 106)
+                settle()
+                tap()
+                settle()
+                // YouTube Music sends the playing track again with a new length: the same track.
+                play("A", seconds = 279)
+                settle()
+            },
+            Case(
+                "a new length while the track's insight is being written waits for the call",
+                mapOf("A" to 1),
+                listOf("A", "A"),
+                "A",
+            ) {
+                streamMs = 10_000
+                play("A", seconds = 106)
+                settle()
+                tap()
+                advance(2_000)
+                play("A", seconds = 279)
+                settle()
+                assertEquals(listOf("A"), lookups)
+                advance(30_000)
+                assertEquals(emptyList<String>(), cut)
+            },
+            Case(
+                "a run that ends while offering Write leaves nothing waiting for it",
+                emptyMap(),
+                listOf("A", "A"),
+                "A",
+            ) {
+                play("A")
+                settle()
+                assertTrue(offersWriteFor("A"))
+                send(CoordinatorEvent.RunEnded(coordinator.state.run!!.id))
+                assertEquals(false, offersWriteFor("A"))
+                tap()
+                keyChange()
+                settle()
+            },
+            Case(
                 "When I skip writes nothing for a change that ended on its own",
                 mapOf("Zero" to 1),
                 listOf("Zero", "B"),
@@ -487,9 +547,20 @@ class PipelineCoordinatorTest {
             world.(case.script)()
             assertEquals(case.name, case.calls, world.calls)
             assertEquals(case.name, case.lookups, world.lookups)
-            val offered = world.lookups.distinct().filter(world::offersWriteFor)
-            assertEquals(case.name, listOfNotNull(case.offered), offered)
+            val run = world.coordinator.state.current
+            val offered = run?.takeIf { world.coordinator.state.offersWrite(it.key) }?.nowPlaying?.title
+            assertEquals(case.name, case.offered, offered)
         }
+    }
+
+    @Test
+    fun requestsAreNotAllowedBeforeTheFirstRunIsAcknowledged() {
+        val coordinator = PipelineCoordinator()
+        coordinator.on(CoordinatorEvent.ActivityStarted)
+        coordinator.on(CoordinatorEvent.BackgroundChanged(true))
+        assertEquals(false, coordinator.state.allowed)
+        coordinator.on(CoordinatorEvent.Acknowledged)
+        assertEquals(true, coordinator.state.allowed)
     }
 
     @Test

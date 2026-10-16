@@ -124,7 +124,11 @@ class PipelineHost(
 
     private val live = MutableStateFlow<Live?>(null)
 
-    // The pipelines built, until the coordinator swaps one in.
+    // The track whose run failed during its insight, shown as failed until another run starts.
+    private val failed = MutableStateFlow<RunKey?>(null)
+
+    // The pipelines built, until the coordinator swaps one in. A build superseded before it was
+    // swapped in stays here until the next swap, which clears them all.
     private val built = ConcurrentHashMap<Long, Pair<Pipeline, PipelineParts>>()
 
     // The settings once read (after the acknowledgement); builds read them.
@@ -141,7 +145,10 @@ class PipelineHost(
     /** The diagnostics stream of every pipeline built, in order; a slow collector loses the oldest. */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
-    /** Whether requests may start (D6): the app is visible, or *Look up in the background* is on. */
+    /**
+     * Whether requests may start (D6): once the first run is acknowledged, while the app is visible
+     * or *Look up in the background* is on.
+     */
     val lookupsAllowed: Flow<Boolean> = snapshot.map { it.allowed }.distinctUntilChanged()
 
     /** An activity started (`MainActivity.onStart`). */
@@ -266,6 +273,7 @@ class PipelineHost(
         val current = live.value ?: return
         val handle = RunHandle(effect.run, effect.cause)
         runs[effect.run] = handle
+        failed.value = null
         handle.job =
             current.scope.launch {
                 try {
@@ -276,6 +284,10 @@ class PipelineHost(
                     @Suppress("TooGenericExceptionCaught") e: Exception,
                 ) {
                     onFailure(e)
+                    failed.value = RunKey.of(normalizer, effect.nowPlaying)
+                } finally {
+                    // However it ends, nothing in the coordinator waits for it any more.
+                    queue.trySend(CoordinatorEvent.RunEnded(effect.run))
                 }
             }
     }
@@ -321,17 +333,26 @@ class PipelineHost(
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun publish(latest: StateFlow<Settings>) {
         val tracks = live.flatMapLatest { it?.pipeline?.state ?: flowOf(null) }
-        combine(tracks, live, snapshot, latest) { track, current, owner, now ->
+        combine(tracks, live, snapshot, latest, failed) { track, current, owner, now, failedKey ->
             val made = current?.parts
             val adapters = made?.adapters?.map { it.id }?.toSet()
             PipelineView(
-                track = (track ?: view.value.track)?.let { offering(it, owner) },
+                track = (track ?: view.value.track)?.let { offering(it, owner) }?.let { failing(it, failedKey) },
                 needsKey =
                     adapters?.let { ids -> KEYED_SOURCES.filter { now.isEnabled(it) && it !in ids }.toSet() }
                         ?: view.value.needsKey,
                 aiReady = made?.let { it.ai != null } ?: view.value.aiReady,
             )
         }.collect { view.value = it }
+    }
+
+    // A run that failed while writing shows as failed, not as writing for ever.
+    private fun failing(
+        track: TrackState,
+        failedKey: RunKey?,
+    ): TrackState {
+        val stuck = track.insight is InsightState.Writing && failedKey == RunKey.of(track.normalized, track.nowPlaying)
+        return if (stuck) track.copy(insight = InsightState.Failed(FAILED)) else track
     }
 
     // Write withdrawn unless the coordinator offers it for this track.
@@ -348,5 +369,8 @@ class PipelineHost(
     companion object {
         /** The sources looked up only with the user's key (design, *Source adapters*). */
         val KEYED_SOURCES: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.WEB)
+
+        /** The reason shown for an insight whose run failed. */
+        const val FAILED: String = "failed"
     }
 }

@@ -3,29 +3,17 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.core.Secret
-import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
-import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.normalizer.Normalizer
-import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.InsightState
-import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SourceState
-import app.sleevesight.core.pipeline.TrackResolver
-import app.sleevesight.core.platform.JvmAccentFolder
-import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
-import app.sleevesight.core.sources.Resolution
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -34,7 +22,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -44,65 +31,7 @@ import kotlin.time.Duration.Companion.seconds
  * (D6), with the visible track catching up; *Write* on tap; the keys, and the rebuilds they take.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class PipelineHostTest {
-    private val acknowledged = MutableStateFlow(true)
-    private val nowPlaying = MutableStateFlow<NowPlaying?>(null)
-    private val settings = MutableStateFlow(Settings(aiProvider = ProviderId.ANTHROPIC))
-    private val keyChanges = MutableStateFlow(0)
-    private var keys = PipelineKeys(ai = Secret("ai"))
-    private var keysReady: CompletableDeferred<Unit>? = null
-    private var buildFailure: Exception? = null
-    private var keyReads = 0
-    private var nowPlayingCollected = false
-    private var builds = 0
-    private val failures = mutableListOf<Throwable>()
-
-    private val musicBrainz = CountingAdapter(SourceId.MUSICBRAINZ)
-    private val lastFm = CountingAdapter(SourceId.LASTFM)
-    private val provider = CountingProvider()
-    private val cache = CardCache()
-
-    private val host =
-        PipelineHost(
-            acknowledged = acknowledged,
-            nowPlaying = nowPlaying.onStart { nowPlayingCollected = true },
-            settings = settings,
-            keyChanges = keyChanges.map { },
-            readKeys = {
-                keyReads++
-                keysReady?.await()
-                keys
-            },
-            onFailure = { failures += it },
-            normalizer = Normalizer(JvmAccentFolder),
-            parts = { keys, _ ->
-                builds++
-                buildFailure?.let { throw it }
-                PipelineParts(
-                    normalizer = Normalizer(JvmAccentFolder),
-                    adapters = listOfNotNull(musicBrainz, keys.sources.lastFm?.let { lastFm }),
-                    resolver = TrackResolver { _, _ -> Resolution(Outcome.SongArticle, recordingMbid = "rec") },
-                    hasher = JvmHasher,
-                    ai = keys.ai?.let { AiAccess(provider, it) },
-                    cache = cache,
-                )
-            },
-        )
-
-    private fun TestScope.started(visible: Boolean = true) {
-        if (visible) host.activityStarted()
-        host.start(backgroundScope)
-        runCurrent()
-    }
-
-    private fun TestScope.play(title: String) {
-        nowPlaying.value = NowPlaying(title = title, artists = "Artist", player = Settings.SPOTIFY)
-        runCurrent()
-    }
-
-    // Past the debounce, and long enough for a run to land.
-    private fun TestScope.settle() = advanceTimeBy(DEBOUNCE_AND_RUN)
-
+internal class PipelineHostTest : PipelineHostFixture() {
     @Test
     fun `nothing is read, built or sent before the first run is acknowledged`() =
         runTest {
@@ -609,6 +538,11 @@ class PipelineHostTest {
             host.write()
             settle()
             assertEquals(listOf("IllegalStateException"), failures.map { it::class.simpleName })
+            assertEquals(
+                InsightState.Failed(PipelineHost.FAILED),
+                host.state.value.track
+                    ?.insight,
+            )
 
             // The failed call reported its end, so a rebuild is not left waiting for it.
             provider.failure = null
@@ -618,81 +552,4 @@ class PipelineHostTest {
             settle()
             assertEquals(listOf("artist|one", "artist|two", "artist|two"), musicBrainz.asked)
         }
-
-    // End to end, through the real `Pipeline`: the sequences of the third review round.
-
-    @Test
-    fun `consecutive rebuilds while the replay gathers write the track once`() =
-        runTest {
-            started()
-            play("Alpha")
-            settle()
-            host.write()
-            settle()
-            musicBrainz.byName = 2.seconds
-            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
-            keyChanges.value++
-            advanceTimeBy(500.milliseconds)
-            keyChanges.value++
-            settle()
-
-            assertEquals(1, provider.requestsFor("Alpha"))
-            assertEquals(
-                InsightState.Idle(canWrite = true),
-                host.state.value.track
-                    ?.insight,
-            )
-        }
-
-    @Test
-    fun `a rebuild in a newer track's debounce while the old track streams waits for the call, then goes on`() =
-        runTest {
-            provider.streaming = 10.seconds
-            started()
-            play("Alpha")
-            settle()
-            host.write()
-            advanceTimeBy(2.seconds)
-            play("Bravo")
-            advanceTimeBy(100.milliseconds)
-            keyChanges.value++
-            advanceTimeBy(60.seconds)
-            play("Charlie")
-            advanceTimeBy(60.seconds)
-
-            assertEquals(1, provider.requestsFor("Alpha"))
-            assertEquals(listOf("artist|alpha", "artist|bravo", "artist|charlie"), musicBrainz.asked)
-            assertEquals(
-                "Charlie",
-                host.state.value.track
-                    ?.nowPlaying
-                    ?.title,
-            )
-        }
-
-    @Test
-    fun `a stale run made current again while hidden starts no model call`() =
-        runTest {
-            started()
-            play("Zero")
-            settle()
-            host.write()
-            settle()
-            musicBrainz.byName = 2.seconds
-            play("Alpha")
-            advanceTimeBy(DEBOUNCE + 1.8.seconds)
-            play("Bravo")
-            advanceTimeBy(300.milliseconds)
-            host.activityStopped(changingConfigurations = false)
-            play("Alpha")
-            settle()
-
-            assertEquals(0, provider.requestsFor("Alpha"))
-            assertEquals(0, provider.requestsFor("Bravo"))
-        }
-
-    private companion object {
-        val DEBOUNCE: Duration = 650.milliseconds
-        val DEBOUNCE_AND_RUN: Duration = DEBOUNCE + 5.seconds
-    }
 }

@@ -3,6 +3,7 @@
 
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.RunKey
@@ -77,6 +78,11 @@ sealed interface CoordinatorEvent {
         val step: RunStep,
     ) : CoordinatorEvent
 
+    /** Run [run] ended: done, failed or cancelled (from its job's `finally`). */
+    data class RunEnded(
+        val run: RunId,
+    ) : CoordinatorEvent
+
     /** Run [run] decided its insight without a call (a card kept, no evidence, no AI service). */
     data class DecidedWithoutCall(
         val run: RunId,
@@ -128,11 +134,13 @@ sealed interface CoordinatorEffect {
 
 /**
  * Everything the coordinator knows. [visible] while an activity is started, or one is restarting
- * after a configuration change; [allowed] (D6) while visible or *Look up in the background* is
- * on. [decided] is the track whose insight is decided (written, being written, kept, or offered):
- * kept through any number of rebuilds and runs of the same track, cleared when a run of another
- * track starts. [building]
- * is the rebuild waiting to be swapped in, and [built] its outcome once it is known.
+ * after a configuration change; [allowed] (D6) once acknowledged, while visible or *Look up in the
+ * background* is on. [decided] is the track whose insight is decided (written, being written,
+ * kept, or offered), as reported: the same track by the session layer's identity
+ * (`TrackIdentity.same`) stays decided through any number of rebuilds and runs, a new length or
+ * album included, which runs the lookups again but decides nothing again; it is cleared when a
+ * run of another track starts. [building] is the rebuild waiting to be swapped in, and [built] its
+ * outcome once it is known.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -142,7 +150,7 @@ data class CoordinatorState(
     val acted: Boolean = false,
     val latest: Report? = null,
     val run: Run? = null,
-    val decided: RunKey? = null,
+    val decided: NowPlaying? = null,
     val builds: Long = 0,
     val building: Long? = null,
     val built: Boolean? = null,
@@ -161,11 +169,13 @@ data class CoordinatorState(
     /**
      * The run in progress. [asked]: the steps it waits for; [insight]: its question whether to
      * write, while undecided ([CoordinatorEvent.InsightAsked]); [offered] while it offers Write;
-     * [calling] while its model call is under way.
+     * [calling] while its model call is under way. Requests and questions are remembered while the
+     * run is not current, and granted if it becomes current again.
      */
     data class Run(
         val id: RunId,
         val key: RunKey,
+        val nowPlaying: NowPlaying,
         val asked: Set<RunStep> = emptySet(),
         val insight: Boolean? = null,
         val offered: Boolean = false,
@@ -174,7 +184,7 @@ data class CoordinatorState(
 
     val visible: Boolean get() = started > 0 || restarting
 
-    val allowed: Boolean get() = visible || background
+    val allowed: Boolean get() = acknowledged && (visible || background)
 
     /** The run, while it is current: of the latest report's track, on the live pipeline, with no rebuild pending. */
     val current: Run? get() = run?.takeIf { live && building == null && latest?.key == it.key }
@@ -190,41 +200,43 @@ data class CoordinatorState(
  * whole state at once: visibility, currency, the mode, the first action. Pure: no threads, no
  * time; [PipelineHost] carries the effects out and feeds the events back from one queue.
  *
- * After each event, the current run (if [CoordinatorState.allowed]) is granted the steps it waits
- * for, and its question whether to write is answered: write when *Write insights automatically*
- * writes this change, the user has acted since the app opened, and the track is not already
- * decided (a rebuild's run of it again is not a track change, D5); else offer Write.
+ * After every event, once acknowledged, come the grants: while a run is current and requests are
+ * [CoordinatorState.allowed], Grant for each step it waits for, and Decide for its question whether
+ * to write: write when *Write insights automatically* writes this change, the user has acted since
+ * the app opened, and the track is not already decided (a rebuild's run of it again, or its new
+ * length, is not a track change, D5); else offer Write. Either way its track is then decided. The
+ * table gives each event's own effects; the grants follow every row. "The run" is the run in
+ * progress; "an old run" is any other, cancelled or replaced.
  *
  * | State | Event | New state | Effects |
  * |---|---|---|---|
  * | not acknowledged | anything but the four below | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
- * | any | ActivityStarted | started + 1; first action cleared if none was started and not restarting (the app opening) | grants (*) |
+ * | any | ActivityStarted | started + 1; first action cleared if none was started and not restarting (the app opening) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
- * | any | BackgroundChanged(on) | background = on | grants (*) |
+ * | any | BackgroundChanged(on) | background = on | none |
  * | any | Reported(key) | latest = the report; the run is stale unless it is of key; first action made if the cause is an action in Sleevesight | StartTimer |
  * | latest not this report | Settled | unchanged | none |
  * | no live pipeline, or a rebuild pending | Settled | latest settled | none (the swap starts it) |
- * | run of latest's track | Settled | latest settled | none |
- * | otherwise | Settled | latest settled; a new run of it; decided cleared if its track differs | CancelRun (old), StartRun, grants (*) |
+ * | run of latest's key | Settled | latest settled | none |
+ * | the run's model call under way, the same track (new length) | Settled | latest settled; waits for the call | none |
+ * | otherwise | Settled | latest settled; a new run of it; decided cleared unless the same track | CancelRun (old), StartRun |
  * | any | RebuildRequested | building = a new build; no run is current | Build |
  * | build not the one pending | RebuildFinished | unchanged | none |
- * | the pending build, a model call under way | RebuildFinished | built known; waits for the call | none |
+ * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared | CancelRun (old), Swap; StartRun of latest if settled |
- * | run waiting for the call | StepEnded(MODEL_CALL) | calling = false; a pending rebuild swaps as above | as above |
- * | current run | StepRequested(step) | step asked | grants (*) |
- * | current run | InsightAsked(w) | question asked | grants (*) |
+ * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and of another key | as for RebuildFinished, or StartRun |
+ * | the run | RunEnded | calling and offered cleared; then as for StepEnded(MODEL_CALL) | as above |
+ * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting | none |
  * | current run offering Write, allowed | WriteTapped | calling; first action made | Grant(MODEL_CALL) |
  * | otherwise | WriteTapped | unchanged | none |
  * | the run | DecidedWithoutCall | decided = its track | none |
- * | not the run (an old one) | StepRequested, InsightAsked, StepEnded, DecidedWithoutCall | unchanged | none |
- *
- * (*) Grants, while a run is current and requests are allowed: Grant for each step it asked for;
- * Decide(write) for its question, marking its track decided, and calling or offering Write.
+ * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, DecidedWithoutCall | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
     initial: CoordinatorState = CoordinatorState(),
+    private val sameTrack: (NowPlaying, NowPlaying) -> Boolean = TrackIdentity::same,
 ) {
     /** The state after the last event. */
     var state: CoordinatorState = initial
@@ -255,9 +267,10 @@ class PipelineCoordinator(
             is CoordinatorEvent.StepRequested -> ofRun(event.run) { it.copy(asked = it.asked + event.step) }
             is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesWhenActed) }
             CoordinatorEvent.WriteTapped -> tapped()
-            is CoordinatorEvent.StepEnded -> ended(event)
+            is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
+            is CoordinatorEvent.RunEnded -> runEnded(event.run)
             is CoordinatorEvent.DecidedWithoutCall ->
-                if (state.run?.id == event.run) state = state.copy(decided = state.run?.key)
+                if (state.run?.id == event.run) state = state.copy(decided = state.run?.nowPlaying)
             else -> Unit
         }
     }
@@ -285,8 +298,18 @@ class PipelineCoordinator(
     private fun settled(seq: Long) {
         val latest = state.latest?.takeIf { it.seq == seq } ?: return
         state = state.copy(latest = latest.copy(settled = true))
-        if (!state.live || state.building != null || state.run?.key == latest.key) return
-        startRun(latest)
+        if (startsNow(latest)) startRun(latest)
+    }
+
+    // Whether the settled [latest] report starts a run now: not without a live pipeline or with a
+    // rebuild pending (the swap starts it), not when the run is of its key, and not while the run's
+    // model call is under way for the same track (a new length): the call is paid for, so it
+    // finishes first.
+    private fun startsNow(latest: CoordinatorState.Report): Boolean {
+        val run = state.run
+        val waits =
+            run != null && (run.key == latest.key || run.calling && sameTrack(run.nowPlaying, latest.nowPlaying))
+        return state.live && state.building == null && !waits
     }
 
     private fun startRun(report: CoordinatorState.Report) {
@@ -294,11 +317,12 @@ class PipelineCoordinator(
         begin(report)
     }
 
-    // A run of [report]'s track; its track stays decided only if it is the one decided.
+    // A run of [report]'s track; it stays decided only if it is the same track as the one decided.
     private fun begin(report: CoordinatorState.Report) {
         val id = RunId(state.runs + 1)
-        val decided = state.decided.takeIf { it == report.key }
-        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, report.key), decided = decided)
+        val decided = state.decided?.takeIf { sameTrack(it, report.nowPlaying) }
+        val run = CoordinatorState.Run(id, report.key, report.nowPlaying)
+        state = state.copy(runs = id.value, run = run, decided = decided)
         effects += CoordinatorEffect.StartRun(id, report.nowPlaying, report.cause)
     }
 
@@ -336,10 +360,24 @@ class PipelineCoordinator(
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
     }
 
-    private fun ended(event: CoordinatorEvent.StepEnded) {
-        if (event.step != RunStep.MODEL_CALL) return
-        ofRun(event.run) { it.copy(calling = false) }
+    private fun callEnded(id: RunId) {
+        if (state.run?.id != id) return
+        ofRun(id) { it.copy(calling = false) }
+        afterCall()
+    }
+
+    // A run that ended waits for nothing: no call, no tap. Nothing then waits for it.
+    private fun runEnded(id: RunId) {
+        if (state.run?.id != id) return
+        ofRun(id) { it.copy(calling = false, offered = false, asked = emptySet(), insight = null) }
+        afterCall()
+    }
+
+    // What waited for the call: a pending swap, or a run of the latest report's new key.
+    private fun afterCall() {
         swap()
+        val latest = state.latest?.takeIf { it.settled } ?: return
+        if (startsNow(latest)) startRun(latest)
     }
 
     private fun ofRun(
@@ -358,9 +396,10 @@ class PipelineCoordinator(
         var next = run.copy(asked = emptySet())
         val writesWhenActed = run.insight
         if (writesWhenActed != null) {
-            val write = writesWhenActed && state.acted && state.decided != run.key
+            val decided = state.decided?.let { sameTrack(it, run.nowPlaying) } == true
+            val write = writesWhenActed && state.acted && !decided
             next = next.copy(insight = null, offered = !write, calling = write)
-            state = state.copy(decided = run.key)
+            state = state.copy(decided = run.nowPlaying)
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
