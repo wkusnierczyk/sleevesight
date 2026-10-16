@@ -16,6 +16,7 @@ import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SystemActiveSessions
+import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
@@ -23,8 +24,7 @@ import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -56,9 +56,11 @@ class AppGraph(
      */
     val aiProviders: Map<ProviderId, AiProvider> = emptyMap()
 
-    /** *Players to follow*, by package name: the default until the settings supply it (#50). */
-    private val followedPlayers: Flow<Set<String>> = flowOf(SessionRepository.DEFAULT_FOLLOWED)
-
+    /**
+     * The session layer, following the players switched on under *Players to follow*: a switch
+     * turned on or off reaches it at once. It waits for the settings' first read before it reads
+     * any session, so a player switched off is never followed in between.
+     */
     val sessions =
         SessionRepository(
             sessions = SystemActiveSessions(appContext),
@@ -66,8 +68,13 @@ class AppGraph(
             // `http` art waits for the process's `NetClient` and `:sources`' `ArtFetcher` (#51).
             artLoader = ArtLoader(appContext.contentResolver, HttpArt.NONE, Dispatchers.IO),
             scope = mainScope,
-            followed = followedPlayers,
+            followed = settings.followedPlayers,
         )
+
+    init {
+        // Each player the session layer sees appears under *Players to follow*, switched off.
+        mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
+    }
 
     /** A player's name as the phone knows it, else as the design knows it, else its package. */
     fun playerLabel(packageName: String): String {

@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.idleUntil
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -51,7 +52,7 @@ class ListenerServiceTest {
         assertNull(sessions.nowPlaying.value)
 
         FirstRunAcknowledgement(app).acknowledge()
-        shadowOf(Looper.getMainLooper()).idle()
+        idleUntil { sessions.seenPlayers.value.isNotEmpty() }
 
         assertEquals(setOf(OTHER_PLAYER), sessions.seenPlayers.value)
     }

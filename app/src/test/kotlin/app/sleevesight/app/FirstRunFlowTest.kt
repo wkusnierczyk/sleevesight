@@ -283,7 +283,10 @@ class FirstRunFlowTest {
             setAccess(granted = true)
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
+            idleUntil {
+                app.graph.sessions.seenPlayers.value
+                    .isNotEmpty()
+            }
             assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
         }
     }
@@ -299,7 +302,7 @@ class FirstRunFlowTest {
         )
         shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
         launch().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleUntil { app.graph.sessions.nowPlaying.value != null }
             assertEquals(
                 "Sundown",
                 app.graph.sessions.nowPlaying.value
@@ -324,7 +327,10 @@ class FirstRunFlowTest {
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            shadowOf(Looper.getMainLooper()).idle()
+            idleUntil {
+                app.graph.sessions.seenPlayers.value
+                    .isNotEmpty()
+            }
             assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
         }
     }
