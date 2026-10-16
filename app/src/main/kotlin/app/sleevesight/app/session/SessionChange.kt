@@ -11,10 +11,13 @@ import app.sleevesight.core.model.NowPlaying
  *
  * @property track the new track.
  * @property changedAt when the first report of the change arrived, on the
- *   `SystemClock.elapsedRealtime` clock: the first callback of the burst that settled into [track].
- * @property before the player's playback state just before that burst, which holds the previous
- *   track's last reported position, for the time it had left; null when the change came with no
- *   burst (the session shown switched to another player's track).
+ *   `SystemClock.elapsedRealtime` clock: the first callback of the burst that settled into [track],
+ *   or within it the first that named a new title or queue item, the reports before it having
+ *   moved only the position. On a switch to another player's track settled earlier (the player
+ *   shown paused), the time of the switch: it never goes back.
+ * @property before the player's playback state just before that report, which holds the previous
+ *   track's last reported position, for the time it had left; null when the session shown
+ *   switched to another player's track.
  */
 data class SessionChange(
     val track: NowPlaying,

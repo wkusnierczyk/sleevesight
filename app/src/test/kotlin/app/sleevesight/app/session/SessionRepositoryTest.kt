@@ -252,6 +252,26 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun stopClearsTheLastChange() {
+        val spotify = FakeSession(SPOTIFY)
+        system.active = listOf(spotify)
+        repository.start()
+        spotify.settled(carefree)
+        assertEquals(
+            "Carefree Highway",
+            repository.lastChange.value
+                ?.track
+                ?.title,
+        )
+
+        repository.stop()
+        assertNull(repository.lastChange.value)
+
+        repository.start()
+        assertNull(repository.lastChange.value)
+    }
+
+    @Test
     fun aChangeWhileTheCallbackIsRegisteredIsNotLost() {
         val spotify = FakeSession(SPOTIFY)
         spotify.onRegister = {

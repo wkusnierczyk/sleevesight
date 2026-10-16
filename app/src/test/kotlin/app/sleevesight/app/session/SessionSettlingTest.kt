@@ -6,6 +6,7 @@ import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.queueItem
 import app.sleevesight.app.session.Sessions.state
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -267,6 +268,132 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals(began, change.changedAt)
         assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 7, 1f), change.before)
         assertTrue(scheduler.currentTime > began)
+    }
+
+    @Test
+    fun aSessionAttachedBetweenTheNewStateAndItsMetadataSeesTheChange() {
+        // Attached after the new track's state (item 5) and before its metadata.
+        val youtube = youtubeMusic(item = 5)
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(SessionRepository.SETTLE / 2)
+        youtube.settled(carefree)
+
+        assertEquals(1, changes(tracks))
+        assertEquals(listOf("Sundown", "Carefree Highway"), tracks.map { it?.title })
+        assertEquals(
+            "Carefree Highway",
+            repository.lastChange.value
+                ?.track
+                ?.title,
+        )
+    }
+
+    @Test
+    fun theLongestWaitDoesNotCutANewTracksStateFromItsMetadata() {
+        // Reports less than 300 ms apart for a second (a seek bar scrubbed), then the new track's
+        // state just before the longest wait runs out, and its metadata just after.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.send(state(positionMs = 100_000, queueItem = 4))
+        for (at in listOf(250L, 500L, 750L)) {
+            scheduler.advanceTimeBy(250.milliseconds)
+            youtube.send(state(positionMs = 100_000 + at, updatedAt = at, queueItem = 4))
+        }
+        scheduler.advanceTimeBy(240.milliseconds)
+        youtube.send(state(positionMs = 0, updatedAt = 990, queueItem = 5))
+        scheduler.advanceTimeBy(20.milliseconds)
+        youtube.send(carefree)
+        settle()
+
+        assertEquals(
+            listOf(
+                sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4),
+                sundown.copy(title = "Carefree Highway", player = YOUTUBE_MUSIC, queueItemId = 5),
+            ),
+            tracks,
+        )
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(990L, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 100_750.milliseconds, 750, 1f), change.before)
+    }
+
+    @Test
+    fun theLongestWaitDoesNotCutTheSecondOfTwoChangesInOneBurst() {
+        // *Next* pressed, reports less than 300 ms apart, and *next* again as the longest wait runs out.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.send(state(queueItem = 5))
+        scheduler.advanceTimeBy(20.milliseconds)
+        youtube.send(carefree)
+        scheduler.advanceTimeBy(230.milliseconds)
+        for (at in listOf(250L, 500L, 750L)) {
+            youtube.send(state(positionMs = at, updatedAt = at, queueItem = 5))
+            scheduler.advanceTimeBy(if (at == 750L) 240.milliseconds else 250.milliseconds)
+        }
+        youtube.send(state(queueItem = 6))
+        scheduler.advanceTimeBy(20.milliseconds)
+        youtube.send(metadata(title = "Rainy Day People"))
+        settle()
+
+        assertEquals(listOf(4L, 6L), tracks.map { it?.queueItemId })
+        assertEquals(listOf("Sundown", "Rainy Day People"), tracks.map { it?.title })
+        assertEquals(0L, repository.lastChange.value?.changedAt)
+    }
+
+    @Test
+    fun aStopDoesNotReleaseThePreviousTracksItem() {
+        // Metadata well before the state, and a stop (no item) before the state moves on.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.settled(carefree)
+        youtube.settled(state(PlaybackState.STATE_STOPPED, queueItem = -1))
+        youtube.settled(state(queueItem = 4))
+        youtube.settled(state(queueItem = 5))
+
+        assertEquals(1, changes(tracks))
+        assertEquals(5L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun aSwitchToAPlayerSettledEarlierIsTimedAtTheSwitch() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = FakeSession(SPOTIFY)
+        val youtube =
+            FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "OldYT"), playbackState = state(queueItem = 4))
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        val recorded = mutableListOf<SessionChange?>()
+        scope.launch { repository.lastChange.collect { recorded += it } }
+
+        // YouTube Music changes track while Spotify is shown, then Spotify does.
+        scheduler.advanceTimeBy(10.seconds)
+        youtube.send(state(queueItem = 5))
+        youtube.settled(metadata(title = "NewYT"))
+        scheduler.advanceTimeBy(60.seconds)
+        spotify.settled(carefree)
+        assertEquals(
+            "Carefree Highway",
+            repository.lastChange.value
+                ?.track
+                ?.title,
+        )
+
+        // Spotify pauses, and YouTube Music's track, settled a minute ago, is shown.
+        scheduler.advanceTimeBy(60.seconds)
+        val switchedAt = scheduler.currentTime
+        spotify.send(state(PlaybackState.STATE_PAUSED, speed = 0f))
+        settle()
+
+        val switch = checkNotNull(repository.lastChange.value)
+        assertEquals("NewYT", switch.track.title)
+        assertEquals(switchedAt, switch.changedAt)
+        assertNull(switch.before)
+        val times = recorded.filterNotNull().map { it.changedAt }
+        assertEquals(times.sorted(), times)
     }
 
     @Test
