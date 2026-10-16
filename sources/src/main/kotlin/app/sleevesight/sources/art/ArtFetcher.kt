@@ -11,14 +11,16 @@ import kotlin.time.Duration.Companion.seconds
  * *UI*): `:app` may not reach `:net`, so the session layer asks here. Castbox sends such URIs.
  *
  * The URI is a stranger's choice, so the answer is bounded ([MAX_BYTES]) and kept only when the
- * server says it is an image, or says nothing of its type; the caller decodes it.
+ * server says it is an image, or says nothing of its type; the caller decodes it. For the same
+ * reason the request is marked `sensitiveUrl`: the path or query may carry a token or name the
+ * track, so `:net`'s log shows only the host.
  */
 class ArtFetcher(
     private val net: NetClient,
 ) {
     suspend fun fetch(uri: String): ArtResult {
         if (!isHttp(uri)) return ArtResult.Failed("not http")
-        return when (val result = net.send(NetRequest(uri, timeout = TIMEOUT, maxBytes = MAX_BYTES))) {
+        return when (val result = net.send(request(uri))) {
             is NetResult.Failure -> ArtResult.Failed(result.error::class.simpleName ?: "error")
             is NetResult.Success -> read(result.value)
         }
@@ -35,6 +37,10 @@ class ArtFetcher(
     }
 
     companion object {
+        /** The request for [uri]: bounded, and with its path and query kept out of the log. */
+        internal fun request(uri: String): NetRequest =
+            NetRequest(uri, timeout = TIMEOUT, maxBytes = MAX_BYTES, sensitiveUrl = true)
+
         /** Far above any cover a player links to (Spotify's are about 60 KB at 640 pixels). */
         const val MAX_BYTES: Long = 4L * 1024 * 1024
 

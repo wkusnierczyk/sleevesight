@@ -19,18 +19,16 @@ object SessionMapping {
      *
      * The title is `TITLE`, else `DISPLAY_TITLE`; the artists are `ARTIST` as sent, one string the
      * normalizer splits, and empty when the player sends none (a player that sends only a title
-     * still runs the pipeline). Blank values are absent. The active queue item comes from [state],
-     * not the metadata: the playback state names it.
+     * still runs the pipeline). Blank values are absent. [queueItemId] is the active queue item as
+     * [QueueItemTracker] reconciles it with the metadata.
      */
     fun nowPlaying(
         player: String,
         metadata: MediaMetadata?,
-        state: PlaybackState?,
+        queueItemId: Long?,
     ): NowPlaying? {
         metadata ?: return null
-        val title =
-            metadata.text(MediaMetadata.METADATA_KEY_TITLE) ?: metadata.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
-        return title?.let {
+        return title(metadata)?.let {
             NowPlaying(
                 title = it,
                 artists = metadata.text(MediaMetadata.METADATA_KEY_ARTIST).orEmpty(),
@@ -38,14 +36,31 @@ object SessionMapping {
                 duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION).takeIf { ms -> ms > 0 }?.milliseconds,
                 player = player,
                 mediaId = metadata.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
-                queueItemId =
-                    state?.activeQueueItemId?.takeIf { id ->
-                        id != MediaSession.QueueItem.UNKNOWN_ID.toLong()
-                    },
+                queueItemId = queueItemId,
                 artUri = artUris(metadata).firstOrNull(),
             )
         }
     }
+
+    /** The track's title as [nowPlaying] reads it, for reconciling the queue item. */
+    fun title(metadata: MediaMetadata?): String? =
+        metadata?.let { it.text(MediaMetadata.METADATA_KEY_TITLE) ?: it.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) }
+
+    /**
+     * What tells one track's metadata from another's, for [QueueItemTracker]: the values identity
+     * and lookups read, without the length or art, which a player re-sends for the same track.
+     */
+    fun metadataKey(metadata: MediaMetadata?): Any =
+        listOf(
+            title(metadata),
+            metadata?.text(MediaMetadata.METADATA_KEY_ARTIST),
+            metadata?.text(MediaMetadata.METADATA_KEY_ALBUM),
+            metadata?.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
+        )
+
+    /** The active queue item the playback state names; the session's −1 ("no item") is null. */
+    fun activeItem(state: PlaybackState?): Long? =
+        state?.activeQueueItemId?.takeIf { it != MediaSession.QueueItem.UNKNOWN_ID.toLong() }
 
     /** [state] in the app's terms; [PlaybackInfo.NONE]'s status when the player reports none. */
     fun playbackInfo(
@@ -110,10 +125,6 @@ object SessionMapping {
             metadata.text(MediaMetadata.METADATA_KEY_ART_URI),
         ).distinct()
 
-    private fun String.scheme(): String = substringBefore("://", missingDelimiterValue = "").lowercase()
-
-    private fun MediaMetadata.text(key: String): String? = getString(key)?.trim()?.takeIf { it.isNotEmpty() }
-
     private fun status(state: Int): PlaybackStatus =
         when (state) {
             PlaybackState.STATE_NONE -> PlaybackStatus.NONE
@@ -137,6 +148,10 @@ object SessionMapping {
             PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM,
         )
 }
+
+private fun String.scheme(): String = substringBefore("://", missingDelimiterValue = "").lowercase()
+
+private fun MediaMetadata.text(key: String): String? = getString(key)?.trim()?.takeIf { it.isNotEmpty() }
 
 /** One place the art can come from (see [SessionMapping.artSources]). */
 sealed interface ArtSource {

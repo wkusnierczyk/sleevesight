@@ -29,6 +29,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowNotificationListenerService
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -213,6 +214,19 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun theAppAsksForTheListenerToBeBoundWhenAccessIsGranted() {
+        // An unbound listener (after a force stop or an update) would never start the session layer.
+        setAccess(granted = false)
+        launch().use { scenario ->
+            assertEquals(0, ShadowNotificationListenerService.getRebindRequestCount())
+            setAccess(granted = true)
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            assertEquals(1, ShadowNotificationListenerService.getRebindRequestCount())
         }
     }
 

@@ -45,7 +45,7 @@ class SessionMappingTest {
                 queueItemId = 7,
                 artUri = "content://com.spotify.mobile.android.mediaapi/v1/image/1",
             ),
-            SessionMapping.nowPlaying(SPOTIFY, metadata, state(queueItem = 7)),
+            SessionMapping.nowPlaying(SPOTIFY, metadata, 7),
         )
     }
 
@@ -55,7 +55,7 @@ class SessionMappingTest {
             SessionMapping.nowPlaying(
                 SPOTIFY,
                 metadata(title = "Sundown", artist = null, album = " ", durationMs = 0, mediaId = ""),
-                state(),
+                null,
             )
         assertEquals(NowPlaying(title = "Sundown", artists = "", player = SPOTIFY), track)
     }
@@ -73,17 +73,30 @@ class SessionMappingTest {
             SessionMapping.nowPlaying(
                 SPOTIFY,
                 metadata(title = null, artist = null, albumArt = bitmap(Color.RED)),
-                state(),
+                null,
             ),
         )
-        assertNull(SessionMapping.nowPlaying(SPOTIFY, null, state()))
+        assertNull(SessionMapping.nowPlaying(SPOTIFY, null, null))
     }
 
     @Test
     fun theActiveQueueItemComesFromThePlaybackStateAndMinusOneIsNone() {
-        assertNull(SessionMapping.nowPlaying(SPOTIFY, metadata(), state(queueItem = -1))?.queueItemId)
-        assertNull(SessionMapping.nowPlaying(SPOTIFY, metadata(), null)?.queueItemId)
-        assertEquals(3L, SessionMapping.nowPlaying(SPOTIFY, metadata(), state(queueItem = 3))?.queueItemId)
+        assertNull(SessionMapping.activeItem(state(queueItem = -1)))
+        assertNull(SessionMapping.activeItem(null))
+        assertEquals(3L, SessionMapping.activeItem(state(queueItem = 3)))
+    }
+
+    @Test
+    fun theMetadataKeyLeavesOutLengthAndArt() {
+        assertEquals(
+            SessionMapping.metadataKey(metadata(durationMs = 106_000)),
+            SessionMapping.metadataKey(metadata(durationMs = 278_800, albumArt = bitmap(Color.RED))),
+        )
+        assertNotEquals(
+            SessionMapping.metadataKey(metadata()),
+            SessionMapping.metadataKey(metadata(title = "Carefree Highway")),
+        )
+        assertNotEquals(SessionMapping.metadataKey(metadata()), SessionMapping.metadataKey(metadata(mediaId = "1")))
     }
 
     @Test

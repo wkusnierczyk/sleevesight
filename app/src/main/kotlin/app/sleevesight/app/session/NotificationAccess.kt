@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,16 @@ class NotificationAccess(
 
     fun refresh() {
         state.value = isGranted()
+    }
+
+    /**
+     * Asks the system to bind the listener, when access is granted. It binds it by itself when
+     * access is granted and at boot, but not always after the app is force-stopped or updated; an
+     * unbound listener never starts the [SessionRepository], so nothing would be followed even
+     * with the app open. Binding an already bound listener does nothing.
+     */
+    fun requestRebind() {
+        if (state.value) NotificationListenerService.requestRebind(listener)
     }
 
     /**

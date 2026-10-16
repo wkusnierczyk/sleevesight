@@ -34,8 +34,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // The user may have changed notification access in Settings while the app was away.
+        // The user may have changed notification access in Settings while the app was away; and
+        // a listener left unbound (after a force stop or an update) is bound again.
         graph.notificationAccess.refresh()
+        graph.notificationAccess.requestRebind()
     }
 
     /** Opens the first settings screen for notification access that exists; false if none does. */

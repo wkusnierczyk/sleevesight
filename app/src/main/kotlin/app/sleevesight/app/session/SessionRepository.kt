@@ -74,8 +74,10 @@ class SessionRepository(
     val queue: StateFlow<SessionQueue?> = queueState.asStateFlow()
 
     /**
-     * The shown track's art (see [SessionMapping.artSources]). Cleared on a track change; kept
-     * through an update of the same track until the new art has loaded.
+     * The shown track's art (see [SessionMapping.artSources]). Cleared on a track change, and
+     * loaded again even when the new track names the same URI; kept through an update of the
+     * same track until the new art has loaded, and kept when it fails to load. A load for a track
+     * no longer shown never lands.
      */
     val art: StateFlow<Bitmap?> = artState.asStateFlow()
 
@@ -129,6 +131,8 @@ class SessionRepository(
     }
 
     private fun onSessionsChanged(active: List<PlayerSession>) {
+        // A list dispatched before the listener was removed may arrive after it.
+        if (!listening) return
         seenState.update { it + active.map(PlayerSession::player) }
         val ignoredNow = active.map(PlayerSession::player).filterNot { it in followedPlayers }.toSet()
         (ignoredNow - ignored).forEach { Log.i(TAG, "Ignored: the media session of $it, a player not followed") }
@@ -146,7 +150,7 @@ class SessionRepository(
     private fun publish() {
         val shown = attached.values.firstOrNull { SessionMapping.isActive(it.state) } ?: attached.values.firstOrNull()
         val previous = nowPlayingState.value
-        val track = shown?.let { SessionMapping.nowPlaying(it.session.player, it.metadata, it.state) }
+        val track = shown?.let { SessionMapping.nowPlaying(it.session.player, it.metadata, it.item) }
         nowPlayingState.value = track
         playbackState.value =
             shown?.let { SessionMapping.playbackInfo(it.session.player, it.state) } ?: PlaybackInfo.NONE
@@ -159,11 +163,13 @@ class SessionRepository(
         track: NowPlaying?,
         sources: List<ArtSource>,
     ) {
-        if (sources == artSources) return
+        val sameTrack = previous != null && track != null && TrackIdentity.same(previous, track)
+        // The same art for the same track: Spotify re-sends it with every update. Another track
+        // reloads even from the same URI, which a player may reuse for whatever is playing.
+        if (sameTrack && sources == artSources) return
         artSources = sources
         artJob?.cancel()
         artJob = null
-        val sameTrack = previous != null && track != null && TrackIdentity.same(previous, track)
         val first = sources.firstOrNull()
         when {
             first == null -> artState.value = null
@@ -174,7 +180,8 @@ class SessionRepository(
                     scope.launch {
                         val bitmap = artLoader.load(sources)
                         ensureActive()
-                        artState.value = bitmap
+                        // A failed load for the same track keeps the art already shown.
+                        if (bitmap != null || !sameTrack) artState.value = bitmap
                     }
             }
         }
@@ -184,23 +191,29 @@ class SessionRepository(
     private inner class Attached(
         val session: PlayerSession,
     ) {
-        var metadata: MediaMetadata? = session.metadata
-        var state: PlaybackState? = session.playbackState
-        var queue: List<MediaSession.QueueItem>? = session.queue
-        var queueTitle: CharSequence? = session.queueTitle
+        private val items = QueueItemTracker()
 
         val callback =
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
-                    ifAttached { this@Attached.metadata = metadata }
+                    ifAttached {
+                        this@Attached.metadata = metadata
+                        itemFromMetadata()
+                    }
                 }
 
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
-                    ifAttached { this@Attached.state = state }
+                    ifAttached {
+                        this@Attached.state = state
+                        itemFromState()
+                    }
                 }
 
                 override fun onQueueChanged(queue: List<MediaSession.QueueItem>?) {
-                    ifAttached { this@Attached.queue = queue }
+                    ifAttached {
+                        this@Attached.queue = queue
+                        itemFromState()
+                    }
                 }
 
                 override fun onQueueTitleChanged(title: CharSequence?) {
@@ -216,7 +229,36 @@ class SessionRepository(
             }
 
         init {
+            // Registered before the first reads: a change in between then reaches the callback, or
+            // the reads, rather than being lost until the next one.
             session.register(callback)
+        }
+
+        var metadata: MediaMetadata? = session.metadata
+        var state: PlaybackState? = session.playbackState
+        var queue: List<MediaSession.QueueItem>? = session.queue
+        var queueTitle: CharSequence? = session.queueTitle
+
+        /** The active queue item the track is published with (see [QueueItemTracker]). */
+        var item: Long? = null
+            private set
+
+        init {
+            itemFromMetadata()
+        }
+
+        private fun itemFromMetadata() {
+            item =
+                items.onMetadata(
+                    SessionMapping.metadataKey(metadata),
+                    SessionMapping.title(metadata),
+                    SessionMapping.activeItem(state),
+                    queue,
+                )
+        }
+
+        private fun itemFromState() {
+            item = items.onState(SessionMapping.activeItem(state), queue)
         }
 
         /** Applies [change] and republishes, unless this session was dropped meanwhile (a late callback). */

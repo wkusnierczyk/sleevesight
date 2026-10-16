@@ -32,6 +32,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
+    // Navigation's typed routes compile against it; declared so compile and runtime agree with
+    // the version `:core` brings at runtime.
+    implementation(libs.kotlinx.serialization.core)
     // Renders the previews in the IDE; debug only.
     debugImplementation(libs.androidx.compose.ui.tooling)
 

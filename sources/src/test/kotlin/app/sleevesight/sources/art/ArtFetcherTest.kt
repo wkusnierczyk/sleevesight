@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -45,6 +46,19 @@ class ArtFetcherTest {
             assertEquals("https://img.example/cover.jpg", request.url)
             assertEquals(ArtFetcher.MAX_BYTES, request.maxBytes)
             assertEquals(ArtFetcher.TIMEOUT, request.timeout)
+            assertTrue(request.sensitiveUrl)
+        }
+
+    @Test
+    fun `the log shows the host of a player's art URI, not its path or query`() =
+        runTest {
+            val client = StubClient { response() }
+            ArtFetcher(client).fetch("https://img.example/u/listener-42/now-playing.jpg?token=abc&track=sundown")
+            val logged = client.requests.single().toString()
+            assertTrue("img.example" in logged, logged)
+            listOf("listener-42", "now-playing", "token", "abc", "track", "sundown").forEach {
+                assertFalse(it in logged, "$it in $logged")
+            }
         }
 
     @Test

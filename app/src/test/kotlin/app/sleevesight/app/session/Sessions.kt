@@ -86,7 +86,11 @@ internal class FakeSession(
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()
 
+    /** Runs as a callback is registered: a change the player makes at that moment, before any is heard. */
+    var onRegister: () -> Unit = {}
+
     override fun register(callback: MediaController.Callback) {
+        onRegister()
         callbacks += callback
     }
 
