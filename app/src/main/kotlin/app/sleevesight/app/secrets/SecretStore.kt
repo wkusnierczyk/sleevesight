@@ -1,5 +1,6 @@
 package app.sleevesight.app.secrets
 
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -57,8 +58,9 @@ enum class SecretState {
     /**
      * A value is stored but cannot be opened: the Keystore key that sealed it is gone (a restore
      * onto another phone, a reset Keystore), the value is damaged, or the key store fails. It reads
-     * as no key. Saving it again works when the Keystore key is gone (a new one is made); when the
-     * key store keeps failing, the user's *Reset saved keys* ([SecretStore.reset]) is the way out.
+     * as no key. Saving it again works when the Keystore key is gone from API 31 (a new one is made);
+     * before API 31 with other keys stored, or when the key store keeps failing, the user's *Reset
+     * saved keys* ([SecretStore.reset]) is the way out.
      */
     UNREADABLE,
 }
@@ -73,6 +75,12 @@ enum class SecretState {
  * removes it, or resets every saved key ([reset]). A store file DataStore cannot parse is replaced by
  * an empty one (the corruption handler where the store is created), so its keys read as absent.
  *
+ * Reading never creates the Keystore key; a save creates it only when the key store has none and
+ * that cannot cost a stored key: from API 31 (keystore2, which reports a failed lookup as an
+ * error), or when no key is stored. Before API 31 the key store reports a failed lookup as no key,
+ * and creating one deletes whatever is under the alias, so with keys stored such a save fails and
+ * *Reset saved keys* is the way out. [legacyKeystore] says which applies.
+ *
  * The cipher's work, which goes to the Keystore over binder calls, runs on [dispatcher], never on
  * the caller's (the screen's main thread). Saves, removals and resets run one at a time. One that
  * fails, in the key store or in DataStore, returns false rather than throwing.
@@ -80,6 +88,7 @@ enum class SecretState {
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
     private val cipher: SecretCipher,
+    private val legacyKeystore: Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val data: Flow<Preferences> =
@@ -126,9 +135,10 @@ class SecretStore(
         writes.withLock {
             val sealed =
                 withContext(dispatcher) {
+                    val mayCreate = !legacyKeystore || nothingStored()
                     val plain = secret.reveal().encodeToByteArray()
                     try {
-                        cipher.seal(plain, associated(id))
+                        cipher.seal(plain, associated(id), mayCreate)
                     } finally {
                         plain.fill(0)
                     }
@@ -153,6 +163,19 @@ class SecretStore(
             } finally {
                 resets.update { it + 1 }
             }
+        }
+
+    /**
+     * Whether no key is stored, read from the file itself: a read that fails counts as keys stored,
+     * so it never allows creating a key that could cost one.
+     */
+    @Suppress("SwallowedException") // A failed read means "maybe"; that is all the caller needs.
+    private suspend fun nothingStored(): Boolean =
+        try {
+            val prefs = dataStore.data.first()
+            SecretId.entries.none { prefs[keyOf(it)] != null }
+        } catch (e: IOException) {
+            false
         }
 
     @Suppress("SwallowedException") // A failed write is reported as false; its message holds no key.

@@ -138,7 +138,7 @@ class SettingsScreenTest {
     fun aKeyThatCannotBeSavedKeepsTheDialogOpenAndSaysSo() {
         val failing =
             object : SoftwareKeySource() {
-                override fun key(): SecretKey = throw ProviderException("key store down")
+                override fun find(): SecretKey? = throw ProviderException("key store down")
             }
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->

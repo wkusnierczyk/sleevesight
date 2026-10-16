@@ -46,7 +46,7 @@ Each change is saved at once. The defaults, and why:
 | Look up in the background | Off | No paid or network activity nobody is looking at |
 | How long findings are kept | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7, web search 1 | Freshness against repeated requests and paid searches |
 
-Your API keys are encrypted with a key kept in the phone's Android Keystore, are never shown again once saved, and are never logged. Neither they nor the settings are part of Android's backup or a transfer to a new phone. If a saved key can no longer be read, as after the phone's Keystore is reset, the settings say so, and you enter it again. If saving keeps failing, *Reset saved keys* removes every saved key, with the phone's key that protects them, so you can enter them afresh; Sleevesight never deletes them on its own.
+Your API keys are encrypted with a key kept in the phone's Android Keystore, are never shown again once saved, and are never logged. Neither they nor the settings are part of Android's backup or a transfer to a new phone. If a saved key can no longer be read, as after the phone's Keystore is reset, the settings say so, and you enter it again. If saving fails or keeps failing, *Reset saved keys* removes every saved key, with the phone's key that protects them, so you can enter them afresh; Sleevesight never deletes them on its own.
 
 ## Privacy
 

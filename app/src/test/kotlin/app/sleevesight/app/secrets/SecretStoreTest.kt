@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -156,7 +157,7 @@ class SecretStoreTest {
     @Test
     fun theCipherRefusesAnotherFormatAndAnotherEntry() {
         val cipher = testCipher(key)
-        val sealed = checkNotNull(cipher.seal("value".encodeToByteArray(), "a".encodeToByteArray()))
+        val sealed = checkNotNull(cipher.seal("value".encodeToByteArray(), "a".encodeToByteArray(), mayCreate = false))
         assertArrayEquals("value".encodeToByteArray(), cipher.open(sealed, "a".encodeToByteArray()))
         assertNull(cipher.open(sealed, "b".encodeToByteArray()))
         assertNull(cipher.open(byteArrayOf(2) + sealed.copyOfRange(1, sealed.size), "a".encodeToByteArray()))
@@ -170,7 +171,7 @@ class SecretStoreTest {
     ) = object : SoftwareKeySource(key) {
         var calls = 0
 
-        override fun key(): SecretKey = if (++calls <= times) throw failure else super.key()
+        override fun find(): SecretKey? = if (++calls <= times) throw failure else super.find()
     }
 
     private fun aFailedSaveDeletesNothing(failure: Exception) =
@@ -221,8 +222,8 @@ class SecretStoreTest {
             // The stored key fails every time until it is deleted, as a corrupt key blob would.
             val keys =
                 object : SoftwareKeySource(key) {
-                    override fun key(): SecretKey =
-                        if (deletions == 0) throw InvalidKeyException("invalid key blob") else super.key()
+                    override fun find(): SecretKey? =
+                        if (deletions == 0) throw InvalidKeyException("invalid key blob") else super.find()
                 }
             val store = SecretStore(dataStore, SecretCipher(keys))
             assertFalse(store.set(SecretId.EXA, Secret("exa")))
@@ -243,13 +244,69 @@ class SecretStoreTest {
             val dataStore = stores.open("secrets")
             SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
 
-            // The Keystore has no key under the alias any more: one is made on the next use.
+            // From API 31, the Keystore has no key under the alias any more: a save makes one.
             val keys = SoftwareKeySource(current = null)
-            val store = SecretStore(dataStore, SecretCipher(keys))
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
             assertTrue(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            assertEquals(1, keys.creations)
             assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
             assertEquals(0, keys.deletions)
+        }
+
+    @Test
+    fun aReadWithNoKeyCreatesNone() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            val keys = SoftwareKeySource(current = null)
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
+            assertNull(store.get(SecretId.LASTFM))
+            assertEquals(0, keys.creations)
+        }
+
+    @Test
+    fun beforeApi31ASaveWithKeysStoredAndNoKeyFoundCreatesNothing() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            // Before API 31 a failed lookup reads as no key, and creating one would delete the
+            // existing key: with a key stored, the save fails instead.
+            val keys = SoftwareKeySource(current = null)
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = true)
+            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(0, keys.creations)
+            assertEquals(0, keys.deletions)
+            assertEquals(SecretState.ABSENT, store.state(SecretId.EXA))
+            // The stored key is untouched and opens once the key store finds its key again.
+            assertEquals(LASTFM_KEY, SecretStore(dataStore, testCipher(key)).get(SecretId.LASTFM)?.reveal())
+        }
+
+    @Test
+    fun beforeApi31ASaveWithNoKeysStoredCreatesTheKey() =
+        runBlocking {
+            val keys = SoftwareKeySource(current = null)
+            val store = SecretStore(stores.open("secrets"), SecretCipher(keys), legacyKeystore = true)
+            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.creations)
+            assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+        }
+
+    @Test
+    fun beforeApi31AFailedReadOfTheFileCreatesNoKey() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            val unreadable =
+                object : DataStore<Preferences> by dataStore {
+                    override val data = flow<Preferences> { throw IOException("cannot read") }
+                }
+            val keys = SoftwareKeySource(current = null)
+            val store = SecretStore(unreadable, SecretCipher(keys), legacyKeystore = true)
+            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(0, keys.creations)
         }
 
     @Test
@@ -273,7 +330,7 @@ class SecretStoreTest {
                 object : SoftwareKeySource(key) {
                     @Volatile var down = false
 
-                    override fun key(): SecretKey = if (down) throw InvalidKeyException("busy") else super.key()
+                    override fun find(): SecretKey? = if (down) throw InvalidKeyException("busy") else super.find()
                 }
             val store = SecretStore(dataStore, SecretCipher(keys))
             val seen = mutableListOf<SecretState>()
@@ -295,7 +352,7 @@ class SecretStoreTest {
             SecretStore(dataStore, testCipher(key)).set(SecretId.EXA, Secret("exa"))
             val unloadable =
                 object : SoftwareKeySource(key) {
-                    override fun key(): SecretKey = throw IOException("cannot load")
+                    override fun find(): SecretKey? = throw IOException("cannot load")
                 }
             val store = SecretStore(dataStore, SecretCipher(unloadable))
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.EXA))

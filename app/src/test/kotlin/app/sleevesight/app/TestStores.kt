@@ -49,14 +49,20 @@ fun softwareKey(): SecretKey = KeyGenerator.getInstance("AES").apply { init(256)
 
 /**
  * A software key that, like the Keystore's, stays the same until it is deleted, and is made afresh
- * when there is none.
+ * only when [create] is called.
  */
 open class SoftwareKeySource(
     private var current: SecretKey? = softwareKey(),
 ) : SecretKeySource {
     var deletions = 0
+    var creations = 0
 
-    override fun key(): SecretKey = current ?: softwareKey().also { current = it }
+    override fun find(): SecretKey? = current
+
+    override fun create(): SecretKey {
+        creations++
+        return softwareKey().also { current = it }
+    }
 
     override fun forget() = Unit
 

@@ -4,6 +4,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.io.IOException
 import java.security.GeneralSecurityException
+import java.security.InvalidKeyException
 import java.security.KeyStore
 import java.security.ProviderException
 import javax.crypto.Cipher
@@ -17,16 +18,19 @@ import javax.crypto.spec.GCMParameterSpec
  */
 interface SecretKeySource {
     /**
-     * The key, created only when none exists (first use, or after the Keystore was reset). Throws a
+     * The key, or null when the key store has none under the alias. Never creates one. Throws a
      * [GeneralSecurityException], [ProviderException] or [IOException] when the key store fails.
      */
-    fun key(): SecretKey
+    fun find(): SecretKey?
 
-    /** Forgets a key looked up earlier, so the next [key] looks it up again; deletes nothing. */
+    /** Creates the key. Only a save does this, and only when [SecretStore] allows it. */
+    fun create(): SecretKey
+
+    /** Forgets a key looked up earlier, so the next [find] looks it up again; deletes nothing. */
     fun forget()
 
     /**
-     * Deletes the key, so the next [key] creates a new one and nothing sealed before opens again.
+     * Deletes the key, so the next save creates a new one and nothing sealed before opens again.
      * Only the user's *Reset saved keys* does this, never a failure.
      */
     fun delete()
@@ -47,23 +51,25 @@ class SecretCipher(
     private val keys: SecretKeySource,
 ) {
     /**
-     * [plain] sealed, or null when the key store fails. A failure is tried once more with the key
-     * looked up afresh, which gets past a key object the key store no longer knows; nothing is
-     * deleted either way.
+     * [plain] sealed, or null when the key store fails, or when it has no key and [mayCreate] is
+     * false. A failure is tried once more with the key looked up afresh, which gets past a key object
+     * the key store no longer knows; nothing is deleted either way.
      */
     fun seal(
         plain: ByteArray,
         associated: ByteArray,
+        mayCreate: Boolean,
     ): ByteArray? =
-        attempt(plain, associated) ?: run {
+        attempt(plain, associated, mayCreate) ?: run {
             keys.forget()
-            attempt(plain, associated)
+            attempt(plain, associated, mayCreate)
         }
 
     /**
      * The plain value of [sealed], or null when it cannot be opened: a value in another format, a
      * damaged one, one sealed with another key (the Keystore key is gone, as after a restore onto
-     * another phone or a reset Keystore), or a key store that fails.
+     * another phone or a reset Keystore), no key at all, or a key store that fails. It never creates
+     * a key.
      */
     @Suppress("SwallowedException") // Every such failure means the same to the caller: unreadable.
     fun open(
@@ -72,8 +78,9 @@ class SecretCipher(
     ): ByteArray? {
         if (sealed.size < HEADER_BYTES + TAG_BYTES || sealed[0] != VERSION) return null
         return try {
+            val key = keys.find() ?: throw InvalidKeyException("No key")
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, keys.key(), GCMParameterSpec(TAG_BITS, sealed, 1, IV_BYTES))
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, sealed, 1, IV_BYTES))
             cipher.updateAAD(associated)
             cipher.doFinal(sealed, HEADER_BYTES, sealed.size - HEADER_BYTES)
         } catch (e: GeneralSecurityException) {
@@ -104,11 +111,13 @@ class SecretCipher(
     private fun attempt(
         plain: ByteArray,
         associated: ByteArray,
+        mayCreate: Boolean,
     ): ByteArray? =
         try {
+            val key = keys.find() ?: if (mayCreate) keys.create() else throw InvalidKeyException("No key")
             val cipher = Cipher.getInstance(TRANSFORMATION)
             // The IV is the cipher's: a Keystore key with randomized encryption refuses one from outside.
-            cipher.init(Cipher.ENCRYPT_MODE, keys.key())
+            cipher.init(Cipher.ENCRYPT_MODE, key)
             cipher.updateAAD(associated)
             val iv = cipher.iv
             check(iv.size == IV_BYTES) { "Unexpected IV length ${iv.size}" }
@@ -138,9 +147,10 @@ class SecretCipher(
  * when the app is uninstalled or its data is cleared, and is not part of any backup, so a stored
  * value it sealed cannot be opened anywhere else.
  *
- * A key is generated only when the Keystore has none under the alias; one the Keystore fails to load
- * is a failure, never a reason to make another. The key is looked up once and kept, so a seal or an
- * open does not load the key store again.
+ * Looking the key up never creates one; [create] does, and only a save calls it, when
+ * [SecretStore] allows (on API 26 to 30 the key store reports a failed lookup as no key, and making
+ * a key there deletes what is under the alias first). The key is looked up once and kept, so a seal
+ * or an open does not load the key store again.
  */
 class AndroidKeystoreKey(
     private val alias: String = ALIAS,
@@ -148,10 +158,12 @@ class AndroidKeystoreKey(
     private val lock = Any()
     private var cached: SecretKey? = null
 
-    override fun key(): SecretKey =
+    override fun find(): SecretKey? =
         synchronized(lock) {
-            cached ?: ((keyStore().getKey(alias, null) as? SecretKey) ?: generate()).also { cached = it }
+            cached ?: (keyStore().getKey(alias, null) as? SecretKey)?.also { cached = it }
         }
+
+    override fun create(): SecretKey = synchronized(lock) { generate().also { cached = it } }
 
     override fun forget() {
         synchronized(lock) { cached = null }
