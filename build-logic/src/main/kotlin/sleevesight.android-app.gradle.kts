@@ -1,12 +1,14 @@
 // An Android application: SDK levels from the architecture (D10), Java 17, Compose,
 // kotlinx.serialization (Navigation Compose's type-safe routes are serializable), and the shared
-// checks, plus `checkManifest` on each variant's merged manifest.
+// checks, plus `checkManifest` on each variant's merged manifest. The release build is shrunk by
+// R8 and signed with the upload key when the environment names one (`design/release.md`).
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
 import sleevesight.checks.networkModules
+import sleevesight.release.UploadSigning
 
 plugins {
     id("com.android.application")
@@ -28,6 +30,29 @@ extensions.configure<ApplicationExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    // Without the key, the release build is unsigned: `./gradlew build` assembles it anywhere, and
+    // only the release workflow, which has the key, produces a bundle Google Play takes.
+    val upload = UploadSigning.from { providers.environmentVariable(it).orNull }
+    val uploadConfig =
+        upload?.let {
+            signingConfigs.create("upload") {
+                storeFile = file(it.storeFile)
+                storePassword = it.storePassword
+                keyAlias = it.keyAlias
+                keyPassword = it.keyPassword
+            }
+        }
+    buildTypes {
+        release {
+            // R8 shrinks, optimizes and obfuscates the code, and drops unused resources. The
+            // libraries bring their own keep rules (kotlinx.serialization, coroutines, Ktor); the
+            // module's `proguard-rules.pro` adds what they lack.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = uploadConfig
+        }
     }
 }
 

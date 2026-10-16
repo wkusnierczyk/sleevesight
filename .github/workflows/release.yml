@@ -1,0 +1,87 @@
+name: Release
+
+# A version tag, `v<major>.<minor>.<patch>`, builds the app bundle for Google Play, signed with the
+# upload key (D7; `design/release.md`). The key is in the `release` environment's secrets, which
+# only tags matching `v*` may use, and each run waits for a reviewer's approval before it starts.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Read-only: a release runs on a tag, and the cache belongs to `main` and `dev-*`.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      # The tag without its `v`; Gradle checks its form and derives `versionCode` from it.
+      - name: Version from the tag
+        id: version
+        run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # An unset secret reads as empty; the build then fails on the missing variables rather than
+      # produce an unsigned bundle.
+      - name: Upload key
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$UPLOAD_KEYSTORE_BASE64" ]; then
+            echo "::error::The release environment has no UPLOAD_KEYSTORE_BASE64 secret (design/release.md)"
+            exit 1
+          fi
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.p12"
+
+      - name: Signed bundle
+        env:
+          SLEEVESIGHT_UPLOAD_STORE_FILE: ${{ runner.temp }}/upload.p12
+          SLEEVESIGHT_UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          SLEEVESIGHT_UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          SLEEVESIGHT_UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+          VERSION: ${{ steps.version.outputs.name }}
+        run: ./gradlew :app:bundleRelease -Psleevesight.version="$VERSION" --console=plain
+
+      - name: Remove the upload key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.p12"
+
+      # `jarsigner -verify` succeeds on an unsigned bundle too, so its output is checked. The
+      # certificate's SHA-256 fingerprint is the one Play Console shows as the upload certificate.
+      - name: Check the signature
+        run: |
+          aab=app/build/outputs/bundle/release/app-release.aab
+          out=$(jarsigner -verify "$aab")
+          echo "$out"
+          case "$out" in
+            *"jar verified."*) ;;
+            *) echo "::error::$aab is not signed"; exit 1 ;;
+          esac
+          keytool -printcert -jarfile "$aab" | grep -E 'Owner:|SHA256:'
+
+      # The R8 mapping is in the bundle as well, where Play Console reads it; the copy here is for
+      # retracing a stack trace locally.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sleevesight-${{ steps.version.outputs.name }}
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 90
