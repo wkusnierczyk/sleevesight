@@ -10,6 +10,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import kotlin.time.Duration
 
 @Composable
@@ -65,10 +66,26 @@ internal fun keyRecipient(id: SecretId): Int =
         SecretId.EXA -> R.string.settings_key_recipient_exa
     }
 
-/** The key a source needs, or null for one that needs none. */
+/** The key a source needs, or null for one that needs none; web search's are its engines'. */
 internal fun sourceKey(switch: SourceSwitch): SecretId? =
     when (switch) {
         SourceSwitch.LASTFM -> SecretId.LASTFM
-        SourceSwitch.WEB -> SecretId.EXA
-        SourceSwitch.MUSICBRAINZ, SourceSwitch.WIKIPEDIA, SourceSwitch.DISCOGS, SourceSwitch.MODEL -> null
+        SourceSwitch.MUSICBRAINZ,
+        SourceSwitch.WIKIPEDIA,
+        SourceSwitch.DISCOGS,
+        SourceSwitch.WEB,
+        SourceSwitch.MODEL,
+        -> null
+    }
+
+/** The key a web search engine needs. */
+internal fun engineKey(engine: WebEngine): SecretId =
+    when (engine) {
+        WebEngine.EXA -> SecretId.EXA
+    }
+
+@StringRes
+internal fun engineName(engine: WebEngine): Int =
+    when (engine) {
+        WebEngine.EXA -> R.string.settings_engine_exa
     }

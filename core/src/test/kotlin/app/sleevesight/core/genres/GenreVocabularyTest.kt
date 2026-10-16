@@ -85,6 +85,16 @@ class GenreVocabularyTest {
     }
 
     @Test
+    fun `each label carries its genre's identity and the page its tags are from`() {
+        val page = "https://www.last.fm/music/Ann+Peebles"
+        val labels = vocabulary.labelsFor(listOf("r&b", "hip hop", "soul"), page)
+        assertEquals(listOf("rb", "hiphop", "soul"), labels.map { it.identity })
+        assertEquals(labels.map { vocabulary.identity(it.tag) }, labels.map { it.identity })
+        assertEquals(listOf(page), labels.map { it.url }.distinct())
+        assertEquals(null, vocabulary.labelsFor(listOf("soul")).single().url)
+    }
+
+    @Test
     fun `noise gives no labels`() {
         val noise = listOf("seen live", "bagel", "under 2000 listeners", "denmark", "00s")
         assertTrue(vocabulary.labelsFor(noise).isEmpty())

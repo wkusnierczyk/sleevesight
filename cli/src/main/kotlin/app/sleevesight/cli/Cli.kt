@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -102,6 +103,8 @@ class Cli(
                 enabledSources =
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
+                // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
+                labelSources = setOf(LabelSource.LASTFM),
             )
         private val caches = driver?.let { Caches(it, { settings }, normalizer) }
 

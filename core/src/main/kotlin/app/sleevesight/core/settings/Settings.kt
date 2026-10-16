@@ -1,6 +1,7 @@
 package app.sleevesight.core.settings
 
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import kotlin.time.Duration
@@ -16,6 +17,10 @@ import kotlin.time.Duration.Companion.seconds
  * @property followedPlayers one switch per player seen, by package name; see [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
+ * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
+ *   only with one on. See [DEFAULT_WEB_ENGINES].
+ * @property labelSources the sources whose tags give genre labels (D12, #84); ask [givesLabels],
+ *   which also needs the source on under *Where to look*. See [DEFAULT_LABEL_SOURCES].
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
@@ -32,6 +37,8 @@ data class Settings(
     val aiModel: String? = null,
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
+    val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
+    val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
     val crossfade: Crossfade = Crossfade.Autodetect,
@@ -52,8 +59,23 @@ data class Settings(
     /** The model to write with: the user's choice, or [aiProvider]'s default ([DEFAULT_MODELS]), or none. */
     val model: String? get() = aiModel ?: aiProvider?.let { DEFAULT_MODELS[it] }
 
-    /** Whether lines from [source] may be used: its switch is on, or it is the player's metadata. */
-    fun isEnabled(source: SourceId): Boolean = SourceSwitch.of(source)?.let { it in enabledSources } ?: true
+    /**
+     * Whether lines from [source] may be used: its switch is on, or it is the player's metadata.
+     * Web search also needs an engine switched on.
+     */
+    fun isEnabled(source: SourceId): Boolean =
+        when (val switch = SourceSwitch.of(source)) {
+            null -> true
+            SourceSwitch.WEB -> switch in enabledSources && webEngines.isNotEmpty()
+            else -> switch in enabledSources
+        }
+
+    /**
+     * Whether [source]'s tags give genre labels: its label switch is on, and its source is on under
+     * *Where to look*, since the tags come with that source's lookup. Last.fm also needs its key,
+     * without which it is not looked up at all.
+     */
+    fun givesLabels(source: LabelSource): Boolean = source in labelSources && isEnabled(source.source)
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
@@ -68,6 +90,22 @@ data class Settings(
 
         /** All on except the model's own knowledge. */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
+
+        /**
+         * Every engine on. Each needs the user's own key, so an engine searches only once its key
+         * is saved: the switch is for turning off one whose key is saved, without removing the key.
+         */
+        val DEFAULT_WEB_ENGINES: Set<WebEngine> = WebEngine.entries.toSet()
+
+        /**
+         * Both on (#84). MusicBrainz needs no key, and a new user has no Last.fm key: without
+         * MusicBrainz's tags no track gets labels until one is saved, with them 29 of the test
+         * playlist's 78 did (design, *D12*). Last.fm is looked up only with its key, so its labels
+         * come once the key is saved. The MusicBrainz tags are CC BY-NC-SA 3.0, used for labels
+         * only and credited (`LabelSource.MUSICBRAINZ`); if the MetaBrainz inquiry (#100) is not
+         * answered by the Play release, the release has them off by default, with the reason.
+         */
+        val DEFAULT_LABEL_SOURCES: Set<LabelSource> = LabelSource.entries.toSet()
 
         private const val STABLE_DAYS = 30
         private const val ARTICLE_DAYS = 7
@@ -146,6 +184,15 @@ enum class SourceSwitch(
         /** The switch that covers [source], or null for the player's metadata. */
         fun of(source: SourceId): SourceSwitch? = entries.firstOrNull { source in it.sources }
     }
+}
+
+/**
+ * The web search engines (D11), each a switch under *Web search*. The list is fixed, not edited by
+ * the user: an engine needs an adapter, a filter for its results and its terms settled before it
+ * ships (#80 for Exa), so an engine joins the list with its adapter. Exa is the first.
+ */
+enum class WebEngine {
+    EXA,
 }
 
 /** How the detail content is shown. */

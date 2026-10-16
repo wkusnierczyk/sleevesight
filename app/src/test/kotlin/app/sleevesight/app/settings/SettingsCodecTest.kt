@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
@@ -14,6 +15,7 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -58,6 +60,8 @@ class SettingsCodecTest {
                 aiModel = "claude-opus-5-5",
                 followedPlayers = mapOf(Settings.SPOTIFY to false, "com.example.player" to true),
                 enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
+                webEngines = emptySet(),
+                labelSources = setOf(LabelSource.LASTFM),
                 writeInsights = false,
                 writeAutomatically = WriteAutomatically.WHEN_I_SKIP,
                 crossfade = Crossfade.Fixed(6.seconds),
@@ -147,6 +151,35 @@ class SettingsCodecTest {
         // Switched back to its default, an override goes.
         SettingsCodec.write(Settings(enabledSources = chosen + SourceSwitch.LASTFM), prefs)
         assertEquals(mutablePreferencesOf(stringSetPreferencesKey("sources.on") to setOf("MODEL")), prefs)
+    }
+
+    @Test
+    fun labelSourcesAndEnginesAreStoredOnlyAsTheUsersOverrides() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(labelSources = setOf(LabelSource.LASTFM), webEngines = emptySet()), prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringSetPreferencesKey("labels.off") to setOf("MUSICBRAINZ"),
+                stringSetPreferencesKey("web.engines.off") to setOf("EXA"),
+            ),
+            prefs,
+        )
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue(prefs.asMap().isEmpty())
+    }
+
+    @Test
+    fun labelSourcesNotMovedFollowTheirDefaults() {
+        // A default revised later (#100: MusicBrainz's off in the release) reaches whoever did not move it.
+        val read =
+            SettingsCodec.read(
+                mutablePreferencesOf(
+                    stringSetPreferencesKey("labels.off") to setOf("LASTFM", "DISCOGS"),
+                ),
+            )
+        assertEquals(Settings.DEFAULT_LABEL_SOURCES - LabelSource.LASTFM, read.labelSources)
+        assertEquals(Settings.DEFAULT_WEB_ENGINES, read.webEngines)
+        assertEquals(setOf(WebEngine.EXA), read.webEngines)
     }
 
     @Test

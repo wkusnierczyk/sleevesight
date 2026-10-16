@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.SleevesightListenerService
+import app.sleevesight.app.ui.CreditsPage
 import app.sleevesight.app.ui.FirstRun
 import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.SettingsPage
@@ -236,6 +237,42 @@ class FirstRunFlowTest {
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_section_ai)).fetchSemanticsNodes().isNotEmpty()
             }
+        }
+    }
+
+    @Test
+    fun theSettingsOpenTheCredits() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launch().use {
+            compose.onNodeWithText(text(R.string.home_settings)).performClick()
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.credits_title)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.credits_intro)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun theCreditsSendTheUserToTheFirstRunScreenUntilItIsAcknowledged() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launch().use { scenario ->
+            lateinit var nav: NavHostController
+            scenario.onActivity { activity ->
+                val graph = (activity.application as SleevesightApplication).graph
+                activity.setContent {
+                    nav = rememberNavController()
+                    SleevesightNavHost(graph.notificationAccess, graph.firstRun, { true }, nav)
+                }
+            }
+            compose.waitForIdle()
+            app.getSharedPreferences("first_run", Context.MODE_PRIVATE).edit { clear() }
+            scenario.onActivity { nav.navigate(CreditsPage) }
+
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.credits_intro)).fetchSemanticsNodes().size)
         }
     }
 

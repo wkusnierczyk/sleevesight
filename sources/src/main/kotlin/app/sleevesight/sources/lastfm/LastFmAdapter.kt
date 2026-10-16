@@ -115,7 +115,7 @@ class LastFmAdapter(
                 genres =
                     answers
                         .flatMap { it.genres }
-                        .distinctBy { it.tag }
+                        .distinctBy { it.identity }
                         .take(GenreVocabulary.MAX_LABELS),
                 provisional = answers.any { it.provisional },
             )
@@ -172,7 +172,15 @@ class LastFmAdapter(
                 val artist = info.value
                 val judgement = check.judge(credited, artist, check.resolvedFor(credited, resolution.artists))
                 val match = judgement.match
-                val genres = if (match.shows) vocabulary.labelsFor(genreTags(artist, fetched.topTags)) else emptyList()
+                val genres =
+                    if (match.shows) {
+                        vocabulary.labelsFor(
+                            genreTags(artist, fetched.topTags),
+                            artist.url,
+                        )
+                    } else {
+                        emptyList()
+                    }
                 LastFmArtistLookup(credited, match, artist, genres, judgement.provisional)
             }
 
