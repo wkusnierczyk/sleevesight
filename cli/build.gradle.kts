@@ -8,7 +8,7 @@ plugins {
 }
 
 application {
-    mainClass = "io.github.wkusnierczyk.sleevesight.cli.MainKt"
+    mainClass = "app.sleevesight.cli.MainKt"
     applicationName = "sleevesight-cli"
 }
 

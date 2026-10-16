@@ -3,9 +3,9 @@ plugins {
 }
 
 android {
-    namespace = "io.github.wkusnierczyk.sleevesight.app"
+    namespace = "app.sleevesight.app"
     defaultConfig {
-        applicationId = "io.github.wkusnierczyk.sleevesight"
+        applicationId = "app.sleevesight"
         versionCode = 1
         versionName = "0.1.0"
     }
