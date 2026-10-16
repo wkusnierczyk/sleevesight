@@ -22,6 +22,7 @@ import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -156,6 +157,32 @@ class SettingsScreenTest {
             }
             compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
             assertEquals(null, runBlocking { failingSecrets.get(SecretId.EXA) })
+        }
+    }
+
+    @Test
+    fun anUnreadableKeyOffersResetSavedKeys() {
+        val dataStore = stores.open("reset-secrets")
+        runBlocking { SecretStore(dataStore, testCipher()).set(SecretId.LASTFM, Secret("lastfm-key")) }
+        // Another key than the one that sealed it, as after the Keystore lost the first.
+        val resetting = SecretStore(dataStore, testCipher())
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent { SettingsScreen(settings, resetting, emptyMap()) { it } }
+            }
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
+
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
+            }
+            assertEquals(SecretState.ABSENT, runBlocking { resetting.states.first() }.getValue(SecretId.LASTFM))
         }
     }
 

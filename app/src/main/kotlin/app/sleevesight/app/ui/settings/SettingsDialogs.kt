@@ -139,6 +139,54 @@ internal fun KeyDialog(
 }
 
 /**
+ * Confirms *Reset saved keys*, which removes every saved key and the phone's key for them. [onReset]
+ * returns whether it succeeded: the dialog closes only then, and otherwise says so.
+ */
+@Composable
+internal fun ResetKeysDialog(
+    onReset: suspend () -> Boolean,
+    onDismiss: () -> Unit,
+) {
+    var busy by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_reset_keys_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.settings_reset_keys_explained),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (failed) {
+                    Text(
+                        stringResource(R.string.settings_reset_keys_failed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    busy = true
+                    failed = false
+                    scope.launch {
+                        val done = onReset()
+                        busy = false
+                        if (done) onDismiss() else failed = true
+                    }
+                },
+                enabled = !busy,
+            ) { Text(stringResource(R.string.settings_reset)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+    )
+}
+
+/**
  * The model for [provider]: its default, stored as no choice so that it follows the default if a
  * later version revises it, or one of the models its service lists for the saved key, fetched by
  * [load] when the dialog opens. A model chosen earlier stays offered when the list cannot be had.

@@ -59,11 +59,14 @@ fun SettingsScreen(
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
+    // Whether the last save of a key failed: with an unreadable key, it offers *Reset saved keys*.
+    var saveFailed by remember { mutableStateOf(false) }
     val update: Update = { transform -> scope.launch { settingsStore.update(transform) } }
+    val keys = KeysShown(secrets, offerReset = saveFailed || SecretState.UNREADABLE in secrets.values)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         settings?.let { current ->
-            SettingsContent(current, secrets, playerLabel, update) { dialog = it }
+            SettingsContent(current, keys, playerLabel, update) { dialog = it }
         }
     }
 
@@ -79,8 +82,15 @@ fun SettingsScreen(
             KeyDialog(
                 id = shown.id,
                 state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value -> secretStore.set(shown.id, Secret(value)) },
+                onSave = { value -> secretStore.set(shown.id, Secret(value)).also { saveFailed = !it } },
                 onRemove = { secretStore.clear(shown.id) },
+                onDismiss = close,
+            )
+        }
+
+        SettingsDialog.ResetKeys -> {
+            ResetKeysDialog(
+                onReset = { secretStore.reset().also { if (it) saveFailed = false } },
                 onDismiss = close,
             )
         }
@@ -117,7 +127,15 @@ internal sealed interface SettingsDialog {
     class Model(
         val provider: ProviderId,
     ) : SettingsDialog
+
+    data object ResetKeys : SettingsDialog
 }
+
+/** The saved keys' states, and whether to offer *Reset saved keys*. */
+internal class KeysShown(
+    val states: Map<SecretId, SecretState>,
+    val offerReset: Boolean,
+)
 
 /**
  * The services offered in Phase 1: Anthropic, the one with a client (the plan's pending decision
@@ -156,11 +174,12 @@ private val MAX_CROSSFADE_SECONDS =
 @Composable
 private fun SettingsContent(
     settings: Settings,
-    secrets: Map<SecretId, SecretState>,
+    keys: KeysShown,
     playerLabel: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
+    val secrets = keys.states
     Column(
         modifier =
             Modifier
@@ -170,6 +189,14 @@ private fun SettingsContent(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
+        if (keys.offerReset) {
+            ValueRow(
+                title = stringResource(R.string.settings_reset_keys),
+                value = stringResource(R.string.settings_reset_keys_value),
+                summary = stringResource(R.string.settings_reset_keys_summary),
+                onClick = { open(SettingsDialog.ResetKeys) },
+            )
+        }
         SectionHeading(R.string.settings_section_ai)
         AiServiceRows(settings, secrets, update, open)
         AiModelRows(settings, update, open)

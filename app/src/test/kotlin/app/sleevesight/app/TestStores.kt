@@ -47,19 +47,22 @@ class TestStores(
 /** A software AES key, standing in for the Keystore's on the JVM. */
 fun softwareKey(): SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
 
-/** A software key that, like the Keystore's, stays the same until it is replaced. */
+/**
+ * A software key that, like the Keystore's, stays the same until it is deleted, and is made afresh
+ * when there is none.
+ */
 open class SoftwareKeySource(
-    private var current: SecretKey = softwareKey(),
+    private var current: SecretKey? = softwareKey(),
 ) : SecretKeySource {
-    var replacements = 0
+    var deletions = 0
 
-    override fun key(): SecretKey = current
+    override fun key(): SecretKey = current ?: softwareKey().also { current = it }
 
     override fun forget() = Unit
 
-    override fun replace() {
-        replacements++
-        current = softwareKey()
+    override fun delete() {
+        deletions++
+        current = null
     }
 }
 
