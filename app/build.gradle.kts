@@ -1,13 +1,19 @@
+import sleevesight.release.ReleaseVersion
+
 plugins {
     id("sleevesight.android-app")
 }
+
+// A release takes its version from its tag, `v<major>.<minor>.<patch>`, which the release workflow
+// passes as `-Psleevesight.version` (`design/release.md`, *Versioning*); other builds are 0.1.0.
+val appVersion = ReleaseVersion.parse(providers.gradleProperty("sleevesight.version").getOrElse("0.1.0"))
 
 android {
     namespace = "app.sleevesight.app"
     defaultConfig {
         applicationId = "app.sleevesight"
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersion.code
+        versionName = appVersion.name
     }
     testOptions {
         // Robolectric reads the app's resources and manifest, and sets a `FileDescriptor`'s
