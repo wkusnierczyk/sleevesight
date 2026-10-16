@@ -48,6 +48,7 @@ tasks.register<CheckModuleGraph>("checkModuleGraph") {
     rules = graphRules
     modulePath = project.path
     projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot)
+    compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(compileRoot)
     modulesOutsideNetwork =
         CheckModuleGraph.modulesOutsideNetworkOf(runtimeRoot, networkModules(graphRules.asFile))
             .zip(CheckModuleGraph.modulesOutsideNetworkOf(compileRoot, networkModules(graphRules.asFile))) { a, b ->

@@ -22,6 +22,9 @@ import java.util.Properties
  * Enforces the module boundaries of the architecture, from `config/module-graph.properties`:
  *
  * - each module may depend directly only on the modules listed for it, on any classpath;
+ * - a module listed under `compile-forbidden.<module>` may not be on that module's compile
+ *   classpath at all, even through another module (an `api` dependency), though it may be on its
+ *   runtime classpath: the direct-dependency rule alone would not see it;
  * - an HTTP client (`network-groups`) may be reached only through a module in `network-modules`:
  *   a client reachable from this module on a path that avoids those modules fails the check,
  *   whether it is a direct dependency or arrives through a third-party library.
@@ -37,6 +40,10 @@ abstract class CheckModuleGraph : DefaultTask() {
     /** Direct project dependencies on the runtime and compile classpaths, as project paths. */
     @get:Input
     abstract val projectDependencies: ListProperty<String>
+
+    /** Every project on the compile classpath, directly or through another, as project paths. */
+    @get:Input
+    abstract val compileClasspathProjects: ListProperty<String>
 
     /** External modules reachable without passing through a network module, as `group:name`. */
     @get:Input
@@ -67,6 +74,7 @@ abstract class CheckModuleGraph : DefaultTask() {
         projectDependencies.get().map { it.removePrefix(":") }.forEach { target ->
             if (target !in allowed) problems += ":$name may not depend on :$target"
         }
+        problems += compileForbidden(name, list("$COMPILE_FORBIDDEN.$name"), compileClasspathProjects.get())
         if (name !in networkModules) {
             modulesOutsideNetwork.get()
                 .filter { module ->
@@ -82,6 +90,35 @@ abstract class CheckModuleGraph : DefaultTask() {
     }
 
     companion object {
+        /** The key prefix of the modules a module may not have on its compile classpath. */
+        const val COMPILE_FORBIDDEN = "compile-forbidden"
+
+        /**
+         * The problems of module [name], whose compile classpath holds the projects [onClasspath]
+         * (project paths), when the modules in [forbidden] may not be among them.
+         */
+        fun compileForbidden(
+            name: String,
+            forbidden: List<String>,
+            onClasspath: List<String>,
+        ): List<String> {
+            val present = onClasspath.map { it.removePrefix(":") }.toSet()
+            return forbidden
+                .filter { it in present }
+                .map { ":$name may not have :$it on its compile classpath, even through another module" }
+        }
+
+        /** Every project reachable from [root], as project paths, without the root itself. */
+        fun projectsReachableFrom(root: Provider<ResolvedComponentResult>): Provider<List<String>> =
+            root.map { component ->
+                val self = (component.id as? ProjectComponentIdentifier)?.projectPath
+                CheckDependencies.reachable(component)
+                    .mapNotNull { (it.id as? ProjectComponentIdentifier)?.projectPath }
+                    .filterNot { it == self }
+                    .distinct()
+                    .sorted()
+            }
+
         /** Direct project dependencies of each root, as project paths, without the root itself. */
         fun projectDependenciesOf(vararg roots: Provider<ResolvedComponentResult>): Provider<List<String>> =
             roots.map { root ->

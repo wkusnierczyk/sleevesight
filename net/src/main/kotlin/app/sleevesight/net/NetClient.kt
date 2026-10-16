@@ -52,8 +52,8 @@ interface NetClient : AutoCloseable {
 /**
  * The client over the OkHttp engine, logging each attempt to [log], redacted.
  *
- * The rate limiters belong to the instance, so a process makes exactly one: the app's `AppGraph`
- * and the CLI each create it once and inject it into every adapter and provider. Two instances
+ * The rate limiters belong to the instance, so a process makes exactly one: `:wiring` creates the
+ * app's, and the CLI its own, each once, and every adapter and provider is built on it. Two instances
  * would each allow MusicBrainz a request a second.
  */
 fun NetClient(

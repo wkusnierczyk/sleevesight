@@ -98,6 +98,8 @@ androidComponents {
                 rules = graphRules
                 modulePath = project.path
                 projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot)
+                // The variant's compile classpath; `:net` is on its runtime classpath, since the APK ships it.
+                compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(compileRoot)
                 modulesOutsideNetwork =
                     CheckModuleGraph.modulesOutsideNetworkOf(runtimeRoot, networkModules(graphRules.asFile))
                         .zip(CheckModuleGraph.modulesOutsideNetworkOf(compileRoot, networkModules(graphRules.asFile))) { a, b ->

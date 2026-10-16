@@ -1,9 +1,7 @@
 package app.sleevesight.cli
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.core.Secret
-import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -14,29 +12,20 @@ import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
-import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
-import app.sleevesight.core.resolution.IdentityCheck
-import app.sleevesight.core.resolution.NameMatcher
-import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.net.NetClient
-import app.sleevesight.net.NetConfig
-import app.sleevesight.sources.lastfm.LastFmAdapter
-import app.sleevesight.sources.musicbrainz.MusicBrainzClient
-import app.sleevesight.sources.musicbrainz.MusicBrainzSource
-import app.sleevesight.sources.web.ExaWebSearch
-import app.sleevesight.sources.wikidata.WikidataClient
-import app.sleevesight.sources.wikipedia.WikipediaClient
-import app.sleevesight.sources.wikipedia.WikipediaSource
 import app.sleevesight.store.Caches
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
+import app.sleevesight.wiring.HostPolicies
+import app.sleevesight.wiring.pipelineWiringOn
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,8 +43,9 @@ import kotlin.time.TimeSource
  * fixture playlist, one track after another, and prints the coverage report ([Report]), whose gate
  * criteria ([Gate]) decide the exit status. See [Options.USAGE].
  *
- * One [NetClient] per process (architecture, *Networking*), with each adapter's host policy
- * registered: MusicBrainz's is `:net`'s default, Exa's is added here.
+ * One [NetClient] per process (architecture, *Networking*), with every host policy `:wiring` lists
+ * ([HostPolicies]); the adapters, the resolver and the provider are the app's, built by `:wiring`
+ * on that client, live, replaying or recording.
  */
 class Cli(
     private val out: PrintStream,
@@ -79,11 +69,13 @@ class Cli(
     ) : AutoCloseable {
         private val keys = if (options.mode == Mode.REPLAY) Keys.NONE else Keys.load(environment, options.keysFile)
         private val store = FixtureStore(File(options.fixtures, "http"))
-        private val live: NetClient? = if (options.mode == Mode.REPLAY) null else NetClient(NET_CONFIG)
+        private val live: NetClient? =
+            if (options.mode == Mode.REPLAY) null else NetClient(HostPolicies.netConfig(APP_VERSION))
         private val replay = ReplayNetClient(store)
         private val recorder =
             if (options.mode == Mode.RECORD) live?.let { RecordingNetClient(it, store, options.record) } else null
         private val net: NetClient = recorder ?: live ?: replay
+        private val wiring = pipelineWiringOn(net, JvmAccentFolder, JvmResourceReader)
         private val cacheFile: File? =
             when (val choice = options.cache) {
                 CacheChoice.None -> null
@@ -93,7 +85,6 @@ class Cli(
         private val driver =
             cacheFile?.let { JdbcSqliteDriver("jdbc:sqlite:${it.path}", Properties(), CacheDatabase.Schema) }
         private val normalizer = Normalizer(JvmAccentFolder)
-        private val names = NameMatcher(JvmAccentFolder)
         private val ai: AiAccess? = aiAccess()
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
         private val settings =
@@ -147,7 +138,7 @@ class Cli(
                     PipelineParts(
                         normalizer = normalizer,
                         adapters = sources.mapNotNull { it.second },
-                        resolver = resolver(),
+                        resolver = wiring.resolver,
                         hasher = JvmHasher,
                         ai = ai,
                         cache = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None,
@@ -166,28 +157,20 @@ class Cli(
             }
         }
 
-        private fun resolver(): TrackResolver {
-            val resolver = RecordingResolver(MusicBrainzClient(net), names)
-            return TrackResolver { track, duration -> resolver.resolve(track, duration) }
-        }
-
-        private fun sources(): List<Pair<SourceStatus, SourceAdapter?>> {
-            val identity = IdentityCheck(WikidataClient(net), names)
-            return listOf(
-                SourceStatus(SourceId.MUSICBRAINZ, true, "resolution and templated lines (CC0)") to MusicBrainzSource(),
+        private fun sources(): List<Pair<SourceStatus, SourceAdapter?>> =
+            listOf(
+                SourceStatus(SourceId.MUSICBRAINZ, true, "resolution and templated lines (CC0)") to
+                    wiring.musicBrainz(),
                 SourceStatus(SourceId.WIKIPEDIA, true, "with Wikidata (WD): lead sentences, CC BY-SA 4.0") to
-                    WikipediaSource(WikipediaClient(net), identity, names),
+                    wiring.wikipedia(),
                 lastFm(),
                 web(),
             )
-        }
 
         private fun lastFm(): Pair<SourceStatus, SourceAdapter?> {
             val key = keys.lastFm
             return if (key != null && options.mode == Mode.LIVE) {
-                val vocabulary = GenreVocabulary.load(JvmResourceReader)
-                SourceStatus(SourceId.LASTFM, true, "") to
-                    LastFmAdapter(net, MusicBrainzClient(net), key, vocabulary, JvmAccentFolder)
+                SourceStatus(SourceId.LASTFM, true, "") to wiring.lastFm(key)
             } else {
                 SourceStatus(SourceId.LASTFM, false, "off: no Last.fm key exists yet, so nothing is recorded either") to
                     null
@@ -207,7 +190,7 @@ class Cli(
             return if (off != null || key == null) {
                 SourceStatus(SourceId.WEB, false, off ?: "off") to null
             } else {
-                SourceStatus(SourceId.WEB, true, "Exa, instant search") to ExaWebSearch(net, key, JvmAccentFolder)
+                SourceStatus(SourceId.WEB, true, "Exa, instant search") to wiring.web(mapOf(WebEngine.EXA to key))
             }
         }
 
@@ -219,7 +202,7 @@ class Cli(
                     options.mode == Mode.RECORD -> keys.anthropic?.takeIf { ANTHROPIC in options.record }
                     else -> keys.anthropic
                 }
-            return key?.let { AiAccess(AnthropicProvider(net), it) }
+            return key?.let { AiAccess(wiring.aiProviders.getValue(ProviderId.ANTHROPIC), it) }
         }
 
         private fun aiNote(): String {
@@ -254,10 +237,6 @@ class Cli(
         const val EXIT_UNCHECKED = 3
         private const val ANTHROPIC = "anthropic"
         private const val SECONDS_PER_MINUTE = 60
-
-        /** The one client's configuration: `:net`'s defaults (MusicBrainz) and Exa's policy. */
-        val NET_CONFIG: NetConfig
-            get() = NetConfig(APP_VERSION, NetConfig.DEFAULT_HOSTS + (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY))
 
         /** Playlist position [n] as the player would report it. */
         fun nowPlaying(n: Int): NowPlaying {
