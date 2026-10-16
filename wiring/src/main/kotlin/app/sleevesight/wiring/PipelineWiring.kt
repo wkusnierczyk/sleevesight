@@ -67,6 +67,11 @@ class PipelineWiring internal constructor(
      * about the key and relies on that; web search from the engines switched on in [settings] whose
      * key is in [keys] ([web]). A source switched off under *Where to look* still gets its adapter:
      * the pipeline reads the switch for each track.
+     *
+     * The keys and the web engines, unlike those switches, are read here, when the list is built: a
+     * key saved or removed, or an engine switched, takes a new list, and so a new pipeline. Each call
+     * builds new adapters, so whatever state one holds (`WikipediaSource`'s `IdentityCheck`
+     * included) starts again.
      */
     fun adapters(
         keys: SourceKeys,

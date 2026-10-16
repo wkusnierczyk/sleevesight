@@ -33,6 +33,8 @@ tasks.withType<Test>().configureEach {
 
 val runtimeRoot = configurations.named("runtimeClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
 val compileRoot = configurations.named("compileClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
+// The tests are the module's code too, so a module kept off its compile classpath is kept off theirs.
+val testCompileRoot = configurations.named("testCompileClasspath").flatMap { it.incoming.resolutionResult.rootComponent }
 val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.properties")
 
 tasks.register<CheckDependencies>("checkDependencies") {
@@ -47,8 +49,8 @@ tasks.register<CheckModuleGraph>("checkModuleGraph") {
     description = "Fails on dependencies the module graph does not allow."
     rules = graphRules
     modulePath = project.path
-    projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot)
-    compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(compileRoot)
+    projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot, testCompileRoot)
+    compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(compileRoot, testCompileRoot)
     modulesOutsideNetwork =
         CheckModuleGraph.modulesOutsideNetworkOf(runtimeRoot, networkModules(graphRules.asFile))
             .zip(CheckModuleGraph.modulesOutsideNetworkOf(compileRoot, networkModules(graphRules.asFile))) { a, b ->

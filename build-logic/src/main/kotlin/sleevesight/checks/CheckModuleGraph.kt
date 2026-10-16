@@ -37,11 +37,14 @@ abstract class CheckModuleGraph : DefaultTask() {
     @get:Input
     abstract val modulePath: Property<String>
 
-    /** Direct project dependencies on the runtime and compile classpaths, as project paths. */
+    /** Direct project dependencies on the runtime and compile classpaths (the tests' included), as project paths. */
     @get:Input
     abstract val projectDependencies: ListProperty<String>
 
-    /** Every project on the compile classpath, directly or through another, as project paths. */
+    /**
+     * Every project on the compile classpaths, the tests' included, directly or through another, as
+     * project paths.
+     */
     @get:Input
     abstract val compileClasspathProjects: ListProperty<String>
 
@@ -108,16 +111,17 @@ abstract class CheckModuleGraph : DefaultTask() {
                 .map { ":$name may not have :$it on its compile classpath, even through another module" }
         }
 
-        /** Every project reachable from [root], as project paths, without the root itself. */
-        fun projectsReachableFrom(root: Provider<ResolvedComponentResult>): Provider<List<String>> =
-            root.map { component ->
-                val self = (component.id as? ProjectComponentIdentifier)?.projectPath
-                CheckDependencies.reachable(component)
-                    .mapNotNull { (it.id as? ProjectComponentIdentifier)?.projectPath }
-                    .filterNot { it == self }
-                    .distinct()
-                    .sorted()
-            }
+        /** Every project reachable from each root, as project paths, without the roots themselves. */
+        fun projectsReachableFrom(vararg roots: Provider<ResolvedComponentResult>): Provider<List<String>> =
+            roots.map { root ->
+                root.map { component ->
+                    val self = (component.id as? ProjectComponentIdentifier)?.projectPath
+                    CheckDependencies.reachable(component)
+                        .mapNotNull { (it.id as? ProjectComponentIdentifier)?.projectPath }
+                        .filterNot { it == self }
+                }
+            }.reduce { a, b -> a.zip(b) { x, y -> x + y } }
+                .map { it.distinct().sorted() }
 
         /** Direct project dependencies of each root, as project paths, without the root itself. */
         fun projectDependenciesOf(vararg roots: Provider<ResolvedComponentResult>): Provider<List<String>> =

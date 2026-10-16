@@ -11,8 +11,11 @@ import app.sleevesight.sources.web.ExaWebSearch
  * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's. The other
  * hosts state no figure for a client ([NetConfig.DEFAULT_HOSTS] says why).
  *
- * For `:cli` and this module only: `:app` never names a `:net` type, and takes its client already
- * made ([appPipelineWiring]).
+ * Nothing finds a new adapter's policy for this list: there is no registry of them to check it
+ * against, so the list is kept by review, when an adapter or provider with a stated limit is added.
+ *
+ * For `:cli` and this module only: `:app` never names a `:net` type, and takes the wiring, with
+ * its client inside, from [appPipelineWiring].
  */
 object HostPolicies {
     /** Every host policy, by domain. */

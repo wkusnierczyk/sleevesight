@@ -22,8 +22,9 @@ import org.junit.Test
 
 /**
  * `:app` takes the pipeline's network side from `:wiring` as `:core` types, without naming a `:net`
- * type: this compiles only while `:net` stays off the app's compile classpath, which
- * `checkModuleGraph` also checks.
+ * type: this compiles without `:net` on the app's compile classpath, so the wiring's surface needs no
+ * `:net` type. That `:net` stays off the classpath is `checkModuleGraph`'s to check
+ * (`compile-forbidden.app`), not this test's.
  */
 class WiringTest {
     private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader)

@@ -8,12 +8,15 @@ import kotlin.test.assertEquals
 class HostPoliciesTest {
     /**
      * Each policy an adapter or provider states, under its host: `:net`'s defaults (MusicBrainz's)
-     * and Exa's. A new one is added here and to [HostPolicies.ALL].
+     * and Exa's. No registry of them exists to read this from, so it is a second copy of
+     * [HostPolicies.ALL], kept by review like the list itself: a new adapter's policy is added to
+     * both. What this test checks on its own is that the configuration for each version carries the
+     * list whole, with the version, and that each policy applies to the host its adapter sends to.
      */
     private val stated = NetConfig.DEFAULT_HOSTS + (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY)
 
     @Test
-    fun `the configuration for any version carries every adapter's and provider's host policy`() {
+    fun `the configuration for any version carries every listed host policy and the version`() {
         for (version in listOf("0.0", "1.4.2")) {
             val config = HostPolicies.netConfig(version)
             for ((host, policy) in stated) {
