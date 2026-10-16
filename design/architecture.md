@@ -2,7 +2,7 @@
 
 **Status:** Proposal, for discussion  
 **Date:** 2026-10-12  
-**Builds on:** [design.md](design.md) and the [simulator](https://wkusnierczyk.github.io/sleevesight/design/simulator.html)  
+**Builds on:** [design.md](design.md) and the [simulator](https://sleevesight.app/design/simulator.html)  
 **Tracking:** [#3](https://github.com/wkusnierczyk/sleevesight/issues/3)
 
 This document turns the design into a buildable structure: modules and their boundaries, the runtime data flow, the technology choices, how the structural constraints are enforced, testing and CI. It starts with a review of the design and the simulator, because several findings change the architecture. The decisions it needed are collected at the end, as made by the owner.
