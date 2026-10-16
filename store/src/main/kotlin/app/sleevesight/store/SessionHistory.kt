@@ -175,30 +175,19 @@ class SessionHistory(
     /**
      * Deletes what is older than [lifetime], the user's *Keep history for*, in one transaction: the
      * tracks that began to play, and the track changes that began, more than [lifetime] before
-     * [now], or before the newest time the history holds if that is earlier. So a clock set ahead
-     * (by hand, or a bad network time) deletes no more than the history's own times allow; the cost
-     * is that while nothing plays, the last [lifetime] of listening stays. The track added last is
-     * kept while it may still be playing, so a stream that plays across the cutoff keeps its row.
+     * [now]. The track added last is kept while it may still be playing, so a stream that plays
+     * across the cutoff keeps its row, and its stop.
      *
      * By when a track began rather than when it was last heard: every row has it, and it is the
      * order the history is in, so what goes is its oldest part; the two times differ by how long a
-     * track played, against a limit of days.
+     * track played, against a limit of days. [now] is the caller's: a clock set ahead deletes by
+     * it, so the caller checks the clock first (`HistoryRecorder`).
      */
     fun deleteOlderThan(
         lifetime: Duration,
         now: Instant,
     ) {
-        queries.transaction {
-            val newest =
-                listOfNotNull(
-                    queries.newestPlayed().executeAsOne().newest,
-                    queries.newestChange().executeAsOne().newest,
-                ).maxOrNull()
-            // An empty history has nothing to delete.
-            if (newest != null) {
-                queries.deleteBefore(minOf(now.toEpochMilliseconds(), newest) - lifetime.inWholeMilliseconds)
-            }
-        }
+        queries.deleteBefore((now - lifetime).toEpochMilliseconds())
     }
 
     /** Deletes the session history and the record of track changes together, in one transaction. */

@@ -32,8 +32,8 @@ import kotlin.time.Duration.Companion.seconds
  * @property aiEffort how much the model may reason before it writes, or null for the provider's
  *   default. See [DEFAULT_AI_EFFORT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
- *   are kept, counted from when a track began to play and a change began, back from the newest of
- *   them or the clock, whichever is earlier; null keeps them for ever. See [DEFAULT_HISTORY_LIFETIME].
+ *   are kept, counted back from today to when a track began to play and a change began; null keeps
+ *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  */

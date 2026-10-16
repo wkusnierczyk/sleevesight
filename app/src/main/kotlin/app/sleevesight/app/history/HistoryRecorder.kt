@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -68,6 +69,12 @@ import kotlin.time.Instant
  * queue, so each runs after every write queued before it and before any queued after: a clear is
  * never undone by a write of something seen before it. A clear also forgets the playback being
  * recorded, so the track playing then comes back, as a new row, only with its next value.
+ *
+ * **A clock that jumps.** Old rows are deleted by the [wall] clock, so a clock set ahead would
+ * delete history early. The recorder notes how far the wall clock is from the [elapsed] clock, which
+ * nothing sets, when it is made, at the process's start; a deletion that finds them moved apart by
+ * more than [CLOCK_MARGIN] since is skipped, and so is every one after it until the next start. A
+ * jump made while the process was not running, or across a restart of the phone, is not caught.
  */
 @Suppress("LongParameterList") // What it records from and to, and the user's gap; the rest are test seams.
 class HistoryRecorder(
@@ -85,6 +92,12 @@ class HistoryRecorder(
 
     // Read and written by the writes alone, which run one at a time.
     private val playback = Playback()
+
+    /** The wall clock less the [elapsed] one when the recorder was made: what a jump moves. */
+    private val clockOffset = wall.now() - elapsed().milliseconds
+
+    // Set by the writes alone, once the clock is found to have jumped.
+    private var clockJumped = false
 
     /** Records until the calling coroutine is cancelled. Called once, for the process. */
     suspend fun run(): Unit =
@@ -142,13 +155,21 @@ class HistoryRecorder(
         }
 
     /**
-     * Deletes what is older than [lifetime] ([SessionHistory.deleteOlderThan]), in its place in the
-     * queue, as of the [wall] clock then. Returns whether it succeeded; a failure is reported to
-     * [warn] without its text, never thrown.
+     * Deletes what is older than the [lifetime] it returns when the deletion runs, in its place in
+     * the queue ([SessionHistory.deleteOlderThan]), by the [wall] clock then: so a lifetime made
+     * longer, or *Forever* (null), while it waits is never undercut. Skipped once the wall clock
+     * has jumped (the class's KDoc). Returns whether it succeeded or was skipped; a failure is
+     * reported to [warn] without its text, never thrown.
      */
-    suspend fun deleteOlderThan(lifetime: Duration): Boolean =
+    suspend fun deleteOlderThan(lifetime: () -> Duration?): Boolean =
         queued("Could not delete old entries from the session history") {
-            history.deleteOlderThan(lifetime, wall.now())
+            val kept = lifetime()
+            val now = wall.now()
+            if (!clockJumped && (now - elapsed().milliseconds - clockOffset).absoluteValue > CLOCK_MARGIN) {
+                clockJumped = true
+                warn("The clock moved: old entries in the session history are kept until the app restarts")
+            }
+            if (kept != null && !clockJumped) history.deleteOlderThan(kept, now)
         }
 
     private suspend fun queued(
@@ -250,6 +271,12 @@ class HistoryRecorder(
 
     private companion object {
         const val TAG = "Sleevesight"
+
+        /**
+         * How far the wall clock may move against the [elapsed] clock before it counts as set: an
+         * hour, far more than a network time correction, far less than a lifetime of days.
+         */
+        val CLOCK_MARGIN: Duration = 1.hours
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session

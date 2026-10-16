@@ -19,21 +19,28 @@ import kotlin.time.Duration.Companion.hours
  * settings are first read, which is at each start of the process, again each time the lifetime
  * changes, so a shorter one applies at once, and after every [PERIOD] the phone is awake while the
  * process lives: the wait is a coroutine delay, which deep sleep pauses. No WorkManager: the history
- * is written only while the process runs, and each start trims it. A deletion that fails is
- * reported by the recorder and tried again at the next.
+ * is written only while the process runs, and each start trims it. A deletion reads the lifetime
+ * when it runs, not when it was queued, so one waiting behind other writes when the lifetime is made
+ * longer, or *Forever*, deletes by the new one. One that fails is reported by the recorder and
+ * tried again at the next; the recorder skips them once the clock has jumped.
  */
 class HistoryRetention(
     private val recorder: HistoryRecorder,
     private val lifetime: Flow<Duration?>,
     private val scope: CoroutineScope,
 ) {
+    // The lifetime now, for the deletions already queued: they run on the I/O dispatcher.
+    @Volatile
+    private var current: Duration? = null
+
     /** Deletes old history until the calling coroutine is cancelled. */
     suspend fun run() {
         lifetime.distinctUntilChanged().collectLatest { kept ->
+            current = kept
             // Kept for ever: nothing to delete, until the setting changes.
             if (kept == null) return@collectLatest
             while (true) {
-                recorder.deleteOlderThan(kept)
+                recorder.deleteOlderThan { current }
                 delay(PERIOD)
             }
         }
@@ -47,9 +54,10 @@ class HistoryRetention(
 
     companion object {
         /**
-         * Six hours of the phone being awake. The lifetime is counted in days, so the history is at
-         * most about a quarter of a day past it while the phone is in use; each deletion scans the
-         * history's two main tables, so a few a day is cheap.
+         * Six hours of the phone being awake. The lifetime is counted in days, so while the process
+         * runs and the phone is awake, the history is at most about a quarter of a day past it (and
+         * past it by however long the phone slept, or the process was not running, otherwise);
+         * each deletion scans the history's two main tables, so a few a day is cheap.
          */
         val PERIOD: Duration = 6.hours
     }

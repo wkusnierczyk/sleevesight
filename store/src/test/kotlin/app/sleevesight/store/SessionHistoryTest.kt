@@ -256,16 +256,20 @@ class SessionHistoryTest {
     }
 
     @Test
-    fun `a clock set ahead deletes nothing newer than the newest entry less the lifetime`() {
-        for (daysAgo in listOf(100, 10, 0)) {
+    fun `the lifetime is counted back from now, whatever the history's newest time`() {
+        // Nothing played for 60 days: the rows older than 30 days before now go, all of them.
+        for (daysAgo in listOf(100, 70, 60)) {
             play(sundown, start - daysAgo.days)
             history.stopped(start - daysAgo.days + 1.minutes)
         }
+        history.changed(change(start - 60.days, "Sundown"))
+        play(carefree, start - 60.days + 10.minutes)
+        history.stopped(start - 60.days + 11.minutes)
 
-        history.deleteOlderThan(90.days, now = start + 200.days)
+        history.deleteOlderThan(30.days, now = start)
 
-        assertEquals(2, (1L..3L).flatMap(history::session).size)
-        assertTrue(history.session(1).isEmpty())
+        assertEquals(0L, count("played"))
+        assertEquals(0L, count("track_change"))
     }
 
     @Test

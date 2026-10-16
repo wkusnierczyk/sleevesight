@@ -44,9 +44,12 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     /** Whether the settings have been read when the recorder starts: then the gap is the default. */
     protected open val settingsRead = true
     val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
+
+    /** How far the wall clock has been set, ahead of [base] plus the virtual time. */
+    protected var clockSet: Duration = Duration.ZERO
     private val wall =
         object : Clock {
-            override fun now(): Instant = base + scheduler.currentTime.milliseconds
+            override fun now(): Instant = base + clockSet + scheduler.currentTime.milliseconds
         }
 
     /** Where the writes run: at once, unless a test holds them. */
@@ -57,18 +60,21 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     @Before
     fun record() {
         if (settingsRead) sessionGap.tryEmit(Settings.DEFAULT_SESSION_GAP)
-        recorder =
-            HistoryRecorder(
-                repository,
-                history,
-                io = io,
-                sessionGap = sessionGap,
-                elapsed = { scheduler.currentTime },
-                wall = wall,
-                warn = { warnings += it },
-            )
+        recorder = newRecorder()
         scope.launch { recorder.run() }
     }
+
+    /** A recorder on this fixture's history and clocks, as a new process would make it. */
+    protected fun newRecorder() =
+        HistoryRecorder(
+            repository,
+            history,
+            io = io,
+            sessionGap = sessionGap,
+            elapsed = { scheduler.currentTime },
+            wall = wall,
+            warn = { warnings += it },
+        )
 
     @After
     fun close() = jdbc.close()

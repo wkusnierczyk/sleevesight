@@ -64,13 +64,55 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
         assertEquals(listOf("Turning", "New"), rows())
         assertEquals(listOf("New", "Turning"), changes())
 
-        // Something plays meanwhile: the history's newest time moves on with the clock.
-        played("Later", base + 5.hours)
         at((HistoryRetention.PERIOD - 1.milliseconds).inWholeMilliseconds)
-        assertEquals(listOf("Turning", "New", "Later"), rows())
+        assertEquals(listOf("Turning", "New"), rows())
         atPeriod()
-        assertEquals(listOf("New", "Later"), rows())
-        assertEquals(listOf("Later", "New"), changes())
+        assertEquals(listOf("New"), rows())
+        assertEquals(listOf("New"), changes())
+    }
+
+    @Test
+    fun theLifetimeIsCountedBackFromTodayEvenWhenNothingHasPlayedSince() {
+        lifetime.value = 30.days
+        played("Old", base - 40.days)
+        played("Older", base - 45.days)
+        scope.launch { retention.run() }
+
+        assertEquals(emptyList<String>(), rows())
+        assertEquals(emptyList<String>(), changes())
+    }
+
+    @Test
+    fun aClockSetAheadWhileTheAppRunsDeletesNothingUntilItRestarts() {
+        played("Old", base - 80.days)
+        played("New", base - 1.days)
+        scope.launch { retention.run() }
+        assertEquals(listOf("Old", "New"), rows())
+
+        // Set 200 days ahead, and a track recorded by that clock.
+        clockSet = 200.days
+        spotify()
+        atPeriod()
+        lifetime.value = 30.days
+
+        assertEquals(listOf("Old", "New", "Sundown"), rows())
+        assertEquals(
+            listOf("The clock moved: old entries in the session history are kept until the app restarts"),
+            warnings,
+        )
+    }
+
+    @Test
+    fun aClockSetAheadBeforeTheAppStartsIsNotCaught() {
+        // The documented limit: a process started after the jump takes the jumped clock as right.
+        clockSet = 200.days
+        played("Recent", base - 1.days)
+        val restarted = newRecorder()
+        scope.launch { restarted.run() }
+        scope.launch { HistoryRetention(restarted, lifetime, scope).run() }
+
+        assertEquals(emptyList<String>(), rows())
+        assertTrue(warnings.isEmpty())
     }
 
     @Test

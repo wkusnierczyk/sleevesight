@@ -4,6 +4,8 @@ import android.media.session.PlaybackState
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
+import app.sleevesight.app.ui.settings.Clearing
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,15 +13,20 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -72,7 +79,7 @@ internal class HistoryRecorderQueueTest : HistoryRecorderFixture() {
     }
 
     @Test
-    fun aConfirmedClearIsMadeWhenTheScreenThatAskedGoesAway() {
+    fun aQueuedClearIsMadeWhenItsWaiterIsCancelled() {
         val retention = HistoryRetention(recorder, flowOf(null), scope)
         gate.open = false
         spotify()
@@ -83,6 +90,53 @@ internal class HistoryRecorderQueueTest : HistoryRecorderFixture() {
         gate.release()
 
         assertEquals(emptyList<Any>(), allRows())
+    }
+
+    @Test
+    fun aConfirmedClearIsMadeWhenTheScreenGoesBeforeItsScopeRunsAnything() {
+        val retention = HistoryRetention(recorder, flowOf(null), scope)
+        gate.open = false
+        spotify()
+        // The screen's scope runs nothing until the scheduler does, which it never gets to.
+        val screen = CoroutineScope(Job() + StandardTestDispatcher(scheduler))
+        val clearing = Clearing(screen)
+
+        clearing.start(retention::clear)
+        screen.cancel()
+        gate.release()
+
+        assertEquals(emptyList<Any>(), allRows())
+        assertNull(clearing.ended)
+    }
+
+    @Test
+    fun theScreenIsToldHowTheClearEnded() {
+        val retention = HistoryRetention(recorder, flowOf(null), scope)
+        gate.open = false
+        spotify()
+        val clearing = Clearing(scope)
+
+        clearing.start(retention::clear)
+        assertNull(clearing.ended)
+        gate.release()
+
+        assertEquals(true, clearing.ended)
+    }
+
+    @Test
+    fun aDeletionQueuedBeforeTheLifetimeBecameForeverDeletesNothing() {
+        history.started(sundown, base - 100.days, Settings.DEFAULT_SESSION_GAP) { false }
+        history.stopped(base - 100.days + 4.minutes)
+        gate.open = false
+        // A write held, and a deletion by 30 days queued behind it.
+        spotify(metadata(title = "Carefree Highway"))
+        val lifetime = MutableStateFlow<Duration?>(30.days)
+        scope.launch { HistoryRetention(recorder, lifetime, scope).run() }
+
+        lifetime.value = null
+        gate.release()
+
+        assertEquals(listOf("Sundown", "Carefree Highway"), allRows().map { it.track.title })
     }
 
     /** Holds what is dispatched to it while closed, and runs it when [release]d. */
@@ -120,5 +174,24 @@ internal class HistoryRecorderFirstReadTest : HistoryRecorderFixture() {
         sessionGap.tryEmit(10.minutes)
 
         assertEquals(listOf("Sundown"), allRows().map { it.track.title })
+    }
+
+    @Test
+    fun writesQueuedBeforeTheFirstReadRunInOrderOnceItComes() {
+        val spotify = spotify()
+        at(60_000)
+        spotify.report(metadata(title = "Carefree Highway"))
+        at(120_000)
+        spotify.report(state(PlaybackState.STATE_PAUSED, positionMs = 60_000, speed = 0f))
+        assertEquals(emptyList<Any>(), allRows())
+        assertEquals(emptyList<Any>(), history.changes(limit = 10).changes)
+
+        sessionGap.tryEmit(10.minutes)
+
+        val rows = allRows()
+        assertEquals(listOf("Sundown", "Carefree Highway"), rows.map { it.track.title })
+        assertEquals(base + 60_000.milliseconds + SessionRepository.SETTLE, rows[0].stoppedAt)
+        assertEquals(base + 120_000.milliseconds + SessionRepository.SETTLE, rows[1].stoppedAt)
+        assertEquals(listOf("Carefree Highway"), history.changes(limit = 10).changes.map { it.to.title })
     }
 }

@@ -334,7 +334,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
 | Lookups | Cache lifetime of artist identities | 90 days |
 | Lookups | Cache size limit | 50 MB |
-| History | Keep history for: 7, 30 or 90 days, a year, or forever; the session history and the track changes together (#148) | 90 days |
+| History | Keep history for: 7, 30 or 90 days, a year, or forever, counted back from today; the session history and the track changes together (#148) | 90 days |
 | History | Start a new session after a break of: 10, 20 or 30 minutes, 1 or 2 hours, counted from when the last track was heard | 30 minutes |
 | History | Clear history: the session history and the track changes, after a confirmation | |
 

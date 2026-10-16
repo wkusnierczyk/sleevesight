@@ -157,8 +157,13 @@ private fun CoroutineScope.updater(
         }
     }
 
-/** How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in [scope]. */
-private class Clearing(
+/**
+ * How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in
+ * [scope], the screen's: the clear itself is made whatever happens to the screen, but if the screen
+ * goes, or is recreated (a rotation), before the clear ends, its notice is not shown. Nothing shows
+ * while a clear waits in the history's queue.
+ */
+internal class Clearing(
     private val scope: CoroutineScope,
 ) {
     var ended by mutableStateOf<Boolean?>(null)
