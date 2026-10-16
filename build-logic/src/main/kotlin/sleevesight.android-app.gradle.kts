@@ -19,7 +19,8 @@ plugins {
 }
 
 extensions.configure<ApplicationExtension> {
-    compileSdk = 36
+    // 37 because OkHttp's Android artifact (from 5.5.0) requires it; targetSdk is a separate decision.
+    compileSdk = 37
     defaultConfig {
         minSdk = 26
         targetSdk = 36
