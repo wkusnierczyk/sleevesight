@@ -22,6 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class SettingsCodecTest {
@@ -71,8 +72,16 @@ class SettingsCodecTest {
                 artistCacheLifetime = 30.days,
                 cacheSizeLimit = 10_000_000,
                 aiEffort = ReasoningEffort.HIGH,
+                historyLifetime = 7.days,
+                sessionGap = 10.minutes,
             )
         assertEquals(changed, roundTrip(changed))
+    }
+
+    @Test
+    fun keepingTheHistoryForeverIsKeptApartFromNoChoice() {
+        assertNull(roundTrip(Settings(historyLifetime = null)).historyLifetime)
+        assertEquals(Settings.DEFAULT_HISTORY_LIFETIME, roundTrip(Settings()).historyLifetime)
     }
 
     @Test
@@ -204,6 +213,8 @@ class SettingsCodecTest {
                 longPreferencesKey("cache.lifetime_ms.WEB") to -1L,
                 longPreferencesKey("cache.artist_lifetime_ms") to 0L,
                 longPreferencesKey("cache.size_limit") to -5L,
+                longPreferencesKey("history.lifetime_ms") to 0L,
+                longPreferencesKey("history.session_gap_ms") to -1L,
                 stringSetPreferencesKey("sources.off") to setOf("LASTFM", "TELEPATHY"),
                 booleanPreferencesKey("lookups.background") to true,
             )
