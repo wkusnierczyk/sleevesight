@@ -77,6 +77,7 @@ class SessionRepository(
     private val queueState = MutableStateFlow<SessionQueue?>(null)
     private val artState = MutableStateFlow<Bitmap?>(null)
     private val changeState = MutableStateFlow<SessionChange?>(null)
+    private val playingState = MutableStateFlow<NowPlaying?>(null)
     private val seenState = MutableStateFlow<Set<String>>(emptySet())
 
     /**
@@ -91,6 +92,16 @@ class SessionRepository(
      * playback state before it, for skip detection (D5, #53): see [SessionChange].
      */
     val lastChange: StateFlow<SessionChange?> = changeState.asStateFlow()
+
+    /**
+     * The track shown while it plays, as of the settle that showed it or last updated it: its
+     * metadata and the state it settled with, a consistent pair. [playback] is published at once,
+     * so a new track's `PLAYING` state, which may come before its metadata (YouTube Music,
+     * Castbox), would pair with the track before; this waits for the settle. Null once a pause, a
+     * stop or no track has settled; unchanged while reports are still settling. For the session
+     * history (#49).
+     */
+    val playing: StateFlow<NowPlaying?> = playingState.asStateFlow()
 
     /** The shown player's playback state; [PlaybackInfo.NONE] when there is no followed session. */
     val playback: StateFlow<PlaybackInfo> = playbackState.asStateFlow()
@@ -202,7 +213,15 @@ class SessionRepository(
                     change
                 }
         }
+        // After the change, so a collector that sees a new track playing finds its change.
+        publishPlaying(shown)
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
+    }
+
+    /** Publishes [playing] from [shown]'s settled track and state, unless its reports are still settling. */
+    private fun publishPlaying(shown: Attached?) {
+        if (shown?.pending == true) return
+        playingState.value = shown?.track?.takeIf { shown.state?.state == PlaybackState.STATE_PLAYING }
     }
 
     /**

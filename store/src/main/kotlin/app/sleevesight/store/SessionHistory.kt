@@ -24,8 +24,8 @@ import kotlin.time.Instant
  * - [changed]: each change from one track to another, with the features skip detection will learn
  *   from per player.
  *
- * A track that starts more than [sessionGap] after the previous one should have ended (its start
- * plus its length, or its start when the player sent no length) begins a new listening session.
+ * A track that starts, or resumes, more than [sessionGap] after the track before was last heard
+ * ([PlayedTrack.heardUntil]) begins a new listening session.
  *
  * Calls are blocking database calls: the app makes them off the main thread, from one writer.
  */
@@ -36,11 +36,11 @@ class SessionHistory(
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
 
     /**
-     * Adds [track], which began to play at [at], to the history, unless [sameTrack] says it is the
-     * track added last and it is still the same listening session: the session layer shows a track
-     * again after a restart, and an update of the same track (artists sent after the title, a new
-     * length) is no new entry; the entry then takes the update. The art is not kept. Returns the
-     * entry that now holds the track.
+     * Adds [track], which began or resumed playing at [at], to the history, unless [sameTrack] says
+     * it is the track added last and it is still the same listening session: a resume after a pause,
+     * the same track shown again after a restart, and an update of it (artists sent after the
+     * title, a new length) are no new entry; the entry then takes the update and is playing again.
+     * The art is not kept. Returns the entry that now holds the track.
      */
     fun played(
         track: NowPlaying,
@@ -53,12 +53,12 @@ class SessionHistory(
             val session =
                 when {
                     last == null -> 1L
-                    at - last.endsAt > sessionGap -> last.session + 1
+                    at - last.heardUntil > sessionGap -> last.session + 1
                     else -> last.session
                 }
             if (last != null && session == last.session && sameTrack(last.track)) {
-                if (last.track != kept) update(last.id, kept)
-                last.copy(track = kept)
+                if (last.track != kept || last.stoppedAt != null) update(last.id, kept)
+                last.copy(track = kept, stoppedAt = null)
             } else {
                 queries.playedInsert(
                     session = session,
@@ -90,6 +90,15 @@ class SessionHistory(
         )
     }
 
+    /**
+     * Notes that the track added last stopped playing at [at] (paused, stopped, or followed by
+     * another), which the next listening session counts from. A track already stopped keeps the
+     * time it first stopped.
+     */
+    fun stopped(at: Instant) {
+        queries.playedStopped(at.toEpochMilliseconds())
+    }
+
     /** The tracks of the latest listening session, in the order they played; empty when there are none. */
     fun latestSession(): List<PlayedTrack> {
         val last = queries.lastPlayed().executeAsOneOrNull() ?: return emptyList()
@@ -105,6 +114,10 @@ class SessionHistory(
             queries.trackChangeInsert(
                 player = change.player,
                 changed_at = change.changedAt.toEpochMilliseconds(),
+                from_title = change.from?.title,
+                from_media_id = change.from?.mediaId,
+                to_title = change.to.title,
+                to_media_id = change.to.mediaId,
                 time_left_ms = change.timeLeft?.inWholeMilliseconds,
                 since_action_ms = change.sinceLastAction?.inWholeMilliseconds,
                 learned_crossfade_ms = change.learnedCrossfade?.inWholeMilliseconds,
@@ -117,7 +130,7 @@ class SessionHistory(
                     received_before_ms = state.receivedBefore.inWholeMilliseconds,
                     status = state.status,
                     position_ms = state.position?.inWholeMilliseconds,
-                    position_before_ms = state.positionBefore.inWholeMilliseconds,
+                    position_before_ms = state.positionBefore?.inWholeMilliseconds,
                     speed = state.speed.toDouble(),
                 )
             }
@@ -150,6 +163,7 @@ class SessionHistory(
                     mediaId = row.media_id,
                     queueItemId = row.queue_item,
                 ),
+            stoppedAt = row.stopped_at?.let(Instant::fromEpochMilliseconds),
         )
 
     private fun trackChange(
@@ -159,6 +173,8 @@ class SessionHistory(
         TrackChangeRecord(
             player = row.player,
             changedAt = Instant.fromEpochMilliseconds(row.changed_at),
+            from = row.from_title?.let { TrackRef(it, row.from_media_id) },
+            to = TrackRef(row.to_title, row.to_media_id),
             timeLeft = row.time_left_ms?.milliseconds,
             states =
                 states.map {
@@ -166,7 +182,7 @@ class SessionHistory(
                         receivedBefore = it.received_before_ms.milliseconds,
                         status = it.status,
                         position = it.position_ms?.milliseconds,
-                        positionBefore = it.position_before_ms.milliseconds,
+                        positionBefore = it.position_before_ms?.milliseconds,
                         speed = it.speed.toFloat(),
                     )
                 },
@@ -188,17 +204,24 @@ class SessionHistory(
  * A track in the session history.
  *
  * @property session the listening session it played in, numbered from 1.
- * @property playedAt when the session layer first saw it play.
- * @property track the track as the player reported it then, without its art.
+ * @property playedAt when it began to play: when its change began, if it followed the track before
+ *   at once, else when the session layer first saw it play.
+ * @property track the track as the player last reported it, without its art.
+ * @property stoppedAt when it was last seen to stop playing; null while it plays, or if the
+ *   process ended while it played.
  */
 data class PlayedTrack(
     val id: Long,
     val session: Long,
     val playedAt: Instant,
     val track: NowPlaying,
+    val stoppedAt: Instant? = null,
 ) {
-    /** When it should have ended: its start plus its length, or its start when the player sent none. */
-    val endsAt: Instant get() = playedAt + (track.duration ?: Duration.ZERO)
+    /**
+     * When it was last heard: when it stopped; failing that, when it should have ended (its start
+     * plus its length, or its start when the player sent none).
+     */
+    val heardUntil: Instant get() = stoppedAt ?: (playedAt + (track.duration ?: Duration.ZERO))
 }
 
 /**
@@ -207,6 +230,8 @@ data class PlayedTrack(
  *
  * @property player the player whose track changed (the new track's).
  * @property changedAt when the change began, as the session layer timed it.
+ * @property from the track it left; null if none is known.
+ * @property to the track it entered.
  * @property timeLeft the time the previous track had left at the change: its length less its
  *   position then; null when either is unknown, or on a switch from another player's track.
  * @property states the playback states the player reported shortly before the change, oldest first.
@@ -216,6 +241,8 @@ data class PlayedTrack(
 data class TrackChangeRecord(
     val player: String,
     val changedAt: Instant,
+    val from: TrackRef?,
+    val to: TrackRef,
     val timeLeft: Duration?,
     val states: List<PlaybackStateRecord>,
     val sinceLastAction: Duration?,
@@ -228,13 +255,20 @@ data class TrackChangeRecord(
  * @property receivedBefore how long before the change it came.
  * @property status the session layer's name for its state: `PLAYING`, `PAUSED`, and so on.
  * @property position the position it reported, if any.
- * @property positionBefore how long before the change [position] was taken; negative if after it.
+ * @property positionBefore how long before the change [position] was taken; negative if after it,
+ *   null with no position or no time for it.
  * @property speed the playback speed: 1 for normal play, 0 when paused.
  */
 data class PlaybackStateRecord(
     val receivedBefore: Duration,
     val status: String,
     val position: Duration?,
-    val positionBefore: Duration,
+    val positionBefore: Duration?,
     val speed: Float,
+)
+
+/** A track named in a track change: its title, and its media id when the player sends one. */
+data class TrackRef(
+    val title: String,
+    val mediaId: String?,
 )

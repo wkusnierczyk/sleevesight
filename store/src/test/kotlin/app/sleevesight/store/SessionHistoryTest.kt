@@ -87,6 +87,32 @@ class SessionHistoryTest {
     }
 
     @Test
+    fun `a resume after a break longer than the gap begins a new session with the resumed track`() {
+        play(sundown, start)
+        history.stopped(start + 10.seconds)
+
+        // Within the gap: the same entry, playing again.
+        val resumed = play(sundown, start + 10.seconds + SessionHistory.DEFAULT_SESSION_GAP)
+        assertEquals(PlayedTrack(resumed.id, 1, start, sundown), history.latestSession().single())
+
+        history.stopped(start + 1.minutes)
+        val later = play(sundown, start + 1.minutes + SessionHistory.DEFAULT_SESSION_GAP + 1.milliseconds)
+        assertEquals(2L, later.session)
+        assertEquals(listOf(sundown), history.latestSession().map { it.track })
+    }
+
+    @Test
+    fun `the break counts from when the track before stopped, even within its length`() {
+        play(sundown, start)
+        // Paused 10 s in, and something else played 31 minutes later: before Sundown's length
+        // plus the gap, but after the gap since it stopped.
+        history.stopped(start + 10.seconds)
+        history.stopped(start + 20.seconds)
+
+        assertEquals(2L, play(carefree, start + 10.seconds + 31.minutes).session)
+    }
+
+    @Test
     fun `a track without a length is timed from its start`() {
         val gap = 10.minutes
         val short = SessionHistory(driver, sessionGap = gap)
@@ -104,17 +130,25 @@ class SessionHistoryTest {
             TrackChangeRecord(
                 player = SPOTIFY,
                 changedAt = start,
+                from = TrackRef("Sundown", "spotify:track:1"),
+                to = TrackRef("Carefree Highway", null),
                 timeLeft = 11_960.milliseconds,
                 states =
                     listOf(
                         state(3_100, "PLAYING", 210_000, 3_100, 1f),
                         state(700, "PLAYING", 212_400, 700, 1f),
-                        state(5, "PAUSED", null, -2, 0f),
+                        state(5, "PAUSED", null, null, 0f),
                     ),
                 sinceLastAction = null,
                 learnedCrossfade = 12.seconds,
             )
-        val other = change.copy(player = "com.google.android.apps.youtube.music", states = emptyList(), timeLeft = null)
+        val other =
+            change.copy(
+                player = "com.google.android.apps.youtube.music",
+                from = null,
+                states = emptyList(),
+                timeLeft = null,
+            )
 
         history.changed(change)
         history.changed(other)
@@ -125,7 +159,9 @@ class SessionHistoryTest {
     @Test
     fun `clearing deletes the history and the track changes together`() {
         play(sundown, start)
-        history.changed(TrackChangeRecord(SPOTIFY, start, null, listOf(state()), null, null))
+        history.changed(
+            TrackChangeRecord(SPOTIFY, start, null, TrackRef("Sundown", null), null, listOf(state()), null, null),
+        )
 
         history.clear()
 
@@ -139,13 +175,13 @@ class SessionHistoryTest {
         receivedBeforeMs: Long = 1_000,
         status: String = "PLAYING",
         positionMs: Long? = 1_000,
-        positionBeforeMs: Long = 1_000,
+        positionBeforeMs: Long? = 1_000,
         speed: Float = 1f,
     ) = PlaybackStateRecord(
         receivedBeforeMs.milliseconds,
         status,
         positionMs?.milliseconds,
-        positionBeforeMs.milliseconds,
+        positionBeforeMs?.milliseconds,
         speed,
     )
 

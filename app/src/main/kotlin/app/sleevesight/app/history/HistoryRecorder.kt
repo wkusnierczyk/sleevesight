@@ -3,7 +3,7 @@ package app.sleevesight.app.history
 import android.database.SQLException
 import android.os.SystemClock
 import android.util.Log
-import app.sleevesight.app.session.PlaybackStatus
+import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.SessionChange
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.TrackIdentity
@@ -11,16 +11,15 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
+import app.sleevesight.store.TrackRef
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -31,11 +30,17 @@ import kotlin.time.Instant
  * the session layer runs while the listener service is bound, screen or no screen. Nothing reaches
  * it before the first run is acknowledged, since the session layer publishes nothing until then.
  *
- * - **The history**: each track shown once it is seen playing, so a track only paused on screen (a
- *   player's last track, found at start) is not one played. While it is the track added last, in
- *   the same listening session, it is not added again: a pause and resume is no new entry, an
- *   update of it (artists sent after the title, a new length) updates its entry, and so does
- *   the same track shown again after a restart.
+ * - **The history**: each track shown once it is seen playing ([SessionRepository.playing], a
+ *   settled track and state), so a track only paused on screen (a player's last track, found at
+ *   start) is not one played, nor is it when the next track's state arrives before its metadata.
+ *   When it stops playing (paused, stopped, the session layer stopped, or another track), that is
+ *   noted, and the next listening session counts from it. While it is the track added last, in
+ *   the same listening session, it is not added again: a resume, an update of it (artists sent
+ *   after the title, a new length) and the same track shown after a restart update its entry. A
+ *   resume after a break longer than the session gap begins a new session with it.
+ * - **When a track began**: when its change began, if it followed the track playing before at
+ *   once; else (the first track found playing at start, a track resumed, or one skipped to while
+ *   paused) when it was first seen playing, which is up to the settle window late.
  * - **Each track change** ([SessionRepository.lastChange]) with its features: the time the
  *   previous track had left ([SessionChange.timeLeft]), the playback states before it, and the
  *   player. Two features have no source yet and are recorded as null: the time since the user's
@@ -68,9 +73,25 @@ class HistoryRecorder(
                 }
             }
             launch {
-                playing().collect { track ->
-                    val at = wall.now()
-                    writes.trySend(Write("a track played") { history.played(track, at) { sameAsLast(it, track) } })
+                var before: NowPlaying? = null
+                var timed: SessionChange? = null
+                sessions.playing.collect { track ->
+                    val change = sessions.lastChange.value
+                    // The change that led here from the track playing before, used once.
+                    val followed =
+                        change?.takeIf {
+                            before != null && track != null && it !== timed && TrackIdentity.same(it.track, track)
+                        }
+                    if (followed != null) timed = followed
+                    val at = followed?.let { wallTime(it.changedAt) } ?: wall.now()
+                    val playedBefore = before
+                    if (playedBefore != null && (track == null || !TrackIdentity.same(playedBefore, track))) {
+                        writes.trySend(Write("a track stopping") { history.stopped(at) })
+                    }
+                    if (track != null) {
+                        writes.trySend(Write("a track played") { history.played(track, at) { sameAsLast(it, track) } })
+                    }
+                    before = track
                 }
             }
             for (write in writes) {
@@ -83,16 +104,12 @@ class HistoryRecorder(
             }
         }
 
-    /** The track shown while it plays, again whenever the player updates it. */
-    private fun playing(): Flow<NowPlaying> =
-        combine(sessions.nowPlaying, sessions.playback) { track, playback ->
-            track?.takeIf { playback.status == PlaybackStatus.PLAYING && playback.player == it.player }
-        }.filterNotNull().distinctUntilChanged()
-
     private fun record(change: SessionChange): TrackChangeRecord =
         TrackChangeRecord(
             player = change.track.player,
             changedAt = wallTime(change.changedAt),
+            from = change.from?.let { TrackRef(it.title, it.mediaId) },
+            to = TrackRef(change.track.title, change.track.mediaId),
             timeLeft = change.timeLeft,
             states =
                 change.states.map { report ->
@@ -100,13 +117,19 @@ class HistoryRecorder(
                         receivedBefore = (change.changedAt - report.at).milliseconds,
                         status = report.state.status.name,
                         position = report.state.position,
-                        positionBefore = (change.changedAt - report.state.updatedAt).milliseconds,
+                        positionBefore = positionBefore(change.changedAt, report.state),
                         speed = report.state.speed,
                     )
                 },
             sinceLastAction = null,
             learnedCrossfade = null,
         )
+
+    /** How long before [changedAt] [state]'s position was taken; null with no position or no time for it. */
+    private fun positionBefore(
+        changedAt: Long,
+        state: PlaybackInfo,
+    ): Duration? = (changedAt - state.updatedAt).milliseconds.takeIf { state.position != null && state.updatedAt > 0 }
 
     /** [at], on the [elapsed] clock, as a wall-clock time. */
     private fun wallTime(at: Long): Instant = wall.now() - (elapsed() - at).milliseconds

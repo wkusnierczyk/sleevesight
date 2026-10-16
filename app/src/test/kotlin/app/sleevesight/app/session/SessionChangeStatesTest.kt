@@ -55,6 +55,19 @@ internal class SessionChangeStatesTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun theWindowIsFiveSeconds() {
+        val spotify = spotify()
+        spotify.playingAt(2_900)
+        spotify.playingAt(3_100)
+        at(8_000)
+        spotify.send(metadata(title = "Carefree Highway"))
+        settle()
+
+        // 5.1 s before the change is out, 4.9 s before it is in.
+        assertEquals(listOf(3_100L), checkNotNull(repository.lastChange.value).states.map { it.at })
+    }
+
+    @Test
     fun aChangeKnowsTheTrackItLeftAndTheTimeItHadLeft() {
         val spotify = spotify()
         spotify.playingAt(6_500)

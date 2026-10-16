@@ -7,13 +7,14 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.app.session.FakeSession
-import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SessionRepositoryFixture
 import app.sleevesight.app.session.Sessions.SPOTIFY
+import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.SessionHistory
+import app.sleevesight.store.TrackRef
 import app.sleevesight.store.history.HistoryDatabase
 import kotlinx.coroutines.launch
 import org.junit.After
@@ -82,7 +83,85 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
 
         val played = history.latestSession()
         assertEquals(listOf("Sundown", "Carefree Highway"), played.map { it.track.title })
-        assertEquals(listOf(base, base + 60.seconds + SessionRepository.SETTLE), played.map { it.playedAt })
+        // The first track from when it was found playing; the next from when its change began.
+        assertEquals(listOf(base, base + 60.seconds), played.map { it.playedAt })
+    }
+
+    @Test
+    fun aPausedTrackIsNotPlayedWhenTheNextTracksStateComesBeforeItsMetadata() {
+        // YouTube Music, paused, then the next track's state just before its metadata.
+        followed.value = setOf(YOUTUBE_MUSIC)
+        val youtube =
+            FakeSession(YOUTUBE_MUSIC, playbackState = state(PlaybackState.STATE_PAUSED, speed = 0f, queueItem = 4))
+        system.active = listOf(youtube)
+        repository.start()
+
+        at(10_000)
+        youtube.send(state(queueItem = 5))
+        at(10_100)
+        youtube.settled(metadata(title = "Carefree Highway"))
+
+        assertEquals(listOf("Carefree Highway"), history.latestSession().map { it.track.title })
+    }
+
+    @Test
+    fun aShortPauseKeepsOneEntry() {
+        val spotify = spotify()
+        at(10_000)
+        spotify.settled(state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 0f, updatedAt = 10_000))
+        at(70_000)
+        spotify.settled(state(positionMs = 10_000, updatedAt = 70_000))
+
+        assertEquals(listOf(1L), history.latestSession().map { it.session })
+    }
+
+    @Test
+    fun aResumeAfterALongBreakBeginsANewSessionWithTheResumedTrack() {
+        val spotify = spotify()
+        at(10_000)
+        spotify.settled(state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 0f, updatedAt = 10_000))
+        val resumeAt = 10_000 + (SessionHistory.DEFAULT_SESSION_GAP + 1.seconds).inWholeMilliseconds
+        at(resumeAt)
+        spotify.settled(state(positionMs = 10_000, updatedAt = resumeAt))
+
+        val session = history.latestSession()
+        assertEquals(listOf("Sundown"), session.map { it.track.title })
+        assertEquals(2L, session.single().session)
+    }
+
+    @Test
+    fun theSessionLayerStoppedAndStartedAgainKeepsOneEntry() {
+        spotify()
+        at(30_000)
+        repository.stop()
+        at(31_000)
+        repository.start()
+        settle()
+
+        assertEquals(1, history.latestSession().size)
+        assertEquals(1, history.session(1).size)
+    }
+
+    @Test
+    fun artistsSentAfterTheTitleUpdateTheEntry() {
+        val spotify = FakeSession(SPOTIFY, metadata = metadata(artist = null))
+        system.active = listOf(spotify)
+        repository.start()
+        at(1_000)
+        spotify.settled(metadata())
+
+        assertEquals(listOf("Gordon Lightfoot"), history.latestSession().map { it.track.artists })
+    }
+
+    @Test
+    fun aNewTitleUnderTheSameMediaIdIsANewEntry() {
+        val spotify = FakeSession(SPOTIFY, metadata = metadata(mediaId = "spotify:track:1"))
+        system.active = listOf(spotify)
+        repository.start()
+        at(1_000)
+        spotify.settled(metadata(title = "Sundown (Live)", mediaId = "spotify:track:1"))
+
+        assertEquals(listOf("Sundown", "Sundown (Live)"), history.latestSession().map { it.track.title })
     }
 
     @Test
@@ -109,6 +188,8 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
         val change = history.changes().single()
         assertEquals(SPOTIFY, change.player)
         assertEquals(base + 8.seconds, change.changedAt)
+        assertEquals(TrackRef("Sundown", null), change.from)
+        assertEquals(TrackRef("Carefree Highway", null), change.to)
         assertEquals(23.seconds, change.timeLeft)
         assertEquals(
             listOf(
@@ -120,6 +201,25 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
         // Nothing supplies these yet: the user's actions (#53, Phase 2) and the learned crossfade (#53).
         assertNull(change.sinceLastAction)
         assertNull(change.learnedCrossfade)
+    }
+
+    @Test
+    fun aStateWithNoPositionHasNoTimeForIt() {
+        val spotify = spotify()
+        at(6_000)
+        spotify.send(state(PlaybackState.STATE_BUFFERING, positionMs = PlaybackState.PLAYBACK_POSITION_UNKNOWN))
+        at(7_000)
+        spotify.settled(metadata(title = "Carefree Highway"))
+
+        val state =
+            history
+                .changes()
+                .single()
+                .states
+                .single()
+        assertEquals("BUFFERING", state.status)
+        assertNull(state.position)
+        assertNull(state.positionBefore)
     }
 
     @Test

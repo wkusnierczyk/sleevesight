@@ -12,9 +12,13 @@ sqldelight {
             packageName = "app.sleevesight.store.db"
             srcDirs("src/main/sqldelight")
         }
+        // The history cannot be rebuilt, so each schema version is kept (`databases/<version>.db`,
+        // from `generateMainHistoryDatabaseSchema`) and every migration is checked against it.
         create("HistoryDatabase") {
             packageName = "app.sleevesight.store.history"
             srcDirs("src/main/history")
+            schemaOutputDirectory = file("src/main/history/databases")
+            verifyMigrations = true
         }
     }
 }
