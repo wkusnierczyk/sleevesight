@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -9,6 +10,9 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.isOff
+import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -123,21 +127,36 @@ class SettingsScreenTest {
         }
     }
 
+    /**
+     * The stored settings. The screen reads them by a collection of its own, which can lag the
+     * store, and `waitForIdle` does not wait for DataStore's threads: after a wait on [current], a
+     * step that reads the screen waits for the screen too ([waitForNode], [waitForText]).
+     */
     private fun current(store: SettingsStore = settings): Settings = runBlocking { store.settings.first() }
 
-    private fun waitFor(condition: () -> Boolean) = compose.waitUntil(timeoutMillis = 5_000) { condition() }
+    /** Waits for [condition]; a timeout names [what]. */
+    private fun waitFor(
+        what: String,
+        condition: () -> Boolean,
+    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = 5_000) { condition() }
 
-    private fun waitForText(text: String) =
-        waitFor { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitForNode(matcher: SemanticsMatcher) =
+        waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+
+    private fun waitForText(text: String) = waitForNode(hasText(text))
+
+    /** The model row's value, and the dialog's option, for Anthropic's default model. */
+    private fun anthropicDefault() =
+        app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC))
 
     @Test
     fun aSwitchIsSavedAtOnce() =
         show {
             compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
-            waitFor { current().lookUpInBackground }
+            waitFor("look-up in the background stored on") { current().lookUpInBackground }
 
             compose.onNodeWithText("Label of ${Settings.SPOTIFY}").performScrollTo().performClick()
-            waitFor { current().followedPlayers[Settings.SPOTIFY] == false }
+            waitFor("Spotify stored off") { current().followedPlayers[Settings.SPOTIFY] == false }
         }
 
     @Test
@@ -157,9 +176,9 @@ class SettingsScreenTest {
 
             // The next change is saved, and the message goes.
             row.performClick()
-            waitFor { current(store).lookUpInBackground }
-            row.assertIsOn()
-            waitFor {
+            waitFor("look-up in the background stored on") { current(store).lookUpInBackground }
+            waitForNode(hasText(text(R.string.settings_background)) and isOn())
+            waitFor("the failure message gone") {
                 compose.onAllNodesWithText(text(R.string.settings_change_failed)).fetchSemanticsNodes().isEmpty()
             }
         }
@@ -189,7 +208,8 @@ class SettingsScreenTest {
             compose.onNode(hasSetTextAction()).performTextInput("  lastfm-key  ")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
-            waitFor { runBlocking { secrets.get(SecretId.LASTFM) }?.reveal() == "lastfm-key" }
+            waitFor("the Last.fm key stored") { runBlocking { secrets.get(SecretId.LASTFM) }?.reveal() == "lastfm-key" }
+            waitForText(text(R.string.settings_key_saved))
             compose.onNodeWithText(text(R.string.settings_key_saved)).performScrollTo().assertIsDisplayed()
             assertEquals(0, compose.onAllNodesWithSubstring("lastfm-key").size)
         }
@@ -254,10 +274,13 @@ class SettingsScreenTest {
 
             compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor { current().aiProvider == ProviderId.ANTHROPIC }
+            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
+            // The model row opens its dialog only once the screen has the service.
+            waitForText(anthropicDefault())
 
-            // Without a key, only the default.
+            // Without a key, only the default. The dialog says so once it has looked for the key.
             compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
+            waitForText(text(R.string.settings_model_no_key))
             compose.onNodeWithText(text(R.string.settings_model_no_key)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
 
@@ -266,7 +289,7 @@ class SettingsScreenTest {
             compose.waitUntil(5_000) { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
             compose.onNodeWithText("Claude Opus 5.5 (claude-opus-5-5)").performClick()
 
-            waitFor { current().aiModel == "claude-opus-5-5" }
+            waitFor("the model stored") { current().aiModel == "claude-opus-5-5" }
             assertEquals("sk-test", provider.keyUsed)
         }
     }
@@ -276,15 +299,16 @@ class SettingsScreenTest {
         show {
             compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor { current().aiProvider == ProviderId.ANTHROPIC }
+            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
+            // The model row opens its dialog only once the screen has the service.
+            waitForText(anthropicDefault())
 
             compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
+            // The dialog shows *Loading* until it has looked for a key, on the key store's thread.
+            waitForText(text(R.string.settings_model_unavailable))
             compose.onNodeWithText(text(R.string.settings_model_unavailable)).assertIsDisplayed()
             // In the row and as the dialog's one option.
-            compose
-                .onAllNodesWithText(
-                    app.getString(R.string.settings_ai_model_default, "claude-haiku-5-5"),
-                ).assertCountEquals(2)
+            compose.onAllNodesWithText(anthropicDefault()).assertCountEquals(2)
         }
 
     @Test
@@ -293,7 +317,7 @@ class SettingsScreenTest {
             // Web search under *Where to look*, then its cache lifetime.
             compose.onAllNodesWithText(text(R.string.settings_cache_web))[1].performScrollTo().performClick()
             compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
-            waitFor { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
+            waitFor("the web cache lifetime stored") { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
         }
 
     @Test
@@ -355,8 +379,8 @@ class SettingsScreenTest {
             val row = compose.onNodeWithText(text(R.string.settings_labels_musicbrainz_summary)).performScrollTo()
             row.assertIsOn()
             row.performClick()
-            waitFor { current().labelSources == setOf(LabelSource.LASTFM) }
-            row.assertIsOff()
+            waitFor("only Last.fm labels stored") { current().labelSources == setOf(LabelSource.LASTFM) }
+            waitForNode(hasText(text(R.string.settings_labels_musicbrainz_summary)) and isOff())
         }
 
     @Test
@@ -368,7 +392,7 @@ class SettingsScreenTest {
             waiting.assertIsNotEnabled()
 
             runBlocking { secrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
-            waitFor {
+            waitFor("the Last.fm labels no longer waiting for the key") {
                 compose
                     .onAllNodesWithText(
                         text(R.string.settings_labels_needs_key),
@@ -380,14 +404,14 @@ class SettingsScreenTest {
             label.assertIsOn()
             label.assertIsEnabled()
             label.performClick()
-            waitFor { current().labelSources == setOf(LabelSource.MUSICBRAINZ) }
+            waitFor("only MusicBrainz labels stored") { current().labelSources == setOf(LabelSource.MUSICBRAINZ) }
         }
 
     @Test
     fun aLabelSourceOffUnderWhereToLookCannotBeSwitched() =
         show {
             runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.MUSICBRAINZ) } }
-            waitFor {
+            waitFor("the MusicBrainz labels shown off under *Where to look*") {
                 compose
                     .onAllNodesWithText(
                         text(R.string.settings_labels_source_off),
@@ -405,11 +429,11 @@ class SettingsScreenTest {
             val exa = compose.onNodeWithText(text(R.string.settings_engine_exa)).performScrollTo()
             exa.assertIsOn()
             exa.performClick()
-            waitFor { current().webEngines.isEmpty() }
+            waitFor("no web engine stored") { current().webEngines.isEmpty() }
 
             compose.onAllNodesWithText(text(R.string.settings_source_web))[0].performScrollTo().performClick()
-            waitFor { SourceSwitch.WEB !in current().enabledSources }
-            compose.onNodeWithText(text(R.string.settings_engine_exa)).assertIsNotEnabled()
+            waitFor("web search stored off") { SourceSwitch.WEB !in current().enabledSources }
+            waitForNode(hasText(text(R.string.settings_engine_exa)) and isNotEnabled())
             assertEquals(emptySet<WebEngine>(), current().webEngines)
         }
 
