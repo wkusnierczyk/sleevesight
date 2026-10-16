@@ -8,18 +8,26 @@ import app.sleevesight.app.session.SessionChange
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -38,7 +46,8 @@ import kotlin.time.Instant
  *     row takes the update however long it has played;
  *   - another track, or a track after none (a resume, a restart, the session layer started): the
  *     one before, if any, *stopped*, and this one *started*, which alone decides whether a new
- *     listening session begins;
+ *     listening session begins, by the [sessionGap] when it is written (the user's *Start a new
+ *     session after a break of*: the queue waits for the settings' first read);
  *   - none: the one before *stopped* (paused, stopped, the session layer stopped).
  * - **Times in the history** are when the recorder sees them: a track's start when it is first seen
  *   playing, its stop when it is first seen to stop, both as [SessionRepository.playing] publishes
@@ -55,31 +64,54 @@ import kotlin.time.Instant
  * restarts with the phone, so they are kept as wall-clock times from [wall] and as offsets from the
  * change. Writes go through one queue, in the order they were seen, each on [io]; a write that fails
  * (the disk full, say) is reported to [warn] and dropped, never thrown, so it does not end the run.
+ *
+ * *Clear history* ([clear]) and the deletion of old rows ([deleteOlderThan]) go through the same
+ * queue, so each runs after every write queued before it and before any queued after: a clear is
+ * never undone by a write of something seen before it. A clear also forgets the playback being
+ * recorded, so the track playing then comes back, as a new row, only with its next value.
+ *
+ * **A clock that jumps.** Old rows are deleted by the [wall] clock, so a clock set ahead would
+ * delete history early. The recorder notes how far the wall clock is from the [elapsed] clock, which
+ * nothing sets, when it is made, at the process's start; a deletion that finds them moved apart by
+ * more than [CLOCK_MARGIN] since is skipped, and so is every one after it until the next start. A
+ * jump made while the process was not running, or across a restart of the phone, is not caught.
  */
+@Suppress("LongParameterList") // What it records from and to, and the user's gap; the rest are test seams.
 class HistoryRecorder(
     private val sessions: SessionRepository,
     private val history: SessionHistory,
     private val io: CoroutineContext,
+    private val sessionGap: Flow<Duration> = flowOf(Settings.DEFAULT_SESSION_GAP),
     private val elapsed: () -> Long = SystemClock::elapsedRealtime,
     private val wall: Clock = Clock.System,
     private val warn: (String) -> Unit = { Log.w(TAG, it) },
 ) {
-    /** Records until the calling coroutine is cancelled. */
+    // The collectors only queue, so they never suspend: a state flow's value is not missed while a
+    // write is in progress. Read by [run] alone, which is called once.
+    private val writes = Channel<Write>(Channel.UNLIMITED)
+
+    // Read and written by the writes alone, which run one at a time.
+    private val playback = Playback()
+
+    /** The wall clock less the [elapsed] one when the recorder was made: what a jump moves. */
+    private val clockOffset = wall.now() - elapsed().milliseconds
+
+    // Set by the writes alone, once the clock is found to have jumped.
+    private var clockJumped = false
+
+    /** Records until the calling coroutine is cancelled. Called once, for the process. */
     suspend fun run(): Unit =
         coroutineScope {
-            // The collectors only queue, so they never suspend: a state flow's value is not missed
-            // while a write is in progress.
-            val writes = Channel<Write>(Channel.UNLIMITED)
+            // Null until the settings are first read: the first start waits for the user's gap.
+            val gap = sessionGap.stateIn(this, SharingStarted.Eagerly, null)
             launch {
                 sessions.lastChange.filterNotNull().collect { change ->
                     val record = record(change)
-                    writes.trySend(Write("a track change") { history.changed(record) })
+                    writes.trySend(Write.record("a track change") { history.changed(record) })
                 }
             }
             launch {
                 var before: NowPlaying? = null
-                // Read and written by the writes alone, which run one at a time.
-                val playback = Playback()
                 sessions.playing.collect { track ->
                     val at = wall.now()
                     val playedBefore = before
@@ -87,24 +119,67 @@ class HistoryRecorder(
                     // A track that plays on is updated; any other ends the one before and starts.
                     val continues = playedBefore != null && same(playedBefore)
                     if (playedBefore != null && !continues) {
-                        writes.trySend(Write("a track stopping") { history.stopped(at) })
+                        writes.trySend(Write.record("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        val write = Write("a track played") { playback.write(track, at, continues, same) }
-                        writes.trySend(write)
+                        val write = { given: Duration -> playback.write(track, at, given, continues, same) }
+                        writes.trySend(Write.record("a track played", write))
                     }
                     before = track
                 }
             }
             for (write in writes) {
-                try {
-                    withContext(io) { write.run() }
-                } catch (_: SQLException) {
-                    // No exception text: a database message may name a path or a track.
-                    warn("Could not record ${write.what} in the session history")
-                }
+                val gapNow = gap.filterNotNull().first()
+                val done =
+                    try {
+                        withContext(io) { write.run(gapNow) }
+                        true
+                    } catch (_: SQLException) {
+                        // No exception text: a database message may name a path or a track.
+                        warn(write.failure)
+                        false
+                    }
+                write.done?.complete(done)
             }
         }
+
+    /**
+     * *Clear history*: deletes the session history and the track changes, after every write queued
+     * before it, and forgets the playback being recorded. Returns whether it succeeded; a failure is
+     * reported to [warn] without its text, never thrown. Waits for [run] to reach it.
+     */
+    suspend fun clear(): Boolean =
+        queued("Could not clear the session history") {
+            history.clear()
+            playback.forget()
+        }
+
+    /**
+     * Deletes what is older than the [lifetime] it returns when the deletion runs, in its place in
+     * the queue ([SessionHistory.deleteOlderThan]), by the [wall] clock then: so a lifetime made
+     * longer, or *Forever* (null), while it waits is never undercut. Skipped once the wall clock
+     * has jumped (the class's KDoc). Returns whether it succeeded or was skipped; a failure is
+     * reported to [warn] without its text, never thrown.
+     */
+    suspend fun deleteOlderThan(lifetime: () -> Duration?): Boolean =
+        queued("Could not delete old entries from the session history") {
+            val kept = lifetime()
+            val now = wall.now()
+            if (!clockJumped && (now - elapsed().milliseconds - clockOffset).absoluteValue > CLOCK_MARGIN) {
+                clockJumped = true
+                warn("The clock moved: old entries in the session history are kept until the app restarts")
+            }
+            if (kept != null && !clockJumped) history.deleteOlderThan(kept, now)
+        }
+
+    private suspend fun queued(
+        failure: String,
+        run: () -> Unit,
+    ): Boolean {
+        val done = CompletableDeferred<Boolean>()
+        writes.trySend(Write(failure, { run() }, done))
+        return done.await()
+    }
 
     private fun record(change: SessionChange): TrackChangeRecord =
         TrackChangeRecord(
@@ -154,29 +229,54 @@ class HistoryRecorder(
         fun write(
             track: NowPlaying,
             at: Instant,
+            gap: Duration,
             continues: Boolean,
             same: (NowPlaying) -> Boolean,
         ) {
             val start = startedAt
             if (continues && written && start != null) {
-                history.continued(track, start, same)
+                history.continued(track, start, gap, same)
                 return
             }
             val from = if (continues && start != null) start else at
             startedAt = from
             written = false
-            history.started(track, from, same)
+            history.started(track, from, gap, same)
             written = true
+        }
+
+        /** The history was cleared: the playback's next value starts it again, at that value's time. */
+        fun forget() {
+            startedAt = null
+            written = false
         }
     }
 
+    /**
+     * A write in the queue: [run] with the session gap, [failure] reported if it fails, and [done]
+     * told whether it succeeded, when someone waits for it.
+     */
     private class Write(
-        val what: String,
-        val run: () -> Unit,
-    )
+        val failure: String,
+        val run: (Duration) -> Unit,
+        val done: CompletableDeferred<Boolean>? = null,
+    ) {
+        companion object {
+            fun record(
+                what: String,
+                run: (Duration) -> Unit,
+            ) = Write("Could not record $what in the session history", run)
+        }
+    }
 
     private companion object {
         const val TAG = "Sleevesight"
+
+        /**
+         * How far the wall clock may move against the [elapsed] clock before it counts as set: an
+         * hour, far more than a network time correction, far less than a lifetime of days.
+         */
+        val CLOCK_MARGIN: Duration = 1.hours
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session

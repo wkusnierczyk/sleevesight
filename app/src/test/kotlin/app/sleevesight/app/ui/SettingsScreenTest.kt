@@ -48,6 +48,8 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -63,6 +65,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.security.ProviderException
 import javax.crypto.SecretKey
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -109,12 +113,13 @@ class SettingsScreenTest {
         providers: Map<ProviderId, AiProvider> = emptyMap(),
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
+        clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settingsStore, secrets, providers, onOpenCredits) { "Label of $it" }
+                    SettingsScreen(settingsStore, secrets, providers, clearHistory, onOpenCredits) { "Label of $it" }
                 }
             }
             // The screen draws once the settings are read.
@@ -221,7 +226,7 @@ class SettingsScreenTest {
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap()) { it } }
+                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap(), ::clearedAtOnce) { it } }
             }
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_title)).fetchSemanticsNodes().isNotEmpty()
@@ -246,7 +251,7 @@ class SettingsScreenTest {
         val resetting = SecretStore(dataStore, testCipher())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, resetting, emptyMap()) { it } }
+                activity.setContent { SettingsScreen(settings, resetting, emptyMap(), ::clearedAtOnce) { it } }
             }
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
@@ -317,6 +322,76 @@ class SettingsScreenTest {
             compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
             waitFor("the web cache lifetime stored") { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
         }
+
+    @Test
+    fun theHistorysLifetimeAndSessionGapAreChosen() =
+        show {
+            compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_keep_history_forever)).performClick()
+            waitFor("the history kept forever") { current().historyLifetime == null }
+
+            compose.onNodeWithText(text(R.string.settings_session_gap)).performScrollTo().performClick()
+            compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_hours, 1, 1)).performClick()
+            waitFor("a session gap of 1 hour stored") { current().sessionGap == 1.hours }
+        }
+
+    @Test
+    fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
+        runBlocking { settings.update { it.copy(historyLifetime = 12.hours, sessionGap = 45.minutes) } }
+        show {
+            val twelveHours = app.resources.getQuantityString(R.plurals.settings_hours, 12, 12)
+            compose.onNodeWithText(twelveHours).performScrollTo().assertIsDisplayed()
+            val minutes = app.resources.getQuantityString(R.plurals.settings_minutes, 45, 45)
+            compose.onNodeWithText(minutes).performScrollTo().assertIsDisplayed()
+
+            // And offered among the options.
+            compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
+            compose.onAllNodesWithText(twelveHours).assertCountEquals(2)
+        }
+    }
+
+    @Test
+    fun clearHistoryAsksFirst() {
+        var cleared = 0
+        val clear = {
+            cleared++
+            CompletableDeferred(true)
+        }
+        show(clearHistory = clear) {
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear_history_explained)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+            compose.waitForIdle()
+            assertEquals(0, cleared)
+
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitFor("one clear asked for") { cleared == 1 }
+            waitForText(text(R.string.settings_clear_history_done))
+            assertEquals(
+                0,
+                compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().size,
+            )
+        }
+    }
+
+    @Test
+    fun aFailedClearSaysSoUntilOneSucceeds() {
+        var succeeds = false
+        show(clearHistory = { CompletableDeferred(succeeds) }) {
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitForText(text(R.string.settings_clear_history_failed))
+
+            succeeds = true
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitFor("the clear failure message gone") {
+                compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().isEmpty()
+            }
+            waitForText(text(R.string.settings_clear_history_done))
+        }
+    }
 
     @Test
     fun theMusicBrainzLabelsAreASwitchOnByDefault() =
@@ -401,6 +476,9 @@ class SettingsScreenTest {
             for (credit in CREDITS) compose.onNodeWithText(text(credit.name)).performScrollTo().assertIsDisplayed()
         }
     }
+
+    /** *Clear history* done at once. */
+    private fun clearedAtOnce(): Deferred<Boolean> = CompletableDeferred(true)
 
     private fun ComposeTestRule.onAllNodesWithSubstring(text: String) =
         onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes()

@@ -1,12 +1,16 @@
 package app.sleevesight.store
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.history.HistoryDatabase
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -35,7 +39,7 @@ class SessionHistoryTest {
     private fun play(
         track: NowPlaying,
         at: Instant,
-    ) = history.started(track, at) { it.title == track.title }
+    ) = history.started(track, at, GAP) { it.title == track.title }
 
     @Test
     fun `tracks come back in the order they played, as they were kept`() {
@@ -74,10 +78,10 @@ class SessionHistoryTest {
         play(sundown, start)
         val ends = start + 225.seconds
 
-        val carefreeAt = ends + SessionHistory.DEFAULT_SESSION_GAP
+        val carefreeAt = ends + GAP
         val sameSession = play(carefree, carefreeAt)
         // Carefree Highway has no length: the break counts from its start.
-        val next = play(sundown, carefreeAt + SessionHistory.DEFAULT_SESSION_GAP + 1.milliseconds)
+        val next = play(sundown, carefreeAt + GAP + 1.milliseconds)
 
         assertEquals(1L, sameSession.session)
         // The same track as the last one, but after the break: a session of its own.
@@ -95,6 +99,7 @@ class SessionHistoryTest {
             history.continued(
                 carefree.copy(album = "Live"),
                 start + 40.minutes,
+                GAP,
             ) { it.title == carefree.title }
 
         assertEquals(PlayedTrack(updated.id, 1, start, carefree.copy(album = "Live")), history.latestSession().single())
@@ -105,7 +110,7 @@ class SessionHistoryTest {
         // The write that added it failed: the last row is the track before.
         play(sundown, start)
 
-        val added = history.continued(carefree, start + 4.minutes) { it.title == carefree.title }
+        val added = history.continued(carefree, start + 4.minutes, GAP) { it.title == carefree.title }
 
         assertEquals(listOf(sundown, carefree), history.latestSession().map { it.track })
         assertEquals(start + 4.minutes, added.playedAt)
@@ -117,11 +122,11 @@ class SessionHistoryTest {
         history.stopped(start + 10.seconds)
 
         // Within the gap: the same entry, playing again.
-        val resumed = play(sundown, start + 10.seconds + SessionHistory.DEFAULT_SESSION_GAP)
+        val resumed = play(sundown, start + 10.seconds + GAP)
         assertEquals(PlayedTrack(resumed.id, 1, start, sundown), history.latestSession().single())
 
         history.stopped(start + 1.minutes)
-        val later = play(sundown, start + 1.minutes + SessionHistory.DEFAULT_SESSION_GAP + 1.milliseconds)
+        val later = play(sundown, start + 1.minutes + GAP + 1.milliseconds)
         assertEquals(2L, later.session)
         assertEquals(listOf(sundown), history.latestSession().map { it.track })
     }
@@ -141,13 +146,23 @@ class SessionHistoryTest {
     @Test
     fun `a track without a length is timed from its start`() {
         val gap = 10.minutes
-        val short = SessionHistory(driver, sessionGap = gap)
-        short.started(carefree, start) { false }
+        history.started(carefree, start, gap) { false }
 
-        assertEquals(1L, short.started(sundown, start + gap) { false }.session)
+        assertEquals(1L, history.started(sundown, start + gap, gap) { false }.session)
         // Sundown should have ended 225 s after it began.
         val afterSundown = start + gap + 225.seconds
-        assertEquals(2L, short.started(carefree, afterSundown + gap + 1.milliseconds) { false }.session)
+        assertEquals(2L, history.started(carefree, afterSundown + gap + 1.milliseconds, gap) { false }.session)
+    }
+
+    @Test
+    fun `each start is decided by the gap it is given`() {
+        play(sundown, start)
+        history.stopped(start + 1.minutes)
+
+        // 20 minutes on: within the default gap, past a 10-minute one.
+        assertEquals(2L, history.started(carefree, start + 21.minutes, 10.minutes) { false }.session)
+        history.stopped(start + 25.minutes)
+        assertEquals(2L, history.started(sundown, start + 45.minutes, GAP) { false }.session)
     }
 
     @Test
@@ -179,7 +194,89 @@ class SessionHistoryTest {
         history.changed(change)
         history.changed(other)
 
-        assertEquals(listOf(change, other), history.changes())
+        assertEquals(TrackChangePage(listOf(other, change), next = null), history.changes(limit = 10))
+    }
+
+    @Test
+    fun `track changes come in pages, newest first, unshifted by changes written meanwhile`() {
+        val changes = (0 until 5).map { change(start + it.minutes, "Track $it", states = it) }
+        changes.forEach(history::changed)
+
+        val first = history.changes(limit = 2)
+        assertEquals(listOf(changes[4], changes[3]), first.changes)
+        history.changed(change(start + 10.minutes, "Track 5"))
+        val second = history.changes(limit = 2, before = first.next)
+        assertEquals(listOf(changes[2], changes[1]), second.changes)
+        // Exactly a page left: no page after it.
+        assertEquals(TrackChangePage(listOf(changes[0]), next = null), history.changes(limit = 1, before = second.next))
+    }
+
+    @Test
+    fun `old tracks and changes go with their states, and newer ones stay`() {
+        val old = start - 91.days
+        play(sundown, old)
+        history.stopped(old + 4.minutes)
+        history.changed(change(old, "Sundown", states = 3))
+        play(carefree, start)
+        val kept = change(start, "Carefree Highway", states = 2)
+        history.changed(kept)
+
+        history.deleteOlderThan(90.days, now = start)
+
+        assertEquals(listOf(carefree), history.latestSession().map { it.track })
+        assertTrue(history.session(1).isEmpty())
+        assertEquals(listOf(kept), history.changes(limit = 10).changes)
+        // The old change's states went with it.
+        assertEquals(2L, count("track_change_state"))
+
+        // A cutoff at a track's start keeps it.
+        history.deleteOlderThan(Duration.ZERO, now = start)
+        assertEquals(listOf(carefree), history.latestSession().map { it.track })
+        assertEquals(listOf(kept), history.changes(limit = 10).changes)
+    }
+
+    @Test
+    fun `a stream playing across the cutoff keeps its row, and is stopped in it`() {
+        // A stream with no length, begun 100 days ago and still playing.
+        play(carefree, start - 100.days)
+        history.changed(change(start, "Carefree Highway"))
+
+        history.deleteOlderThan(90.days, now = start)
+        val playing = history.latestSession().single()
+        assertEquals(carefree, playing.track)
+
+        history.stopped(start + 1.minutes)
+        assertEquals(start + 1.minutes, history.session(playing.session).single().stoppedAt)
+
+        // Stopped, and followed by another track, it goes.
+        play(sundown, start + 2.minutes)
+        history.deleteOlderThan(90.days, now = start + 2.minutes)
+        // Its session, in which Sundown played a minute later.
+        assertEquals(listOf(sundown), history.session(playing.session).map { it.track })
+    }
+
+    @Test
+    fun `the lifetime is counted back from now, whatever the history's newest time`() {
+        // Nothing played for 60 days: the rows older than 30 days before now go, all of them.
+        for (daysAgo in listOf(100, 70, 60)) {
+            play(sundown, start - daysAgo.days)
+            history.stopped(start - daysAgo.days + 1.minutes)
+        }
+        history.changed(change(start - 60.days, "Sundown"))
+        play(carefree, start - 60.days + 10.minutes)
+        history.stopped(start - 60.days + 11.minutes)
+
+        history.deleteOlderThan(30.days, now = start)
+
+        assertEquals(0L, count("played"))
+        assertEquals(0L, count("track_change"))
+    }
+
+    @Test
+    fun `an empty history has nothing to delete`() {
+        history.deleteOlderThan(90.days, now = start)
+
+        assertTrue(history.latestSession().isEmpty())
     }
 
     @Test
@@ -192,10 +289,33 @@ class SessionHistoryTest {
         history.clear()
 
         assertTrue(history.latestSession().isEmpty())
-        assertTrue(history.changes().isEmpty())
+        assertEquals(TrackChangePage(emptyList(), next = null), history.changes(limit = 10))
         // The next track begins the history again, as session 1.
         assertEquals(1L, play(carefree, start + 1.minutes).session)
     }
+
+    private fun count(table: String): Long =
+        driver
+            .executeQuery(null, "SELECT count(*) FROM $table", { cursor ->
+                cursor.next()
+                QueryResult.Value(cursor.getLong(0) ?: 0)
+            }, 0)
+            .value
+
+    private fun change(
+        at: Instant,
+        to: String,
+        states: Int = 1,
+    ) = TrackChangeRecord(
+        SPOTIFY,
+        at,
+        null,
+        TrackRef(to, null),
+        null,
+        List(states) { state(receivedBeforeMs = 1_000L - it) },
+        null,
+        null,
+    )
 
     private fun state(
         receivedBeforeMs: Long = 1_000,
@@ -213,5 +333,6 @@ class SessionHistoryTest {
 
     private companion object {
         const val SPOTIFY = "com.spotify.music"
+        val GAP = Settings.DEFAULT_SESSION_GAP
     }
 }
