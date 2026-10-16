@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 
 /** The one activity; every screen is a Compose destination in [SleevesightNavHost]. */
@@ -27,6 +28,9 @@ class MainActivity : ComponentActivity() {
                     notificationAccess = graph.notificationAccess,
                     firstRun = graph.firstRun,
                     openAccessSettings = ::openAccessSettings,
+                    settings = {
+                        SettingsScreen(graph.settings, graph.secrets, graph.aiProviders, graph::playerLabel)
+                    },
                 )
             }
         }

@@ -30,12 +30,14 @@ android {
 }
 
 dependencies {
-    // The domain types the session layer maps to (`NowPlaying`).
+    // The domain types the session layer maps to (`NowPlaying`), and `Settings`, `Secret` and the
+    // `AiProvider` interface the settings screen lists models through.
     implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
     // Navigation's typed routes compile against it; declared so compile and runtime agree with
