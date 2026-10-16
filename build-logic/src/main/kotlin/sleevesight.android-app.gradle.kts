@@ -19,9 +19,11 @@ plugins {
 }
 
 extensions.configure<ApplicationExtension> {
-    compileSdk = 36
+    // 37 because `okhttp-android` 5.5.0's AAR metadata requires it (`minCompileSdk`).
+    compileSdk = 37
     defaultConfig {
         minSdk = 26
+        // 36 until Android 17's behaviour changes are checked (#147).
         targetSdk = 36
     }
     buildFeatures {
