@@ -30,6 +30,8 @@ import app.sleevesight.app.ui.FirstRun
 import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -301,6 +303,20 @@ class FirstRunFlowTest {
         }
     }
 
+    private fun seenPlayers() = app.graph.sessions.seenPlayers.value
+
+    /**
+     * That the session layer reads no session: once the settings' first read is in, which the
+     * layer also waits for, nothing appears for a while.
+     */
+    private fun assertNoSessionRead() {
+        runBlocking {
+            app.graph.settings.followedPlayers
+                .first()
+        }
+        idleFor("no session read") { seenPlayers().isEmpty() }
+    }
+
     /** A media session of a player not followed, so starting the session layer reads only the list. */
     private fun addSession(player: String) {
         val controller = MediaController(app, MediaSession(app, "test").sessionToken)
@@ -316,12 +332,12 @@ class FirstRunFlowTest {
         setAccess(granted = false)
         addSession("com.example.player")
         launch().use { scenario ->
-            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
+            assertNoSessionRead()
             setAccess(granted = true)
             scenario.moveToState(Lifecycle.State.STARTED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            shadowOf(Looper.getMainLooper()).idle()
-            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
+            idleUntil("the session list read") { seenPlayers().isNotEmpty() }
+            assertEquals(setOf("com.example.player"), seenPlayers())
         }
     }
 
@@ -336,7 +352,7 @@ class FirstRunFlowTest {
         )
         shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
         launch().use { scenario ->
-            shadowOf(Looper.getMainLooper()).idle()
+            idleUntil("Spotify's track shown") { app.graph.sessions.nowPlaying.value != null }
             assertEquals(
                 "Sundown",
                 app.graph.sessions.nowPlaying.value
@@ -358,11 +374,10 @@ class FirstRunFlowTest {
         setAccess(granted = true)
         addSession("com.example.player")
         launch().use {
-            shadowOf(Looper.getMainLooper()).idle()
-            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
+            assertNoSessionRead()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            shadowOf(Looper.getMainLooper()).idle()
-            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
+            idleUntil("the session list read") { seenPlayers().isNotEmpty() }
+            assertEquals(setOf("com.example.player"), seenPlayers())
         }
     }
 
