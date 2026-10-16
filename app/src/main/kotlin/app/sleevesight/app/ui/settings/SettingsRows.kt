@@ -44,28 +44,35 @@ internal fun Hint(
     Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 
-/** A setting that is on or off; the whole row toggles it. */
+/** A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. */
 @Composable
 internal fun SwitchRow(
     title: String,
     summary: String?,
     checked: Boolean,
-    onChange: (Boolean) -> Unit,
+    indent: Boolean = false,
+    onChange: ((Boolean) -> Unit)?,
 ) {
+    val enabled = onChange != null
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .toggleable(value = checked, role = Role.Switch, onValueChange = onChange)
-                .padding(vertical = 8.dp),
+                .toggleable(
+                    value = checked,
+                    enabled = enabled,
+                    role = Role.Switch,
+                    onValueChange = { onChange?.invoke(it) },
+                ).padding(start = if (indent) 16.dp else 0.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            summary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
+            summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         }
         Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 

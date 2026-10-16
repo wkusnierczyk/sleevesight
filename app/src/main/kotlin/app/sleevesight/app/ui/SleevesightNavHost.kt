@@ -25,12 +25,17 @@ data object Home
 @Serializable
 data object SettingsPage
 
+/** The data sources and their licences, opened from [SettingsPage]. */
+@Serializable
+data object CreditsPage
+
 /**
  * The app's destinations. It opens on [FirstRun] until the user has continued past it and
  * notification access is on, and on [Home] after that. Continuing needs access on, so the
  * first-run screen is seen even when access was granted in Settings before the app was opened.
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
- * (a deep link, a restored back stack) skips it; nor does [SettingsPage], which [settings] draws.
+ * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
+ * given the way to [CreditsPage], and [CreditsPage].
  */
 @Composable
 fun SleevesightNavHost(
@@ -38,7 +43,7 @@ fun SleevesightNavHost(
     firstRun: FirstRunAcknowledgement,
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
-    settings: @Composable () -> Unit = {},
+    settings: @Composable (openCredits: () -> Unit) -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
     // Chosen once: a change of access later does not move the user off the screen they are on.
@@ -70,7 +75,11 @@ fun SleevesightNavHost(
             }
         }
         composable<SettingsPage> {
-            if (firstRun.acknowledged) settings() else FirstRunFirst(navController)
+            val openCredits = { navController.navigate(CreditsPage) }
+            if (firstRun.acknowledged) settings(openCredits) else FirstRunFirst(navController)
+        }
+        composable<CreditsPage> {
+            if (firstRun.acknowledged) CreditsScreen() else FirstRunFirst(navController)
         }
     }
 }

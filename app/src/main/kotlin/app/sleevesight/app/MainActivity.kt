@@ -28,8 +28,14 @@ class MainActivity : ComponentActivity() {
                     notificationAccess = graph.notificationAccess,
                     firstRun = graph.firstRun,
                     openAccessSettings = ::openAccessSettings,
-                    settings = {
-                        SettingsScreen(graph.settings, graph.secrets, graph.aiProviders, graph::playerLabel)
+                    settings = { openCredits ->
+                        SettingsScreen(
+                            graph.settings,
+                            graph.secrets,
+                            graph.aiProviders,
+                            openCredits,
+                            graph::playerLabel,
+                        )
                     },
                 )
             }
