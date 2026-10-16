@@ -55,8 +55,8 @@ class AppGraph(
 
     /**
      * The AI services' clients, for the settings screen's model list. Empty until the pipeline is
-     * wired on the phone (#51), which creates the process's one `NetClient` they need; until then the
-     * screen offers each service's default model.
+     * wired on the phone (#51), which takes them from `:wiring` (`PipelineWiring.aiProviders`, on the
+     * process's one `NetClient`); until then the screen offers each service's default model.
      */
     val aiProviders: Map<ProviderId, AiProvider> = emptyMap()
 
@@ -70,7 +70,7 @@ class AppGraph(
         SessionRepository(
             sessions = SystemActiveSessions(appContext),
             acknowledged = firstRun.state,
-            // `http` art waits for the process's `NetClient` and `:sources`' `ArtFetcher` (#51).
+            // `http` art waits for the pipeline on the phone (#51): `HttpArt { wiring.art(it) }`.
             artLoader = ArtLoader(appContext.contentResolver, HttpArt.NONE, Dispatchers.IO),
             scope = mainScope,
             followed = settings.followedPlayers,

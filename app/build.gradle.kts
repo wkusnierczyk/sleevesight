@@ -36,6 +36,10 @@ dependencies {
     // The session history and the record of track changes (#49), on the Android SQLite driver.
     implementation(project(":store"))
     implementation(libs.sqldelight.android.driver)
+    // The pipeline's adapters, resolver, AI providers and art fetch, on the process's one
+    // `NetClient`, which `:wiring` creates and keeps: `:app` gets `:core` types only, and `:net`
+    // stays off its compile classpath (`compile-forbidden.app` in `config/module-graph.properties`).
+    implementation(project(":wiring"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

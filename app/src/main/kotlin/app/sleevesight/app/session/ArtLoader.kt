@@ -13,7 +13,8 @@ import kotlin.coroutines.CoroutineContext
 
 /**
  * Fetches album art given as an `http` or `https` URI. `:app` may not reach the network, so the
- * app graph wires `:sources`' `ArtFetcher` here once it holds the process's one `NetClient` (#51);
+ * app graph points this at the art fetch `:wiring` builds on the process's one `NetClient`
+ * (`PipelineWiring.art`, over `:sources`' `ArtFetcher`) once the pipeline runs on the phone (#51);
  * until then [NONE] fetches nothing, and such art is missing.
  */
 fun interface HttpArt {
