@@ -8,8 +8,8 @@ import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlayedTrack
-import app.sleevesight.store.SessionHistory
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,7 +68,7 @@ internal class HistoryRecorderSequencesTest(
         private val S = SessionRepository.SETTLE.inWholeMilliseconds
 
         /** The session gap, in milliseconds. */
-        private val GAP = SessionHistory.DEFAULT_SESSION_GAP.inWholeMilliseconds
+        private val GAP = Settings.DEFAULT_SESSION_GAP.inWholeMilliseconds
 
         private const val FORTY_MINUTES = 40 * 60_000L
         private const val SUNDOWN = "Sundown"

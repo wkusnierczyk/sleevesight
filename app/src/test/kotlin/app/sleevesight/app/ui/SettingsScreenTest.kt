@@ -59,6 +59,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.security.ProviderException
 import javax.crypto.SecretKey
+import kotlin.time.Duration.Companion.hours
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -105,12 +106,13 @@ class SettingsScreenTest {
         providers: Map<ProviderId, AiProvider> = emptyMap(),
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
+        clearHistory: suspend () -> Boolean = { true },
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settingsStore, secrets, providers, onOpenCredits) { "Label of $it" }
+                    SettingsScreen(settingsStore, secrets, providers, clearHistory, onOpenCredits) { "Label of $it" }
                 }
             }
             // The screen draws once the settings are read.
@@ -201,7 +203,7 @@ class SettingsScreenTest {
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap()) { it } }
+                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap(), { true }) { it } }
             }
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_title)).fetchSemanticsNodes().isNotEmpty()
@@ -226,7 +228,7 @@ class SettingsScreenTest {
         val resetting = SecretStore(dataStore, testCipher())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, resetting, emptyMap()) { it } }
+                activity.setContent { SettingsScreen(settings, resetting, emptyMap(), { true }) { it } }
             }
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
@@ -293,6 +295,59 @@ class SettingsScreenTest {
             compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
             waitFor { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
         }
+
+    @Test
+    fun theHistorysLifetimeAndSessionGapAreChosen() =
+        show {
+            compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_keep_history_forever)).performClick()
+            waitFor { current().historyLifetime == null }
+
+            compose.onNodeWithText(text(R.string.settings_session_gap)).performScrollTo().performClick()
+            compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_hours, 1, 1)).performClick()
+            waitFor { current().sessionGap == 1.hours }
+        }
+
+    @Test
+    fun clearHistoryAsksFirst() {
+        var cleared = 0
+        val clear: suspend () -> Boolean = {
+            cleared++
+            true
+        }
+        show(clearHistory = clear) {
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear_history_explained)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+            compose.waitForIdle()
+            assertEquals(0, cleared)
+
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitFor { cleared == 1 }
+            assertEquals(
+                0,
+                compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().size,
+            )
+        }
+    }
+
+    @Test
+    fun aFailedClearSaysSoUntilOneSucceeds() {
+        var succeeds = false
+        show(clearHistory = { succeeds }) {
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitForText(text(R.string.settings_clear_history_failed))
+
+            succeeds = true
+            compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_clear)).performClick()
+            waitFor {
+                compose.onAllNodesWithText(text(R.string.settings_clear_history_failed)).fetchSemanticsNodes().isEmpty()
+            }
+        }
+    }
 
     @Test
     fun theMusicBrainzLabelsAreASwitchOnByDefault() =

@@ -14,6 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -34,7 +35,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         spotify.send(metadata(title = "Carefree Highway"))
         settleAll()
 
-        val change = history.changes().single()
+        val change = history.changes(limit = 10).changes.single()
         assertEquals(SPOTIFY, change.player)
         assertEquals(base + 8.seconds, change.changedAt)
         assertEquals(TrackRef("Sundown", null), change.from)
@@ -62,7 +63,8 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
 
         val state =
             history
-                .changes()
+                .changes(limit = 10)
+                .changes
                 .single()
                 .states
                 .single()
@@ -81,7 +83,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         spotify.report(metadata(title = "Carefree Highway"))
 
         assertEquals(listOf("Carefree Highway"), history.latestSession().map { it.track.title })
-        assertEquals(1, history.changes().size)
+        assertEquals(1, history.changes(limit = 10).changes.size)
     }
 
     @Test
@@ -104,5 +106,27 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         val second = history.session(2).single()
         assertEquals(base + resume.milliseconds + settle, second.playedAt)
         assertEquals("Live", second.track.album)
+    }
+
+    @Test
+    fun aNewSessionGapAppliesFromTheNextStart() {
+        // Paused 10 s in, resumed 15 minutes later: within the default gap.
+        val spotify = spotify()
+        at(10_000)
+        spotify.report(state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 0f))
+        val resume = 10_000 + 15 * 60_000L
+        at(resume)
+        spotify.report(state(positionMs = 10_000, updatedAt = resume))
+        assertEquals(1, allRows().size)
+
+        // Then the gap is set to 10 minutes, and the same pause and resume begins a new session.
+        sessionGap.value = 10.minutes
+        at(resume + 10_000)
+        spotify.report(state(PlaybackState.STATE_PAUSED, positionMs = 20_000, speed = 0f))
+        val later = resume + 10_000 + 15 * 60_000L
+        at(later)
+        spotify.report(state(positionMs = 20_000, updatedAt = later))
+
+        assertEquals(listOf(1L, 2L), allRows().map { it.session })
     }
 }

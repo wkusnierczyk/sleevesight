@@ -8,13 +8,18 @@ import app.sleevesight.app.session.SessionChange
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -38,7 +43,8 @@ import kotlin.time.Instant
  *     row takes the update however long it has played;
  *   - another track, or a track after none (a resume, a restart, the session layer started): the
  *     one before, if any, *stopped*, and this one *started*, which alone decides whether a new
- *     listening session begins;
+ *     listening session begins, by the [sessionGap] when it is seen (the user's *Start a new
+ *     session after a break of*; the default until the settings are first read);
  *   - none: the one before *stopped* (paused, stopped, the session layer stopped).
  * - **Times in the history** are when the recorder sees them: a track's start when it is first seen
  *   playing, its stop when it is first seen to stop, both as [SessionRepository.playing] publishes
@@ -56,10 +62,12 @@ import kotlin.time.Instant
  * change. Writes go through one queue, in the order they were seen, each on [io]; a write that fails
  * (the disk full, say) is reported to [warn] and dropped, never thrown, so it does not end the run.
  */
+@Suppress("LongParameterList") // What it records from and to, and the user's gap; the rest are test seams.
 class HistoryRecorder(
     private val sessions: SessionRepository,
     private val history: SessionHistory,
     private val io: CoroutineContext,
+    private val sessionGap: Flow<Duration> = flowOf(Settings.DEFAULT_SESSION_GAP),
     private val elapsed: () -> Long = SystemClock::elapsedRealtime,
     private val wall: Clock = Clock.System,
     private val warn: (String) -> Unit = { Log.w(TAG, it) },
@@ -70,6 +78,7 @@ class HistoryRecorder(
             // The collectors only queue, so they never suspend: a state flow's value is not missed
             // while a write is in progress.
             val writes = Channel<Write>(Channel.UNLIMITED)
+            val gap = sessionGap.stateIn(this, SharingStarted.Eagerly, Settings.DEFAULT_SESSION_GAP)
             launch {
                 sessions.lastChange.filterNotNull().collect { change ->
                     val record = record(change)
@@ -90,7 +99,8 @@ class HistoryRecorder(
                         writes.trySend(Write("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        val write = Write("a track played") { playback.write(track, at, continues, same) }
+                        val gapNow = gap.value
+                        val write = Write("a track played") { playback.write(track, at, gapNow, continues, same) }
                         writes.trySend(write)
                     }
                     before = track
@@ -154,18 +164,19 @@ class HistoryRecorder(
         fun write(
             track: NowPlaying,
             at: Instant,
+            gap: Duration,
             continues: Boolean,
             same: (NowPlaying) -> Boolean,
         ) {
             val start = startedAt
             if (continues && written && start != null) {
-                history.continued(track, start, same)
+                history.continued(track, start, gap, same)
                 return
             }
             val from = if (continues && start != null) start else at
             startedAt = from
             written = false
-            history.started(track, from, same)
+            history.started(track, from, gap, same)
             written = true
         }
     }

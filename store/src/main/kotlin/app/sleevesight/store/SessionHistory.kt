@@ -9,7 +9,6 @@ import app.sleevesight.store.history.Track_change
 import app.sleevesight.store.history.Track_change_state
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 /**
@@ -17,7 +16,7 @@ import kotlin.time.Instant
  * history* and *Learning skip detection*, D15), over a database of their own, apart from the
  * caches: [driver] is the Android driver in `:app`, with [HistoryDatabase.Schema] created on it.
  * Both stay on the phone, are never evicted by the caches' size limit, and are cleared together
- * ([clear]).
+ * ([clear]); what is older than the user's *Keep history for* is deleted ([deleteBefore]).
  *
  * - The session history: each track the session layer saw play, in order, grouped in listening
  *   sessions: the default track list, "Played this session".
@@ -27,11 +26,13 @@ import kotlin.time.Instant
  * The caller says what happened to the history, and these are its rules:
  *
  * 1. [started]: a track began to play: a new one, a resume after a pause or a stop, or one found
- *    playing when the app starts. Only here is a listening session decided. The break is the time
- *    since the last row was last heard ([PlayedTrack.heardUntil]).
- *    - The same track as the last row, and a break of at most [sessionGap]: that row again, playing.
- *    - Otherwise a new row: in the last row's session if the break is at most [sessionGap], else
- *      in the next one.
+ *    playing when the app starts. Only here is a listening session decided, by the session gap the
+ *    caller passes (the user's *Start a new session after a break of*), so a new gap applies from
+ *    the next start. The break is the time since the last row was last heard
+ *    ([PlayedTrack.heardUntil]).
+ *    - The same track as the last row, and a break of at most the gap: that row again, playing.
+ *    - Otherwise a new row: in the last row's session if the break is at most the gap, else in
+ *      the next one.
  * 2. [continued]: the track of the last row plays on without a break, as the player updated it
  *    (artists sent after the title, an album, a new length): the row takes the update, however
  *    long it has played. No session is decided. If the last row is not that track (its write
@@ -41,65 +42,61 @@ import kotlin.time.Instant
  *
  * The art is never kept.
  *
- * Calls are blocking database calls: the app makes them off the main thread, from one writer.
+ * Calls are blocking database calls, made off the main thread. [started], [continued] and [stopped]
+ * come from one writer, in the order the tracks played; [clear] and [deleteBefore] may come from
+ * elsewhere, as each is one transaction. A track whose row either deleted gets a new one with the
+ * writer's next start or update of it (rule 2).
  */
 class SessionHistory(
     driver: SqlDriver,
-    private val sessionGap: Duration = DEFAULT_SESSION_GAP,
 ) {
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
 
     /**
-     * [track] began to play at [at] (rule 1); [sameTrack] says whether a row holds it. Returns the
-     * row that now holds it.
+     * [track] began to play at [at] (rule 1), a listening session ending after a break longer than
+     * [sessionGap]; [sameTrack] says whether a row holds it. Returns the row that now holds it.
      */
     fun started(
         track: NowPlaying,
         at: Instant,
+        sessionGap: Duration,
         sameTrack: (NowPlaying) -> Boolean,
-    ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sameTrack) }
+    ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sessionGap, sameTrack) }
 
     /**
      * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says
      * whether a row holds it. [at] is when this playback started: if no row holds the track, it
-     * starts then. Returns the row that now holds it.
+     * starts then, by [sessionGap]. Returns the row that now holds it.
      */
     fun continued(
         track: NowPlaying,
         at: Instant,
+        sessionGap: Duration,
         sameTrack: (NowPlaying) -> Boolean,
     ): PlayedTrack =
         queries.transactionWithResult {
             val kept = track.copy(artUri = null)
             val last = queries.last()
             if (last != null && sameTrack(last.track)) {
-                playing(last, kept)
+                queries.playing(last, kept)
             } else {
-                start(kept, at, sameTrack)
+                start(kept, at, sessionGap, sameTrack)
             }
         }
 
     private fun start(
         kept: NowPlaying,
         at: Instant,
+        sessionGap: Duration,
         sameTrack: (NowPlaying) -> Boolean,
     ): PlayedTrack {
         val last = queries.last() ?: return queries.insert(kept, at, session = 1)
         val withinGap = at - last.heardUntil <= sessionGap
         return when {
-            withinGap && sameTrack(last.track) -> playing(last, kept)
+            withinGap && sameTrack(last.track) -> queries.playing(last, kept)
             withinGap -> queries.insert(kept, at, last.session)
             else -> queries.insert(kept, at, last.session + 1)
         }
-    }
-
-    /** [last], holding [track] and playing. */
-    private fun playing(
-        last: PlayedTrack,
-        track: NowPlaying,
-    ): PlayedTrack {
-        if (last.track != track || last.stoppedAt != null) queries.update(last.id, track)
-        return last.copy(track = track, stoppedAt = null)
     }
 
     /** The last row stopped playing at [at] (rule 3). */
@@ -145,24 +142,51 @@ class SessionHistory(
         }
     }
 
-    /** Every track change recorded, oldest first: for the diagnostics screen and, later, learning (D15). */
-    fun changes(): List<TrackChangeRecord> {
-        val states = queries.states().executeAsList().groupBy(Track_change_state::change_id)
-        return queries.trackChanges().executeAsList().map { trackChange(it, states[it.id].orEmpty()) }
+    /**
+     * A page of the track changes recorded, newest first: at most [limit], older than the page that
+     * gave [before] as its [TrackChangePage.next], or the latest with none. For the diagnostics
+     * screen (#54) and, later, learning (D15). Pages are by the order the changes were written, so
+     * changes written meanwhile do not shift a later page.
+     */
+    fun changes(
+        limit: Int,
+        before: Long? = null,
+    ): TrackChangePage {
+        require(limit > 0) { "A page holds at least one change, was $limit" }
+        return queries.transactionWithResult {
+            // One more than asked, to know whether an older page follows.
+            val rows = queries.trackChangesBefore(before ?: Long.MAX_VALUE, limit + 1L).executeAsList()
+            val page = rows.take(limit)
+            val states =
+                if (page.isEmpty()) {
+                    emptyMap()
+                } else {
+                    queries
+                        .statesBetween(page.last().id, page.first().id)
+                        .executeAsList()
+                        .groupBy(Track_change_state::change_id)
+                }
+            TrackChangePage(
+                changes = page.map { trackChange(it, states[it.id].orEmpty()) },
+                next = page.lastOrNull()?.id?.takeIf { rows.size > limit },
+            )
+        }
+    }
+
+    /**
+     * Deletes the tracks that began to play before [cutoff] and the track changes that began before
+     * it, in one transaction: what is older than the user's *Keep history for*. By when a track
+     * began rather than when it was last heard: every row has it, and it is the order the history
+     * is in, so what goes is its oldest part; the two times differ by how long a track played,
+     * against a limit of days.
+     */
+    fun deleteBefore(cutoff: Instant) {
+        queries.deleteBefore(cutoff.toEpochMilliseconds())
     }
 
     /** Deletes the session history and the record of track changes together, in one transaction. */
     fun clear() {
         queries.clear()
-    }
-
-    companion object {
-        /**
-         * How long a break in listening ends a listening session: longer than a pause to answer the
-         * door or change trains, shorter than a meal or the gap between the morning's listening
-         * and the evening's.
-         */
-        val DEFAULT_SESSION_GAP: Duration = 30.minutes
     }
 }
 
@@ -185,6 +209,15 @@ private fun HistoryQueries.insert(
         queue_item = kept.queueItemId,
     )
     return PlayedTrack(lastInsertedId().executeAsOne(), session, at, kept)
+}
+
+/** [last], holding [track] and playing. */
+private fun HistoryQueries.playing(
+    last: PlayedTrack,
+    track: NowPlaying,
+): PlayedTrack {
+    if (last.track != track || last.stoppedAt != null) update(last.id, track)
+    return last.copy(track = track, stoppedAt = null)
 }
 
 private fun HistoryQueries.update(
@@ -292,6 +325,16 @@ data class TrackChangeRecord(
     val states: List<PlaybackStateRecord>,
     val sinceLastAction: Duration?,
     val learnedCrossfade: Duration?,
+)
+
+/**
+ * A page of the track changes, newest first ([SessionHistory.changes]).
+ *
+ * @property next what to pass as `before` for the next, older page; null when there is none.
+ */
+data class TrackChangePage(
+    val changes: List<TrackChangeRecord>,
+    val next: Long?,
 )
 
 /**

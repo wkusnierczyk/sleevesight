@@ -1,8 +1,8 @@
 -- The session history and the record of track changes (architecture, *Cache and history* and
--- *Learning skip detection*, D15): on the phone only, outside the caches' size limit, and cleared
--- together (`clear`). Times are epoch milliseconds, lengths and offsets milliseconds. Ids are
--- `AUTOINCREMENT`, so rows keep the order they were written in, and an id is never reused, even
--- after `clear`.
+-- *Learning skip detection*, D15): on the phone only, outside the caches' size limit, kept for
+-- the user's *Keep history for* (`deleteBefore`), and cleared together (`clear`). Times are epoch
+-- milliseconds, lengths and offsets milliseconds. Ids are `AUTOINCREMENT`, so rows keep the order
+-- they were written in, and an id is never reused, even after `clear`.
 
 -- Each track the session layer saw play, once (a track repeated right away is the same track): the
 -- default track list, "Played this session". `session` numbers the listening sessions, from 1: a
@@ -109,11 +109,23 @@ stateInsert:
 INSERT INTO track_change_state (change_id, seq, received_before_ms, status, position_ms, position_before_ms, speed)
 VALUES (?, ?, ?, ?, ?, ?, ?);
 
-trackChanges:
-SELECT * FROM track_change ORDER BY id;
+-- A page of changes, newest first: those before the id `before`, at most `limit`.
+trackChangesBefore:
+SELECT * FROM track_change WHERE id < :before ORDER BY id DESC LIMIT :limit;
 
-states:
-SELECT * FROM track_change_state ORDER BY change_id, seq;
+-- The states of the changes from id `first` to `last`, a page's, by change and in order.
+statesBetween:
+SELECT * FROM track_change_state WHERE change_id BETWEEN :first AND :last ORDER BY change_id, seq;
+
+-- What is older than the user's *Keep history for*, in one transaction: the tracks that began to
+-- play before `cutoff`, and the changes that began before it, with their states. `played` and
+-- `track_change` are scanned, with no index on their times: some tens of thousands of rows a year
+-- each, purged a few times a day. The states are found by their key.
+deleteBefore {
+    DELETE FROM track_change_state WHERE change_id IN (SELECT id FROM track_change WHERE changed_at < :cutoff);
+    DELETE FROM track_change WHERE changed_at < :cutoff;
+    DELETE FROM played WHERE played_at < :cutoff;
+}
 
 -- Both, in one transaction.
 clear {

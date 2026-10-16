@@ -126,12 +126,36 @@
     <string name="settings_cache_wikipedia">Wikipedia</string>
     <string name="settings_cache_wikidata">Wikidata</string>
     <string name="settings_cache_web">Web search</string>
+    <string name="settings_section_history">History</string>
+    <string name="settings_history_hint">The tracks Sleevesight has seen play, and the track changes it learns your skips from. Kept only on this phone.</string>
+    <string name="settings_keep_history">Keep history for</string>
+    <string name="settings_keep_history_forever">Forever</string>
+    <string name="settings_session_gap">Start a new session after a break of</string>
+    <string name="settings_session_gap_summary">Counted from when the last track was heard. A change applies from the next track that starts.</string>
+    <string name="settings_clear_history">Clear history</string>
+    <string name="settings_clear_history_value">Deletes the tracks played and the track changes</string>
+    <string name="settings_clear_history_title">Clear history?</string>
+    <string name="settings_clear_history_explained">Every track Sleevesight has seen play, and every track change it recorded to learn your skips, is deleted from this phone. This cannot be undone.</string>
+    <string name="settings_clear">Clear</string>
+    <string name="settings_clear_history_failed">The history could not be cleared: the phone’s storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources and their licences</string>
 
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="settings_years">
+        <item quantity="one">%d year</item>
+        <item quantity="other">%d years</item>
+    </plurals>
+    <plurals name="settings_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="settings_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
     </plurals>
 
     <!-- Credits: each data source with its licence and attribution (architecture, Licensing). -->

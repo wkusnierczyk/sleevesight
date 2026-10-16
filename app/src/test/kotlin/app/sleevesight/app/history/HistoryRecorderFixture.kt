@@ -13,9 +13,11 @@ import app.sleevesight.app.session.Sessions
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
@@ -33,6 +35,9 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     protected val driver = FailingDriver(jdbc)
     protected val history = SessionHistory(driver)
     protected val warnings = mutableListOf<String>()
+
+    /** The user's *Start a new session after a break of*. */
+    protected val sessionGap = MutableStateFlow(Settings.DEFAULT_SESSION_GAP)
     val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
     private val wall =
         object : Clock {
@@ -46,6 +51,7 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
                 repository,
                 history,
                 io = EmptyCoroutineContext,
+                sessionGap = sessionGap,
                 elapsed = { scheduler.currentTime },
                 wall = wall,
                 warn = { warnings += it },
@@ -74,7 +80,7 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
         track: NowPlaying,
         at: Instant,
     ) {
-        history.started(track, at) { false }
+        history.started(track, at, Settings.DEFAULT_SESSION_GAP) { false }
     }
 
     /** Spotify playing [metadata], or in [playbackState]. */

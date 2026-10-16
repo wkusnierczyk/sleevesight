@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import app.sleevesight.app.history.HistoryRecorder
+import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretStore
@@ -28,6 +29,7 @@ import app.sleevesight.store.history.HistoryDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -83,11 +85,16 @@ class AppGraph(
      */
     val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
 
+    /** *Keep history for* and *Clear history*. */
+    val historyRetention = HistoryRetention(history, settings.settings.map { it.historyLifetime }, Dispatchers.IO)
+
     init {
         // Each player the session layer sees appears under *Players to follow*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
         // What the session layer sees is recorded whether or not the app is visible.
-        mainScope.launch { HistoryRecorder(sessions, history, Dispatchers.IO).run() }
+        val sessionGap = settings.settings.map { it.sessionGap }
+        mainScope.launch { HistoryRecorder(sessions, history, Dispatchers.IO, sessionGap).run() }
+        mainScope.launch { historyRetention.run() }
     }
 
     /** A player's name as the phone knows it, else as the design knows it, else its package. */

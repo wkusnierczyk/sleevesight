@@ -6,6 +6,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -30,6 +31,11 @@ import kotlin.time.Duration.Companion.seconds
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property aiEffort how much the model may reason before it writes, or null for the provider's
  *   default. See [DEFAULT_AI_EFFORT].
+ * @property historyLifetime *Keep history for*: how long the session history and the track changes
+ *   are kept, counted from when a track began to play and a change began; null keeps them for ever.
+ *   See [DEFAULT_HISTORY_LIFETIME].
+ * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
+ *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -48,9 +54,15 @@ data class Settings(
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val aiEffort: ReasoningEffort? = DEFAULT_AI_EFFORT,
+    val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
+    val sessionGap: Duration = DEFAULT_SESSION_GAP,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
+        require(historyLifetime == null || historyLifetime.isPositive()) {
+            "The history lifetime must be positive, was $historyLifetime"
+        }
+        require(sessionGap.isPositive()) { "The session gap must be positive, was $sessionGap" }
     }
 
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
@@ -162,6 +174,26 @@ data class Settings(
          * A user who prefers more deliberate cards raises it, or chooses the provider's default.
          */
         val DEFAULT_AI_EFFORT: ReasoningEffort = ReasoningEffort.LOW
+
+        private const val HISTORY_DAYS = 90
+
+        /**
+         * 90 days. The history is the default track list and what skip detection will learn from
+         * (D15), from labels that come rarely (a skip made from Sleevesight, a tap on Write), so it
+         * wants a season of track changes rather than a week; a season is also enough to look back
+         * on. What the limit bounds is the track changes: each keeps 10 to 30 playback states, some
+         * 25 MB a year at 100 changes a day (#148), so about 6 MB at that rate. *Forever* is offered.
+         */
+        val DEFAULT_HISTORY_LIFETIME: Duration = HISTORY_DAYS.days
+
+        private const val SESSION_GAP_MINUTES = 30
+
+        /**
+         * 30 minutes. How long a break in listening ends a listening session: longer than a pause
+         * to answer the door or change trains, shorter than a meal or the gap between the morning's
+         * listening and the evening's.
+         */
+        val DEFAULT_SESSION_GAP: Duration = SESSION_GAP_MINUTES.minutes
     }
 }
 

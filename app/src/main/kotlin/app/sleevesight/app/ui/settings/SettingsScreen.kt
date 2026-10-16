@@ -38,6 +38,7 @@ import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.time.Duration.Companion.days
@@ -46,20 +47,24 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
- * #84), the insight settings (D5, D13), and the lookup settings (D6, D9); at the end, the way to
- * the credits. Each change is saved at once. The rows show the stored settings, so a change that
- * cannot be saved (the settings file cannot be read or written) leaves its row at the stored value,
- * and the screen says so above the list until a later change is saved.
+ * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
+ * the end, the way to the credits. Each change is saved at once. The rows show the stored settings,
+ * so a change that cannot be saved (the settings file cannot be read or written) leaves its row at
+ * the stored value, and the screen says so above the list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
- * its default model only. [onOpenCredits] opens the credits screen. [playerLabel] names a player by
- * its package.
+ * its default model only. [clearHistory] clears the session history and the track changes, once
+ * the user confirms, and returns whether it succeeded: a failure is said above the list, as a
+ * change that could not be saved is, until a later clear succeeds. [onOpenCredits] opens the
+ * credits screen. [playerLabel] names a player by its package.
  */
+@Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
 @Composable
 fun SettingsScreen(
     settingsStore: SettingsStore,
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
+    clearHistory: suspend () -> Boolean,
     onOpenCredits: () -> Unit = {},
     playerLabel: (String) -> String,
 ) {
@@ -71,24 +76,15 @@ fun SettingsScreen(
     var saveFailed by remember { mutableStateOf(false) }
     // Whether the last change could not be saved.
     var changeFailed by remember { mutableStateOf(false) }
-    val update: Update = { transform ->
-        scope.launch {
-            changeFailed =
-                try {
-                    settingsStore.update(transform)
-                    false
-                } catch (_: IOException) {
-                    // Only an I/O error: cancellation and any other failure propagate.
-                    true
-                }
-        }
-    }
+    // Whether the last *Clear history* failed.
+    var clearFailed by remember { mutableStateOf(false) }
+    val update = scope.updater(settingsStore) { changeFailed = it }
     val keys = KeysShown(secrets, offerReset = saveFailed || SecretState.UNREADABLE in secrets.values)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding()) {
             // Above the list, so it shows wherever the list is scrolled to.
-            if (changeFailed) ChangeFailed()
+            Failures(changeFailed, clearFailed)
             settings?.let { current ->
                 SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
             }
@@ -109,6 +105,13 @@ fun SettingsScreen(
                 state = secrets[shown.id] ?: SecretState.ABSENT,
                 onSave = { value -> secretStore.set(shown.id, Secret(value)).also { saveFailed = !it } },
                 onRemove = { secretStore.clear(shown.id) },
+                onDismiss = close,
+            )
+        }
+
+        SettingsDialog.ClearHistory -> {
+            ClearHistoryDialog(
+                onClear = { scope.launch { clearFailed = !clearHistory() } },
                 onDismiss = close,
             )
         }
@@ -135,6 +138,25 @@ fun SettingsScreen(
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
 
+/** Saves each change to [store] in this scope, telling [failed] whether it could not be saved. */
+private fun CoroutineScope.updater(
+    store: SettingsStore,
+    failed: (Boolean) -> Unit,
+): Update =
+    { transform ->
+        launch {
+            failed(
+                try {
+                    store.update(transform)
+                    false
+                } catch (_: IOException) {
+                    // Only an I/O error: cancellation and any other failure propagate.
+                    true
+                },
+            )
+        }
+    }
+
 /** The dialogs the screen opens, one at a time. */
 internal sealed interface SettingsDialog {
     /** One of [options], each a value with its label; [onSelect] saves the one chosen. */
@@ -154,6 +176,8 @@ internal sealed interface SettingsDialog {
     ) : SettingsDialog
 
     data object ResetKeys : SettingsDialog
+
+    data object ClearHistory : SettingsDialog
 }
 
 /** How the screen names players, and where it leads. */
@@ -192,18 +216,31 @@ private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
         .toInt()
 
-/** Says that the last change could not be saved, without the error's text, which may name a path. */
+/**
+ * Says what could not be saved or done, above the list: the last change, the last *Clear history*.
+ * Never the error's text, which may name a path.
+ */
 @Composable
-private fun ChangeFailed() {
-    Text(
-        stringResource(R.string.settings_change_failed),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.error,
-        modifier =
-            Modifier
-                .padding(start = 24.dp, end = 24.dp, top = 16.dp)
-                .semantics { liveRegion = LiveRegionMode.Polite },
-    )
+private fun Failures(
+    changeFailed: Boolean,
+    clearFailed: Boolean,
+) {
+    val messages =
+        listOfNotNull(
+            R.string.settings_change_failed.takeIf { changeFailed },
+            R.string.settings_clear_history_failed.takeIf { clearFailed },
+        )
+    for (message in messages) {
+        Text(
+            stringResource(message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier =
+                Modifier
+                    .padding(start = 24.dp, end = 24.dp, top = 16.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
 }
 
 @Composable
@@ -239,6 +276,7 @@ private fun SettingsContent(
         LabelsSection(settings, secrets, update)
         InsightsSection(settings, update, open)
         LookupsSection(settings, update, open)
+        HistorySection(settings, update, open)
         SectionHeading(R.string.settings_section_about)
         ValueRow(
             title = stringResource(R.string.credits_title),
