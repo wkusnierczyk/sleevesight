@@ -6,6 +6,7 @@ import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import app.sleevesight.core.model.NowPlaying
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Maps what a media session publishes to the session layer's types (`design/architecture.md`,
@@ -45,6 +46,31 @@ object SessionMapping {
     /** The track's title as [nowPlaying] reads it. */
     fun title(metadata: MediaMetadata?): String? =
         metadata?.let { it.text(MediaMetadata.METADATA_KEY_TITLE) ?: it.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) }
+
+    /**
+     * Whether [next] reports a position well before where [previous] would be by then (extrapolated
+     * while playing, from the two states' own update times): a new track's first state, which may
+     * name no new queue item (Castbox), or a seek back. Unknown positions never move back.
+     */
+    fun movedBack(
+        previous: PlaybackState?,
+        next: PlaybackState?,
+    ): Boolean {
+        if (previous == null || next == null) return false
+        val known = previous.position >= 0 && next.position >= 0
+        val elapsed =
+            if (previous.state == PlaybackState.STATE_PLAYING) {
+                ((next.lastPositionUpdateTime - previous.lastPositionUpdateTime) * previous.playbackSpeed)
+                    .toLong()
+                    .coerceAtLeast(0)
+            } else {
+                0
+            }
+        return known && next.position < previous.position + elapsed - MOVED_BACK.inWholeMilliseconds
+    }
+
+    /** How far back a position must move to count: more than a player's jitter, less than any track. */
+    private val MOVED_BACK = 1.seconds
 
     /** The active queue item the playback state names; the session's −1 ("no item") is null. */
     fun activeItem(state: PlaybackState?): Long? =

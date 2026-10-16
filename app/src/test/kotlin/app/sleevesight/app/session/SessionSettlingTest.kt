@@ -396,6 +396,151 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals(times.sorted(), times)
     }
 
+    /** Moves virtual time on to [ms], running what is due before it. */
+    private fun at(ms: Long) = scheduler.advanceTimeBy((ms - scheduler.currentTime).milliseconds)
+
+    @Test
+    fun castboxsRecordedChangeBeganAtTheNewEpisodesFirstState() {
+        // Recorded (`.dev/probe.jsonl`): the new episode's state falls back to 0 on the same queue
+        // item, 0, and its metadata follows 90 ms later.
+        val castbox = "fm.castbox.audiobook.radio.podcast"
+        followed.value = setOf(castbox)
+        at(1_148_170_321)
+        val session =
+            FakeSession(
+                castbox,
+                metadata =
+                    metadata(
+                        title = "How to build muscle & stay strong at any age",
+                        artist = "ZOE",
+                        mediaId = "1008811046",
+                        durationMs = 3_720_097,
+                    ),
+                playbackState =
+                    state(PlaybackState.STATE_PAUSED, positionMs = 1_878_080, updatedAt = 1_148_170_320, queueItem = 0),
+            )
+        system.active = listOf(session)
+        repository.start()
+
+        at(1_148_173_102)
+        repeat(2) { session.send(state(PlaybackState.STATE_PAUSED, updatedAt = 1_148_173_101, queueItem = 0)) }
+        at(1_148_173_108)
+        session.send(state(PlaybackState.STATE_BUFFERING, updatedAt = 1_148_173_106, queueItem = 0))
+        at(1_148_173_150)
+        session.send(state(PlaybackState.STATE_BUFFERING, updatedAt = 1_148_173_144, queueItem = 0))
+        at(1_148_173_192)
+        session.send(
+            metadata(
+                title = "French supermarkets say fridges targeted in cyberattack",
+                artist = "BBC World Service",
+                mediaId = "1011324312",
+                durationMs = 1_927_000,
+            ),
+        )
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals("1011324312", change.track.mediaId)
+        assertEquals(1_148_173_102L, change.changedAt)
+        assertEquals(
+            PlaybackInfo(castbox, PlaybackStatus.PAUSED, 1_878_080.milliseconds, 1_148_170_320, 1f),
+            change.before,
+        )
+    }
+
+    @Test
+    fun aNewTracksFirstStateWithNoItemBeforeItsMetadataIsWhereTheChangeBegan() {
+        val youtube = youtubeMusic(item = -1)
+        youtube.settled(state(positionMs = 200_000, updatedAt = 100, queueItem = -1))
+
+        at(5_300)
+        youtube.send(state(positionMs = 0, updatedAt = 5_300, queueItem = -1))
+        at(5_350)
+        youtube.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals("Carefree Highway", change.track.title)
+        assertEquals(5_300L, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 100, 1f), change.before)
+    }
+
+    @Test
+    fun aTitleChangingEvery250MsStillSettlesWithinTheLongestBurst() {
+        val youtube = youtubeMusic()
+        val longest = SessionRepository.LONGEST_BURST.inWholeMilliseconds
+        for (sent in 0L..longest step 250) {
+            at(sent)
+            youtube.send(metadata(title = "Title $sent"))
+        }
+        at(longest + 1)
+
+        assertEquals("Title $longest", repository.nowPlaying.value?.title)
+        assertEquals(0L, repository.lastChange.value?.changedAt)
+    }
+
+    /** Spotify, shown and playing, ranked over YouTube Music playing [youtubeState] on "OldYT". */
+    private fun spotifyOverYouTubeMusic(youtubeState: PlaybackState): Pair<FakeSession, FakeSession> {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = FakeSession(SPOTIFY)
+        val youtube = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "OldYT"), playbackState = youtubeState)
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        return spotify to youtube
+    }
+
+    private fun recordChanges(): List<SessionChange> {
+        val changes = mutableListOf<SessionChange>()
+        scope.launch { repository.lastChange.collect { change -> change?.let { changes += it } } }
+        return changes
+    }
+
+    @Test
+    fun aSwitchCompletedByAHiddenBurstThatBeganEarlierIsTimedAtTheSwitch() {
+        // YouTube Music, hidden, changes track and keeps reporting; Spotify changes track after
+        // it began, settles, and pauses; YouTube Music then settles, completing the switch.
+        val (spotify, youtube) = spotifyOverYouTubeMusic(state(queueItem = 4))
+        val changes = recordChanges()
+
+        at(10_000)
+        youtube.send(state(queueItem = 5))
+        youtube.send(metadata(title = "NewYT"))
+        at(10_100)
+        spotify.send(carefree)
+        for (sent in listOf(10_250L, 10_500L, 10_750L)) {
+            at(sent)
+            youtube.send(state(positionMs = sent - 10_000, updatedAt = sent, queueItem = 5))
+            if (sent == 10_500L) spotify.send(state(PlaybackState.STATE_PAUSED, speed = 0f))
+        }
+        at(11_001)
+
+        assertEquals(listOf("Carefree Highway", "NewYT"), changes.map { it.track.title })
+        assertEquals(listOf(10_100L, 11_000L), changes.map { it.changedAt })
+        assertNull(changes.last().before)
+    }
+
+    @Test
+    fun aSwitchToAPausedPlayerThatThenPlaysIsTimedAtTheSwitch() {
+        // YouTube Music, paused, gets new metadata; Spotify changes track; YouTube Music plays
+        // the same item, Spotify pauses, and YouTube Music's settle completes the switch.
+        val (spotify, youtube) = spotifyOverYouTubeMusic(state(PlaybackState.STATE_PAUSED, speed = 0f, queueItem = 4))
+        val changes = recordChanges()
+
+        at(10_000)
+        youtube.send(metadata(title = "NewYT"))
+        at(10_010)
+        spotify.send(carefree)
+        at(10_250)
+        youtube.send(state(queueItem = 4))
+        at(10_320)
+        spotify.send(state(PlaybackState.STATE_PAUSED, speed = 0f))
+        settle()
+
+        assertEquals(listOf("Carefree Highway", "NewYT"), changes.map { it.track.title })
+        assertEquals(listOf(10_010L, 10_550L), changes.map { it.changedAt })
+        assertNull(changes.last().before)
+    }
+
     @Test
     fun anUpdateOfTheSameTrackIsNoChange() {
         val youtube = youtubeMusic()

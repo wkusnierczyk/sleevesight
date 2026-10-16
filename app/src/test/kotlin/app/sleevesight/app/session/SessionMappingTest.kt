@@ -9,9 +9,11 @@ import app.sleevesight.app.session.Sessions.queueItem
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -199,5 +201,20 @@ class SessionMappingTest {
     fun imagesCompareByContent() {
         assertEquals(ArtSource.Image(bitmap(Color.RED)), ArtSource.Image(bitmap(Color.RED)))
         assertNotEquals(ArtSource.Image(bitmap(Color.RED)), ArtSource.Image(bitmap(Color.BLUE)))
+    }
+
+    @Test
+    fun aPositionMovedBackIsMeasuredFromWherePlayingWouldHaveTakenIt() {
+        val playing = state(positionMs = 0, updatedAt = 1_000)
+        // Three minutes on with no report: back to 0 is a move back, and 180 s is not.
+        assertTrue(SessionMapping.movedBack(playing, state(positionMs = 0, updatedAt = 181_000)))
+        assertFalse(SessionMapping.movedBack(playing, state(positionMs = 180_000, updatedAt = 181_000)))
+        // Paused, the position stays: 500 ms back is jitter, 2 s back is a move.
+        val paused = state(PlaybackState.STATE_PAUSED, positionMs = 60_000, speed = 0f, updatedAt = 1_000)
+        assertFalse(SessionMapping.movedBack(paused, state(PlaybackState.STATE_PAUSED, positionMs = 59_500)))
+        assertTrue(SessionMapping.movedBack(paused, state(PlaybackState.STATE_PAUSED, positionMs = 58_000)))
+        // Unknown positions never move back.
+        assertFalse(SessionMapping.movedBack(null, state()))
+        assertFalse(SessionMapping.movedBack(paused, state(positionMs = -1)))
     }
 }

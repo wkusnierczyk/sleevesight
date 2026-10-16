@@ -45,12 +45,14 @@ import kotlin.time.Duration.Companion.seconds
  * else the first followed session: the system lists the most recently active first.
  *
  * **Settling.** [nowPlaying] is mapped from a session's metadata and playback state once they
- * have settled for [SETTLE], or at most [MAX_SETTLE] after the first of them, or after the first
- * that changed the track (see `Attached`), so the two halves of a track change arrive as one. A
- * player that becomes the one shown while its reports are settling is shown once they have.
- * [playback] and [queue] are published at once: skip detection counts the `PLAYING` states before
- * a change and reads the position they report (D5), which coalescing would lose; [lastChange]
- * keeps when each change began.
+ * have settled for [SETTLE]: at most [MAX_SETTLE] after the first of them, or after the first that
+ * changed the title or the queue item, unless the title or the item changes again in the last
+ * [SETTLE] of that; and in any case within [LONGEST_BURST] of the first (see `Attached`). So the
+ * two halves of a track change arrive as one. A player that becomes the one shown while its
+ * reports are settling is shown once they have. [playback] and [queue] are published at once:
+ * skip detection counts the `PLAYING` states before a change and reads the position they report
+ * (D5), which coalescing would lose; [lastChange] keeps when each change began, and its times
+ * never go back.
  *
  * **Lifecycle.** [SleevesightListenerService] calls [start] when the system binds it and [stop] when
  * it unbinds; `MainActivity` also calls [start] on resume while access is granted, since the
@@ -188,7 +190,13 @@ class SessionRepository(
         val track = shown?.track
         nowPlayingState.value = track
         if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
-            changeState.value = changeTo(track, shown.change.takeIf { settled === shown }, switched)
+            val change = changeTo(track, shown.change.takeIf { settled === shown }, switched)
+            val last = changeState.value
+            // Whatever order the sessions settle in, the times never go back: a change that began
+            // before the last one published (a hidden player's, shown once the other paused) is
+            // timed now, as a switch.
+            changeState.value =
+                if (last != null && change.changedAt < last.changedAt) SessionChange(track, clock(), null) else change
         }
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
     }
@@ -197,7 +205,7 @@ class SessionRepository(
      * The record of a change to [track]: the session's own ([own]), made by the settle that
      * triggered this publish; on a switch to another player, only its timing, since that player's
      * playback state says nothing of the track left behind. A switch to a player settled earlier
-     * (the one shown paused) began now, so [lastChange]'s times never go back.
+     * (the one shown paused) began now.
      */
     private fun changeTo(
         track: NowPlaying,
@@ -248,7 +256,8 @@ class SessionRepository(
      * the new track's state just before its metadata (YouTube Music, Castbox) so publishes the
      * new track once, with its own queue item, never the old title with the new item. The window
      * is capped at [MAX_SETTLE], but the cap never falls within [SETTLE] of a report that changed
-     * the title or the queue item, which may be the first half of such a pair.
+     * the title or the queue item, which may be the first half of such a pair, until
+     * [LONGEST_BURST] has passed since the burst's first report.
      */
     private inner class Attached(
         val session: PlayerSession,
@@ -268,7 +277,10 @@ class SessionRepository(
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
                     ifAttached {
                         val item = SessionMapping.activeItem(state)
-                        beginReport(changesTrack = item != null && item != stateItem)
+                        beginReport(
+                            changesTrack = item != null && item != stateItem,
+                            movesBack = SessionMapping.movedBack(this@Attached.state, state),
+                        )
                         if (item != null) stateItem = item
                         this@Attached.state = state
                         settleLater()
@@ -334,8 +346,19 @@ class SessionRepository(
         private var burstStart = 0L
         private var beforeBurst: PlaybackInfo? = null
 
+        /** When the burst's first report came: [LONGEST_BURST] counts from it, whatever else moves. */
+        private var burstFirst = 0L
+
         /** The last report of this burst that changed the title or the queue item; null if none has. */
         private var changeAt: Long? = null
+
+        /**
+         * The last state that moved the position back (see [SessionMapping.movedBack]), and the
+         * state before it: a new track's first state may name no new item (Castbox), so the
+         * change began there if its metadata follows within [SETTLE].
+         */
+        private var movedBackAt: Long? = null
+        private var beforeMovedBack: PlaybackInfo? = null
 
         private var settling: Job? = null
 
@@ -351,38 +374,48 @@ class SessionRepository(
         }
 
         /**
-         * Notes a report before it is applied: the start of a burst, and whether the report
-         * [changesTrack], naming a new title or a new queue item; the other half of the pair may
-         * follow it.
+         * Notes a report before it is applied: the start of a burst, whether the report
+         * [changesTrack], naming a new title or a new queue item (the other half of the pair may
+         * follow it), and whether it [movesBack] the position.
          */
-        private fun beginReport(changesTrack: Boolean) {
+        private fun beginReport(
+            changesTrack: Boolean,
+            movesBack: Boolean = false,
+        ) {
             val now = clock()
+            val before = SessionMapping.playbackInfo(session.player, state)
             if (!pending) {
                 pending = true
+                burstFirst = now
                 changeAt = null
-                beginBurstAt(now)
+                burstStart = now
+                beforeBurst = before
             }
-            if (changesTrack) {
-                if (changeAt == null) beginBurstAt(now)
-                changeAt = now
+            if (changesTrack && changeAt == null) {
+                // The change began here, or at a state just before that moved the position back.
+                val back = movedBackAt?.takeIf { now - it <= SETTLE.inWholeMilliseconds }
+                burstStart = back ?: now
+                beforeBurst = if (back != null) beforeMovedBack else before
             }
-        }
-
-        private fun beginBurstAt(now: Long) {
-            burstStart = now
-            beforeBurst = SessionMapping.playbackInfo(session.player, state)
+            if (changesTrack) changeAt = now
+            if (movesBack) {
+                movedBackAt = now
+                beforeMovedBack = before
+            }
         }
 
         /**
          * Settles [SETTLE] after the last report, restarted by each one; however often the player
-         * reports, within [MAX_SETTLE] of the burst's start, but never sooner than [SETTLE] after a
-         * report that changed the title or the item, so the longest wait does not cut a new
-         * track's state from its metadata.
+         * reports, within [MAX_SETTLE] of the burst's start ([burstStart]), but never sooner than
+         * [SETTLE] after a report that changed the title or the item, so the longest wait does not
+         * cut a new track's state from its metadata; and in any case within [LONGEST_BURST] of the
+         * burst's first report, so a player that keeps changing its title still settles.
          */
         private fun settleLater() {
             val now = clock()
             val deadline = burstStart + MAX_SETTLE.inWholeMilliseconds
-            val latest = changeAt?.let { maxOf(deadline, it + SETTLE.inWholeMilliseconds) } ?: deadline
+            val floor = changeAt?.let { maxOf(deadline, it + SETTLE.inWholeMilliseconds) } ?: deadline
+            val latest = minOf(floor, burstFirst + LONGEST_BURST.inWholeMilliseconds)
             val at = minOf(now + SETTLE.inWholeMilliseconds, latest)
             settling?.cancel()
             settling = scope.launch { delay((at - now).milliseconds).also { settleNow() } }
@@ -452,10 +485,17 @@ class SessionRepository(
          * scrubbed seek bar, a player that reports its position several times a second), counted
          * from its first report or from the first that changed the title or the queue item. With
          * the pipeline's 650 ms debounce after it, a lookup starts at most about 1.7 s after a
-         * change, unless the player keeps changing the title or the item (*next* pressed again
-         * and again): each such report waits for [SETTLE].
+         * change, unless the title or the item changes again in the last [SETTLE] of that (*next*
+         * pressed again and again): each such report waits for [SETTLE], up to [LONGEST_BURST].
          */
         val MAX_SETTLE: Duration = 1.seconds
+
+        /**
+         * The longest any burst waits to settle, counted from its first report, which nothing
+         * moves: a player that changes its title every 250 ms still shows a track at least this
+         * often, and a lookup starts at most about 3.7 s after the burst began.
+         */
+        val LONGEST_BURST: Duration = MAX_SETTLE * 3
 
         /** The players followed until the settings supply them: `Settings`' default, Spotify. */
         val DEFAULT_FOLLOWED: Set<String> = Settings().followedPlayers.filterValues { it }.keys
