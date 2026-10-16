@@ -1,5 +1,6 @@
 package app.sleevesight.app.settings
 
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
@@ -79,7 +80,55 @@ class SettingsCodecTest {
     @Test
     fun noSourcesAndNoPlayersAreChoicesToo() {
         assertEquals(emptySet<SourceSwitch>(), roundTrip(Settings(enabledSources = emptySet())).enabledSources)
-        assertEquals(emptyMap<String, Boolean>(), roundTrip(Settings(followedPlayers = emptyMap())).followedPlayers)
+        // A default player missing from the map is not followed, so it is stored as switched off.
+        assertEquals(
+            mapOf(Settings.SPOTIFY to false),
+            roundTrip(Settings(followedPlayers = emptyMap())).followedPlayers,
+        )
+    }
+
+    private fun storedPlayers(players: Map<String, Boolean>): Preferences {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(followedPlayers = players), prefs)
+        return prefs
+    }
+
+    @Test
+    fun aPlayerSwitchIsStoredOnlyAsTheUsersOverride() {
+        // The default untouched: nothing stored.
+        assertEquals(mutablePreferencesOf(), storedPlayers(mapOf(Settings.SPOTIFY to true)))
+        // The default switched off.
+        assertEquals(
+            mutablePreferencesOf(stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY)),
+            storedPlayers(mapOf(Settings.SPOTIFY to false)),
+        )
+        // A new player seen, so listed off; the default's switch is not stored.
+        assertEquals(
+            mutablePreferencesOf(stringSetPreferencesKey("players.off") to setOf(OTHER_PLAYER)),
+            storedPlayers(mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to false)),
+        )
+        // A new player switched on.
+        assertEquals(
+            mutablePreferencesOf(stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER)),
+            storedPlayers(mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true)),
+        )
+    }
+
+    @Test
+    fun aPlayerSwitchTheUserDidNotMoveFollowsItsDefault() {
+        // Another player seen and switched on; Spotify's switch never moved, so it reads as its
+        // default, as would a player a later version follows by default.
+        val read =
+            SettingsCodec.read(
+                mutablePreferencesOf(
+                    stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                    stringSetPreferencesKey("players.off") to setOf("com.example.third"),
+                ),
+            )
+        assertEquals(
+            mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true, "com.example.third" to false),
+            read.followedPlayers,
+        )
     }
 
     @Test
@@ -130,5 +179,9 @@ class SettingsCodecTest {
             Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LASTFM, lookUpInBackground = true),
             read,
         )
+    }
+
+    private companion object {
+        const val OTHER_PLAYER = "com.example.player"
     }
 }

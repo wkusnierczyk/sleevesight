@@ -99,25 +99,32 @@ internal object SettingsCodec {
         prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
     }
 
-    /** Spotify on by default; once the user has changed any switch, the stored switches are all. */
-    private fun readPlayers(prefs: Preferences): Map<String, Boolean> {
-        val on = prefs[PLAYERS_ON]
-        val off = prefs[PLAYERS_OFF]
-        if (on == null && off == null) return defaults.followedPlayers
-        return off.orEmpty().associateWith { false } + on.orEmpty().associateWith { true }
-    }
+    /**
+     * *Players to follow* as overrides of the defaults, like *Where to look*: a player listed by
+     * default whose switch the user has not moved follows its default, including one a later
+     * version adds or whose default it revises. A player seen but not listed by default is stored
+     * with its switch, off as first listed.
+     */
+    private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
+        defaults.followedPlayers +
+            prefs[PLAYERS_OFF].orEmpty().associateWith { false } +
+            prefs[PLAYERS_ON].orEmpty().associateWith { true }
 
+    /**
+     * Stores the switches that differ from the defaults: on, where the default is not on; off, where
+     * it is not off, newly seen players included. A default player missing from [players] is not
+     * followed, so it is stored as off.
+     */
     private fun writePlayers(
         players: Map<String, Boolean>,
         prefs: MutablePreferences,
     ) {
-        if (players == defaults.followedPlayers) {
-            prefs.remove(PLAYERS_ON)
-            prefs.remove(PLAYERS_OFF)
-        } else {
-            prefs[PLAYERS_ON] = players.filterValues { it }.keys
-            prefs[PLAYERS_OFF] = players.filterValues { !it }.keys
-        }
+        val on = players.filter { (player, follow) -> follow && defaults.followedPlayers[player] != true }.keys
+        val off =
+            players.filter { (player, follow) -> !follow && defaults.followedPlayers[player] != false }.keys +
+                defaults.followedPlayers.filter { (player, follow) -> follow && player !in players }.keys
+        prefs.put(PLAYERS_ON, on.ifEmpty { null }, null)
+        prefs.put(PLAYERS_OFF, off.ifEmpty { null }, null)
     }
 
     /**

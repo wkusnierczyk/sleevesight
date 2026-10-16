@@ -10,8 +10,13 @@ import app.sleevesight.app.secrets.SecretKeySource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
@@ -74,3 +79,23 @@ open class SoftwareKeySource(
 
 /** A cipher with a fixed software key, as the Keystore's key is fixed for the app's life. */
 fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher(SoftwareKeySource(key))
+
+/**
+ * A DataStore over [store] whose reads fail with an I/O error while [failures] is above zero, each
+ * failing read taking one, as a file that cannot be read for a while would.
+ */
+class FlakyDataStore<T>(
+    private val store: DataStore<T>,
+) : DataStore<T> {
+    val failures = AtomicInteger()
+    val reads = AtomicInteger()
+
+    override val data: Flow<T> =
+        flow {
+            reads.incrementAndGet()
+            if (failures.getAndUpdate { maxOf(it - 1, 0) } > 0) throw IOException("cannot read")
+            emitAll(store.data)
+        }
+
+    override suspend fun updateData(transform: suspend (t: T) -> T): T = store.updateData(transform)
+}

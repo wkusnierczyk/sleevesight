@@ -37,7 +37,7 @@ Each change is saved at once. The defaults, and why:
 |---|---|---|
 | AI service, model, API key | No service until you choose one; then Anthropic's cheapest current model, Claude Haiku 5.5 | The key and its bill are yours, and an insight narrates a few lines, which needs no larger model. The model list comes from the service, with your key, once the app looks tracks up; until then the default is offered |
 | Reasoning effort | Low | An insight is short and waited for; the citation check, not the model's deliberation, keeps it honest |
-| Players to follow | Spotify on | A player appears, switched off, once Sleevesight has seen it play; switching it on follows it at once |
+| Players to follow | Spotify on | A player appears, switched off, once it has had a media session (open, playing or paused) while Sleevesight has notification access; switching it on follows it at once |
 | Where to look | Every source on except the model's own knowledge | Last.fm and web search (Exa) also need your key, entered under their switches |
 | Write insights | On | Off makes no AI calls at all; the evidence is still shown |
 | Write insights automatically | On every track change | Goes with preparing the next track, so the card is ready when it starts |

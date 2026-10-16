@@ -59,7 +59,8 @@ class AppGraph(
     /**
      * The session layer, following the players switched on under *Players to follow*: a switch
      * turned on or off reaches it at once. It waits for the settings' first read before it reads
-     * any session, so a player switched off is never followed in between.
+     * any session, so a player switched off is never followed in between, and follows none while
+     * the file cannot be read.
      */
     val sessions =
         SessionRepository(
