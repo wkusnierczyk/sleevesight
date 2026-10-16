@@ -14,11 +14,12 @@ application {
 
 dependencies {
     implementation(project(":core"))
-    implementation(project(":sources"))
-    implementation(project(":ai"))
     implementation(project(":store"))
-    // The CLI creates the process's one `NetClient` and registers the adapters' host policies in its
-    // `NetConfig` (architecture, *Networking*).
+    // The host policies and the adapters and providers, built on the CLI's client (architecture,
+    // *Modules*): the same as the app's.
+    implementation(project(":wiring"))
+    // The CLI creates the process's one `NetClient` from the `NetConfig` `:wiring` builds, and
+    // replays or records through it (architecture, *Networking*).
     implementation(project(":net"))
     // The fixture playlist (`BelowSoundtrack`, `RegressionCase`) is the CLI's input.
     implementation(testFixtures(project(":core")))

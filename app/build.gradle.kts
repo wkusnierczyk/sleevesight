@@ -33,6 +33,10 @@ dependencies {
     // The domain types the session layer maps to (`NowPlaying`), and `Settings`, `Secret` and the
     // `AiProvider` interface the settings screen lists models through.
     implementation(project(":core"))
+    // The pipeline's adapters, resolver, AI providers and art fetch, on the process's one
+    // `NetClient`, which `:wiring` creates and keeps: `:app` gets `:core` types only, and `:net`
+    // stays off its compile classpath (`compile-forbidden.app` in `config/module-graph.properties`).
+    implementation(project(":wiring"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

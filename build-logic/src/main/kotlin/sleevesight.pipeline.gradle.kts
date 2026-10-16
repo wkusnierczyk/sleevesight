@@ -1,4 +1,4 @@
-// A pipeline module (`:core`, `:sources`, `:ai`, `:store`, `:net`): a plain Kotlin JVM module kept
+// A pipeline module (`:core`, `:sources`, `:ai`, `:wiring`, `:store`, `:net`): a plain Kotlin JVM module kept
 // Multiplatform-ready (architecture, decision D2). JSON goes through kotlinx.serialization, so its
 // compiler plugin is applied here.
 //
