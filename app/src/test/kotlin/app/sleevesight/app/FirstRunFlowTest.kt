@@ -3,6 +3,11 @@ package app.sleevesight.app
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
@@ -23,6 +28,7 @@ import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.SleevesightNavHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -213,6 +219,71 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    /** A media session of a player not followed, so starting the session layer reads only the list. */
+    private fun addSession(player: String) {
+        val controller = MediaController(app, MediaSession(app, "test").sessionToken)
+        shadowOf(controller).setPackageName(player)
+        shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
+    }
+
+    @Test
+    fun theAppStartsTheSessionLayerWithoutTheListenerBound() {
+        // As after a force stop or an update: access granted, but the system has not bound the
+        // listener again, so nothing calls `onListenerConnected`.
+        acknowledgeFirstRun()
+        setAccess(granted = false)
+        addSession("com.example.player")
+        launch().use { scenario ->
+            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
+            setAccess(granted = true)
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
+        }
+    }
+
+    @Test
+    fun accessRevokedWhileAwayStopsTheSessionLayerTheAppStarted() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        val controller = MediaController(app, MediaSession(app, "test").sessionToken)
+        shadowOf(controller).setPackageName("com.spotify.music")
+        shadowOf(controller).setMetadata(
+            MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown").build(),
+        )
+        shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
+        launch().use { scenario ->
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(
+                "Sundown",
+                app.graph.sessions.nowPlaying.value
+                    ?.title,
+            )
+            assertEquals(1, shadowOf(controller).callbacks.size)
+
+            setAccess(granted = false)
+            scenario.moveToState(Lifecycle.State.STARTED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            shadowOf(Looper.getMainLooper()).idle()
+            assertNull(app.graph.sessions.nowPlaying.value)
+            assertEquals(0, shadowOf(controller).callbacks.size)
+        }
+    }
+
+    @Test
+    fun theSessionLayerStartedByTheAppStillWaitsForTheFirstRun() {
+        setAccess(granted = true)
+        addSession("com.example.player")
+        launch().use {
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(emptySet<String>(), app.graph.sessions.seenPlayers.value)
+            compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(setOf("com.example.player"), app.graph.sessions.seenPlayers.value)
         }
     }
 
