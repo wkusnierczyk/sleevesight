@@ -10,8 +10,12 @@ import app.sleevesight.app.TestStores
 import app.sleevesight.app.softwareKey
 import app.sleevesight.app.testCipher
 import app.sleevesight.core.Secret
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -22,7 +26,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.IOException
+import java.security.InvalidKeyException
 import java.security.ProviderException
+import java.security.UnrecoverableKeyException
 import javax.crypto.SecretKey
 
 class SecretStoreTest {
@@ -172,18 +178,144 @@ class SecretStoreTest {
             assertEquals(LASTFM_KEY, SecretStore(dataStore, SecretCipher(keys)).get(SecretId.LASTFM)?.reveal())
         }
 
-    @Test
-    fun anUnusableKeystoreKeyIsReplacedSoAKeyCanBeEnteredAgain() =
+    /** A key source that fails once with [failure], as a passing key store error does, then works. */
+    private fun failingOnce(failure: Exception) =
+        object : SoftwareKeySource(key) {
+            var failed = false
+
+            override fun key(): SecretKey {
+                if (!failed) {
+                    failed = true
+                    throw failure
+                }
+                return super.key()
+            }
+        }
+
+    private fun aPassingErrorKeepsTheKeystoreKey(failure: Exception) =
         runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            val keys = failingOnce(failure)
+            val store = SecretStore(dataStore, SecretCipher(keys))
+            assertTrue(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            assertEquals(0, keys.replacements)
+            assertEquals(SecretState.SAVED, store.state(SecretId.LASTFM))
+            assertEquals(LASTFM_KEY, store.get(SecretId.LASTFM)?.reveal())
+            assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
+        }
+
+    @Test
+    fun aPassingInvalidKeyErrorKeepsTheKeystoreKey() = aPassingErrorKeepsTheKeystoreKey(InvalidKeyException("busy"))
+
+    @Test
+    fun aPassingUnrecoverableKeyErrorKeepsTheKeystoreKey() =
+        aPassingErrorKeepsTheKeystoreKey(UnrecoverableKeyException("Failed to load key from keystore"))
+
+    @Test
+    fun aKeyInvalidatedForGoodIsReplacedSoAKeyCanBeEnteredAgain() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
             val keys =
                 object : SoftwareKeySource(key) {
                     override fun key(): SecretKey =
                         if (replacements == 0) throw KeyPermanentlyInvalidatedException() else super.key()
                 }
-            val store = SecretStore(stores.open("secrets"), SecretCipher(keys))
+            val store = SecretStore(dataStore, SecretCipher(keys))
             assertTrue(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
             assertEquals(1, keys.replacements)
             assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
+        }
+
+    @Test
+    fun aKeyThatFailsTwiceIsReplacedWhenTheOtherKeysAreShownNotToOpen() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            // An entry sealed with a key the store no longer has: it does not open, so nothing is lost.
+            SecretStore(dataStore, testCipher(softwareKey())).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            val keys =
+                object : SoftwareKeySource(key) {
+                    var calls = 0
+
+                    override fun key(): SecretKey =
+                        if (++calls <= 2) throw UnrecoverableKeyException("blob") else super.key()
+                }
+            val store = SecretStore(dataStore, SecretCipher(keys))
+            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.replacements)
+            assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+        }
+
+    @Test
+    fun aKeyThatFailsEveryTimeIsReplacedWhenNoOtherKeyIsStored() =
+        runBlocking {
+            val keys =
+                object : SoftwareKeySource(key) {
+                    override fun key(): SecretKey =
+                        if (replacements == 0) throw UnrecoverableKeyException("blob") else super.key()
+                }
+            val store = SecretStore(stores.open("secrets"), SecretCipher(keys))
+            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.replacements)
+        }
+
+    @Test
+    fun aKeyThatFailsEveryTimeIsKeptWhileAnotherKeyOpens() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            // Both seals fail, but the stored key still opens when the guard asks: the Keystore key is kept.
+            val cipher =
+                object : SoftwareKeySource(key) {
+                    var calls = 0
+
+                    override fun key(): SecretKey = if (++calls <= 2) throw InvalidKeyException("busy") else super.key()
+                }
+            val store = SecretStore(dataStore, SecretCipher(cipher))
+            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(0, cipher.replacements)
+        }
+
+    @Test
+    fun aSaveThatFailsAfterAReplacementShowsTheOtherKeysUnreadable() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            val keys =
+                object : SoftwareKeySource(key) {
+                    var invalidated = false
+
+                    override fun key(): SecretKey =
+                        if (invalidated &&
+                            replacements == 0
+                        ) {
+                            throw KeyPermanentlyInvalidatedException()
+                        } else {
+                            super.key()
+                        }
+                }
+            val failingWrites =
+                object : DataStore<Preferences> by dataStore {
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+                        throw IOException("disk full")
+                }
+            val store = SecretStore(failingWrites, SecretCipher(keys))
+            val seen = mutableListOf<SecretState>()
+            val watcher = launch(Dispatchers.IO) { store.states.collect { seen += it.getValue(SecretId.LASTFM) } }
+            withTimeout(5_000) { while (seen.isEmpty()) delay(10) }
+            assertEquals(SecretState.SAVED, seen.last())
+
+            keys.invalidated = true
+            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.replacements)
+            withTimeout(5_000) { while (seen.last() != SecretState.UNREADABLE) delay(10) }
+            watcher.cancel()
         }
 
     @Test

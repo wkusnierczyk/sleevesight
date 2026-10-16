@@ -1,13 +1,13 @@
 package app.sleevesight.app.secrets
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import java.io.IOException
 import java.security.GeneralSecurityException
-import java.security.InvalidKeyException
 import java.security.KeyStore
 import java.security.ProviderException
-import java.security.UnrecoverableKeyException
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -24,9 +24,12 @@ interface SecretKeySource {
      */
     fun key(): SecretKey
 
+    /** Forgets a key looked up earlier, so the next [key] looks it up again; deletes nothing. */
+    fun forget()
+
     /**
-     * Drops a key that can no longer be used, so the next [key] creates a new one. What it sealed
-     * cannot be opened by the new key; it could not be opened by the old one either.
+     * Deletes the key, so the next [key] creates a new one. Nothing it sealed opens again: the caller
+     * replaces it only when that costs nothing (see [SecretCipher.seal]).
      */
     fun replace()
 }
@@ -42,47 +45,95 @@ class SecretCipher(
     private val keys: SecretKeySource,
 ) {
     /**
-     * [plain] sealed, or null when the key store fails. A key the key store reports unusable (an
-     * [InvalidKeyException], which covers a key invalidated for good, or an
-     * [UnrecoverableKeyException]) is replaced and the seal tried once more, so the user can enter a
-     * key again after the Keystore lost theirs. Any other failure leaves the key alone: it may pass,
-     * and the key still opens the other entries.
+     * [plain] sealed, or null when the key store fails.
+     *
+     * A failure is retried once with the key looked up afresh, deleting nothing: Android reports
+     * transient key store errors (secure hardware busy, keystore2 restarting) as the same
+     * [java.security.InvalidKeyException] or [java.security.UnrecoverableKeyException] as a key
+     * that is gone. The key is replaced, and the seal tried once more, only when that loses
+     * nothing: the key store says the key is invalidated for good
+     * ([KeyPermanentlyInvalidatedException]), or [nothingOpens], asked only after the retry
+     * failed, says no stored value can open under it ([mightOpen]; none stored counts). So
+     * the user can enter a key again after the Keystore lost theirs, and a passing error does not
+     * cost the other keys.
      */
     fun seal(
         plain: ByteArray,
         associated: ByteArray,
-    ): ByteArray? =
-        when (val first = attempt(plain, associated)) {
-            is Attempt.Sealed -> first.value
-            Attempt.Failed -> null
-            Attempt.KeyUnusable -> if (replaced()) (attempt(plain, associated) as? Attempt.Sealed)?.value else null
+        nothingOpens: () -> Boolean = { false },
+    ): ByteArray? {
+        var result = attempt(plain, associated)
+        if (result == Attempt.Failed) {
+            keys.forget()
+            result = attempt(plain, associated)
         }
+        val replace = result == Attempt.Invalidated || (result == Attempt.Failed && nothingOpens())
+        if (replace && replaced()) result = attempt(plain, associated)
+        return (result as? Attempt.Sealed)?.value
+    }
 
     /**
      * The plain value of [sealed], or null when it cannot be opened: a value in another format, a
      * damaged one, one sealed with another key (the Keystore key is gone, as after a restore onto
      * another phone or a reset Keystore), or a key store that fails.
      */
-    @Suppress("SwallowedException") // Every such failure means the same to the caller: unreadable.
     fun open(
         sealed: ByteArray,
         associated: ByteArray,
-    ): ByteArray? {
-        if (sealed.size < HEADER_BYTES + TAG_BYTES || sealed[0] != VERSION) return null
-        return try {
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, keys.key(), GCMParameterSpec(TAG_BITS, sealed, 1, IV_BYTES))
-            cipher.updateAAD(associated)
-            cipher.doFinal(sealed, HEADER_BYTES, sealed.size - HEADER_BYTES)
-        } catch (e: GeneralSecurityException) {
-            null
-        } catch (e: ProviderException) {
-            null
-        } catch (e: IOException) {
-            // The key store could not be loaded.
-            null
+    ): ByteArray? = (read(sealed, associated) as? Read.Opened)?.value
+
+    /**
+     * Whether [sealed] opens, or may open once the key store works again: false only when it is
+     * shown not to, being damaged, sealed with another key, or under a key invalidated for good. A
+     * key store failure is no such proof, since Android reports a passing error as it reports a key
+     * that is gone; the guard of [seal] relies on that.
+     */
+    fun mightOpen(
+        sealed: ByteArray,
+        associated: ByteArray,
+    ): Boolean =
+        when (val read = read(sealed, associated)) {
+            is Read.Opened -> {
+                read.value.fill(0)
+                true
+            }
+
+            Read.KeyStoreFailed -> {
+                true
+            }
+
+            Read.Lost -> {
+                false
+            }
         }
-    }
+
+    @Suppress("SwallowedException") // The kind of failure is all the callers act on.
+    private fun read(
+        sealed: ByteArray,
+        associated: ByteArray,
+    ): Read =
+        if (sealed.size < HEADER_BYTES + TAG_BYTES || sealed[0] != VERSION) {
+            Read.Lost
+        } else {
+            try {
+                val cipher = Cipher.getInstance(TRANSFORMATION)
+                cipher.init(Cipher.DECRYPT_MODE, keys.key(), GCMParameterSpec(TAG_BITS, sealed, 1, IV_BYTES))
+                cipher.updateAAD(associated)
+                Read.Opened(cipher.doFinal(sealed, HEADER_BYTES, sealed.size - HEADER_BYTES))
+            } catch (e: AEADBadTagException) {
+                // Damaged, moved from another entry, or sealed with another key.
+                Read.Lost
+            } catch (e: KeyPermanentlyInvalidatedException) {
+                Read.Lost
+            } catch (e: GeneralSecurityException) {
+                Read.KeyStoreFailed
+            } catch (e: ProviderException) {
+                Read.KeyStoreFailed
+            } catch (e: IOException) {
+                // The key store could not be loaded.
+                Read.KeyStoreFailed
+            }
+        }
 
     @Suppress("SwallowedException") // The kind of failure is all the caller acts on.
     private fun attempt(
@@ -97,10 +148,8 @@ class SecretCipher(
             val iv = cipher.iv
             check(iv.size == IV_BYTES) { "Unexpected IV length ${iv.size}" }
             Attempt.Sealed(byteArrayOf(VERSION) + iv + cipher.doFinal(plain))
-        } catch (e: InvalidKeyException) {
-            Attempt.KeyUnusable
-        } catch (e: UnrecoverableKeyException) {
-            Attempt.KeyUnusable
+        } catch (e: KeyPermanentlyInvalidatedException) {
+            Attempt.Invalidated
         } catch (e: GeneralSecurityException) {
             Attempt.Failed
         } catch (e: ProviderException) {
@@ -122,12 +171,25 @@ class SecretCipher(
             false
         }
 
+    private sealed interface Read {
+        class Opened(
+            val value: ByteArray,
+        ) : Read
+
+        /** Shown not to open: damaged, sealed with another key, or the key is gone for good. */
+        data object Lost : Read
+
+        /** The key store failed; it may open later. */
+        data object KeyStoreFailed : Read
+    }
+
     private sealed interface Attempt {
         class Sealed(
             val value: ByteArray,
         ) : Attempt
 
-        data object KeyUnusable : Attempt
+        /** The key store says the key is gone for good. */
+        data object Invalidated : Attempt
 
         data object Failed : Attempt
     }
@@ -161,6 +223,10 @@ class AndroidKeystoreKey(
         synchronized(lock) {
             cached ?: ((keyStore().getKey(alias, null) as? SecretKey) ?: generate()).also { cached = it }
         }
+
+    override fun forget() {
+        synchronized(lock) { cached = null }
+    }
 
     override fun replace() {
         synchronized(lock) {

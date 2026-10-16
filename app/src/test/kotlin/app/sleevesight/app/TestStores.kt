@@ -55,6 +55,8 @@ open class SoftwareKeySource(
 
     override fun key(): SecretKey = current
 
+    override fun forget() = Unit
+
     override fun replace() {
         replacements++
         current = softwareKey()
