@@ -33,6 +33,9 @@ dependencies {
     // The domain types the session layer maps to (`NowPlaying`), and `Settings`, `Secret` and the
     // `AiProvider` interface the settings screen lists models through.
     implementation(project(":core"))
+    // The session history and the record of track changes (#49), on the Android SQLite driver.
+    implementation(project(":store"))
+    implementation(libs.sqldelight.android.driver)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -53,4 +56,6 @@ dependencies {
     // Virtual time for the session layer's settle window.
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    // The history's tests run on an in-memory database through the JDBC driver, as `:store`'s do.
+    testImplementation(libs.sqldelight.sqlite.driver)
 }

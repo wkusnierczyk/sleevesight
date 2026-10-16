@@ -190,33 +190,38 @@ class SessionRepository(
         val track = shown?.track
         nowPlayingState.value = track
         if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
-            val change = changeTo(track, shown.change.takeIf { settled === shown }, switched)
+            val change = changeTo(previous, track, shown.change.takeIf { settled === shown }, switched)
             val last = changeState.value
             // Whatever order the sessions settle in, the times never go back: a change that began
             // before the last one published (a hidden player's, shown once the other paused) is
             // timed now, as a switch.
             changeState.value =
-                if (last != null && change.changedAt < last.changedAt) SessionChange(track, clock(), null) else change
+                if (last != null && change.changedAt < last.changedAt) {
+                    SessionChange(track, clock(), null, from = previous)
+                } else {
+                    change
+                }
         }
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
     }
 
     /**
-     * The record of a change to [track]: the session's own ([own]), made by the settle that
-     * triggered this publish; on a switch to another player, only its timing, since that player's
-     * playback state says nothing of the track left behind. A switch to a player settled earlier
-     * (the one shown paused) began now.
+     * The record of a change from [previous] to [track]: the session's own ([own]), made by the
+     * settle that triggered this publish; on a switch to another player, only its timing, since
+     * that player's playback states say nothing of the track left behind. A switch to a player
+     * settled earlier (the one shown paused) began now.
      */
     private fun changeTo(
+        previous: NowPlaying,
         track: NowPlaying,
         own: SessionChange?,
         switched: Boolean,
     ): SessionChange {
         val mine = own?.takeIf { it.track == track }
         return when {
-            mine == null -> SessionChange(track, clock(), null)
-            switched -> mine.copy(before = null)
-            else -> mine
+            mine == null -> SessionChange(track, clock(), null, from = previous)
+            switched -> mine.copy(before = null, from = previous, states = emptyList())
+            else -> mine.copy(from = previous)
         }
     }
 
@@ -283,6 +288,7 @@ class SessionRepository(
                         )
                         if (item != null) stateItem = item
                         this@Attached.state = state
+                        remember(SessionMapping.playbackInfo(session.player, state))
                         settleLater()
                     }
                 }
@@ -345,6 +351,14 @@ class SessionRepository(
          */
         private var burstStart = 0L
         private var beforeBurst: PlaybackInfo? = null
+        private var statesBeforeBurst: List<StateReport> = emptyList()
+
+        /**
+         * The playback states reported in the last [STATES_BEFORE_CHANGE], at most
+         * [MAX_STATES_BEFORE_CHANGE] of them, oldest first: the pattern of states before a change,
+         * recorded with it (D15), as Spotify's clusters before a natural end.
+         */
+        private val recentStates = ArrayDeque<StateReport>()
 
         /** When the burst's first report came: [LONGEST_BURST] counts from it, whatever else moves. */
         private var burstFirst = 0L
@@ -360,6 +374,7 @@ class SessionRepository(
          */
         private var movedBackAt: Long? = null
         private var beforeMovedBack: PlaybackInfo? = null
+        private var statesBeforeMovedBack: List<StateReport> = emptyList()
 
         private var settling: Job? = null
 
@@ -393,6 +408,7 @@ class SessionRepository(
                 changeAt = null
                 burstStart = now
                 beforeBurst = before
+                statesBeforeBurst = statesBefore(now)
             }
             if (changesTrack && changeAt == null) {
                 // The change began here: at a new item, which marks it; or, at a new title, at a
@@ -400,14 +416,31 @@ class SessionRepository(
                 val back = movedBackAt?.takeIf { newTitle && now - it <= SETTLE.inWholeMilliseconds }
                 burstStart = back ?: now
                 beforeBurst = if (back != null) beforeMovedBack else before
+                statesBeforeBurst = if (back != null) statesBeforeMovedBack else statesBefore(now)
                 movedBackAt = null
             }
             if (changesTrack) changeAt = now
             if (movesBack && !newItem) {
                 movedBackAt = now
                 beforeMovedBack = before
+                statesBeforeMovedBack = statesBefore(now)
             }
         }
+
+        /** Keeps [state], reported now, among the [recentStates]. */
+        private fun remember(state: PlaybackInfo) {
+            val now = clock()
+            recentStates.addLast(StateReport(now, state))
+            while (recentStates.size > MAX_STATES_BEFORE_CHANGE ||
+                now - recentStates.first().at > STATES_BEFORE_CHANGE.inWholeMilliseconds
+            ) {
+                recentStates.removeFirst()
+            }
+        }
+
+        /** The states reported in the [STATES_BEFORE_CHANGE] before [now], before the report now arriving. */
+        private fun statesBefore(now: Long): List<StateReport> =
+            recentStates.filter { now - it.at <= STATES_BEFORE_CHANGE.inWholeMilliseconds }
 
         /**
          * Settles [SETTLE] after the last report, restarted by each one; however often the player
@@ -443,7 +476,12 @@ class SessionRepository(
             track = now
             trackMetadata = metadata
             val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
-            change = if (pending && changed) SessionChange(checkNotNull(now), burstStart, beforeBurst) else null
+            change =
+                if (pending && changed) {
+                    SessionChange(checkNotNull(now), burstStart, beforeBurst, states = statesBeforeBurst)
+                } else {
+                    null
+                }
             pending = false
         }
 
@@ -501,6 +539,17 @@ class SessionRepository(
          * often, and a lookup starts at most about 3.7 s after the burst began.
          */
         val LONGEST_BURST: Duration = MAX_SETTLE * 3
+
+        /**
+         * How far back the playback states before a change are kept with it ([SessionChange.states]):
+         * past Spotify's early cluster, about 3 s before a natural end (`design/design.md`, *Track
+         * changes*), which skip detection may learn from (D15) besides the late cluster D5 counts.
+         * Not a setting: it only sizes what is recorded.
+         */
+        val STATES_BEFORE_CHANGE: Duration = 5.seconds
+
+        /** The most states kept before a change, the latest: two of Spotify's clusters of about six, with room. */
+        const val MAX_STATES_BEFORE_CHANGE: Int = 32
 
         /** The players followed until the settings supply them: `Settings`' default, Spotify. */
         val DEFAULT_FOLLOWED: Set<String> = Settings().followedPlayers.filterValues { it }.keys
