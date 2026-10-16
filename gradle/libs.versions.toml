@@ -9,8 +9,8 @@ kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
 asm = "9.9"
 sqldelight = "2.4.1"
-# The last AndroidX releases that compile against API 36 (`compileSdk`); Compose 1.12 and
-# Navigation 2.10 need 37.
+# Held at the last AndroidX releases that compiled against API 36; `compileSdk` is 37 since #143,
+# and the move to Compose 1.12 and Navigation 2.10 is #146.
 androidx-compose-bom = "2026.06.01"
 androidx-activity = "1.12.4"
 androidx-navigation = "2.9.8"
