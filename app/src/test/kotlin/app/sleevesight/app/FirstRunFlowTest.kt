@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.setContent
+import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -20,6 +22,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.FirstRun
 import app.sleevesight.app.ui.Home
+import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -213,6 +216,45 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun homeOpensTheSettings() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launch().use {
+            compose.onNodeWithText(text(R.string.home_settings)).performClick()
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.settings_section_ai)).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun theSettingsSendTheUserToTheFirstRunScreenUntilItIsAcknowledged() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        launch().use { scenario ->
+            lateinit var nav: NavHostController
+            scenario.onActivity { activity ->
+                val graph = (activity.application as SleevesightApplication).graph
+                activity.setContent {
+                    nav = rememberNavController()
+                    SleevesightNavHost(
+                        graph.notificationAccess,
+                        graph.firstRun,
+                        { true },
+                        nav,
+                    ) { Text("Settings drawn") }
+                }
+            }
+            compose.waitForIdle()
+            app.getSharedPreferences("first_run", Context.MODE_PRIVATE).edit { clear() }
+            scenario.onActivity { nav.navigate(SettingsPage) }
+
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
+            assertEquals(0, compose.onAllNodesWithText("Settings drawn").fetchSemanticsNodes().size)
         }
     }
 
