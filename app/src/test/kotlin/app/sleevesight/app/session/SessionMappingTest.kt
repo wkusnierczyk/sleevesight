@@ -9,9 +9,11 @@ import app.sleevesight.app.session.Sessions.queueItem
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -199,5 +201,26 @@ class SessionMappingTest {
     fun imagesCompareByContent() {
         assertEquals(ArtSource.Image(bitmap(Color.RED)), ArtSource.Image(bitmap(Color.RED)))
         assertNotEquals(ArtSource.Image(bitmap(Color.RED)), ArtSource.Image(bitmap(Color.BLUE)))
+    }
+
+    @Test
+    fun onlyAFallToTheStartOfATrackFromPastItMovesBack() {
+        assertTrue(SessionMapping.movedBack(state(positionMs = 180_000), state(positionMs = 0)))
+        assertTrue(
+            SessionMapping.movedBack(state(PlaybackState.STATE_PAUSED, positionMs = 3_000), state(positionMs = 1_000)),
+        )
+        // A seek to mid-track, and a fall from no further than the start.
+        assertFalse(SessionMapping.movedBack(state(positionMs = 30_000), state(positionMs = 5_000)))
+        assertFalse(SessionMapping.movedBack(state(positionMs = 2_000), state(positionMs = 0)))
+        // Castbox stalled: `PLAYING` at 0, reported again 4 s later, still at 0.
+        assertFalse(
+            SessionMapping.movedBack(
+                state(positionMs = 0, updatedAt = 1_148_239_036),
+                state(positionMs = 0, updatedAt = 1_148_243_292),
+            ),
+        )
+        // Unknown positions never fall back.
+        assertFalse(SessionMapping.movedBack(null, state()))
+        assertFalse(SessionMapping.movedBack(state(positionMs = 180_000), state(positionMs = -1)))
     }
 }
