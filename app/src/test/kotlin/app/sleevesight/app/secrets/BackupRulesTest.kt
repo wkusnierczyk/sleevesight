@@ -17,7 +17,8 @@ import org.xmlpull.v1.XmlPullParser
  * The stored keys are sealed with a Keystore key that never leaves the phone, so a backup of them
  * would restore as unreadable entries, and a backup of the settings would carry the players and
  * sources the user chose. Neither is backed up or transferred: the DataStore files are under the
- * app's `files/`, which the rules exclude with everything else.
+ * app's `files/`, which the rules exclude with everything else. Nor is the session history, with
+ * the record of track changes (#49), in the app's `databases/`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -35,7 +36,7 @@ class BackupRulesTest {
     }
 
     @Test
-    fun theFilesDomainIsExcludedFromCloudBackupAndDeviceTransfer() {
+    fun theFilesAndDatabasesDomainsAreExcludedFromCloudBackupAndDeviceTransfer() {
         val excluded = mutableMapOf<String, MutableSet<String>>()
         val parser = app.resources.getXml(R.xml.data_extraction_rules)
         var section: String? = null
@@ -53,6 +54,8 @@ class BackupRulesTest {
         for (s in listOf("cloud-backup", "device-transfer")) {
             assertTrue("$s excludes the files", "file" in excluded[s].orEmpty())
             assertTrue("$s excludes the device-protected files", "device_file" in excluded[s].orEmpty())
+            assertTrue("$s excludes the databases", "database" in excluded[s].orEmpty())
+            assertTrue("$s excludes the device-protected databases", "device_database" in excluded[s].orEmpty())
         }
     }
 }

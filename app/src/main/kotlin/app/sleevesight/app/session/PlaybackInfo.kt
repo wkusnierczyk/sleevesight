@@ -38,7 +38,10 @@ data class PlaybackInfo(
     }
 }
 
-/** The states of `PlaybackState` the app tells apart; the rest are [OTHER]. */
+/**
+ * The states of `PlaybackState` the app tells apart; the rest are [OTHER]. The session history
+ * stores these names with each track change (#49), so renaming one changes what older rows mean.
+ */
 enum class PlaybackStatus {
     NONE,
     STOPPED,
