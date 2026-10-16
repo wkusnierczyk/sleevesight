@@ -9,7 +9,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 class SettingsTest {
@@ -114,5 +116,15 @@ class SettingsTest {
         Crossfade.Fixed(15.seconds)
         assertFailsWith<IllegalArgumentException> { Crossfade.Fixed(16.seconds) }
         assertFailsWith<IllegalArgumentException> { Crossfade.Fixed((-1).seconds) }
+    }
+
+    @Test
+    fun `the history is kept 90 days, a session ends after a 30-minute break, and both are positive`() {
+        assertEquals(90.days, defaults.historyLifetime)
+        assertEquals(30.minutes, defaults.sessionGap)
+        // Kept for ever.
+        defaults.copy(historyLifetime = null)
+        assertFailsWith<IllegalArgumentException> { defaults.copy(historyLifetime = Duration.ZERO) }
+        assertFailsWith<IllegalArgumentException> { defaults.copy(sessionGap = Duration.ZERO) }
     }
 }

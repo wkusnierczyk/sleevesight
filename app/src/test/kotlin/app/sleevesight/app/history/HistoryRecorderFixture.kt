@@ -13,14 +13,18 @@ import app.sleevesight.app.session.Sessions
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -33,25 +37,44 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     protected val driver = FailingDriver(jdbc)
     protected val history = SessionHistory(driver)
     protected val warnings = mutableListOf<String>()
+
+    /** The user's *Start a new session after a break of*, as each read of the settings gives it. */
+    protected val sessionGap = MutableSharedFlow<Duration>(replay = 1)
+
+    /** Whether the settings have been read when the recorder starts: then the gap is the default. */
+    protected open val settingsRead = true
     val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
+
+    /** How far the wall clock has been set, ahead of [base] plus the virtual time. */
+    protected var clockSet: Duration = Duration.ZERO
     private val wall =
         object : Clock {
-            override fun now(): Instant = base + scheduler.currentTime.milliseconds
+            override fun now(): Instant = base + clockSet + scheduler.currentTime.milliseconds
         }
+
+    /** Where the writes run: at once, unless a test holds them. */
+    protected open val io: CoroutineContext = EmptyCoroutineContext
+
+    protected lateinit var recorder: HistoryRecorder
 
     @Before
     fun record() {
-        val recorder =
-            HistoryRecorder(
-                repository,
-                history,
-                io = EmptyCoroutineContext,
-                elapsed = { scheduler.currentTime },
-                wall = wall,
-                warn = { warnings += it },
-            )
+        if (settingsRead) sessionGap.tryEmit(Settings.DEFAULT_SESSION_GAP)
+        recorder = newRecorder()
         scope.launch { recorder.run() }
     }
+
+    /** A recorder on this fixture's history and clocks, as a new process would make it. */
+    protected fun newRecorder() =
+        HistoryRecorder(
+            repository,
+            history,
+            io = io,
+            sessionGap = sessionGap,
+            elapsed = { scheduler.currentTime },
+            wall = wall,
+            warn = { warnings += it },
+        )
 
     @After
     fun close() = jdbc.close()
@@ -74,7 +97,7 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
         track: NowPlaying,
         at: Instant,
     ) {
-        history.started(track, at) { false }
+        history.started(track, at, Settings.DEFAULT_SESSION_GAP) { false }
     }
 
     /** Spotify playing [metadata], or in [playbackState]. */

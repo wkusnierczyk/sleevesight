@@ -49,9 +49,14 @@ internal object SettingsCodec {
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
     private val ARTIST_LIFETIME_MS = longPreferencesKey("cache.artist_lifetime_ms")
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
+    private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
+    private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
 
     /** `aiEffort` null is the provider's default, which needs a name of its own to be stored. */
     private const val PROVIDER_DEFAULT_EFFORT = "PROVIDER_DEFAULT"
+
+    /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
+    private const val FOREVER = -1L
 
     private fun lifetimeKey(source: SourceId) = longPreferencesKey("cache.lifetime_ms.${source.name}")
 
@@ -74,6 +79,12 @@ internal object SettingsCodec {
                 prefs[ARTIST_LIFETIME_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.artistCacheLifetime,
             cacheSizeLimit = prefs[CACHE_SIZE_LIMIT]?.takeIf { it >= 0 } ?: defaults.cacheSizeLimit,
             aiEffort = readEffort(prefs),
+            historyLifetime =
+                when (val stored = prefs[HISTORY_LIFETIME_MS]) {
+                    FOREVER -> null
+                    else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
+                },
+            sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
         )
 
     fun write(
@@ -106,6 +117,12 @@ internal object SettingsCodec {
             defaults.artistCacheLifetime.inWholeMilliseconds,
         )
         prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
+        prefs.put(
+            HISTORY_LIFETIME_MS,
+            settings.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+            defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+        )
+        prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
     }
 
     /**

@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
                             graph.settings,
                             graph.secrets,
                             graph.aiProviders,
+                            graph.historyRetention::clear,
                             openCredits,
                             graph::playerLabel,
                         )
