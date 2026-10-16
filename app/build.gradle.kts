@@ -24,10 +24,13 @@ android {
 }
 
 dependencies {
+    // `Settings`, `Secret` and the `AiProvider` interface the settings screen lists models through.
+    implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.core)
     // Renders the previews in the IDE; debug only.
@@ -37,5 +40,6 @@ dependencies {
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
 }

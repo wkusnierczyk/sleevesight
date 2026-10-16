@@ -14,6 +14,7 @@ sqldelight = "2.4.1"
 androidx-compose-bom = "2026.06.01"
 androidx-activity = "1.12.4"
 androidx-navigation = "2.9.8"
+androidx-datastore = "1.2.1"
 junit4 = "4.13.2"
 robolectric = "4.17"
 
@@ -45,5 +46,6 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
