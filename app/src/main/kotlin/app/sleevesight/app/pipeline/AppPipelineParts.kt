@@ -20,9 +20,10 @@ import kotlinx.coroutines.flow.flow
 /**
  * The pipeline's stages in the app, for [PipelineHost]: the adapters, the resolver, MusicBrainz's
  * genre labels and the AI services from [wiring], on the process's one `NetClient`; the caches from
- * [cache], asked for at the first build, which follows the first-run acknowledgement, so the cache
- * database is not opened before it. The adapters are those [PipelineWiring.adapters] builds from the keys and the web
- * engines switched on: Last.fm only with its key, web search only through an engine switched on
+ * [cache], asked for at each build, which follows the first-run acknowledgement. (`cache.db` is
+ * opened at its first query: the purge `AppGraph` runs after the acknowledgement, or a lookup.)
+ * The adapters are those [PipelineWiring.adapters] builds from the keys and the web engines
+ * switched on: Last.fm only with its key, web search only through an engine switched on
  * with its key. The AI access is the chosen service's client with its key, or none when no service
  * is chosen, it has no client yet, or its key is not saved or cannot be read: insights then wait,
  * and the evidence is still shown.

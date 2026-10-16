@@ -34,75 +34,73 @@ internal class InsightWriter(
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
     /**
-     * Writes at once when [autoWrite] says so; else after [tap] returns, when there is one; else
-     * leaves it idle. A model call waits for [gate]; [autoWrite] is asked after it. While the run is
-     * not current ([currency]) it decides nothing and calls nothing: it waits to be current again,
-     * or cancelled by the run that replaces it.
+     * Writes at once when [control] decides so; else, when it waits for a tap, once the user taps
+     * Write; else leaves it offered. A model call reports its end to [control], however it ends.
      */
-    suspend fun write(
-        autoWrite: () -> Boolean,
-        tap: (suspend () -> Unit)?,
-        gate: suspend () -> Unit = {},
-        currency: RunCurrency = RunCurrency.Always,
-    ) {
+    suspend fun write(control: RunControl) {
         val ai = parts.ai
         val model = settings.aiModel ?: ai?.let { Settings.DEFAULT_MODELS[it.provider.id] }
         when {
             !settings.writeInsights || ai == null || model == null -> {
-                currency.decide()
+                control.decidedWithoutCall()
                 show(InsightState.Idle(canWrite = false))
             }
 
             evidence.isEmpty() -> {
-                currency.decide()
+                control.decidedWithoutCall()
                 emit(PipelineEvent.NoEvidence(key))
                 show(InsightState.NoEvidence)
             }
 
             else -> {
-                fromCacheOrModel(ai, model, Asked(autoWrite, tap, gate, currency))
+                fromCacheOrModel(ai, model, control)
             }
         }
     }
 
-    // How the card may be asked for: without a tap, by a tap, and only through the gate while current.
-    private class Asked(
-        val autoWrite: () -> Boolean,
-        val tap: (suspend () -> Unit)?,
-        val gate: suspend () -> Unit,
-        val currency: RunCurrency,
-    )
-
     private suspend fun fromCacheOrModel(
         ai: AiAccess,
         model: String,
-        asked: Asked,
+        control: RunControl,
     ) {
         val wanted = cardKey(ai, model)
         val kept = guard.attempt("read insight") { card(wanted) }
-        if (kept != null) {
-            asked.currency.decide()
-            emit(PipelineEvent.InsightCached(key))
-            show(checked(kept, cached = true, usage = null, complete = true))
-            return
-        }
-        asked.gate()
-        asked.currency.decide()
-        if (asked.autoWrite()) {
-            call(ai, model, wanted)
-        } else {
-            show(InsightState.Idle(canWrite = true))
-            emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
-            asked.tap?.let { tap ->
-                tap()
-                asked.gate()
-                asked.currency.awaitCurrent()
-                call(ai, model, wanted)
+        when {
+            kept != null -> {
+                control.decidedWithoutCall()
+                emit(PipelineEvent.InsightCached(key))
+                show(checked(kept, cached = true, usage = null, complete = true))
+            }
+
+            control.decide(settings) -> {
+                call(ai, model, wanted, control)
+            }
+
+            else -> {
+                show(InsightState.Idle(canWrite = true))
+                emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
+                if (control.waitsForTap) {
+                    control.awaitTap()
+                    call(ai, model, wanted, control)
+                }
             }
         }
     }
 
     private suspend fun call(
+        ai: AiAccess,
+        model: String,
+        card: CardKey,
+        control: RunControl,
+    ) {
+        try {
+            stream(ai, model, card)
+        } finally {
+            control.ended(RunStep.MODEL_CALL)
+        }
+    }
+
+    private suspend fun stream(
         ai: AiAccess,
         model: String,
         card: CardKey,

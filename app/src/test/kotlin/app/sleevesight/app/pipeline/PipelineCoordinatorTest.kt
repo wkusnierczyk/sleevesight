@@ -1,0 +1,512 @@
+package app.sleevesight.app.pipeline
+
+import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.RunStep
+import app.sleevesight.core.platform.JvmAccentFolder
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.util.PriorityQueue
+
+/**
+ * The coordinator's rules (#51; D5, D6), pure: each sequence from the reviews of PR #155 runs
+ * through [PipelineCoordinator] in a small simulated world, which carries out its effects as the
+ * host and the runs would (timers, builds, lookups that take a while, model calls that stream),
+ * in virtual time, with no threads. Each case states the model calls per track, the tracks whose
+ * lookups were granted, and the track Write is offered for at the end.
+ */
+class PipelineCoordinatorTest {
+    /** The host, the pipelines and the runs, as the coordinator's effects set them going. */
+    private class World {
+        val coordinator = PipelineCoordinator()
+        private val normalizer = Normalizer(JvmAccentFolder)
+        private var now = 0L
+        private var order = 0L
+
+        private class Scheduled(
+            val at: Long,
+            val order: Long,
+            val run: RunId?,
+            val event: CoordinatorEvent,
+        )
+
+        private val queue = PriorityQueue<Scheduled>(compareBy<Scheduled>({ it.at }, { it.order }))
+        private val titles = HashMap<RunId, String>()
+        private val cancelled = HashSet<RunId>()
+        private val calling = HashSet<RunId>()
+        private val held = mutableListOf<CoordinatorEvent>()
+
+        val calls = linkedMapOf<String, Int>()
+        val lookups = mutableListOf<String>()
+
+        /** The tracks whose model call was cancelled while under way: paid for, and lost. */
+        val cut = mutableListOf<String>()
+
+        var lookupMs = 0L
+        var streamMs = 0L
+        var writesWhenActed = true
+        var holdKeys = false
+        var buildFails = false
+
+        fun key(title: String): RunKey = RunKey.of(normalizer, nowPlaying(title))
+
+        fun nowPlaying(title: String) = NowPlaying(title = title, artists = "Artist", player = "com.spotify.music")
+
+        fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
+
+        private fun schedule(
+            delayMs: Long,
+            event: CoordinatorEvent,
+            run: RunId? = null,
+        ) {
+            queue += Scheduled(now + delayMs, order++, run, event)
+        }
+
+        private fun perform(effect: CoordinatorEffect) {
+            when (effect) {
+                is CoordinatorEffect.StartTimer -> schedule(DEBOUNCE_MS, CoordinatorEvent.Settled(effect.report))
+                is CoordinatorEffect.Build -> {
+                    val finished = CoordinatorEvent.RebuildFinished(effect.build, built = !buildFails)
+                    if (holdKeys) held += finished else schedule(0, finished)
+                }
+                is CoordinatorEffect.Swap -> Unit
+                is CoordinatorEffect.StartRun -> {
+                    titles[effect.run] = effect.nowPlaying.title
+                    schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
+                }
+                is CoordinatorEffect.CancelRun -> cancel(effect.run)
+                is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
+                is CoordinatorEffect.Decide -> if (effect.write) granted(effect.run, RunStep.MODEL_CALL)
+            }
+        }
+
+        private fun cancel(run: RunId) {
+            cancelled += run
+            // A call cut off reports its end from its `finally`.
+            if (calling.remove(run)) {
+                cut += titles.getValue(run)
+                schedule(0, CoordinatorEvent.StepEnded(run, RunStep.MODEL_CALL))
+            }
+        }
+
+        private fun granted(
+            run: RunId,
+            step: RunStep,
+        ) {
+            val title = titles.getValue(run)
+            when (step) {
+                RunStep.LOOKUPS -> {
+                    lookups += title
+                    schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
+                    schedule(lookupMs, CoordinatorEvent.InsightAsked(run, writesWhenActed), run)
+                    schedule(lookupMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
+                }
+                RunStep.LABELS -> schedule(0, CoordinatorEvent.StepEnded(run, step), run)
+                RunStep.MODEL_CALL -> {
+                    calls[title] = (calls[title] ?: 0) + 1
+                    calling += run
+                    schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run)
+                }
+            }
+        }
+
+        /** Lets [ms] pass, delivering what falls due; what a cancelled run would have sent is dropped. */
+        fun advance(ms: Long) {
+            val until = now + ms
+            while (queue.peek()?.let { it.at <= until } == true) {
+                val next = queue.poll()
+                now = next.at
+                deliver(next.run, next.event)
+            }
+            now = until
+        }
+
+        private fun deliver(
+            run: RunId?,
+            event: CoordinatorEvent,
+        ) {
+            if (run != null && run in cancelled) return
+            if (run != null && event is CoordinatorEvent.StepEnded && event.step == RunStep.MODEL_CALL) calling -= run
+            send(event)
+        }
+
+        fun releaseKeys() {
+            holdKeys = false
+            held.forEach { schedule(0, it) }
+            held.clear()
+        }
+
+        fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
+    }
+
+    // The steps of a sequence.
+    private fun World.play(
+        title: String,
+        cause: ChangeCause = ChangeCause.NATURAL_END,
+    ) {
+        send(CoordinatorEvent.Reported(key(title), nowPlaying(title), cause))
+        advance(0)
+    }
+
+    private fun World.settle() = advance(DEBOUNCE_MS + 5_000)
+
+    private fun World.hide() = send(CoordinatorEvent.ActivityStopped(changingConfigurations = false))
+
+    private fun World.show() {
+        send(CoordinatorEvent.ActivityStarted)
+        advance(0)
+    }
+
+    private fun World.tap() {
+        send(CoordinatorEvent.WriteTapped)
+        advance(0)
+    }
+
+    private fun World.keyChange() {
+        send(CoordinatorEvent.RebuildRequested)
+        advance(0)
+    }
+
+    private fun World.background(on: Boolean) {
+        send(CoordinatorEvent.BackgroundChanged(on))
+        advance(0)
+    }
+
+    /** A first action made: Zero played and written on a tap. */
+    private fun World.acted() {
+        play("Zero")
+        settle()
+        tap()
+        settle()
+    }
+
+    private fun started(): World =
+        World().apply {
+            send(CoordinatorEvent.Acknowledged)
+            send(CoordinatorEvent.ActivityStarted)
+            send(CoordinatorEvent.BackgroundChanged(false))
+            send(CoordinatorEvent.RebuildRequested)
+            advance(0)
+        }
+
+    private class Case(
+        val name: String,
+        val calls: Map<String, Int>,
+        val lookups: List<String>,
+        val offered: String? = null,
+        val script: World.() -> Unit,
+    )
+
+    private val cases =
+        listOf(
+            Case(
+                "a change waits for the debounce, and only the latest of a burst runs",
+                emptyMap(),
+                listOf("Two"),
+                "Two",
+            ) {
+                play("One")
+                advance(300)
+                play("Two")
+                settle()
+            },
+            Case("a change still in its debounce when the app is hidden runs on return", emptyMap(), listOf("A"), "A") {
+                play("A")
+                advance(100)
+                hide()
+                settle()
+                assertEquals(emptyList<String>(), lookups)
+                show()
+                settle()
+            },
+            Case(
+                "nothing is looked up while hidden, and the visible track catches up",
+                emptyMap(),
+                listOf("One", "Three"),
+                "Three",
+            ) {
+                play("One")
+                settle()
+                hide()
+                play("Two")
+                settle()
+                play("Three")
+                settle()
+                show()
+                settle()
+            },
+            Case(
+                "lookups under way finish when hidden, and the write waits for background lookups",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A"),
+            ) {
+                acted()
+                lookupMs = 2_000
+                play("A")
+                advance(DEBOUNCE_MS + 1_000)
+                hide()
+                settle()
+                assertEquals(mapOf("Zero" to 1), calls)
+                background(true)
+                settle()
+            },
+            Case(
+                "a model call under way when a key changes is the only one paid",
+                mapOf("A" to 1),
+                listOf("A", "A"),
+                "A",
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(2_000)
+                keyChange()
+                advance(30_000)
+                assertEquals(emptyList<String>(), cut)
+            },
+            Case("a rotation keeps the first action", mapOf("Zero" to 1, "B" to 1), listOf("Zero", "B")) {
+                acted()
+                send(CoordinatorEvent.ActivityStopped(changingConfigurations = true))
+                show()
+                play("B")
+                settle()
+            },
+            Case(
+                "Write, hide, another track, show: nothing is written until a tap",
+                mapOf("Zero" to 1, "B" to 1),
+                listOf("Zero", "B"),
+            ) {
+                acted()
+                hide()
+                play("B")
+                settle()
+                show()
+                settle()
+                assertEquals(mapOf("Zero" to 1), calls)
+                assertTrue(offersWriteFor("B"))
+                tap()
+                settle()
+            },
+            Case("a newer track's action does not authorise the older run's write", mapOf("B" to 1), listOf("A", "B")) {
+                lookupMs = 2_000
+                play("A")
+                advance(DEBOUNCE_MS + 1_500)
+                play("B", ChangeCause.USER_ACTION)
+                advance(DEBOUNCE_MS - 50)
+                assertEquals(emptyMap<String, Int>(), calls)
+                settle()
+            },
+            Case(
+                "returning during a newer track's debounce does not resume the older one",
+                mapOf("Zero" to 1),
+                listOf("Zero", "B"),
+                "B",
+            ) {
+                acted()
+                hide()
+                play("A")
+                settle()
+                play("B")
+                advance(100)
+                show()
+                settle()
+            },
+            Case(
+                "background lookups turned on during a newer track's debounce write only the newer track",
+                mapOf("Zero" to 1, "B" to 1),
+                listOf("Zero", "B"),
+            ) {
+                acted()
+                hide()
+                play("A")
+                settle()
+                play("B")
+                advance(100)
+                background(true)
+                settle()
+            },
+            Case(
+                "a rebuild while a track gathers still writes it, once",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+            ) {
+                acted()
+                lookupMs = 2_000
+                play("A")
+                advance(DEBOUNCE_MS + 500)
+                keyChange()
+                settle()
+            },
+            Case(
+                "a rebuild offers no Write, and takes no tap, until the new pipeline does",
+                emptyMap(),
+                listOf("A", "A"),
+                "A",
+            ) {
+                play("A")
+                settle()
+                assertTrue(offersWriteFor("A"))
+                holdKeys = true
+                keyChange()
+                assertEquals(false, offersWriteFor("A"))
+                tap()
+                releaseKeys()
+                settle()
+            },
+            Case(
+                "an opening during a rebuild clears the first action",
+                mapOf("Zero" to 1),
+                listOf("Zero", "Zero", "B"),
+                "B",
+            ) {
+                acted()
+                holdKeys = true
+                keyChange()
+                hide()
+                show()
+                releaseKeys()
+                settle()
+                play("B")
+                settle()
+            },
+            Case(
+                "a stale run made current again while hidden starts no model call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A"),
+            ) {
+                acted()
+                lookupMs = 2_000
+                play("A")
+                advance(DEBOUNCE_MS + 1_800)
+                play("B")
+                advance(300)
+                hide()
+                play("A")
+                settle()
+            },
+            Case(
+                "consecutive rebuilds keep the track decided, and write it once",
+                mapOf("A" to 1),
+                listOf("A", "A", "A"),
+                "A",
+            ) {
+                play("A")
+                settle()
+                tap()
+                settle()
+                lookupMs = 2_000
+                keyChange()
+                advance(500)
+                keyChange()
+                advance(10_000)
+            },
+            Case(
+                "a rebuild in a newer track's debounce while the old track streams waits for the call",
+                mapOf("A" to 1, "B" to 1, "C" to 1),
+                // B once the call ends, and again after the second rebuild, which writes nothing.
+                listOf("A", "B", "B", "C"),
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(2_000)
+                play("B")
+                advance(100)
+                keyChange()
+                advance(60_000)
+                keyChange()
+                play("C")
+                advance(60_000)
+            },
+            Case(
+                "a skip while streaming hidden, then a rebuild, goes on when shown",
+                mapOf("A" to 1),
+                listOf("A", "B"),
+                "B",
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(1_000)
+                hide()
+                play("B")
+                settle()
+                keyChange()
+                advance(1_000)
+                show()
+                advance(60_000)
+            },
+            Case(
+                "a skip there and back within the debounce lets the run go on",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A"),
+            ) {
+                acted()
+                lookupMs = 1_200
+                play("A")
+                advance(DEBOUNCE_MS + 1_000)
+                play("B")
+                advance(550)
+                assertEquals(mapOf("Zero" to 1), calls)
+                play("A")
+                settle()
+            },
+            Case("a pipeline that cannot be built runs nothing until the next rebuild", emptyMap(), listOf("B"), "B") {
+                buildFails = true
+                keyChange()
+                play("B")
+                settle()
+                assertEquals(emptyList<String>(), lookups)
+                buildFails = false
+                keyChange()
+                settle()
+            },
+            Case(
+                "When I skip writes nothing for a change that ended on its own",
+                mapOf("Zero" to 1),
+                listOf("Zero", "B"),
+                "B",
+            ) {
+                acted()
+                writesWhenActed = false
+                play("B")
+                settle()
+            },
+        )
+
+    @Test
+    fun eachSequenceGrantsOnlyWhatTheRulesAllow() {
+        for (case in cases) {
+            val world = started()
+            world.(case.script)()
+            assertEquals(case.name, case.calls, world.calls)
+            assertEquals(case.name, case.lookups, world.lookups)
+            val offered = world.lookups.distinct().filter(world::offersWriteFor)
+            assertEquals(case.name, listOfNotNull(case.offered), offered)
+        }
+    }
+
+    @Test
+    fun nothingIsBuiltOrStartedBeforeTheFirstRunIsAcknowledged() {
+        val world = World()
+        val effects =
+            listOf(
+                CoordinatorEvent.ActivityStarted,
+                CoordinatorEvent.RebuildRequested,
+                CoordinatorEvent.Reported(world.key("A"), world.nowPlaying("A")),
+                CoordinatorEvent.Settled(1),
+                CoordinatorEvent.WriteTapped,
+            ).flatMap(world.coordinator::on)
+        assertEquals(emptyList<CoordinatorEffect>(), effects)
+    }
+
+    private companion object {
+        const val DEBOUNCE_MS = 650L
+    }
+}

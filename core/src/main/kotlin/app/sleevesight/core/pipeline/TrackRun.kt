@@ -15,8 +15,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
@@ -28,25 +26,6 @@ internal class RunInput(
     val nowPlaying: NowPlaying,
     val track: NormalizedTrack,
 )
-
-/**
- * Whether a run is the current one ([Pipeline.follow], *Currency*). [awaitCurrent] is passed
- * before each request after a gate; [decide] once, where the run decides its insight, and it
- * records that it has. While the run is stale both wait: until it is current again, or is
- * cancelled by its replacement.
- */
-internal interface RunCurrency {
-    suspend fun awaitCurrent()
-
-    suspend fun decide()
-
-    /** For a run nothing supersedes ([Pipeline.run]). */
-    object Always : RunCurrency {
-        override suspend fun awaitCurrent() = Unit
-
-        override suspend fun decide() = Unit
-    }
-}
 
 /** Where a run reports: diagnostics events, and changes to its state. */
 internal interface RunSink {
@@ -64,7 +43,7 @@ internal class TrackRun(
     private val parts: PipelineParts,
     private val time: PipelineTime,
     private val input: RunInput,
-    private val taps: StateFlow<Long>,
+    private val control: RunControl,
     private val onEvent: (PipelineEvent) -> Unit,
     private val publish: (TrackState) -> Unit,
 ) : RunSink {
@@ -89,20 +68,12 @@ internal class TrackRun(
     private val labels = TrackLabels(parts.musicBrainzLabels, settings, key, this)
 
     /**
-     * Gathers the evidence, then the insight: written at once when [autoWrite] says so, asked once
-     * the evidence is in; else, when [waitForTap], once the user taps Write; else not at all.
-     * MusicBrainz's genre labels are asked for beside the insight, after the evidence, so it does
-     * not wait for them; the run ends when both have. [gate] returns once requests may start: it is
-     * passed before the labels' requests and before a model call, each of which then starts only
-     * once [currency] says the run is current.
+     * Gathers the evidence, then the insight: written at once when [control] decides so; else,
+     * when it waits for a tap, once the user taps Write; else not at all. MusicBrainz's genre labels
+     * are asked for beside the insight, after the evidence, so it does not wait for them; the run
+     * ends when both have. Each step that sends requests starts once [control] grants it.
      */
-    suspend fun run(
-        autoWrite: () -> Boolean,
-        waitForTap: Boolean,
-        gate: suspend () -> Unit = {},
-        currency: RunCurrency = RunCurrency.Always,
-    ): TrackState {
-        val tapsAtStart = taps.value
+    suspend fun run(): TrackState {
         try {
             emit(PipelineEvent.Received(nowPlaying))
             emit(PipelineEvent.Normalized(track))
@@ -111,16 +82,14 @@ internal class TrackRun(
                 gather()
                 val evidence = assemble()
                 launch {
-                    gate()
-                    currency.awaitCurrent()
-                    labels.addMusicBrainz(state.value)
+                    control.await(RunStep.LABELS)
+                    try {
+                        labels.addMusicBrainz(state.value)
+                    } finally {
+                        control.ended(RunStep.LABELS)
+                    }
                 }
-                InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(
-                    autoWrite = autoWrite,
-                    tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
-                    gate = gate,
-                    currency = currency,
-                )
+                InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(control)
             }
             return state.value
         } catch (e: CancellationException) {
@@ -140,11 +109,16 @@ internal class TrackRun(
     private suspend fun gather() {
         val misses = enabled.filter { adapter -> !fromCache(adapter) }
         if (misses.isEmpty()) return
+        control.await(RunStep.LOOKUPS)
         val resolution = CompletableDeferred<Resolution>()
         val made = CompletableDeferred<Boolean>()
-        coroutineScope {
-            resolve(resolution, made)
-            for (adapter in misses) launch { lookup(adapter, resolution, made) }
+        try {
+            coroutineScope {
+                resolve(resolution, made)
+                for (adapter in misses) launch { lookup(adapter, resolution, made) }
+            }
+        } finally {
+            control.ended(RunStep.LOOKUPS)
         }
     }
 

@@ -93,9 +93,10 @@ class AppGraph(
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
 
     /**
-     * The latest settings read, for the caches, which read them on every call, and the pipeline.
-     * Nothing is read before the first run is acknowledged; null until the first read after it. The
-     * pipeline, the caches' only caller, starts after it.
+     * The latest settings read, for the caches, which read them on every call, the pipeline and
+     * the history's recorder and retention. Nothing is read before the first run is acknowledged;
+     * null until the first read after it. The pipeline, the caches' only caller, starts after it,
+     * and the history's retention deletes nothing (and opens no `history.db`) before it.
      */
     private val latestSettings =
         settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
@@ -145,10 +146,11 @@ class AppGraph(
 
     /** The one writer of [history]: what the session layer sees, and the deletions below. */
     private val historyRecorder =
-        HistoryRecorder(sessions, history, Dispatchers.IO, settings.settings.map { it.sessionGap })
+        HistoryRecorder(sessions, history, Dispatchers.IO, latestSettings.filterNotNull().map { it.sessionGap })
 
     /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
-    val historyRetention = HistoryRetention(historyRecorder, settings.settings.map { it.historyLifetime }, mainScope)
+    val historyRetention =
+        HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
 
     /**
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
@@ -163,8 +165,10 @@ class AppGraph(
             settings = latestSettings.filterNotNull(),
             keyChanges = secrets.changes,
             readKeys = secrets::pipelineKeys,
-            // The caches only once a pipeline is built, after the first-run acknowledgement.
+            // The caches only once a pipeline is built, after the first-run acknowledgement; the
+            // database opens at its first query.
             parts = AppPipelineParts(wiring, normalizer) { StorePipelineCache(caches, Dispatchers.IO) },
+            normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
         )

@@ -553,156 +553,96 @@ class PipelineTest {
             assertEquals(1, provider.requests.size)
         }
 
-    // The gate (D6 in the app): no request starts while it is closed.
+    // run(nowPlaying, control): the app's runs, each step granted by its coordinator.
+
+    /** A control whose grants and decision the test gives, recording what the run asked and reported. */
+    private class Granted(
+        private val write: Boolean = true,
+    ) : RunControl {
+        val grants = RunStep.entries.associateWith { kotlinx.coroutines.CompletableDeferred<Unit>() }
+        val asked = mutableListOf<RunStep>()
+        val ended = mutableListOf<RunStep>()
+        var decisions = 0
+        var withoutCall = 0
+
+        override suspend fun await(step: RunStep) {
+            asked += step
+            grants.getValue(step).await()
+        }
+
+        override suspend fun decide(settings: Settings): Boolean {
+            decisions++
+            if (write) grants.getValue(RunStep.MODEL_CALL).await()
+            return write
+        }
+
+        override val waitsForTap: Boolean = true
+
+        override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
+
+        override fun ended(step: RunStep) {
+            ended += step
+        }
+
+        override fun decidedWithoutCall() {
+            withoutCall++
+        }
+    }
 
     @Test
-    fun `while requests are not allowed, a change waits before its lookups`() =
+    fun `a controlled run starts each step only once it is granted, and reports each end`() =
         runTest {
             val mb = mb()
-            val pipeline = pipeline(listOf(mb))
-            val allowed = MutableStateFlow(false)
-            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
-            backgroundScope.launch { pipeline.follow(changes, allowed) }
-            settle()
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb), provider = provider)
+            val control = Granted()
+            backgroundScope.launch { pipeline.run(sundown, control) }
+            runCurrent()
+            assertEquals(listOf(RunStep.LOOKUPS), control.asked)
             assertEquals(emptyList(), mb.asked)
 
-            allowed.value = true
-            settle()
-            assertEquals(listOf("gordon lightfoot|sundown"), mb.asked)
-        }
-
-    @Test
-    fun `lookups under way finish when requests stop being allowed, and the model call waits`() =
-        runTest {
-            val provider = FakeProvider()
-            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 5.seconds)
-            val pipeline = pipeline(listOf(slow), provider = provider)
-            pipeline.userActed()
-            val allowed = MutableStateFlow(true)
-            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
-            backgroundScope.launch { pipeline.follow(changes, allowed) }
-            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
-            allowed.value = false
-            settle()
-            assertTrue(pipeline.state.value!!.gathered)
-            assertEquals(0, slow.cancelled)
-            assertEquals(0, provider.requests.size)
-
-            allowed.value = true
-            settle()
-            assertEquals(1, provider.requests.size)
-        }
-
-    @Test
-    fun `after the app opens again, a run waiting to write waits for an action`() =
-        runTest {
-            val provider = FakeProvider()
-            val pipeline = pipeline(listOf(mb()), provider = provider)
-            pipeline.userActed()
-            val allowed = MutableStateFlow(true)
-            val changes = MutableStateFlow<TrackChange?>(null)
-            backgroundScope.launch { pipeline.follow(changes, allowed) }
+            control.grants.getValue(RunStep.LOOKUPS).complete(Unit)
             runCurrent()
-            allowed.value = false
-            changes.value = TrackChange(sundown)
-            settle()
-
-            pipeline.appOpened()
-            allowed.value = true
-            settle()
-            assertEquals(InsightState.Idle(canWrite = true), pipeline.state.value!!.insight)
+            assertEquals(1, mb.asked.size)
+            assertEquals(listOf(RunStep.LOOKUPS, RunStep.LABELS), control.asked)
+            assertEquals(1, control.decisions)
             assertEquals(0, provider.requests.size)
 
-            pipeline.write()
-            settle()
+            control.grants.getValue(RunStep.MODEL_CALL).complete(Unit)
+            control.grants.getValue(RunStep.LABELS).complete(Unit)
+            runCurrent()
             assertEquals(1, provider.requests.size)
+            assertEquals(setOf(RunStep.LOOKUPS, RunStep.LABELS, RunStep.MODEL_CALL), control.ended.toSet())
         }
 
     @Test
-    fun `a replay is never written without a tap`() =
+    fun `a model call cut off reports its end`() =
         runTest {
-            val provider = FakeProvider()
+            val provider = FakeProvider(delay = 10.seconds)
             val pipeline = pipeline(listOf(mb()), provider = provider)
-            pipeline.userActed()
-            backgroundScope.launch { pipeline.follow(MutableStateFlow(TrackChange(sundown, ChangeCause.REPLAY))) }
-            settle()
-            assertEquals(InsightState.Idle(canWrite = true), pipeline.state.value!!.insight)
-            assertEquals(0, provider.requests.size)
-        }
-
-    @Test
-    fun `a report is current when the state is about it in everything a run depends on`() =
-        runTest {
-            val pipeline = pipeline(listOf(mb()))
-            assertEquals(false, pipeline.isCurrent(sundown))
-            backgroundScope.launch { pipeline.follow(MutableStateFlow(TrackChange(sundown))) }
-            settle()
-
-            assertTrue(pipeline.isCurrent(sundown.copy(artUri = "content://art/2")))
-            assertEquals(false, pipeline.isCurrent(sundown.copy(album = "Gord's Gold")))
-            assertEquals(false, pipeline.isCurrent(snowbird))
-        }
-
-    // Currency: a run superseded by a report of another track decides and starts nothing more.
-
-    @Test
-    fun `a newer track's action does not authorise the superseded run's write`() =
-        runTest {
-            val provider = FakeProvider()
-            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 2.seconds)
-            val pipeline = pipeline(listOf(slow), provider = provider)
-            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
-            backgroundScope.launch { pipeline.follow(changes) }
-            advanceTimeBy(Pipeline.DEBOUNCE + 1.5.seconds)
-
-            // Sundown's evidence lands during Snowbird's debounce, after the action that chose it.
-            changes.value = TrackChange(snowbird, ChangeCause.USER_ACTION)
-            advanceTimeBy(Pipeline.DEBOUNCE - 50.milliseconds)
-            assertEquals(0, provider.requests.size)
-
-            settle()
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            val run = backgroundScope.launch { pipeline.run(sundown, control) }
+            advanceTimeBy(2.seconds)
             assertEquals(1, provider.requests.size)
-            assertTrue("Snowbird" in provider.requests.single().prompt)
+            assertTrue(RunStep.MODEL_CALL !in control.ended)
+
+            run.cancel()
+            runCurrent()
+            assertTrue(RunStep.MODEL_CALL in control.ended)
         }
 
     @Test
-    fun `a skip there and back within the debounce lets the run go on`() =
+    fun `a card kept is decided without a call`() =
         runTest {
-            val provider = FakeProvider()
-            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 1.2.seconds)
-            val pipeline = pipeline(listOf(slow), provider = provider)
-            pipeline.userActed()
-            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
-            backgroundScope.launch { pipeline.follow(changes) }
-            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
-            changes.value = TrackChange(snowbird)
-            // Sundown's evidence lands while it is stale, and it waits; back before Snowbird's run starts.
-            advanceTimeBy(550.milliseconds)
-            assertEquals(0, provider.requests.size)
-            changes.value = TrackChange(sundown)
-            settle()
+            val cache = MemoryCache()
+            val first = pipeline(listOf(mb()), cache = cache)
+            first.run(sundown, write = true)
+            val control = Granted(write = false)
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            pipeline(listOf(mb()), cache = cache).run(sundown, control)
 
-            assertEquals(listOf("gordon lightfoot|sundown"), slow.asked)
-            assertEquals(1, provider.requests.size)
-            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
-        }
-
-    @Test
-    fun `superseding says whether the run had decided, and a run that had not decides nothing`() =
-        runTest {
-            val provider = FakeProvider()
-            val waiting = pipeline(listOf(mb()), provider = provider)
-            backgroundScope.launch { waiting.follow(MutableStateFlow(TrackChange(sundown))) }
-            settle()
-            assertEquals(InsightState.Idle(canWrite = true), waiting.state.value!!.insight)
-            assertTrue(waiting.supersede())
-
-            val gathering = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ, byName = 2.seconds)), provider = provider)
-            gathering.userActed()
-            backgroundScope.launch { gathering.follow(MutableStateFlow(TrackChange(snowbird))) }
-            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
-            assertEquals(false, gathering.supersede())
-            settle()
-            assertEquals(0, provider.requests.size)
+            assertEquals(1, control.withoutCall)
+            assertEquals(0, control.decisions)
         }
 }

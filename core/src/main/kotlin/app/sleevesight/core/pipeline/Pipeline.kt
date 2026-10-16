@@ -21,11 +21,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -70,28 +69,6 @@ class PipelineParts(
     }
 }
 
-/**
- * Whether the user has acted in the app since it last opened (D5): after it opens, nothing is
- * written without a tap until they do. One for the app, shared by every pipeline it builds, so a
- * pipeline built anew neither copies it nor misses an opening; each run reads it when it decides.
- */
-class FirstAction {
-    private val state = MutableStateFlow(false)
-
-    /** Whether the user has acted since the app last opened. */
-    val made: Boolean get() = state.value
-
-    /** The user acted in the app. */
-    fun acted() {
-        state.value = true
-    }
-
-    /** The app opened (again): no action yet. */
-    fun opened() {
-        state.value = false
-    }
-}
-
 /** Where the pipeline's time comes from: [clock] for retrieval times, [timeSource] for latencies. */
 class PipelineTime(
     val clock: Clock = Clock.System,
@@ -121,7 +98,6 @@ class PipelineTime(
 class Pipeline(
     private val parts: PipelineParts,
     private val time: PipelineTime = PipelineTime(),
-    private val firstAction: FirstAction = FirstAction(),
     private val settings: () -> Settings,
 ) {
     private val eventFlow =
@@ -132,8 +108,7 @@ class Pipeline(
     private val stateFlow = MutableStateFlow<TrackState?>(null)
     private val runs = MutableStateFlow(0L)
     private val taps = MutableStateFlow(0L)
-
-    private val tickets = RunTickets()
+    private val acted = MutableStateFlow(false)
 
     /** The diagnostics stream (`design/architecture.md`, *Diagnostics*). */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
@@ -142,37 +117,13 @@ class Pipeline(
     val state: StateFlow<TrackState?> = stateFlow.asStateFlow()
 
     /** The user acted in the app (after it opened, nothing is written until they do; D5). */
-    fun userActed() = firstAction.acted()
-
-    /**
-     * The app opened (again): nothing is written without a tap until the user's next action in it
-     * (D5), the tracks already under way included, since a run asks whether to write only once its
-     * evidence is in.
-     */
-    fun appOpened() = firstAction.opened()
-
-    /**
-     * Makes the run in progress stale (in the app: this pipeline is being replaced): it starts no
-     * request, and decides nothing, from now on; a model call already under way goes on. True when
-     * the run had already decided its insight (written it, or is writing it, or served it from the
-     * cache, or chose to wait for a tap): a replacement's run of the same track is then a
-     * [ChangeCause.REPLAY], and not otherwise, so a run cut off before it decided is still decided.
-     */
-    fun supersede(): Boolean = tickets.supersede()
-
-    /**
-     * Whether [nowPlaying] is the track [state] is about, in everything a run depends on: a report
-     * that is not would start a run of its own, so the state shown is not yet its.
-     */
-    fun isCurrent(nowPlaying: NowPlaying): Boolean {
-        val shown = state.value ?: return false
-        val key = RunKey.of(parts.normalizer.normalize(nowPlaying), nowPlaying)
-        return key == RunKey.of(shown.normalized, shown.nowPlaying)
+    fun userActed() {
+        acted.value = true
     }
 
     /** The user tapped Write: the current track's insight is written once its evidence is in. */
     fun write() {
-        firstAction.acted()
+        acted.value = true
         taps.update { it + 1 }
     }
 
@@ -182,51 +133,32 @@ class Pipeline(
      * run depends on (the normalized track, its credited artists and work included, the album and
      * the length) is not run again; a metadata update that changes none of them is suppressed. A
      * new track cancels the previous one's retrieval and synthesis.
-     *
-     * While [allowed] is false (in the app: not visible, and *Look up in the background* off; D6)
-     * no request starts: a run waits before its lookups, and a run whose lookups are under way
-     * finishes them (their follow-up requests included) and keeps their results, but waits before
-     * MusicBrainz's genre labels and before a model call. Whether to write without a tap is asked
-     * once the evidence is in and the run may go on, so an action, or the app opening again
-     * ([appOpened]), meanwhile counts.
-     *
-     * **Currency.** A report of another track makes the run in progress stale at once, before its
-     * debounce: a stale run starts no request after a gate and decides nothing, but waits, so
-     * neither a newer track's action nor a gate opening during the newer track's debounce
-     * authorises anything for it; the debounce only delays starting the replacement, which
-     * cancels it. A report of its own track again before then (a skip there and back) makes it
-     * current again, and it goes on.
      */
     @OptIn(FlowPreview::class)
-    suspend fun follow(
-        changes: Flow<TrackChange?>,
-        allowed: Flow<Boolean> = flowOf(true),
-    ) {
-        val gate: suspend () -> Unit = { allowed.first { it } }
+    suspend fun follow(changes: Flow<TrackChange?>) {
         changes
             .filterNotNull()
-            .map { change ->
-                val track = parts.normalizer.normalize(change.nowPlaying)
-                val report = Report(change, track, RunKey.of(track, change.nowPlaying))
-                // Stale before the action is counted, so the run cannot decide on it.
-                tickets.reported(report.key)
-                if (change.cause == ChangeCause.USER_ACTION) firstAction.acted()
-                report
-            }.debounce(DEBOUNCE)
-            .filter { report -> !tickets.isRun(report.key) }
-            .collectLatest { report ->
-                val currency = tickets.start(report.key)
-                gate()
-                currency.awaitCurrent()
+            .onEach { if (it.cause == ChangeCause.USER_ACTION) acted.value = true }
+            .debounce(DEBOUNCE)
+            .map { change -> change to parts.normalizer.normalize(change.nowPlaying) }
+            .distinctUntilChangedBy { (change, track) ->
+                RunKey.of(track, change.nowPlaying)
+            }.collectLatest { (change, track) ->
                 val current = settings()
-                start(report.change.nowPlaying, report.track, current).run(
-                    autoWrite = { AutoWrite.writes(current, report.change.cause, firstAction.made) },
-                    waitForTap = true,
-                    gate = gate,
-                    currency = currency,
-                )
+                val writes = AutoWrite.writes(current, change.cause, acted.value)
+                start(change.nowPlaying, track, current, Followed(writes, taps)).run()
             }
     }
+
+    /**
+     * Runs the pipeline for [nowPlaying] once, each step that sends requests or spends starting
+     * only once [control] grants it, and returns its final state: the app's loop, whose
+     * coordinator decides when (#51). The state is published as for [follow].
+     */
+    suspend fun run(
+        nowPlaying: NowPlaying,
+        control: RunControl,
+    ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control).run()
 
     /**
      * Runs the pipeline for [nowPlaying] once and returns its final state: with the insight written
@@ -237,44 +169,30 @@ class Pipeline(
         write: Boolean,
     ): TrackState {
         val track = parts.normalizer.normalize(nowPlaying)
-        return start(nowPlaying, track, settings()).run(autoWrite = { write }, waitForTap = false)
+        return start(nowPlaying, track, settings(), RunControl.Unattended(write)).run()
     }
 
     private fun start(
         nowPlaying: NowPlaying,
         track: NormalizedTrack,
         current: Settings,
+        control: RunControl,
     ): TrackRun {
         val token = runs.updateAndGetValue()
         return TrackRun(
             parts = parts,
             time = time,
             input = RunInput(current, nowPlaying, track),
-            taps = taps,
+            control = control,
             onEvent = { eventFlow.tryEmit(it) },
             publish = { state -> if (runs.value == token) stateFlow.value = state },
         )
     }
 
-    // A report on its way to a run.
-    private data class Report(
-        val change: TrackChange,
-        val track: NormalizedTrack,
-        val key: RunKey,
-    )
-
-    // Everything a run reads from a change: two changes with the same key give the same run. The
-    // length in whole seconds, as the cache keys hold it, so a player's millisecond jitter is no change.
-    internal data class RunKey(
-        val track: NormalizedTrack,
-        val album: String?,
-        val seconds: Long?,
-    ) {
-        companion object {
-            fun of(
-                track: NormalizedTrack,
-                nowPlaying: NowPlaying,
-            ) = RunKey(track, nowPlaying.album, nowPlaying.duration?.inWholeSeconds)
+    private fun MutableStateFlow<Long>.updateAndGetValue(): Long {
+        while (true) {
+            val seen = value
+            if (compareAndSet(seen, seen + 1)) return seen + 1
         }
     }
 
@@ -287,72 +205,26 @@ class Pipeline(
     }
 }
 
-private fun MutableStateFlow<Long>.updateAndGetValue(): Long {
-    while (true) {
-        val seen = value
-        if (compareAndSet(seen, seen + 1)) return seen + 1
-    }
-}
-
 /**
- * Which of a pipeline's runs is current ([Pipeline.follow], *Currency*): the run last started,
- * while the latest report is of its track and the pipeline is not being replaced.
+ * Everything a run reads from a report: two reports with the same key give the same run (the
+ * normalized track, its credited artists and work included, the album and the length). The length
+ * in whole seconds, as the cache keys hold it, so a player's millisecond jitter is no change.
  */
-private class RunTickets {
-    // The run last started ([id], about [run]), whether it has decided its insight, the key of
-    // the latest report, and whether the pipeline is being replaced.
-    private data class Ticket(
-        val id: Long = 0,
-        val run: Pipeline.RunKey? = null,
-        val latest: Pipeline.RunKey? = null,
-        val decided: Boolean = false,
-        val superseded: Boolean = false,
-    )
+data class RunKey(
+    val track: NormalizedTrack,
+    val album: String?,
+    val seconds: Long?,
+) {
+    companion object {
+        fun of(
+            track: NormalizedTrack,
+            nowPlaying: NowPlaying,
+        ): RunKey = RunKey(track, nowPlaying.album, nowPlaying.duration?.inWholeSeconds)
 
-    private val ticket = MutableStateFlow(Ticket())
-
-    /** A report of [key] arrived: a run about another track is stale from now on. */
-    fun reported(key: Pipeline.RunKey) = ticket.update { it.copy(latest = key) }
-
-    /** Whether the run last started is about [key]. */
-    fun isRun(key: Pipeline.RunKey): Boolean = ticket.value.run == key
-
-    /** Makes the run in progress stale for good; whether it had decided its insight. */
-    fun supersede(): Boolean {
-        while (true) {
-            val seen = ticket.value
-            if (ticket.compareAndSet(seen, seen.copy(superseded = true))) return seen.decided
-        }
+        /** The key of [nowPlaying], normalized by [normalizer]. */
+        fun of(
+            normalizer: Normalizer,
+            nowPlaying: NowPlaying,
+        ): RunKey = of(normalizer.normalize(nowPlaying), nowPlaying)
     }
-
-    /** Starts a run about [key], and returns its currency. */
-    fun start(key: Pipeline.RunKey): RunCurrency {
-        var id: Long
-        while (true) {
-            val seen = ticket.value
-            id = seen.id + 1
-            if (ticket.compareAndSet(seen, seen.copy(id = id, run = key, decided = false))) break
-        }
-        return currencyOf(id, key)
-    }
-
-    private fun currencyOf(
-        id: Long,
-        key: Pipeline.RunKey,
-    ): RunCurrency =
-        object : RunCurrency {
-            private fun Ticket.isMine() = this.id == id && latest == key && !superseded
-
-            override suspend fun awaitCurrent() {
-                ticket.first { it.isMine() }
-            }
-
-            override suspend fun decide() {
-                while (true) {
-                    awaitCurrent()
-                    val seen = ticket.value
-                    if (seen.isMine() && (seen.decided || ticket.compareAndSet(seen, seen.copy(decided = true)))) return
-                }
-            }
-        }
 }

@@ -74,6 +74,7 @@ class PipelineHostTest {
                 keys
             },
             onFailure = { failures += it },
+            normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, _ ->
                 builds++
                 buildFailure?.let { throw it }
@@ -599,7 +600,7 @@ class PipelineHostTest {
         }
 
     @Test
-    fun `a pipeline that fails is reported and stays stopped until it is rebuilt`() =
+    fun `a run that fails is reported, ends its call for the coordinator, and the next track runs`() =
         runTest {
             provider.failure = IllegalStateException("a bug")
             started()
@@ -609,14 +610,85 @@ class PipelineHostTest {
             settle()
             assertEquals(listOf("IllegalStateException"), failures.map { it::class.simpleName })
 
+            // The failed call reported its end, so a rebuild is not left waiting for it.
+            provider.failure = null
             play("Two")
             settle()
-            assertEquals(listOf("artist|one"), musicBrainz.asked)
-
-            provider.failure = null
             keyChanges.value++
             settle()
-            assertEquals(listOf("artist|one", "artist|two"), musicBrainz.asked)
+            assertEquals(listOf("artist|one", "artist|two", "artist|two"), musicBrainz.asked)
+        }
+
+    // End to end, through the real `Pipeline`: the sequences of the third review round.
+
+    @Test
+    fun `consecutive rebuilds while the replay gathers write the track once`() =
+        runTest {
+            started()
+            play("Alpha")
+            settle()
+            host.write()
+            settle()
+            musicBrainz.byName = 2.seconds
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            advanceTimeBy(500.milliseconds)
+            keyChanges.value++
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(
+                InsightState.Idle(canWrite = true),
+                host.state.value.track
+                    ?.insight,
+            )
+        }
+
+    @Test
+    fun `a rebuild in a newer track's debounce while the old track streams waits for the call, then goes on`() =
+        runTest {
+            provider.streaming = 10.seconds
+            started()
+            play("Alpha")
+            settle()
+            host.write()
+            advanceTimeBy(2.seconds)
+            play("Bravo")
+            advanceTimeBy(100.milliseconds)
+            keyChanges.value++
+            advanceTimeBy(60.seconds)
+            play("Charlie")
+            advanceTimeBy(60.seconds)
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(listOf("artist|alpha", "artist|bravo", "artist|charlie"), musicBrainz.asked)
+            assertEquals(
+                "Charlie",
+                host.state.value.track
+                    ?.nowPlaying
+                    ?.title,
+            )
+        }
+
+    @Test
+    fun `a stale run made current again while hidden starts no model call`() =
+        runTest {
+            started()
+            play("Zero")
+            settle()
+            host.write()
+            settle()
+            musicBrainz.byName = 2.seconds
+            play("Alpha")
+            advanceTimeBy(DEBOUNCE + 1.8.seconds)
+            play("Bravo")
+            advanceTimeBy(300.milliseconds)
+            host.activityStopped(changingConfigurations = false)
+            play("Alpha")
+            settle()
+
+            assertEquals(0, provider.requestsFor("Alpha"))
+            assertEquals(0, provider.requestsFor("Bravo"))
         }
 
     private companion object {
