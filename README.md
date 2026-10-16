@@ -38,7 +38,7 @@ Each change is saved at once. The defaults, and why:
 |---|---|---|
 | AI service, model, API key | No service until you choose one; then Anthropic's cheapest current model, Claude Haiku 5.5 | The key and its bill are yours, and an insight narrates a few lines, which needs no larger model. The model list comes from the service, with your key, once the app looks tracks up; until then the default is offered |
 | Reasoning effort | Low | An insight is short and waited for; the citation check, not the model's deliberation, keeps it honest |
-| Players to follow | Spotify on | A player appears, switched off, once it has played |
+| Players to follow | Spotify on | A player appears, switched off, once it has had a media session (open, playing or paused) while Sleevesight has notification access; switching it on follows it at once |
 | Where to look | Every source on except the model's own knowledge | Last.fm and web search also need your key, entered under their switches |
 | Web search engines | Exa on | It searches only once its key is saved; the switch turns it off without removing the key |
 | Genre labels | MusicBrainz and Last.fm on | MusicBrainz needs no key, and without it a new user, who has no Last.fm key, gets no labels at all (on the test playlist it labels 29 of 78 tracks alone). Last.fm gives labels once its key is saved, and only while Last.fm is on under *Where to look*; so does MusicBrainz. If MusicBrainz has not confirmed how its tags may be used by the Play release, they are off by default there |

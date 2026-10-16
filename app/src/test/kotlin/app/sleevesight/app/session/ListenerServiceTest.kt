@@ -7,8 +7,11 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.idleFor
+import app.sleevesight.app.idleUntil
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -47,11 +50,17 @@ class ListenerServiceTest {
         connectListener()
 
         val sessions = app.graph.sessions
-        assertEquals(emptySet<String>(), sessions.seenPlayers.value)
-        assertNull(sessions.nowPlaying.value)
+        // Once the settings' first read is in, which the session layer also waits for.
+        runBlocking {
+            app.graph.settings.followedPlayers
+                .first()
+        }
+        idleFor("no session read before the first run") {
+            sessions.seenPlayers.value.isEmpty() && sessions.nowPlaying.value == null
+        }
 
         FirstRunAcknowledgement(app).acknowledge()
-        shadowOf(Looper.getMainLooper()).idle()
+        idleUntil("the session list read") { sessions.seenPlayers.value.isNotEmpty() }
 
         assertEquals(setOf(OTHER_PLAYER), sessions.seenPlayers.value)
     }
