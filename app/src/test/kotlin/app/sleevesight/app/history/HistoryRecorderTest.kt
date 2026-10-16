@@ -1,6 +1,7 @@
 package app.sleevesight.app.history
 
 import android.media.session.PlaybackState
+import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
@@ -81,5 +82,27 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
 
         assertEquals(listOf("Carefree Highway"), history.latestSession().map { it.track.title })
         assertEquals(1, history.changes().size)
+    }
+
+    @Test
+    fun aFailedResumeIsStartedAgainAtItsTimeWithTheNextUpdate() {
+        // Paused 10 s in, resumed 40 minutes later with that write failing, then given an album.
+        val spotify = spotify()
+        at(10_000)
+        spotify.report(state(PlaybackState.STATE_PAUSED, positionMs = 10_000, speed = 0f))
+        val resume = 10_000 + 40 * 60_000L
+        at(resume)
+        driver.failNext = "INSERT INTO played"
+        spotify.report(state(positionMs = 10_000, updatedAt = resume))
+        assertEquals(listOf("Could not record a track played in the session history"), warnings)
+        at(resume + 60_000)
+        spotify.report(metadata(durationMs = 225_000, album = "Live"))
+
+        val settle = SessionRepository.SETTLE
+        val first = history.session(1).single()
+        assertEquals(base + 10.seconds + settle, first.stoppedAt)
+        val second = history.session(2).single()
+        assertEquals(base + resume.milliseconds + settle, second.playedAt)
+        assertEquals("Live", second.track.album)
     }
 }

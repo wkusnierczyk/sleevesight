@@ -3,9 +3,11 @@ package app.sleevesight.app.history
 import android.media.session.PlaybackState
 import app.sleevesight.app.session.FakeSession
 import app.sleevesight.app.session.SessionRepository
+import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import org.junit.Assert.assertEquals
@@ -13,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Each sequence of reports, through the real session layer, recorder and history, and the rows
@@ -41,6 +44,7 @@ internal class HistoryRecorderSequencesTest(
             stoppedAt = stoppedAt?.let { (it - base).inWholeMilliseconds },
             album = track.album,
             artists = track.artists,
+            player = track.player,
         )
 
     /** A row as the test expects it. */
@@ -51,6 +55,7 @@ internal class HistoryRecorderSequencesTest(
         val stoppedAt: Long?,
         val album: String? = null,
         val artists: String = "Gordon Lightfoot",
+        val player: String = SPOTIFY,
     )
 
     class Steps(
@@ -102,7 +107,7 @@ internal class HistoryRecorderSequencesTest(
                 },
                 sequence(
                     "a paused track, then the next track's state before its metadata",
-                    Row(CAREFREE, 1, 10_100 + S, null),
+                    Row(CAREFREE, 1, 10_100 + S, null, player = YOUTUBE_MUSIC),
                 ) {
                     val youtube =
                         begin(
@@ -187,6 +192,35 @@ internal class HistoryRecorderSequencesTest(
                     val spotify = spotify()
                     at(FORTY_MINUTES)
                     spotify.report(metadata(durationMs = 225_000, artUri = "content://art/2"))
+                },
+                sequence(
+                    "a switch to another player with the same track, and back",
+                    Row(SUNDOWN, 1, 0, 60_000 + S),
+                    Row(SUNDOWN, 1, 60_000 + S, 120_000 + S, player = YOUTUBE_MUSIC),
+                    Row(SUNDOWN, 1, 120_000 + S, null),
+                ) {
+                    val same = metadata(mediaId = "same:1", durationMs = 225_000)
+                    val spotify = FakeSession(SPOTIFY, metadata = same)
+                    val youtube = FakeSession(YOUTUBE_MUSIC, metadata = same, playbackState = paused())
+                    beginAll(spotify, youtube)
+                    at(60_000)
+                    youtube.send(state())
+                    spotify.send(paused())
+                    settleAll()
+                    at(120_000)
+                    spotify.send(state())
+                    youtube.send(paused())
+                    settleAll()
+                },
+                sequence(
+                    "a process start finds the track of a stored row that was never stopped",
+                    Row(SUNDOWN, 1, -60_000, null),
+                ) {
+                    stored(
+                        NowPlaying(SUNDOWN, "Gordon Lightfoot", duration = 225.seconds, player = SPOTIFY),
+                        base - 60.seconds,
+                    )
+                    spotify()
                 },
                 sequence(
                     "a change that settles while buffering, then plays",

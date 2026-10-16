@@ -12,6 +12,7 @@ import app.sleevesight.app.session.SessionRepositoryFixture
 import app.sleevesight.app.session.Sessions
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.history.HistoryDatabase
@@ -32,7 +33,7 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     protected val driver = FailingDriver(jdbc)
     protected val history = SessionHistory(driver)
     protected val warnings = mutableListOf<String>()
-    protected val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
+    val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
     private val wall =
         object : Clock {
             override fun now(): Instant = base + scheduler.currentTime.milliseconds
@@ -57,10 +58,23 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
 
     /** Follows [session] alone and starts the session layer on it. */
     fun begin(session: FakeSession): FakeSession {
-        followed.value = setOf(session.player)
-        system.active = listOf(session)
-        repository.start()
+        beginAll(session)
         return session
+    }
+
+    /** Follows [sessions], in the system's order, and starts the session layer on them. */
+    fun beginAll(vararg sessions: FakeSession) {
+        followed.value = sessions.map { it.player }.toSet()
+        system.active = sessions.toList()
+        repository.start()
+    }
+
+    /** A row of the history from before this process: [track], started at [at] and never stopped. */
+    fun stored(
+        track: NowPlaying,
+        at: Instant,
+    ) {
+        history.started(track, at) { false }
     }
 
     /** Spotify playing [metadata], or in [playbackState]. */

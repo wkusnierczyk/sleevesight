@@ -60,8 +60,9 @@ class SessionHistory(
     ): PlayedTrack = queries.transactionWithResult { start(track.copy(artUri = null), at, sameTrack) }
 
     /**
-     * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says whether
-     * a row holds it, and [at] is the time it began if none does. Returns the row that now holds it.
+     * [track], the last row's, plays on without a break, updated (rule 2); [sameTrack] says
+     * whether a row holds it. [at] is when this playback started: if no row holds the track, it
+     * starts then. Returns the row that now holds it.
      */
     fun continued(
         track: NowPlaying,
@@ -71,7 +72,11 @@ class SessionHistory(
         queries.transactionWithResult {
             val kept = track.copy(artUri = null)
             val last = queries.last()
-            if (last != null && sameTrack(last.track)) playing(last, kept) else start(kept, at, sameTrack)
+            if (last != null && sameTrack(last.track)) {
+                playing(last, kept)
+            } else {
+                start(kept, at, sameTrack)
+            }
         }
 
     private fun start(

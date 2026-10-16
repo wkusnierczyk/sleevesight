@@ -9,7 +9,6 @@ import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.PlaybackStateRecord
-import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
@@ -79,6 +78,8 @@ class HistoryRecorder(
             }
             launch {
                 var before: NowPlaying? = null
+                // Read and written by the writes alone, which run one at a time.
+                val playback = Playback()
                 sessions.playing.collect { track ->
                     val at = wall.now()
                     val playedBefore = before
@@ -89,13 +90,8 @@ class HistoryRecorder(
                         writes.trySend(Write("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {
-                        val write: () -> PlayedTrack =
-                            if (continues) {
-                                { history.continued(track, at, same) }
-                            } else {
-                                { history.started(track, at, same) }
-                            }
-                        writes.trySend(Write("a track played") { write() })
+                        val write = Write("a track played") { playback.write(track, at, continues, same) }
+                        writes.trySend(write)
                     }
                     before = track
                 }
@@ -131,7 +127,10 @@ class HistoryRecorder(
             learnedCrossfade = null,
         )
 
-    /** How long before [changedAt] [state]'s position was taken; null with no position or no time for it. */
+    /**
+     * How long before [changedAt] [state]'s position was taken; null with no position or no time
+     * for it.
+     */
     private fun positionBefore(
         changedAt: Long,
         state: PlaybackInfo,
@@ -142,6 +141,34 @@ class HistoryRecorder(
 
     /** [at], on the [elapsed] clock, as a wall-clock time. */
     private fun wallTime(at: Long): Instant = wall.now() - (elapsed() - at).milliseconds
+
+    /**
+     * The playback now recorded: when it started, and whether its start was written. Until it is
+     * (the write failed), each update of it is a start again, at that time, so the history never
+     * takes an update for a row of an earlier playback that happens to hold the same track.
+     */
+    private inner class Playback {
+        private var startedAt: Instant? = null
+        private var written = false
+
+        fun write(
+            track: NowPlaying,
+            at: Instant,
+            continues: Boolean,
+            same: (NowPlaying) -> Boolean,
+        ) {
+            val start = startedAt
+            if (continues && written && start != null) {
+                history.continued(track, start, same)
+                return
+            }
+            val from = if (continues && start != null) start else at
+            startedAt = from
+            written = false
+            history.started(track, from, same)
+            written = true
+        }
+    }
 
     private class Write(
         val what: String,

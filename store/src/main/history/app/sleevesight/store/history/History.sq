@@ -13,8 +13,8 @@
 -- app saw the track start and stop playing, once the player's reports had settled: up to the
 -- settle window after the reports, longer while a track buffers before it plays. A change's precise
 -- time is in `track_change`, when the session layer recorded one: a new title under one media id
--- (a stream) is a new row with no change. The artists are the player's string, as sent. `queue_item` is the
--- active queue item, kept so the track is known again after a restart.
+-- (a stream) is a new row with no change. The artists are the player's string, as sent.
+-- `queue_item` is the active queue item, kept so the track is known again after a restart.
 CREATE TABLE played (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     session INTEGER NOT NULL,
