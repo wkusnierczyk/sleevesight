@@ -211,7 +211,7 @@ flowchart TD
 ### After implementation
 
 - **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting; and [#101][101] (D12), once [#100][100] is settled.
-- **Installs outside Play.** Google's rules for apps installed outside Play are tightening; check them when [#29][29] runs, since they decide what a development install or a channel outside Play costs.
+- **Installs outside Play.** Checked with [#29][29] (`design.md`, *Notification access and installation*): on the phone measured, restricted settings marked a file install but did not block notification access; Google's developer verification is enforced since 2026-09-30 only for installs from participating stores in four countries, and is planned globally for 2027, when registering the package becomes the condition for a build handed out as a file (or `adb` and the *advanced flow*).
 - **Play's testing requirement** for a new developer account can add weeks before production; check it when the account is set up, so [#58][58] is scheduled with it.
 
 [9]: https://github.com/wkusnierczyk/sleevesight/issues/9
