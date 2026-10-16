@@ -204,17 +204,23 @@ class SessionMappingTest {
     }
 
     @Test
-    fun aPositionMovedBackIsMeasuredFromWherePlayingWouldHaveTakenIt() {
-        val playing = state(positionMs = 0, updatedAt = 1_000)
-        // Three minutes on with no report: back to 0 is a move back, and 180 s is not.
-        assertTrue(SessionMapping.movedBack(playing, state(positionMs = 0, updatedAt = 181_000)))
-        assertFalse(SessionMapping.movedBack(playing, state(positionMs = 180_000, updatedAt = 181_000)))
-        // Paused, the position stays: 500 ms back is jitter, 2 s back is a move.
-        val paused = state(PlaybackState.STATE_PAUSED, positionMs = 60_000, speed = 0f, updatedAt = 1_000)
-        assertFalse(SessionMapping.movedBack(paused, state(PlaybackState.STATE_PAUSED, positionMs = 59_500)))
-        assertTrue(SessionMapping.movedBack(paused, state(PlaybackState.STATE_PAUSED, positionMs = 58_000)))
-        // Unknown positions never move back.
+    fun onlyAFallToTheStartOfATrackFromPastItMovesBack() {
+        assertTrue(SessionMapping.movedBack(state(positionMs = 180_000), state(positionMs = 0)))
+        assertTrue(
+            SessionMapping.movedBack(state(PlaybackState.STATE_PAUSED, positionMs = 3_000), state(positionMs = 1_000)),
+        )
+        // A seek to mid-track, and a fall from no further than the start.
+        assertFalse(SessionMapping.movedBack(state(positionMs = 30_000), state(positionMs = 5_000)))
+        assertFalse(SessionMapping.movedBack(state(positionMs = 2_000), state(positionMs = 0)))
+        // Castbox stalled: `PLAYING` at 0, reported again 4 s later, still at 0.
+        assertFalse(
+            SessionMapping.movedBack(
+                state(positionMs = 0, updatedAt = 1_148_239_036),
+                state(positionMs = 0, updatedAt = 1_148_243_292),
+            ),
+        )
+        // Unknown positions never fall back.
         assertFalse(SessionMapping.movedBack(null, state()))
-        assertFalse(SessionMapping.movedBack(paused, state(positionMs = -1)))
+        assertFalse(SessionMapping.movedBack(state(positionMs = 180_000), state(positionMs = -1)))
     }
 }

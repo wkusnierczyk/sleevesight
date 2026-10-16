@@ -466,6 +466,94 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun aSeekToMidTrackJustBeforeANewTitleIsNotWhereTheChangeBegan() {
+        val spotify = FakeSession(SPOTIFY, playbackState = state(positionMs = 30_000, updatedAt = 5_000))
+        system.active = listOf(spotify)
+        repository.start()
+
+        at(10_000)
+        spotify.send(state(positionMs = 5_000, updatedAt = 10_000))
+        at(10_200)
+        spotify.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(10_200L, change.changedAt)
+        assertEquals(PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, 5.seconds, 10_000, 1f), change.before)
+    }
+
+    @Test
+    fun aNewItemAfterASeekBackIsWhereTheChangeBegan() {
+        val youtube = youtubeMusic()
+        youtube.settled(state(positionMs = 239_000, updatedAt = 1_000, queueItem = 4))
+
+        at(10_000)
+        youtube.send(state(positionMs = 30_000, updatedAt = 10_000, queueItem = 4))
+        at(10_200)
+        youtube.send(state(positionMs = 0, updatedAt = 10_200, queueItem = 5))
+        at(10_250)
+        youtube.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(5L, change.track.queueItemId)
+        assertEquals(10_200L, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 30.seconds, 10_000, 1f), change.before)
+    }
+
+    @Test
+    fun aNewItemJustAfterARestartIsWhereTheChangeBegan() {
+        // The track restarted (back to 0, the same item), then *next*: the new item marks the change.
+        val youtube = youtubeMusic()
+        youtube.settled(state(positionMs = 239_000, updatedAt = 1_000, queueItem = 4))
+
+        at(10_000)
+        youtube.send(state(positionMs = 0, updatedAt = 10_000, queueItem = 4))
+        at(10_200)
+        youtube.send(state(positionMs = 0, updatedAt = 10_200, queueItem = 5))
+        at(10_250)
+        youtube.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(10_200L, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 0.seconds, 10_000, 1f), change.before)
+    }
+
+    @Test
+    fun castboxStalledAtTheStartIsNotWhereTheChangeBegan() {
+        // Recorded (`.dev/probe.jsonl`): `PLAYING` at 0, and again 4 s later, still at 0; then, in
+        // this test, a new episode's metadata 100 ms after the second.
+        val castbox = "fm.castbox.audiobook.radio.podcast"
+        followed.value = setOf(castbox)
+        at(1_148_239_099)
+        val session =
+            FakeSession(
+                castbox,
+                metadata =
+                    metadata(
+                        title = "Houthis attack Saudi airport for third time in four days",
+                        mediaId = "1011031754",
+                    ),
+                playbackState = state(updatedAt = 1_148_239_036, queueItem = 1),
+            )
+        system.active = listOf(session)
+        repository.start()
+
+        at(1_148_243_304)
+        session.send(state(updatedAt = 1_148_243_292, queueItem = 1))
+        at(1_148_243_404)
+        session.send(
+            metadata(title = "French supermarkets say fridges targeted in cyberattack", mediaId = "1011324312"),
+        )
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals(1_148_243_404L, change.changedAt)
+        assertEquals(PlaybackInfo(castbox, PlaybackStatus.PLAYING, 0.seconds, 1_148_243_292, 1f), change.before)
+    }
+
+    @Test
     fun aTitleChangingEvery250MsStillSettlesWithinTheLongestBurst() {
         val youtube = youtubeMusic()
         val longest = SessionRepository.LONGEST_BURST.inWholeMilliseconds

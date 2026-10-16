@@ -268,7 +268,7 @@ class SessionRepository(
                     ifAttached {
                         val title = SessionMapping.title(metadata)
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
-                        beginReport(changesTrack = title != null && title != previousTitle)
+                        beginReport(newTitle = title != null && title != previousTitle)
                         this@Attached.metadata = metadata
                         settleLater()
                     }
@@ -278,7 +278,7 @@ class SessionRepository(
                     ifAttached {
                         val item = SessionMapping.activeItem(state)
                         beginReport(
-                            changesTrack = item != null && item != stateItem,
+                            newItem = item != null && item != stateItem,
                             movesBack = SessionMapping.movedBack(this@Attached.state, state),
                         )
                         if (item != null) stateItem = item
@@ -353,9 +353,10 @@ class SessionRepository(
         private var changeAt: Long? = null
 
         /**
-         * The last state that moved the position back (see [SessionMapping.movedBack]), and the
-         * state before it: a new track's first state may name no new item (Castbox), so the
-         * change began there if its metadata follows within [SETTLE].
+         * The last state that fell back to the start of a track (see [SessionMapping.movedBack])
+         * naming no new item, and the state before it: a new track's first state may name no new
+         * item (Castbox), so the change began there if its metadata follows within [SETTLE]. Used
+         * once at most.
          */
         private var movedBackAt: Long? = null
         private var beforeMovedBack: PlaybackInfo? = null
@@ -374,14 +375,16 @@ class SessionRepository(
         }
 
         /**
-         * Notes a report before it is applied: the start of a burst, whether the report
-         * [changesTrack], naming a new title or a new queue item (the other half of the pair may
-         * follow it), and whether it [movesBack] the position.
+         * Notes a report before it is applied: the start of a burst, whether the report names a
+         * [newTitle] or a [newItem] (the other half of the pair may follow it), and whether it
+         * [movesBack] the position to the start of a track.
          */
         private fun beginReport(
-            changesTrack: Boolean,
+            newTitle: Boolean = false,
+            newItem: Boolean = false,
             movesBack: Boolean = false,
         ) {
+            val changesTrack = newTitle || newItem
             val now = clock()
             val before = SessionMapping.playbackInfo(session.player, state)
             if (!pending) {
@@ -392,13 +395,15 @@ class SessionRepository(
                 beforeBurst = before
             }
             if (changesTrack && changeAt == null) {
-                // The change began here, or at a state just before that moved the position back.
-                val back = movedBackAt?.takeIf { now - it <= SETTLE.inWholeMilliseconds }
+                // The change began here: at a new item, which marks it; or, at a new title, at a
+                // state just before that fell back to the start naming no new item.
+                val back = movedBackAt?.takeIf { newTitle && now - it <= SETTLE.inWholeMilliseconds }
                 burstStart = back ?: now
                 beforeBurst = if (back != null) beforeMovedBack else before
+                movedBackAt = null
             }
             if (changesTrack) changeAt = now
-            if (movesBack) {
+            if (movesBack && !newItem) {
                 movedBackAt = now
                 beforeMovedBack = before
             }

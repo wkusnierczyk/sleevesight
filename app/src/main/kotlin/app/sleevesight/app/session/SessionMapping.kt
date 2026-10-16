@@ -48,29 +48,25 @@ object SessionMapping {
         metadata?.let { it.text(MediaMetadata.METADATA_KEY_TITLE) ?: it.text(MediaMetadata.METADATA_KEY_DISPLAY_TITLE) }
 
     /**
-     * Whether [next] reports a position well before where [previous] would be by then (extrapolated
-     * while playing, from the two states' own update times): a new track's first state, which may
-     * name no new queue item (Castbox), or a seek back. Unknown positions never move back.
+     * Whether [next] falls back to the start of a track (within [AT_START]) from a position
+     * [previous] reported past it (more than twice that): a new track's first state, which may name
+     * no new queue item (Castbox). A seek to mid-track is not one, nor a state still at the start
+     * (Castbox reports `PLAYING` at 0 while it stalls), nor a fall from a position reported only at
+     * the start, however long it has played since: its extrapolation cannot tell it from a stall.
+     * Unknown positions never fall back.
      */
     fun movedBack(
         previous: PlaybackState?,
         next: PlaybackState?,
     ): Boolean {
-        if (previous == null || next == null) return false
-        val known = previous.position >= 0 && next.position >= 0
-        val elapsed =
-            if (previous.state == PlaybackState.STATE_PLAYING) {
-                ((next.lastPositionUpdateTime - previous.lastPositionUpdateTime) * previous.playbackSpeed)
-                    .toLong()
-                    .coerceAtLeast(0)
-            } else {
-                0
-            }
-        return known && next.position < previous.position + elapsed - MOVED_BACK.inWholeMilliseconds
+        val start = AT_START.inWholeMilliseconds
+        val from = previous?.position ?: -1
+        val to = next?.position ?: -1
+        return from > 2 * start && to in 0..start
     }
 
-    /** How far back a position must move to count: more than a player's jitter, less than any track. */
-    private val MOVED_BACK = 1.seconds
+    /** How near the start a new track's first state reports: more than a player's jitter, short of any track. */
+    private val AT_START = 1.seconds
 
     /** The active queue item the playback state names; the session's −1 ("no item") is null. */
     fun activeItem(state: PlaybackState?): Long? =
