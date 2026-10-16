@@ -204,11 +204,12 @@ class SessionHistory(
  * A track in the session history.
  *
  * @property session the listening session it played in, numbered from 1.
- * @property playedAt when it began to play: when its change began, if it followed the track before
- *   at once, else when the session layer first saw it play.
+ * @property playedAt when the app first saw it play, once the player's reports had settled: up to
+ *   the settle window after they came, longer while it buffered first. A change's precise time is
+ *   its [TrackChangeRecord.changedAt].
  * @property track the track as the player last reported it, without its art.
- * @property stoppedAt when it was last seen to stop playing; null while it plays, or if the
- *   process ended while it played.
+ * @property stoppedAt when the app first saw it stop playing, with the same lag as [playedAt]; null
+ *   while it plays, or if the process ended while it played.
  */
 data class PlayedTrack(
     val id: Long,

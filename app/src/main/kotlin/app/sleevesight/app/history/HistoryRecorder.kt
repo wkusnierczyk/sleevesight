@@ -38,9 +38,11 @@ import kotlin.time.Instant
  *   the same listening session, it is not added again: a resume, an update of it (artists sent
  *   after the title, a new length) and the same track shown after a restart update its entry. A
  *   resume after a break longer than the session gap begins a new session with it.
- * - **When a track began**: when its change began, if it followed the track playing before at
- *   once; else (the first track found playing at start, a track resumed, or one skipped to while
- *   paused) when it was first seen playing, which is up to the settle window late.
+ * - **Times in the history** are when the recorder sees them: a track's start when it is first seen
+ *   playing, its stop when it is first seen to stop, both as [SessionRepository.playing] publishes
+ *   them, after the player's reports have settled. So they lag the reports by up to the settle
+ *   window, and a track that buffers before it plays starts once it plays. The precise time of a
+ *   change is its record's `changedAt`; its `from` and `to` name the tracks it links.
  * - **Each track change** ([SessionRepository.lastChange]) with its features: the time the
  *   previous track had left ([SessionChange.timeLeft]), the playback states before it, and the
  *   player. Two features have no source yet and are recorded as null: the time since the user's
@@ -74,18 +76,11 @@ class HistoryRecorder(
             }
             launch {
                 var before: NowPlaying? = null
-                var timed: SessionChange? = null
                 sessions.playing.collect { track ->
-                    val change = sessions.lastChange.value
-                    // The change that led here from the track playing before, used once.
-                    val followed =
-                        change?.takeIf {
-                            before != null && track != null && it !== timed && TrackIdentity.same(it.track, track)
-                        }
-                    if (followed != null) timed = followed
-                    val at = followed?.let { wallTime(it.changedAt) } ?: wall.now()
+                    val at = wall.now()
                     val playedBefore = before
-                    if (playedBefore != null && (track == null || !TrackIdentity.same(playedBefore, track))) {
+                    // By the rule that adds a track, so a track that gets a row of its own stops the one before.
+                    if (playedBefore != null && (track == null || !sameAsLast(playedBefore, track))) {
                         writes.trySend(Write("a track stopping") { history.stopped(at) })
                     }
                     if (track != null) {

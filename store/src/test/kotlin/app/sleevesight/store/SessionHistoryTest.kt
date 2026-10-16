@@ -104,12 +104,13 @@ class SessionHistoryTest {
     @Test
     fun `the break counts from when the track before stopped, even within its length`() {
         play(sundown, start)
-        // Paused 10 s in, and something else played 31 minutes later: before Sundown's length
-        // plus the gap, but after the gap since it stopped.
+        // Paused 10 s in, and something else played 30.5 minutes later: before Sundown's length
+        // plus the gap, but after the gap since it stopped. A later stop does not move the first.
         history.stopped(start + 10.seconds)
-        history.stopped(start + 20.seconds)
+        history.stopped(start + 2.minutes)
+        assertEquals(start + 10.seconds, history.latestSession().single().stoppedAt)
 
-        assertEquals(2L, play(carefree, start + 10.seconds + 31.minutes).session)
+        assertEquals(2L, play(carefree, start + 10.seconds + 30.5.minutes).session)
     }
 
     @Test

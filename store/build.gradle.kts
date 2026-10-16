@@ -14,6 +14,8 @@ sqldelight {
         }
         // The history cannot be rebuilt, so each schema version is kept (`databases/<version>.db`,
         // from `generateMainHistoryDatabaseSchema`) and every migration is checked against it.
+        // Regenerate only after adding the migration's `.sqm`, which writes the next version;
+        // never overwrite a committed `.db`.
         create("HistoryDatabase") {
             packageName = "app.sleevesight.store.history"
             srcDirs("src/main/history")

@@ -7,6 +7,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.app.session.FakeSession
+import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SessionRepositoryFixture
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
@@ -83,8 +84,10 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
 
         val played = history.latestSession()
         assertEquals(listOf("Sundown", "Carefree Highway"), played.map { it.track.title })
-        // The first track from when it was found playing; the next from when its change began.
-        assertEquals(listOf(base, base + 60.seconds), played.map { it.playedAt })
+        // Each from when it was seen playing, once its reports had settled; the first stopped then.
+        val carefreeAt = base + 60.seconds + SessionRepository.SETTLE
+        assertEquals(listOf(base, carefreeAt), played.map { it.playedAt })
+        assertEquals(listOf(carefreeAt, null), played.map { it.stoppedAt })
     }
 
     @Test
@@ -112,7 +115,10 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
         at(70_000)
         spotify.settled(state(positionMs = 10_000, updatedAt = 70_000))
 
-        assertEquals(listOf(1L), history.latestSession().map { it.session })
+        val entry = history.latestSession().single()
+        assertEquals(1L, entry.session)
+        // Playing again: no longer stopped.
+        assertNull(entry.stoppedAt)
     }
 
     @Test
@@ -154,14 +160,19 @@ internal class HistoryRecorderTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aNewTitleUnderTheSameMediaIdIsANewEntry() {
-        val spotify = FakeSession(SPOTIFY, metadata = metadata(mediaId = "spotify:track:1"))
+    fun aNewTitleUnderTheSameMediaIdIsANewEntryAndStopsTheOneBefore() {
+        // A stream with no length that keeps one media id while its songs change, the next 40
+        // minutes in: past the session gap from the first song's start, but not from its stop.
+        val spotify = FakeSession(SPOTIFY, metadata = metadata(mediaId = "stream:1"))
         system.active = listOf(spotify)
         repository.start()
-        at(1_000)
-        spotify.settled(metadata(title = "Sundown (Live)", mediaId = "spotify:track:1"))
+        at(40 * 60_000L)
+        spotify.settled(metadata(title = "Carefree Highway", mediaId = "stream:1"))
 
-        assertEquals(listOf("Sundown", "Sundown (Live)"), history.latestSession().map { it.track.title })
+        val played = history.latestSession()
+        assertEquals(listOf("Sundown", "Carefree Highway"), played.map { it.track.title })
+        assertEquals(listOf(1L, 1L), played.map { it.session })
+        assertEquals(played[1].playedAt, played[0].stoppedAt)
     }
 
     @Test

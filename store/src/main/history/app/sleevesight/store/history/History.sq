@@ -9,8 +9,11 @@
 -- track that starts, or resumes, more than the session gap after the track before was last heard
 -- begins the next. A track was last heard at `stopped_at`, when it was last seen to stop playing
 -- (paused, stopped, or followed by another), null while it plays; failing that (the process ended
--- while it played), at `played_at` plus `duration_ms`. The artists are the player's string, as
--- sent. `queue_item` is the active queue item, kept so the track is known again after a restart.
+-- while it played), at `played_at` plus `duration_ms`. `played_at` and `stopped_at` are when the
+-- app saw the track start and stop playing, once the player's reports had settled: up to the
+-- settle window after the reports, longer while a track buffers before it plays; a change's precise
+-- time is in `track_change`. The artists are the player's string, as sent. `queue_item` is the
+-- active queue item, kept so the track is known again after a restart.
 CREATE TABLE played (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     session INTEGER NOT NULL,
