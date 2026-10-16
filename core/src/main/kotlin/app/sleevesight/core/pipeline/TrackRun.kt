@@ -3,7 +3,8 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.combineLabels
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -54,14 +55,15 @@ internal class TrackRun(
     private val nowPlaying = input.nowPlaying
     private val track = input.track
     private val key = track.lookupKey
-    private val enabled = parts.adapters.filter { settings.isEnabled(it.id) }
+    private val adapters = parts.adapters.map { it.configuredFor(settings) }
+    private val enabled = adapters.filter { settings.isEnabled(it.id) }
     private val state =
         MutableStateFlow(
             TrackState(
                 nowPlaying = nowPlaying,
                 normalized = track,
                 sources =
-                    parts.adapters.associate { adapter ->
+                    adapters.associate { adapter ->
                         adapter.id to if (adapter in enabled) SourceState.Pending else SOURCE_OFF
                     },
             ),
@@ -218,17 +220,22 @@ internal class TrackRun(
 
     // The cited lines: the player's release, then each enabled source's verified lines, in the
     // adapters' order, so the same retrieval gives the same ids whatever order the sources land in.
+    // The genre labels: those of the label sources switched on, combined; never evidence.
     private fun assemble(): EvidenceSet {
         val results =
-            parts.adapters.mapNotNull { (state.value.sources[it.id] as? SourceState.Done)?.result }
+            adapters.mapNotNull { adapter ->
+                (state.value.sources[adapter.id] as? SourceState.Done)?.let { adapter.id to it.result }
+            }
         val drafts =
-            playerLines() + results.flatMap { it.evidence }.filter { settings.isEnabled(it.source) }
+            playerLines() + results.flatMap { it.second.evidence }.filter { settings.isEnabled(it.source) }
         val evidence = EvidenceSet.of(drafts, parts.hasher)
+        val bySource = results.toMap()
         val genres =
-            results
-                .flatMap { it.genres }
-                .distinctBy { it.tag }
-                .take(GenreVocabulary.MAX_LABELS)
+            combineLabels(
+                LabelSource.entries
+                    .filter(settings::givesLabels)
+                    .associateWith { bySource[it.source]?.genres.orEmpty() },
+            )
         update { it.copy(evidence = evidence, genres = genres) }
         emit(
             PipelineEvent.EvidenceAssembled(

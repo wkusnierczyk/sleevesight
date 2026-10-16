@@ -2,7 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
@@ -19,8 +19,8 @@ import app.sleevesight.core.synthesis.GroundedText
  * @property resolution what MusicBrainz resolved, once it has (null before, and when every source
  *   was served from the cache, so nothing needed it).
  * @property evidence the cited evidence, with ids and fingerprint, once every source has landed.
- * @property genres the artists' genre labels, from the sources that give them, once every source
- *   has landed.
+ * @property genres the artists' genre labels, from the label sources switched on, combined
+ *   ([app.sleevesight.core.genres.combineLabels]), once every source has landed.
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -28,7 +28,7 @@ data class TrackState(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution? = null,
     val evidence: EvidenceSet? = null,
-    val genres: List<GenreLabel> = emptyList(),
+    val genres: List<TrackLabel> = emptyList(),
     val insight: InsightState = InsightState.Idle(canWrite = false),
 ) {
     /** Whether every source has landed. */

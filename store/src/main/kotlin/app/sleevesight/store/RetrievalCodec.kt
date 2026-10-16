@@ -21,9 +21,10 @@ internal object RetrievalCodec {
     /**
      * The encoding's version; a change to it makes every kept result a miss. 2: genre labels (#44),
      * which a result of version 1 would lack. 3: the key holds the player's length (#44), so entries
-     * under the old key are dropped rather than left to expire.
+     * under the old key are dropped rather than left to expire. 4: a genre label's identity and the
+     * page it links (#84), by which labels from two sources combine and are credited.
      */
-    const val FORMAT: Int = 3
+    const val FORMAT: Int = 4
 
     private val json = Json { encodeDefaults = false }
 
@@ -39,7 +40,7 @@ internal object RetrievalCodec {
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason) },
-                genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label) },
+                genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
             ),
         )
 
@@ -53,7 +54,7 @@ internal object RetrievalCodec {
                 latency = Duration.parseIsoString(stored.latency),
                 unverified = stored.unverified.map(::draft),
                 rejections = stored.rejections.map { Rejection(it.subject, it.reason) },
-                genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label) },
+                genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -121,6 +122,8 @@ internal object RetrievalCodec {
         val family: String,
         val hue: Int,
         val label: String,
+        val identity: String,
+        val url: String? = null,
     )
 
     @Serializable

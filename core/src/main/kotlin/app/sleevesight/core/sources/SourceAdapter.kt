@@ -5,6 +5,7 @@ import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Deferred
 import kotlin.time.Duration
 
@@ -40,6 +41,15 @@ interface SourceAdapter {
     val consults: Set<SourceId> get() = setOf(id)
 
     /**
+     * This adapter as [settings] have it look up, which the pipeline asks once per track and uses
+     * for that track, cache included. Most adapters do not depend on the settings, and are
+     * themselves. One that does (MusicBrainz, which fetches its artists' tags only while they give
+     * genre labels, #84) gives each configuration whose results differ its own
+     * [extractionVersion], so the retrieval cache does not serve a result made under the other.
+     */
+    fun configuredFor(settings: Settings): SourceAdapter = this
+
+    /**
      * Looks [track] up. Lines in the result must come in a deterministic order for the same
      * response, since [app.sleevesight.core.evidence.EvidenceSet] keeps it
      * when assigning ids. Each draft names its own source, which decides its id; an adapter may
@@ -69,9 +79,10 @@ val SourceAdapter.tag: String get() = id.tag
  * reason, also when another candidate gave lines (one credited artist of several), so the
  * *Sources* section can show them.
  *
- * [genres] are the genre labels the source gives the track's artists (Last.fm's tags through the
- * vocabulary, `design/architecture.md`, *Genre labels*), from a verified or unverified match only;
- * empty for a source that gives none.
+ * [genres] are the genre labels the source gives the track's artists (`design/architecture.md`,
+ * *Genre labels*): Last.fm's tags through the vocabulary, from a verified or unverified match only;
+ * MusicBrainz's, from the resolved artists' tags (#84); empty for a source that gives none. They
+ * are never evidence, so never in a prompt.
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
