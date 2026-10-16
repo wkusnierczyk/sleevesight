@@ -153,6 +153,28 @@ class FollowedPlayersTest {
         assertEquals(1, shadowOf(controller).callbacks.size)
     }
 
+    @Test
+    fun aFollowedPlayerIsReleasedWhenAReadFailsAndFollowedAgainAfterTheRetry() {
+        // Spotify followed by default; the settings' first read emits, then fails.
+        val flaky = FlakyDataStore(stores.open("settings"))
+        flaky.failuresAfterAValue.set(1)
+        val sessions =
+            SessionRepository(
+                sessions = SystemActiveSessions(app),
+                acknowledged = MutableStateFlow(true),
+                artLoader = ArtLoader(app.contentResolver, HttpArt.NONE, Dispatchers.IO),
+                scope = scope,
+                followed = SettingsStore(flaky).followedPlayers,
+            )
+        val controller = addSession(Settings.SPOTIFY)
+        val shown = tracksShown(sessions)
+        sessions.start()
+
+        idleUntil("Spotify followed again") { flaky.reads.get() >= 2 && sessions.nowPlaying.value != null }
+        assertEquals(listOf(null, "Sundown", null, "Sundown"), shown.map { it?.title })
+        assertEquals(1, shadowOf(controller).callbacks.size)
+    }
+
     private companion object {
         const val OTHER_PLAYER = "com.example.player"
     }

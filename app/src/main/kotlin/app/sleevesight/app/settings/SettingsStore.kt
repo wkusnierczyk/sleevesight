@@ -8,7 +8,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import java.io.IOException
 import kotlin.math.pow
@@ -25,7 +28,9 @@ import kotlin.time.Duration.Companion.seconds
  * player the user switched off, or use a source they turned off: the read is retried, after
  * [FIRST_RETRY] and then twice as long each time up to [MAX_RETRY], until one succeeds, and the
  * flows go on with each change after it. Meanwhile [settings] emits nothing new, so the screen
- * keeps what it showed, or shows nothing yet; [followedPlayers] follows no player. A file DataStore
+ * keeps what it showed, or shows nothing yet. [followedPlayers] emits nothing before its first
+ * read succeeds, so the session layer waits, as for any first read; a failure after a read names
+ * no player, so the session layer follows none until the retry succeeds. A file DataStore
  * cannot parse is replaced by an empty one (the corruption handler where the store is created):
  * the settings return to their defaults. Losing the settings costs the user their choices, never
  * a key or the cache.
@@ -40,14 +45,22 @@ class SettingsStore(
 
     /**
      * The package names of the players switched on under *Players to follow*, for the session layer
-     * (#48), which reads only these players' sessions and drops the others' events. None while the
-     * file cannot be read: a player is followed only on the user's stored choice.
+     * (#48), which reads only these players' sessions and drops the others' events. A player is
+     * followed only on the user's stored choice: nothing is emitted before the first read
+     * succeeds, and a read that fails after it names no player until the retry succeeds.
      */
     val followedPlayers: Flow<Set<String>> =
-        stored
-            .map { s -> s.followedPlayers.filterValues { it }.keys }
-            .retryReads { emit(emptySet()) }
-            .distinctUntilChanged()
+        flow {
+            // Per collection: before its first value, a failure emits nothing, so the session layer
+            // waits rather than reading sessions it could not record (`playerSeen` would fail too).
+            var read = false
+            emitAll(
+                stored
+                    .map { s -> s.followedPlayers.filterValues { it }.keys }
+                    .onEach { read = true }
+                    .retryReads { if (read) emit(emptySet()) },
+            )
+        }.distinctUntilChanged()
 
     /** Applies [transform] to the stored settings, atomically. */
     suspend fun update(transform: (Settings) -> Settings) {

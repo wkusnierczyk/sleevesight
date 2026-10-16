@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -82,18 +83,24 @@ fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher(Soft
 
 /**
  * A DataStore over [store] whose reads fail with an I/O error while [failures] is above zero, each
- * failing read taking one, as a file that cannot be read for a while would.
+ * failing read taking one, as a file that cannot be read for a while would. While
+ * [failuresAfterAValue] is above zero, a read instead emits the stored value and then fails.
  */
 class FlakyDataStore<T>(
     private val store: DataStore<T>,
 ) : DataStore<T> {
     val failures = AtomicInteger()
+    val failuresAfterAValue = AtomicInteger()
     val reads = AtomicInteger()
 
     override val data: Flow<T> =
         flow {
             reads.incrementAndGet()
             if (failures.getAndUpdate { maxOf(it - 1, 0) } > 0) throw IOException("cannot read")
+            if (failuresAfterAValue.getAndUpdate { maxOf(it - 1, 0) } > 0) {
+                emit(store.data.first())
+                throw IOException("cannot read")
+            }
             emitAll(store.data)
         }
 

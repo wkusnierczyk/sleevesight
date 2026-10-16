@@ -90,6 +90,29 @@ class SettingsStoreTest {
         }
 
     @Test
+    fun theFollowedPlayersWaitForAFirstReadAndNameNoneAfterALaterFailure() =
+        runBlocking {
+            val flaky = FlakyDataStore(stores.open("settings"))
+            val store = SettingsStore(flaky)
+            val followed = mutableListOf<Set<String>>()
+
+            // A failed first read emits nothing: the session layer waits, as for any first read.
+            flaky.failures.set(1)
+            val first = launch { store.followedPlayers.collect { followed += it } }
+            withTimeout(5.seconds) { while (followed.isEmpty()) delay(10) }
+            assertEquals(listOf(setOf(Settings.SPOTIFY)), followed)
+            first.cancel()
+
+            // A failure after a read names no player until the retry succeeds.
+            followed.clear()
+            flaky.failuresAfterAValue.set(1)
+            val second = launch { store.followedPlayers.collect { followed += it } }
+            withTimeout(5.seconds) { while (followed.size < 3) delay(10) }
+            assertEquals(listOf(setOf(Settings.SPOTIFY), emptySet(), setOf(Settings.SPOTIFY)), followed)
+            second.cancel()
+        }
+
+    @Test
     fun aDamagedFileReadsAsTheDefaults() =
         runBlocking {
             stores.file("settings").writeBytes(byteArrayOf(0x0a, 0x7f, 0x01, 0x02, 0x03))
