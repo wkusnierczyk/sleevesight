@@ -32,7 +32,7 @@ When little is documented about a track, Sleevesight says so instead of filling 
 
 ### Settings
 
-Each change is saved at once. The defaults, and why:
+Each change is saved at once; one that cannot be saved leaves the setting as it was, and the settings say so. The defaults, and why:
 
 | Setting | Default | Why |
 |---|---|---|
