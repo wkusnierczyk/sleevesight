@@ -24,6 +24,8 @@ android {
 }
 
 dependencies {
+    // The domain types the session layer maps to (`NowPlaying`).
+    implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
