@@ -5,6 +5,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.SystemClock
 import android.util.Log
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * What the followed players are playing (`design/architecture.md`, *Session layer*): listens for
@@ -43,9 +45,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * else the first followed session: the system lists the most recently active first.
  *
  * **Settling.** [nowPlaying] is mapped from a session's metadata and playback state once they
- * have settled for [SETTLE] (see `Attached`), so the two halves of a track change arrive as one.
- * [playback] and [queue] are published at once: skip detection counts the `PLAYING` states
- * before a change and reads the position they report (D5), which coalescing would lose.
+ * have settled for [SETTLE], or at most [MAX_SETTLE] after the first of them (see `Attached`), so
+ * the two halves of a track change arrive as one. A player that becomes the one shown while its
+ * reports are settling is shown once they have. [playback] and [queue] are published at once:
+ * skip detection counts the `PLAYING` states before a change and reads the position they report
+ * (D5), which coalescing would lose; [lastChange] keeps when each change began.
  *
  * **Lifecycle.** [SleevesightListenerService] calls [start] when the system binds it and [stop] when
  * it unbinds; `MainActivity` also calls [start] on resume while access is granted, since the
@@ -63,11 +67,13 @@ class SessionRepository(
     private val artLoader: ArtLoader,
     private val scope: CoroutineScope,
     private val followed: Flow<Set<String>> = flowOf(DEFAULT_FOLLOWED),
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
     private val nowPlayingState = MutableStateFlow<NowPlaying?>(null)
     private val playbackState = MutableStateFlow(PlaybackInfo.NONE)
     private val queueState = MutableStateFlow<SessionQueue?>(null)
     private val artState = MutableStateFlow<Bitmap?>(null)
+    private val changeState = MutableStateFlow<SessionChange?>(null)
     private val seenState = MutableStateFlow<Set<String>>(emptySet())
 
     /**
@@ -76,6 +82,12 @@ class SessionRepository(
      * sends constantly, do not emit.
      */
     val nowPlaying: StateFlow<NowPlaying?> = nowPlayingState.asStateFlow()
+
+    /**
+     * The last change of [nowPlaying] from one track to another, with when it began and the
+     * playback state before it, for skip detection (D5, #53): see [SessionChange].
+     */
+    val lastChange: StateFlow<SessionChange?> = changeState.asStateFlow()
 
     /** The shown player's playback state; [PlaybackInfo.NONE] when there is no followed session. */
     val playback: StateFlow<PlaybackInfo> = playbackState.asStateFlow()
@@ -101,6 +113,7 @@ class SessionRepository(
     private val attached = LinkedHashMap<Any, Attached>()
     private var artSources: List<ArtSource> = emptyList()
     private var artJob: Job? = null
+    private var lastShown: Attached? = null
 
     /** Starts following, once [acknowledged] is true; calling it again while started does nothing. */
     fun start() {
@@ -159,13 +172,38 @@ class SessionRepository(
 
     private fun publish() {
         val shown = attached.values.firstOrNull { SessionMapping.isActive(it.state) } ?: attached.values.firstOrNull()
-        val previous = nowPlayingState.value
-        val track = shown?.track
-        nowPlayingState.value = track
         playbackState.value =
             shown?.let { SessionMapping.playbackInfo(it.session.player, it.state) } ?: PlaybackInfo.NONE
         queueState.value = shown?.let { SessionMapping.queue(it.queue, it.queueTitle) }
+        // A player that becomes the one shown because it started a new track has not settled
+        // yet: its track is still the one before. The track shown stays until it settles.
+        if (shown != null && shown !== lastShown && shown.pending) return
+        val switched = shown !== lastShown
+        lastShown = shown
+        val previous = nowPlayingState.value
+        val track = shown?.track
+        nowPlayingState.value = track
+        if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
+            changeState.value = changeTo(track, shown.change, switched)
+        }
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
+    }
+
+    /**
+     * The record of a change to [track]: the session's own ([own]); on a switch to another player,
+     * only its timing, since that player's playback state says nothing of the track left behind.
+     */
+    private fun changeTo(
+        track: NowPlaying,
+        own: SessionChange?,
+        switched: Boolean,
+    ): SessionChange {
+        val mine = own?.takeIf { it.track == track }
+        return when {
+            mine == null -> SessionChange(track, clock(), null)
+            switched -> mine.copy(before = null)
+            else -> mine
+        }
     }
 
     private fun updateArt(
@@ -211,6 +249,7 @@ class SessionRepository(
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
                     ifAttached {
+                        beginBurst()
                         this@Attached.metadata = metadata
                         settleLater()
                     }
@@ -218,6 +257,7 @@ class SessionRepository(
 
                 override fun onPlaybackStateChanged(state: PlaybackState?) {
                     ifAttached {
+                        beginBurst()
                         this@Attached.state = state
                         settleLater()
                     }
@@ -256,10 +296,27 @@ class SessionRepository(
         var trackMetadata: MediaMetadata? = null
             private set
 
+        /** The change the last settle made, if it made one: for skip detection (D5). */
+        var change: SessionChange? = null
+            private set
+
+        /** Whether reports have arrived that are not settled yet. */
+        var pending = false
+            private set
+
         /** The last queue item the state named, and the title it was named for. */
         private var knownItem: Long? = null
         private var knownItemTitle: String? = null
+
+        /** An item the state still names after the title moved on: the previous track's. */
+        private var staleItem: Long? = null
+
+        /** When the reports now settling began, and the playback state just before them. */
+        private var burstStart = 0L
+        private var beforeBurst: PlaybackInfo? = null
+
         private var settling: Job? = null
+        private var deadline: Job? = null
 
         init {
             // The first track is settled at once: after process death the playing track is shown
@@ -269,17 +326,31 @@ class SessionRepository(
 
         fun release() {
             settling?.cancel()
+            deadline?.cancel()
             session.unregister(callback)
         }
 
+        /** Notes the start of a burst of reports, before the first of them is applied. */
+        private fun beginBurst() {
+            if (pending) return
+            pending = true
+            burstStart = clock()
+            beforeBurst = SessionMapping.playbackInfo(session.player, state)
+            // However often the player reports, the burst settles within [MAX_SETTLE].
+            deadline = scope.launch { delay(MAX_SETTLE).also { settleNow() } }
+        }
+
+        /** Settles [SETTLE] after the last report, restarted by each one. */
         private fun settleLater() {
             settling?.cancel()
-            settling =
-                scope.launch {
-                    delay(SETTLE)
-                    settle()
-                    publish()
-                }
+            settling = scope.launch { delay(SETTLE).also { settleNow() } }
+        }
+
+        private fun settleNow() {
+            settling?.cancel()
+            deadline?.cancel()
+            settle()
+            publish()
         }
 
         /**
@@ -288,15 +359,33 @@ class SessionRepository(
          * is unchanged.
          */
         private fun settle() {
+            val previous = track
+            val now = SessionMapping.nowPlaying(session.player, metadata, item(previous))
+            track = now
+            trackMetadata = metadata
+            val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
+            change = if (pending && changed) SessionChange(checkNotNull(now), burstStart, beforeBurst) else null
+            pending = false
+        }
+
+        /** The queue item to map the latest pair with, after the [previous] track settled. */
+        private fun item(previous: NowPlaying?): Long? {
             val title = SessionMapping.title(metadata)
             val item = SessionMapping.activeItem(state)
-            if (item != null) {
+            // New metadata while the state still names the previous track's item: a player that
+            // sends its metadata well before its state, or a stream that keeps one item. That item
+            // is not this track's until the state names another; identity then reads the title.
+            val previousItem = previous?.queueItemId?.takeIf { previous.title != title }
+            staleItem = item?.takeIf { it == previousItem || it == staleItem }
+            if (item != null && item != staleItem) {
                 knownItem = item
                 knownItemTitle = title
             }
-            val reported = item ?: knownItem.takeIf { title != null && title == knownItemTitle }
-            track = SessionMapping.nowPlaying(session.player, metadata, reported)
-            trackMetadata = metadata
+            return when {
+                item == null -> knownItem.takeIf { title != null && title == knownItemTitle }
+                item == staleItem -> null
+                else -> item
+            }
         }
 
         /** Applies [change] and republishes, unless this session was dropped meanwhile (a late callback). */
@@ -315,6 +404,13 @@ class SessionRepository(
          * 650 ms debounce. Not a setting: it only aligns two halves of one report.
          */
         val SETTLE: Duration = 300.milliseconds
+
+        /**
+         * The longest a burst of reports waits to settle, however often the player reports (a
+         * scrubbed seek bar, a player that reports its position several times a second). With the
+         * pipeline's 650 ms debounce after it, a lookup starts at most about 1.7 s after a change.
+         */
+        val MAX_SETTLE: Duration = 1.seconds
 
         /** The players followed until the settings supply them: `Settings`' default, Spotify. */
         val DEFAULT_FOLLOWED: Set<String> = Settings().followedPlayers.filterValues { it }.keys

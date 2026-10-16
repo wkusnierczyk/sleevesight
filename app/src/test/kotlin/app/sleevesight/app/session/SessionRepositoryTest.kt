@@ -51,7 +51,14 @@ class SessionRepositoryTest {
     private val resolver = ApplicationProvider.getApplicationContext<android.app.Application>().contentResolver
 
     private val repository =
-        SessionRepository(system, acknowledged, ArtLoader(resolver, http, Dispatchers.Unconfined), scope, followed)
+        SessionRepository(
+            system,
+            acknowledged,
+            ArtLoader(resolver, http, Dispatchers.Unconfined),
+            scope,
+            followed,
+            clock = { scheduler.currentTime },
+        )
 
     private val sundown = NowPlaying(title = "Sundown", artists = "Gordon Lightfoot", player = SPOTIFY)
 
@@ -471,6 +478,7 @@ class SessionRepositoryTest {
         youtube.settled(metadata(title = "Carefree Highway", album = "Sundown"))
 
         assertEquals(1, changes(tracks))
+        assertEquals("Carefree Highway", tracks[1]?.title)
         assertEquals(5L, repository.nowPlaying.value?.queueItemId)
     }
 
@@ -494,6 +502,97 @@ class SessionRepositoryTest {
 
         scheduler.advanceTimeBy(SessionRepository.SETTLE + 1.milliseconds)
         assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+    }
+
+    @Test
+    fun aPlayerShownBecauseItStartedANewTrackIsShownOnceSettled() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = FakeSession(SPOTIFY, playbackState = state(PlaybackState.STATE_PAUSED))
+        val youtube =
+            FakeSession(
+                YOUTUBE_MUSIC,
+                metadata = metadata(title = "OldYT"),
+                playbackState = state(PlaybackState.STATE_PAUSED, queueItem = 4),
+            )
+        system.active = listOf(spotify, youtube)
+        repository.start()
+        val tracks = recordTracks()
+
+        youtube.send(state(queueItem = 5))
+        assertEquals(YOUTUBE_MUSIC, repository.playback.value.player)
+        youtube.send(metadata(title = "NewYT"))
+        settle()
+
+        assertEquals(listOf("Sundown", "NewYT"), tracks.map { it?.title })
+        assertEquals(5L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun aPlayerReportingEvery250MsStillSettlesWithinTheLongestWait() {
+        val youtube = youtubeMusic()
+        youtube.send(carefree)
+        repeat(4) {
+            scheduler.advanceTimeBy(250.milliseconds)
+            youtube.send(state(positionMs = it * 250L, queueItem = 5))
+        }
+        // 1 s after the burst began, with a report 250 ms ago and more to come.
+        scheduler.advanceTimeBy(1.milliseconds)
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+        assertEquals(5L, repository.nowPlaying.value?.queueItemId)
+    }
+
+    @Test
+    fun metadataWellBeforeTheStateIsOneChangeAtTheMetadata() {
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.send(carefree)
+        scheduler.advanceTimeBy(500.milliseconds)
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+        youtube.settled(state(queueItem = 5))
+
+        assertEquals(1, changes(tracks))
+        assertEquals(listOf(4L, null, 5L), tracks.map { it?.queueItemId })
+        assertEquals(listOf("Sundown", "Carefree Highway", "Carefree Highway"), tracks.map { it?.title })
+    }
+
+    @Test
+    fun titlesChangingUnderOneQueueItemAreChanges() {
+        // A stream that publishes one item while the songs change.
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.settled(carefree)
+        youtube.settled(state(positionMs = 1_000, queueItem = 4))
+        youtube.settled(metadata(title = "Rainy Day People"))
+
+        assertEquals(2, changes(tracks))
+    }
+
+    @Test
+    fun aChangeKeepsWhenItBeganAndThePlaybackBeforeIt() {
+        val youtube = youtubeMusic()
+        youtube.settled(state(positionMs = 200_000, updatedAt = 7, queueItem = 4))
+        assertNull(repository.lastChange.value)
+
+        val began = scheduler.currentTime
+        youtube.send(state(positionMs = 0, queueItem = 5))
+        scheduler.advanceTimeBy(100.milliseconds)
+        youtube.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals("Carefree Highway", change.track.title)
+        assertEquals(began, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 7, 1f), change.before)
+        assertTrue(scheduler.currentTime > began)
+    }
+
+    @Test
+    fun anUpdateOfTheSameTrackIsNoChange() {
+        val youtube = youtubeMusic()
+        youtube.settled(metadata(durationMs = 279_000))
+        assertNull(repository.lastChange.value)
     }
 
     @Test
