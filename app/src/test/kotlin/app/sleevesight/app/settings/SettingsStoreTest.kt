@@ -77,7 +77,9 @@ class SettingsStoreTest {
                     launch { store.followedPlayers.collect { followed += it } },
                     launch { store.settings.collect { shown += it } },
                 )
-            withTimeout(5.seconds) { while (shown.isEmpty() || flaky.reads.get() < 4) delay(10) }
+            // A read is counted when it starts, before its value arrives: wait for both values.
+            withTimeout(5.seconds) { while (followed.isEmpty() || shown.isEmpty()) delay(10) }
+            assertEquals(4, flaky.reads.get())
             assertEquals(listOf(emptySet<String>()), followed)
             assertEquals(listOf(mapOf(Settings.SPOTIFY to false)), shown.map { it.followedPlayers })
 
