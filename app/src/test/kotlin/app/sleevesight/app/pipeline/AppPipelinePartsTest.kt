@@ -1,0 +1,113 @@
+package app.sleevesight.app.pipeline
+
+import app.sleevesight.app.TestStores
+import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.testCipher
+import app.sleevesight.core.Secret
+import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.PipelineCache
+import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.wiring.SourceKeys
+import app.sleevesight.wiring.appPipelineWiring
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.util.concurrent.atomic.AtomicInteger
+
+/** The app's pipeline stages from the wiring and the saved keys (#51). Nothing here sends a request. */
+class AppPipelinePartsTest {
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    private val stores by lazy { TestStores(tmp.root) }
+    private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+    private val parts =
+        AppPipelineParts(
+            appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader),
+            Normalizer(JvmAccentFolder),
+            PipelineCache.None,
+        )
+
+    @After
+    fun close() = stores.close()
+
+    @Test
+    fun theKeysAreReadForTheServiceChosenAndTheKeyedSources() =
+        runBlocking {
+            secrets.set(SecretId.ANTHROPIC, Secret("ai"))
+            secrets.set(SecretId.EXA, Secret("exa"))
+
+            val keys = secrets.pipelineKeys(ProviderId.ANTHROPIC)
+            assertEquals("ai", keys.ai?.reveal())
+            assertNull(keys.sources.lastFm)
+            assertEquals("exa", keys.sources.web[WebEngine.EXA]?.reveal())
+            assertNull("no service chosen, no AI key", secrets.pipelineKeys(null).ai)
+        }
+
+    @Test
+    fun aKeySavedReplacedOrRemovedIsAChange() =
+        runBlocking {
+            val seen = AtomicInteger()
+            val watching = launch(Dispatchers.Default) { secrets.changes.collect { seen.incrementAndGet() } }
+
+            suspend fun changesSeen(n: Int) = withTimeout(5_000) { while (seen.get() < n) delay(10) }
+
+            changesSeen(1)
+            secrets.set(SecretId.LASTFM, Secret("first"))
+            changesSeen(2)
+            // Replaced: its state stays saved, and the pipeline still needs to know.
+            secrets.set(SecretId.LASTFM, Secret("second"))
+            changesSeen(3)
+            secrets.clear(SecretId.LASTFM)
+            changesSeen(4)
+            watching.cancel()
+        }
+
+    @Test
+    fun keyedSourcesAreLookedUpOnlyWithTheirKeys() {
+        val none = parts(PipelineKeys(), Settings())
+        assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), none.adapters.map { it.id })
+        assertNotNull(none.musicBrainzLabels)
+
+        val keyed =
+            parts(
+                PipelineKeys(sources = SourceKeys(Secret("lastfm"), mapOf(WebEngine.EXA to Secret("exa")))),
+                Settings(),
+            )
+        assertEquals(
+            listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM, SourceId.WEB),
+            keyed.adapters.map { it.id },
+        )
+
+        val engineOff =
+            parts(
+                PipelineKeys(sources = SourceKeys(web = mapOf(WebEngine.EXA to Secret("exa")))),
+                Settings(webEngines = emptySet()),
+            )
+        assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), engineOff.adapters.map { it.id })
+    }
+
+    @Test
+    fun theAiAccessNeedsTheServiceChosenAndItsKey() {
+        val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
+        assertEquals(ProviderId.ANTHROPIC, parts(PipelineKeys(ai = Secret("ai")), anthropic).ai?.provider?.id)
+        assertNull("no key", parts(PipelineKeys(), anthropic).ai)
+        assertNull("no service chosen", parts(PipelineKeys(ai = Secret("ai")), Settings()).ai)
+        assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OPENAI)).ai)
+    }
+}

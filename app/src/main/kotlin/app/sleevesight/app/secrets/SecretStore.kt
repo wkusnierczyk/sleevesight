@@ -109,6 +109,17 @@ class SecretStore(
             .flowOn(dispatcher)
             .distinctUntilChanged()
 
+    /**
+     * Emits once, and again whenever a stored key changes (saved, replaced, removed, reset), for the
+     * pipeline on the phone, which is built with the keys and reads them with [get] when this
+     * emits (#51). It says nothing of the values: a key replaced by another emits, though its state
+     * stays [SecretState.SAVED].
+     */
+    val changes: Flow<Unit> =
+        combine(data, resets) { prefs, count -> SecretId.entries.map { prefs[keyOf(it)] } to count }
+            .distinctUntilChanged()
+            .map { }
+
     /** The key [id], or null when none is saved or it cannot be read. */
     suspend fun get(id: SecretId): Secret? {
         val stored = data.first()[keyOf(id)] ?: return null
