@@ -19,12 +19,13 @@ How a release is built and signed for Google Play, and the one-time setup it nee
 
 `.github/workflows/release.yml` runs on a pushed tag `v<major>.<minor>.<patch>`, for example `v0.1.0`. Its one job runs in the GitHub environment `release`, which holds the upload key, so it waits for a reviewer's approval before it starts. It then:
 
-1. decodes the upload key from the environment's secrets into the runner's temporary directory;
-2. builds `./gradlew :app:bundleRelease -Psleevesight.version=<the tag without its v>`, shrunk by R8 and signed with the upload key;
-3. removes the key file, checks that the bundle is signed, and prints the signing certificate's SHA-256 fingerprint;
-4. uploads the bundle and the R8 mapping as the workflow artifact `sleevesight-<version>`, kept 90 days.
+1. checks that the tagged commit is on `main`, and stops if it is not;
+2. decodes the upload key from the environment's secrets into the runner's temporary directory;
+3. builds `./gradlew :app:bundleRelease -Psleevesight.version=<the tag without its v>`, shrunk by R8 and signed with the upload key, from a clean state: no Gradle cache is restored, and the build cache is off;
+4. removes the key file, checks that the bundle is signed, and checks the signer: its certificate's SHA-256 fingerprint must equal the environment variable `UPLOAD_CERT_SHA256` once that is set (step 5 of [Play App Signing](#5-play-app-signing)); until then the run prints the fingerprint;
+5. uploads the bundle and the R8 mapping as the workflow artifact `sleevesight-<version>`, kept 90 days.
 
-It does not run the tests: the tagged commit has passed `build` on its pull request and on its branch. Tag a commit on `main`. The bundle is uploaded to Play Console by hand; uploading through the Play Developer API can come later.
+It does not run the tests: the tagged commit has passed `build` on its pull request and on `main`. Its actions are pinned to commits, not tags, since the job holds the upload key. The bundle is uploaded to Play Console by hand; uploading through the Play Developer API can come later.
 
 ## Versioning
 
@@ -33,7 +34,7 @@ The tag gives both versions, so a release needs no commit to bump them:
 - `versionName` is the tag without its `v`: `v1.2.3` gives `1.2.3`.
 - `versionCode` is `major × 1 000 000 + minor × 1 000 + patch`: `1.2.3` gives `1002003`.
 
-Google Play needs every upload's `versionCode` higher than any before it. This code rises with the version, can be read back as the version, and needs no state such as a counter. Minor and patch stay below 1000, and the code at or below Play's limit, 2 100 000 000. A tag is never moved or reused: when a bundle is refused, or never uploaded, the next attempt is a new patch version. The workflow's run number was the alternative; it rises too, but says nothing about the version, and a rerun of the same tag would get a new code.
+Google Play needs every upload's `versionCode` higher than any before it. This code rises with the version, can be read back as the version, and needs no state such as a counter. Minor and patch stay below 1000, and the code at or below Play's limit, 2 100 000 000. A tag is never moved or reused (the [tag rulesets](#3-tag-rulesets) block moving or deleting one): when a bundle is refused, or never uploaded, the next attempt is a new patch version. The workflow's run number was the alternative; it rises too, but says nothing about the version, and a rerun of the same tag would get a new code.
 
 Gradle reads the version from the property `sleevesight.version`, checks its form (`build-logic/src/main/kotlin/sleevesight/release/ReleaseVersion.kt`), and fails on anything else. Without the property, as in every build but a release, the version is `0.1.0`.
 
@@ -96,7 +97,35 @@ gh api -X POST repos/wkusnierczyk/sleevesight/environments/release/deployment-br
 
 `prevent_self_review` is off so that the reviewer may approve a run of a tag they pushed. Check the result with `gh api repos/wkusnierczyk/sleevesight/environments/release`.
 
-### 3. The secrets
+### 3. Tag rulesets
+
+The environment admits any `v*` tag, and the workflow checks that it is on `main`; two rulesets keep a release tag where it was pushed. The first blocks moving or deleting a `v*` tag, for everyone; the second lets only an administrator create one (in the web interface: *Settings*, *Rules*, *Rulesets*, *New tag ruleset*):
+
+```sh
+gh api -X POST repos/wkusnierczyk/sleevesight/rulesets --input - <<'EOF'
+{
+  "name": "Release tags stay put",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+  "rules": [{"type": "update"}, {"type": "deletion"}]
+}
+EOF
+gh api -X POST repos/wkusnierczyk/sleevesight/rulesets --input - <<'EOF'
+{
+  "name": "Release tags by administrators",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+  "rules": [{"type": "creation"}],
+  "bypass_actors": [{"actor_type": "RepositoryRole", "actor_id": 5, "bypass_mode": "always"}]
+}
+EOF
+```
+
+There are two rulesets because a bypass applies to every rule of its ruleset, and the administrator who may create a tag should still not move one. Role 5 is the repository's *Admin* role. Check them with `gh api repos/wkusnierczyk/sleevesight/rulesets`.
+
+### 4. The secrets
 
 ```sh
 base64 < sleevesight-upload.p12 | tr -d '\n' | gh secret set UPLOAD_KEYSTORE_BASE64 --env release
@@ -106,7 +135,7 @@ gh secret set UPLOAD_KEY_ALIAS --env release --body upload
 gh secret list --env release
 ```
 
-### 4. Play App Signing
+### 5. Play App Signing
 
 In Play Console, once the developer account exists:
 
@@ -114,6 +143,11 @@ In Play Console, once the developer account exists:
 2. Push a tag (`git tag v0.1.0 && git push origin v0.1.0` on `main`), approve the run, and download the artifact.
 3. *Test and release*, *Testing*, *Internal testing*, *Create new release*. Play App Signing is on for a new app: keep *Use Google-generated key* for the app signing key. Upload `app-release.aab`. The key that signed this first upload becomes the upload key.
 4. *Test and release*, *App integrity*, *App signing*: the *Upload key certificate*'s SHA-256 fingerprint must equal the one the run printed in *Check the signature*.
+5. Record it as a variable of the environment, not a secret (a certificate's fingerprint is public), so that every later run fails if the bundle is signed with any other key. Colons and case do not matter:
+
+   ```sh
+   gh variable set UPLOAD_CERT_SHA256 --env release --body '<the SHA-256 fingerprint>'
+   ```
 
 A bundle Play Console takes there closes [#56](https://github.com/wkusnierczyk/sleevesight/issues/56); rolling it out to testers is [#58](https://github.com/wkusnierczyk/sleevesight/issues/58).
 
@@ -125,4 +159,4 @@ The app signing key stays with Google, so the upload key can be replaced. Genera
 keytool -export -rfc -keystore sleevesight-upload-new.p12 -alias upload -file upload_certificate.pem
 ```
 
-Once Play has accepted it, replace the four secrets. A leaked key's secrets are removed at once (`gh secret delete <name> --env release`), so no run can sign with it while the reset is pending.
+Once Play has accepted it, replace the four secrets and set `UPLOAD_CERT_SHA256` to the new certificate's fingerprint. A leaked key's secrets are removed at once (`gh secret delete <name> --env release`), so no run can sign with it while the reset is pending.

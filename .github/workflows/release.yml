@@ -3,6 +3,7 @@ name: Release
 # A version tag, `v<major>.<minor>.<patch>`, builds the app bundle for Google Play, signed with the
 # upload key (D7; `design/release.md`). The key is in the `release` environment's secrets, which
 # only tags matching `v*` may use, and each run waits for a reviewer's approval before it starts.
+# The actions are pinned to commits, since the job holds the key.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -20,17 +21,29 @@ jobs:
     timeout-minutes: 30
     environment: release
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-java@v6
+      # A release is built from `main`: a tag on any other commit stops here.
+      - name: Tagged commit on main
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME ($GITHUB_SHA) is not on main"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: "21"
 
-      # Read-only: a release runs on a tag, and the cache belongs to `main` and `dev-*`.
-      - uses: gradle/actions/setup-gradle@v6
+      # No cache: the signed bundle is built from a clean state, with no task output restored from
+      # another run. A release is rare, so the extra minutes do not matter.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-read-only: true
+          cache-disabled: true
 
       # The tag without its `v`; Gradle checks its form and derives `versionCode` from it.
       - name: Version from the tag
@@ -56,15 +69,18 @@ jobs:
           SLEEVESIGHT_UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           SLEEVESIGHT_UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
           VERSION: ${{ steps.version.outputs.name }}
-        run: ./gradlew :app:bundleRelease -Psleevesight.version="$VERSION" --console=plain
+        run: ./gradlew :app:bundleRelease -Psleevesight.version="$VERSION" --no-build-cache --console=plain
 
       - name: Remove the upload key
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.p12"
 
       # `jarsigner -verify` succeeds on an unsigned bundle too, so its output is checked. The
-      # certificate's SHA-256 fingerprint is the one Play Console shows as the upload certificate.
+      # signer's SHA-256 fingerprint must be the upload certificate's, which Play Console shows and
+      # the environment variable `UPLOAD_CERT_SHA256` records once the first bundle is uploaded.
       - name: Check the signature
+        env:
+          UPLOAD_CERT_SHA256: ${{ vars.UPLOAD_CERT_SHA256 }}
         run: |
           aab=app/build/outputs/bundle/release/app-release.aab
           out=$(jarsigner -verify "$aab")
@@ -73,11 +89,24 @@ jobs:
             *"jar verified."*) ;;
             *) echo "::error::$aab is not signed"; exit 1 ;;
           esac
-          keytool -printcert -jarfile "$aab" | grep -E 'Owner:|SHA256:'
+          normalize() { tr -d ': ' | tr '[:lower:]' '[:upper:]'; }
+          actual=$(keytool -printcert -jarfile "$aab" | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | normalize)
+          if [ -z "$actual" ] || [ "${#actual}" -ne 64 ]; then
+            echo "::error::Could not read one SHA-256 fingerprint of the signer"
+            exit 1
+          fi
+          echo "Signer SHA-256: $actual"
+          expected=$(printf '%s' "$UPLOAD_CERT_SHA256" | normalize)
+          if [ -z "$expected" ]; then
+            echo "::notice::The release environment has no UPLOAD_CERT_SHA256 variable; set it to the upload certificate's SHA-256 once Play Console shows it (design/release.md)"
+          elif [ "$actual" != "$expected" ]; then
+            echo "::error::Signed by $actual, not by the upload key $expected"
+            exit 1
+          fi
 
       # The R8 mapping is in the bundle as well, where Play Console reads it; the copy here is for
       # retracing a stack trace locally.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sleevesight-${{ steps.version.outputs.name }}
           path: |

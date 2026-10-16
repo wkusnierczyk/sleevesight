@@ -545,7 +545,7 @@ GitHub Actions from the first code PR. On every pull request, and every push to 
 
 `build` assembles the release variant too, shrunk by R8, so every pull request runs R8 over the app.
 
-The release workflow (`release.yml`, D7) runs on a version tag, `v<major>.<minor>.<patch>`: it builds the app bundle with the version taken from the tag and signs it with the upload key, whose secrets belong to the protected environment `release`, not to the repository, and uploads the bundle as a workflow artifact. Versioning, R8, signing and the one-time setup outside the repository (the key, the environment, Play App Signing) are in [release.md](release.md).
+The release workflow (`release.yml`, D7) runs on a version tag on `main`, `v<major>.<minor>.<patch>`: it builds the app bundle with the version taken from the tag and signs it with the upload key, whose secrets belong to the protected environment `release`, not to the repository, and uploads the bundle as a workflow artifact. Versioning, R8, signing and the one-time setup outside the repository (the key, the environment, Play App Signing) are in [release.md](release.md).
 
 ## Phase mapping
 
