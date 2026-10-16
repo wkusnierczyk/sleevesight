@@ -20,6 +20,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
@@ -36,6 +39,7 @@ import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.launch
+import java.io.IOException
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 
@@ -43,7 +47,9 @@ import kotlin.time.Duration.Companion.seconds
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
  * #84), the insight settings (D5, D13), and the lookup settings (D6, D9); at the end, the way to
- * the credits. Each change is saved at once.
+ * the credits. Each change is saved at once. The rows show the stored settings, so a change that
+ * cannot be saved (the settings file cannot be read or written) leaves its row at the stored value,
+ * and the screen says so above the list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [onOpenCredits] opens the credits screen. [playerLabel] names a player by
@@ -63,12 +69,29 @@ fun SettingsScreen(
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
     // Whether the last save of a key failed: with an unreadable key, it offers *Reset saved keys*.
     var saveFailed by remember { mutableStateOf(false) }
-    val update: Update = { transform -> scope.launch { settingsStore.update(transform) } }
+    // Whether the last change could not be saved.
+    var changeFailed by remember { mutableStateOf(false) }
+    val update: Update = { transform ->
+        scope.launch {
+            changeFailed =
+                try {
+                    settingsStore.update(transform)
+                    false
+                } catch (_: IOException) {
+                    // Only an I/O error: cancellation and any other failure propagate.
+                    true
+                }
+        }
+    }
     val keys = KeysShown(secrets, offerReset = saveFailed || SecretState.UNREADABLE in secrets.values)
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        settings?.let { current ->
-            SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
+        Column(modifier = Modifier.safeDrawingPadding()) {
+            // Above the list, so it shows wherever the list is scrolled to.
+            if (changeFailed) ChangeFailed()
+            settings?.let { current ->
+                SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
+            }
         }
     }
 
@@ -169,6 +192,20 @@ private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
         .toInt()
 
+/** Says that the last change could not be saved, without the error's text, which may name a path. */
+@Composable
+private fun ChangeFailed() {
+    Text(
+        stringResource(R.string.settings_change_failed),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+        modifier =
+            Modifier
+                .padding(start = 24.dp, end = 24.dp, top = 16.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+    )
+}
+
 @Composable
 private fun SettingsContent(
     settings: Settings,
@@ -181,7 +218,6 @@ private fun SettingsContent(
     Column(
         modifier =
             Modifier
-                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),

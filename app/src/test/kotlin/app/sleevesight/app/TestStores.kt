@@ -84,7 +84,9 @@ fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher(Soft
 /**
  * A DataStore over [store] whose reads fail with an I/O error while [failures] is above zero, each
  * failing read taking one, as a file that cannot be read for a while would. While
- * [failuresAfterAValue] is above zero, a read instead emits the stored value and then fails.
+ * [failuresAfterAValue] is above zero, a read instead emits the stored value and then fails. While
+ * [writeFailures] is above zero, a write (`edit`, `updateData`) fails with an I/O error and stores
+ * nothing, each failing write taking one, as a file that cannot be written would.
  */
 class FlakyDataStore<T>(
     private val store: DataStore<T>,
@@ -92,6 +94,7 @@ class FlakyDataStore<T>(
     val failures = AtomicInteger()
     val failuresAfterAValue = AtomicInteger()
     val reads = AtomicInteger()
+    val writeFailures = AtomicInteger()
 
     override val data: Flow<T> =
         flow {
@@ -104,5 +107,8 @@ class FlakyDataStore<T>(
             emitAll(store.data)
         }
 
-    override suspend fun updateData(transform: suspend (t: T) -> T): T = store.updateData(transform)
+    override suspend fun updateData(transform: suspend (t: T) -> T): T {
+        if (writeFailures.getAndUpdate { maxOf(it - 1, 0) } > 0) throw IOException("cannot write")
+        return store.updateData(transform)
+    }
 }
