@@ -17,12 +17,14 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlayedTrack
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.history.HistoryDatabase
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -36,21 +38,30 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     protected val history = SessionHistory(driver)
     protected val warnings = mutableListOf<String>()
 
-    /** The user's *Start a new session after a break of*. */
-    protected val sessionGap = MutableStateFlow(Settings.DEFAULT_SESSION_GAP)
+    /** The user's *Start a new session after a break of*, as each read of the settings gives it. */
+    protected val sessionGap = MutableSharedFlow<Duration>(replay = 1)
+
+    /** Whether the settings have been read when the recorder starts: then the gap is the default. */
+    protected open val settingsRead = true
     val base: Instant = Instant.parse("2026-10-16T08:00:00Z")
     private val wall =
         object : Clock {
             override fun now(): Instant = base + scheduler.currentTime.milliseconds
         }
 
+    /** Where the writes run: at once, unless a test holds them. */
+    protected open val io: CoroutineContext = EmptyCoroutineContext
+
+    protected lateinit var recorder: HistoryRecorder
+
     @Before
     fun record() {
-        val recorder =
+        if (settingsRead) sessionGap.tryEmit(Settings.DEFAULT_SESSION_GAP)
+        recorder =
             HistoryRecorder(
                 repository,
                 history,
-                io = EmptyCoroutineContext,
+                io = io,
                 sessionGap = sessionGap,
                 elapsed = { scheduler.currentTime },
                 wall = wall,

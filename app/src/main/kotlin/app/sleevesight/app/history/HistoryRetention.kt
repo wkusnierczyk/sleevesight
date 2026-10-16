@@ -1,34 +1,31 @@
 package app.sleevesight.app.history
 
-import android.database.SQLException
-import android.util.Log
-import app.sleevesight.store.SessionHistory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.CoroutineContext
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
 /**
- * Keeps the session history and the track changes ([SessionHistory]) for the user's *Keep history
- * for* ([lifetime]; null keeps them for ever), and clears them on *Clear history*.
+ * Keeps the session history and the track changes for the user's *Keep history for* ([lifetime];
+ * null keeps them for ever), and clears them on *Clear history*. Both go through [recorder]'s
+ * queue, so they are ordered with the history's writes.
  *
- * [run] deletes what is older than the lifetime ([SessionHistory.deleteBefore]) once the settings
- * are first read, which is at the app's start, again each time the lifetime changes, so a shorter
- * one applies at once, and every [PERIOD] while the process lives. No WorkManager: the history is
- * written only while the process runs, so it needs trimming only then. Each deletion runs on [io];
- * one that fails is reported to [warn] and tried again at the next, never thrown.
+ * [run] deletes what is older than the lifetime ([HistoryRecorder.deleteOlderThan]) once the
+ * settings are first read, which is at each start of the process, again each time the lifetime
+ * changes, so a shorter one applies at once, and after every [PERIOD] the phone is awake while the
+ * process lives: the wait is a coroutine delay, which deep sleep pauses. No WorkManager: the history
+ * is written only while the process runs, and each start trims it. A deletion that fails is
+ * reported by the recorder and tried again at the next.
  */
 class HistoryRetention(
-    private val history: SessionHistory,
+    private val recorder: HistoryRecorder,
     private val lifetime: Flow<Duration?>,
-    private val io: CoroutineContext,
-    private val clock: Clock = Clock.System,
-    private val warn: (String) -> Unit = { Log.w(TAG, it) },
+    private val scope: CoroutineScope,
 ) {
     /** Deletes old history until the calling coroutine is cancelled. */
     suspend fun run() {
@@ -36,38 +33,23 @@ class HistoryRetention(
             // Kept for ever: nothing to delete, until the setting changes.
             if (kept == null) return@collectLatest
             while (true) {
-                try {
-                    withContext(io) { history.deleteBefore(clock.now() - kept) }
-                } catch (_: SQLException) {
-                    // No exception text: a database message may name a path or a track.
-                    warn("Could not delete old entries from the session history")
-                }
+                recorder.deleteOlderThan(kept)
                 delay(PERIOD)
             }
         }
     }
 
     /**
-     * *Clear history*: deletes the session history and the track changes together. Returns whether
-     * it succeeded; a failure is not thrown, and its text is not kept, as it may name a path.
+     * *Clear history*, in [scope], which lives as long as the process: once confirmed, a clear is
+     * made even if the screen that asked goes away. The result says whether it succeeded.
      */
-    suspend fun clear(): Boolean =
-        withContext(io) {
-            try {
-                history.clear()
-                true
-            } catch (_: SQLException) {
-                warn("Could not clear the session history")
-                false
-            }
-        }
+    fun clear(): Deferred<Boolean> = scope.async { recorder.clear() }
 
     companion object {
-        private const val TAG = "Sleevesight"
-
         /**
-         * Six hours. The lifetime is counted in days, so the history is never more than a quarter of
-         * a day past it; each deletion scans the history's two main tables, so a few a day is cheap.
+         * Six hours of the phone being awake. The lifetime is counted in days, so the history is at
+         * most about a quarter of a day past it while the phone is in use; each deletion scans the
+         * history's two main tables, so a few a day is cheap.
          */
         val PERIOD: Duration = 6.hours
     }

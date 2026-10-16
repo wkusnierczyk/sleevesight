@@ -117,14 +117,23 @@ SELECT * FROM track_change WHERE id < :before ORDER BY id DESC LIMIT :limit;
 statesBetween:
 SELECT * FROM track_change_state WHERE change_id BETWEEN :first AND :last ORDER BY change_id, seq;
 
+-- The newest time in each table, which bounds the cutoff (`SessionHistory.deleteOlderThan`).
+newestPlayed:
+SELECT max(played_at) AS newest FROM played;
+
+newestChange:
+SELECT max(changed_at) AS newest FROM track_change;
+
 -- What is older than the user's *Keep history for*, in one transaction: the tracks that began to
--- play before `cutoff`, and the changes that began before it, with their states. `played` and
--- `track_change` are scanned, with no index on their times: some tens of thousands of rows a year
--- each, purged a few times a day. The states are found by their key.
+-- play before `cutoff`, and the changes that began before it, with their states. The track added
+-- last is kept while it may still be playing (not stopped), so its stop and updates find it.
+-- `played` and `track_change` are scanned, with no index on their times: some tens of thousands of
+-- rows a year each, purged a few times a day. The states are found by their key.
 deleteBefore {
     DELETE FROM track_change_state WHERE change_id IN (SELECT id FROM track_change WHERE changed_at < :cutoff);
     DELETE FROM track_change WHERE changed_at < :cutoff;
-    DELETE FROM played WHERE played_at < :cutoff;
+    DELETE FROM played
+    WHERE played_at < :cutoff AND (stopped_at IS NOT NULL OR id < (SELECT max(id) FROM played));
 }
 
 -- Both, in one transaction.

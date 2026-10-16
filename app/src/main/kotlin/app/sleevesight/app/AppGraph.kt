@@ -85,15 +85,18 @@ class AppGraph(
      */
     val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
 
-    /** *Keep history for* and *Clear history*. */
-    val historyRetention = HistoryRetention(history, settings.settings.map { it.historyLifetime }, Dispatchers.IO)
+    /** The one writer of [history]: what the session layer sees, and the deletions below. */
+    private val historyRecorder =
+        HistoryRecorder(sessions, history, Dispatchers.IO, settings.settings.map { it.sessionGap })
+
+    /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
+    val historyRetention = HistoryRetention(historyRecorder, settings.settings.map { it.historyLifetime }, mainScope)
 
     init {
         // Each player the session layer sees appears under *Players to follow*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
         // What the session layer sees is recorded whether or not the app is visible.
-        val sessionGap = settings.settings.map { it.sessionGap }
-        mainScope.launch { HistoryRecorder(sessions, history, Dispatchers.IO, sessionGap).run() }
+        mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
     }
 

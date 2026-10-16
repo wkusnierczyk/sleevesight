@@ -39,6 +39,7 @@ import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.time.Duration.Companion.days
@@ -54,9 +55,9 @@ import kotlin.time.Duration.Companion.seconds
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
- * the user confirms, and returns whether it succeeded: a failure is said above the list, as a
- * change that could not be saved is, until a later clear succeeds. [onOpenCredits] opens the
- * credits screen. [playerLabel] names a player by its package.
+ * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
+ * above the list that the history was cleared, or could not be. [onOpenCredits] opens the credits
+ * screen. [playerLabel] names a player by its package.
  */
 @Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
 @Composable
@@ -64,7 +65,7 @@ fun SettingsScreen(
     settingsStore: SettingsStore,
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
-    clearHistory: suspend () -> Boolean,
+    clearHistory: () -> Deferred<Boolean>,
     onOpenCredits: () -> Unit = {},
     playerLabel: (String) -> String,
 ) {
@@ -76,15 +77,14 @@ fun SettingsScreen(
     var saveFailed by remember { mutableStateOf(false) }
     // Whether the last change could not be saved.
     var changeFailed by remember { mutableStateOf(false) }
-    // Whether the last *Clear history* failed.
-    var clearFailed by remember { mutableStateOf(false) }
+    val clearing = remember(scope) { Clearing(scope) }
     val update = scope.updater(settingsStore) { changeFailed = it }
     val keys = KeysShown(secrets, offerReset = saveFailed || SecretState.UNREADABLE in secrets.values)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding()) {
             // Above the list, so it shows wherever the list is scrolled to.
-            Failures(changeFailed, clearFailed)
+            Notices(changeFailed, clearing.ended)
             settings?.let { current ->
                 SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
             }
@@ -111,7 +111,7 @@ fun SettingsScreen(
 
         SettingsDialog.ClearHistory -> {
             ClearHistoryDialog(
-                onClear = { scope.launch { clearFailed = !clearHistory() } },
+                onClear = { clearing.start(clearHistory) },
                 onDismiss = close,
             )
         }
@@ -156,6 +156,21 @@ private fun CoroutineScope.updater(
             )
         }
     }
+
+/** How the last *Clear history* ended: [ended] is null until one does. Its result is awaited in [scope]. */
+private class Clearing(
+    private val scope: CoroutineScope,
+) {
+    var ended by mutableStateOf<Boolean?>(null)
+        private set
+
+    /** Starts [clear], which runs outside the screen's scope, and waits for its result in [scope]. */
+    fun start(clear: () -> Deferred<Boolean>) {
+        ended = null
+        val result = clear()
+        scope.launch { ended = result.await() }
+    }
+}
 
 /** The dialogs the screen opens, one at a time. */
 internal sealed interface SettingsDialog {
@@ -217,24 +232,26 @@ private val MAX_CROSSFADE_SECONDS =
         .toInt()
 
 /**
- * Says what could not be saved or done, above the list: the last change, the last *Clear history*.
- * Never the error's text, which may name a path.
+ * Says above the list that the last change could not be saved, and how the last *Clear history*
+ * ended ([cleared]; null for none). Never an error's text, which may name a path.
  */
 @Composable
-private fun Failures(
+private fun Notices(
     changeFailed: Boolean,
-    clearFailed: Boolean,
+    cleared: Boolean?,
 ) {
     val messages =
         listOfNotNull(
             R.string.settings_change_failed.takeIf { changeFailed },
-            R.string.settings_clear_history_failed.takeIf { clearFailed },
+            R.string.settings_clear_history_failed.takeIf { cleared == false },
+            R.string.settings_clear_history_done.takeIf { cleared == true },
         )
     for (message in messages) {
+        val failure = message != R.string.settings_clear_history_done
         Text(
             stringResource(message),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
+            color = if (failure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             modifier =
                 Modifier
                     .padding(start = 24.dp, end = 24.dp, top = 16.dp)

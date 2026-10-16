@@ -11,7 +11,9 @@ import app.sleevesight.app.R
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 // The history's settings (#148): *Keep history for*, *Start a new session after a break of*, and
 // *Clear history*.
@@ -34,7 +36,7 @@ private val HISTORY_DAYS = listOf(7, 30, 90, 365)
 private val SESSION_GAP_MINUTES = listOf(10, 20, 30, 60, 120)
 
 private const val DAYS_IN_YEAR = 365
-private const val MINUTES_IN_HOUR = 60
+private val YEAR = DAYS_IN_YEAR.days
 
 @Composable
 internal fun HistorySection(
@@ -58,10 +60,10 @@ internal fun HistorySection(
     }
 
     val gap = settings.sessionGap
-    val gaps = (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to gapLabel(it) }
+    val gaps = (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
     ValueRow(
         title = stringResource(R.string.settings_session_gap),
-        value = gapLabel(gap),
+        value = durationLabel(gap),
         summary = stringResource(R.string.settings_session_gap_summary),
     ) {
         open(
@@ -80,7 +82,7 @@ internal fun HistorySection(
 
 /**
  * Confirms *Clear history*, which deletes the session history and the track changes. [onClear]
- * starts the clear; the dialog closes at once, and the screen says if it failed.
+ * starts the clear; the dialog closes at once, and the screen says how it ended.
  */
 @Composable
 internal fun ClearHistoryDialog(
@@ -105,24 +107,29 @@ internal fun ClearHistoryDialog(
     )
 }
 
-/** *Keep history for*: years when whole, else days; null is *Forever*. */
+/** *Keep history for*: null is *Forever*. */
 @Composable
-private fun lifetimeLabel(lifetime: Duration?): String {
-    val days = lifetime?.inWholeDays?.toInt() ?: return stringResource(R.string.settings_keep_history_forever)
-    return if (days > 0 && days % DAYS_IN_YEAR == 0) {
-        pluralStringResource(R.plurals.settings_years, days / DAYS_IN_YEAR, days / DAYS_IN_YEAR)
-    } else {
-        daysLabel(lifetime)
-    }
+private fun lifetimeLabel(lifetime: Duration?): String =
+    lifetime?.let { durationLabel(it) } ?: stringResource(R.string.settings_keep_history_forever)
+
+/**
+ * [duration] in the largest unit it is a whole number of: years of 365 days, days, hours, minutes,
+ * else seconds. The options are all whole; a stored value outside them, as from a later version,
+ * is shown as it is.
+ */
+@Composable
+private fun durationLabel(duration: Duration): String {
+    val (unit, count) =
+        when {
+            duration.isWhole(YEAR) -> R.plurals.settings_years to duration / YEAR
+            duration.isWhole(1.days) -> R.plurals.settings_days to duration / 1.days
+            duration.isWhole(1.hours) -> R.plurals.settings_hours to duration / 1.hours
+            duration.isWhole(1.minutes) -> R.plurals.settings_minutes to duration / 1.minutes
+            else -> R.plurals.settings_seconds to duration / 1.seconds
+        }
+    val whole = count.toInt()
+    return pluralStringResource(unit, whole, whole)
 }
 
-/** A session gap: hours when whole, else minutes. */
-@Composable
-private fun gapLabel(gap: Duration): String {
-    val minutes = gap.inWholeMinutes.toInt()
-    return if (minutes > 0 && minutes % MINUTES_IN_HOUR == 0) {
-        pluralStringResource(R.plurals.settings_hours, minutes / MINUTES_IN_HOUR, minutes / MINUTES_IN_HOUR)
-    } else {
-        pluralStringResource(R.plurals.settings_minutes, minutes, minutes)
-    }
-}
+private fun Duration.isWhole(unit: Duration): Boolean =
+    this >= unit && inWholeMilliseconds % unit.inWholeMilliseconds == 0L

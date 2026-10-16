@@ -137,7 +137,8 @@
     <string name="settings_clear_history_title">Clear history?</string>
     <string name="settings_clear_history_explained">Every track Sleevesight has seen play, and every track change it recorded to learn your skips, is deleted from this phone. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>
-    <string name="settings_clear_history_failed">The history could not be cleared: the phone’s storage failed. Try again.</string>
+    <string name="settings_clear_history_failed">The history could not be cleared. Try again.</string>
+    <string name="settings_clear_history_done">History cleared.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources and their licences</string>
 
@@ -152,6 +153,10 @@
     <plurals name="settings_minutes">
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="settings_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
     </plurals>
     <plurals name="settings_hours">
         <item quantity="one">%d hour</item>

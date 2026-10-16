@@ -48,7 +48,7 @@ Each change is saved at once; one that cannot be saved leaves the setting as it 
 | Prepare the next track | Evidence and insight | The insight only where *Write insights automatically* would write it |
 | Look up in the background | Off | No paid or network activity nobody is looking at |
 | How long findings are kept | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7, web search 1 | Freshness against repeated requests and paid searches |
-| Keep history for | 90 days | The tracks played, and the track changes Sleevesight will learn your skips from, which needs a season of them rather than a week; 90 days keeps them to a few MB. From a week to a year, or *Forever* |
+| Keep history for | 90 days | The tracks played, and the track changes Sleevesight will learn your skips from, which needs a season of them rather than a week; 90 days keeps them to a few MB. Counted back from your latest listening, so a clock set wrong deletes nothing early. From a week to a year, or *Forever* |
 | Start a new session after a break of | 30 minutes | Longer than a pause to answer the door, shorter than the gap between the morning's listening and the evening's. Counted from when the last track was heard; a change applies from the next track that starts |
 
 The history stays on the phone. *Clear history*, with the history settings, deletes the tracks played and the track changes together, once you confirm.

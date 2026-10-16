@@ -120,7 +120,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         assertEquals(1, allRows().size)
 
         // Then the gap is set to 10 minutes, and the same pause and resume begins a new session.
-        sessionGap.value = 10.minutes
+        sessionGap.tryEmit(10.minutes)
         at(resume + 10_000)
         spotify.report(state(PlaybackState.STATE_PAUSED, positionMs = 20_000, speed = 0f))
         val later = resume + 10_000 + 15 * 60_000L

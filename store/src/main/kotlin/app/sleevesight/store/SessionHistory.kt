@@ -16,7 +16,7 @@ import kotlin.time.Instant
  * history* and *Learning skip detection*, D15), over a database of their own, apart from the
  * caches: [driver] is the Android driver in `:app`, with [HistoryDatabase.Schema] created on it.
  * Both stay on the phone, are never evicted by the caches' size limit, and are cleared together
- * ([clear]); what is older than the user's *Keep history for* is deleted ([deleteBefore]).
+ * ([clear]); what is older than the user's *Keep history for* is deleted ([deleteOlderThan]).
  *
  * - The session history: each track the session layer saw play, in order, grouped in listening
  *   sessions: the default track list, "Played this session".
@@ -43,9 +43,8 @@ import kotlin.time.Instant
  * The art is never kept.
  *
  * Calls are blocking database calls, made off the main thread. [started], [continued] and [stopped]
- * come from one writer, in the order the tracks played; [clear] and [deleteBefore] may come from
- * elsewhere, as each is one transaction. A track whose row either deleted gets a new one with the
- * writer's next start or update of it (rule 2).
+ * come from one writer, in the order the tracks played, and [clear] and [deleteOlderThan] from the
+ * same writer, so they are ordered with the writes. Each is one transaction.
  */
 class SessionHistory(
     driver: SqlDriver,
@@ -174,14 +173,32 @@ class SessionHistory(
     }
 
     /**
-     * Deletes the tracks that began to play before [cutoff] and the track changes that began before
-     * it, in one transaction: what is older than the user's *Keep history for*. By when a track
-     * began rather than when it was last heard: every row has it, and it is the order the history
-     * is in, so what goes is its oldest part; the two times differ by how long a track played,
-     * against a limit of days.
+     * Deletes what is older than [lifetime], the user's *Keep history for*, in one transaction: the
+     * tracks that began to play, and the track changes that began, more than [lifetime] before
+     * [now], or before the newest time the history holds if that is earlier. So a clock set ahead
+     * (by hand, or a bad network time) deletes no more than the history's own times allow; the cost
+     * is that while nothing plays, the last [lifetime] of listening stays. The track added last is
+     * kept while it may still be playing, so a stream that plays across the cutoff keeps its row.
+     *
+     * By when a track began rather than when it was last heard: every row has it, and it is the
+     * order the history is in, so what goes is its oldest part; the two times differ by how long a
+     * track played, against a limit of days.
      */
-    fun deleteBefore(cutoff: Instant) {
-        queries.deleteBefore(cutoff.toEpochMilliseconds())
+    fun deleteOlderThan(
+        lifetime: Duration,
+        now: Instant,
+    ) {
+        queries.transaction {
+            val newest =
+                listOfNotNull(
+                    queries.newestPlayed().executeAsOne().newest,
+                    queries.newestChange().executeAsOne().newest,
+                ).maxOrNull()
+            // An empty history has nothing to delete.
+            if (newest != null) {
+                queries.deleteBefore(minOf(now.toEpochMilliseconds(), newest) - lifetime.inWholeMilliseconds)
+            }
+        }
     }
 
     /** Deletes the session history and the record of track changes together, in one transaction. */

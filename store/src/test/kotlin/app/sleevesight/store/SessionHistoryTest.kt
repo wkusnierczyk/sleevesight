@@ -9,6 +9,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -211,7 +212,7 @@ class SessionHistoryTest {
     }
 
     @Test
-    fun `deleting before a time deletes the tracks begun and the changes made before it, and no others`() {
+    fun `old tracks and changes go with their states, and newer ones stay`() {
         val old = start - 91.days
         play(sundown, old)
         history.stopped(old + 4.minutes)
@@ -220,7 +221,7 @@ class SessionHistoryTest {
         val kept = change(start, "Carefree Highway", states = 2)
         history.changed(kept)
 
-        history.deleteBefore(start - 90.days)
+        history.deleteOlderThan(90.days, now = start)
 
         assertEquals(listOf(carefree), history.latestSession().map { it.track })
         assertTrue(history.session(1).isEmpty())
@@ -229,18 +230,49 @@ class SessionHistoryTest {
         assertEquals(2L, count("track_change_state"))
 
         // A cutoff at a track's start keeps it.
-        history.deleteBefore(start)
+        history.deleteOlderThan(Duration.ZERO, now = start)
         assertEquals(listOf(carefree), history.latestSession().map { it.track })
         assertEquals(listOf(kept), history.changes(limit = 10).changes)
     }
 
     @Test
-    fun `once every row is deleted, the next track begins the history again`() {
-        play(sundown, start)
-        history.deleteBefore(start + 1.days)
+    fun `a stream playing across the cutoff keeps its row, and is stopped in it`() {
+        // A stream with no length, begun 100 days ago and still playing.
+        play(carefree, start - 100.days)
+        history.changed(change(start, "Carefree Highway"))
+
+        history.deleteOlderThan(90.days, now = start)
+        val playing = history.latestSession().single()
+        assertEquals(carefree, playing.track)
+
+        history.stopped(start + 1.minutes)
+        assertEquals(start + 1.minutes, history.session(playing.session).single().stoppedAt)
+
+        // Stopped, and followed by another track, it goes.
+        play(sundown, start + 2.minutes)
+        history.deleteOlderThan(90.days, now = start + 2.minutes)
+        // Its session, in which Sundown played a minute later.
+        assertEquals(listOf(sundown), history.session(playing.session).map { it.track })
+    }
+
+    @Test
+    fun `a clock set ahead deletes nothing newer than the newest entry less the lifetime`() {
+        for (daysAgo in listOf(100, 10, 0)) {
+            play(sundown, start - daysAgo.days)
+            history.stopped(start - daysAgo.days + 1.minutes)
+        }
+
+        history.deleteOlderThan(90.days, now = start + 200.days)
+
+        assertEquals(2, (1L..3L).flatMap(history::session).size)
+        assertTrue(history.session(1).isEmpty())
+    }
+
+    @Test
+    fun `an empty history has nothing to delete`() {
+        history.deleteOlderThan(90.days, now = start)
 
         assertTrue(history.latestSession().isEmpty())
-        assertEquals(1L, play(carefree, start + 2.days).session)
     }
 
     @Test
