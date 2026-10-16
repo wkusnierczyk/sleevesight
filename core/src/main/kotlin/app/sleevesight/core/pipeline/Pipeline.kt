@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
@@ -48,7 +49,12 @@ class AiAccess(
     val key: Secret,
 )
 
-/** What the pipeline is built from: the stages it joins. [adapters] holds one adapter per source. */
+/**
+ * What the pipeline is built from: the stages it joins. [adapters] holds one adapter per source.
+ * [musicBrainzLabels] gives MusicBrainz's genre labels (#84), asked for after the evidence; without
+ * it (the CLI), MusicBrainz gives none.
+ */
+@Suppress("LongParameterList") // Seven independent stages; the last three are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -56,6 +62,7 @@ class PipelineParts(
     val hasher: Hasher,
     val ai: AiAccess? = null,
     val cache: PipelineCache = PipelineCache.None,
+    val musicBrainzLabels: MusicBrainzLabels? = null,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

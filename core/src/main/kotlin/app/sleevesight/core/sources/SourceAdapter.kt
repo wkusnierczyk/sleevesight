@@ -69,9 +69,14 @@ val SourceAdapter.tag: String get() = id.tag
  * reason, also when another candidate gave lines (one credited artist of several), so the
  * *Sources* section can show them.
  *
- * [genres] are the genre labels the source gives the track's artists (Last.fm's tags through the
- * vocabulary, `design/architecture.md`, *Genre labels*), from a verified or unverified match only;
- * empty for a source that gives none.
+ * [genres] are the genre labels the source gives the track's artists (`design/architecture.md`,
+ * *Genre labels*): Last.fm's tags through the vocabulary, from a verified or unverified match only;
+ * empty for a source that gives none. They are never evidence, so never in a prompt.
+ *
+ * [labelArtists] are the MusicBrainz ids of the credited artists whose tags give MusicBrainz's
+ * genre labels (#84): MusicBrainz's result holds the resolved artists, kept with it in the
+ * retrieval cache, so a cached track gets its labels too. The pipeline asks for their tags after
+ * the evidence is assembled, so the insight does not wait for them.
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
@@ -85,6 +90,7 @@ data class SourceResult(
     val rejections: List<Rejection> = emptyList(),
     val genres: List<GenreLabel> = emptyList(),
     val provisional: Boolean = false,
+    val labelArtists: List<String> = emptyList(),
 )
 
 /** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */

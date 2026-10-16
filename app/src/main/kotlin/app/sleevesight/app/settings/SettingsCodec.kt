@@ -11,7 +11,6 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.settings.SourceSwitch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -19,9 +18,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * Maps [Settings] to DataStore preferences and back, one key per setting.
  *
  * Only a setting the user moved off its default is stored; one at its default has no key. So a
- * default revised in a later version reaches everyone who has not changed that setting, and a
- * default that depends on something else (#84: Last.fm's genre labels on once its key is set) can
- * be computed rather than frozen.
+ * default revised in a later version reaches everyone who has not changed that setting (#100: the
+ * MusicBrainz labels may be off by default in the release). A set of switches (*Where to look*,
+ * the web search engines, the genre label sources) is stored as the switches moved on or off
+ * against their defaults, so one the user has not moved, or one a later version adds, follows its
+ * default.
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
  * later one), or out of range reads as that setting's default, and the others are unaffected.
@@ -37,6 +38,10 @@ internal object SettingsCodec {
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
     private val SOURCES_ON = stringSetPreferencesKey("sources.on")
     private val SOURCES_OFF = stringSetPreferencesKey("sources.off")
+    private val ENGINES_ON = stringSetPreferencesKey("web.engines.on")
+    private val ENGINES_OFF = stringSetPreferencesKey("web.engines.off")
+    private val LABELS_ON = stringSetPreferencesKey("labels.on")
+    private val LABELS_OFF = stringSetPreferencesKey("labels.off")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
@@ -56,7 +61,9 @@ internal object SettingsCodec {
             aiProvider = enumOf<ProviderId>(prefs[AI_PROVIDER]),
             aiModel = prefs[AI_MODEL]?.takeIf { it.isNotBlank() },
             followedPlayers = readPlayers(prefs),
-            enabledSources = readSources(prefs),
+            enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
+            webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
+            labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
             writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
             crossfade = readCrossfade(prefs),
@@ -78,7 +85,9 @@ internal object SettingsCodec {
         prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
         prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
         writePlayers(settings.followedPlayers, prefs)
-        writeSources(settings.enabledSources, prefs)
+        writeSwitches(settings.enabledSources, defaults.enabledSources, prefs, SOURCES_ON, SOURCES_OFF)
+        writeSwitches(settings.webEngines, defaults.webEngines, prefs, ENGINES_ON, ENGINES_OFF)
+        writeSwitches(settings.labelSources, defaults.labelSources, prefs, LABELS_ON, LABELS_OFF)
         prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
         prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
@@ -121,22 +130,30 @@ internal object SettingsCodec {
     }
 
     /**
-     * *Where to look* as overrides of each switch's default: a switch the user has not moved follows
-     * its default, including one a later version adds or whose default it revises.
+     * A set of switches as overrides of each switch's [default]: a switch the user has not moved
+     * follows its default, including one a later version adds or whose default it revises.
      */
-    private fun readSources(prefs: Preferences): Set<SourceSwitch> {
-        fun switches(key: Preferences.Key<Set<String>>) = prefs[key].orEmpty().mapNotNull { enumOf<SourceSwitch>(it) }
-        return defaults.enabledSources + switches(SOURCES_ON) - switches(SOURCES_OFF).toSet()
+    private inline fun <reified E : Enum<E>> readSwitches(
+        prefs: Preferences,
+        on: Preferences.Key<Set<String>>,
+        off: Preferences.Key<Set<String>>,
+        default: Set<E>,
+    ): Set<E> {
+        val moved = { key: Preferences.Key<Set<String>> -> prefs[key].orEmpty().mapNotNull { enumOf<E>(it) } }
+        return default + moved(on) - moved(off).toSet()
     }
 
-    private fun writeSources(
-        enabled: Set<SourceSwitch>,
+    private fun <E : Enum<E>> writeSwitches(
+        enabled: Set<E>,
+        default: Set<E>,
         prefs: MutablePreferences,
+        onKey: Preferences.Key<Set<String>>,
+        offKey: Preferences.Key<Set<String>>,
     ) {
-        val on = (enabled - defaults.enabledSources).map { it.name }.toSet()
-        val off = (defaults.enabledSources - enabled).map { it.name }.toSet()
-        prefs.put(SOURCES_ON, on.ifEmpty { null }, null)
-        prefs.put(SOURCES_OFF, off.ifEmpty { null }, null)
+        val on = (enabled - default).map { it.name }.toSet()
+        val off = (default - enabled).map { it.name }.toSet()
+        prefs.put(onKey, on.ifEmpty { null }, null)
+        prefs.put(offKey, off.ifEmpty { null }, null)
     }
 
     private fun readCrossfade(prefs: Preferences): Crossfade {

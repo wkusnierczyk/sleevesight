@@ -86,13 +86,20 @@
     <string name="settings_players_hint">Sleevesight reads only the players switched on here. A player is listed once it has played.</string>
 
     <string name="settings_section_sources">Where to look</string>
-    <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and web search need your own.</string>
+    <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and each web search engine need your own.</string>
     <string name="settings_source_musicbrainz">MusicBrainz</string>
     <string name="settings_source_wikipedia">Wikipedia and Wikidata</string>
     <string name="settings_source_lastfm">Last.fm</string>
-    <string name="settings_source_web">Web search (Exa)</string>
+    <string name="settings_source_web">Web search</string>
+    <string name="settings_engine_exa">Exa</string>
     <string name="settings_source_model">The model’s own knowledge</string>
     <string name="settings_source_model_summary">At most one claim from what the model knows, marked unverified</string>
+
+    <string name="settings_section_labels">Genre labels</string>
+    <string name="settings_labels_hint">Where the colored genre labels come from: the artists’ tags at each source, kept only when they name a genre. With both on, Last.fm’s come first. Web search gives no tags.</string>
+    <string name="settings_labels_source_off">Off under “Where to look”</string>
+    <string name="settings_labels_needs_key">Needs your Last.fm API key, under “Where to look”</string>
+    <string name="settings_labels_musicbrainz_summary">Tags by MusicBrainz contributors, CC BY-NC-SA 3.0. Used for labels only, never sent to the AI service.</string>
 
     <string name="settings_section_insights">Insights</string>
     <string name="settings_write_insights">Write insights</string>
@@ -118,8 +125,27 @@
     <string name="settings_cache_wikipedia">Wikipedia</string>
     <string name="settings_cache_wikidata">Wikidata</string>
     <string name="settings_cache_web">Web search</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_credits_value">The data sources and their licences</string>
+
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
     </plurals>
+
+    <!-- Credits: each data source with its licence and attribution (architecture, Licensing). -->
+    <string name="credits_title">Credits</string>
+    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, under their own terms.</string>
+    <string name="credits_musicbrainz">MusicBrainz</string>
+    <string name="credits_musicbrainz_text">Recordings, releases, artists, credits and dates, from MusicBrainz.</string>
+    <string name="credits_musicbrainz_tags">MusicBrainz tags</string>
+    <string name="credits_musicbrainz_tags_text">Genre labels, from the artists’ tags by MusicBrainz contributors. Used for labels only, never sent to the AI service.</string>
+    <string name="credits_wikipedia">Wikipedia</string>
+    <string name="credits_wikipedia_text">Sentences from articles, by Wikipedia contributors.</string>
+    <string name="credits_wikidata">Wikidata</string>
+    <string name="credits_wikidata_text">Facts on songs and artists, from Wikidata.</string>
+    <string name="credits_lastfm">Last.fm</string>
+    <string name="credits_lastfm_text">Artist bios by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
+    <string name="credits_exa">Exa</string>
+    <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
 </resources>

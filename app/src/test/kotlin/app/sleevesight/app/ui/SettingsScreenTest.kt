@@ -3,7 +3,10 @@ package app.sleevesight.app.ui
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -33,15 +36,19 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.WebEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -94,11 +101,12 @@ class SettingsScreenTest {
 
     private fun show(
         providers: Map<ProviderId, AiProvider> = emptyMap(),
+        onOpenCredits: () -> Unit = {},
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, secrets, providers) { "Label of $it" } }
+                activity.setContent { SettingsScreen(settings, secrets, providers, onOpenCredits) { "Label of $it" } }
             }
             // The screen draws once the settings are read.
             compose.waitUntil(5_000) {
@@ -230,10 +238,95 @@ class SettingsScreenTest {
     @Test
     fun aCacheLifetimeIsChosen() =
         show {
-            compose.onNodeWithText(text(R.string.settings_cache_web)).performScrollTo().performClick()
+            // Web search under *Where to look*, then its cache lifetime.
+            compose.onAllNodesWithText(text(R.string.settings_cache_web))[1].performScrollTo().performClick()
             compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
             waitFor { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
         }
+
+    @Test
+    fun theMusicBrainzLabelsAreASwitchOnByDefault() =
+        show {
+            val row = compose.onNodeWithText(text(R.string.settings_labels_musicbrainz_summary)).performScrollTo()
+            row.assertIsOn()
+            row.performClick()
+            waitFor { current().labelSources == setOf(LabelSource.LASTFM) }
+            row.assertIsOff()
+        }
+
+    @Test
+    fun lastFmsLabelsWaitForItsKey() =
+        show {
+            // Without the key, the switch shows off, cannot move, and says why.
+            val waiting = compose.onNodeWithText(text(R.string.settings_labels_needs_key)).performScrollTo()
+            waiting.assertIsOff()
+            waiting.assertIsNotEnabled()
+
+            runBlocking { secrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
+            waitFor {
+                compose
+                    .onAllNodesWithText(
+                        text(R.string.settings_labels_needs_key),
+                    ).fetchSemanticsNodes()
+                    .isEmpty()
+            }
+            // Last.fm under *Where to look*, under *Genre labels*, and its cache lifetime.
+            val label = compose.onAllNodesWithText(text(R.string.settings_source_lastfm))[1].performScrollTo()
+            label.assertIsOn()
+            label.assertIsEnabled()
+            label.performClick()
+            waitFor { current().labelSources == setOf(LabelSource.MUSICBRAINZ) }
+        }
+
+    @Test
+    fun aLabelSourceOffUnderWhereToLookCannotBeSwitched() =
+        show {
+            runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.MUSICBRAINZ) } }
+            waitFor {
+                compose
+                    .onAllNodesWithText(
+                        text(R.string.settings_labels_source_off),
+                    ).fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            compose.onNodeWithText(text(R.string.settings_labels_source_off)).performScrollTo().assertIsNotEnabled()
+            // The choice itself is kept for when MusicBrainz is back on.
+            assertEquals(Settings.DEFAULT_LABEL_SOURCES, current().labelSources)
+        }
+
+    @Test
+    fun aWebSearchEngineIsASwitchUnderWebSearch() =
+        show {
+            val exa = compose.onNodeWithText(text(R.string.settings_engine_exa)).performScrollTo()
+            exa.assertIsOn()
+            exa.performClick()
+            waitFor { current().webEngines.isEmpty() }
+
+            compose.onAllNodesWithText(text(R.string.settings_source_web))[0].performScrollTo().performClick()
+            waitFor { SourceSwitch.WEB !in current().enabledSources }
+            compose.onNodeWithText(text(R.string.settings_engine_exa)).assertIsNotEnabled()
+            assertEquals(emptySet<WebEngine>(), current().webEngines)
+        }
+
+    @Test
+    fun theCreditsAreAtTheEnd() {
+        var opened = false
+        show(onOpenCredits = { opened = true }) {
+            compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
+            assertTrue(opened)
+        }
+    }
+
+    @Test
+    fun theCreditsListMusicBrainzWithBothLicences() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
+            compose.onNodeWithText(text(R.string.credits_musicbrainz_tags)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("CC BY-NC-SA 3.0").performScrollTo().assertIsDisplayed()
+            assertEquals(2, compose.onAllNodesWithText("CC0").fetchSemanticsNodes().size)
+            for (credit in CREDITS) compose.onNodeWithText(text(credit.name)).performScrollTo().assertIsDisplayed()
+        }
+    }
 
     private fun ComposeTestRule.onAllNodesWithSubstring(text: String) =
         onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes()

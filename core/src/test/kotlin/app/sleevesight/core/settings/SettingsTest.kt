@@ -1,5 +1,6 @@
 package app.sleevesight.core.settings
 
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import kotlin.test.Test
@@ -61,6 +62,34 @@ class SettingsTest {
         assertTrue(noWikipedia.isEnabled(SourceId.LASTFM))
         assertTrue(defaults.copy(enabledSources = emptySet()).isEnabled(SourceId.PLAYER))
         assertTrue(defaults.copy(enabledSources = setOf(SourceSwitch.MODEL)).isEnabled(SourceId.MODEL))
+    }
+
+    @Test
+    fun `web search runs only with an engine on, Exa on by default`() {
+        assertEquals(setOf(WebEngine.EXA), defaults.webEngines)
+        assertTrue(defaults.isEnabled(SourceId.WEB))
+        assertFalse(defaults.copy(webEngines = emptySet()).isEnabled(SourceId.WEB))
+        assertFalse(defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.WEB).isEnabled(SourceId.WEB))
+        assertTrue(defaults.copy(webEngines = emptySet()).isEnabled(SourceId.MUSICBRAINZ))
+    }
+
+    @Test
+    fun `both label sources are on by default, Last fm first`() {
+        assertEquals(listOf(LabelSource.LASTFM, LabelSource.MUSICBRAINZ), LabelSource.entries)
+        assertEquals(LabelSource.entries.toSet(), defaults.labelSources)
+        assertTrue(LabelSource.entries.all(defaults::givesLabels))
+    }
+
+    @Test
+    fun `a label source gives labels only while its source is on under Where to look`() {
+        val noMusicBrainz = defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.MUSICBRAINZ)
+        assertFalse(noMusicBrainz.givesLabels(LabelSource.MUSICBRAINZ))
+        assertTrue(noMusicBrainz.givesLabels(LabelSource.LASTFM))
+
+        val lastFmOnly = defaults.copy(labelSources = setOf(LabelSource.LASTFM))
+        assertFalse(lastFmOnly.givesLabels(LabelSource.MUSICBRAINZ))
+        // Off as a label source, MusicBrainz is still looked up for its lines.
+        assertTrue(lastFmOnly.isEnabled(SourceId.MUSICBRAINZ))
     }
 
     @Test

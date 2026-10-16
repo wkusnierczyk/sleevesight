@@ -1,5 +1,6 @@
 package app.sleevesight.sources.musicbrainz
 
+import app.sleevesight.core.genres.ArtistTags
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbArtist
 import app.sleevesight.core.resolution.MbArtistRelation
@@ -29,15 +30,18 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * The MusicBrainz web service (`/ws/2`, JSON), keyless, through the one [NetClient], whose host
  * policy keeps it to one request a second and names the app in the User-Agent, as MusicBrainz
- * requires. Only core data (CC0) is asked for: never `inc=tags` or `inc=genres`, and the tags a
- * search returns anyway are not read (`design/architecture.md`, *MusicBrainz tags and genres*).
+ * requires. Resolution asks for core data (CC0) only: never `inc=genres`, and the tags a search
+ * returns anyway are not read. The one call for tags is [artistTags] (`inc=tags` on an artist),
+ * behind the MusicBrainz genre labels (D12, #84): tags are CC BY-NC-SA 3.0, used for labels only and
+ * never sent in a prompt (`design/architecture.md`, *MusicBrainz tags and genres (#9)*).
  *
  * Duration matching happens in `:core`, after the search, so the player's duration never leaves
  * the phone (R4).
  */
 class MusicBrainzClient(
     private val net: NetClient,
-) : MusicBrainzLookup {
+) : MusicBrainzLookup,
+    ArtistTags {
     override suspend fun searchRecordings(
         title: String,
         artist: String,
@@ -120,6 +124,24 @@ class MusicBrainzClient(
                 total = json.int("count") ?: error("no count"),
                 artists = artists.map { MbArtist(it.required("id"), it.required("name")) },
             )
+        }
+    }
+
+    /**
+     * The artist's tags, most voted first (ties by name, so the order is the same for the same
+     * answer), those with no net vote up left out. Only the tags are read, not the artist.
+     */
+    override suspend fun artistTags(mbid: String): Lookup<List<String>> {
+        val request = NetRequest("$BASE/artist/$mbid", query = mapOf("inc" to "tags", "fmt" to "json"))
+        return net.lookup(request) { response ->
+            val json = parseObject(response.body)
+            json.required("id")
+            json
+                .array("tags")
+                .mapNotNull { tag -> tag.string("name")?.let { name -> name to (tag.int("count") ?: 0) } }
+                .filter { (_, count) -> count > 0 }
+                .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+                .map { it.first }
         }
     }
 

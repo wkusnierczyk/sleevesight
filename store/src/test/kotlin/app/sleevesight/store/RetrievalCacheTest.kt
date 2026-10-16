@@ -367,7 +367,19 @@ class RetrievalCacheTest {
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
             rejections = listOf(Rejection("Sundown", "a disambiguation page")),
-            genres = listOf(GenreLabel("folk rock", "folk", 135, "Folk Rock")),
+            genres =
+                listOf(
+                    GenreLabel(
+                        "folk rock",
+                        "folk",
+                        135,
+                        "Folk Rock",
+                        "folkrock",
+                        "https://www.last.fm/music/Gordon+Lightfoot",
+                    ),
+                    GenreLabel("folk", "folk", 135, "Folk", "folk"),
+                ),
+            labelArtists = listOf("mb-gl", "mb-other"),
         )
     }
 
