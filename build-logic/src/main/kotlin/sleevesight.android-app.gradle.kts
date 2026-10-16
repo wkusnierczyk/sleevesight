@@ -4,6 +4,8 @@
 // R8 and signed with the upload key when the environment names one (`design/release.md`).
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.HasAndroidTest
+import com.android.build.api.variant.HasUnitTest
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
@@ -71,6 +73,16 @@ androidComponents {
         val suffix = variant.name.replaceFirstChar { it.uppercase() }
         val runtimeRoot = variant.runtimeConfiguration.incoming.resolutionResult.rootComponent
         val compileRoot = variant.compileConfiguration.incoming.resolutionResult.rootComponent
+        // The variant's compile classpath and its tests': the tests are the module's code too, so a
+        // module kept off one is kept off the others.
+        val compileRoots =
+            (
+                listOf(variant.compileConfiguration) +
+                    listOfNotNull(
+                        (variant as? HasUnitTest)?.unitTest?.compileConfiguration,
+                        (variant as? HasAndroidTest)?.androidTest?.compileConfiguration,
+                    )
+            ).map { it.incoming.resolutionResult.rootComponent }.toTypedArray()
 
         val manifest =
             tasks.register<CheckManifest>("checkManifest$suffix") {
@@ -97,7 +109,9 @@ androidComponents {
                 description = "Fails on dependencies the module graph does not allow."
                 rules = graphRules
                 modulePath = project.path
-                projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, compileRoot)
+                projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, *compileRoots)
+                // The compile classpaths only: `:net` is on the runtime classpath, since the APK ships it.
+                compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(*compileRoots)
                 modulesOutsideNetwork =
                     CheckModuleGraph.modulesOutsideNetworkOf(runtimeRoot, networkModules(graphRules.asFile))
                         .zip(CheckModuleGraph.modulesOutsideNetworkOf(compileRoot, networkModules(graphRules.asFile))) { a, b ->

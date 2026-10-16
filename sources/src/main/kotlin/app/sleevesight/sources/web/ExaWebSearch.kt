@@ -44,8 +44,8 @@ import kotlin.time.TimeSource
  * for a network error or any answer other than a 2xx (a wrong key, exhausted credits, a bad
  * request), which carries nothing to show.
  *
- * The app graph and the CLI register [HOST_POLICY] under [HOST] in `NetConfig.hosts`; without it
- * `:net` puts no limit on Exa's host.
+ * `:wiring`'s list of host policies (`HostPolicies`) registers [HOST_POLICY] under [HOST] in the
+ * `NetConfig.hosts` of the app and the CLI; without it `:net` puts no limit on Exa's host.
  */
 class ExaWebSearch(
     private val net: NetClient,
@@ -126,8 +126,7 @@ class ExaWebSearch(
 
         /**
          * Exa allows 10 requests a second to `/search` across a team's keys; one every 100 ms keeps
-         * a single client within it. The app graph and the CLI must register it in
-         * `NetConfig.hosts` under [HOST].
+         * a single client within it. `:wiring`'s list of host policies must hold it under [HOST].
          */
         val HOST_POLICY: HostPolicy = HostPolicy(minInterval = 100.milliseconds)
 
