@@ -20,12 +20,13 @@ import app.sleevesight.app.ui.theme.SleevesightTheme
 
 /**
  * Where the first-run flow lands. A placeholder until the now-playing screen: it says whether
- * notification access is on, and leads back to the first-run screen.
+ * notification access is on, and leads back to the first-run screen and to the settings.
  */
 @Composable
 fun HomeScreen(
     accessGranted: Boolean,
     onOpenFirstRun: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -40,6 +41,7 @@ fun HomeScreen(
                 Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
                 Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
             }
+            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.home_settings)) }
         }
     }
 }
@@ -47,11 +49,11 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 private fun HomeAccessOnPreview() {
-    SleevesightTheme { HomeScreen(accessGranted = true, onOpenFirstRun = {}) }
+    SleevesightTheme { HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun HomeAccessOffPreview() {
-    SleevesightTheme { HomeScreen(accessGranted = false, onOpenFirstRun = {}) }
+    SleevesightTheme { HomeScreen(accessGranted = false, onOpenFirstRun = {}, onOpenSettings = {}) }
 }

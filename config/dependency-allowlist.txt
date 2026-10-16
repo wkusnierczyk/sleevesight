@@ -37,6 +37,7 @@ androidx.compose.ui            Apache-2.0
 androidx.concurrent            Apache-2.0
 androidx.core                  Apache-2.0
 androidx.customview            Apache-2.0
+androidx.datastore             Apache-2.0   # settings and sealed keys (#50)
 androidx.documentfile          Apache-2.0
 androidx.dynamicanimation      Apache-2.0
 androidx.emoji2                Apache-2.0

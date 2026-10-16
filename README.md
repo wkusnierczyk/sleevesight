@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** Phase 1, Android MVP, is under way. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design. The app so far is a skeleton: its first-run screen says what leaves the phone and leads to notification access, and it does not yet show what is playing. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://sleevesight.app/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
+> **Status:** Phase 1, Android MVP, is under way. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design. The app so far is a skeleton: its first-run screen says what leaves the phone and leads to notification access, its settings screen holds the choices below and your keys, and it does not yet show what is playing. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://sleevesight.app/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
 
 ## What it does
 
@@ -28,6 +28,25 @@ When little is documented about a track, Sleevesight says so instead of filling 
 - **When and how it writes.** Each insight is a call on your key. By default one is written for every track, and the next track in the queue is prepared ahead so its card is ready when it starts. You can have insights written only when you skip, or only when you tap Write, and prepare only the evidence or nothing. In every mode, lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*, and nothing is written after you open the app until your first action in it. A style setting, with presets or your own words, sets the length and tone; it cannot loosen the citation rules.
 - **Which players.** Spotify by default; any player with a media session can be followed.
 - **Spotify account.** Optional. Connecting it, with your own Spotify developer app, lets Sleevesight see the whole playlist or album being played. Without it, the app knows the tracks it has seen play.
+
+### Settings
+
+Each change is saved at once. The defaults, and why:
+
+| Setting | Default | Why |
+|---|---|---|
+| AI service, model, API key | No service until you choose one; then Anthropic's cheapest current model, Claude Haiku 5.5 | The key and its bill are yours, and an insight narrates a few lines, which needs no larger model. The model list comes from the service, with your key, once the app looks tracks up; until then the default is offered |
+| Reasoning effort | Low | An insight is short and waited for; the citation check, not the model's deliberation, keeps it honest |
+| Players to follow | Spotify on | A player appears, switched off, once it has played |
+| Where to look | Every source on except the model's own knowledge | Last.fm and web search (Exa) also need your key, entered under their switches |
+| Write insights | On | Off makes no AI calls at all; the evidence is still shown |
+| Write insights automatically | On every track change | Goes with preparing the next track, so the card is ready when it starts |
+| Crossfade | Autodetect | Used to tell your skips from natural ends under *When I skip* |
+| Prepare the next track | Evidence and insight | The insight only where *Write insights automatically* would write it |
+| Look up in the background | Off | No paid or network activity nobody is looking at |
+| How long findings are kept | MusicBrainz and Wikidata 30 days, Wikipedia and Last.fm 7, web search 1 | Freshness against repeated requests and paid searches |
+
+Your API keys are encrypted with a key kept in the phone's Android Keystore, are never shown again once saved, and are never logged. Neither they nor the settings are part of Android's backup or a transfer to a new phone. If a saved key can no longer be read, as after the phone's Keystore is reset, the settings say so, and you enter it again. If saving fails or keeps failing, *Reset saved keys* removes every saved key, with the phone's key that protects them, so you can enter them afresh; Sleevesight never deletes them on its own.
 
 ## Privacy
 

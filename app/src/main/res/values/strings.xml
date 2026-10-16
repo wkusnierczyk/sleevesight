@@ -31,4 +31,95 @@
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
     <string name="home_what_leaves">What leaves the phone</string>
+    <string name="home_settings">Settings</string>
+
+    <!-- Settings (design, Settings). -->
+    <string name="settings_title">Settings</string>
+
+    <string name="settings_section_ai">AI service</string>
+    <string name="settings_ai_provider">Service</string>
+    <string name="settings_ai_provider_none">Not chosen</string>
+    <string name="settings_ai_provider_anthropic">Anthropic</string>
+    <string name="settings_ai_providers_hint">Only Anthropic is built so far.</string>
+    <string name="settings_ai_key">API key</string>
+    <string name="settings_ai_model">Model</string>
+    <string name="settings_ai_model_default">%1$s (default)</string>
+    <string name="settings_ai_model_none">Choose a service first</string>
+    <string name="settings_ai_effort">Reasoning effort</string>
+    <string name="settings_ai_effort_summary">How much the model may reason before it writes. Less is faster and cheaper.</string>
+    <string name="settings_effort_low">Low</string>
+    <string name="settings_effort_medium">Medium</string>
+    <string name="settings_effort_high">High</string>
+    <string name="settings_effort_provider_default">The service’s default</string>
+
+    <string name="settings_key_absent">Not set</string>
+    <string name="settings_key_saved">Saved</string>
+    <string name="settings_key_unreadable">Saved, but it can no longer be read</string>
+    <string name="settings_key_name_anthropic">Anthropic API key</string>
+    <string name="settings_key_name_lastfm">Last.fm API key</string>
+    <string name="settings_key_name_exa">Exa API key</string>
+    <string name="settings_key_recipient_exa">Exa</string>
+    <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again.</string>
+    <string name="settings_key_field">Key</string>
+    <string name="settings_key_save_failed">The key could not be saved: the phone’s key store or storage failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
+    <string name="settings_key_remove_failed">The key could not be removed: the phone’s storage failed. Try again.</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_reset">Reset</string>
+    <string name="settings_reset_keys">Reset saved keys</string>
+    <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved</string>
+    <string name="settings_reset_keys_summary">Removes every saved key, so you can enter them again.</string>
+    <string name="settings_reset_keys_title">Reset saved keys?</string>
+    <string name="settings_reset_keys_explained">Every saved key, for the AI service, Last.fm and Exa, is removed, with the phone’s key that protects them. You then enter each key again.</string>
+    <string name="settings_reset_keys_failed">The keys could not be reset: the phone’s key store or storage failed. Try again.</string>
+    <string name="settings_remove">Remove</string>
+    <string name="settings_cancel">Cancel</string>
+
+    <string name="settings_model_title">Model</string>
+    <string name="settings_model_loading">Listing the service’s models…</string>
+    <string name="settings_model_unavailable">This build cannot list the service’s models yet; the default is used until it can.</string>
+    <string name="settings_model_no_key">Save the API key to list the service’s models.</string>
+    <string name="settings_model_failed_unauthorized">The models could not be listed: the service refused the key.</string>
+    <string name="settings_model_failed_offline">The models could not be listed: no connection.</string>
+    <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
+
+    <string name="settings_section_players">Players to follow</string>
+    <string name="settings_players_hint">Sleevesight reads only the players switched on here. A player is listed once it has played.</string>
+
+    <string name="settings_section_sources">Where to look</string>
+    <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and web search need your own.</string>
+    <string name="settings_source_musicbrainz">MusicBrainz</string>
+    <string name="settings_source_wikipedia">Wikipedia and Wikidata</string>
+    <string name="settings_source_lastfm">Last.fm</string>
+    <string name="settings_source_web">Web search (Exa)</string>
+    <string name="settings_source_model">The model’s own knowledge</string>
+    <string name="settings_source_model_summary">At most one claim from what the model knows, marked unverified</string>
+
+    <string name="settings_section_insights">Insights</string>
+    <string name="settings_write_insights">Write insights</string>
+    <string name="settings_write_insights_summary">Off: no AI calls at all. The evidence is still shown.</string>
+    <string name="settings_write_automatically">Write insights automatically</string>
+    <string name="settings_write_every_change">On every track change</string>
+    <string name="settings_write_when_skip">When I skip</string>
+    <string name="settings_write_never">Never: only when I tap Write</string>
+    <string name="settings_crossfade">Crossfade</string>
+    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “When I skip”.</string>
+    <string name="settings_crossfade_auto">Autodetect</string>
+    <string name="settings_crossfade_seconds">%1$d s</string>
+    <string name="settings_prepare_next">Prepare the next track</string>
+    <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead. The insight is written only where “Write insights automatically” would write it.</string>
+    <string name="settings_prepare_off">Off</string>
+    <string name="settings_prepare_evidence">Evidence</string>
+    <string name="settings_prepare_evidence_and_insight">Evidence and insight</string>
+
+    <string name="settings_section_lookups">Lookups</string>
+    <string name="settings_background">Look up in the background</string>
+    <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen.</string>
+    <string name="settings_cache_lifetimes">How long each source’s findings are kept</string>
+    <string name="settings_cache_wikipedia">Wikipedia</string>
+    <string name="settings_cache_wikidata">Wikidata</string>
+    <string name="settings_cache_web">Web search</string>
+    <plurals name="settings_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>
