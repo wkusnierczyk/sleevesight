@@ -17,9 +17,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
@@ -121,13 +124,25 @@ class SecretStore(
      * emits (#51). It says nothing of the values: a key replaced by another emits, though its state
      * stays [SecretState.SAVED]. Reading a key or the states does not emit. While the file cannot
      * be read it emits nothing, and the read is retried, after [FIRST_RETRY] and then twice as long
-     * each time up to [MAX_RETRY], so a pipeline keeps the keys it was built with, and the changes
-     * after the file reads again still arrive.
+     * each time up to [MAX_RETRY], counted from the last read that succeeded, so a pipeline keeps
+     * the keys it was built with, and the changes after the file reads again still arrive. Until
+     * its first read succeeds it emits nothing at all, so no pipeline is built before it.
      */
     val changes: Flow<Unit> =
         combine(
-            dataStore.data.retryWhen { cause, attempt ->
-                (cause is IOException).also { io -> if (io) delay(retryDelay(attempt)) }
+            flow {
+                // Failures since the last read that succeeded: the backoff starts again after one.
+                var failures = 0L
+                emitAll(
+                    dataStore.data
+                        .onEach { failures = 0 }
+                        .retryWhen {
+                            cause,
+                            _,
+                            ->
+                            (cause is IOException).also { io -> if (io) delay(retryDelay(failures++)) }
+                        },
+                )
             },
             resets,
         ) { prefs, count -> SecretId.entries.map { prefs[keyOf(it)] } to count }

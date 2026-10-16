@@ -52,17 +52,17 @@ class MainActivity : ComponentActivity() {
 
     // The pipeline sends requests only while the app is visible, unless *Look up in the
     // background* is on (D6). Started and stopped, not resumed and paused: a dialog or the split
-    // screen over the app leaves it visible. A stop for a configuration change (a rotation) is not
-    // reported, so the start after it is not the app opening, which would ask for a new first
-    // action (D5).
+    // screen over the app leaves it visible. Counted, since a second instance of the activity is
+    // possible; a stop for a configuration change (a rotation) says so, so the start after it is
+    // not the app opening, which would ask for a new first action (D5).
     override fun onStart() {
         super.onStart()
-        graph.pipeline.visible(true)
+        graph.pipeline.activityStarted()
     }
 
     override fun onStop() {
         super.onStop()
-        if (!isChangingConfigurations) graph.pipeline.visible(false)
+        graph.pipeline.activityStopped(changingConfigurations = isChangingConfigurations)
     }
 
     override fun onResume() {

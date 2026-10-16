@@ -163,7 +163,8 @@ class AppGraph(
             settings = latestSettings.filterNotNull(),
             keyChanges = secrets.changes,
             readKeys = secrets::pipelineKeys,
-            parts = AppPipelineParts(wiring, normalizer, StorePipelineCache(caches, Dispatchers.IO)),
+            // The caches only once a pipeline is built, after the first-run acknowledgement.
+            parts = AppPipelineParts(wiring, normalizer) { StorePipelineCache(caches, Dispatchers.IO) },
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
         )

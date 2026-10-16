@@ -44,8 +44,7 @@ class AppPipelinePartsTest {
         AppPipelineParts(
             appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader),
             Normalizer(JvmAccentFolder),
-            PipelineCache.None,
-        )
+        ) { PipelineCache.None }
 
     @After
     fun close() = stores.close()

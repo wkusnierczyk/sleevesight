@@ -642,4 +642,67 @@ class PipelineTest {
             assertEquals(false, pipeline.isCurrent(sundown.copy(album = "Gord's Gold")))
             assertEquals(false, pipeline.isCurrent(snowbird))
         }
+
+    // Currency: a run superseded by a report of another track decides and starts nothing more.
+
+    @Test
+    fun `a newer track's action does not authorise the superseded run's write`() =
+        runTest {
+            val provider = FakeProvider()
+            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 2.seconds)
+            val pipeline = pipeline(listOf(slow), provider = provider)
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.5.seconds)
+
+            // Sundown's evidence lands during Snowbird's debounce, after the action that chose it.
+            changes.value = TrackChange(snowbird, ChangeCause.USER_ACTION)
+            advanceTimeBy(Pipeline.DEBOUNCE - 50.milliseconds)
+            assertEquals(0, provider.requests.size)
+
+            settle()
+            assertEquals(1, provider.requests.size)
+            assertTrue("Snowbird" in provider.requests.single().prompt)
+        }
+
+    @Test
+    fun `a skip there and back within the debounce lets the run go on`() =
+        runTest {
+            val provider = FakeProvider()
+            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 1.2.seconds)
+            val pipeline = pipeline(listOf(slow), provider = provider)
+            pipeline.userActed()
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            changes.value = TrackChange(snowbird)
+            // Sundown's evidence lands while it is stale, and it waits; back before Snowbird's run starts.
+            advanceTimeBy(550.milliseconds)
+            assertEquals(0, provider.requests.size)
+            changes.value = TrackChange(sundown)
+            settle()
+
+            assertEquals(listOf("gordon lightfoot|sundown"), slow.asked)
+            assertEquals(1, provider.requests.size)
+            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
+        }
+
+    @Test
+    fun `superseding says whether the run had decided, and a run that had not decides nothing`() =
+        runTest {
+            val provider = FakeProvider()
+            val waiting = pipeline(listOf(mb()), provider = provider)
+            backgroundScope.launch { waiting.follow(MutableStateFlow(TrackChange(sundown))) }
+            settle()
+            assertEquals(InsightState.Idle(canWrite = true), waiting.state.value!!.insight)
+            assertTrue(waiting.supersede())
+
+            val gathering = pipeline(listOf(FakeAdapter(SourceId.MUSICBRAINZ, byName = 2.seconds)), provider = provider)
+            gathering.userActed()
+            backgroundScope.launch { gathering.follow(MutableStateFlow(TrackChange(snowbird))) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            assertEquals(false, gathering.supersede())
+            settle()
+            assertEquals(0, provider.requests.size)
+        }
 }

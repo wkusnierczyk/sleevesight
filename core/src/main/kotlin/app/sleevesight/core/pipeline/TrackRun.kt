@@ -29,6 +29,25 @@ internal class RunInput(
     val track: NormalizedTrack,
 )
 
+/**
+ * Whether a run is the current one ([Pipeline.follow], *Currency*). [awaitCurrent] is passed
+ * before each request after a gate; [decide] once, where the run decides its insight, and it
+ * records that it has. While the run is stale both wait: until it is current again, or is
+ * cancelled by its replacement.
+ */
+internal interface RunCurrency {
+    suspend fun awaitCurrent()
+
+    suspend fun decide()
+
+    /** For a run nothing supersedes ([Pipeline.run]). */
+    object Always : RunCurrency {
+        override suspend fun awaitCurrent() = Unit
+
+        override suspend fun decide() = Unit
+    }
+}
+
 /** Where a run reports: diagnostics events, and changes to its state. */
 internal interface RunSink {
     fun emit(event: PipelineEvent)
@@ -74,12 +93,14 @@ internal class TrackRun(
      * the evidence is in; else, when [waitForTap], once the user taps Write; else not at all.
      * MusicBrainz's genre labels are asked for beside the insight, after the evidence, so it does
      * not wait for them; the run ends when both have. [gate] returns once requests may start: it is
-     * passed before the labels' requests and before a model call.
+     * passed before the labels' requests and before a model call, each of which then starts only
+     * once [currency] says the run is current.
      */
     suspend fun run(
         autoWrite: () -> Boolean,
         waitForTap: Boolean,
         gate: suspend () -> Unit = {},
+        currency: RunCurrency = RunCurrency.Always,
     ): TrackState {
         val tapsAtStart = taps.value
         try {
@@ -91,12 +112,14 @@ internal class TrackRun(
                 val evidence = assemble()
                 launch {
                     gate()
+                    currency.awaitCurrent()
                     labels.addMusicBrainz(state.value)
                 }
                 InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(
                     autoWrite = autoWrite,
                     tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
                     gate = gate,
+                    currency = currency,
                 )
             }
             return state.value

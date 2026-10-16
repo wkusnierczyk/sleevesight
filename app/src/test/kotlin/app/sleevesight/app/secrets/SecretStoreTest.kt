@@ -431,6 +431,22 @@ class SecretStoreTest {
             changes.stop()
         }
 
+    @Test
+    fun theBackoffStartsAgainAfterAReadThatSucceeds() =
+        runBlocking {
+            // Each read gives the file and then fails: failure, recovery, failure, five times over.
+            val flaky = FlakyDataStore(stores.open("secrets"))
+            flaky.failuresAfterAValue.set(5)
+            val store = SecretStore(flaky, testCipher(key))
+            val changes = Changes(store, this)
+            // From the first retry's wait each time (250 ms), about 1.3 s; doubling, it would be 7.75 s.
+            withTimeout(4_000) { while (flaky.reads.get() < 6) delay(10) }
+            assertEquals(1, changes.seen.get())
+            store.set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            changes.reach(2)
+            changes.stop()
+        }
+
     private companion object {
         // Not real keys.
         const val ANTHROPIC_KEY = "sk-ant-test-0123456789abcdefghijklmnop"

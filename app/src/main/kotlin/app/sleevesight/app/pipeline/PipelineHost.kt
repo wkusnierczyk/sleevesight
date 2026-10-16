@@ -5,6 +5,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.FirstAction
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -78,29 +79,35 @@ class PipelineKeys(
  *   [Pipeline.follow], which waits [Pipeline.DEBOUNCE] for the next and runs only the latest,
  *   cancelling a superseded track's run. The change's cause is the default, "ended on its own or
  *   could not tell": skip detection, and the actions in Sleevesight, are #53's.
- * - **Requests only while visible** (D6): while the app is not visible ([visible]) and *Look up in
- *   the background* is off ([lookupsAllowed]), no request starts. A change waits before its
- *   lookups; a run whose lookups are under way finishes them, and keeps what they found, but waits
- *   before MusicBrainz's labels and before a model call. When requests are allowed again the run
- *   waiting goes on, for the track shown then: the visible track catches up, whether or not it is
- *   the one last run, and the tracks played meanwhile are never looked up.
- * - **The app opening.** [visible] going from false to true is the app opening (a rotation does
- *   not stop it: `MainActivity` does not report a stop for a configuration change). From then on
- *   nothing is written without a tap until the user's next action (D5), the run waiting
- *   included, since it asks whether to write only once it may go on.
+ * - **Requests only while visible** (D6): while no activity is started ([activityStarted],
+ *   [activityStopped]) and *Look up in the background* is off ([lookupsAllowed]), no run starts
+ *   its lookups. A run whose lookups are under way finishes them, their follow-up requests
+ *   included, and keeps what they found, but waits before MusicBrainz's labels and before a model
+ *   call. When requests are allowed again the run waiting goes on if it is still current: the
+ *   visible track catches up, whether or not it is the one last run, and the tracks played
+ *   meanwhile are never looked up. A run is current while the latest report is of its track
+ *   ([Pipeline.follow], *Currency*): one superseded waits, and decides and starts nothing.
+ * - **The app opening.** The first activity started while none was is the app opening; a restart
+ *   for a configuration change (a rotation) is not. It clears the first action ([FirstAction],
+ *   one for the app, shared by every pipeline built), so nothing is written without a tap until
+ *   the user's next action (D5), the run waiting included, since it decides only once it may go
+ *   on.
  * - **Write on tap**: [write] writes the current track's insight once its evidence is in, and is
- *   the user's first action. The state offers Write only for the track shown: not while a newer
- *   report waits for its run, nor while the pipeline is being rebuilt.
+ *   the user's first action. The state offers Write only from the pipeline that takes taps, for
+ *   the track shown: not while a newer report waits for its run, nor once a rebuild has begun.
  * - **Built from the keys.** [parts] builds the pipeline's stages from the keys (read with
  *   [readKeys]) and the settings. The adapter list depends on the keyed sources' keys and the web
  *   engines switched on, and the AI access on the service chosen and its key, so a change to any
  *   of them ([keyChanges], or those settings) builds a new pipeline; other settings are read by the
  *   pipeline for each track, and change nothing here. What an adapter keeps in memory (Last.fm's
  *   verdicts) is lost with it, which is why nothing else rebuilds it. A rebuild never spends twice
- *   on a track: a model call under way is let finish first (and its card is kept), and the new
- *   pipeline runs the track shown again as a [ChangeCause.REPLAY], which is not a track change,
- *   so it shows the card kept for it or offers Write, and writes nothing without a tap. The
- *   user's first action carries over.
+ *   on a track: the old run is made stale at once ([Pipeline.supersede]), a model call under way
+ *   is let finish (and its card is kept), and when the old run had already decided its insight
+ *   the new pipeline runs the track shown again as a [ChangeCause.REPLAY], which is not a track
+ *   change, so it shows the card kept for it or offers Write, and writes nothing without a tap; a
+ *   run cut off before it decided keeps its cause, so it is decided once. The first action is
+ *   one for the app ([FirstAction]), shared by every pipeline built. No pipeline is built until
+ *   the keys' first read succeeds (`SecretStore.changes` retries a failed one).
  *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds, which never
  * blocks the pipeline. A pipeline that fails, or cannot be built (a bug: the stages map their
@@ -117,6 +124,12 @@ class PipelineHost(
     private val onFailure: (Throwable) -> Unit = {},
 ) {
     private val visibleState = MutableStateFlow(false)
+    private val firstAction = FirstAction()
+
+    // The activities started and not stopped, and whether the last stop was for a configuration
+    // change, after which the next start is not an opening. Main thread only.
+    private var started = 0
+    private var restarting = false
     private val view = MutableStateFlow(PipelineView())
     private val eventFlow =
         MutableSharedFlow<PipelineEvent>(
@@ -126,9 +139,6 @@ class PipelineHost(
 
     // The pipeline that takes taps; null while none is built, or one is being rebuilt.
     private val current = MutableStateFlow<Pipeline?>(null)
-
-    @Volatile
-    private var acted = false
 
     // The track the session layer shows, once the host has started.
     @Volatile
@@ -148,16 +158,26 @@ class PipelineHost(
         combine(visibleState, settings) { shown, now -> shown || now.lookUpInBackground }.distinctUntilChanged()
 
     /**
-     * Whether the app is on screen: `MainActivity` sets it when it starts, and when it stops other
-     * than for a configuration change. From not visible to visible is the app opening.
+     * An activity started (`MainActivity.onStart`, on the main thread). The first one while none is
+     * is the app opening, unless the last stop was for a configuration change.
      */
-    fun visible(shown: Boolean) {
-        val opened = shown && !visibleState.value
-        if (opened) {
-            acted = false
-            current.value?.appOpened()
-        }
-        visibleState.value = shown
+    fun activityStarted() {
+        if (started == 0 && !restarting) firstAction.opened()
+        restarting = false
+        started++
+        visibleState.value = true
+    }
+
+    /**
+     * An activity stopped (`MainActivity.onStop`). The app is visible while any activity is
+     * started, and through a restart for a configuration change ([changingConfigurations]), whose
+     * new activity starts at once.
+     */
+    fun activityStopped(changingConfigurations: Boolean) {
+        started = (started - 1).coerceAtLeast(0)
+        if (started > 0) return
+        restarting = changingConfigurations
+        if (!changingConfigurations) visibleState.value = false
     }
 
     /**
@@ -166,9 +186,9 @@ class PipelineHost(
      * writes nothing: it would pay for a track about to be superseded.
      */
     fun write() {
-        acted = true
         val pipeline = current.value ?: return
         val shown = playing?.value
+        // [Pipeline.write] counts it as the first action; a tap that writes nothing does not.
         if (shown == null || pipeline.isCurrent(shown)) pipeline.write()
     }
 
@@ -193,10 +213,13 @@ class PipelineHost(
                     current.value = null
                     view.update { it.copy(track = it.track?.let(::withoutWrite)) }
                     val old = live
+                    // Stale from now on: it starts and decides nothing more.
+                    val decided = old?.supersede() ?: false
                     // A model call under way is paid for: let it finish, and its card be kept.
                     old?.state?.first { it?.insight !is InsightState.Writing }
                     running?.cancelAndJoin()
-                    val reads = RunInputs(latest, shown, allowed, replayOf = old?.let { it::isCurrent })
+                    val replayOf = old?.takeIf { decided }?.let { it::isCurrent }
+                    val reads = RunInputs(latest, shown, allowed, replayOf)
                     running = launch { follow(input, reads) { live = it } }
                 }
         }
@@ -208,9 +231,8 @@ class PipelineHost(
     ) = coroutineScope {
         try {
             val built = parts(readKeys(input.provider), inputs.latest.value)
-            val pipeline = Pipeline(built) { inputs.latest.value }
+            val pipeline = Pipeline(built, firstAction = firstAction) { inputs.latest.value }
             onBuilt(pipeline)
-            if (acted) pipeline.userActed()
             launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { eventFlow.tryEmit(it) } }
             launch(start = CoroutineStart.UNDISPATCHED) { publish(pipeline, built, inputs) }
             current.value = pipeline
@@ -233,17 +255,20 @@ class PipelineHost(
     }
 
     // The view of [pipeline]'s state. Until it publishes, the previous pipeline's track stays,
-    // without Write; so does a track the session layer has moved on from, until its run starts.
+    // without Write; so does a track the session layer has moved on from, until its run starts,
+    // and every track while [pipeline] is not the one that takes taps (a rebuild has begun).
     private suspend fun publish(
         pipeline: Pipeline,
         built: PipelineParts,
         inputs: RunInputs,
     ) {
         val adapters = built.adapters.map { it.id }.toSet()
-        combine(pipeline.state, inputs.latest, inputs.shown) { track, now, playing ->
+        combine(pipeline.state, inputs.latest, inputs.shown, current) { track, now, playing, taking ->
             val shownTrack =
                 when {
                     track == null -> view.value.track?.let(::withoutWrite)
+                    // Write only from the pipeline that takes taps, for the track shown.
+                    taking !== pipeline -> withoutWrite(track)
                     playing != null && !pipeline.isCurrent(playing) -> withoutWrite(track)
                     else -> track
                 }

@@ -3,24 +3,13 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.core.Secret
-import app.sleevesight.core.ai.AiProvider
-import app.sleevesight.core.ai.CompletionEvent
-import app.sleevesight.core.ai.CompletionRequest
-import app.sleevesight.core.ai.ModelList
-import app.sleevesight.core.ai.StopReason
-import app.sleevesight.core.ai.Usage
-import app.sleevesight.core.evidence.EvidenceDraft
-import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
-import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.InsightState
-import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackResolver
@@ -29,16 +18,10 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
-import app.sleevesight.core.sources.SourceAdapter
-import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
@@ -54,7 +37,6 @@ import org.junit.Test
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Instant
 
 /**
  * The pipeline in the app (#51) under virtual time: nothing before the first run is acknowledged;
@@ -107,7 +89,7 @@ class PipelineHostTest {
         )
 
     private fun TestScope.started(visible: Boolean = true) {
-        host.visible(visible)
+        if (visible) host.activityStarted()
         host.start(backgroundScope)
         runCurrent()
     }
@@ -166,7 +148,7 @@ class PipelineHostTest {
             started()
             play("One")
             settle()
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             runCurrent()
             play("Two")
             settle()
@@ -174,7 +156,7 @@ class PipelineHostTest {
             settle()
             assertEquals(listOf("artist|one"), musicBrainz.asked)
 
-            host.visible(true)
+            host.activityStarted()
             runCurrent()
             settle()
             // The tracks played meanwhile are never looked up; the one shown is.
@@ -193,11 +175,11 @@ class PipelineHostTest {
             started()
             play("One")
             settle()
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             runCurrent()
             play("Two")
             play("One")
-            host.visible(true)
+            host.activityStarted()
             runCurrent()
             settle()
 
@@ -211,7 +193,7 @@ class PipelineHostTest {
             started()
             play("One")
             advanceTimeBy(DEBOUNCE + 1.seconds)
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             runCurrent()
             settle()
 
@@ -456,7 +438,7 @@ class PipelineHostTest {
             started()
             play("One")
             settle()
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             play("Two")
             assertEquals(
                 InsightState.Idle(canWrite = false),
@@ -464,7 +446,7 @@ class PipelineHostTest {
                     ?.insight,
             )
 
-            host.visible(true)
+            host.activityStarted()
             host.write()
             settle()
             assertEquals(0, provider.requests)
@@ -505,11 +487,11 @@ class PipelineHostTest {
             started()
             play("One")
             advanceTimeBy(100.milliseconds)
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             settle()
             assertEquals(emptyList<String>(), musicBrainz.asked)
 
-            host.visible(true)
+            host.activityStarted()
             settle()
             assertEquals(listOf("artist|one"), musicBrainz.asked)
         }
@@ -528,7 +510,7 @@ class PipelineHostTest {
             musicBrainz.byName = 2.seconds
             play("One")
             advanceTimeBy(DEBOUNCE + 1.seconds)
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             settle()
             assertTrue(
                 host.state.value.track
@@ -554,11 +536,11 @@ class PipelineHostTest {
             musicBrainz.byName = 2.seconds
             play("One")
             advanceTimeBy(DEBOUNCE + 1.seconds)
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             play("Two")
             settle()
 
-            host.visible(true)
+            host.activityStarted()
             settle()
             assertEquals(
                 "Two",
@@ -586,8 +568,9 @@ class PipelineHostTest {
             settle()
             host.write()
             settle()
-            // `MainActivity` reports no stop for a configuration change, only the start after it.
-            host.visible(true)
+            // A rotation: a stop for a configuration change, and the new activity started.
+            host.activityStopped(changingConfigurations = true)
+            host.activityStarted()
             play("Two")
             settle()
             assertEquals(2, provider.requests)
@@ -597,7 +580,7 @@ class PipelineHostTest {
     fun `remote art waits while lookups are not allowed`() =
         runTest {
             started()
-            host.visible(false)
+            host.activityStopped(changingConfigurations = false)
             runCurrent()
             var fetched = 0
             val art =
@@ -609,7 +592,7 @@ class PipelineHostTest {
             settle()
             assertEquals(0, fetched)
 
-            host.visible(true)
+            host.activityStarted()
             runCurrent()
             assertEquals(1, fetched)
             assertTrue(load.isCompleted)
@@ -639,81 +622,5 @@ class PipelineHostTest {
     private companion object {
         val DEBOUNCE: Duration = 650.milliseconds
         val DEBOUNCE_AND_RUN: Duration = DEBOUNCE + 5.seconds
-    }
-}
-
-/** An adapter that answers a song line after [byName], recording what it was asked. */
-private class CountingAdapter(
-    override val id: SourceId,
-) : SourceAdapter {
-    var byName: Duration = Duration.ZERO
-    val asked = mutableListOf<String>()
-    var cancelled = 0
-
-    override suspend fun lookup(
-        track: NormalizedTrack,
-        resolution: Deferred<Resolution>,
-    ): SourceResult {
-        asked += track.lookupKey
-        try {
-            delay(byName)
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-            cancelled++
-            throw e
-        }
-        resolution.await()
-        val line = EvidenceDraft(id, Scope.SONG, "A line from ${id.tag}.", null, Instant.parse("2026-10-16T12:00:00Z"))
-        return SourceResult(Outcome.SongArticle, listOf(line), byName)
-    }
-}
-
-/** A provider that replies with one cited sentence, counting its requests. */
-private class CountingProvider : AiProvider {
-    override val id: ProviderId = ProviderId.ANTHROPIC
-    var requests = 0
-    var completed = 0
-    var failure: Exception? = null
-    var streaming: Duration = Duration.ZERO
-
-    override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
-
-    override fun stream(
-        request: CompletionRequest,
-        key: Secret,
-    ): Flow<CompletionEvent> =
-        flow {
-            requests++
-            failure?.let { throw it }
-            emit(CompletionEvent.Delta("It is a song [MB1]."))
-            delay(streaming)
-            emit(CompletionEvent.Done(Usage(inputTokens = 10, outputTokens = 5), StopReason.END))
-            completed++
-        }
-}
-
-/** A cache that keeps written cards only, as the store's synthesis cache would. */
-private class CardCache : PipelineCache {
-    private val cards = mutableMapOf<CardKey, String>()
-
-    override suspend fun result(
-        adapter: SourceAdapter,
-        track: NormalizedTrack,
-        duration: Duration?,
-    ): SourceResult? = null
-
-    override suspend fun keep(
-        adapter: SourceAdapter,
-        track: NormalizedTrack,
-        duration: Duration?,
-        result: SourceResult,
-    ) = Unit
-
-    override suspend fun card(key: CardKey): String? = cards[key]
-
-    override suspend fun keep(
-        key: CardKey,
-        text: String,
-    ) {
-        cards[key] = text
     }
 }

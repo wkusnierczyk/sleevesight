@@ -72,7 +72,9 @@ class ListenerServiceTest {
         val cache = app.getDatabasePath("cache.db")
         idleFor("no cache database before the first run") { !cache.exists() }
 
-        // Then the settings are read, the cache opened and its expired entries purged.
+        // Then the cache is opened and its expired entries purged. (That the pipeline's settings
+        // are not read before is `AppPipelinePartsTest`'s; the session layer reads *Players to
+        // follow* before the acknowledgement, #48.)
         FirstRunAcknowledgement(app).acknowledge()
         idleUntil("the cache database opened") { cache.exists() }
     }
