@@ -83,6 +83,33 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun aSourceSwitchIsStoredOnlyAsTheUsersOverride() {
+        val prefs = mutablePreferencesOf()
+        val chosen = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL - SourceSwitch.LASTFM
+        SettingsCodec.write(Settings(enabledSources = chosen), prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringSetPreferencesKey("sources.on") to setOf("MODEL"),
+                stringSetPreferencesKey("sources.off") to setOf("LASTFM"),
+            ),
+            prefs,
+        )
+
+        // Switched back to its default, an override goes.
+        SettingsCodec.write(Settings(enabledSources = chosen + SourceSwitch.LASTFM), prefs)
+        assertEquals(mutablePreferencesOf(stringSetPreferencesKey("sources.on") to setOf("MODEL")), prefs)
+    }
+
+    @Test
+    fun aSwitchTheUserDidNotMoveFollowsItsDefault() {
+        // Only the model's switch was moved; Discogs, hidden and never moved, stays at its default (on),
+        // as would a switch a later version adds.
+        val read = SettingsCodec.read(mutablePreferencesOf(stringSetPreferencesKey("sources.on") to setOf("MODEL")))
+        assertEquals(Settings.DEFAULT_SOURCES + SourceSwitch.MODEL, read.enabledSources)
+        assertTrue(SourceSwitch.DISCOGS in read.enabledSources)
+    }
+
+    @Test
     fun valuesThisVersionCannotUseReadAsTheirDefaults() {
         val prefs =
             mutablePreferencesOf(
@@ -95,12 +122,12 @@ class SettingsCodecTest {
                 longPreferencesKey("cache.lifetime_ms.WEB") to -1L,
                 longPreferencesKey("cache.artist_lifetime_ms") to 0L,
                 longPreferencesKey("cache.size_limit") to -5L,
-                stringSetPreferencesKey("sources.enabled") to setOf("LASTFM", "TELEPATHY"),
+                stringSetPreferencesKey("sources.off") to setOf("LASTFM", "TELEPATHY"),
                 booleanPreferencesKey("lookups.background") to true,
             )
         val read = SettingsCodec.read(prefs)
         assertEquals(
-            Settings(enabledSources = setOf(SourceSwitch.LASTFM), lookUpInBackground = true),
+            Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LASTFM, lookUpInBackground = true),
             read,
         )
     }

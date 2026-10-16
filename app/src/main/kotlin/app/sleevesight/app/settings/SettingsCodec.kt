@@ -35,7 +35,8 @@ internal object SettingsCodec {
     private val AI_EFFORT = stringPreferencesKey("ai.effort")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
-    private val SOURCES = stringSetPreferencesKey("sources.enabled")
+    private val SOURCES_ON = stringSetPreferencesKey("sources.on")
+    private val SOURCES_OFF = stringSetPreferencesKey("sources.off")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
@@ -55,8 +56,7 @@ internal object SettingsCodec {
             aiProvider = enumOf<ProviderId>(prefs[AI_PROVIDER]),
             aiModel = prefs[AI_MODEL]?.takeIf { it.isNotBlank() },
             followedPlayers = readPlayers(prefs),
-            enabledSources =
-                prefs[SOURCES]?.mapNotNull { enumOf<SourceSwitch>(it) }?.toSet() ?: defaults.enabledSources,
+            enabledSources = readSources(prefs),
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
             writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
             crossfade = readCrossfade(prefs),
@@ -78,11 +78,7 @@ internal object SettingsCodec {
         prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
         prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
         writePlayers(settings.followedPlayers, prefs)
-        prefs.put(
-            SOURCES,
-            settings.enabledSources.map { it.name }.toSet(),
-            defaults.enabledSources.map { it.name }.toSet(),
-        )
+        writeSources(settings.enabledSources, prefs)
         prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
         prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
@@ -124,6 +120,25 @@ internal object SettingsCodec {
         }
     }
 
+    /**
+     * *Where to look* as overrides of each switch's default: a switch the user has not moved follows
+     * its default, including one a later version adds or whose default it revises.
+     */
+    private fun readSources(prefs: Preferences): Set<SourceSwitch> {
+        fun switches(key: Preferences.Key<Set<String>>) = prefs[key].orEmpty().mapNotNull { enumOf<SourceSwitch>(it) }
+        return defaults.enabledSources + switches(SOURCES_ON) - switches(SOURCES_OFF).toSet()
+    }
+
+    private fun writeSources(
+        enabled: Set<SourceSwitch>,
+        prefs: MutablePreferences,
+    ) {
+        val on = (enabled - defaults.enabledSources).map { it.name }.toSet()
+        val off = (defaults.enabledSources - enabled).map { it.name }.toSet()
+        prefs.put(SOURCES_ON, on.ifEmpty { null }, null)
+        prefs.put(SOURCES_OFF, off.ifEmpty { null }, null)
+    }
+
     private fun readCrossfade(prefs: Preferences): Crossfade {
         val value = prefs[CROSSFADE_MS]?.milliseconds ?: return Crossfade.Autodetect
         return if (value in Duration.ZERO..Crossfade.Fixed.MAX) Crossfade.Fixed(value) else Crossfade.Autodetect
@@ -143,15 +158,15 @@ internal object SettingsCodec {
         Settings.DEFAULT_CACHE_LIFETIMES.mapValues { (source, default) ->
             prefs[lifetimeKey(source)]?.takeIf { it > 0 }?.milliseconds ?: default
         }
+}
 
-    private inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }
+private inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }
 
-    /** Stores [value], or removes the key when it is the default or null. */
-    private fun <T : Any> MutablePreferences.put(
-        key: Preferences.Key<T>,
-        value: T?,
-        default: T?,
-    ) {
-        if (value == null || value == default) remove(key) else set(key, value)
-    }
+/** Stores [value], or removes the key when it is the default or null. */
+private fun <T : Any> MutablePreferences.put(
+    key: Preferences.Key<T>,
+    value: T?,
+    default: T?,
+) {
+    if (value == null || value == default) remove(key) else set(key, value)
 }

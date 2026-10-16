@@ -79,8 +79,8 @@ fun SettingsScreen(
             KeyDialog(
                 id = shown.id,
                 state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value -> scope.launch { secretStore.set(shown.id, Secret(value)) } },
-                onRemove = { scope.launch { secretStore.clear(shown.id) } },
+                onSave = { value -> secretStore.set(shown.id, Secret(value)) },
+                onRemove = { secretStore.clear(shown.id) },
                 onDismiss = close,
             )
         }

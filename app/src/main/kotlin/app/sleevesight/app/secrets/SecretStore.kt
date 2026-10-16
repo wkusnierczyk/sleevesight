@@ -1,17 +1,22 @@
 package app.sleevesight.app.secrets
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Base64
 
@@ -62,10 +67,15 @@ enum class SecretState {
  * it goes when the user saves a new key or removes it. A store file DataStore cannot parse is
  * replaced by an empty one (the corruption handler where the store is created), so its keys read as
  * absent.
+ *
+ * The cipher's work, which goes to the Keystore over binder calls, runs on [dispatcher], never on
+ * the caller's (the screen's main thread). Saving or removing a key that fails, in the key store or
+ * in DataStore, returns false rather than throwing.
  */
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
     private val cipher: SecretCipher,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val data: Flow<Preferences> =
         dataStore.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
@@ -74,37 +84,54 @@ class SecretStore(
     val states: Flow<Map<SecretId, SecretState>> =
         data
             .map { prefs -> SecretId.entries.associateWith { id -> stateOf(prefs, id) } }
+            .flowOn(dispatcher)
             .distinctUntilChanged()
 
     /** The key [id], or null when none is saved or it cannot be read. */
     suspend fun get(id: SecretId): Secret? {
-        val plain = data.first()[keyOf(id)]?.let { open(id, it) } ?: return null
-        return try {
-            Secret(plain.decodeToString())
-        } finally {
-            plain.fill(0)
+        val stored = data.first()[keyOf(id)] ?: return null
+        return withContext(dispatcher) {
+            open(id, stored)?.let { plain ->
+                try {
+                    Secret(plain.decodeToString())
+                } finally {
+                    plain.fill(0)
+                }
+            }
         }
     }
 
-    /** Saves [secret] as the key [id], replacing any before it. */
+    /**
+     * Saves [secret] as the key [id], replacing any before it. False when it could not be sealed
+     * (the key store failed) or written (DataStore failed); what was stored before is then kept.
+     */
     suspend fun set(
         id: SecretId,
         secret: Secret,
-    ) {
-        val plain = secret.reveal().encodeToByteArray()
+    ): Boolean {
         val sealed =
-            try {
-                cipher.seal(plain, associated(id))
-            } finally {
-                plain.fill(0)
-            }
-        dataStore.edit { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) }
+            withContext(dispatcher) {
+                val plain = secret.reveal().encodeToByteArray()
+                try {
+                    cipher.seal(plain, associated(id))
+                } finally {
+                    plain.fill(0)
+                }
+            } ?: return false
+        return write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) }
     }
 
-    /** Removes the key [id]. */
-    suspend fun clear(id: SecretId) {
-        dataStore.edit { it.remove(keyOf(id)) }
-    }
+    /** Removes the key [id]. False when DataStore could not write. */
+    suspend fun clear(id: SecretId): Boolean = write { it.remove(keyOf(id)) }
+
+    @Suppress("SwallowedException") // A failed write is reported as false; its message holds no key.
+    private suspend fun write(change: (MutablePreferences) -> Unit): Boolean =
+        try {
+            dataStore.edit(change)
+            true
+        } catch (e: IOException) {
+            false
+        }
 
     private fun stateOf(
         prefs: Preferences,

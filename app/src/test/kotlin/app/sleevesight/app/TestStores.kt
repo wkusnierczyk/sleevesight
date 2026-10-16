@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import app.sleevesight.app.secrets.SecretCipher
+import app.sleevesight.app.secrets.SecretKeySource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,5 +47,19 @@ class TestStores(
 /** A software AES key, standing in for the Keystore's on the JVM. */
 fun softwareKey(): SecretKey = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
 
+/** A software key that, like the Keystore's, stays the same until it is replaced. */
+open class SoftwareKeySource(
+    private var current: SecretKey = softwareKey(),
+) : SecretKeySource {
+    var replacements = 0
+
+    override fun key(): SecretKey = current
+
+    override fun replace() {
+        replacements++
+        current = softwareKey()
+    }
+}
+
 /** A cipher with a fixed software key, as the Keystore's key is fixed for the app's life. */
-fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher { key }
+fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher(SoftwareKeySource(key))

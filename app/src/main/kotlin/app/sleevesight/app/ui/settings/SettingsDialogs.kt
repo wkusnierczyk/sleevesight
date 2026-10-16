@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,6 +32,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.launch
 
 private val DIALOG_LIST_HEIGHT = 360.dp
 
@@ -59,18 +62,36 @@ internal fun <T> ChoiceDialog(
 /**
  * Enters, replaces or removes the key [id]. The saved key is never shown, and what is typed lives
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
- * Spaces around the key, as a paste often brings, are dropped.
+ * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] return
+ * whether they succeeded: the dialog closes only then, and otherwise says so and keeps what was typed.
  */
 @Composable
 internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
-    onSave: (String) -> Unit,
-    onRemove: () -> Unit,
+    onSave: suspend (String) -> Boolean,
+    onRemove: suspend () -> Boolean,
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf<Int?>(null) }
+    val scope = rememberCoroutineScope()
     val value = typed.trim()
+
+    fun run(
+        @StringRes failure: Int,
+        action: suspend () -> Boolean,
+    ) {
+        busy = true
+        failed = null
+        scope.launch {
+            val done = action()
+            busy = false
+            if (done) onDismiss() else failed = failure
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(keyName(id))) },
@@ -88,25 +109,27 @@ internal fun KeyDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                 )
+                failed?.let {
+                    Text(
+                        stringResource(it),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = {
-                    onSave(value)
-                    onDismiss()
-                },
-                enabled = value.isNotEmpty(),
+                onClick = { run(R.string.settings_key_save_failed) { onSave(value) } },
+                enabled = value.isNotEmpty() && !busy,
             ) { Text(stringResource(R.string.settings_save)) }
         },
         dismissButton = {
             Row {
                 if (state != SecretState.ABSENT) {
                     TextButton(
-                        onClick = {
-                            onRemove()
-                            onDismiss()
-                        },
+                        onClick = { run(R.string.settings_key_remove_failed, onRemove) },
+                        enabled = !busy,
                     ) { Text(stringResource(R.string.settings_remove)) }
                 }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) }

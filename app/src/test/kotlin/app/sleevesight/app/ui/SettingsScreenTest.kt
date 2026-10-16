@@ -18,7 +18,9 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -45,6 +47,8 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.security.ProviderException
+import javax.crypto.SecretKey
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -128,6 +132,32 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_key_saved)).performScrollTo().assertIsDisplayed()
             assertEquals(0, compose.onAllNodesWithSubstring("lastfm-key").size)
         }
+
+    @Test
+    fun aKeyThatCannotBeSavedKeepsTheDialogOpenAndSaysSo() {
+        val failing =
+            object : SoftwareKeySource() {
+                override fun key(): SecretKey = throw ProviderException("key store down")
+            }
+        val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap()) { it } }
+            }
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.settings_title)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+
+            compose.waitUntil(5_000) {
+                compose.onAllNodesWithText(text(R.string.settings_key_save_failed)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
+            assertEquals(null, runBlocking { failingSecrets.get(SecretId.EXA) })
+        }
+    }
 
     @Test
     fun theModelComesFromTheServicesList() {

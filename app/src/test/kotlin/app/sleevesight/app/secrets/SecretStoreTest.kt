@@ -1,7 +1,11 @@
 package app.sleevesight.app.secrets
 
+import android.security.keystore.KeyPermanentlyInvalidatedException
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.softwareKey
 import app.sleevesight.app.testCipher
@@ -13,9 +17,12 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.IOException
+import java.security.ProviderException
 import javax.crypto.SecretKey
 
 class SecretStoreTest {
@@ -141,12 +148,73 @@ class SecretStoreTest {
     @Test
     fun theCipherRefusesAnotherFormatAndAnotherEntry() {
         val cipher = testCipher(key)
-        val sealed = cipher.seal("value".encodeToByteArray(), "a".encodeToByteArray())
+        val sealed = checkNotNull(cipher.seal("value".encodeToByteArray(), "a".encodeToByteArray()))
         assertArrayEquals("value".encodeToByteArray(), cipher.open(sealed, "a".encodeToByteArray()))
         assertNull(cipher.open(sealed, "b".encodeToByteArray()))
         assertNull(cipher.open(byteArrayOf(2) + sealed.copyOfRange(1, sealed.size), "a".encodeToByteArray()))
         assertNull(cipher.open(sealed.copyOf(10), "a".encodeToByteArray()))
     }
+
+    @Test
+    fun aKeyStoreThatFailsLeavesTheSavedKeyAndReportsTheFailure() =
+        runBlocking {
+            val keys = SoftwareKeySource(key)
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, SecretCipher(keys)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+
+            val failing =
+                object : SoftwareKeySource(key) {
+                    override fun key(): SecretKey = throw ProviderException("key store down")
+                }
+            val store = SecretStore(dataStore, SecretCipher(failing))
+            assertFalse(store.set(SecretId.LASTFM, Secret("replacement")))
+            assertEquals(0, failing.replacements)
+            assertEquals(LASTFM_KEY, SecretStore(dataStore, SecretCipher(keys)).get(SecretId.LASTFM)?.reveal())
+        }
+
+    @Test
+    fun anUnusableKeystoreKeyIsReplacedSoAKeyCanBeEnteredAgain() =
+        runBlocking {
+            val keys =
+                object : SoftwareKeySource(key) {
+                    override fun key(): SecretKey =
+                        if (replacements == 0) throw KeyPermanentlyInvalidatedException() else super.key()
+                }
+            val store = SecretStore(stores.open("secrets"), SecretCipher(keys))
+            assertTrue(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            assertEquals(1, keys.replacements)
+            assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
+        }
+
+    @Test
+    fun aKeyStoreThatCannotLoadReadsAsUnreadable() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.EXA, Secret("exa"))
+            val unloadable =
+                object : SoftwareKeySource(key) {
+                    override fun key(): SecretKey = throw IOException("cannot load")
+                }
+            val store = SecretStore(dataStore, SecretCipher(unloadable))
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.EXA))
+            assertNull(store.get(SecretId.EXA))
+        }
+
+    @Test
+    fun aStoreThatCannotWriteReportsTheFailure() =
+        runBlocking {
+            val dataStore = stores.open("secrets")
+            SecretStore(dataStore, testCipher(key)).set(SecretId.EXA, Secret("exa"))
+            val failing =
+                object : DataStore<Preferences> by dataStore {
+                    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+                        throw IOException("disk full")
+                }
+            val store = SecretStore(failing, testCipher(key))
+            assertFalse(store.set(SecretId.EXA, Secret("other")))
+            assertFalse(store.clear(SecretId.EXA))
+            assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+        }
 
     private companion object {
         // Not real keys.
