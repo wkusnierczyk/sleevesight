@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -36,6 +37,7 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -102,11 +104,14 @@ class SettingsScreenTest {
     private fun show(
         providers: Map<ProviderId, AiProvider> = emptyMap(),
         onOpenCredits: () -> Unit = {},
+        settingsStore: SettingsStore = settings,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, secrets, providers, onOpenCredits) { "Label of $it" } }
+                activity.setContent {
+                    SettingsScreen(settingsStore, secrets, providers, onOpenCredits) { "Label of $it" }
+                }
             }
             // The screen draws once the settings are read.
             compose.waitUntil(5_000) {
@@ -116,9 +121,12 @@ class SettingsScreenTest {
         }
     }
 
-    private fun current(): Settings = runBlocking { settings.settings.first() }
+    private fun current(store: SettingsStore = settings): Settings = runBlocking { store.settings.first() }
 
     private fun waitFor(condition: () -> Boolean) = compose.waitUntil(timeoutMillis = 5_000) { condition() }
+
+    private fun waitForText(text: String) =
+        waitFor { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
 
     @Test
     fun aSwitchIsSavedAtOnce() =
@@ -129,6 +137,48 @@ class SettingsScreenTest {
             compose.onNodeWithText("Label of ${Settings.SPOTIFY}").performScrollTo().performClick()
             waitFor { current().followedPlayers[Settings.SPOTIFY] == false }
         }
+
+    @Test
+    fun aSwitchThatCannotBeSavedKeepsItsStoredValueAndSaysSo() {
+        val flaky = FlakyDataStore(stores.open("flaky-settings"))
+        val store = SettingsStore(flaky)
+        show(settingsStore = store) {
+            flaky.writeFailures.set(1)
+            val row = compose.onNodeWithText(text(R.string.settings_background)).performScrollTo()
+            row.performClick()
+
+            waitForText(text(R.string.settings_change_failed))
+            row.assertIsOff()
+            assertEquals(false, current(store).lookUpInBackground)
+            // The error's own text is not shown.
+            assertEquals(0, compose.onAllNodesWithSubstring("cannot write").size)
+
+            // The next change is saved, and the message goes.
+            row.performClick()
+            waitFor { current(store).lookUpInBackground }
+            row.assertIsOn()
+            waitFor {
+                compose.onAllNodesWithText(text(R.string.settings_change_failed)).fetchSemanticsNodes().isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun aChoiceThatCannotBeSavedKeepsItsStoredValueAndSaysSo() {
+        val flaky = FlakyDataStore(stores.open("flaky-settings"))
+        val store = SettingsStore(flaky)
+        show(settingsStore = store) {
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.settings_ai_effort)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_effort_high)).performClick()
+
+            waitForText(text(R.string.settings_change_failed))
+            // The dialog has closed, and the row still shows the stored effort.
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
+            compose.onNodeWithText(text(R.string.settings_effort_low)).performScrollTo().assertIsDisplayed()
+            assertEquals(ReasoningEffort.LOW, current(store).aiEffort)
+        }
+    }
 
     @Test
     fun aSourceKeyIsSavedSealedAndNeverShown() =
