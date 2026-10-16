@@ -8,7 +8,7 @@ plugins {
 sqldelight {
     databases {
         create("CacheDatabase") {
-            packageName = "io.github.wkusnierczyk.sleevesight.store.db"
+            packageName = "app.sleevesight.store.db"
         }
     }
 }
