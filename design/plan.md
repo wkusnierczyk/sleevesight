@@ -40,6 +40,8 @@ flowchart TD
     i48["#48 Session layer"]
     i49["#49 History, track changes (D15)"]
     i50["#50 Settings, secrets"]
+    i112["#112 Who creates the NetClient"]
+    i132["#132 :wiring"]
     i51["#51 Pipeline on the phone"]
     i52["#52 Home screen"]
     i53["#53 Auto-write, skip detection (D5)"]
@@ -95,6 +97,8 @@ flowchart TD
   i48 --> i51
   i50 --> i51
   i44 --> i51
+  i112 --> i132
+  i132 --> i51
   i51 --> i52
   i51 --> i54
   i49 --> i53
@@ -157,7 +161,9 @@ flowchart TD
 | [#48][48] | Session layer: `NowPlaying`, track identity, queue, art | [#47][47], [#33][33] |
 | [#49][49] | Session history; track-change records (D15) | [#48][48], [#41][41] |
 | [#50][50] | Settings (DataStore) and secrets (Keystore): the AI key and the sources' keys (Last.fm, web search); settings screen | [#47][47], [#33][33] |
-| [#51][51] | The pipeline on the phone, with the keys wired into the adapters; visible-only lookups (D6); Write on tap | [#48][48], [#50][50], [#44][44] |
+| [#112][112] | Who creates the app's one `NetClient`: `:wiring` (architecture, *Modules*) | |
+| [#132][132] | `:wiring`: the one list of host policies, and the `NetConfig` built from it with each process's version, for the app and `:cli`; the app's one `NetClient`, and the adapters and providers handed to `:app` as `:core` types | [#112][112] (the decision, in architecture) |
+| [#51][51] | The pipeline on the phone, with the keys wired into the adapters; visible-only lookups (D6); Write on tap | [#48][48], [#50][50], [#44][44], [#112][112], [#132][132] |
 | [#52][52] | Home screen; every empty and error state | [#51][51] |
 | [#53][53] | *Write insights automatically*; skip detection and *Crossfade* (D5) | [#49][49], [#51][51] |
 | [#20][20] | Prepare the next track (D13) | [#53][53] |
@@ -252,3 +258,5 @@ flowchart TD
 [84]: https://github.com/wkusnierczyk/sleevesight/issues/84
 [100]: https://github.com/wkusnierczyk/sleevesight/issues/100
 [101]: https://github.com/wkusnierczyk/sleevesight/issues/101
+[112]: https://github.com/wkusnierczyk/sleevesight/issues/112
+[132]: https://github.com/wkusnierczyk/sleevesight/issues/132
