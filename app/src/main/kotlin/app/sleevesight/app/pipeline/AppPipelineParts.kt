@@ -12,6 +12,10 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.wiring.PipelineWiring
 import app.sleevesight.wiring.SourceKeys
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 
 /**
  * The pipeline's stages in the app, for [PipelineHost]: the adapters, the resolver, MusicBrainz's
@@ -55,3 +59,10 @@ suspend fun SecretStore.pipelineKeys(provider: ProviderId?): PipelineKeys =
                 web = listOfNotNull(get(SecretId.EXA)?.let { WebEngine.EXA to it }).toMap(),
             ),
     )
+
+/** This flow, collected only once [acknowledged] is true: nothing is read before the first run. */
+fun <T> Flow<T>.afterAcknowledged(acknowledged: Flow<Boolean>): Flow<T> =
+    flow {
+        acknowledged.first { it }
+        emitAll(this@afterAcknowledged)
+    }

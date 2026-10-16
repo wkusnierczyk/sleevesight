@@ -16,18 +16,22 @@ import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.wiring.SourceKeys
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.util.concurrent.atomic.AtomicInteger
 
 /** The app's pipeline stages from the wiring and the saved keys (#51). Nothing here sends a request. */
 class AppPipelinePartsTest {
@@ -60,22 +64,22 @@ class AppPipelinePartsTest {
         }
 
     @Test
-    fun aKeySavedReplacedOrRemovedIsAChange() =
+    fun aFlowAfterTheAcknowledgementIsNotCollectedBeforeIt() =
         runBlocking {
-            val seen = AtomicInteger()
-            val watching = launch(Dispatchers.Default) { secrets.changes.collect { seen.incrementAndGet() } }
+            val acknowledged = MutableStateFlow(false)
+            var collected = false
+            val settings =
+                flow {
+                    collected = true
+                    emit(Settings())
+                }.afterAcknowledged(acknowledged)
+            val first = async(Dispatchers.Default) { settings.first() }
+            delay(100)
+            assertFalse(collected)
 
-            suspend fun changesSeen(n: Int) = withTimeout(5_000) { while (seen.get() < n) delay(10) }
-
-            changesSeen(1)
-            secrets.set(SecretId.LASTFM, Secret("first"))
-            changesSeen(2)
-            // Replaced: its state stays saved, and the pipeline still needs to know.
-            secrets.set(SecretId.LASTFM, Secret("second"))
-            changesSeen(3)
-            secrets.clear(SecretId.LASTFM)
-            changesSeen(4)
-            watching.cancel()
+            acknowledged.value = true
+            assertEquals(Settings(), withTimeout(5_000) { first.await() })
+            assertTrue(collected)
         }
 
     @Test

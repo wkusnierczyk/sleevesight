@@ -10,7 +10,8 @@ class AutoWriteTest {
     fun `each mode writes the changes D5 says, and only after the user's first action`() {
         val expected =
             mapOf(
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE to ChangeCause.entries.toSet(),
+                // A replay is not a track change: never written without a tap.
+                WriteAutomatically.ON_EVERY_TRACK_CHANGE to ChangeCause.entries.toSet() - ChangeCause.REPLAY,
                 WriteAutomatically.WHEN_I_SKIP to setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER),
                 WriteAutomatically.NEVER to emptySet(),
             )

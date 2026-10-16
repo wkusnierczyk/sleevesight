@@ -552,4 +552,94 @@ class PipelineTest {
             assertIs<InsightState.Written>(pipeline.state.value!!.insight)
             assertEquals(1, provider.requests.size)
         }
+
+    // The gate (D6 in the app): no request starts while it is closed.
+
+    @Test
+    fun `while requests are not allowed, a change waits before its lookups`() =
+        runTest {
+            val mb = mb()
+            val pipeline = pipeline(listOf(mb))
+            val allowed = MutableStateFlow(false)
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes, allowed) }
+            settle()
+            assertEquals(emptyList(), mb.asked)
+
+            allowed.value = true
+            settle()
+            assertEquals(listOf("gordon lightfoot|sundown"), mb.asked)
+        }
+
+    @Test
+    fun `lookups under way finish when requests stop being allowed, and the model call waits`() =
+        runTest {
+            val provider = FakeProvider()
+            val slow = FakeAdapter(SourceId.MUSICBRAINZ, byName = 5.seconds)
+            val pipeline = pipeline(listOf(slow), provider = provider)
+            pipeline.userActed()
+            val allowed = MutableStateFlow(true)
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes, allowed) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            allowed.value = false
+            settle()
+            assertTrue(pipeline.state.value!!.gathered)
+            assertEquals(0, slow.cancelled)
+            assertEquals(0, provider.requests.size)
+
+            allowed.value = true
+            settle()
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `after the app opens again, a run waiting to write waits for an action`() =
+        runTest {
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb()), provider = provider)
+            pipeline.userActed()
+            val allowed = MutableStateFlow(true)
+            val changes = MutableStateFlow<TrackChange?>(null)
+            backgroundScope.launch { pipeline.follow(changes, allowed) }
+            runCurrent()
+            allowed.value = false
+            changes.value = TrackChange(sundown)
+            settle()
+
+            pipeline.appOpened()
+            allowed.value = true
+            settle()
+            assertEquals(InsightState.Idle(canWrite = true), pipeline.state.value!!.insight)
+            assertEquals(0, provider.requests.size)
+
+            pipeline.write()
+            settle()
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `a replay is never written without a tap`() =
+        runTest {
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb()), provider = provider)
+            pipeline.userActed()
+            backgroundScope.launch { pipeline.follow(MutableStateFlow(TrackChange(sundown, ChangeCause.REPLAY))) }
+            settle()
+            assertEquals(InsightState.Idle(canWrite = true), pipeline.state.value!!.insight)
+            assertEquals(0, provider.requests.size)
+        }
+
+    @Test
+    fun `a report is current when the state is about it in everything a run depends on`() =
+        runTest {
+            val pipeline = pipeline(listOf(mb()))
+            assertEquals(false, pipeline.isCurrent(sundown))
+            backgroundScope.launch { pipeline.follow(MutableStateFlow(TrackChange(sundown))) }
+            settle()
+
+            assertTrue(pipeline.isCurrent(sundown.copy(artUri = "content://art/2")))
+            assertEquals(false, pipeline.isCurrent(sundown.copy(album = "Gord's Gold")))
+            assertEquals(false, pipeline.isCurrent(snowbird))
+        }
 }

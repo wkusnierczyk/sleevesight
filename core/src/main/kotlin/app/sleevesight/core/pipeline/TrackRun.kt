@@ -70,14 +70,16 @@ internal class TrackRun(
     private val labels = TrackLabels(parts.musicBrainzLabels, settings, key, this)
 
     /**
-     * Gathers the evidence, then the insight: written at once when [autoWrite]; else, when
-     * [waitForTap], once the user taps Write; else not at all. MusicBrainz's genre labels are asked
-     * for beside the insight, after the evidence, so it does not wait for them; the run ends when
-     * both have.
+     * Gathers the evidence, then the insight: written at once when [autoWrite] says so, asked once
+     * the evidence is in; else, when [waitForTap], once the user taps Write; else not at all.
+     * MusicBrainz's genre labels are asked for beside the insight, after the evidence, so it does
+     * not wait for them; the run ends when both have. [gate] returns once requests may start: it is
+     * passed before the labels' requests and before a model call.
      */
     suspend fun run(
-        autoWrite: Boolean,
+        autoWrite: () -> Boolean,
         waitForTap: Boolean,
+        gate: suspend () -> Unit = {},
     ): TrackState {
         val tapsAtStart = taps.value
         try {
@@ -87,10 +89,14 @@ internal class TrackRun(
             coroutineScope {
                 gather()
                 val evidence = assemble()
-                launch { labels.addMusicBrainz(state.value) }
+                launch {
+                    gate()
+                    labels.addMusicBrainz(state.value)
+                }
                 InsightWriter(parts, time, input, evidence, guard, this@TrackRun).write(
                     autoWrite = autoWrite,
                     tap = if (waitForTap) suspend { taps.first { it > tapsAtStart } } else null,
+                    gate = gate,
                 )
             }
             return state.value

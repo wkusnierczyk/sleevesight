@@ -4,6 +4,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -15,8 +16,9 @@ import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -29,11 +31,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -41,10 +42,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * What the home screen (#52) and the diagnostics screen (#54) read of the pipeline.
  *
  * @property track the current track's state, null before the first run. It stays through a
- *   rebuild of the pipeline (a key saved, say) until the new pipeline publishes its own, with no
- *   Write to offer meanwhile.
- * @property needsKey the keyed sources (Last.fm, web search) switched on under *Where to look* that
- *   are not looked up because their key is not saved, or cannot be read: their state is that they
+ *   rebuild of the pipeline (a key saved, say) until the new pipeline publishes its own, and
+ *   offers no Write while it is not the track the session layer shows or the pipeline's.
+ * @property needsKey the keyed sources (Last.fm, web search) switched on under *Where to look* (web
+ *   search with an engine switched on, `Settings.isEnabled`) that are not looked up because their
+ *   key is not saved, or cannot be read: their state is that they
  *   need a key, not a failure. They have no entry in [TrackState.sources], which holds one per
  *   adapter, and a source needs its key for an adapter.
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,
@@ -56,7 +58,10 @@ data class PipelineView(
     val aiReady: Boolean = false,
 )
 
-/** The keys a pipeline is built with: the chosen AI service's, and the keyed sources'. */
+/**
+ * The keys a pipeline is built with: the chosen AI service's, and the keyed sources'. Not a data
+ * class, on purpose: no generated `toString`, `equals` or `copy` handles the [Secret]s.
+ */
 class PipelineKeys(
     val ai: Secret? = null,
     val sources: SourceKeys = SourceKeys(),
@@ -64,7 +69,7 @@ class PipelineKeys(
 
 /**
  * The shared pipeline ([Pipeline]) run in the app, under the app's rules (#51; architecture,
- * *Concurrency*, D6):
+ * *How the app runs it*, D5, D6):
  *
  * - **Nothing before the first run.** Until [acknowledged] is true it reads no session, no setting
  *   and no key, and builds nothing, so nothing is sent: notification access can be granted before
@@ -73,28 +78,35 @@ class PipelineKeys(
  *   [Pipeline.follow], which waits [Pipeline.DEBOUNCE] for the next and runs only the latest,
  *   cancelling a superseded track's run. The change's cause is the default, "ended on its own or
  *   could not tell": skip detection, and the actions in Sleevesight, are #53's.
- * - **Only while visible** (D6): while the app is not visible ([visible]) and *Look up in the
- *   background* is off, no track reaches the pipeline, so no lookup and no model call starts. When
- *   the app is visible again, or the setting is turned on, the track shown then reaches it, after
- *   the debounce, and runs unless it is the track the pipeline last ran: the visible track
- *   catches up, and the tracks played meanwhile are never looked up. A run that began while the
- *   app was visible, a change seen then included, is not cancelled when it is hidden: what it has
- *   sent is paid for either way, and its results are cached for the track's return.
- * - **Write on tap**: [write] writes the current track's insight once its evidence is in (and
- *   counts as the user's first action, D5).
+ * - **Requests only while visible** (D6): while the app is not visible ([visible]) and *Look up in
+ *   the background* is off ([lookupsAllowed]), no request starts. A change waits before its
+ *   lookups; a run whose lookups are under way finishes them, and keeps what they found, but waits
+ *   before MusicBrainz's labels and before a model call. When requests are allowed again the run
+ *   waiting goes on, for the track shown then: the visible track catches up, whether or not it is
+ *   the one last run, and the tracks played meanwhile are never looked up.
+ * - **The app opening.** [visible] going from false to true is the app opening (a rotation does
+ *   not stop it: `MainActivity` does not report a stop for a configuration change). From then on
+ *   nothing is written without a tap until the user's next action (D5), the run waiting
+ *   included, since it asks whether to write only once it may go on.
+ * - **Write on tap**: [write] writes the current track's insight once its evidence is in, and is
+ *   the user's first action. The state offers Write only for the track shown: not while a newer
+ *   report waits for its run, nor while the pipeline is being rebuilt.
  * - **Built from the keys.** [parts] builds the pipeline's stages from the keys (read with
  *   [readKeys]) and the settings. The adapter list depends on the keyed sources' keys and the web
  *   engines switched on, and the AI access on the service chosen and its key, so a change to any
- *   of them ([keyChanges], or those settings) builds a new pipeline, which runs the track shown
- *   again; other settings are read by the pipeline for each track, and change nothing here. The
- *   user's first action carries over to the new pipeline. What an adapter keeps in memory (Last.fm's
- *   verdicts) is lost with it, which is why nothing else rebuilds it.
+ *   of them ([keyChanges], or those settings) builds a new pipeline; other settings are read by the
+ *   pipeline for each track, and change nothing here. What an adapter keeps in memory (Last.fm's
+ *   verdicts) is lost with it, which is why nothing else rebuilds it. A rebuild never spends twice
+ *   on a track: a model call under way is let finish first (and its card is kept), and the new
+ *   pipeline runs the track shown again as a [ChangeCause.REPLAY], which is not a track change,
+ *   so it shows the card kept for it or offers Write, and writes nothing without a tap. The
+ *   user's first action carries over.
  *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds, which never
- * blocks the pipeline. A pipeline that fails (a bug: the stages map their failures to outcomes) is
- * reported to [onFailure] and stays stopped until the next rebuild.
+ * blocks the pipeline. A pipeline that fails, or cannot be built (a bug: the stages map their
+ * failures to outcomes), is reported to [onFailure] and stays stopped until the next rebuild.
  */
-@Suppress("LongParameterList") // The inputs of one loop, each a seam for the tests.
+@Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
     private val acknowledged: Flow<Boolean>,
     private val nowPlaying: Flow<NowPlaying?>,
@@ -104,17 +116,23 @@ class PipelineHost(
     private val parts: (PipelineKeys, Settings) -> PipelineParts,
     private val onFailure: (Throwable) -> Unit = {},
 ) {
-    private val visible = MutableStateFlow(false)
+    private val visibleState = MutableStateFlow(false)
     private val view = MutableStateFlow(PipelineView())
     private val eventFlow =
         MutableSharedFlow<PipelineEvent>(
             extraBufferCapacity = Pipeline.EVENT_BUFFER,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
+
+    // The pipeline that takes taps; null while none is built, or one is being rebuilt.
     private val current = MutableStateFlow<Pipeline?>(null)
 
     @Volatile
     private var acted = false
+
+    // The track the session layer shows, once the host has started.
+    @Volatile
+    private var playing: StateFlow<NowPlaying?>? = null
 
     /** What the UI renders. */
     val state: StateFlow<PipelineView> = view.asStateFlow()
@@ -122,15 +140,36 @@ class PipelineHost(
     /** The diagnostics stream of every pipeline built, in order; a slow collector loses the oldest. */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
-    /** Whether the app is on screen: `MainActivity` sets it when it starts and stops. */
+    /**
+     * Whether requests may start (D6): the app is visible, or *Look up in the background* is on. For
+     * the pipeline, and for the session layer's `http` art.
+     */
+    val lookupsAllowed: Flow<Boolean> =
+        combine(visibleState, settings) { shown, now -> shown || now.lookUpInBackground }.distinctUntilChanged()
+
+    /**
+     * Whether the app is on screen: `MainActivity` sets it when it starts, and when it stops other
+     * than for a configuration change. From not visible to visible is the app opening.
+     */
     fun visible(shown: Boolean) {
-        visible.value = shown
+        val opened = shown && !visibleState.value
+        if (opened) {
+            acted = false
+            current.value?.appOpened()
+        }
+        visibleState.value = shown
     }
 
-    /** The user tapped Write: the current track's insight is written once its evidence is in. */
+    /**
+     * The user tapped Write: the current track's insight is written once its evidence is in. A tap
+     * that arrives while the pipeline's track is not the one shown (the state then offers no Write)
+     * writes nothing: it would pay for a track about to be superseded.
+     */
     fun write() {
         acted = true
-        current.value?.write()
+        val pipeline = current.value ?: return
+        val shown = playing?.value
+        if (shown == null || pipeline.isCurrent(shown)) pipeline.write()
     }
 
     /** Runs until [scope] is cancelled; called once. */
@@ -142,62 +181,107 @@ class PipelineHost(
         coroutineScope {
             acknowledged.first { it }
             val latest = settings.stateIn(this)
+            val shown = nowPlaying.stateIn(this)
+            playing = shown
+            val allowed = lookupsAllowed.stateIn(this)
             val inputs = latest.map { BuildInput(it.webEngines, it.aiProvider) }.distinctUntilChanged()
+            var running: Job? = null
+            var live: Pipeline? = null
             combine(keyChanges, inputs) { _, input -> input }
-                .collectLatest { input -> follow(readKeys(input.provider), latest) }
+                .collectLatest { input ->
+                    // No tap may go to the pipeline being replaced, nor be lost with it.
+                    current.value = null
+                    view.update { it.copy(track = it.track?.let(::withoutWrite)) }
+                    val old = live
+                    // A model call under way is paid for: let it finish, and its card be kept.
+                    old?.state?.first { it?.insight !is InsightState.Writing }
+                    running?.cancelAndJoin()
+                    val reads = RunInputs(latest, shown, allowed, replayOf = old?.let { it::isCurrent })
+                    running = launch { follow(input, reads) { live = it } }
+                }
         }
 
     private suspend fun follow(
-        keys: PipelineKeys,
-        latest: StateFlow<Settings>,
+        input: BuildInput,
+        inputs: RunInputs,
+        onBuilt: (Pipeline?) -> Unit,
     ) = coroutineScope {
-        val built = parts(keys, latest.value)
-        val pipeline = Pipeline(built) { latest.value }
-        if (acted) pipeline.userActed()
-        val adapters = built.adapters.map { it.id }.toSet()
-        launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { eventFlow.tryEmit(it) } }
-        launch(start = CoroutineStart.UNDISPATCHED) {
-            combine(pipeline.state, latest) { track, now ->
-                PipelineView(
-                    track = track ?: view.value.track?.let(::superseded),
-                    needsKey = KEYED_SOURCES.filter { now.isEnabled(it) && it !in adapters }.toSet(),
-                    aiReady = built.ai != null,
-                )
-            }.collect { view.value = it }
-        }
-        current.value = pipeline
         try {
-            pipeline.follow(changes(latest))
+            val built = parts(readKeys(input.provider), inputs.latest.value)
+            val pipeline = Pipeline(built) { inputs.latest.value }
+            onBuilt(pipeline)
+            if (acted) pipeline.userActed()
+            launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { eventFlow.tryEmit(it) } }
+            launch(start = CoroutineStart.UNDISPATCHED) { publish(pipeline, built, inputs) }
+            current.value = pipeline
+            try {
+                pipeline.follow(changes(inputs), inputs.allowed)
+            } finally {
+                current.compareAndSet(pipeline, null)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (
             @Suppress("TooGenericExceptionCaught") e: Exception,
         ) {
-            // Kept stopped rather than restarted, which could repeat the failing run's requests.
+            // Kept stopped rather than restarted, which could repeat the failing run's requests;
+            // nothing of it is under way, so a rebuild waits for nothing and replays nothing.
+            onBuilt(null)
             onFailure(e)
             awaitCancellation()
-        } finally {
-            current.compareAndSet(pipeline, null)
         }
     }
 
-    // The previous pipeline's track, kept on screen until the new one publishes: no longer one a
-    // tap on Write would write, since its run is gone.
-    private fun superseded(track: TrackState): TrackState =
+    // The view of [pipeline]'s state. Until it publishes, the previous pipeline's track stays,
+    // without Write; so does a track the session layer has moved on from, until its run starts.
+    private suspend fun publish(
+        pipeline: Pipeline,
+        built: PipelineParts,
+        inputs: RunInputs,
+    ) {
+        val adapters = built.adapters.map { it.id }.toSet()
+        combine(pipeline.state, inputs.latest, inputs.shown) { track, now, playing ->
+            val shownTrack =
+                when {
+                    track == null -> view.value.track?.let(::withoutWrite)
+                    playing != null && !pipeline.isCurrent(playing) -> withoutWrite(track)
+                    else -> track
+                }
+            PipelineView(
+                track = shownTrack,
+                needsKey = KEYED_SOURCES.filter { now.isEnabled(it) && it !in adapters }.toSet(),
+                aiReady = built.ai != null,
+            )
+        }.collect { view.value = it }
+    }
+
+    private fun withoutWrite(track: TrackState): TrackState =
         if (track.insight is InsightState.Idle) track.copy(insight = InsightState.Idle(canWrite = false)) else track
 
-    // The tracks the pipeline may run: none while lookups are not allowed (D6), the one shown as
-    // soon as they are again, and each change while they are.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun changes(latest: StateFlow<Settings>): Flow<TrackChange?> =
-        combine(visible, latest) { shown, now -> shown || now.lookUpInBackground }
-            .distinctUntilChanged()
-            .flatMapLatest { allowed -> if (allowed) nowPlaying.map { it?.let(::TrackChange) } else emptyFlow() }
+    // Each report of the session layer, as a change; the track a rebuilt pipeline starts on, if it
+    // is the one the previous pipeline was about, as a replay.
+    private fun changes(inputs: RunInputs): Flow<TrackChange?> {
+        var replaying = inputs.replayOf != null
+        return inputs.shown.map { playing ->
+            playing?.let {
+                replaying = replaying && inputs.replayOf?.invoke(it) == true
+                TrackChange(it, if (replaying) ChangeCause.REPLAY else ChangeCause.NATURAL_END)
+            }
+        }
+    }
 
     // What the pipeline is built from, besides the keys.
     private data class BuildInput(
         val engines: Set<WebEngine>,
         val provider: ProviderId?,
+    )
+
+    // What each pipeline built reads.
+    private class RunInputs(
+        val latest: StateFlow<Settings>,
+        val shown: StateFlow<NowPlaying?>,
+        val allowed: StateFlow<Boolean>,
+        val replayOf: ((NowPlaying) -> Boolean)?,
     )
 
     companion object {

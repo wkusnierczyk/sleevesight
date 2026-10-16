@@ -66,6 +66,18 @@ class ListenerServiceTest {
     }
 
     @Test
+    fun aBoundListenerOpensNoCacheBeforeTheFirstRunIsAcknowledged() {
+        connectListener()
+        app.graph.pipeline
+        val cache = app.getDatabasePath("cache.db")
+        idleFor("no cache database before the first run") { !cache.exists() }
+
+        // Then the settings are read, the cache opened and its expired entries purged.
+        FirstRunAcknowledgement(app).acknowledge()
+        idleUntil("the cache database opened") { cache.exists() }
+    }
+
+    @Test
     fun theSystemsSessionsAndTheirChangesAreRead() {
         addSession()
         val system = SystemActiveSessions(app)

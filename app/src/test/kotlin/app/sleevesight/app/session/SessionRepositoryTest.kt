@@ -241,6 +241,23 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun remoteArtWaitsWhileLookupsAreNotAllowedAndTheCurrentTracksLoadsOnReturn() {
+        artAllowed.value = false
+        val spotify = FakeSession(SPOTIFY, metadata = metadata(mediaId = "1", artUri = "https://cdn/1"))
+        system.active = listOf(spotify)
+        repository.start()
+        spotify.settled(metadata(mediaId = "2", title = "Carefree Highway", artUri = "https://cdn/2"))
+        assertEquals(emptyList<String>(), fetches.map { it.first })
+
+        // The first track's load was cancelled with its track; only the one shown is fetched.
+        artAllowed.value = true
+        settle()
+        assertEquals(listOf("https://cdn/2"), fetches.map { it.first })
+        fetches.single().second.complete(png(Color.GREEN))
+        assertEquals(Color.GREEN, repository.art.value?.getPixel(0, 0))
+    }
+
+    @Test
     fun republishedMetadataDoesNotReloadTheArt() {
         val spotify = FakeSession(SPOTIFY, metadata = metadata(mediaId = "1", artUri = "https://cdn/1"))
         system.active = listOf(spotify)

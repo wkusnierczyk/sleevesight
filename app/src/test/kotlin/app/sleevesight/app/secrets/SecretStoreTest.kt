@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.softwareKey
@@ -32,6 +33,7 @@ import java.io.IOException
 import java.security.InvalidKeyException
 import java.security.ProviderException
 import java.security.UnrecoverableKeyException
+import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.SecretKey
 
 class SecretStoreTest {
@@ -373,6 +375,60 @@ class SecretStoreTest {
             assertFalse(store.set(SecretId.EXA, Secret("other")))
             assertFalse(store.clear(SecretId.EXA))
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+        }
+
+    /** Counts what [SecretStore.changes] emits, on a thread of its own, until [stop]. */
+    private class Changes(
+        store: SecretStore,
+        scope: kotlinx.coroutines.CoroutineScope,
+    ) {
+        val seen = AtomicInteger()
+        private val job = scope.launch(Dispatchers.Default) { store.changes.collect { seen.incrementAndGet() } }
+
+        suspend fun reach(n: Int) = withTimeout(5_000) { while (seen.get() < n) delay(10) }
+
+        fun stop() = job.cancel()
+    }
+
+    @Test
+    fun changesEmitForEachStoredChangeAndNotForReads() =
+        runBlocking {
+            val store = store()
+            val changes = Changes(store, this)
+            changes.reach(1)
+            store.set(SecretId.LASTFM, Secret("first"))
+            changes.reach(2)
+            // Replaced: its state stays saved, and the pipeline still needs to know.
+            store.set(SecretId.LASTFM, Secret("second"))
+            changes.reach(3)
+
+            store.get(SecretId.LASTFM)
+            store.states.first()
+            delay(200)
+            assertEquals(3, changes.seen.get())
+
+            store.clear(SecretId.LASTFM)
+            changes.reach(4)
+            store.set(SecretId.EXA, Secret("exa"))
+            changes.reach(5)
+            store.reset()
+            changes.reach(6)
+            changes.stop()
+        }
+
+    @Test
+    fun changesGoOnAfterAFailedRead() =
+        runBlocking {
+            val flaky = FlakyDataStore(stores.open("secrets"))
+            flaky.failures.set(1)
+            val store = SecretStore(flaky, testCipher(key))
+            val changes = Changes(store, this)
+            // The failed read emits nothing (no rebuild without keys); the retry reads the file.
+            changes.reach(1)
+            assertEquals(1, changes.seen.get())
+            store.set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            changes.reach(2)
+            changes.stop()
         }
 
     private companion object {

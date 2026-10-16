@@ -33,10 +33,14 @@ internal class InsightWriter(
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
-    /** Writes at once when [autoWrite]; else after [tap] returns, when there is one; else leaves it idle. */
+    /**
+     * Writes at once when [autoWrite] says so; else after [tap] returns, when there is one; else
+     * leaves it idle. A model call waits for [gate]; [autoWrite] is asked after it.
+     */
     suspend fun write(
-        autoWrite: Boolean,
+        autoWrite: () -> Boolean,
         tap: (suspend () -> Unit)?,
+        gate: suspend () -> Unit = {},
     ) {
         val ai = parts.ai
         val model = settings.aiModel ?: ai?.let { Settings.DEFAULT_MODELS[it.provider.id] }
@@ -51,37 +55,34 @@ internal class InsightWriter(
             }
 
             else -> {
-                fromCacheOrModel(ai, model, autoWrite, tap)
+                fromCacheOrModel(ai, model, autoWrite, tap, gate)
             }
         }
     }
 
+    @Suppress("LongParameterList") // The card's parts and the three ways it may be asked for.
     private suspend fun fromCacheOrModel(
         ai: AiAccess,
         model: String,
-        autoWrite: Boolean,
+        autoWrite: () -> Boolean,
         tap: (suspend () -> Unit)?,
+        gate: suspend () -> Unit,
     ) {
         val wanted = cardKey(ai, model)
         val kept = guard.attempt("read insight") { card(wanted) }
-        when {
-            kept != null -> {
-                emit(PipelineEvent.InsightCached(key))
-                show(checked(kept, cached = true, usage = null, complete = true))
-            }
-
-            autoWrite -> {
-                call(ai, model, wanted)
-            }
-
-            else -> {
-                show(InsightState.Idle(canWrite = true))
-                emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
-                if (tap != null) {
-                    tap()
-                    call(ai, model, wanted)
-                }
-            }
+        if (kept != null) {
+            emit(PipelineEvent.InsightCached(key))
+            show(checked(kept, cached = true, usage = null, complete = true))
+            return
+        }
+        gate()
+        if (autoWrite()) return call(ai, model, wanted)
+        show(InsightState.Idle(canWrite = true))
+        emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
+        if (tap != null) {
+            tap()
+            gate()
+            call(ai, model, wanted)
         }
     }
 

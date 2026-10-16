@@ -11,6 +11,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -19,12 +20,17 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Base64
+import kotlin.math.pow
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /** The keys the user enters: the AI service's and the keyed sources'. */
 enum class SecretId(
@@ -113,10 +119,18 @@ class SecretStore(
      * Emits once, and again whenever a stored key changes (saved, replaced, removed, reset), for the
      * pipeline on the phone, which is built with the keys and reads them with [get] when this
      * emits (#51). It says nothing of the values: a key replaced by another emits, though its state
-     * stays [SecretState.SAVED].
+     * stays [SecretState.SAVED]. Reading a key or the states does not emit. While the file cannot
+     * be read it emits nothing, and the read is retried, after [FIRST_RETRY] and then twice as long
+     * each time up to [MAX_RETRY], so a pipeline keeps the keys it was built with, and the changes
+     * after the file reads again still arrive.
      */
     val changes: Flow<Unit> =
-        combine(data, resets) { prefs, count -> SecretId.entries.map { prefs[keyOf(it)] } to count }
+        combine(
+            dataStore.data.retryWhen { cause, attempt ->
+                (cause is IOException).also { io -> if (io) delay(retryDelay(attempt)) }
+            },
+            resets,
+        ) { prefs, count -> SecretId.entries.map { prefs[keyOf(it)] } to count }
             .distinctUntilChanged()
             .map { }
 
@@ -222,10 +236,21 @@ class SecretStore(
         return cipher.open(sealed, associated(id))
     }
 
-    private companion object {
-        fun keyOf(id: SecretId): Preferences.Key<String> = stringPreferencesKey("secret.${id.storageName}")
+    companion object {
+        /** The first retry of a failed read for [changes]. */
+        val FIRST_RETRY: Duration = 250.milliseconds
+
+        /** The longest wait between retries of a read for [changes] that keeps failing. */
+        val MAX_RETRY: Duration = 30.seconds
+
+        private const val DOUBLINGS = 7
+
+        private fun retryDelay(attempt: Long): Duration =
+            minOf(FIRST_RETRY * 2.0.pow(attempt.coerceAtMost(DOUBLINGS.toLong()).toInt()), MAX_RETRY)
+
+        private fun keyOf(id: SecretId): Preferences.Key<String> = stringPreferencesKey("secret.${id.storageName}")
 
         /** Binds a sealed value to its entry: one copied to another entry does not open. */
-        fun associated(id: SecretId): ByteArray = "sleevesight:${id.storageName}".encodeToByteArray()
+        private fun associated(id: SecretId): ByteArray = "sleevesight:${id.storageName}".encodeToByteArray()
     }
 }

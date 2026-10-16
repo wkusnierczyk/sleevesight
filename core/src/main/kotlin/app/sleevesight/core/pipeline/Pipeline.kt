@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -121,6 +123,25 @@ class Pipeline(
         acted.value = true
     }
 
+    /**
+     * The app opened (again): nothing is written without a tap until the user's next action in it
+     * (D5), the tracks already under way included, since a run asks whether to write only once its
+     * evidence is in.
+     */
+    fun appOpened() {
+        acted.value = false
+    }
+
+    /**
+     * Whether [nowPlaying] is the track [state] is about, in everything a run depends on: a report
+     * that is not would start a run of its own, so the state shown is not yet its.
+     */
+    fun isCurrent(nowPlaying: NowPlaying): Boolean {
+        val shown = state.value ?: return false
+        val key = RunKey.of(parts.normalizer.normalize(nowPlaying), nowPlaying)
+        return key == RunKey.of(shown.normalized, shown.nowPlaying)
+    }
+
     /** The user tapped Write: the current track's insight is written once its evidence is in. */
     fun write() {
         acted.value = true
@@ -133,20 +154,33 @@ class Pipeline(
      * run depends on (the normalized track, its credited artists and work included, the album and
      * the length) is not run again; a metadata update that changes none of them is suppressed. A
      * new track cancels the previous one's retrieval and synthesis.
+     *
+     * While [allowed] is false (in the app: not visible, and *Look up in the background* off; D6)
+     * no request starts: a run waits before its lookups, and a run whose lookups are under way
+     * finishes them, and keeps their results, but waits before MusicBrainz's genre labels and
+     * before a model call. Whether to write without a tap is asked once the evidence is in and
+     * the run may go on, so an action, or the app opening again ([appOpened]), meanwhile counts.
      */
     @OptIn(FlowPreview::class)
-    suspend fun follow(changes: Flow<TrackChange?>) {
+    suspend fun follow(
+        changes: Flow<TrackChange?>,
+        allowed: Flow<Boolean> = flowOf(true),
+    ) {
+        val gate: suspend () -> Unit = { allowed.first { it } }
         changes
             .filterNotNull()
             .onEach { if (it.cause == ChangeCause.USER_ACTION) acted.value = true }
             .debounce(DEBOUNCE)
             .map { change -> change to parts.normalizer.normalize(change.nowPlaying) }
-            .distinctUntilChangedBy { (change, track) ->
-                RunKey(track, change.nowPlaying.album, change.nowPlaying.duration?.inWholeSeconds)
-            }.collectLatest { (change, track) ->
+            .distinctUntilChangedBy { (change, track) -> RunKey.of(track, change.nowPlaying) }
+            .collectLatest { (change, track) ->
+                gate()
                 val current = settings()
-                val writes = AutoWrite.writes(current, change.cause, acted.value)
-                start(change.nowPlaying, track, current).run(autoWrite = writes, waitForTap = true)
+                start(change.nowPlaying, track, current).run(
+                    autoWrite = { AutoWrite.writes(current, change.cause, acted.value) },
+                    waitForTap = true,
+                    gate = gate,
+                )
             }
     }
 
@@ -159,7 +193,7 @@ class Pipeline(
         write: Boolean,
     ): TrackState {
         val track = parts.normalizer.normalize(nowPlaying)
-        return start(nowPlaying, track, settings()).run(autoWrite = write, waitForTap = false)
+        return start(nowPlaying, track, settings()).run(autoWrite = { write }, waitForTap = false)
     }
 
     private fun start(
@@ -191,7 +225,14 @@ class Pipeline(
         val track: NormalizedTrack,
         val album: String?,
         val seconds: Long?,
-    )
+    ) {
+        companion object {
+            fun of(
+                track: NormalizedTrack,
+                nowPlaying: NowPlaying,
+            ) = RunKey(track, nowPlaying.album, nowPlaying.duration?.inWholeSeconds)
+        }
+    }
 
     companion object {
         /** How long a track change waits for the next before it runs: skips settle first. */

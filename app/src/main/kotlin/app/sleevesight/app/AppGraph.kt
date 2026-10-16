@@ -14,6 +14,7 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
@@ -23,6 +24,7 @@ import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SystemActiveSessions
+import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
@@ -89,10 +91,12 @@ class AppGraph(
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
 
     /**
-     * The latest settings read, for the caches, which read them on every call. Null before the
-     * first read; the pipeline, the caches' only caller, starts after it.
+     * The latest settings read, for the caches, which read them on every call, and the pipeline.
+     * Nothing is read before the first run is acknowledged; null until the first read after it. The
+     * pipeline, the caches' only caller, starts after it.
      */
-    private val latestSettings = settings.settings.stateIn(mainScope, SharingStarted.Eagerly, null)
+    private val latestSettings =
+        settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
 
     private val normalizer = Normalizer(JvmAccentFolder)
 
@@ -101,12 +105,13 @@ class AppGraph(
      * `databases/`, which the backup and transfer rules exclude: unlike the history, they can be
      * evicted or rebuilt at the cost of the lookups and paid calls again.
      */
-    private val caches =
+    private val caches by lazy {
         Caches(
             AndroidSqliteDriver(CacheDatabase.Schema, appContext, CACHE_DATABASE),
             { checkNotNull(latestSettings.value) { "The caches are used before the settings' first read" } },
             normalizer,
         )
+    }
 
     /**
      * The session layer, following the players switched on under *Players to follow*: a switch
@@ -114,11 +119,17 @@ class AppGraph(
      * any session, so a player switched off is never followed in between, and follows none while
      * the file cannot be read.
      */
-    val sessions =
+    val sessions: SessionRepository =
         SessionRepository(
             sessions = SystemActiveSessions(appContext),
             acknowledged = firstRun.state,
-            artLoader = ArtLoader(appContext.contentResolver, HttpArt { wiring.art(it) }, Dispatchers.IO),
+            // `http` art is a request like the pipeline's: only while lookups are allowed (D6).
+            artLoader =
+                ArtLoader(
+                    appContext.contentResolver,
+                    HttpArt { wiring.art(it) }.onlyWhen { pipeline.lookupsAllowed },
+                    Dispatchers.IO,
+                ),
             scope = mainScope,
             followed = settings.followedPlayers,
         )
@@ -136,7 +147,7 @@ class AppGraph(
      * acknowledged. Runs off the main thread, since the adapters parse their responses where they
      * are called.
      */
-    val pipeline =
+    val pipeline: PipelineHost =
         PipelineHost(
             acknowledged = firstRun.state,
             nowPlaying = sessions.nowPlaying,
@@ -154,7 +165,8 @@ class AppGraph(
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { HistoryRecorder(sessions, history, Dispatchers.IO).run() }
         pipeline.start(pipelineScope)
-        // Expired cache entries are deleted on start; reads never return them either way.
+        // Expired cache entries are deleted on start, once the first run is acknowledged (the
+        // settings are read only then); reads never return them either way.
         mainScope.launch {
             latestSettings.filterNotNull().first()
             try {
