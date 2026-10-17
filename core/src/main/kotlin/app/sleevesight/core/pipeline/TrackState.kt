@@ -93,4 +93,7 @@ sealed interface InsightState {
     data class Failed(
         val reason: String,
     ) : InsightState
+
+    /** The user stopped the call before its reply ended: nothing is kept, and Write may be offered again. */
+    data object Stopped : InsightState
 }

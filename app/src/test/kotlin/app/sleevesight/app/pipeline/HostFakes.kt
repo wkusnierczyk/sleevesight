@@ -1,6 +1,7 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
@@ -67,6 +68,9 @@ internal class CountingProvider : AiProvider {
     fun requestsFor(title: String): Int = prompts.count { title in it }
 
     var failure: Exception? = null
+
+    /** An error the AI service answers with, as a provider maps it: the call fails, the run goes on. */
+    var error: AiErrorKind? = null
     var streaming: Duration = Duration.ZERO
 
     /** The reply to the request numbered (from 1) as given. */
@@ -82,6 +86,10 @@ internal class CountingProvider : AiProvider {
             requests++
             prompts += request.prompt
             failure?.let { throw it }
+            error?.let {
+                emit(CompletionEvent.Error(it))
+                return@flow
+            }
             emit(CompletionEvent.Delta(reply(requests)))
             delay(streaming)
             emit(CompletionEvent.Done(Usage(inputTokens = 10, outputTokens = 5), StopReason.END))

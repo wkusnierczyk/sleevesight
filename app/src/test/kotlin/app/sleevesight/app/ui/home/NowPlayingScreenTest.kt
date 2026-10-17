@@ -30,6 +30,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -77,6 +78,7 @@ class NowPlayingScreenTest {
 
     private var writes = 0
     private var tapped: Pair<RunKey, NowPlaying>? = null
+    private val stops = mutableListOf<RunKey>()
     private val sundownKey = RunKey.of(normalizer, sundown)
 
     private fun show(
@@ -85,10 +87,16 @@ class NowPlayingScreenTest {
         block: (MainActivity) -> Unit,
     ) {
         val actions =
-            NowPlayingActions(normalizer::normalize, { "Spotify" }, activity) { key, shown ->
-                writes++
-                tapped = key to shown
-            }
+            NowPlayingActions(
+                normalizer::normalize,
+                { "Spotify" },
+                activity,
+                write = { key, shown ->
+                    writes++
+                    tapped = key to shown
+                },
+                stop = { stops += it },
+            )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
@@ -173,6 +181,71 @@ class NowPlayingScreenTest {
         }
         show(state(PipelineView(track(insight = InsightState.Writing("")), aiReady = true))) {
             compose.onNodeWithText(text(R.string.home_insight_writing)).assertExists()
+        }
+    }
+
+    @Test
+    fun aFailedInsightOffersWriteAgainOnlyWhileThePipelineDoes() {
+        val failed = track(insight = InsightState.Failed("overloaded"))
+        val reason = text(R.string.home_failure_overloaded)
+        show(state(PipelineView(failed, aiReady = true))) {
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
+            assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
+        }
+        writes = 0
+        show(state(PipelineView(failed, aiReady = true, retry = true, writeKey = sundownKey))) {
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
+            compose.onNodeWithText(text(R.string.home_insight_retry)).assertExists()
+            compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
+            assertEquals(1, writes)
+            assertEquals(sundownKey to sundown, tapped)
+        }
+    }
+
+    @Test
+    fun aStoppedInsightSaysSoAndOffersWriteAgain() {
+        show(state(PipelineView(track(insight = InsightState.Stopped), aiReady = true))) {
+            compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()
+            assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
+        }
+        writes = 0
+        val view =
+            PipelineView(track(insight = InsightState.Stopped), aiReady = true, retry = true, writeKey = sundownKey)
+        show(state(view)) {
+            compose.onNodeWithText(text(R.string.home_insight_stopped)).assertExists()
+            compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
+            assertEquals(1, writes)
+        }
+    }
+
+    @Test
+    fun stopIsOfferedWhileTheCallIsUnderWayAndIsATapThePipelineDecides() {
+        val writing = track(insight = InsightState.Writing("It was recorded"))
+        show(state(PipelineView(writing, aiReady = true))) {
+            assertEquals(0, compose.onAllNodesWithTag(STOP_TAG).fetchSemanticsNodes().size)
+        }
+        stops.clear()
+        show(state(PipelineView(writing, aiReady = true, stopKey = sundownKey))) {
+            compose.onNodeWithTag(STOP_TAG).performScrollTo().performClick()
+            // The tap carries the run whose call Stop was offered for.
+            assertEquals(listOf(sundownKey), stops)
+        }
+    }
+
+    @Test
+    fun aRewriteStoppedShowsTheCardWrittenEarlierAndSaysSo() {
+        val view =
+            PipelineView(
+                track(insight = written("It was recorded in 1973 [MB1].")),
+                aiReady = true,
+                rewrite = true,
+                rewriteFailed = PipelineHost.STOPPED,
+                writeKey = sundownKey,
+            )
+        show(state(view)) {
+            compose.onNodeWithText(text(R.string.home_rewrite_stopped)).assertExists()
+            compose.onNodeWithText("It was recorded in 1973", substring = true).assertExists()
+            compose.onNodeWithTag(WRITE_TAG).assertExists()
         }
     }
 

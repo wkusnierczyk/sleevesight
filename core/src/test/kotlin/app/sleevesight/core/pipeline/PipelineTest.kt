@@ -19,7 +19,9 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.SentenceStatus
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -582,6 +584,20 @@ class PipelineTest {
 
         override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
 
+        /** The answers to the run's questions whether to call again, in order; and how many it asked. */
+        val retries = Channel<Boolean>(Channel.UNLIMITED)
+        var retriesAsked = 0
+
+        override suspend fun awaitRetry(): Boolean {
+            retriesAsked++
+            return retries.receive()
+        }
+
+        /** Completed to stop the call under way; replaced for the next call. */
+        var stop = CompletableDeferred<Unit>()
+
+        override suspend fun awaitStop() = stop.await()
+
         override fun ended(step: RunStep) {
             ended += step
         }
@@ -653,6 +669,101 @@ class PipelineTest {
             assertTrue(RunStep.MODEL_CALL in control.ended)
             // A call cut off writes no card.
             assertEquals(emptyList(), control.cardsWritten)
+        }
+
+    @Test
+    fun `a call that failed is made again only when a tap asks for it`() =
+        runTest {
+            var replies = 0
+            val provider =
+                FakeProvider {
+                    if (++replies == 1) {
+                        listOf(CompletionEvent.Error(AiErrorKind.OVERLOADED))
+                    } else {
+                        FakeProvider.done("It is a song [MB1].")
+                    }
+                }
+            val pipeline = pipeline(listOf(mb()), provider = provider)
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            val run = backgroundScope.launch { pipeline.run(sundown, control) }
+            runCurrent()
+            assertEquals(InsightState.Failed("overloaded"), pipeline.state.value!!.insight)
+            assertEquals(1, control.retriesAsked)
+            assertEquals(1, control.ended.count { it == RunStep.MODEL_CALL })
+            // It waits for the tap; nothing is called again meanwhile.
+            advanceTimeBy(10.minutes)
+            assertEquals(1, provider.requests.size)
+            assertTrue(run.isActive)
+
+            control.retries.send(true)
+            runCurrent()
+            assertEquals(2, provider.requests.size)
+            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
+            assertEquals(listOf("It is a song [MB1]."), control.cardsWritten)
+            assertEquals(2, control.ended.count { it == RunStep.MODEL_CALL })
+            assertTrue(run.isCompleted)
+        }
+
+    @Test
+    fun `a failed call is not made again when the control says no, and the run ends`() =
+        runTest {
+            val provider = FakeProvider { listOf(CompletionEvent.Error(AiErrorKind.SERVER)) }
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            control.retries.send(false)
+            val state = pipeline(listOf(mb()), provider = provider).run(sundown, control)
+
+            assertEquals(InsightState.Failed("server"), state.insight)
+            assertEquals(1, control.retriesAsked)
+            assertEquals(1, provider.requests.size)
+        }
+
+    @Test
+    fun `a call stopped shows as stopped, keeps nothing, and is made again only on a tap`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = FakeProvider(delay = 10.seconds)
+            val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
+            val events = recording(pipeline)
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            val run = backgroundScope.launch { pipeline.run(sundown, control) }
+            advanceTimeBy(2.seconds)
+            assertIs<InsightState.Writing>(pipeline.state.value!!.insight)
+
+            control.stop.complete(Unit)
+            runCurrent()
+            assertEquals(InsightState.Stopped, pipeline.state.value!!.insight)
+            assertTrue(events.any { it is PipelineEvent.ModelStopped })
+            assertEquals(emptyMap(), cache.cards)
+            assertEquals(emptyList(), control.cardsWritten)
+            assertEquals(1, control.ended.count { it == RunStep.MODEL_CALL })
+            assertEquals(1, control.retriesAsked)
+            assertTrue(run.isActive)
+
+            control.stop = CompletableDeferred()
+            control.retries.send(true)
+            advanceTimeBy(11.seconds)
+            assertEquals(2, provider.requests.size)
+            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
+            assertEquals(1, cache.cards.size)
+            assertTrue(run.isCompleted)
+        }
+
+    @Test
+    fun `a Stop that came before the call starts sends nothing`() =
+        runTest {
+            val provider = FakeProvider()
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            control.stop.complete(Unit)
+            control.retries.send(false)
+            val state = pipeline(listOf(mb()), provider = provider).run(sundown, control)
+
+            assertEquals(InsightState.Stopped, state.insight)
+            assertEquals(0, provider.requests.size)
+            assertEquals(1, control.ended.count { it == RunStep.MODEL_CALL })
         }
 
     @Test

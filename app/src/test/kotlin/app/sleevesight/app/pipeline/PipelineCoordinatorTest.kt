@@ -383,6 +383,138 @@ class PipelineCoordinatorTest {
                 play("B")
                 settle()
             },
+            // A call that failed, and Stop (#163).
+            Case(
+                "a call that fails offers Write again: a tap is a new call, the grants never make one",
+                mapOf("A" to 2),
+                listOf("A"),
+            ) {
+                failing = true
+                play("A")
+                settle()
+                tap()
+                settle()
+                assertEquals(mapOf("A" to 1), calls)
+                assertTrue(offersWriteFor("A"))
+                // The first action is made, and A is a track change written on: still nothing unasked.
+                settle()
+                assertEquals(mapOf("A" to 1), calls)
+                failing = false
+                tap()
+                settle()
+            },
+            Case(
+                "an automatic call that fails is never made again unasked, a rebuild's run included",
+                mapOf("Zero" to 1, "B" to 1),
+                listOf("Zero", "B", "B"),
+                "B",
+            ) {
+                acted()
+                failing = true
+                play("B")
+                settle()
+                assertTrue(offersWriteFor("B"))
+                keyChange()
+                settle()
+            },
+            Case(
+                "a new length of a track whose call failed starts nothing, and Write stays offered",
+                mapOf("A" to 1),
+                listOf("A"),
+                "A",
+            ) {
+                failing = true
+                play("A", seconds = 106)
+                settle()
+                tap()
+                settle()
+                play("A", seconds = 279)
+                settle()
+            },
+            Case("a tap to call again for a track left does nothing", mapOf("A" to 1), listOf("A", "B"), "B") {
+                writesOn = mode(WriteAutomatically.NEVER)
+                failing = true
+                play("A")
+                settle()
+                tap()
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                play("B")
+                tap(offered)
+                settle()
+            },
+            Case(
+                "Stop ends the call under way, and offers Write again; nothing is written again unasked",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                acted()
+                streamMs = 10_000
+                play("A")
+                settle()
+                assertEquals(key("A"), coordinator.state.stopKey)
+                stopTap()
+                assertEquals(listOf("A"), stopped)
+                assertEquals(null, coordinator.state.stopKey)
+                assertEquals(true, coordinator.state.ledger?.written)
+                assertEquals(null, cardText())
+                assertTrue(offersWriteFor("A"))
+                settle()
+                keyChange()
+                settle()
+            },
+            Case(
+                "Stop stays offered while a rebuild waits for the call, and ending it lets the swap go on",
+                mapOf("A" to 1),
+                listOf("A", "A"),
+                "A",
+            ) {
+                streamMs = 60_000
+                play("A")
+                settle()
+                tap()
+                advance(2_000)
+                keyChange()
+                assertEquals(null, coordinator.state.current)
+                assertEquals(key("A"), coordinator.state.stopKey)
+                stopTap()
+                settle()
+                assertEquals(listOf("A"), stopped)
+                // The rebuild's run of the written track finds no card: Write offered, never a call.
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case("a tap on Write after Stop is a new call", mapOf("A" to 2), listOf("A")) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(2_000)
+                stopTap()
+                tap()
+                advance(30_000)
+                assertEquals("A #2", cardText())
+            },
+            Case(
+                "Stop for another key, or with no call under way, does nothing",
+                mapOf("A" to 1),
+                listOf("A"),
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                assertEquals(null, coordinator.state.stopKey)
+                stopTap(key("A"))
+                tap()
+                advance(2_000)
+                stopTap(key("B"))
+                stopTap(key("A", seconds = 200))
+                advance(30_000)
+                assertEquals(emptyList<String>(), stopped)
+                assertEquals("A #1", cardText())
+                stopTap(key("A"))
+                assertEquals("A #1", cardText())
+            },
         )
 
     @Test

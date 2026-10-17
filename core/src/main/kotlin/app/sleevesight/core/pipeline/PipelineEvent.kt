@@ -122,6 +122,11 @@ sealed interface PipelineEvent {
         val kind: AiErrorKind,
     ) : PipelineEvent
 
+    /** The user stopped the call before its reply ended (what was generated may still be billed). */
+    data class ModelStopped(
+        override val key: String,
+    ) : PipelineEvent
+
     /** The grounding check's counts for the written insight. */
     data class Grounded(
         override val key: String,

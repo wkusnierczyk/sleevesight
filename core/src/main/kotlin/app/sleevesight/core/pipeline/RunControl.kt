@@ -2,8 +2,12 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /** The steps of a run that send requests, each started only once the run's [RunControl] grants it. */
 enum class RunStep {
@@ -42,6 +46,22 @@ interface RunControl {
 
     /** Returns once a tap on Write starts the model call. */
     suspend fun awaitTap()
+
+    /**
+     * Asked after a model call that failed or was stopped ([InsightState.Failed],
+     * [InsightState.Stopped]): Write is offered again, and true once a tap on it starts another
+     * call, a new paid call; false ends the run with none. Never true without a tap. By default
+     * false: the CLI and [Pipeline.follow] do not offer Write again.
+     */
+    suspend fun awaitRetry(): Boolean = false
+
+    /**
+     * Returns when the user stops the model call under way: the call is cut off, nothing is kept,
+     * and the insight shows as [InsightState.Stopped]. By default never.
+     */
+    suspend fun awaitStop() {
+        awaitCancellation()
+    }
 
     /** A step that was granted ended: done, failed or cancelled. Reported from a `finally`. */
     fun ended(step: RunStep)
@@ -86,6 +106,26 @@ interface RunControl {
 
         override fun decidedWithoutCall() = Unit
     }
+}
+
+/**
+ * [block], unless the user stops it first ([RunControl.awaitStop]): then it is cancelled, and the
+ * result is null. A Stop that came before is seen before [block] starts, so it sends nothing; once
+ * [block] has returned, a Stop changes nothing.
+ */
+internal suspend fun <T : Any> RunControl.unlessStopped(block: suspend () -> T): T? {
+    var result: T? = null
+    coroutineScope {
+        val work = launch(start = CoroutineStart.LAZY) { result = block() }
+        val stop =
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                awaitStop()
+                work.cancel()
+            }
+        work.join()
+        stop.cancel()
+    }
+    return result
 }
 
 /** [Pipeline.follow]'s control: every step at once, the write as decided at the run's start, then taps. */

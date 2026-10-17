@@ -35,7 +35,8 @@ internal class InsightWriter(
 
     /**
      * Writes at once when [control] decides so; else, when it waits for a tap, once the user taps
-     * Write; else leaves it offered. A model call reports its end to [control], however it ends.
+     * Write; else leaves it offered. A model call reports its end to [control], however it ends;
+     * one that fails or is stopped is made again only when [control] says a tap asked for it.
      */
     suspend fun write(control: RunControl) {
         val ai = parts.ai
@@ -74,7 +75,7 @@ internal class InsightWriter(
             }
 
             control.decide(settings) -> {
-                call(ai, model, wanted, control)
+                calls(ai, model, wanted, control)
             }
 
             else -> {
@@ -82,23 +83,29 @@ internal class InsightWriter(
                 emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
                 if (control.waitsForTap) {
                     control.awaitTap()
-                    call(ai, model, wanted, control)
+                    calls(ai, model, wanted, control)
                 }
             }
         }
     }
 
-    private suspend fun call(
+    // A call, and another each time one that failed or was stopped is asked for again by a tap.
+    // Each reports its end, however it ends.
+    private suspend fun calls(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
     ) {
-        try {
-            stream(ai, model, card, control)
-        } finally {
-            control.ended(RunStep.MODEL_CALL)
-        }
+        do {
+            val shown =
+                try {
+                    stream(ai, model, card, control)
+                } finally {
+                    control.ended(RunStep.MODEL_CALL)
+                }
+            val again = (shown is InsightState.Failed || shown is InsightState.Stopped) && control.awaitRetry()
+        } while (again)
     }
 
     private suspend fun stream(
@@ -106,27 +113,36 @@ internal class InsightWriter(
         model: String,
         card: CardKey,
         control: RunControl,
-    ) {
+    ): InsightState {
         emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
         show(InsightState.Writing(""))
         val started = time.timeSource.markNow()
         val prompt = InsightPrompt.build(nowPlaying, track, evidence, allowModel)
-        val text = StringBuilder()
-        var end: CompletionEvent? = null
-        ai.provider.stream(CompletionRequest(model, prompt, effort = settings.aiEffort), ai.key).collect { event ->
-            when (event) {
-                is CompletionEvent.Delta -> {
-                    text.append(event.text)
-                    show(InsightState.Writing(text.toString()))
-                }
+        val request = CompletionRequest(model, prompt, effort = settings.aiEffort)
+        val reply =
+            control.unlessStopped {
+                val text = StringBuilder()
+                var end: CompletionEvent? = null
+                ai.provider.stream(request, ai.key).collect { event ->
+                    when (event) {
+                        is CompletionEvent.Delta -> {
+                            text.append(event.text)
+                            show(InsightState.Writing(text.toString()))
+                        }
 
-                is CompletionEvent.Done, is CompletionEvent.Error -> {
-                    end = event
+                        is CompletionEvent.Done, is CompletionEvent.Error -> {
+                            end = event
+                        }
+                    }
                 }
+                Reply(text.toString(), end)
             }
+        if (reply == null) {
+            emit(PipelineEvent.ModelStopped(key))
+            return show(InsightState.Stopped)
         }
-        when (val last = end) {
-            is CompletionEvent.Done -> finish(last, text.toString(), card, started.elapsedNow(), control)
+        return when (val last = reply.end) {
+            is CompletionEvent.Done -> finish(last, reply.text, card, started.elapsedNow(), control)
             is CompletionEvent.Error -> {
                 emit(PipelineEvent.ModelFailed(key, last.kind))
                 show(InsightState.Failed(last.kind.name.lowercase()))
@@ -136,20 +152,26 @@ internal class InsightWriter(
         }
     }
 
+    // What the model sent: the text, and how it ended (null when the stream ended early).
+    private class Reply(
+        val text: String,
+        val end: CompletionEvent?,
+    )
+
     private suspend fun finish(
         done: CompletionEvent.Done,
         text: String,
         card: CardKey,
         latency: Duration,
         control: RunControl,
-    ) {
+    ): InsightState {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         if (done.stopReason == StopReason.REFUSAL) return show(InsightState.Failed(DECLINED))
         val complete = done.stopReason == StopReason.END
         if (complete) guard.attempt("write insight") { keep(card, text) }
         val written = checked(text, cached = false, usage = done.usage, complete = complete)
         if (written is InsightState.Written) control.cardWritten(written, evidence)
-        show(written)
+        return show(written)
     }
 
     private fun checked(
@@ -194,7 +216,11 @@ internal class InsightWriter(
             HEX[value shr NIBBLE].toString() + HEX[value and NIBBLE_MASK]
         }
 
-    private fun show(insight: InsightState) = sink.update { it.copy(insight = insight) }
+    // Shows [insight], and returns it.
+    private fun show(insight: InsightState): InsightState {
+        sink.update { it.copy(insight = insight) }
+        return insight
+    }
 
     private fun emit(event: PipelineEvent) = sink.emit(event)
 

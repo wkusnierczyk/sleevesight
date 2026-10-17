@@ -90,6 +90,23 @@ sealed interface CoordinatorEvent {
         val key: RunKey,
     ) : CoordinatorEvent
 
+    /**
+     * The user tapped Stop shown for the run under [key] while its model call was under way
+     * ([CoordinatorState.stopKey]): a tap for any other run, or once the call has ended, does
+     * nothing.
+     */
+    data class StopTapped(
+        val key: RunKey,
+    ) : CoordinatorEvent
+
+    /**
+     * Run [run]'s model call failed or was stopped, and the run waits for a tap on Write to make
+     * another (`RunControl.awaitRetry`). Sent after the call's [StepEnded].
+     */
+    data class RetryAsked(
+        val run: RunId,
+    ) : CoordinatorEvent
+
     /** A step granted to [run] ended: done, failed or cancelled. */
     data class StepEnded(
         val run: RunId,
@@ -163,6 +180,11 @@ sealed interface CoordinatorEffect {
         val write: Boolean,
     ) : CoordinatorEffect
 
+    /** Stop [run]'s model call under way: it ends as stopped, and reports its end as any call does. */
+    data class StopCall(
+        val run: RunId,
+    ) : CoordinatorEffect
+
     /**
      * The user acted in Sleevesight, now: a tap on Write was taken. The time is kept for the track
      * changes' features (D15, `UserActions`); the first action is in the state.
@@ -194,7 +216,7 @@ data class CoordinatorState(
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
      * whether its insight is decided and whether it is [written]: a model call granted (on a tap or
-     * without one; a call that then fails or is cut off counts), or a card shown from the cache.
+     * without one; a call that then fails, is stopped or is cut off counts), or a card shown from the cache.
      * [track] and [key] are the report and `RunKey` the insight was decided, written or shown
      * under, so a card is found again under its own key; [shown] is the latest report of the track,
      * whose metadata (artists, album, length) the header shows. Only a report of another insight
@@ -203,7 +225,7 @@ data class CoordinatorState(
      * included. [card] is the card paid for, as its run reported it, with the evidence it cites:
      * what the view shows whenever the track's run has no insight of its own. A card written by a
      * call (a rewrite included) always replaces it; one served from the cache only fills an empty
-     * slot; a call that fails or is cut off adds none; it goes with the entry. So an insight written
+     * slot; a call that fails, is stopped or is cut off adds none; it goes with the entry. So an insight written
      * from a title alone stays when the artists arrive, and the header shows the artists: nothing
      * is written twice for one track without a tap (D5), and a title-only report that found
      * nothing is decided afresh. A rewrite (Write offered beside the card kept) runs under [track],
@@ -283,6 +305,12 @@ data class CoordinatorState(
     val writeKey: RunKey? get() = current?.takeIf { it.offered && !it.calling }?.key
 
     /**
+     * The key of the run Stop is offered for: the run in progress, while its model call is under
+     * way, current or not (a rebuild waits for the call, and Stop may still end it).
+     */
+    val stopKey: RunKey? get() = run?.takeIf { it.calling }?.key
+
+    /**
      * Whether the Write offered is a rewrite: the current run is of the ledger's written track, so
      * the card paid for stays shown beside it.
      */
@@ -314,7 +342,10 @@ fun sameInsightTrack(
  * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
  * *Write insights* off), the user has acted since the app opened, and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
- * then records the decision. The table gives each event's own effects; the grants follow every row.
+ * then records the decision. A model call that fails or is stopped (#163) leaves the ledger
+ * written, as every call granted does, so nothing writes the track again without a tap: its run
+ * offers Write again, and a tap on it is a new paid call. The table gives each event's own
+ * effects; the grants follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
  * the run "holds" a report as [CoordinatorState.holds] says. A run of the ledger's written track
@@ -344,11 +375,14 @@ fun sameInsightTrack(
  * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
+ * | the run, its model call under way, of the tap's key | StopTapped(key) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall |
+ * | otherwise (no call under way, or another run's key) | StopTapped(key) | unchanged | none |
+ * | the run (current or not) | RetryAsked (its call failed or was stopped) | Write offered again: a tap grants a new call, never the grants on their own; the ledger unchanged | none |
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  * | the run, not orphaned | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
- * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
+ * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall, RetryAsked | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
@@ -381,6 +415,7 @@ class PipelineCoordinator(
             CoordinatorEvent.RebuildRequested -> rebuild()
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
+            is CoordinatorEvent.StopTapped -> stopTapped(event.key)
             else -> fromRun(event)
         }
     }
@@ -390,6 +425,7 @@ class PipelineCoordinator(
         when (event) {
             is CoordinatorEvent.StepRequested -> ofRun(event.run) { it.copy(asked = it.asked + event.step) }
             is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesOn) }
+            is CoordinatorEvent.RetryAsked -> ofRun(event.run) { it.copy(offered = true) }
             is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
             is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
@@ -505,6 +541,13 @@ class PipelineCoordinator(
             )
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
         effects += CoordinatorEffect.Acted
+    }
+
+    // Only the run whose call is under way, of the key Stop was shown for. Stopping spends
+    // nothing, so it needs neither currency nor requests allowed, and it is no action (D5, D15).
+    private fun stopTapped(key: RunKey) {
+        val run = state.run?.takeIf { it.key == key && it.calling } ?: return
+        effects += CoordinatorEffect.StopCall(run.id)
     }
 
     private fun callEnded(id: RunId) {
