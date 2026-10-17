@@ -202,8 +202,9 @@ footer p{margin:0 0 4px}
 @keyframes sl-hold{from,to{opacity:0}}
 @keyframes sl-arrive{from{opacity:0}}
 @keyframes sl-name{from{opacity:0}}
-/* The splash: the animated logo's timeline (`assets/logo/src/make_svg.py`), played once. */
-@keyframes sp-sleeve{0%,8.00%{transform:translateX(0);animation-timing-function:cubic-bezier(.45,0,.2,1)}17.00%,28.00%{transform:translateX(-8.2px);animation-timing-function:cubic-bezier(.55,0,1,.45)}38.00%,84.00%{transform:translateX(-42.2px);animation-timing-function:cubic-bezier(0,.55,.45,1)}94.00%,100%{transform:translateX(0)}}
+/* The splash: the animated logo's timeline (`assets/logo/src/make_svg.py`), played once. Where the
+   animated logo's sleeve goes out of its frame, this one waits at `--sw`, inside the window. */
+@keyframes sp-sleeve{0%,8.00%{transform:translateX(0);animation-timing-function:cubic-bezier(.45,0,.2,1)}17.00%,28.00%{transform:translateX(-8.2px);animation-timing-function:cubic-bezier(.55,0,1,.45)}38.00%,84.00%{transform:translateX(var(--sw,-42.2px));animation-timing-function:cubic-bezier(0,.55,.45,1)}94.00%,100%{transform:translateX(0)}}
 @keyframes sp-eye{0%,18.00%{opacity:0}23.00%,86.00%{opacity:1}93.00%,100%{opacity:0}}
 @keyframes sp-blink{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}44.00%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}45.00%,45.40%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}46.80%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}71.00%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}72.00%,72.40%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}73.80%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}100%{transform:scaleY(1)}}
 @keyframes sp-shut{0%{opacity:0}44.80%{opacity:1}45.68%{opacity:0}71.80%{opacity:1}72.68%{opacity:0}}
@@ -212,7 +213,7 @@ footer p{margin:0 0 4px}
    the eye and the name fade in; one blink, at 1.3 s. */
 @keyframes sl-out{0%{opacity:1;transform:translateX(0)}40%{opacity:1}100%{opacity:0;transform:translateX(-50px)}}
 @keyframes sl-eyes{from{opacity:0}}
-@keyframes sl-blink{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}82.28%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}88.61%,91.14%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}100.00%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}100%{transform:scaleY(1)}}
+@keyframes sl-blink{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}82.28%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}88.61%,91.14%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}100%{transform:scaleY(1)}}
 @keyframes sl-blink-shut{0%{opacity:0}87.34%{opacity:1}92.91%{opacity:0}}
 @keyframes sl-hover{0%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}35.71%,50.00%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}100.00%{transform:scaleY(1)}}
 @keyframes sl-hover-shut{0%{opacity:0}28.57%{opacity:1}60.00%{opacity:0}}
@@ -388,17 +389,26 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
   addEventListener('scroll', onScroll, {passive: true});
 
   if (root.classList.contains('sl-wait')) {
-    // The splash starts in the middle of the window and shrinks onto the header's logo.
-    var logo = brand.querySelector('svg').getBoundingClientRect(),
-        big = Math.min(440, innerWidth * .7, innerHeight * .55), x = (innerWidth - big) / 2, y = (innerHeight - big) / 2;
+    // The splash starts in the middle of the window and shrinks onto the header's logo. In logo units
+    // (32 across, the eye's centre at 16), the sleeve waits to the left of the eye, `wait` units from
+    // where it started: 42.2 as in the animated logo, less if that would take it out of the window, but
+    // never so little that it covers the eye's corner. Where the window is too narrow for that, the
+    // splash is smaller.
+    var half = innerWidth / 2 - 8,
+        big = Math.min(440, innerWidth * .7, innerHeight * .55, 32 * half / 32.9),
+        unit = big / 32, wait = Math.min(42.2, half / unit - 8.2),
+        logo = brand.querySelector('svg').getBoundingClientRect(), x = (innerWidth - big) / 2, y = (innerHeight - big) / 2;
     root.style.setProperty('--sb', big + 'px');
+    root.style.setProperty('--sw', -wait + 'px');
     root.style.setProperty('--sx', x + 'px');
     root.style.setProperty('--sy', y + 'px');
     root.style.setProperty('--fx', logo.left - x + 'px');
     root.style.setProperty('--fy', logo.top - y + 'px');
     root.style.setProperty('--fs', logo.width / big);
     root.classList.replace('sl-wait', 'sl-intro');
-    var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll'];
+    // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
+    // key (a screen reader's cursor), so either ends the intro too.
+    var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'];
     var end = function () {
       root.classList.remove('sl-intro');
       stops.forEach(function (e) { removeEventListener(e, end); });
