@@ -18,21 +18,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.synthesis.GroundedText
 
 /**
  * *Why it's interesting*: the insight in each of its states (architecture, *Errors and empty
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
- * from the evidence ids the app assigned, each scrolling to its line ([onCite]). Write and
- * Rewrite go to the pipeline as a tap ([onWrite]); whether a tap writes is the pipeline's to say.
+ * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
+ * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
  */
 @Composable
 internal fun InsightCard(
     insight: InsightState,
     context: InsightContext,
-    onWrite: () -> Unit,
-    onCite: (String) -> Unit,
+    actions: InsightActions,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -40,7 +40,7 @@ internal fun InsightCard(
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
-            InsightBody(insight, context, onWrite, onCite)
+            InsightBody(insight, context, actions)
         }
     }
 }
@@ -49,16 +49,13 @@ internal fun InsightCard(
 private fun InsightBody(
     insight: InsightState,
     context: InsightContext,
-    onWrite: () -> Unit,
-    onCite: (String) -> Unit,
+    actions: InsightActions,
 ) {
     when (insight) {
         is InsightState.Idle -> {
             if (insight.canWrite) {
                 Quiet(stringResource(R.string.home_insight_tap_write))
-                Button(onClick = onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
-                    Text(stringResource(R.string.home_write))
-                }
+                WriteButton(actions.onWrite)
             } else {
                 Quiet(stringResource(idleReason(context)))
             }
@@ -67,12 +64,46 @@ private fun InsightBody(
         is InsightState.Writing -> {
             val paragraphs = paragraphsOf(insight.partial)
             if (paragraphs.isEmpty()) Quiet(stringResource(R.string.home_insight_writing))
-            for (paragraph in paragraphs) Prose(uncheckedProse(paragraph, context, onCite))
+            for (paragraph in paragraphs) Prose(uncheckedProse(paragraph, context, actions.onCite))
+            if (context.offers.stop) StopButton(actions.onStop)
         }
 
-        is InsightState.Written -> Written(insight, context, onWrite, onCite)
+        is InsightState.Written -> Written(insight, context, actions)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
-        is InsightState.Failed -> Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
+        is InsightState.Failed -> {
+            Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
+            Retry(context, actions.onWrite)
+        }
+
+        InsightState.Stopped -> {
+            Quiet(stringResource(R.string.home_insight_stopped))
+            Retry(context, actions.onWrite)
+        }
+    }
+}
+
+// Write offered again after a call that failed or was stopped: a new paid call, on a tap only.
+@Composable
+private fun Retry(
+    context: InsightContext,
+    onWrite: () -> Unit,
+) {
+    if (!context.offers.retry) return
+    Quiet(stringResource(R.string.home_insight_retry))
+    WriteButton(onWrite)
+}
+
+@Composable
+private fun WriteButton(onWrite: () -> Unit) {
+    Button(onClick = onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
+        Text(stringResource(R.string.home_write))
+    }
+}
+
+@Composable
+private fun StopButton(onStop: () -> Unit) {
+    OutlinedButton(onClick = onStop, modifier = Modifier.testTag(STOP_TAG)) {
+        Text(stringResource(R.string.home_stop))
     }
 }
 
@@ -90,20 +121,27 @@ private fun idleReason(context: InsightContext): Int =
 private fun Written(
     insight: InsightState.Written,
     context: InsightContext,
-    onWrite: () -> Unit,
-    onCite: (String) -> Unit,
+    actions: InsightActions,
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
-    for (paragraph in paragraphs) Prose(checkedProse(paragraph, insight.grounded, context.track?.evidence, onCite))
+    for (paragraph in paragraphs) {
+        Prose(checkedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite))
+    }
     Meta(insight.grounded, insight.cached)
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-    context.rewriteFailed?.let { Quiet(stringResource(R.string.home_rewrite_failed, failureText(it))) }
-    if (context.rewrite) {
-        // The card paid for, written from earlier evidence or with another AI service: a tap
-        // writes it again.
+    context.rewriteFailed?.let {
+        if (it == PipelineHost.STOPPED) {
+            Quiet(stringResource(R.string.home_rewrite_stopped))
+        } else {
+            Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
+        }
+    }
+    if (context.offers.rewrite) {
+        // The card paid for, written from earlier evidence or with another AI service, or kept
+        // after its rewrite failed or was stopped: a tap writes it again.
         Quiet(stringResource(R.string.home_rewrite_offered))
-        OutlinedButton(onClick = onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
+        OutlinedButton(onClick = actions.onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
             Text(stringResource(R.string.home_rewrite))
         }
     }
@@ -143,3 +181,6 @@ private fun Quiet(text: String) {
 
 /** The test tag of Write and Rewrite. */
 const val WRITE_TAG: String = "write"
+
+/** The test tag of Stop. */
+const val STOP_TAG: String = "stop"

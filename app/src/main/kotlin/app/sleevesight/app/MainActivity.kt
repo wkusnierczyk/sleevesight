@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
             playerLabel = graph::playerLabel,
             playerActivity = graph.sessions::playerActivity,
             write = graph.pipeline::write,
+            stop = graph.pipeline::stop,
         )
     }
 

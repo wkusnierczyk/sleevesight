@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.core.model.NormalizedTrack
@@ -34,7 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
  * What the home screen reads, and where its actions go: the pipeline's view, the session layer's
  * track, playback and art, and the settings, all as published; a tap on Write goes to the pipeline
  * ([write]) with the key it was offered under and the track it was shown beside, and the pipeline
- * decides whether it writes.
+ * decides whether it writes; a tap on Stop goes to it ([stop]) with the call Stop was offered for.
  *
  * @property playerLabel a player's name, from its package.
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
@@ -50,6 +51,7 @@ class HomeFeed(
     val playerLabel: (String) -> String,
     val playerActivity: () -> PendingIntent?,
     val write: (RunKey, NowPlaying) -> Unit,
+    val stop: (CallId) -> Unit,
 )
 
 /** The now-playing part of the home screen, from [feed]. */
@@ -67,6 +69,7 @@ fun NowPlayingHome(feed: HomeFeed) {
             playerLabel = feed.playerLabel,
             playerActivity = feed.playerActivity,
             write = feed.write,
+            stop = feed.stop,
         ),
     )
 }
@@ -86,6 +89,7 @@ internal class NowPlayingActions(
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
+    val stop: (CallId) -> Unit = {},
 )
 
 /**
@@ -121,7 +125,12 @@ internal fun NowPlayingContent(
             aiReady = view.aiReady,
             insightsOn = settings?.writeInsights ?: true,
             modelAllowed = modelAllowed,
-            rewrite = view.rewrite && track != null,
+            offers =
+                InsightOffers(
+                    rewrite = view.rewrite && track != null,
+                    retry = view.retry && track != null,
+                    stop = view.stopCall != null && track != null,
+                ),
             rewriteFailed = view.rewriteFailed.takeIf { track != null },
         )
 
@@ -138,12 +147,13 @@ internal fun NowPlayingContent(
                 Genres(track, settings)
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
-                InsightCard(track?.insight ?: NOT_YET, insight, onWrite, focus::cite)
+                val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
+                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, focus::cite))
                 SourcesSection(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
                     focus = focus,
-                    cardKept = insight.rewrite || insight.rewriteFailed != null,
+                    cardKept = insight.offers.rewrite || insight.rewriteFailed != null,
                 )
             }
         }

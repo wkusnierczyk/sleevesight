@@ -26,6 +26,7 @@ object EventLine {
             is PipelineEvent.ModelCall -> "model      ${e.key}: ${e.provider.name.lowercase()} ${e.model}"
             is PipelineEvent.ModelDone -> modelDone(e)
             is PipelineEvent.ModelFailed -> "model      ${e.key}: failed, ${e.kind.name.lowercase()}"
+            is PipelineEvent.ModelStopped -> "model      ${e.key}: stopped"
             is PipelineEvent.Grounded -> grounded(e)
             is PipelineEvent.NoEvidence -> "insight    ${e.key}: no evidence"
             is PipelineEvent.Superseded -> "superseded ${e.key}"
