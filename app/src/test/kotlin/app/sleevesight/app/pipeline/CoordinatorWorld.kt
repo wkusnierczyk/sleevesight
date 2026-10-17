@@ -252,8 +252,12 @@ internal fun World.show() {
     advance(0)
 }
 
-internal fun World.tap() {
-    send(CoordinatorEvent.WriteTapped)
+/** A tap on Write as the screen sends it: under the key Write is offered for (when none is, any key). */
+internal fun World.tap() = tap(coordinator.state.writeKey ?: key("No run offers Write"))
+
+/** A tap on Write carrying [key], as a screen that showed that run sends it. */
+internal fun World.tap(key: RunKey) {
+    send(CoordinatorEvent.WriteTapped(key))
     advance(0)
 }
 

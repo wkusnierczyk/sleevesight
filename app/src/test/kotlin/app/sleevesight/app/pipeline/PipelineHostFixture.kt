@@ -54,6 +54,7 @@ internal abstract class PipelineHostFixture {
         PipelineHost(
             acknowledged = acknowledged,
             changes = changes.onStart { nowPlayingCollected = true },
+            latestPlaying = { changes.value?.nowPlaying },
             settings = settings,
             keyChanges = keyChanges.map { },
             readKeys = {
@@ -97,6 +98,12 @@ internal abstract class PipelineHostFixture {
     protected fun TestScope.report(playing: NowPlaying) {
         changes.value = TrackChange(playing)
         runCurrent()
+    }
+
+    /** A tap on Write as the screen sends it: under the key Write is offered for, beside the track shown. */
+    protected fun tap() {
+        val key = host.state.value.writeKey ?: return
+        host.write(key, changes.value?.nowPlaying ?: return)
     }
 
     // Past the debounce, and long enough for a run to land.

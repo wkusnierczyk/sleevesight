@@ -21,7 +21,7 @@ internal class PipelineHostAutoWriteTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals(1, provider.requests)
             assertEquals("a tap taken is an action", 1, actions)

@@ -2,27 +2,32 @@ package app.sleevesight.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.SleevesightTheme
 
 /**
- * Where the first-run flow lands. A placeholder until the now-playing screen (#52): it says whether
- * notification access is on, shows the pipeline's state ([pipeline], [PipelineSummary]) while it
- * is, and leads back to the first-run screen and to the settings.
+ * Where the first-run flow lands: the app's name and the way to the settings, then, while
+ * notification access is on, what is playing ([pipeline], the now-playing content), and the way
+ * back to what leaves the phone; while it is off, the way to turn it on. The whole screen scrolls,
+ * so a citation can bring its evidence line into view.
  */
 @Composable
 fun HomeScreen(
@@ -33,10 +38,21 @@ fun HomeScreen(
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier =
+                Modifier
+                    .safeDrawingPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.home_settings)) }
+            }
             if (accessGranted) {
                 pipeline()
                 TextButton(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_what_leaves)) }
@@ -44,7 +60,6 @@ fun HomeScreen(
                 Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
                 Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
             }
-            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.home_settings)) }
         }
     }
 }
@@ -54,7 +69,7 @@ fun HomeScreen(
 private fun HomeAccessOnPreview() {
     SleevesightTheme {
         HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) {
-            PipelineSummary(PipelineView(), onWrite = {})
+            Text(stringResource(R.string.home_placeholder))
         }
     }
 }

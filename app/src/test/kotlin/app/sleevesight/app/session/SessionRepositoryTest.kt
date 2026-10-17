@@ -1,8 +1,11 @@
 package app.sleevesight.app.session
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.Color
 import android.media.session.PlaybackState
 import android.util.Log
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.bitmap
@@ -131,6 +134,35 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         playing.settled(state(PlaybackState.STATE_PAUSED))
         // Neither plays: the one the system ranks first.
         assertEquals(YOUTUBE_MUSIC, repository.nowPlaying.value?.player)
+    }
+
+    @Test
+    fun thePlayerActivityIsThatOfThePlayerWhoseTrackIsShown() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        fun activity(code: Int) =
+            PendingIntent.getActivity(context, code, Intent(Intent.ACTION_MAIN), PendingIntent.FLAG_IMMUTABLE)
+        val youtube = activity(1)
+        val spotify = activity(2)
+        val paused =
+            FakeSession(
+                YOUTUBE_MUSIC,
+                metadata = metadata(title = "Other"),
+                playbackState = state(PlaybackState.STATE_PAUSED),
+                sessionActivity = youtube,
+            )
+        val playing = FakeSession(SPOTIFY, sessionActivity = spotify)
+        assertNull(repository.playerActivity())
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        system.active = listOf(paused, playing)
+        repository.start()
+        assertSame(spotify, repository.playerActivity())
+
+        playing.settled(state(PlaybackState.STATE_PAUSED))
+        assertSame(youtube, repository.playerActivity())
+
+        repository.stop()
+        assertNull(repository.playerActivity())
     }
 
     @Test

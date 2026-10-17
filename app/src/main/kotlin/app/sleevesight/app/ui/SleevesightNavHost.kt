@@ -10,8 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.sleevesight.app.FirstRunAcknowledgement
-import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.NotificationAccess
+import app.sleevesight.app.ui.home.NothingPlaying
 import kotlinx.serialization.Serializable
 
 /** What leaves the phone, and the way to notification access. */
@@ -57,7 +57,7 @@ fun SleevesightNavHost(
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
     settings: @Composable (links: SettingsLinks) -> Unit = {},
-    pipeline: @Composable () -> Unit = { PipelineSummary(PipelineView(), onWrite = {}) },
+    pipeline: @Composable () -> Unit = { NothingPlaying() },
     diagnostics: @Composable () -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()

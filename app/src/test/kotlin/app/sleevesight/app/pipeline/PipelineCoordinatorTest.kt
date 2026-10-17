@@ -407,13 +407,34 @@ class PipelineCoordinatorTest {
         val replay =
             world.coordinator.state.run!!
                 .id
-        world.send(CoordinatorEvent.WriteTapped)
+        world.send(CoordinatorEvent.WriteTapped(checkNotNull(world.coordinator.state.writeKey)))
         world.send(CoordinatorEvent.StepEnded(replay, RunStep.MODEL_CALL))
         assertEquals("A #1", world.cardText())
 
         // A card reported by the run before the rebuild: ignored.
         world.send(CoordinatorEvent.CardWritten(first, world.card("A, from an old run")))
         assertEquals("A #1", world.cardText())
+    }
+
+    @Test
+    fun aTapForAnotherRunsKeyWritesNothing() {
+        val world = started()
+        world.play("A")
+        world.settle()
+        val offered = checkNotNull(world.coordinator.state.writeKey)
+        assertEquals(world.key("A"), offered)
+
+        // A screen that showed another track (or another key of this one) taps: nothing is granted.
+        world.tap(world.key("B"))
+        world.tap(world.key("A", seconds = 200))
+        world.settle()
+        assertEquals(emptyMap<String, Int>(), world.calls)
+        assertEquals(offered, world.coordinator.state.writeKey)
+
+        // The tap for the run offered writes it.
+        world.tap(offered)
+        world.settle()
+        assertEquals(mapOf("A" to 1), world.calls)
     }
 
     @Test
@@ -435,7 +456,7 @@ class PipelineCoordinatorTest {
                 CoordinatorEvent.RebuildRequested,
                 CoordinatorEvent.Reported(world.key("A"), world.nowPlaying("A")),
                 CoordinatorEvent.Settled(1),
-                CoordinatorEvent.WriteTapped,
+                CoordinatorEvent.WriteTapped(world.key("A")),
             ).flatMap(world.coordinator::on)
         assertEquals(emptyList<CoordinatorEffect>(), effects)
     }

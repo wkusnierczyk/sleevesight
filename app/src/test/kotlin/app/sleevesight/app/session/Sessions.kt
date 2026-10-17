@@ -82,6 +82,7 @@ internal class FakeSession(
     override var playbackState: PlaybackState? = Sessions.state(),
     override var queue: List<MediaSession.QueueItem>? = null,
     override var queueTitle: CharSequence? = null,
+    override var sessionActivity: android.app.PendingIntent? = null,
 ) : PlayerSession {
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()

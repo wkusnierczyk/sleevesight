@@ -6,18 +6,34 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import app.sleevesight.app.ui.DiagnosticsScreen
-import app.sleevesight.app.ui.PipelineSummary
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.home.HomeFeed
+import app.sleevesight.app.ui.home.NowPlayingHome
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.platform.JvmAccentFolder
 
 /** The one activity; every screen is a Compose destination in [SleevesightNavHost]. */
 class MainActivity : ComponentActivity() {
     private val graph: AppGraph
         get() = (application as SleevesightApplication).graph
+
+    // What the home screen reads of the session layer and the pipeline, and where its taps go.
+    private val homeFeed: HomeFeed by lazy {
+        HomeFeed(
+            view = graph.pipeline.state,
+            nowPlaying = graph.sessions.nowPlaying,
+            playback = graph.sessions.playback,
+            art = graph.sessions.art,
+            settings = graph.settings.settings,
+            normalizer = Normalizer(JvmAccentFolder),
+            playerLabel = graph::playerLabel,
+            playerActivity = graph.sessions::playerActivity,
+            write = graph.pipeline::write,
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,10 +59,7 @@ class MainActivity : ComponentActivity() {
                             graph::playerLabel,
                         )
                     },
-                    pipeline = {
-                        val view by graph.pipeline.state.collectAsState()
-                        PipelineSummary(view, onWrite = graph.pipeline::write)
-                    },
+                    pipeline = { NowPlayingHome(homeFeed) },
                     diagnostics = { DiagnosticsScreen(graph.diagnostics) },
                 )
             }

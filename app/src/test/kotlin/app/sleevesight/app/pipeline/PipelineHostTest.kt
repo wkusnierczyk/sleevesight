@@ -7,6 +7,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.wiring.SourceKeys
@@ -164,7 +165,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             )
             assertEquals(0, provider.requests)
 
-            host.write()
+            tap()
             settle()
             assertEquals(1, provider.requests)
             val written =
@@ -180,7 +181,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
 
             assertFalse(host.state.value.aiReady)
@@ -263,7 +264,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals(1, provider.requests)
 
@@ -280,7 +281,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             assertTrue(host.state.value.rewrite)
 
             // A tap rewrites it: one more call.
-            host.write()
+            tap()
             settle()
             assertEquals(2, provider.requests)
             assertEquals(false, host.state.value.rewrite)
@@ -292,12 +293,62 @@ internal class PipelineHostTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `a tap on a track the session layer has left writes nothing, though its report is not in yet`() =
+        runTest {
+            started()
+            play("Sundown")
+            settle()
+            val key = checkNotNull(host.state.value.writeKey)
+            val shown = checkNotNull(changes.value).nowPlaying
+
+            // The session layer moves on; the screen's tap on Sundown lands before the report does.
+            changes.value = TrackChange(shown.copy(title = "Carefree Highway"))
+            host.write(key, shown)
+            settle()
+            assertEquals(0, provider.requestsFor("Sundown"))
+            assertEquals(0, provider.requests)
+        }
+
+    @Test
+    fun `a rewrite that fails shows the card paid for again, and says the rewrite failed`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            tap()
+            settle()
+            assertEquals(null, host.state.value.rewriteFailed)
+
+            // New evidence: the card paid for stays, with Write beside it.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertTrue(host.state.value.rewrite)
+
+            // The rewrite's call fails: the card written before comes back, saying so, with no Write.
+            provider.failure = IllegalStateException("a bug")
+            tap()
+            settle()
+            assertEquals(2, provider.requests)
+            val view = host.state.value
+            assertTrue(view.track?.insight is InsightState.Written)
+            assertEquals(PipelineHost.FAILED, view.rewriteFailed)
+            assertEquals(false, view.rewrite)
+
+            // The next track is a track of its own: nothing failed there.
+            provider.failure = null
+            play("Two")
+            settle()
+            assertEquals(null, host.state.value.rewriteFailed)
+        }
+
+    @Test
     fun `a rebuild that changes nothing in the card's key serves the card kept, with no call`() =
         runTest {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
             keyChanges.value++
             settle()
@@ -318,7 +369,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             advanceTimeBy(2.seconds)
             assertTrue(
                 host.state.value.track
@@ -356,7 +407,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
                 host.state.value.track
                     ?.insight,
             )
-            host.write()
+            tap()
             runCurrent()
 
             keysReady!!.complete(Unit)
@@ -384,7 +435,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             )
 
             host.activityStarted()
-            host.write()
+            tap()
             settle()
             assertEquals(0, provider.requests)
             assertEquals(
@@ -439,7 +490,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("Zero")
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals(1, provider.requests)
 
@@ -468,7 +519,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("Zero")
             settle()
-            host.write()
+            tap()
             settle()
             musicBrainz.byName = 2.seconds
             play("One")
@@ -492,7 +543,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             )
             assertEquals(1, provider.requests)
 
-            host.write()
+            tap()
             settle()
             assertEquals(2, provider.requests)
         }
@@ -503,7 +554,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
             // A rotation: a stop for a configuration change, and the new activity started.
             host.activityStopped(changingConfigurations = true)
@@ -542,7 +593,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             started()
             play("One")
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals(listOf("IllegalStateException"), failures.map { it::class.simpleName })
             assertEquals(
