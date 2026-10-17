@@ -33,6 +33,9 @@ class MusicBrainzSource(
      */
     override val extractionVersion: Int = EXTRACTION_VERSION
 
+    /** It sends no request of its own, and its result names the artists the labels ask about (D13). */
+    override val preparesAhead: Boolean = true
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,

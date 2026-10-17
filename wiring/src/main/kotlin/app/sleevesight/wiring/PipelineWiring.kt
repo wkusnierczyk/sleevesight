@@ -10,8 +10,10 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.resolution.IdentityCheck
+import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.resolution.RecordingResolver
+import app.sleevesight.core.resolution.RememberedMusicBrainz
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.SourceAdapter
@@ -36,19 +38,29 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * Made by [appPipelineWiring] in the app, which creates the process's one client, and by
  * [pipelineWiringOn] in the CLI, on the client it creates (live, replaying or recording). The
  * [accentFolder] and the [resources] (the genre vocabulary) are the platform's.
+ *
+ * With [rememberMusicBrainz] (the app's), the resolver and Last.fm's check of an artist's name ask
+ * MusicBrainz through one [RememberedMusicBrainz], which keeps its answers for a short time: what
+ * preparing the next track looks up ahead (D13) is then not asked again when the track plays. The
+ * CLI asks afresh for each track, so its reports time every request.
  */
 class PipelineWiring internal constructor(
     private val net: NetClient,
     private val accentFolder: AccentFolder,
     resources: ResourceReader,
+    rememberMusicBrainz: Boolean = false,
 ) {
     private val names = NameMatcher(accentFolder)
+
+    // MusicBrainz's core data, for the resolver and Last.fm's check; the tags are asked apart.
+    private val musicBrainz: MusicBrainzLookup =
+        MusicBrainzClient(net).let { if (rememberMusicBrainz) RememberedMusicBrainz(it) else it }
     private val vocabulary by lazy { GenreVocabulary.load(resources) }
     private val artFetcher = ArtFetcher(net)
 
     /** Resolution over MusicBrainz (`RecordingResolver`), for `PipelineParts.resolver`. */
     val resolver: TrackResolver =
-        RecordingResolver(MusicBrainzClient(net), names).let { resolver ->
+        RecordingResolver(musicBrainz, names).let { resolver ->
             TrackResolver { track, duration -> resolver.resolve(track, duration) }
         }
 
@@ -92,7 +104,7 @@ class PipelineWiring internal constructor(
         WikipediaSource(WikipediaClient(net), IdentityCheck(WikidataClient(net), names), names)
 
     /** Last.fm on the user's [key]. */
-    fun lastFm(key: Secret): SourceAdapter = LastFmAdapter(net, MusicBrainzClient(net), key, vocabulary, accentFolder)
+    fun lastFm(key: Secret): SourceAdapter = LastFmAdapter(net, musicBrainz, key, vocabulary, accentFolder)
 
     /**
      * Web search through the [engines] given, each with its key, or null for none. Exa is the only
