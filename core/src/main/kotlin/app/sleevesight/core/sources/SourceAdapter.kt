@@ -42,11 +42,11 @@ interface SourceAdapter {
     /**
      * Whether this adapter looks up the next track ahead, from the player's queue item (D13,
      * `Pipeline.prepare`). A queue item has no length, so a result looked up ahead would be kept
-     * under a key the playing track never reads; only what an adapter keeps in memory by name or
-     * id (Last.fm's verdicts on an artist's name) serves the playing track's own lookup. So only
-     * such an adapter, and one that sends no request of its own (MusicBrainz's lines, made from
-     * the resolution, which name the artists for the genre labels), prepares ahead; any other
-     * would send requests for nothing.
+     * under a key the playing track never reads, and the requests made for it sent for nothing.
+     * Only an adapter that sends no request of its own prepares ahead: MusicBrainz's lines, made
+     * from the resolution, which name the artists for the genre labels. (Last.fm keeps its
+     * verdicts on artists' names, but its lookup ahead would send its own requests again when the
+     * track plays.)
      */
     val preparesAhead: Boolean get() = false
 

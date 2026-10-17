@@ -44,6 +44,19 @@ internal class PipelineHostPrepareTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `a preparation that ends leaves no handle behind, however many tracks are prepared`() =
+        runTest {
+            started()
+            play("A", 200.seconds)
+            for (title in listOf("B", "C", "D")) {
+                next.value = nextTrack.copy(title = title, mediaId = title)
+                settle()
+            }
+            assertEquals(listOf("artist|b", "artist|c", "artist|d"), resolved.drop(1).map { it.first })
+            assertEquals(0, host.preparationsHeld)
+        }
+
+    @Test
     fun `with the setting off, nothing is prepared, and turning it on prepares the next track`() =
         runTest {
             settings.value = settings.value.copy(prepareNextTrack = PrepareNextTrack.OFF)

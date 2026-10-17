@@ -253,7 +253,7 @@ enum class WriteAutomatically {
 enum class PrepareNextTrack {
     OFF,
 
-    /** The resolution by name, Last.fm's verdicts and MusicBrainz's genre labels, ahead; no paid call. */
+    /** The resolution by name and MusicBrainz's genre labels, ahead; no paid call. */
     EVIDENCE,
 }
 

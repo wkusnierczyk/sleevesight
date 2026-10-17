@@ -365,7 +365,9 @@ fun sameInsightTrack(
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
  * then records the decision. Then the next track's preparation (D13, *Evidence*), while requests
  * are allowed and the current run's requests are over (its labels step ended: [CoordinatorState.prepares]),
- * so it never stalls or displaces the playing track's run: StartPreparation of the next track
+ * so it never stalls or displaces the playing track's run (every StartRun, a new length or album
+ * of the playing track's included, also cancels a preparation in progress, which then starts again
+ * once the new run's requests are over): StartPreparation of the next track
  * unless there is none, it was prepared on the live pipeline already, or it is the track playing;
  * else Grant for each step the preparation waits for, never a model call. The table gives each
  * event's own effects; the grants and the preparation follow every row.
@@ -388,7 +390,7 @@ fun sameInsightTrack(
  * | any | Settled, of the ledger's insight track | latest settled; the ledger's header from it; then as below | as below |
  * | no live pipeline, or a rebuild pending | Settled | as above | none (the swap starts it) |
  * | the run holds latest | Settled | as above | none |
- * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track) | CancelRun (old), StartRun |
+ * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track); a preparation cancelled, the next track kept | CancelRun (old), CancelPreparation (if one is cancelled), StartRun |
  * | any | RebuildRequested | building = a new build; no run is current; a preparation cancelled, and nothing prepared on the new pipeline yet | CancelPreparation (if one is cancelled), Build |
  * | build not the one pending | RebuildFinished | unchanged | none |
  * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
@@ -526,7 +528,10 @@ class PipelineCoordinator(
 
     // A run of [report]; of the ledger's key and report for its written track, so the card paid
     // for is found under its own key.
+    // A preparation in progress is cancelled: the new run's lookups come first, and the
+    // preparation starts again, from what is kept, once they are over.
     private fun begin(report: CoordinatorState.Report) {
+        cancelPreparation()
         val id = RunId(state.runs + 1)
         val written = state.written(report.nowPlaying)
         val key = written?.key ?: report.key
@@ -536,8 +541,8 @@ class PipelineCoordinator(
     }
 
     private fun rebuild() {
-        // The preparation runs on the pipeline being replaced, whose adapters (Last.fm's verdicts)
-        // go with it: the new one prepares afresh.
+        // The preparation runs on the pipeline being replaced: the new one prepares again, from
+        // what is kept in memory.
         cancelPreparation()
         state = state.copy(prepared = null)
         val build = state.builds + 1

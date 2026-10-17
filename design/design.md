@@ -74,7 +74,7 @@ These were established while designing, and checked in Phase 0 with the platform
 The media session carries more context than the design assumed. In order of reliability:
 
 1. **Spotify's metadata.** `CONTEXT_URI` and `CONTEXT_TITLE` name the playlist or album being played (`spotify:playlist:...` and the playlist's name), **without an account**.
-2. **The session queue.** Spotify publishes `getQueue()` (the upcoming tracks, with `spotify:track:` ids; 4 to 50 items, one fewer per track, reset when a track is opened through a deep link) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids), and YouTube Music its "Up next" (13 to 25 items, titles without media ids, starting with the playing track rather than after it).
+2. **The session queue.** Spotify publishes `getQueue()` (the playing track, then the upcoming ones, with `spotify:track:` ids; 4 to 50 items, one fewer per track, reset when a track is opened through a deep link; the playing track's media id matches the queue's first item in every capture, while its active queue item can lag a new track's queue for a moment) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids), and YouTube Music its "Up next" (13 to 25 items, titles without media ids, starting with the playing track rather than after it).
 3. **Session history.** Every track the app has seen play. Always available, but it only knows the past.
 4. **Spotify Web API, optional account.** `GET /playlists/{id}/items` returns the whole playlist, not only what is queued.
 
@@ -346,7 +346,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 ## Privacy and security
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
-  - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track; and, with *Prepare the next track* on (D13), the title and artists of the next one in the player's queue, to MusicBrainz and Last.fm where enabled.
+  - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track; and, with *Prepare the next track* on (D13), the title and artists of the next one in the player's queue, to MusicBrainz where enabled.
   - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track only: the next one is not written ahead (D13, #20). Each prompt also carries the user's style (D14), including any free text they wrote.
   - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
   - To the server named in that web address, when a player gives the album art only as a web address: a request for that image. The address itself may identify the album or episode.

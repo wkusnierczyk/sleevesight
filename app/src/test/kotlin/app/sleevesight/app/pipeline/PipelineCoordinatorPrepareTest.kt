@@ -136,7 +136,7 @@ class PipelineCoordinatorPrepareTest {
     }
 
     @Test
-    fun `a new length of the playing track does not cancel the preparation`() {
+    fun `a new length of the playing track cancels the preparation when its run starts, then it starts again`() {
         val world = started()
         with(world) {
             prepareMs = 5_000
@@ -144,9 +144,36 @@ class PipelineCoordinatorPrepareTest {
             next("B")
             advance(DEBOUNCE_MS + 100)
             play("A", seconds = 200)
+            assertEquals(
+                "the report alone, of the same track, cancels nothing",
+                emptyList<String>(),
+                preparationsCancelled,
+            )
             settle()
-            assertEquals(emptyList<String>(), preparationsCancelled)
-            assertEquals(listOf("B"), preparations)
+            assertEquals(listOf("B"), preparationsCancelled)
+            assertEquals(listOf("B", "B"), preparations)
+            assertEquals(listOf("run A", "labels A", "prepare B", "run A", "labels A", "prepare B"), grants.take(6))
+        }
+    }
+
+    @Test
+    fun `a replacement run's lookups never run beside a preparation's`() {
+        val world = started()
+        with(world) {
+            lookupMs = 3_000
+            prepareMs = 5_000
+            play("A")
+            next("B")
+            advance(DEBOUNCE_MS + 3_100)
+            assertTrue("B's lookups under way", coordinator.state.preparation != null)
+            play("A", seconds = 200)
+            advance(DEBOUNCE_MS)
+            assertEquals("run A", grants.last())
+            assertEquals("cancelled when the run started", null, coordinator.state.preparation)
+            advance(2_000)
+            assertEquals("no preparation while the run looks up", "run A", grants.last())
+            settle()
+            assertEquals(listOf("run A", "labels A", "prepare B", "run A", "labels A", "prepare B"), grants.take(6))
         }
     }
 

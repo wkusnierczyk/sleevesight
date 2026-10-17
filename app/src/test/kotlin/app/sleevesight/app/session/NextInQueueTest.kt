@@ -62,6 +62,36 @@ class NextInQueueTest {
         assertNull(NextInQueue.of(null, spotifyQueue))
     }
 
+    // A media id queued twice: A, B, A, C.
+    private val repeated =
+        SessionQueue(
+            null,
+            listOf(
+                QueueEntry(1, "A", "X", "a"),
+                QueueEntry(2, "B", "X", "b"),
+                QueueEntry(3, "A", "X", "a"),
+                QueueEntry(4, "C", "X", "c"),
+            ),
+        )
+
+    @Test
+    fun `a media id queued twice is told apart by the active queue item`() {
+        assertEquals("C", NextInQueue.of(playing(mediaId = "a", item = 3), repeated)?.title)
+        assertEquals("B", NextInQueue.of(playing(mediaId = "a", item = 1), repeated)?.title)
+    }
+
+    @Test
+    fun `a media id queued twice with no active item among them is ambiguous`() {
+        assertNull(NextInQueue.of(playing(mediaId = "a"), repeated))
+        assertNull(NextInQueue.of(playing(mediaId = "a", item = 2), repeated))
+    }
+
+    @Test
+    fun `a media id found once goes before an active item that names another track`() {
+        // B is found once, at 2; the active item, 3, names the second A.
+        assertEquals("A", NextInQueue.of(playing(mediaId = "b", item = 3), repeated)?.title)
+    }
+
     @Test
     fun `an item without a title is not prepared`() {
         val queue = SessionQueue(null, listOf(QueueEntry(1, "A", "X", "m1"), QueueEntry(2, " ", "Y", "m2")))

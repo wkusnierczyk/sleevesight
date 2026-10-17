@@ -53,7 +53,7 @@ class PreparationTest {
                 SourceResult(Outcome.SongArticle, emptyList(), Duration.ZERO, labelArtists = listOf("artist-1"))
             },
         )
-    private val lastFm = Ahead(FakeAdapter(SourceId.LASTFM))
+    private val lastFm = FakeAdapter(SourceId.LASTFM)
     private val wikipedia = FakeAdapter(SourceId.WIKIPEDIA)
     private val tagRequests = mutableListOf<String>()
     private val labels =
@@ -106,8 +106,8 @@ class PreparationTest {
 
             assertEquals(listOf<Pair<String, Duration?>>("next artist|next song" to null), resolved)
             assertEquals(listOf("next artist|next song"), musicBrainz.inner.asked)
-            assertEquals(listOf("next artist|next song"), lastFm.inner.asked)
             assertEquals(emptyList<String>(), wikipedia.asked, "Wikipedia's results would not carry over")
+            assertEquals(emptyList<String>(), lastFm.asked, "Last.fm's requests would be sent again")
             assertEquals(listOf("artist-1"), tagRequests)
             assertEquals(
                 listOf("await LOOKUPS", "ended LOOKUPS", "await LABELS", "ended LABELS"),

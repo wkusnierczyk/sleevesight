@@ -173,6 +173,9 @@ class PipelineHost(
     @Volatile
     internal var published: ((PipelineView) -> Unit)? = null
 
+    /** For the tests: the preparations whose handles the host holds. */
+    internal val preparationsHeld: Int get() = preparations.size
+
     /** The diagnostics stream of every pipeline built, in order; a slow collector loses the oldest. */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
@@ -248,6 +251,8 @@ class PipelineHost(
     // The one consumer of the queue: each event through the coordinator, then its effects.
     private suspend fun loop(scope: CoroutineScope) {
         for (event in queue) {
+            // A preparation that ended needs its handle no more: no effect names it again.
+            if (event is CoordinatorEvent.PreparationEnded) preparations.remove(event.prep)
             val effects = coordinator.on(event)
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }

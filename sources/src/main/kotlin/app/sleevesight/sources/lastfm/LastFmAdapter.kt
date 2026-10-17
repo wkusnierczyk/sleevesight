@@ -62,9 +62,6 @@ class LastFmAdapter(
     /** The verification asks MusicBrainz for the artists of a name. */
     override val consults: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ)
 
-    /** Its verdicts on artists' names are kept in memory, so the next track's are found ahead (D13). */
-    override val preparesAhead: Boolean = true
-
     private val check = ArtistCheck(accentFolder, musicBrainz)
 
     override suspend fun lookup(

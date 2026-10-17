@@ -22,8 +22,8 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * - the resolution, by name only, whose MusicBrainz answers the resolver's lookup keeps for a while
  *   (`RememberedMusicBrainz`, in the app); the playing track's run resolves again, with its length;
- * - the adapters that prepare ahead ([SourceAdapter.preparesAhead]): Last.fm, whose verdicts on
- *   the artists' names it keeps, and MusicBrainz's lines, which name the resolved artists;
+ * - the adapters that prepare ahead ([SourceAdapter.preparesAhead]): MusicBrainz's lines, which
+ *   send nothing and name the resolved artists;
  * - MusicBrainz's genre labels for those artists, kept by `MusicBrainzLabels`.
  *
  * Nothing is published, nothing goes to the retrieval or synthesis cache, and no insight is
