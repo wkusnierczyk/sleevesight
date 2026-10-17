@@ -18,6 +18,12 @@ class AutoWriteTest {
             val settings = Settings(writeAutomatically = mode)
             for (cause in ChangeCause.entries) {
                 assertEquals(cause in writes, AutoWrite.writes(settings, cause, userHasActed = true), "$mode $cause")
+                assertEquals(cause in writes, cause in AutoWrite.causes(settings), "$mode $cause, causes")
+                assertEquals(
+                    false,
+                    cause in AutoWrite.causes(settings.copy(writeInsights = false)),
+                    "$mode $cause, causes, insights off",
+                )
                 assertEquals(false, AutoWrite.writes(settings, cause, userHasActed = false), "$mode $cause")
                 assertEquals(
                     false,

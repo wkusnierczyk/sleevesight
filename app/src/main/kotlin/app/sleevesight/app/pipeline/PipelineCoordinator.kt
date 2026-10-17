@@ -28,7 +28,10 @@ sealed interface CoordinatorEvent {
     /** The first run was acknowledged: nothing is read, built or sent before. */
     data object Acknowledged : CoordinatorEvent
 
-    /** The session layer reported a track ([key] is its `RunKey`). */
+    /**
+     * The session layer reported a track ([key] is its `RunKey`), and why it came to play ([cause]:
+     * the change into it, as skip detection judged it, or an action in Sleevesight).
+     */
     data class Reported(
         val key: RunKey,
         val nowPlaying: NowPlaying,
@@ -69,12 +72,13 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * Run [run] has its evidence and could write its insight; [writesWhenActed] is whether *Write
-     * insights automatically* writes this change once the user has acted (`AutoWrite`).
+     * Run [run] has its evidence and could write its insight; [writesOn] are the causes of a change
+     * that *Write insights automatically* writes on, once the user has acted, under the run's
+     * settings (`AutoWrite.causes`: none while *Write insights* is off or under *Never*).
      */
     data class InsightAsked(
         val run: RunId,
-        val writesWhenActed: Boolean,
+        val writesOn: Set<ChangeCause>,
     ) : CoordinatorEvent
 
     /**
@@ -140,7 +144,6 @@ sealed interface CoordinatorEffect {
     data class StartRun(
         val run: RunId,
         val nowPlaying: NowPlaying,
-        val cause: ChangeCause,
     ) : CoordinatorEffect
 
     /** Cancel run [run]. */
@@ -159,6 +162,12 @@ sealed interface CoordinatorEffect {
         val run: RunId,
         val write: Boolean,
     ) : CoordinatorEffect
+
+    /**
+     * The user acted in Sleevesight, now: a tap on Write was taken. The time is kept for the track
+     * changes' features (D15, `UserActions`); the first action is in the state.
+     */
+    data object Acted : CoordinatorEffect
 }
 
 /**
@@ -195,11 +204,13 @@ data class CoordinatorState(
      * what the view shows whenever the track's run has no insight of its own. A card written by a
      * call (a rewrite included) always replaces it; one served from the cache only fills an empty
      * slot; a call that fails or is cut off adds none; it goes with the entry. So an insight written
-     * from a title alone stays when the artists
-     * arrive, and the header shows the artists; and a rewrite (Write offered beside the card kept)
-     * runs under [track], not [shown] (#53 may revisit both). A track that returns after another
-     * has settled is a new decision (D5): the card in the store is served when the return's key
-     * matches it.
+     * from a title alone stays when the artists arrive, and the header shows the artists: nothing
+     * is written twice for one track without a tap (D5), and a title-only report that found
+     * nothing is decided afresh. A rewrite (Write offered beside the card kept) runs under [track],
+     * not [shown]: it is a rebuild's run, which starts under the key the card was written under so
+     * that the card is found when the rebuild changed nothing in it. A track that returns after
+     * another has settled is a new decision (D5): the card in the store is served when the
+     * return's key matches it.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -220,7 +231,8 @@ data class CoordinatorState(
 
     /**
      * The run in progress, of [nowPlaying] under [key]. [asked]: the steps it waits for;
-     * [insight]: its question whether to write, while undecided ([CoordinatorEvent.InsightAsked]);
+     * [insight]: its question whether to write, while undecided, with the causes its settings
+     * write on ([CoordinatorEvent.InsightAsked]);
      * [offered] while it offers Write; [calling] while its model call is under way. Requests and
      * questions are remembered while the run is not current, and granted if it becomes current
      * again. [orphaned] once a report of another insight track has settled while it ran: it then
@@ -233,7 +245,7 @@ data class CoordinatorState(
         val key: RunKey,
         val nowPlaying: NowPlaying,
         val asked: Set<RunStep> = emptySet(),
-        val insight: Boolean? = null,
+        val insight: Set<ChangeCause>? = null,
         val offered: Boolean = false,
         val calling: Boolean = false,
         val orphaned: Boolean = false,
@@ -296,11 +308,13 @@ fun sameInsightTrack(
  * to write. For the insight track the ledger has written, the answer is never to write: the
  * question comes only when a rebuild's run cannot find its card under its new card key (new
  * evidence, another service), and Write is offered beside the card paid for, which the view keeps
- * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when *Write
- * insights automatically* writes this change, the user has acted since the app opened, and the
- * ledger has not decided this key (a rebuild's run of it again is not a track change, D5); else
- * offer Write. The ledger then
- * records the decision. The table gives each event's own effects; the grants follow every row.
+ * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when the
+ * latest report's cause, which the current run holds, is one *Write insights automatically* writes
+ * on under the run's settings (`InsightAsked.writesOn`: every cause under *On every track change*,
+ * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
+ * *Write insights* off), the user has acted since the app opened, and the ledger has not decided
+ * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
+ * then records the decision. The table gives each event's own effects; the grants follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
  * the run "holds" a report as [CoordinatorState.holds] says. A run of the ledger's written track
@@ -313,7 +327,7 @@ fun sameInsightTrack(
  * | any | ActivityStarted | started + 1; first action cleared if none was started and not restarting (the app opening) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
- * | any | Reported(key) | latest = the report; the run current only if it holds it; first action made if the cause is an action in Sleevesight | StartTimer |
+ * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight | StartTimer |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
@@ -327,8 +341,8 @@ fun sameInsightTrack(
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
- * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
+ * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
@@ -375,7 +389,7 @@ class PipelineCoordinator(
     private fun fromRun(event: CoordinatorEvent) {
         when (event) {
             is CoordinatorEvent.StepRequested -> ofRun(event.run) { it.copy(asked = it.asked + event.step) }
-            is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesWhenActed) }
+            is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesOn) }
             is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
             is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
@@ -450,7 +464,7 @@ class PipelineCoordinator(
         val key = written?.key ?: report.key
         val playing = written?.track ?: report.nowPlaying
         state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing))
-        effects += CoordinatorEffect.StartRun(id, playing, report.cause)
+        effects += CoordinatorEffect.StartRun(id, playing)
     }
 
     private fun rebuild() {
@@ -490,6 +504,7 @@ class PipelineCoordinator(
                 acted = true,
             )
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
+        effects += CoordinatorEffect.Acted
     }
 
     private fun callEnded(id: RunId) {
@@ -555,13 +570,16 @@ class PipelineCoordinator(
         if (!state.allowed) return
         run.asked.forEach { effects += CoordinatorEffect.Grant(run.id, it) }
         var next = run.copy(asked = emptySet())
-        val writesWhenActed = run.insight
-        if (writesWhenActed != null) {
+        val writesOn = run.insight
+        if (writesOn != null) {
             val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
             val written = ledger?.written == true
             // A rebuild's run of a key the ledger decided is not a track change (D5).
             val decided = ledger != null && ledger.key == run.key
-            val write = writesWhenActed && state.acted && !written && !decided
+            // The cause of the latest report, which the run, being current, holds: the latest word
+            // on how the user came to this track (a skip back to it during its run included).
+            val cause = state.latest?.cause
+            val write = cause != null && cause in writesOn && state.acted && !written && !decided
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next = next.copy(insight = null, offered = !write, calling = write)

@@ -12,6 +12,7 @@ import app.sleevesight.app.session.SessionRepositoryFixture
 import app.sleevesight.app.session.Sessions
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
+import app.sleevesight.app.session.UserActions
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlayedTrack
@@ -57,6 +58,9 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
 
     protected lateinit var recorder: HistoryRecorder
 
+    /** The user's actions in Sleevesight, on the virtual clock. */
+    protected val actions = UserActions { scheduler.currentTime }
+
     @Before
     fun record() {
         if (settingsRead) sessionGap.tryEmit(Settings.DEFAULT_SESSION_GAP)
@@ -74,6 +78,8 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
             elapsed = { scheduler.currentTime },
             wall = wall,
             warn = { warnings += it },
+            lastAction = actions::lastAt,
+            onCleared = skips::reset,
         )
 
     @After

@@ -40,12 +40,21 @@ object AutoWrite {
         settings: Settings,
         cause: ChangeCause,
         userHasActed: Boolean,
-    ): Boolean =
-        settings.writeInsights &&
-            userHasActed &&
+    ): Boolean = userHasActed && cause in causes(settings)
+
+    /**
+     * The causes of a change that [settings] write on without a tap, once the user has acted: what
+     * a run of the app reports when it asks, so the app's coordinator decides with the cause of the
+     * latest report it holds (`PipelineCoordinator`).
+     */
+    fun causes(settings: Settings): Set<ChangeCause> =
+        if (!settings.writeInsights) {
+            emptySet()
+        } else {
             when (settings.writeAutomatically) {
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE -> true
-                WriteAutomatically.WHEN_I_SKIP -> cause != ChangeCause.NATURAL_END
-                WriteAutomatically.NEVER -> false
+                WriteAutomatically.ON_EVERY_TRACK_CHANGE -> ChangeCause.entries.toSet()
+                WriteAutomatically.WHEN_I_SKIP -> setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER)
+                WriteAutomatically.NEVER -> emptySet()
             }
+        }
 }

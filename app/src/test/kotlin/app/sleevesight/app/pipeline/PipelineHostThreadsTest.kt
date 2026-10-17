@@ -8,6 +8,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
@@ -86,7 +87,7 @@ class PipelineHostThreadsTest {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val reports = Channel<NowPlaying?>()
+    private val reports = Channel<TrackChange?>()
     private val keyChanges = MutableStateFlow(0)
     private val adapter = HeldAdapter()
     private val failures: MutableList<Throwable> = Collections.synchronizedList(mutableListOf())
@@ -100,7 +101,7 @@ class PipelineHostThreadsTest {
     private val host =
         PipelineHost(
             acknowledged = MutableStateFlow(true),
-            nowPlaying = reports.receiveAsFlow(),
+            changes = reports.receiveAsFlow(),
             // No Write is tapped here.
             latestPlaying = { null },
             settings = MutableStateFlow(Settings()),
@@ -140,7 +141,7 @@ class PipelineHostThreadsTest {
 
     /** Reports [title], and returns once the report is on the host's queue. */
     private suspend fun report(title: String) {
-        reports.send(NowPlaying(title = title, artists = "Artist", player = Settings.SPOTIFY))
+        reports.send(TrackChange(NowPlaying(title = title, artists = "Artist", player = Settings.SPOTIFY)))
         reports.send(null)
     }
 

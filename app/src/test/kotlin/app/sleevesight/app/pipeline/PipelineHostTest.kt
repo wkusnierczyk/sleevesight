@@ -7,6 +7,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.wiring.SourceKeys
@@ -298,10 +299,10 @@ internal class PipelineHostTest : PipelineHostFixture() {
             play("Sundown")
             settle()
             val key = checkNotNull(host.state.value.writeKey)
-            val shown = checkNotNull(nowPlaying.value)
+            val shown = checkNotNull(changes.value).nowPlaying
 
             // The session layer moves on; the screen's tap on Sundown lands before the report does.
-            nowPlaying.value = shown.copy(title = "Carefree Highway")
+            changes.value = TrackChange(shown.copy(title = "Carefree Highway"))
             host.write(key, shown)
             settle()
             assertEquals(0, provider.requestsFor("Sundown"))

@@ -10,6 +10,7 @@ import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.queueItem
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.settings.Crossfade
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,12 @@ internal abstract class SessionRepositoryFixture {
             .onlyWhen { artAllowed }
     private val resolver = ApplicationProvider.getApplicationContext<android.app.Application>().contentResolver
 
+    /** The user's *Crossfade*, as skip detection reads it at each change. */
+    protected var crossfade: Crossfade = Crossfade.Autodetect
+
+    /** Skip detection, as the app gives it to the session layer. */
+    protected val skips = SkipDetector { crossfade }
+
     protected val repository =
         SessionRepository(
             system,
@@ -49,6 +56,7 @@ internal abstract class SessionRepositoryFixture {
             scope,
             followed,
             clock = { scheduler.currentTime },
+            classify = skips::classify,
         )
 
     protected val sundown = NowPlaying(title = "Sundown", artists = "Gordon Lightfoot", player = SPOTIFY)

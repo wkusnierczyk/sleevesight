@@ -55,10 +55,11 @@ import kotlin.time.Instant
  *   window, and a track that buffers before it plays starts once it plays. The precise time of a
  *   change is its record's `changedAt`; its `from` and `to` name the tracks it links.
  * - **Each track change** ([SessionRepository.lastChange]) with its features: the time the
- *   previous track had left ([SessionChange.timeLeft]), the playback states before it, and the
- *   player. Two features have no source yet and are recorded as null: the time since the user's
- *   last action in Sleevesight (nothing records the actions yet: the first action, #53, and the
- *   transport controls, Phase 2), and the crossfade learned from natural ends (#53).
+ *   previous track had left ([SessionChange.timeLeft]), the playback states before it, the player,
+ *   the crossfade skip detection had learned when it judged the change
+ *   ([SessionChange.learnedCrossfade]), and the time since the user's last action in Sleevesight
+ *   before it, from [lastAction] (`UserActions`: a tap on Write taken; the transport controls in
+ *   Phase 2), null with none since the process started.
  *
  * The session layer's times are on the [elapsed] clock (`SystemClock.elapsedRealtime`), which
  * restarts with the phone, so they are kept as wall-clock times from [wall] and as offsets from the
@@ -68,7 +69,8 @@ import kotlin.time.Instant
  * *Clear history* ([clear]) and the deletion of old rows ([deleteOlderThan]) go through the same
  * queue, so each runs after every write queued before it and before any queued after: a clear is
  * never undone by a write of something seen before it. A clear also forgets the playback being
- * recorded, so the track playing then comes back, as a new row, only with its next value.
+ * recorded, so the track playing then comes back, as a new row, only with its next value, and tells
+ * [onCleared] (skip detection forgets what it learned from the changes deleted).
  *
  * **A clock that jumps.** Old rows are deleted by the [wall] clock, so a clock set ahead would
  * delete history early. The recorder notes how far the wall clock is from the [elapsed] clock, which
@@ -76,7 +78,7 @@ import kotlin.time.Instant
  * more than [CLOCK_MARGIN] since is skipped, and so is every one after it until the next start. A
  * jump made while the process was not running, or across a restart of the phone, is not caught.
  */
-@Suppress("LongParameterList") // What it records from and to, and the user's gap; the rest are test seams.
+@Suppress("LongParameterList") // What it records from and to, the user's gap and actions; the rest are test seams.
 class HistoryRecorder(
     private val sessions: SessionRepository,
     private val history: SessionHistory,
@@ -85,6 +87,8 @@ class HistoryRecorder(
     private val elapsed: () -> Long = SystemClock::elapsedRealtime,
     private val wall: Clock = Clock.System,
     private val warn: (String) -> Unit = { Log.w(TAG, it) },
+    private val lastAction: (Long) -> Long? = { null },
+    private val onCleared: () -> Unit = {},
 ) {
     // The collectors only queue, so they never suspend: a state flow's value is not missed while a
     // write is in progress. Read by [run] alone, which is called once.
@@ -152,6 +156,7 @@ class HistoryRecorder(
         queued("Could not clear the session history") {
             history.clear()
             playback.forget()
+            onCleared()
         }
 
     /**
@@ -198,8 +203,8 @@ class HistoryRecorder(
                         speed = report.state.speed,
                     )
                 },
-            sinceLastAction = null,
-            learnedCrossfade = null,
+            sinceLastAction = lastAction(change.changedAt)?.let { (change.changedAt - it).milliseconds },
+            learnedCrossfade = change.learnedCrossfade,
         )
 
     /**
