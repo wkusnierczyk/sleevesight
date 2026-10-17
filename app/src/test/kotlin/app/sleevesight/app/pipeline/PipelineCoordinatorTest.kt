@@ -3,9 +3,11 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.synthesis.GroundedText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -149,6 +151,8 @@ class PipelineCoordinatorTest {
                 RunStep.MODEL_CALL -> {
                     calls[title] = (calls[title] ?: 0) + 1
                     calling += run
+                    // The card is reported before the call's end; neither, for a call cut off.
+                    schedule(streamMs, CoordinatorEvent.CardWritten(run, card("$title #${calls[title]}")), run)
                     schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run)
                     // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
                     if (cache) pendingCards[run] = keys.getValue(run) to service
@@ -165,7 +169,7 @@ class PipelineCoordinatorTest {
                 when {
                     cache && (keys.getValue(run) to service) in cards -> {
                         cardsShown += titles.getValue(run)
-                        CoordinatorEvent.CardShown(run)
+                        CoordinatorEvent.CardShown(run, card("${titles.getValue(run)} kept"))
                     }
                     run in withoutEvidence -> CoordinatorEvent.DecidedWithoutCall(run)
                     else -> CoordinatorEvent.InsightAsked(run, writesWhenActed)
@@ -204,6 +208,16 @@ class PipelineCoordinatorTest {
         }
 
         fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
+
+        fun card(text: String) = Card(InsightState.Written(GroundedText(text, emptyList()), cached = false), null)
+
+        /** The text of the card the ledger holds. */
+        fun cardText(): String? =
+            coordinator.state.ledger
+                ?.card
+                ?.insight
+                ?.grounded
+                ?.text
     }
 
     // The steps of a sequence.
@@ -713,6 +727,46 @@ class PipelineCoordinatorTest {
                 advance(DEBOUNCE_MS + 500)
                 play("A")
                 settle()
+            },
+            Case(
+                "a rewrite's card replaces the one before in the ledger; a failed call adds none",
+                mapOf("A" to 2),
+                listOf("A", "A", "A"),
+                "A",
+            ) {
+                play("A")
+                settle()
+                tap()
+                settle()
+                assertEquals("A #1", cardText())
+                keyChange()
+                settle()
+                tap()
+                settle()
+                assertEquals("A #2", cardText())
+                // The card stays through another rebuild, and the AI service gone.
+                keyChange()
+                settle()
+                assertEquals("A #2", cardText())
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "the card goes with its ledger entry: another track settled, the card is gone",
+                mapOf("A" to 1, "B" to 1),
+                listOf("A", "B"),
+            ) {
+                play("A")
+                settle()
+                tap()
+                settle()
+                assertEquals("A #1", cardText())
+                lookupMs = 2_000
+                play("B")
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(null, cardText())
+                // The first action made (the tap), B is written without one.
+                settle()
+                assertEquals("B #1", cardText())
             },
             Case(
                 "a run that ends while offering Write leaves nothing waiting for it",

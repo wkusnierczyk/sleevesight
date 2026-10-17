@@ -67,9 +67,10 @@ internal class InsightWriter(
         val kept = guard.attempt("read insight") { card(wanted) }
         when {
             kept != null -> {
-                control.cardShown()
                 emit(PipelineEvent.InsightCached(key))
-                show(checked(kept, cached = true, usage = null, complete = true))
+                val shown = checked(kept, cached = true, usage = null, complete = true)
+                if (shown is InsightState.Written) control.cardShown(shown, evidence) else control.decidedWithoutCall()
+                show(shown)
             }
 
             control.decide(settings) -> {
@@ -94,7 +95,7 @@ internal class InsightWriter(
         control: RunControl,
     ) {
         try {
-            stream(ai, model, card)
+            stream(ai, model, card, control)
         } finally {
             control.ended(RunStep.MODEL_CALL)
         }
@@ -104,6 +105,7 @@ internal class InsightWriter(
         ai: AiAccess,
         model: String,
         card: CardKey,
+        control: RunControl,
     ) {
         emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
         show(InsightState.Writing(""))
@@ -124,7 +126,7 @@ internal class InsightWriter(
             }
         }
         when (val last = end) {
-            is CompletionEvent.Done -> finish(last, text.toString(), card, started.elapsedNow())
+            is CompletionEvent.Done -> finish(last, text.toString(), card, started.elapsedNow(), control)
             is CompletionEvent.Error -> {
                 emit(PipelineEvent.ModelFailed(key, last.kind))
                 show(InsightState.Failed(last.kind.name.lowercase()))
@@ -139,12 +141,15 @@ internal class InsightWriter(
         text: String,
         card: CardKey,
         latency: Duration,
+        control: RunControl,
     ) {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         if (done.stopReason == StopReason.REFUSAL) return show(InsightState.Failed(DECLINED))
         val complete = done.stopReason == StopReason.END
         if (complete) guard.attempt("write insight") { keep(card, text) }
-        show(checked(text, cached = false, usage = done.usage, complete = complete))
+        val written = checked(text, cached = false, usage = done.usage, complete = complete)
+        if (written is InsightState.Written) control.cardWritten(written, evidence)
+        show(written)
     }
 
     private fun checked(

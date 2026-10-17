@@ -69,6 +69,9 @@ internal class CountingProvider : AiProvider {
     var failure: Exception? = null
     var streaming: Duration = Duration.ZERO
 
+    /** The reply to the request numbered (from 1) as given. */
+    var reply: (Int) -> String = { "It is a song [MB1]." }
+
     override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
 
     override fun stream(
@@ -79,7 +82,7 @@ internal class CountingProvider : AiProvider {
             requests++
             prompts += request.prompt
             failure?.let { throw it }
-            emit(CompletionEvent.Delta("It is a song [MB1]."))
+            emit(CompletionEvent.Delta(reply(requests)))
             delay(streaming)
             emit(CompletionEvent.Done(Usage(inputTokens = 10, outputTokens = 5), StopReason.END))
             completed++

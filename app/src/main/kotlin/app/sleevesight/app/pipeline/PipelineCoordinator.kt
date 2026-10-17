@@ -4,10 +4,18 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.app.session.TrackIdentity
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
+
+/** A card paid for: the insight written and checked, and the evidence it cites. */
+data class Card(
+    val insight: InsightState.Written,
+    val evidence: EvidenceSet?,
+)
 
 /** A run the coordinator started. */
 @JvmInline
@@ -83,9 +91,16 @@ sealed interface CoordinatorEvent {
         val run: RunId,
     ) : CoordinatorEvent
 
-    /** Run [run] showed a card kept in the synthesis cache: its insight is written, with no call. */
+    /** Run [run] showed [card], kept in the synthesis cache: its insight is written, with no call. */
     data class CardShown(
         val run: RunId,
+        val card: Card,
+    ) : CoordinatorEvent
+
+    /** Run [run]'s model call wrote [card] (before the call's end is reported). */
+    data class CardWritten(
+        val run: RunId,
+        val card: Card,
     ) : CoordinatorEvent
 
     /** Run [run] decided its insight without a call (no evidence, no AI service, insights off). */
@@ -166,7 +181,11 @@ data class CoordinatorState(
      * under, so a card is found again under its own key; [shown] is the latest report of the track,
      * whose metadata (artists, album, length) the header shows. Only a report of another insight
      * track, once settled, replaces the entry; runs, rebuilds and new keys never make [written]
-     * false while it stands. So an insight written from a title alone stays when the artists
+     * false while it stands. [card] is the card paid for, as its run reported it (written by a call,
+     * or shown from the cache), with the evidence it cites: what the view shows whenever the
+     * track's run has no insight of its own. A newer card for the entry (a rewrite) replaces it;
+     * a call that fails or is cut off adds none; it goes with the entry. So an insight written
+     * from a title alone stays when the artists
      * arrive, and the header shows the artists; and a rewrite (Write offered beside the card kept)
      * runs under [track], not [shown] (#53 may revisit both). A track that returns after another
      * has settled is a new decision (D5): the card in the store is served when the return's key
@@ -177,6 +196,7 @@ data class CoordinatorState(
         val key: RunKey,
         val written: Boolean,
         val shown: NowPlaying = track,
+        val card: Card? = null,
     )
 
     /** The latest report: its number, track and cause, and whether its debounce has passed. */
@@ -288,9 +308,10 @@ fun sameInsightTrack(
  * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
  * | otherwise | WriteTapped | unchanged | none |
- * | the run | CardShown | the ledger written, under the run's key, unless written already | none |
+ * | the run | CardShown(card) | the ledger written, under the run's key, unless written already; its card | none |
+ * | the run | CardWritten(card) | the ledger's card (the ledger written already, when the call was granted) | none |
  * | the run | DecidedWithoutCall | the ledger decided under the run's key, unless written already | none |
- * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, DecidedWithoutCall | unchanged | none |
+ * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
@@ -322,12 +343,20 @@ class PipelineCoordinator(
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
             is CoordinatorEvent.RebuildFinished -> finished(event)
+            CoordinatorEvent.WriteTapped -> tapped()
+            else -> fromRun(event)
+        }
+    }
+
+    // What a run reports.
+    private fun fromRun(event: CoordinatorEvent) {
+        when (event) {
             is CoordinatorEvent.StepRequested -> ofRun(event.run) { it.copy(asked = it.asked + event.step) }
             is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesWhenActed) }
-            CoordinatorEvent.WriteTapped -> tapped()
             is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
-            is CoordinatorEvent.CardShown -> record(event.run, written = true)
+            is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card)
+            is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card)
             is CoordinatorEvent.DecidedWithoutCall -> record(event.run, written = false)
             else -> Unit
         }
@@ -458,9 +487,11 @@ class PipelineCoordinator(
     private fun record(
         id: RunId,
         written: Boolean,
+        card: Card? = null,
     ) {
         val run = state.run?.takeIf { it.id == id } ?: return
-        state = state.copy(ledger = entry(run, written))
+        val recorded = entry(run, written)
+        state = state.copy(ledger = if (card != null) recorded.copy(card = card) else recorded)
     }
 
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under

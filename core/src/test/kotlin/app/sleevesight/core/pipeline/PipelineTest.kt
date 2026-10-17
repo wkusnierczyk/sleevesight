@@ -565,6 +565,7 @@ class PipelineTest {
         var decisions = 0
         var withoutCall = 0
         var cardsShown = 0
+        val cardsWritten = mutableListOf<String>()
 
         override suspend fun await(step: RunStep) {
             asked += step
@@ -589,8 +590,18 @@ class PipelineTest {
             withoutCall++
         }
 
-        override fun cardShown() {
+        override fun cardShown(
+            card: InsightState.Written,
+            evidence: app.sleevesight.core.evidence.EvidenceSet,
+        ) {
             cardsShown++
+        }
+
+        override fun cardWritten(
+            card: InsightState.Written,
+            evidence: app.sleevesight.core.evidence.EvidenceSet,
+        ) {
+            cardsWritten += card.grounded.text
         }
     }
 
@@ -618,6 +629,8 @@ class PipelineTest {
             runCurrent()
             assertEquals(1, provider.requests.size)
             assertEquals(setOf(RunStep.LOOKUPS, RunStep.LABELS, RunStep.MODEL_CALL), control.ended.toSet())
+            // The card written, reported once.
+            assertEquals(listOf("It is a song [MB1]."), control.cardsWritten)
         }
 
     @Test
@@ -635,6 +648,8 @@ class PipelineTest {
             run.cancel()
             runCurrent()
             assertTrue(RunStep.MODEL_CALL in control.ended)
+            // A call cut off writes no card.
+            assertEquals(emptyList(), control.cardsWritten)
         }
 
     @Test
@@ -648,6 +663,7 @@ class PipelineTest {
             pipeline(listOf(mb()), cache = cache).run(sundown, control)
 
             assertEquals(1, control.cardsShown)
+            assertEquals(emptyList(), control.cardsWritten)
             assertEquals(0, control.withoutCall)
             assertEquals(0, control.decisions)
         }

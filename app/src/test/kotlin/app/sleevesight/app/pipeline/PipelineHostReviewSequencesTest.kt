@@ -460,4 +460,53 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
 
             assertEquals(2, provider.requestsFor("Alpha"))
         }
+
+    // The card paid for lives in the ledger, reported by its run (the eighth review round).
+
+    private fun shownText(): String? =
+        (
+            host.state.value.track
+                ?.insight as? InsightState.Written
+        )?.grounded?.text
+
+    @Test
+    fun `a rewrite's card survives the AI key removed straight after it`() =
+        runTest {
+            provider.reply = { n -> "It is a song, take $n [MB1]." }
+            writtenAlpha()
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertEquals("It is a song, take 1 [MB1].", shownText())
+            assertTrue(host.state.value.rewrite)
+
+            // The rewrite completes, and the AI key goes at once, before anything else runs.
+            host.write()
+            runCurrent()
+            keys = PipelineKeys(sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+
+            assertEquals(2, provider.requestsFor("Alpha"))
+            assertEquals("It is a song, take 2 [MB1].", shownText())
+        }
+
+    @Test
+    fun `a track back after another, its card gone, shows its own failure, not the old card`() =
+        runTest {
+            writtenAlpha()
+            play("Bravo")
+            settle()
+            cache.clearCards()
+            provider.failure = IllegalStateException("a bug")
+            // Alpha again, at the same length: a new decision, written (the first action made).
+            play("Alpha")
+            settle()
+
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Failed,
+            )
+            assertEquals(false, host.state.value.rewrite)
+        }
 }

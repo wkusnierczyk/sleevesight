@@ -1,5 +1,6 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -48,8 +49,20 @@ interface RunControl {
     /** The insight was decided without a model call: nothing to write from, no AI service set up, or insights off. */
     fun decidedWithoutCall()
 
-    /** The insight was served from the synthesis cache: written, with no call. */
-    fun cardShown() = decidedWithoutCall()
+    /** The insight was served from the synthesis cache, as [card] from [evidence]: written, with no call. */
+    fun cardShown(
+        card: InsightState.Written,
+        evidence: EvidenceSet,
+    ) = decidedWithoutCall()
+
+    /**
+     * A model call wrote the insight, [card] from [evidence], checked and shown (reported before the
+     * call's end). A call that fails, is declined or finds no evidence writes no card.
+     */
+    fun cardWritten(
+        card: InsightState.Written,
+        evidence: EvidenceSet,
+    ) = Unit
 
     /** Grants every step at once and writes when [write]: [Pipeline.run] for the CLI. */
     class Unattended(
