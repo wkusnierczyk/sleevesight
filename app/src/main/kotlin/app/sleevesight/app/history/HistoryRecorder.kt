@@ -287,6 +287,6 @@ class HistoryRecorder(
         fun sameAsLast(
             last: NowPlaying,
             track: NowPlaying,
-        ): Boolean = TrackIdentity.same(last, track) && last.title == track.title
+        ): Boolean = TrackIdentity.playsOn(last, track)
     }
 }

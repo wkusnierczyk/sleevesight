@@ -564,6 +564,7 @@ class PipelineTest {
         val ended = mutableListOf<RunStep>()
         var decisions = 0
         var withoutCall = 0
+        var cardsShown = 0
 
         override suspend fun await(step: RunStep) {
             asked += step
@@ -586,6 +587,10 @@ class PipelineTest {
 
         override fun decidedWithoutCall() {
             withoutCall++
+        }
+
+        override fun cardShown() {
+            cardsShown++
         }
     }
 
@@ -633,7 +638,7 @@ class PipelineTest {
         }
 
     @Test
-    fun `a card kept is decided without a call`() =
+    fun `a card kept is shown, reported as such, with no decision and no call`() =
         runTest {
             val cache = MemoryCache()
             val first = pipeline(listOf(mb()), cache = cache)
@@ -642,7 +647,8 @@ class PipelineTest {
             RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
             pipeline(listOf(mb()), cache = cache).run(sundown, control)
 
-            assertEquals(1, control.withoutCall)
+            assertEquals(1, control.cardsShown)
+            assertEquals(0, control.withoutCall)
             assertEquals(0, control.decisions)
         }
 }

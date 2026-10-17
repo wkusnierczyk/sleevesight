@@ -267,13 +267,14 @@ internal class PipelineHostTest : PipelineHostFixture() {
             settle()
             assertEquals(1, provider.requests)
 
-            // New evidence (a Last.fm key): the replay of the track shown is not a track change.
+            // New evidence (a Last.fm key): the replay of the track shown is not a track change, and
+            // the ledger has it written, so its card (under the old evidence) is not offered again.
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
             keyChanges.value++
             settle()
             assertEquals(1, provider.requests)
             assertEquals(
-                InsightState.Idle(canWrite = true),
+                InsightState.Idle(canWrite = false),
                 host.state.value.track
                     ?.insight,
             )

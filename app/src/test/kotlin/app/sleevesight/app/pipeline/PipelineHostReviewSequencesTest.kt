@@ -39,7 +39,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
 
             assertEquals(1, provider.requestsFor("Alpha"))
             assertEquals(
-                InsightState.Idle(canWrite = true),
+                InsightState.Idle(canWrite = false),
                 host.state.value.track
                     ?.insight,
             )
@@ -195,5 +195,111 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             acknowledged.value = true
             runCurrent()
             assertEquals(true, host.lookupsAllowed.first())
+        }
+
+    // The insight ledger (the sixth review round).
+
+    @Test
+    fun `a held new length, then a rebuild changing nothing in the card's key, shows the card`() =
+        runTest {
+            cache.keepsResults = true
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            settle()
+            play("Alpha", 279.seconds)
+            settle()
+            keyChanges.value++
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(listOf("artist|alpha"), musicBrainz.asked)
+            assertEquals(
+                true,
+                (
+                    host.state.value.track
+                        ?.insight as? InsightState.Written
+                )?.cached,
+            )
+        }
+
+    @Test
+    fun `a rebuild changing the card's key, then a new length, writes nothing without a tap`() =
+        runTest {
+            cache.keepsResults = true
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            settle()
+            // A Last.fm key: new evidence, so the card's key changes.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            play("Alpha", 280.seconds)
+            settle()
+            host.write()
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+        }
+
+    @Test
+    fun `a card kept, shown, then a new length keeps it, with no lookup or call`() =
+        runTest {
+            cache.keepsResults = true
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            settle()
+            play("Bravo")
+            settle()
+            // Alpha again: a track change, its card served from the cache.
+            play("Alpha", 106.seconds)
+            settle()
+            assertEquals(
+                true,
+                (
+                    host.state.value.track
+                        ?.insight as? InsightState.Written
+                )?.cached,
+            )
+            play("Alpha", 279.seconds)
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(listOf("artist|alpha", "artist|bravo"), musicBrainz.asked)
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `the header follows a held report, and the insight stays`() =
+        runTest {
+            started()
+            report(NowPlaying(title = "Alpha", artists = "Artist", mediaId = "m1", player = Settings.SPOTIFY))
+            settle()
+            host.write()
+            settle()
+            report(
+                NowPlaying(
+                    title = "Alpha",
+                    artists = "Artist & Guest",
+                    album = "Alpha (Deluxe)",
+                    mediaId = "m1",
+                    player = Settings.SPOTIFY,
+                ),
+            )
+            settle()
+
+            val shown = host.state.value.track
+            assertEquals("Artist & Guest", shown?.nowPlaying?.artists)
+            assertEquals("Alpha (Deluxe)", shown?.nowPlaying?.album)
+            assertTrue(shown?.insight is InsightState.Written)
+            assertEquals(1, provider.requestsFor("Alpha"))
         }
 }

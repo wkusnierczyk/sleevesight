@@ -86,22 +86,30 @@ internal class CountingProvider : AiProvider {
         }
 }
 
-/** A cache that keeps written cards only, as the store's synthesis cache would. */
+/**
+ * A cache that keeps written cards, as the store's synthesis cache would; and, when
+ * [keepsResults], the sources' results too, by source, lookup key and whole seconds.
+ */
 internal class CardCache : PipelineCache {
     private val cards = mutableMapOf<CardKey, String>()
+    private val results = mutableMapOf<Triple<SourceId, String, Long?>, SourceResult>()
+    var keepsResults = false
 
     override suspend fun result(
         adapter: SourceAdapter,
         track: NormalizedTrack,
         duration: Duration?,
-    ): SourceResult? = null
+    ): SourceResult? =
+        if (keepsResults) results[Triple(adapter.id, track.lookupKey, duration?.inWholeSeconds)] else null
 
     override suspend fun keep(
         adapter: SourceAdapter,
         track: NormalizedTrack,
         duration: Duration?,
         result: SourceResult,
-    ) = Unit
+    ) {
+        if (keepsResults) results[Triple(adapter.id, track.lookupKey, duration?.inWholeSeconds)] = result
+    }
 
     override suspend fun card(key: CardKey): String? = cards[key]
 

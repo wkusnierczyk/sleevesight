@@ -142,6 +142,10 @@ class PipelineHost(
     /** What the UI renders. */
     val state: StateFlow<PipelineView> = view.asStateFlow()
 
+    /** For the tests: each view as it is published, none conflated. */
+    @Volatile
+    internal var published: ((PipelineView) -> Unit)? = null
+
     /** The diagnostics stream of every pipeline built, in order; a slow collector loses the oldest. */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
@@ -343,13 +347,31 @@ class PipelineHost(
             val made = current?.parts
             val adapters = made?.adapters?.map { it.id }?.toSet()
             PipelineView(
-                track = (track ?: view.value.track)?.let { offering(it, owner) }?.let { failing(it, failedKey) },
+                track =
+                    (track ?: view.value.track)
+                        ?.let {
+                            offering(it, owner)
+                        }?.let { failing(it, failedKey) }
+                        ?.let { header(it, owner) },
                 needsKey =
                     adapters?.let { ids -> KEYED_SOURCES.filter { now.isEnabled(it) && it !in ids }.toSet() }
                         ?: view.value.needsKey,
                 aiReady = made?.let { it.ai != null } ?: view.value.aiReady,
             )
-        }.collect { view.value = it }
+        }.collect {
+            view.value = it
+            published?.invoke(it)
+        }
+    }
+
+    // The header (artists, album, length) from the latest report of the ledger's insight track;
+    // the run's input and its card's key stay its own.
+    private fun header(
+        track: TrackState,
+        owner: CoordinatorState,
+    ): TrackState {
+        val shown = owner.ledger?.takeIf { sameInsightTrack(it.track, track.nowPlaying) }?.shown ?: return track
+        return if (shown == track.nowPlaying) track else track.copy(nowPlaying = shown)
     }
 
     // A run that failed while writing shows as failed, not as writing for ever.

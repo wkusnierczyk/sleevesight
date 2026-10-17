@@ -75,6 +75,19 @@ class PipelineCoordinatorTest {
         // A report with no artists finds nothing: the run decides without a call.
         private val withoutEvidence = HashSet<RunId>()
 
+        /**
+         * With [cache] on, the world keeps what the store would: the keys looked up, and the cards
+         * written under a key and the AI service (or evidence) in use, [service]; a rebuild that
+         * changes the card's key raises [service].
+         */
+        var cache = false
+        var service = 0
+        val cards = HashSet<Pair<RunKey, Int>>()
+        val cardsShown = mutableListOf<String>()
+        private val retrieved = HashSet<RunKey>()
+        private val keys = HashMap<RunId, RunKey>()
+        private val pendingCards = HashMap<RunId, Pair<RunKey, Int>>()
+
         fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
 
         private fun schedule(
@@ -95,8 +108,14 @@ class PipelineCoordinatorTest {
                 is CoordinatorEffect.Swap -> Unit
                 is CoordinatorEffect.StartRun -> {
                     titles[effect.run] = effect.nowPlaying.title
+                    keys[effect.run] = key(effect.nowPlaying)
                     if (effect.nowPlaying.artists.isEmpty()) withoutEvidence += effect.run
-                    schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
+                    // With the cache, a key looked up before needs no lookups.
+                    if (cache && keys.getValue(effect.run) in retrieved) {
+                        gathered(effect.run, delayMs = 0)
+                    } else {
+                        schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
+                    }
                 }
                 is CoordinatorEffect.CancelRun -> cancel(effect.run)
                 is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
@@ -122,23 +141,37 @@ class PipelineCoordinatorTest {
             when (step) {
                 RunStep.LOOKUPS -> {
                     lookups += title
+                    if (cache) retrieved += keys.getValue(run)
                     schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
-                    val insight =
-                        if (run in withoutEvidence) {
-                            CoordinatorEvent.DecidedWithoutCall(run)
-                        } else {
-                            CoordinatorEvent.InsightAsked(run, writesWhenActed)
-                        }
-                    schedule(lookupMs, insight, run)
-                    schedule(lookupMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
+                    gathered(run, lookupMs)
                 }
                 RunStep.LABELS -> schedule(0, CoordinatorEvent.StepEnded(run, step), run)
                 RunStep.MODEL_CALL -> {
                     calls[title] = (calls[title] ?: 0) + 1
                     calling += run
                     schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run)
+                    // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
+                    if (cache) pendingCards[run] = keys.getValue(run) to service
                 }
             }
+        }
+
+        // The evidence in: a card kept under this key and service is shown; else the question.
+        private fun gathered(
+            run: RunId,
+            delayMs: Long,
+        ) {
+            val insight =
+                when {
+                    cache && (keys.getValue(run) to service) in cards -> {
+                        cardsShown += titles.getValue(run)
+                        CoordinatorEvent.CardShown(run)
+                    }
+                    run in withoutEvidence -> CoordinatorEvent.DecidedWithoutCall(run)
+                    else -> CoordinatorEvent.InsightAsked(run, writesWhenActed)
+                }
+            schedule(delayMs, insight, run)
+            schedule(delayMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
         }
 
         /** Lets [ms] pass, delivering what falls due; what a cancelled run would have sent is dropped. */
@@ -157,7 +190,10 @@ class PipelineCoordinatorTest {
             event: CoordinatorEvent,
         ) {
             if (run != null && run in cancelled) return
-            if (run != null && event is CoordinatorEvent.StepEnded && event.step == RunStep.MODEL_CALL) calling -= run
+            if (run != null && event is CoordinatorEvent.StepEnded && event.step == RunStep.MODEL_CALL) {
+                calling -= run
+                pendingCards.remove(run)?.let { cards += it }
+            }
             send(event)
         }
 
@@ -291,7 +327,8 @@ class PipelineCoordinatorTest {
                 "a model call under way when a key changes is the only one paid",
                 mapOf("A" to 1),
                 listOf("A", "A"),
-                "A",
+                // Written: no Write offered for it again (the simulated world keeps no cards).
+                null,
             ) {
                 streamMs = 10_000
                 play("A")
@@ -423,10 +460,11 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "consecutive rebuilds keep the track decided, and write it once",
+                "consecutive rebuilds keep the track written, and write it once",
                 mapOf("A" to 1),
                 listOf("A", "A", "A"),
-                "A",
+                // Written: no Write offered for it again (the simulated world keeps no cards here).
+                null,
             ) {
                 play("A")
                 settle()
@@ -567,6 +605,96 @@ class PipelineCoordinatorTest {
                 play("A", seconds = 106)
                 settle()
                 play("A", seconds = 279)
+                settle()
+            },
+            Case(
+                "a held new length, then a rebuild changing nothing in the card's key: the card shown, nothing again",
+                mapOf("A" to 1),
+                listOf("A"),
+            ) {
+                cache = true
+                play("A", seconds = 106)
+                settle()
+                tap()
+                settle()
+                play("A", seconds = 279)
+                settle()
+                keyChange()
+                settle()
+                assertEquals(listOf("A"), cardsShown)
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "a rebuild changing the card's key, then a new length: nothing written without a tap",
+                mapOf("A" to 1),
+                listOf("A"),
+            ) {
+                cache = true
+                play("A", seconds = 106)
+                settle()
+                tap()
+                settle()
+                service++
+                keyChange()
+                settle()
+                play("A", seconds = 280)
+                settle()
+                tap()
+                settle()
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "a card kept, shown, then a new length: held, with no lookup or call",
+                emptyMap(),
+                listOf("A"),
+            ) {
+                cache = true
+                cards += key("A", 106) to service
+                play("A", seconds = 106)
+                settle()
+                play("A", seconds = 279)
+                settle()
+                assertEquals(listOf("A"), cardsShown)
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "the header follows a held report: the artists filled in, the insight kept",
+                mapOf("A" to 1),
+                listOf("A"),
+            ) {
+                report(nowPlaying("A", mediaId = "m1"))
+                settle()
+                tap()
+                settle()
+                report(nowPlaying("A", artists = "Artist & Guest", mediaId = "m1"))
+                settle()
+                assertEquals(
+                    "Artist & Guest",
+                    coordinator.state.ledger
+                        ?.shown
+                        ?.artists,
+                )
+                assertEquals(
+                    "Artist",
+                    coordinator.state.run
+                        ?.nowPlaying
+                        ?.artists,
+                )
+            },
+            Case(
+                "back to a written track after another settled is a track change, decided afresh",
+                mapOf("Zero" to 1, "A" to 2),
+                listOf("Zero", "A", "B", "A"),
+            ) {
+                // B settles, so the ledger is emptied, though B is skipped before it decides.
+                // Without the cache here; in the app the card kept is shown, with no call.
+                acted()
+                play("A")
+                settle()
+                lookupMs = 2_000
+                play("B")
+                advance(DEBOUNCE_MS + 500)
+                play("A")
                 settle()
             },
             Case(

@@ -27,7 +27,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -128,10 +127,14 @@ class PipelineHostThreadsTest {
     fun close() = scope.cancel()
 
     private fun start(visible: Boolean = true) {
+        // Every view as the host publishes it, none conflated.
+        host.published = { shownTitles += it.track?.nowPlaying?.title }
         if (visible) host.activityStarted()
         host.start(scope)
-        scope.launch { host.state.collect { shownTitles += it.track?.nowPlaying?.title } }
     }
+
+    /** Runs [body] on real threads, bounded as a whole. */
+    private fun bounded(body: suspend () -> Unit) = runBlocking { withTimeout(TEST_BOUND_MS) { body() } }
 
     /** Reports [title], and returns once the report is on the host's queue. */
     private suspend fun report(title: String) {
@@ -164,13 +167,14 @@ class PipelineHostThreadsTest {
 
     @Test
     fun aLookupThatLandsAfterItsRunWasReplacedIsNeverShown() =
-        runBlocking {
+        bounded {
             adapter.held["artist|alpha"] = CountDownLatch(1)
             start()
             report("Alpha")
             heard(adapter.begun("artist|alpha"))
             report("Bravo")
             until("Bravo gathered") { gathered("Bravo") }
+            until("Bravo recorded") { "Bravo" in shownTitles }
 
             // Alpha's lookup lands now, past its run's cancellation, on another thread.
             adapter.held.getValue("artist|alpha").countDown()
@@ -187,34 +191,39 @@ class PipelineHostThreadsTest {
 
     @Test
     fun aBuildThatFinishesAfterItWasOvertakenIsNeverSwappedIn() =
-        runBlocking {
+        bounded {
             start()
             report("Alpha")
             until("Alpha gathered") { gathered("Alpha") }
 
-            // The second build's key read is held; a third build overtakes it.
-            val held = CountDownLatch(1)
-            keysHeld = held
+            // The second build's key read is held, and the third's, which overtakes it.
+            val second = CountDownLatch(1)
+            keysHeld = second
             keyChanges.value++
             until("the second key read") { keyReads.get() == 2 }
-            keysHeld = null
+            val third = CountDownLatch(1)
+            keysHeld = third
             keyChanges.value++
-            until("the replay on the third build") { adapter.asked.size == 2 }
+            until("the third key read") { keyReads.get() == 3 }
 
-            // The second build finishes now, after it was overtaken, and says so to the host.
-            held.countDown()
-            until("the second build made") { builds.get() == 3 }
+            // The second build finishes while the third is pending, and says so to the host,
+            // which ignores it: no swap, so no replay.
+            second.countDown()
+            until("the second build made") { builds.get() == 2 }
+            third.countDown()
+            until("the replay on the third build") { adapter.asked.size == 2 }
             report("Charlie")
             until("Charlie gathered") { gathered("Charlie") }
 
-            // Swapped in, it would have run Charlie (or Alpha) once more.
+            // Had the second been swapped in, Alpha would have run once more, before or after.
+            assertEquals(3, builds.get())
             assertEquals(listOf("artist|alpha", "artist|alpha", "artist|charlie"), adapter.asked.toList())
             assertEquals(emptyList<Throwable>(), failures.toList())
         }
 
     @Test
     fun anOpeningBeforeANewTracksReportGrantsTheOldTrack() =
-        runBlocking {
+        bounded {
             start(visible = false)
             report("Alpha")
             until("Alpha's run waiting for its lookups") { shown() == "Alpha" }
@@ -231,7 +240,7 @@ class PipelineHostThreadsTest {
 
     @Test
     fun aNewTracksReportBeforeAnOpeningGrantsTheOldTrackNothing() =
-        runBlocking {
+        bounded {
             start(visible = false)
             report("Alpha")
             until("Alpha's run waiting for its lookups") { shown() == "Alpha" }
@@ -247,6 +256,7 @@ class PipelineHostThreadsTest {
 
     private companion object {
         const val BOUND_MS = 10_000L
+        const val TEST_BOUND_MS = 30_000L
         const val STEP_MS = 10L
     }
 }
