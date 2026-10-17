@@ -50,7 +50,7 @@ data class Settings(
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
     val crossfade: Crossfade = Crossfade.Autodetect,
-    val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE_AND_INSIGHT,
+    val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -243,11 +243,18 @@ enum class WriteAutomatically {
     NEVER,
 }
 
-/** *Prepare the next track* (D13): what runs ahead for the next item in the player's queue. */
+/**
+ * *Prepare the next track* (D13): what runs ahead for the next item in the player's queue.
+ * *Evidence and insight*, first proposed as the default, is not offered: a queue item has no album
+ * or length, so an insight written from it would be kept under a key the playing track never
+ * reads, and paid for again when it plays (#172 is to show whether players give them). A value
+ * stored under that name reads as the default, *Evidence*, as any name this version does not know.
+ */
 enum class PrepareNextTrack {
     OFF,
+
+    /** The resolution by name, Last.fm's verdicts and MusicBrainz's genre labels, ahead; no paid call. */
     EVIDENCE,
-    EVIDENCE_AND_INSIGHT,
 }
 
 /** *Crossfade* (D5), for telling a skip in the player from a natural end. */

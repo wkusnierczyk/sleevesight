@@ -9,8 +9,8 @@
     <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing: the title, artists, album, length and cover. It ignores the notifications themselves, and it never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists, cleaned of tags such as “2006 Remaster”, and the album name. This is for the playing track and, while “Prepare the next track” is on, for the next one in the player’s queue.</string>
-    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, what the sources found, and your style setting, including any text you write there. This is for the playing track and, by default, for the next one in the queue.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists, cleaned of tags such as “2006 Remaster”, and the album name. This is for the playing track; while “Prepare the next track” is on, the title and artists of the next one in the player’s queue also go to MusicBrainz and Last.fm, if switched on.</string>
+    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, what the sources found, and your style setting, including any text you write there. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_to_spotify">To Spotify, only if you connect a Spotify account: requests for the playlist or album being played, made with your own token.</string>
     <string name="first_run_to_art_host">To the server named in that web address, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
@@ -107,10 +107,9 @@
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
     <string name="settings_prepare_next">Prepare the next track</string>
-    <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead. The insight is written only where “Write insights automatically” would write it.</string>
+    <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead.</string>
     <string name="settings_prepare_off">Off</string>
     <string name="settings_prepare_evidence">Evidence</string>
-    <string name="settings_prepare_evidence_and_insight">Evidence and insight</string>
 
     <string name="settings_section_lookups">Lookups</string>
     <string name="settings_background">Look up in the background</string>

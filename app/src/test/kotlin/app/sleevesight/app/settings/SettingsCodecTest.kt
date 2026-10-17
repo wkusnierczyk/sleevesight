@@ -66,7 +66,7 @@ class SettingsCodecTest {
                 writeInsights = false,
                 writeAutomatically = WriteAutomatically.WHEN_I_SKIP,
                 crossfade = Crossfade.Fixed(6.seconds),
-                prepareNextTrack = PrepareNextTrack.EVIDENCE,
+                prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 artistCacheLifetime = 30.days,
@@ -224,6 +224,13 @@ class SettingsCodecTest {
             Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LASTFM, lookUpInBackground = true),
             read,
         )
+    }
+
+    @Test
+    fun evidenceAndInsightStoredReadsAsEvidence() {
+        // No longer offered (D13, #20): an insight prepared from a queue item would be paid twice.
+        val prefs = mutablePreferencesOf(stringPreferencesKey("insights.prepare_next_track") to "EVIDENCE_AND_INSIGHT")
+        assertEquals(PrepareNextTrack.EVIDENCE, SettingsCodec.read(prefs).prepareNextTrack)
     }
 
     private companion object {
