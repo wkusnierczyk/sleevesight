@@ -42,7 +42,8 @@ internal object DiagnosticsText {
      * The whole export, to [out]: the header, what skip detection has learned ([learned]; null when
      * nothing supplies it), the caches' sizes ([caches]; null when they could not be read), the
      * events kept, oldest first, and the track changes recorded, newest first, a page at a time from
-     * [changes] (null when the history could not be read).
+     * [changes]. Returns whether all of it was read: false when the caches or a page of the history
+     * could not be, which the text says where it happened.
      */
     @Suppress("LongParameterList") // Each part of the export, in order.
     suspend fun export(
@@ -53,7 +54,7 @@ internal object DiagnosticsText {
         caches: CacheStats?,
         events: List<LoggedEvent>,
         changes: suspend (before: Long?) -> PageResult,
-    ) {
+    ): Boolean {
         out.appendLine("Sleevesight diagnostics, version $version, exported $exportedAt")
         out.appendLine()
         out.appendLine("## Skip detection")
@@ -81,7 +82,7 @@ internal object DiagnosticsText {
             val page = changes(before)
             if (page !is PageResult.Read) {
                 out.appendLine("The history could not be read.")
-                return
+                return false
             }
             for (change in page.page.changes) {
                 out.appendLine("${change.changedAt} ${change(change)}")
@@ -89,6 +90,7 @@ internal object DiagnosticsText {
             }
             before = page.page.next
         } while (before != null)
+        return caches != null
     }
 
     /** Said when nothing supplies what skip detection has learned. */

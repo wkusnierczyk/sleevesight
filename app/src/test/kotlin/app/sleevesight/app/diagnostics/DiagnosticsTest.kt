@@ -13,8 +13,12 @@ import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -48,15 +52,22 @@ class DiagnosticsTest {
         }
 
     @After
-    fun close() = jdbc.close()
+    fun close() {
+        appScope.coroutineContext[Job]?.cancel()
+        jdbc.close()
+    }
 
     private class Learned(
         crossfades: Map<String, Duration>,
+        private val reset: () -> Boolean = { true },
     ) : SkipLearning {
         override val learnedCrossfades: StateFlow<Map<String, Duration>> = MutableStateFlow(crossfades)
 
-        override suspend fun reset() = Unit
+        override suspend fun reset(): Boolean = reset.invoke()
     }
+
+    /** The process's scope, as the app graph gives it: the test's thread, through [runBlocking]. */
+    private val appScope = CoroutineScope(SupervisorJob())
 
     private fun diagnostics(
         readChanges: (Int, Long?) -> TrackChangePage = history::changes,
@@ -67,6 +78,7 @@ class DiagnosticsTest {
         readChanges = readChanges,
         readCacheStats = readCacheStats,
         io = EmptyCoroutineContext,
+        scope = appScope,
         version = "1.2.3",
         skipLearning = learning,
         clock = fixedClock,
@@ -87,9 +99,12 @@ class DiagnosticsTest {
             learnedCrossfade = null,
         )
 
-    private fun exported(diagnostics: Diagnostics): String {
+    private fun exported(
+        diagnostics: Diagnostics,
+        expected: ExportResult = ExportResult.WRITTEN,
+    ): String {
         val out = ByteArrayOutputStream()
-        assertTrue(runBlocking { diagnostics.export { out } })
+        assertEquals(expected, runBlocking { diagnostics.write { out } })
         return out.toString(Charsets.UTF_8)
     }
 
@@ -167,7 +182,7 @@ class DiagnosticsTest {
                 readCacheStats = { throw SQLException("disk I/O error") },
             )
 
-        val text = exported(diagnostics)
+        val text = exported(diagnostics, ExportResult.INCOMPLETE)
 
         assertTrue(text, DiagnosticsText.NOT_LEARNING in text)
         assertTrue(text, "The caches could not be read." in text)
@@ -175,14 +190,79 @@ class DiagnosticsTest {
     }
 
     @Test
+    fun aHistoryPageThatFailsMidwayKeepsWhatWasWrittenAndIsIncomplete() {
+        (1..Diagnostics.PAGE_SIZE + 1).forEach { history.changed(change(it)) }
+        val diagnostics =
+            diagnostics(
+                readChanges = { limit, before ->
+                    if (before == null) history.changes(limit, before) else throw SQLException("disk I/O error")
+                },
+            )
+
+        val text = exported(diagnostics, ExportResult.INCOMPLETE)
+
+        assertEquals(Diagnostics.PAGE_SIZE, text.lines().count { it.startsWith("2026-10-17T08:") })
+        assertTrue(text, text.trimEnd().endsWith("The history could not be read."))
+    }
+
+    @Test
+    fun cachesThatCannotBeReadMakeTheExportIncomplete() {
+        exported(diagnostics(readCacheStats = { throw SQLException("disk I/O error") }), ExportResult.INCOMPLETE)
+    }
+
+    @Test
+    @Suppress("ThrowsCount") // Each a provider's failure.
     fun anExportThatCannotBeWrittenIsReportedNotThrown() {
         val failing =
             object : OutputStream() {
                 override fun write(b: Int): Unit = throw IOException("No space left on device")
             }
+        val failed = { open: () -> OutputStream? -> runBlocking { diagnostics().write(open) } }
 
-        assertFalse(runBlocking { diagnostics().export { failing } })
-        assertFalse(runBlocking { diagnostics().export { null } })
-        assertFalse(runBlocking { diagnostics().export { throw SecurityException("Permission withdrawn") } })
+        assertEquals(ExportResult.FAILED, failed { failing })
+        assertEquals(ExportResult.FAILED, failed { null })
+        assertEquals(ExportResult.FAILED, failed { throw SecurityException("Permission withdrawn") })
+        // A provider that does not take the mode asked for.
+        assertEquals(ExportResult.FAILED, failed { throw IllegalArgumentException("Bad mode: wt") })
+        assertEquals(ExportResult.FAILED, failed { throw UnsupportedOperationException("Read-only") })
+    }
+
+    @Test
+    fun anExportStartedRunsInTheProcessScopeAndSaysHowItEnded() {
+        val diagnostics = diagnostics()
+        val out = ByteArrayOutputStream()
+        assertEquals(ExportState.None, diagnostics.exportState.value)
+
+        runBlocking {
+            val scope = CoroutineScope(coroutineContext + SupervisorJob())
+            val running =
+                Diagnostics(
+                    log = DiagnosticsLog(clock = fixedClock),
+                    readChanges = history::changes,
+                    readCacheStats = { stats },
+                    io = EmptyCoroutineContext,
+                    scope = scope,
+                    version = "1.2.3",
+                )
+            running.export { out }
+            assertEquals(ExportState.Running, running.exportState.value)
+            // A second export is not started while one is under way.
+            running.export { error("not opened") }
+            running.exportState.first { it is ExportState.Ended }
+            assertEquals(ExportState.Ended(ExportResult.WRITTEN), running.exportState.value)
+            scope.coroutineContext[Job]?.cancel()
+        }
+        assertTrue(out.size() > 0)
+    }
+
+    @Test
+    fun aResetThatFailsIsReportedNotThrown() {
+        val reported = Learned(mapOf("p" to 1.seconds)) { false }
+        val thrown = Learned(mapOf("p" to 1.seconds)) { error("database is locked") }
+
+        assertTrue(runBlocking { diagnostics(learning = Learned(emptyMap())).resetLearning() })
+        assertFalse(runBlocking { diagnostics(learning = reported).resetLearning() })
+        assertFalse(runBlocking { diagnostics(learning = thrown).resetLearning() })
+        assertFalse(runBlocking { diagnostics().resetLearning() })
     }
 }

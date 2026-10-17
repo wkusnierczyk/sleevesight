@@ -169,7 +169,9 @@
     <!-- Diagnostics: the pipeline's log, the track changes and what skip detection has learned (design, Diagnostics). -->
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_export">Export</string>
+    <string name="diagnostics_exporting">Exporting…</string>
     <string name="diagnostics_exported">Exported.</string>
+    <string name="diagnostics_exported_incomplete">Exported, but part of it could not be read: the file says which.</string>
     <string name="diagnostics_export_failed">The diagnostics could not be exported. Try again.</string>
     <string name="diagnostics_tab_events">Events</string>
     <string name="diagnostics_tab_changes">Track changes</string>
@@ -186,6 +188,8 @@
     <string name="diagnostics_nothing_learned">Nothing learned yet.</string>
     <string name="diagnostics_reset">Reset</string>
     <string name="diagnostics_reset_title">Reset what skip detection has learned?</string>
+    <string name="diagnostics_reset_done">What skip detection had learned is forgotten.</string>
+    <string name="diagnostics_reset_failed">What skip detection has learned could not be reset. Try again.</string>
     <string name="diagnostics_reset_explained">Skip detection goes back to its fixed rules until it learns again from the next track changes. The track changes recorded are kept.</string>
 
     <plurals name="settings_days">

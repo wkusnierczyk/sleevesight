@@ -9,12 +9,17 @@ import kotlin.time.Duration
  * learned from natural ends (D5); the learned model per player comes later.
  *
  * Skip detection supplies it (#53); until it does, the screen is given none and says that nothing
- * is learned. The learning keeps its own state: the screen only shows it and asks for the reset.
+ * is learned. The learning keeps its own state: the screen only shows it and asks for the reset,
+ * and says whether the reset was made, as *Clear history* does.
  */
 interface SkipLearning {
     /** The crossfade learned per player, by package name; a player with none learned is absent. */
     val learnedCrossfades: StateFlow<Map<String, Duration>>
 
-    /** Forgets everything learned, so detection falls back to its fixed rules until it learns again. */
-    suspend fun reset()
+    /**
+     * Forgets everything learned, so detection falls back to its fixed rules until it learns again.
+     * Returns whether it did; a failure (the database cannot be written, say) is reported as false
+     * and logged by its type, not thrown. The screen also catches what is thrown, as a failure.
+     */
+    suspend fun reset(): Boolean
 }

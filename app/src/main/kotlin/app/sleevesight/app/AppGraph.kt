@@ -186,6 +186,8 @@ class AppGraph(
             readChanges = history::changes,
             readCacheStats = { caches.stats() },
             io = Dispatchers.IO,
+            // An export outlives the screen that started it.
+            scope = mainScope,
             version = BuildConfig.VERSION_NAME,
         )
 

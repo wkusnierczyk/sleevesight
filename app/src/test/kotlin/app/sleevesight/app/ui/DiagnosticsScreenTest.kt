@@ -25,10 +25,14 @@ import app.sleevesight.store.CacheStats
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TableStats
+import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -38,6 +42,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.CountDownLatch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -56,19 +62,28 @@ class DiagnosticsScreenTest {
     private val start = Instant.parse("2026-10-17T08:00:00Z")
 
     @After
-    fun close() = jdbc.close()
+    fun close() {
+        appScope.cancel()
+        jdbc.close()
+    }
 
     private class Learning(
         crossfades: Map<String, Duration>,
+        private val fails: Boolean = false,
     ) : SkipLearning {
         override val learnedCrossfades = MutableStateFlow(crossfades)
         var resets = 0
 
-        override suspend fun reset() {
+        override suspend fun reset(): Boolean {
             resets++
+            check(!fails) { "database is locked" }
             learnedCrossfades.value = emptyMap()
+            return true
         }
     }
+
+    /** The process's scope, as the app graph gives it. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private fun text(id: Int) = app.getString(id)
 
@@ -79,6 +94,7 @@ class DiagnosticsScreenTest {
             readCacheStats = { CacheStats(TableStats(3, 300), TableStats(2, 20), TableStats(1, 1_000)) },
             // The JDBC driver's in-memory database is for one thread.
             io = Dispatchers.Main,
+            scope = appScope,
             version = "test",
             skipLearning = learning,
         )
@@ -188,6 +204,53 @@ class DiagnosticsScreenTest {
 
             waitForText(text(R.string.diagnostics_nothing_learned))
             assertEquals(1, learning.resets)
+        }
+    }
+
+    @Test
+    fun aResetThatFailsSaysSo() {
+        val learning = Learning(mapOf("com.spotify.music" to 2_000.milliseconds), fails = true)
+
+        show(diagnostics(learning)) {
+            compose.onNodeWithText(text(R.string.diagnostics_tab_learned)).performClick()
+            compose.onNodeWithText(text(R.string.diagnostics_reset)).performClick()
+            compose.onNode(hasText(text(R.string.diagnostics_reset)) and hasAnyAncestor(isDialog())).performClick()
+
+            waitForText(text(R.string.diagnostics_reset_failed))
+            assertEquals(1, learning.resets)
+        }
+    }
+
+    @Test
+    fun anExportGoesOnThroughTheScreenRecreatedAndItsResultIsShownThere() {
+        val gate = CountDownLatch(1)
+        val diagnostics =
+            Diagnostics(
+                log = DiagnosticsLog(),
+                // Held until the screen has been recreated.
+                readChanges = { _, _ ->
+                    gate.await()
+                    TrackChangePage(listOf(change(1)), next = null)
+                },
+                readCacheStats = { CacheStats(TableStats(0, 0), TableStats(0, 0), TableStats(0, 0)) },
+                io = Dispatchers.IO,
+                scope = appScope,
+                version = "test",
+            )
+        val out = ByteArrayOutputStream()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics) } }
+            // As the file picker's result would start it.
+            scenario.onActivity { diagnostics.export { out } }
+            waitForText(text(R.string.diagnostics_exporting))
+
+            scenario.recreate()
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics) } }
+            waitForText(text(R.string.diagnostics_exporting))
+            gate.countDown()
+
+            waitForText(text(R.string.diagnostics_exported))
+            assertTrue(out.toString(Charsets.UTF_8).contains("\"Song 1\" -> \"Song 2\""))
         }
     }
 }

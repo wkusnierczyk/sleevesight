@@ -42,8 +42,9 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsText
+import app.sleevesight.app.diagnostics.ExportResult
+import app.sleevesight.app.diagnostics.ExportState
 import app.sleevesight.app.diagnostics.LoggedEvent
-import app.sleevesight.app.diagnostics.SkipLearning
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.store.CacheStats
 import kotlinx.coroutines.NonCancellable
@@ -68,16 +69,13 @@ fun DiagnosticsScreen(diagnostics: Diagnostics) {
     var tab by rememberSaveable { mutableStateOf(DiagnosticsTab.EVENTS) }
     val scope = rememberCoroutineScope()
     val changes = remember(diagnostics) { ChangePages(diagnostics, scope) }
-    var exported by remember { mutableStateOf<Boolean?>(null) }
-    val context = LocalContext.current
+    val exportState by diagnostics.exportState.collectAsState()
+    // The application's resolver: the export outlives this screen, and must not hold the activity.
+    val resolver = LocalContext.current.applicationContext.contentResolver
     val export =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(EXPORT_TYPE)) { uri ->
-            if (uri != null) {
-                scope.launch {
-                    // `wt`: a provider may otherwise leave the end of a longer file it replaces.
-                    exported = diagnostics.export { context.contentResolver.openOutputStream(uri, "wt") }
-                }
-            }
+            // `wt`: a provider may otherwise leave the end of a longer file it replaces.
+            if (uri != null) diagnostics.export { resolver.openOutputStream(uri, "wt") }
         }
     LaunchedEffect(changes) { changes.loadMore() }
 
@@ -92,14 +90,14 @@ fun DiagnosticsScreen(diagnostics: Diagnostics) {
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = {
-                    exported = null
-                    export.launch(exportName(Clock.System.now()))
-                }) {
+                TextButton(
+                    onClick = { export.launch(exportName(Clock.System.now())) },
+                    enabled = exportState != ExportState.Running,
+                ) {
                     Text(stringResource(R.string.diagnostics_export))
                 }
             }
-            exported?.let { ExportNotice(it) }
+            ExportNotice(exportState)
             PrimaryTabRow(selectedTabIndex = tab.ordinal, modifier = Modifier.padding(top = 8.dp)) {
                 for (shown in DiagnosticsTab.entries) {
                     Tab(
@@ -112,7 +110,7 @@ fun DiagnosticsScreen(diagnostics: Diagnostics) {
             when (tab) {
                 DiagnosticsTab.EVENTS -> EventsTab(diagnostics)
                 DiagnosticsTab.CHANGES -> ChangesTab(changes)
-                DiagnosticsTab.LEARNED -> LearnedTab(diagnostics.skipLearning)
+                DiagnosticsTab.LEARNED -> LearnedTab(diagnostics)
             }
         }
     }
@@ -126,12 +124,24 @@ private enum class DiagnosticsTab(
     LEARNED(R.string.diagnostics_tab_learned),
 }
 
+/** The export under way, or how the last one since the process started ended. */
 @Composable
-private fun ExportNotice(done: Boolean) {
+private fun ExportNotice(state: ExportState) {
+    val (message, failure) =
+        when (state) {
+            ExportState.None -> return
+            ExportState.Running -> R.string.diagnostics_exporting to false
+            is ExportState.Ended ->
+                when (state.result) {
+                    ExportResult.WRITTEN -> R.string.diagnostics_exported to false
+                    ExportResult.INCOMPLETE -> R.string.diagnostics_exported_incomplete to true
+                    ExportResult.FAILED -> R.string.diagnostics_export_failed to true
+                }
+        }
     Text(
-        stringResource(if (done) R.string.diagnostics_exported else R.string.diagnostics_export_failed),
+        stringResource(message),
         style = MaterialTheme.typography.bodyMedium,
-        color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+        color = if (failure) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(horizontal = 24.dp).semantics { liveRegion = LiveRegionMode.Polite },
     )
 }
@@ -200,7 +210,8 @@ private fun EventRow(logged: LoggedEvent) {
 
 /** What skip detection has learned, per player, and its reset. */
 @Composable
-private fun LearnedTab(learning: SkipLearning?) {
+private fun LearnedTab(diagnostics: Diagnostics) {
+    val learning = diagnostics.skipLearning
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -217,16 +228,26 @@ private fun LearnedTab(learning: SkipLearning?) {
             learned.toSortedMap().forEach { (player, crossfade) -> Mono(DiagnosticsText.learned(player, crossfade)) }
         }
         var confirm by remember { mutableStateOf(false) }
+        // How the last reset ended, kept through a rotation; null for none.
+        var resetDone by rememberSaveable { mutableStateOf<Boolean?>(null) }
         val scope = rememberCoroutineScope()
         OutlinedButton(onClick = { confirm = true }, enabled = learned.isNotEmpty()) {
             Text(stringResource(R.string.diagnostics_reset))
+        }
+        resetDone?.let { done ->
+            Text(
+                stringResource(if (done) R.string.diagnostics_reset_done else R.string.diagnostics_reset_failed),
+                color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
         }
         if (confirm) {
             ResetDialog(
                 onReset = {
                     confirm = false
+                    resetDone = null
                     // Not cut short by leaving the screen.
-                    scope.launch { withContext(NonCancellable) { learning.reset() } }
+                    scope.launch { resetDone = withContext(NonCancellable) { diagnostics.resetLearning() } }
                 },
                 onDismiss = { confirm = false },
             )
