@@ -1,3 +1,6 @@
-# GitHub Pages (Jekyll, the default theme) builds the site from `main`: the README and the
-# `design/` documents. The title replaces the repository's name in the page titles and headers.
+# GitHub Pages (Jekyll, the default theme) builds the site from `main`: the landing page
+# (`index.html`, standalone, no theme), the README (at `/README.html`, since `index.html` takes `/`)
+# and the `design/` documents. The title replaces the repository's name in the page titles and
+# headers; the description replaces the repository's description in them and in the `og:` tags.
 title: Sleevesight
+description: Liner notes for whatever you're playing. An open-source Android app with short, sourced insights about each song.

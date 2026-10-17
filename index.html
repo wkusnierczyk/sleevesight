@@ -1,0 +1,268 @@
+---
+layout: null
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleevesight: liner notes for whatever you’re playing</title>
+<meta name="description" content="An open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song you are playing, with its genre labels.">
+<link rel="canonical" href="https://sleevesight.app/">
+<link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sleevesight">
+<meta property="og:title" content="Sleevesight: liner notes for whatever you’re playing">
+<meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key. Nothing collected.">
+<meta property="og:url" content="https://sleevesight.app/">
+<meta name="twitter:card" content="summary">
+<!-- The landing page: no theme, no scripts, no web fonts, no analytics. The palette is the
+     simulator's (`design/simulator.html`), so the page and the app share one look. -->
+<style>
+:root{
+  --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
+  --accent:#3346c9; --accent-soft:#e2e6fb; --on-accent:#ffffff;
+  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
+  --f-ui:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --h:28;
+  --s-c1:hsl(var(--h) 28% 95%); --s-c2:hsl(var(--h) 24% 91%); --s-c3:hsl(var(--h) 22% 87%);
+  --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
+  --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
+  --cite-ink:#ffffff;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d1015; --surface:#151920; --sunken:#10141a; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
+  --accent:#8e9cff; --accent-soft:#232a4d; --on-accent:#0e1116;
+  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6; --ok:#5fc48a;
+  --s-c1:hsl(var(--h) 14% 12%); --s-c2:hsl(var(--h) 14% 16%); --s-c3:hsl(var(--h) 13% 21%);
+  --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%); --s-onv:hsl(var(--h) 10% 70%);
+  --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
+  --cite-ink:#0e1116;
+  color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:17px;line-height:1.55}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:1}
+.skip:focus{top:12px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-stretch:88%;font-size:20px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
+.brand svg{width:36px;height:36px;flex:none}
+.brand .eye{fill:none;stroke:#1f2328}
+@media (prefers-color-scheme: dark){.brand .eye{fill:#fff;stroke:#8b949e}}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 18px;font-size:15px}
+nav.top a{color:var(--muted);text-decoration:none}
+nav.top a:hover{color:var(--ink);text-decoration:underline}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center;padding:32px 0 56px}
+.hero h1{margin:0 0 16px;font-size:clamp(36px,6vw,58px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em;text-wrap:balance}
+.lede{font-size:19px;color:var(--ink);margin:0 0 14px;max-width:34em}
+.status{display:inline-block;font-size:14px;color:var(--muted);background:var(--sunken);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:0 0 24px}
+.ctas{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;font-size:16px;font-weight:550;text-decoration:none}
+.btn.filled{background:var(--accent);color:var(--on-accent)}
+.btn.tonal{background:var(--accent-soft);color:var(--ink)}
+
+/* The mock: one card as the home screen is designed (design.md, User interface). */
+figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
+.phone{background:var(--s-bg);color:var(--s-on);border:10px solid #101318;border-radius:40px;padding:18px 14px 20px;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
+.prow{display:flex;align-items:center;gap:10px;background:var(--s-c1);border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.25}
+.prow b{font-weight:600}
+.prow span{color:var(--s-onv)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--s-pri);flex:none}
+.cover{margin-top:12px;border-radius:16px;overflow:hidden;aspect-ratio:1}
+.cover svg{display:block;width:100%;height:100%}
+.np-title{margin:12px 0 0;font-size:24px;line-height:1.1;font-weight:650;font-stretch:90%}
+.np-meta{font-size:14px;color:var(--s-onv);margin:2px 0 0;line-height:1.35}
+.np-meta strong{color:var(--s-on);font-weight:500;font-size:15px}
+.genres{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.genres li{border-radius:8px;padding:4px 10px;font-size:12.5px;font-weight:550;background:hsl(var(--gh) 72% 90%);color:hsl(var(--gh) 62% 22%)}
+@media (prefers-color-scheme: dark){.genres li{background:hsl(var(--gh) 34% 25%);color:hsl(var(--gh) 75% 86%)}}
+.card{margin-top:12px;background:var(--s-c1);border-radius:16px;padding:12px 14px}
+.card h2{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.card p{margin:0;font-size:14px;line-height:1.5}
+.cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
+.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)}
+.check{margin-top:8px;font-size:11.5px;color:var(--ok)}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+
+section{padding:48px 0;border-top:1px solid var(--line)}
+section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;counter-reset:step}
+.steps li,.tiles li{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px}
+.steps li{counter-increment:step}
+.steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700;margin-bottom:10px}
+.steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
+.steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
+.after{margin:20px 0 0;color:var(--muted)}
+.planned{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 0 12px}
+.intro{margin:0 0 20px;max-width:44em}
+.boxes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.boxes li{background:var(--s-c1);color:var(--s-on);border-radius:20px;padding:18px}
+.boxes h3{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.boxes .what{margin:0 0 8px;font-size:19px;font-weight:650;font-stretch:92%}
+.boxes p{margin:0;font-size:15px;line-height:1.55}
+.legend{margin:14px 0 0;font-size:14px;color:var(--muted)}
+.legend .cite{margin:0 4px 0 0}
+.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
+.two ul{margin:0;padding-left:1.2em}
+.two li{margin-bottom:8px}
+.none{font-size:19px;font-weight:600;margin:0 0 12px}
+.small{font-size:15px;color:var(--muted)}
+.links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 32px}
+.links span{display:block;font-size:15px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:14px;color:var(--muted)}
+footer p{margin:0 0 4px}
+
+@media (max-width:880px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles,.boxes{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  header.top{flex-direction:column;align-items:flex-start}
+  .steps,.two,.links{grid-template-columns:minmax(0,1fr)}
+  section{padding:36px 0}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+<header class="top">
+  <a class="brand" href="./" aria-label="Sleevesight, home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><path class="eye" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/><circle cx="16" cy="16" r="7.5" fill="#1f2328"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><circle cx="16" cy="16" r=".9" fill="#fff"/></svg>
+    Sleevesight
+  </a>
+  <nav class="top" aria-label="Site">
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#get">Get it</a></li>
+      <li><a href="https://github.com/wkusnierczyk/sleevesight">GitHub</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="main">
+<div class="hero">
+  <div>
+    <h1>Liner notes for whatever you’re playing.</h1>
+    <p class="lede">Sleevesight is an open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song, with its genre labels. Every fact links to where it came from.</p>
+    <p class="status">In development: not yet on Google Play</p>
+    <div class="ctas">
+      <a class="btn filled" href="design/simulator.html">Try the simulator</a>
+      <a class="btn tonal" href="https://github.com/wkusnierczyk/sleevesight">Source on GitHub</a>
+    </div>
+  </div>
+
+  <!-- Until the app's home screen can be captured (#52), a mock in the simulator's style.
+       The facts are from the test playlist's frozen Wikipedia lookups. -->
+  <figure class="mock">
+    <div class="phone" role="img" aria-labelledby="mock-desc">
+      <div class="prow" aria-hidden="true"><span class="dot"></span><div><b>Spotify</b> <span>· Playing</span></div></div>
+      <div class="cover" aria-hidden="true">
+        <svg viewBox="0 0 100 100"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3b46a"/><stop offset=".55" stop-color="#d9673a"/><stop offset="1" stop-color="#5b2a3a"/></linearGradient></defs><rect width="100" height="100" fill="url(#sky)"/><circle cx="50" cy="62" r="20" fill="#ffd89a" opacity=".9"/><path d="M0 70 Q25 62 50 70 T100 68 V100 H0Z" fill="#3a1f2c"/><path d="M0 80 Q30 74 60 82 T100 80 V100 H0Z" fill="#24131d"/></svg>
+      </div>
+      <div aria-hidden="true">
+        <p class="np-title">Sundown</p>
+        <p class="np-meta"><strong>Gordon Lightfoot</strong><br>Sundown<br>Released 1974</p>
+        <ul class="genres"><li style="--gh:135">Folk</li><li style="--gh:135">Singer-songwriter</li></ul>
+        <div class="card">
+          <h2>Why it's interesting</h2>
+          <p>It was Lightfoot's only number one on the US Hot 100, and it also topped the Canadian chart.<span class="cite W">W3</span> He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home.<span class="cite W">W5</span></p>
+          <p class="check">✓ Every sentence cited</p>
+        </div>
+      </div>
+    </div>
+    <p id="mock-desc" hidden>A phone showing Sleevesight while Spotify plays Sundown by Gordon Lightfoot: the cover, the title, artist, album and year, the genre labels Folk and Singer-songwriter, and a short insight whose two sentences each carry a citation to Wikipedia.</p>
+    <figcaption>Mock home screen design</figcaption>
+  </figure>
+</div>
+
+<section id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How it works</h2>
+  <ol class="steps">
+    <li><h3>Read</h3><p>Android tells the app what your player is playing: title, artists, album and cover. Sleevesight never touches the audio.</p></li>
+    <li><h3>Look up</h3><p>The track is cleaned of tags like “2006 Remaster” and matched in the sources you switched on. Matches that fail an identity check are shown as rejected, not used quietly.</p></li>
+    <li><h3>Write</h3><p>The AI service you chose turns what was found into a few sentences, citing the evidence. It may not add facts of its own unless you allow it, and then they are marked.</p></li>
+    <li><h3>Check</h3><p>Before anything is shown, the citations are checked in code. Uncited sentences are flagged, and the evidence is listed underneath.</p></li>
+  </ol>
+  <p class="after">When little is documented about a track, Sleevesight says so instead of filling the gap.</p>
+</section>
+
+<section id="next" aria-labelledby="next-h">
+  <p class="planned">Planned</p>
+  <h2 id="next-h">Coming next: the song, the artist, the album</h2>
+  <p class="intro">A later version gives the song, each artist and the album an insight of their own, written and checked the same way.</p>
+  <ul class="boxes">
+    <li><h3>Song</h3><p class="what">Sundown</p><p>Written by Lightfoot and produced by Lenny Waronker, it was recorded in November 1973 at Eastern Sound in Toronto, with Red Shea on electric lead guitar.<span class="cite W">W1</span><span class="cite W">W2</span> It was certified Gold by the RIAA.<span class="cite W">W4</span></p></li>
+    <li><h3>Artist</h3><p class="what">Gordon Lightfoot</p><p>A Canadian singer-songwriter, born in Orillia, Ontario, in 1938, who died in 2023.<span class="cite L">L1</span> His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers and loneliness.<span class="cite L">L3</span></p></li>
+    <li><h3>Album</h3><p class="what">Sundown, 1974</p><p>His ninth studio album, released in January 1974, with the title track as its lead single.<span class="cite G">G1</span> It reached number one in the US and in Canada, where it stayed at the top for five weeks.<span class="cite G">G2</span></p></li>
+  </ul>
+  <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search</p>
+</section>
+
+<section id="choose" aria-labelledby="choose-h">
+  <h2 id="choose-h">You choose</h2>
+  <ul class="tiles">
+    <li><h3>Your sources</h3><p>MusicBrainz, Wikipedia, Last.fm and web search, each a switch. The model's own knowledge is a separate switch, off by default.</p></li>
+    <li><h3>Your AI service and key</h3><p>You bring your own API key and pick the model. Anthropic comes first; more providers, and local models, are planned.</p></li>
+    <li><h3>When it writes</h3><p>Each insight is a call on your key. Have one written for every track, only when you skip, or only when you tap Write.</p></li>
+  </ul>
+</section>
+
+<section id="privacy" aria-labelledby="privacy-h">
+  <h2 id="privacy-h">Privacy</h2>
+  <div class="two">
+    <div>
+      <p class="none">Sleevesight collects nothing.</p>
+      <p>No accounts of our own, no telemetry, no analytics, no ads. Your API keys are stored encrypted on the phone and never logged.</p>
+      <p class="small">The full privacy policy will be published here before the Google Play release.</p>
+    </div>
+    <div>
+      <p><strong>What leaves the phone, and to whom</strong></p>
+      <ul>
+        <li>To the sources you switched on: the track's title, artists and album, for the playing track and, by default, the next one in the queue.</li>
+        <li>To the AI service you chose: the same names and what the sources found. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
+        <li>When a player gives the cover only as a web address: a request for that image to the server it names.</li>
+      </ul>
+      <p class="small">Nothing else leaves the phone. Your listening history stays on it. The app's first screen says all this before it starts.</p>
+    </div>
+  </div>
+</section>
+
+<section id="get" aria-labelledby="get-h">
+  <h2 id="get-h">Get it</h2>
+  <!-- The Google Play badge goes here once the app is listed (Phase 1.5). -->
+  <p>Sleevesight is for Android only: iOS does not let one app read what another is playing. It is in development and will be released through Google Play. Until then, the source code is on <a href="https://github.com/wkusnierczyk/sleevesight">GitHub</a> under the GPL-3.0, with instructions for building it.</p>
+</section>
+
+<section id="more" aria-labelledby="more-h">
+  <h2 id="more-h">More</h2>
+  <ul class="links">
+    <li><a href="design/simulator.html">Simulator</a><span>The whole flow over a real 80-track playlist, with frozen lookups</span></li>
+    <li><a href="README.html">README</a><span>What it does, the settings, building it</span></li>
+    <li><a href="design/design.html">Design</a><span>The decisions and the reasoning behind them</span></li>
+    <li><a href="design/architecture.html">Architecture</a><span>Modules, the pipeline, privacy and security</span></li>
+    <li><a href="design/plan.html">Plan</a><span>The work to the first release</span></li>
+    <li><a href="mailto:support@sleevesight.app">support@sleevesight.app</a><span>Questions and support</span></li>
+  </ul>
+</section>
+</main>
+
+<footer>
+  <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
+  <p>This site sets no cookies and loads nothing from anywhere else.</p>
+</footer>
+</div>
+</body>
+</html>
