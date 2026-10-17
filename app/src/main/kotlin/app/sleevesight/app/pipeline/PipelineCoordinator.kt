@@ -23,6 +23,16 @@ value class RunId(
     val value: Long,
 )
 
+/**
+ * One model call: the [number]-th (from 1) of run [run], counted as the coordinator grants them (a
+ * tap's grant, or the decision to write). A Stop names the call it was shown for, so it never
+ * reaches a later one.
+ */
+data class CallId(
+    val run: RunId,
+    val number: Int,
+)
+
 /** What happens, as [PipelineCoordinator] hears it: one at a time, from one queue. */
 sealed interface CoordinatorEvent {
     /** The first run was acknowledged: nothing is read, built or sent before. */
@@ -91,12 +101,12 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * The user tapped Stop shown for the run under [key] while its model call was under way
-     * ([CoordinatorState.stopKey]): a tap for any other run, or once the call has ended, does
-     * nothing.
+     * The user tapped Stop shown for model call [call] while it was under way
+     * ([CoordinatorState.stopCall]): a tap for any other call (another run's, or an earlier one of
+     * this run), or once the call has ended, does nothing.
      */
     data class StopTapped(
-        val key: RunKey,
+        val call: CallId,
     ) : CoordinatorEvent
 
     /**
@@ -180,9 +190,9 @@ sealed interface CoordinatorEffect {
         val write: Boolean,
     ) : CoordinatorEffect
 
-    /** Stop [run]'s model call under way: it ends as stopped, and reports its end as any call does. */
+    /** Stop model call [call], under way: it ends as stopped, and reports its end as any call does. */
     data class StopCall(
-        val run: RunId,
+        val call: CallId,
     ) : CoordinatorEffect
 
     /**
@@ -255,7 +265,8 @@ data class CoordinatorState(
      * The run in progress, of [nowPlaying] under [key]. [asked]: the steps it waits for;
      * [insight]: its question whether to write, while undecided, with the causes its settings
      * write on ([CoordinatorEvent.InsightAsked]);
-     * [offered] while it offers Write; [calling] while its model call is under way. Requests and
+     * [offered] while it offers Write; [calling] while its model call is under way, the [calls]-th
+     * it was granted. Requests and
      * questions are remembered while the run is not current, and granted if it becomes current
      * again. [orphaned] once a report of another insight track has settled while it ran: it then
      * holds no report and is never current again, and its reports to the ledger are ignored, so
@@ -270,6 +281,7 @@ data class CoordinatorState(
         val insight: Set<ChangeCause>? = null,
         val offered: Boolean = false,
         val calling: Boolean = false,
+        val calls: Int = 0,
         val orphaned: Boolean = false,
     )
 
@@ -305,10 +317,10 @@ data class CoordinatorState(
     val writeKey: RunKey? get() = current?.takeIf { it.offered && !it.calling }?.key
 
     /**
-     * The key of the run Stop is offered for: the run in progress, while its model call is under
-     * way, current or not (a rebuild waits for the call, and Stop may still end it).
+     * The call Stop is offered for: the model call under way of the run in progress, current or
+     * not (a rebuild waits for the call, and Stop may still end it).
      */
-    val stopKey: RunKey? get() = run?.takeIf { it.calling }?.key
+    val stopCall: CallId? get() = run?.takeIf { it.calling }?.let { CallId(it.id, it.calls) }
 
     /**
      * Whether the Write offered is a rewrite: the current run is of the ledger's written track, so
@@ -373,10 +385,10 @@ fun sameInsightTrack(
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; then as for StepEnded(MODEL_CALL) | as above |
  * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
- * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
+ * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
- * | the run, its model call under way, of the tap's key | StopTapped(key) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall |
- * | otherwise (no call under way, or another run's key) | StopTapped(key) | unchanged | none |
+ * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
+ * | otherwise (no call under way, another run's call, or an earlier call of the run) | StopTapped(call) | unchanged | none |
  * | the run (current or not) | RetryAsked (its call failed or was stopped) | Write offered again: a tap grants a new call, never the grants on their own; the ledger unchanged | none |
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
@@ -415,7 +427,7 @@ class PipelineCoordinator(
             CoordinatorEvent.RebuildRequested -> rebuild()
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
-            is CoordinatorEvent.StopTapped -> stopTapped(event.key)
+            is CoordinatorEvent.StopTapped -> stopTapped(event.call)
             else -> fromRun(event)
         }
     }
@@ -535,7 +547,7 @@ class PipelineCoordinator(
         val run = state.current ?: return
         state =
             state.copy(
-                run = run.copy(offered = false, calling = true),
+                run = run.copy(offered = false, calling = true, calls = run.calls + 1),
                 ledger = entry(run, written = true),
                 acted = true,
             )
@@ -543,11 +555,11 @@ class PipelineCoordinator(
         effects += CoordinatorEffect.Acted
     }
 
-    // Only the run whose call is under way, of the key Stop was shown for. Stopping spends
-    // nothing, so it needs neither currency nor requests allowed, and it is no action (D5, D15).
-    private fun stopTapped(key: RunKey) {
-        val run = state.run?.takeIf { it.key == key && it.calling } ?: return
-        effects += CoordinatorEffect.StopCall(run.id)
+    // Only the call Stop was shown for, while it is under way. Stopping spends nothing, so it
+    // needs neither currency nor requests allowed, and it is no action (D5, D15).
+    private fun stopTapped(call: CallId) {
+        if (state.stopCall != call) return
+        effects += CoordinatorEffect.StopCall(call)
     }
 
     private fun callEnded(id: RunId) {
@@ -625,7 +637,8 @@ class PipelineCoordinator(
             val write = cause != null && cause in writesOn && state.acted && !written && !decided
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
-            next = next.copy(insight = null, offered = !write, calling = write)
+            next =
+                next.copy(insight = null, offered = !write, calling = write, calls = next.calls + if (write) 1 else 0)
             state = state.copy(ledger = entry(run, write))
             effects += CoordinatorEffect.Decide(run.id, write)
         }

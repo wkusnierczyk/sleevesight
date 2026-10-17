@@ -453,10 +453,10 @@ class PipelineCoordinatorTest {
                 streamMs = 10_000
                 play("A")
                 settle()
-                assertEquals(key("A"), coordinator.state.stopKey)
+                assertEquals(CallId(checkNotNull(coordinator.state.run).id, 1), coordinator.state.stopCall)
                 stopTap()
                 assertEquals(listOf("A"), stopped)
-                assertEquals(null, coordinator.state.stopKey)
+                assertEquals(null, coordinator.state.stopCall)
                 assertEquals(true, coordinator.state.ledger?.written)
                 assertEquals(null, cardText())
                 assertTrue(offersWriteFor("A"))
@@ -477,7 +477,7 @@ class PipelineCoordinatorTest {
                 advance(2_000)
                 keyChange()
                 assertEquals(null, coordinator.state.current)
-                assertEquals(key("A"), coordinator.state.stopKey)
+                assertEquals(CallId(checkNotNull(coordinator.state.run).id, 1), coordinator.state.stopCall)
                 stopTap()
                 settle()
                 assertEquals(listOf("A"), stopped)
@@ -496,24 +496,48 @@ class PipelineCoordinatorTest {
                 assertEquals("A #2", cardText())
             },
             Case(
-                "Stop for another key, or with no call under way, does nothing",
+                "Stop for another run's call, or with no call under way, does nothing",
                 mapOf("A" to 1),
                 listOf("A"),
             ) {
                 streamMs = 10_000
                 play("A")
                 settle()
-                assertEquals(null, coordinator.state.stopKey)
-                stopTap(key("A"))
+                assertEquals(null, coordinator.state.stopCall)
+                val run = checkNotNull(coordinator.state.run).id
+                stopTap(CallId(run, 1))
                 tap()
                 advance(2_000)
-                stopTap(key("B"))
-                stopTap(key("A", seconds = 200))
+                stopTap(CallId(RunId(run.value + 1), 1))
+                stopTap(CallId(run, 2))
                 advance(30_000)
                 assertEquals(emptyList<String>(), stopped)
                 assertEquals("A #1", cardText())
-                stopTap(key("A"))
+                stopTap(CallId(run, 1))
                 assertEquals("A #1", cardText())
+            },
+            Case(
+                "a Stop shown for an earlier call, delivered after the next call started, stops nothing",
+                mapOf("A" to 2),
+                listOf("A"),
+            ) {
+                streamMs = 10_000
+                failing = true
+                play("A")
+                settle()
+                tap()
+                val first = checkNotNull(coordinator.state.stopCall)
+                advance(30_000)
+                assertTrue(offersWriteFor("A"))
+                failing = false
+                tap()
+                advance(2_000)
+                assertEquals(first.copy(number = 2), coordinator.state.stopCall)
+                // The screen's Stop for the first call, late: the second goes on to its card.
+                stopTap(first)
+                advance(30_000)
+                assertEquals(emptyList<String>(), stopped)
+                assertEquals("A #2", cardText())
             },
         )
 
@@ -546,6 +570,29 @@ class PipelineCoordinatorTest {
         // A card reported by the run before the rebuild: ignored.
         world.send(CoordinatorEvent.CardWritten(first, world.card("A, from an old run")))
         assertEquals("A #1", world.cardText())
+    }
+
+    @Test
+    fun anOldRunsRetryAskedChangesNothing() {
+        val world = started()
+        world.play("A")
+        world.settle()
+        world.tap()
+        world.settle()
+        val old = checkNotNull(world.coordinator.state.run).id
+
+        // A rebuild swaps in a new run, which waits for its lookups; the old run's question
+        // whether to call again, queued before it was cancelled, comes after the swap.
+        world.lookupMs = 10_000
+        world.keyChange()
+        val before = world.coordinator.state
+        assertTrue(checkNotNull(before.run).id != old)
+        val effects = world.coordinator.on(CoordinatorEvent.RetryAsked(old))
+
+        assertEquals(emptyList<CoordinatorEffect>(), effects)
+        assertEquals(before, world.coordinator.state)
+        assertEquals(null, world.coordinator.state.writeKey)
+        assertEquals(null, world.coordinator.state.stopCall)
     }
 
     @Test

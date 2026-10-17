@@ -122,7 +122,10 @@ sealed interface PipelineEvent {
         val kind: AiErrorKind,
     ) : PipelineEvent
 
-    /** The user stopped the call before its reply ended (what was generated may still be billed). */
+    /**
+     * The user stopped the call before its reply ended (what was generated may still be billed).
+     * A Stop before the request went out gives no [ModelCall], only this.
+     */
     data class ModelStopped(
         override val key: String,
     ) : PipelineEvent

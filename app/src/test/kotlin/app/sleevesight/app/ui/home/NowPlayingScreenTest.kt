@@ -30,8 +30,10 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.RunId
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
 import app.sleevesight.app.ui.home.HomeFixtures.carefree
@@ -78,7 +80,7 @@ class NowPlayingScreenTest {
 
     private var writes = 0
     private var tapped: Pair<RunKey, NowPlaying>? = null
-    private val stops = mutableListOf<RunKey>()
+    private val stops = mutableListOf<CallId>()
     private val sundownKey = RunKey.of(normalizer, sundown)
 
     private fun show(
@@ -225,10 +227,11 @@ class NowPlayingScreenTest {
             assertEquals(0, compose.onAllNodesWithTag(STOP_TAG).fetchSemanticsNodes().size)
         }
         stops.clear()
-        show(state(PipelineView(writing, aiReady = true, stopKey = sundownKey))) {
+        val call = CallId(RunId(1), 1)
+        show(state(PipelineView(writing, aiReady = true, stopCall = call))) {
             compose.onNodeWithTag(STOP_TAG).performScrollTo().performClick()
-            // The tap carries the run whose call Stop was offered for.
-            assertEquals(listOf(sundownKey), stops)
+            // The tap carries the call Stop was offered for.
+            assertEquals(listOf(call), stops)
         }
     }
 

@@ -130,7 +130,7 @@ internal class World {
             is CoordinatorEffect.CancelRun -> cancel(effect.run)
             is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
             is CoordinatorEffect.Decide -> if (effect.write) granted(effect.run, RunStep.MODEL_CALL)
-            is CoordinatorEffect.StopCall -> stop(effect.run)
+            is CoordinatorEffect.StopCall -> stop(effect.call.run)
             CoordinatorEffect.Acted -> actions++
         }
     }
@@ -297,12 +297,12 @@ internal fun World.tap(key: RunKey) {
     advance(0)
 }
 
-/** A tap on Stop as the screen sends it: under the key Stop is offered for (when none is, any key). */
-internal fun World.stopTap() = stopTap(coordinator.state.stopKey ?: key("No run offers Stop"))
+/** A tap on Stop as the screen sends it: for the call Stop is offered for (when none is, a call of no run). */
+internal fun World.stopTap() = stopTap(coordinator.state.stopCall ?: CallId(RunId(0), 1))
 
-/** A tap on Stop carrying [key], as a screen that showed that run's call sends it. */
-internal fun World.stopTap(key: RunKey) {
-    send(CoordinatorEvent.StopTapped(key))
+/** A tap on Stop carrying [call], as a screen that showed that call sends it. */
+internal fun World.stopTap(call: CallId) {
+    send(CoordinatorEvent.StopTapped(call))
     advance(0)
 }
 

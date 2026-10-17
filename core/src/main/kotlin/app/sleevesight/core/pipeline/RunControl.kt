@@ -57,7 +57,8 @@ interface RunControl {
 
     /**
      * Returns when the user stops the model call under way: the call is cut off, nothing is kept,
-     * and the insight shows as [InsightState.Stopped]. By default never.
+     * and the insight shows as [InsightState.Stopped]; once the reply has ended (done or failed),
+     * a Stop changes nothing. By default never.
      */
     suspend fun awaitStop() {
         awaitCancellation()

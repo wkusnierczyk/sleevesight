@@ -25,9 +25,9 @@ internal class PipelineHostRetryStopTest : PipelineHostFixture() {
         host.state.value.track
             ?.insight
 
-    /** A tap on Stop as the screen sends it: under the key Stop is offered for. */
+    /** A tap on Stop as the screen sends it: for the call Stop is offered for. */
     private fun stop() {
-        host.stop(checkNotNull(host.state.value.stopKey))
+        host.stop(checkNotNull(host.state.value.stopCall))
     }
 
     @Test
@@ -86,17 +86,17 @@ internal class PipelineHostRetryStopTest : PipelineHostFixture() {
             started()
             play("Sundown")
             settle()
-            assertEquals(null, host.state.value.stopKey)
+            assertEquals(null, host.state.value.stopCall)
             tap()
             advanceTimeBy(2.seconds)
             assertTrue(insight() is InsightState.Writing)
             assertEquals(null, host.state.value.writeKey)
-            assertTrue(host.state.value.stopKey != null)
+            assertTrue(host.state.value.stopCall != null)
 
             stop()
             runCurrent()
             assertEquals(InsightState.Stopped, insight())
-            assertEquals(null, host.state.value.stopKey)
+            assertEquals(null, host.state.value.stopCall)
             assertTrue(host.state.value.retry)
             assertEquals(0, provider.completed)
             settle()
@@ -111,26 +111,28 @@ internal class PipelineHostRetryStopTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `a Stop that comes once the call has ended stops nothing, the next call included`() =
+    fun `a Stop shown for a call that has ended stops nothing, the next call included`() =
         runTest {
             started()
             play("Sundown")
             settle()
             provider.error = AiErrorKind.OFFLINE
             provider.streaming = 10.seconds
-            // The key Stop is offered under while the call is under way: the run's.
-            val key = checkNotNull(host.state.value.writeKey)
             tap()
+            runCurrent()
             settle()
             assertTrue(host.state.value.retry)
 
-            // A Stop shown for the failed call, tapped late: nothing is under way.
-            host.stop(key)
-            runCurrent()
+            // Write again: the second call streams; the Stop shown for the first lands now.
             provider.error = null
             tap()
+            advanceTimeBy(2.seconds)
+            val second = checkNotNull(host.state.value.stopCall)
+            assertEquals(2, second.number)
+            host.stop(second.copy(number = 1))
             advanceTimeBy(20.seconds)
             assertEquals(2, provider.requests)
+            assertEquals(1, provider.completed)
             assertTrue(insight() is InsightState.Written)
         }
 

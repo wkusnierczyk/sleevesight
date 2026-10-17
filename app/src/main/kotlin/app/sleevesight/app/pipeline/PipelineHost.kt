@@ -74,8 +74,8 @@ import kotlin.coroutines.cancellation.CancellationException
  *   and offers nothing.
  * @property writeKey the key of the run Write (or Rewrite) is offered for, which a tap carries
  *   back ([PipelineHost.write]); null while none is offered.
- * @property stopKey the key of the run whose model call is under way, while Stop is offered for
- *   it, which a tap on Stop carries back ([PipelineHost.stop]); null otherwise.
+ * @property stopCall the model call under way that Stop is offered for, which a tap on Stop
+ *   carries back ([PipelineHost.stop]); null otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -85,7 +85,7 @@ data class PipelineView(
     val rewriteFailed: String? = null,
     val retry: Boolean = false,
     val writeKey: RunKey? = null,
-    val stopKey: RunKey? = null,
+    val stopCall: CallId? = null,
 )
 
 /**
@@ -207,12 +207,12 @@ class PipelineHost(
     }
 
     /**
-     * The user tapped Stop offered under [key] ([PipelineView.stopKey]): the coordinator stops that
-     * run's model call if it is still under way. Unlike a tap on Write, it is never dropped for a
-     * track left meanwhile: stopping spends nothing.
+     * The user tapped Stop offered for [call] ([PipelineView.stopCall]): the coordinator stops that
+     * model call if it is still under way, and no other. Unlike a tap on Write, it is never dropped
+     * for a track left meanwhile: stopping spends nothing.
      */
-    fun stop(key: RunKey) {
-        queue.trySend(CoordinatorEvent.StopTapped(key))
+    fun stop(call: CallId) {
+        queue.trySend(CoordinatorEvent.StopTapped(call))
     }
 
     /** Runs until [scope] is cancelled; called once. */
@@ -274,7 +274,7 @@ class PipelineHost(
             is CoordinatorEffect.CancelRun -> runs.remove(effect.run)?.job?.cancel()
             is CoordinatorEffect.Grant -> runs[effect.run]?.grant(effect.step)
             is CoordinatorEffect.Decide -> runs[effect.run]?.decided(effect.write)
-            is CoordinatorEffect.StopCall -> runs[effect.run]?.stop()
+            is CoordinatorEffect.StopCall -> runs[effect.call.run]?.stop(effect.call.number)
             CoordinatorEffect.Acted -> onAction()
         }
     }
@@ -355,9 +355,10 @@ class PipelineHost(
     }
 
     // One run's control: it asks the coordinator, and waits for its answer. Its model calls are
-    // numbered from 1 on both sides, in the same order: the loop numbers each as it grants it (a
-    // tap's Grant, or Decide to write), the run each as it makes it, after its grant. So a Stop
-    // reaches the call granted last, and never one granted after it.
+    // numbered from 1 on every side, in the same order: the coordinator as it grants them
+    // (`CallId`), the loop as it carries out each grant (a tap's Grant, or Decide to write), the
+    // run as it makes each, after its grant. A Stop names its call's number, so it reaches that
+    // call alone.
     private inner class RunHandle(
         private val id: RunId,
     ) : RunControl {
@@ -385,8 +386,8 @@ class PipelineHost(
             decision.complete(write)
         }
 
-        fun stop() {
-            if (granted > 0) call(granted).stopped.complete(Unit)
+        fun stop(number: Int) {
+            call(number).stopped.complete(Unit)
         }
 
         override suspend fun await(step: RunStep) {
@@ -466,7 +467,7 @@ class PipelineHost(
                 rewriteFailed = shown.rewriteFailed,
                 retry = owner.writeKey != null && (insight is InsightState.Failed || insight == InsightState.Stopped),
                 writeKey = owner.writeKey,
-                stopKey = owner.stopKey,
+                stopCall = owner.stopCall,
             )
         }.collect {
             view.value = it

@@ -11,7 +11,9 @@ import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
+import kotlinx.coroutines.flow.transformWhile
 import kotlin.time.Duration
+import kotlin.time.TimeMark
 
 /**
  * The home insight for one track, once its [evidence] is in: from the synthesis cache when it has
@@ -114,49 +116,55 @@ internal class InsightWriter(
         card: CardKey,
         control: RunControl,
     ): InsightState {
-        emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
-        show(InsightState.Writing(""))
-        val started = time.timeSource.markNow()
         val prompt = InsightPrompt.build(nowPlaying, track, evidence, allowModel)
         val request = CompletionRequest(model, prompt, effort = settings.aiEffort)
-        val reply =
+        val text = StringBuilder()
+        var end: CompletionEvent? = null
+        var started: TimeMark? = null
+        // The request goes out only if no Stop came first. The reply's end (Done or Error) closes
+        // the stream at once, without waiting for the transport to close.
+        val ran =
             control.unlessStopped {
-                val text = StringBuilder()
-                var end: CompletionEvent? = null
-                ai.provider.stream(request, ai.key).collect { event ->
-                    when (event) {
-                        is CompletionEvent.Delta -> {
-                            text.append(event.text)
-                            show(InsightState.Writing(text.toString()))
-                        }
+                emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
+                show(InsightState.Writing(""))
+                started = time.timeSource.markNow()
+                ai.provider
+                    .stream(request, ai.key)
+                    .transformWhile { event ->
+                        emit(event)
+                        event is CompletionEvent.Delta
+                    }.collect { event ->
+                        when (event) {
+                            is CompletionEvent.Delta -> {
+                                text.append(event.text)
+                                show(InsightState.Writing(text.toString()))
+                            }
 
-                        is CompletionEvent.Done, is CompletionEvent.Error -> {
-                            end = event
+                            is CompletionEvent.Done, is CompletionEvent.Error -> {
+                                end = event
+                            }
                         }
                     }
-                }
-                Reply(text.toString(), end)
             }
-        if (reply == null) {
-            emit(PipelineEvent.ModelStopped(key))
-            return show(InsightState.Stopped)
-        }
-        return when (val last = reply.end) {
-            is CompletionEvent.Done -> finish(last, reply.text, card, started.elapsedNow(), control)
+        // Once the reply's end has come, it is the outcome: what was paid for is kept, whatever a
+        // Stop did after it.
+        return when (val last = end) {
+            is CompletionEvent.Done -> finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control)
             is CompletionEvent.Error -> {
                 emit(PipelineEvent.ModelFailed(key, last.kind))
                 show(InsightState.Failed(last.kind.name.lowercase()))
             }
 
-            else -> show(InsightState.Failed(INCOMPLETE))
+            else -> {
+                if (ran == null) {
+                    emit(PipelineEvent.ModelStopped(key))
+                    show(InsightState.Stopped)
+                } else {
+                    show(InsightState.Failed(INCOMPLETE))
+                }
+            }
         }
     }
-
-    // What the model sent: the text, and how it ended (null when the stream ended early).
-    private class Reply(
-        val text: String,
-        val end: CompletionEvent?,
-    )
 
     private suspend fun finish(
         done: CompletionEvent.Done,
