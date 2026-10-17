@@ -67,7 +67,7 @@ internal class InsightWriter(
         val kept = guard.attempt("read insight") { card(wanted) }
         when {
             kept != null -> {
-                control.decidedWithoutCall()
+                control.cardShown()
                 emit(PipelineEvent.InsightCached(key))
                 show(checked(kept, cached = true, usage = null, complete = true))
             }

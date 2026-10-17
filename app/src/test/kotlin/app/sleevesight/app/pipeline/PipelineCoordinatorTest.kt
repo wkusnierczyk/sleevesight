@@ -57,15 +57,23 @@ class PipelineCoordinatorTest {
             seconds: Long? = null,
         ): RunKey = RunKey.of(normalizer, nowPlaying(title, seconds))
 
+        fun key(nowPlaying: NowPlaying): RunKey = RunKey.of(normalizer, nowPlaying)
+
         fun nowPlaying(
             title: String,
             seconds: Long? = null,
+            artists: String = "Artist",
+            mediaId: String? = null,
         ) = NowPlaying(
             title = title,
-            artists = "Artist",
+            artists = artists,
             duration = seconds?.seconds,
             player = "com.spotify.music",
+            mediaId = mediaId,
         )
+
+        // A report with no artists finds nothing: the run decides without a call.
+        private val withoutEvidence = HashSet<RunId>()
 
         fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
 
@@ -87,6 +95,7 @@ class PipelineCoordinatorTest {
                 is CoordinatorEffect.Swap -> Unit
                 is CoordinatorEffect.StartRun -> {
                     titles[effect.run] = effect.nowPlaying.title
+                    if (effect.nowPlaying.artists.isEmpty()) withoutEvidence += effect.run
                     schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
                 }
                 is CoordinatorEffect.CancelRun -> cancel(effect.run)
@@ -114,7 +123,13 @@ class PipelineCoordinatorTest {
                 RunStep.LOOKUPS -> {
                     lookups += title
                     schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
-                    schedule(lookupMs, CoordinatorEvent.InsightAsked(run, writesWhenActed), run)
+                    val insight =
+                        if (run in withoutEvidence) {
+                            CoordinatorEvent.DecidedWithoutCall(run)
+                        } else {
+                            CoordinatorEvent.InsightAsked(run, writesWhenActed)
+                        }
+                    schedule(lookupMs, insight, run)
                     schedule(lookupMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
                 }
                 RunStep.LABELS -> schedule(0, CoordinatorEvent.StepEnded(run, step), run)
@@ -160,8 +175,13 @@ class PipelineCoordinatorTest {
         title: String,
         cause: ChangeCause = ChangeCause.NATURAL_END,
         seconds: Long? = null,
+    ) = report(nowPlaying(title, seconds), cause)
+
+    private fun World.report(
+        playing: NowPlaying,
+        cause: ChangeCause = ChangeCause.NATURAL_END,
     ) {
-        send(CoordinatorEvent.Reported(key(title, seconds), nowPlaying(title, seconds), cause))
+        send(CoordinatorEvent.Reported(key(playing), playing, cause))
         advance(0)
     }
 
@@ -482,10 +502,9 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "a new length of a written track runs its lookups again, and decides nothing again",
+                "a new length of a written track keeps its run and its insight: no lookup, no call again",
                 mapOf("A" to 1),
-                listOf("A", "A"),
-                "A",
+                listOf("A"),
             ) {
                 play("A", seconds = 106)
                 settle()
@@ -494,12 +513,12 @@ class PipelineCoordinatorTest {
                 // YouTube Music sends the playing track again with a new length: the same track.
                 play("A", seconds = 279)
                 settle()
+                assertEquals(false, coordinator.state.run?.offered)
             },
             Case(
-                "a new length while the track's insight is being written waits for the call",
+                "a new length while the track's insight is being written keeps the call and its run",
                 mapOf("A" to 1),
-                listOf("A", "A"),
-                "A",
+                listOf("A"),
             ) {
                 streamMs = 10_000
                 play("A", seconds = 106)
@@ -511,6 +530,44 @@ class PipelineCoordinatorTest {
                 assertEquals(listOf("A"), lookups)
                 advance(30_000)
                 assertEquals(emptyList<String>(), cut)
+            },
+            Case(
+                "a stream's next song under one media id is a new track: written, the call before cut off",
+                mapOf("Zero" to 1, "Song one" to 1, "Song two" to 1),
+                listOf("Zero", "Song one", "Song two"),
+            ) {
+                acted()
+                streamMs = 10_000
+                report(nowPlaying("Song one", mediaId = "stream"))
+                settle()
+                assertEquals(1, calls["Song one"])
+                report(nowPlaying("Song two", mediaId = "stream"))
+                settle()
+                assertEquals(listOf("Song one"), cut)
+                advance(30_000)
+            },
+            Case(
+                "a title first, with nothing found, then its artists: written without a tap",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+            ) {
+                acted()
+                report(nowPlaying("A", artists = ""))
+                settle()
+                assertEquals(mapOf("Zero" to 1), calls)
+                report(nowPlaying("A"))
+                settle()
+            },
+            Case(
+                "a new length of a track offered Write, not tapped, is a new run, undecided",
+                emptyMap(),
+                listOf("A", "A"),
+                "A",
+            ) {
+                play("A", seconds = 106)
+                settle()
+                play("A", seconds = 279)
+                settle()
             },
             Case(
                 "a run that ends while offering Write leaves nothing waiting for it",

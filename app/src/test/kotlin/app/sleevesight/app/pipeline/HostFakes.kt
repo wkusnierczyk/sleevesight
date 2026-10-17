@@ -47,6 +47,8 @@ internal class CountingAdapter(
             throw e
         }
         resolution.await()
+        // A report with no artists (a title first) finds nothing.
+        if (track.artists.isEmpty()) return SourceResult(Outcome.None, emptyList(), byName)
         val line = EvidenceDraft(id, Scope.SONG, "A line from ${id.tag}.", null, Instant.parse("2026-10-16T12:00:00Z"))
         return SourceResult(Outcome.SongArticle, listOf(line), byName)
     }

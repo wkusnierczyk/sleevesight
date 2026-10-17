@@ -247,7 +247,9 @@ class PipelineHost(
                         onFailure(e)
                         false
                     }
-                queue.send(CoordinatorEvent.RebuildFinished(number, ok))
+                // Without suspending: a build that finished after it was overtaken still says so,
+                // and the coordinator ignores it.
+                queue.trySend(CoordinatorEvent.RebuildFinished(number, ok))
             }
     }
 
@@ -325,6 +327,10 @@ class PipelineHost(
 
         override fun decidedWithoutCall() {
             queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
+        }
+
+        override fun cardShown() {
+            queue.trySend(CoordinatorEvent.CardShown(id))
         }
     }
 

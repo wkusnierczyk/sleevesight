@@ -45,11 +45,11 @@ interface RunControl {
     /** A step that was granted ended: done, failed or cancelled. Reported from a `finally`. */
     fun ended(step: RunStep)
 
-    /**
-     * The insight was decided without a model call: served from the cache, nothing to write from,
-     * no AI service set up, or insights off.
-     */
+    /** The insight was decided without a model call: nothing to write from, no AI service set up, or insights off. */
     fun decidedWithoutCall()
+
+    /** The insight was served from the synthesis cache: written, with no call. */
+    fun cardShown() = decidedWithoutCall()
 
     /** Grants every step at once and writes when [write]: [Pipeline.run] for the CLI. */
     class Unattended(

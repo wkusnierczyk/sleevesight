@@ -87,6 +87,11 @@ internal abstract class PipelineHostFixture {
     }
 
     // Past the debounce, and long enough for a run to land.
+    protected fun TestScope.report(playing: NowPlaying) {
+        nowPlaying.value = playing
+        runCurrent()
+    }
+
     protected fun TestScope.settle() = advanceTimeBy(DEBOUNCE_AND_RUN)
 
     protected companion object {

@@ -20,11 +20,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -34,57 +36,79 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration
 import kotlin.time.Instant
 
 /**
  * The host on real threads (`Dispatchers.Default`), with barriers holding a lookup or a key read
- * where a cancellation, a grant or another build can overtake it. Each case waits for what it
- * needs, with a bound, and checks what must hold whatever the threads' order.
+ * past a cancellation, so that a result lands late, after what overtook it. A held step blocks its
+ * thread on a latch, bounded, rather than suspending: a suspended one would be cancelled at its
+ * next suspension, and nothing would land late. Each case waits for
+ * what it observes, with a bound, and checks what must hold whatever the threads' order. Reports
+ * go through a rendezvous channel, followed by a `null` (which the host ignores), so a report is
+ * known to be on the host's queue before the next step.
  */
 class PipelineHostThreadsTest {
-    /** Answers at once, unless its lookup of a track is held; says when each lookup has begun. */
+    /**
+     * Answers at once, unless its lookup of a track is held: then it blocks, past any
+     * cancellation, and lands late, returning to its run as if nothing had happened. It says when
+     * a lookup has begun, and when a held one has been released.
+     */
     private class HeldAdapter : SourceAdapter {
         override val id: SourceId = SourceId.MUSICBRAINZ
         val asked: MutableList<String> = Collections.synchronizedList(mutableListOf())
-        val held = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+        val held = ConcurrentHashMap<String, CountDownLatch>()
         private val begun = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
+        private val landed = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
 
         fun begun(key: String): CompletableDeferred<Unit> = begun.getOrPut(key) { CompletableDeferred() }
+
+        fun landed(key: String): CompletableDeferred<Unit> = landed.getOrPut(key) { CompletableDeferred() }
 
         override suspend fun lookup(
             track: NormalizedTrack,
             resolution: Deferred<Resolution>,
         ): SourceResult {
-            asked += track.lookupKey
-            begun(track.lookupKey).complete(Unit)
-            held[track.lookupKey]?.await()
+            val key = track.lookupKey
+            // The barrier first, then the signal: the test may release it as soon as it hears.
+            val hold = held[key]
+            asked += key
+            begun(key).complete(Unit)
+            if (hold != null) {
+                check(hold.await(BOUND_MS, TimeUnit.MILLISECONDS)) { "Held past the bound" }
+                landed(key).complete(Unit)
+            }
             val line = EvidenceDraft(id, Scope.SONG, "A line.", null, Instant.parse("2026-10-17T12:00:00Z"))
             return SourceResult(Outcome.SongArticle, listOf(line), Duration.ZERO)
         }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val nowPlaying = MutableStateFlow<NowPlaying?>(null)
+    private val reports = Channel<NowPlaying?>()
     private val keyChanges = MutableStateFlow(0)
     private val adapter = HeldAdapter()
     private val failures: MutableList<Throwable> = Collections.synchronizedList(mutableListOf())
     private val keyReads = AtomicInteger()
     private val builds = AtomicInteger()
+    private val shownTitles: MutableList<String?> = Collections.synchronizedList(mutableListOf())
 
     @Volatile
-    private var keysHeld: CompletableDeferred<Unit>? = null
+    private var keysHeld: CountDownLatch? = null
 
     private val host =
         PipelineHost(
             acknowledged = MutableStateFlow(true),
-            nowPlaying = nowPlaying,
+            nowPlaying = reports.receiveAsFlow(),
             settings = MutableStateFlow(Settings()),
             keyChanges = keyChanges.map { },
             readKeys = {
+                // The barrier first, then the count the test watches.
+                val hold = keysHeld
                 keyReads.incrementAndGet()
-                keysHeld?.await()
+                hold?.let { check(it.await(BOUND_MS, TimeUnit.MILLISECONDS)) { "Held past the bound" } }
                 PipelineKeys()
             },
             parts = { _, _ ->
@@ -103,8 +127,16 @@ class PipelineHostThreadsTest {
     @After
     fun close() = scope.cancel()
 
-    private fun play(title: String) {
-        nowPlaying.value = NowPlaying(title = title, artists = "Artist", player = Settings.SPOTIFY)
+    private fun start(visible: Boolean = true) {
+        if (visible) host.activityStarted()
+        host.start(scope)
+        scope.launch { host.state.collect { shownTitles += it.track?.nowPlaying?.title } }
+    }
+
+    /** Reports [title], and returns once the report is on the host's queue. */
+    private suspend fun report(title: String) {
+        reports.send(NowPlaying(title = title, artists = "Artist", player = Settings.SPOTIFY))
+        reports.send(null)
     }
 
     private suspend fun until(
@@ -113,10 +145,12 @@ class PipelineHostThreadsTest {
     ) {
         try {
             withTimeout(BOUND_MS) { while (!condition()) delay(STEP_MS) }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+        } catch (e: TimeoutCancellationException) {
             throw AssertionError("Not reached within $BOUND_MS ms: $what", e)
         }
     }
+
+    private suspend fun heard(signal: CompletableDeferred<Unit>) = withTimeout(BOUND_MS) { signal.await() }
 
     private fun shown(): String? =
         host.state.value.track
@@ -129,76 +163,90 @@ class PipelineHostThreadsTest {
                 ?.gathered == true
 
     @Test
-    fun aLookupHeldWhileAnotherTrackReplacesItNeverShows() =
+    fun aLookupThatLandsAfterItsRunWasReplacedIsNeverShown() =
         runBlocking {
-            adapter.held["artist|alpha"] = CompletableDeferred()
-            host.activityStarted()
-            host.start(scope)
-            play("Alpha")
-            withTimeout(BOUND_MS) { adapter.begun("artist|alpha").await() }
-            play("Bravo")
-            withTimeout(BOUND_MS) { adapter.begun("artist|bravo").await() }
-            // Alpha's lookup lands now, on another thread, after its run was cancelled.
-            adapter.held.getValue("artist|alpha").complete(Unit)
+            adapter.held["artist|alpha"] = CountDownLatch(1)
+            start()
+            report("Alpha")
+            heard(adapter.begun("artist|alpha"))
+            report("Bravo")
             until("Bravo gathered") { gathered("Bravo") }
-            delay(SETTLE_MS)
 
-            assertEquals("Bravo", shown())
-            assertEquals(listOf("artist|alpha", "artist|bravo"), adapter.asked.toList())
+            // Alpha's lookup lands now, past its run's cancellation, on another thread.
+            adapter.held.getValue("artist|alpha").countDown()
+            heard(adapter.landed("artist|alpha"))
+            report("Charlie")
+            until("Charlie gathered") { gathered("Charlie") }
+
+            val titles = shownTitles.toList()
+            val afterBravo = titles.drop(titles.indexOf("Bravo"))
+            assertTrue("Alpha shown after Bravo: $titles", "Alpha" !in afterBravo)
+            assertEquals(listOf("artist|alpha", "artist|bravo", "artist|charlie"), adapter.asked.toList())
             assertEquals(emptyList<Throwable>(), failures.toList())
         }
 
     @Test
-    fun aBuildOvertakenByAnotherIsNeverSwappedIn() =
+    fun aBuildThatFinishesAfterItWasOvertakenIsNeverSwappedIn() =
         runBlocking {
-            host.activityStarted()
-            host.start(scope)
-            play("Alpha")
+            start()
+            report("Alpha")
             until("Alpha gathered") { gathered("Alpha") }
 
             // The second build's key read is held; a third build overtakes it.
-            keysHeld = CompletableDeferred()
-            val held = keysHeld!!
+            val held = CountDownLatch(1)
+            keysHeld = held
             keyChanges.value++
             until("the second key read") { keyReads.get() == 2 }
             keysHeld = null
             keyChanges.value++
             until("the replay on the third build") { adapter.asked.size == 2 }
-            held.complete(Unit)
-            delay(SETTLE_MS)
 
-            assertEquals(2, adapter.asked.size)
-            assertEquals("initial and third builds; the second was cancelled", 2, builds.get())
-            assertTrue(gathered("Alpha"))
+            // The second build finishes now, after it was overtaken, and says so to the host.
+            held.countDown()
+            until("the second build made") { builds.get() == 3 }
+            report("Charlie")
+            until("Charlie gathered") { gathered("Charlie") }
+
+            // Swapped in, it would have run Charlie (or Alpha) once more.
+            assertEquals(listOf("artist|alpha", "artist|alpha", "artist|charlie"), adapter.asked.toList())
             assertEquals(emptyList<Throwable>(), failures.toList())
         }
 
     @Test
-    fun anOpeningRacingANewTrackGrantsTheOldTrackAtMostOnce() =
+    fun anOpeningBeforeANewTracksReportGrantsTheOldTrack() =
         runBlocking {
-            host.start(scope)
-            play("Alpha")
-            // Alpha settles while hidden, and waits for its lookups to be granted.
-            delay(SETTLE_MS)
+            start(visible = false)
+            report("Alpha")
+            until("Alpha's run waiting for its lookups") { shown() == "Alpha" }
             assertEquals(emptyList<String>(), adapter.asked.toList())
 
-            // The opening and Bravo's report race from two threads.
-            listOf(scope.launch { host.activityStarted() }, scope.launch { play("Bravo") }).joinAll()
+            host.activityStarted()
+            heard(adapter.begun("artist|alpha"))
+            report("Bravo")
             until("Bravo gathered") { gathered("Bravo") }
-            delay(SETTLE_MS)
 
-            val asked = adapter.asked.toList()
-            assertEquals("artist|bravo", asked.last())
-            assertTrue(asked.count { it == "artist|alpha" } <= 1)
-            assertEquals("Bravo", shown())
+            assertEquals(listOf("artist|alpha", "artist|bravo"), adapter.asked.toList())
+            assertEquals(emptyList<Throwable>(), failures.toList())
+        }
+
+    @Test
+    fun aNewTracksReportBeforeAnOpeningGrantsTheOldTrackNothing() =
+        runBlocking {
+            start(visible = false)
+            report("Alpha")
+            until("Alpha's run waiting for its lookups") { shown() == "Alpha" }
+
+            // Bravo's report is on the queue before the opening, so Alpha is stale when it comes.
+            report("Bravo")
+            host.activityStarted()
+            until("Bravo gathered") { gathered("Bravo") }
+
+            assertEquals(listOf("artist|bravo"), adapter.asked.toList())
             assertEquals(emptyList<Throwable>(), failures.toList())
         }
 
     private companion object {
         const val BOUND_MS = 10_000L
         const val STEP_MS = 10L
-
-        // Past the debounce (650 ms), with room for the threads.
-        const val SETTLE_MS = 1_200L
     }
 }

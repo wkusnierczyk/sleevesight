@@ -1,7 +1,9 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.settings.Settings
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -9,6 +11,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -90,7 +93,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `a new length of a written track runs its lookups again, and writes nothing again`() =
+    fun `a new length of a written track keeps its insight, with one call and one lookup`() =
         runTest {
             started()
             play("Alpha", 106.seconds)
@@ -102,11 +105,81 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             settle()
 
             assertEquals(1, provider.requestsFor("Alpha"))
-            assertEquals(listOf("artist|alpha", "artist|alpha"), musicBrainz.asked)
+            assertEquals(listOf("artist|alpha"), musicBrainz.asked)
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `a new length while the insight is being written keeps the call, and then the insight`() =
+        runTest {
+            provider.streaming = 10.seconds
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            advanceTimeBy(2.seconds)
+            play("Alpha", 279.seconds)
+            advanceTimeBy(30.seconds)
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(1, provider.completed)
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `a stream's next song under one media id is a new track, written after the first action`() =
+        runTest {
+            provider.streaming = 10.seconds
+            started()
+            report(NowPlaying(title = "Song one", artists = "Artist", mediaId = "stream", player = Settings.SPOTIFY))
+            settle()
+            host.write()
+            advanceTimeBy(2.seconds)
+            report(NowPlaying(title = "Song two", artists = "Artist", mediaId = "stream", player = Settings.SPOTIFY))
+            advanceTimeBy(30.seconds)
+
+            assertEquals(1, provider.requestsFor("Song one"))
+            assertEquals(1, provider.requestsFor("Song two"))
             assertEquals(
-                InsightState.Idle(canWrite = true),
+                "Song two",
+                host.state.value.track
+                    ?.nowPlaying
+                    ?.title,
+            )
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `a title first, with nothing found, then its artists is written without a tap`() =
+        runTest {
+            started()
+            play("Zero")
+            settle()
+            host.write()
+            settle()
+            report(NowPlaying(title = "Alpha", artists = "", player = Settings.SPOTIFY))
+            settle()
+            assertEquals(
+                InsightState.NoEvidence,
                 host.state.value.track
                     ?.insight,
+            )
+            report(NowPlaying(title = "Alpha", artists = "Artist", player = Settings.SPOTIFY))
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
             )
         }
 
