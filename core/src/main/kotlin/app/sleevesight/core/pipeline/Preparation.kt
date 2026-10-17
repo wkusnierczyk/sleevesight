@@ -28,8 +28,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * Nothing is published, nothing goes to the retrieval or synthesis cache, and no insight is
  * written: a card written from a queue item would be kept under a key the playing track never
- * reads (its evidence lacks the album's line), so the track would be paid for twice (#172 is what
- * would let it). Nothing is prepared with MusicBrainz switched off: its lookup is what is slow.
+ * reads (its evidence lacks the album's line), so the track would be paid for twice (#172: Spotify's
+ * queue items carry neither album nor length). Nothing is prepared with MusicBrainz switched off:
+ * its lookup is what is slow.
  * Each step that sends requests starts once [control] grants it, as a run's do.
  */
 internal class Preparation(
