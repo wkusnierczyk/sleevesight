@@ -29,7 +29,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha")
             settle()
-            host.write()
+            tap()
             settle()
             musicBrainz.byName = 2.seconds
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
@@ -54,7 +54,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha")
             settle()
-            host.write()
+            tap()
             advanceTimeBy(2.seconds)
             play("Bravo")
             advanceTimeBy(100.milliseconds)
@@ -79,7 +79,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Zero")
             settle()
-            host.write()
+            tap()
             settle()
             musicBrainz.byName = 2.seconds
             play("Alpha")
@@ -100,7 +100,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             // YouTube Music's update: the same title, artists and player, a new length.
             play("Alpha", 279.seconds)
@@ -121,7 +121,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             advanceTimeBy(2.seconds)
             play("Alpha", 279.seconds)
             advanceTimeBy(30.seconds)
@@ -141,7 +141,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             report(NowPlaying(title = "Song one", artists = "Artist", mediaId = "stream", player = Settings.SPOTIFY))
             settle()
-            host.write()
+            tap()
             advanceTimeBy(2.seconds)
             report(NowPlaying(title = "Song two", artists = "Artist", mediaId = "stream", player = Settings.SPOTIFY))
             advanceTimeBy(30.seconds)
@@ -166,7 +166,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Zero")
             settle()
-            host.write()
+            tap()
             settle()
             report(NowPlaying(title = "Alpha", artists = "", player = Settings.SPOTIFY))
             settle()
@@ -208,7 +208,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             play("Alpha", 279.seconds)
             settle()
@@ -233,7 +233,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             // A Last.fm key: new evidence, so the card's key changes.
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
@@ -249,7 +249,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             assertTrue(host.state.value.rewrite)
 
             // A tap is the user asking: exactly one more call.
-            host.write()
+            tap()
             settle()
             assertEquals(2, provider.requestsFor("Alpha"))
         }
@@ -262,7 +262,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha")
             settle()
-            host.write()
+            tap()
             settle()
             provider.failure = null
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
@@ -276,7 +276,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
                     ?.insight,
             )
             assertEquals(false, host.state.value.rewrite)
-            host.write()
+            tap()
             settle()
             assertEquals(2, provider.requestsFor("Alpha"))
         }
@@ -288,7 +288,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             play("Bravo")
             settle()
@@ -319,7 +319,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             report(NowPlaying(title = "Alpha", artists = "Artist", mediaId = "m1", player = Settings.SPOTIFY))
             settle()
-            host.write()
+            tap()
             settle()
             report(
                 NowPlaying(
@@ -346,7 +346,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
         started()
         play("Alpha")
         settle()
-        host.write()
+        tap()
         settle()
         assertEquals(1, provider.requestsFor("Alpha"))
     }
@@ -409,7 +409,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             keyChanges.value++
             settle()
             provider.failure = IllegalStateException("a bug")
-            host.write()
+            tap()
             settle()
             settle()
 
@@ -449,7 +449,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             play("Alpha", 279.seconds)
             settle()
@@ -481,7 +481,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             assertTrue(host.state.value.rewrite)
 
             // The rewrite completes, and the AI key goes at once, before anything else runs.
-            host.write()
+            tap()
             runCurrent()
             keys = PipelineKeys(sources = SourceKeys(lastFm = Secret("lastfm")))
             keyChanges.value++
@@ -519,7 +519,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals(
                 InsightState.NoEvidence,
@@ -545,7 +545,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
             keyChanges.value++
             settle()
-            host.write()
+            tap()
             settle()
             assertEquals("It is a song, take 2 [MB1].", shownText())
 
@@ -571,7 +571,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             started()
             play("Alpha", 106.seconds)
             settle()
-            host.write()
+            tap()
             advanceTimeBy(1.seconds)
             // A rebuild waits for the call; Bravo settles, then Alpha returns, at another length,
             // and settles.

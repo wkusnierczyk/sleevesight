@@ -23,7 +23,8 @@ internal object RetrievalCodec {
      * which a result of version 1 would lack. 3: the key holds the player's length (#44), so entries
      * under the old key are dropped rather than left to expire. 4: a genre label's identity and the
      * page it links, by which labels from two sources combine and are credited, and the artists
-     * whose MusicBrainz tags give labels (#84).
+     * whose MusicBrainz tags give labels (#84). The first release's date (#52) is an optional field
+     * that older entries lack: MusicBrainz's extraction version, not this format, makes them misses.
      */
     const val FORMAT: Int = 4
 
@@ -43,6 +44,7 @@ internal object RetrievalCodec {
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason) },
                 genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = result.labelArtists,
+                firstReleased = result.firstReleased,
             ),
         )
 
@@ -58,6 +60,7 @@ internal object RetrievalCodec {
                 rejections = stored.rejections.map { Rejection(it.subject, it.reason) },
                 genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = stored.labelArtists,
+                firstReleased = stored.firstReleased,
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -118,6 +121,7 @@ internal object RetrievalCodec {
         val rejections: List<RejectionJson> = emptyList(),
         val genres: List<GenreJson> = emptyList(),
         val labelArtists: List<String> = emptyList(),
+        val firstReleased: String? = null,
     )
 
     @Serializable

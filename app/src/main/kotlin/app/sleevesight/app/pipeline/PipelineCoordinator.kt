@@ -77,8 +77,14 @@ sealed interface CoordinatorEvent {
         val writesWhenActed: Boolean,
     ) : CoordinatorEvent
 
-    /** The user tapped Write. */
-    data object WriteTapped : CoordinatorEvent
+    /**
+     * The user tapped Write (or Rewrite) offered for the run under [key], as the screen showed it
+     * ([CoordinatorState.writeKey]): a tap for any other run, one the screen showed before a
+     * change reached the coordinator, does nothing.
+     */
+    data class WriteTapped(
+        val key: RunKey,
+    ) : CoordinatorEvent
 
     /** A step granted to [run] ended: done, failed or cancelled. */
     data class StepEnded(
@@ -259,7 +265,10 @@ data class CoordinatorState(
     val current: Run? get() = run?.takeIf { run -> live && building == null && latest?.let { holds(run, it) } == true }
 
     /** Whether Write is offered for the track [key]: the current run's, while it waits for a tap. */
-    fun offersWrite(key: RunKey): Boolean = current?.let { it.key == key && it.offered && !it.calling } == true
+    fun offersWrite(key: RunKey): Boolean = writeKey == key
+
+    /** The key of the run Write is offered for, a rewrite included: the current run's, while it waits for a tap. */
+    val writeKey: RunKey? get() = current?.takeIf { it.offered && !it.calling }?.key
 
     /**
      * Whether the Write offered is a rewrite: the current run is of the ledger's written track, so
@@ -319,8 +328,8 @@ fun sameInsightTrack(
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; then as for StepEnded(MODEL_CALL) | as above |
  * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
- * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
- * | otherwise | WriteTapped | unchanged | none |
+ * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
+ * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
@@ -357,7 +366,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
             is CoordinatorEvent.RebuildFinished -> finished(event)
-            CoordinatorEvent.WriteTapped -> tapped()
+            is CoordinatorEvent.WriteTapped -> tapped(event.key)
             else -> fromRun(event)
         }
     }
@@ -470,9 +479,10 @@ class PipelineCoordinator(
         if (built && latest != null && latest.settled) begin(latest)
     }
 
-    private fun tapped() {
+    private fun tapped(key: RunKey) {
+        // Only the run Write is offered for, while it may be granted.
+        if (state.writeKey != key || !state.allowed) return
         val run = state.current ?: return
-        if (!run.offered || run.calling || !state.allowed) return
         state =
             state.copy(
                 run = run.copy(offered = false, calling = true),
