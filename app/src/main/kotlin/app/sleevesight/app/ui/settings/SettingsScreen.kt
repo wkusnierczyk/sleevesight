@@ -49,15 +49,17 @@ import kotlin.time.Duration.Companion.seconds
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
  * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
- * the end, the way to the credits. Each change is saved at once. The rows show the stored settings,
- * so a change that cannot be saved (the settings file cannot be read or written) leaves its row at
- * the stored value, and the screen says so above the list until a later change is saved.
+ * the end, the way to the credits, and the developer setting *Diagnostics*. Each change is saved
+ * at once. The rows show the stored settings, so a change that cannot be saved (the settings file
+ * cannot be read or written) leaves its row at the stored value, and the screen says so above the
+ * list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
  * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
  * above the list that the history was cleared, or could not be. [onOpenCredits] opens the credits
- * screen. [playerLabel] names a player by its package.
+ * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
+ * [playerLabel] names a player by its package.
  */
 @Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
 @Composable
@@ -67,6 +69,7 @@ fun SettingsScreen(
     aiProviders: Map<ProviderId, AiProvider>,
     clearHistory: () -> Deferred<Boolean>,
     onOpenCredits: () -> Unit = {},
+    onOpenDiagnostics: () -> Unit = {},
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -86,7 +89,9 @@ fun SettingsScreen(
             // Above the list, so it shows wherever the list is scrolled to.
             Notices(changeFailed, clearing.ended)
             settings?.let { current ->
-                SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits), update) { dialog = it }
+                SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits, onOpenDiagnostics), update) {
+                    dialog = it
+                }
             }
         }
     }
@@ -204,6 +209,7 @@ internal sealed interface SettingsDialog {
 private class Navigation(
     val playerLabel: (String) -> String,
     val openCredits: () -> Unit,
+    val openDiagnostics: () -> Unit,
 )
 
 /** The saved keys' states, and whether to offer *Reset saved keys*. */
@@ -305,6 +311,7 @@ private fun SettingsContent(
             value = stringResource(R.string.settings_credits_value),
             onClick = navigation.openCredits,
         )
+        DeveloperSection(settings, update, navigation.openDiagnostics)
     }
 }
 

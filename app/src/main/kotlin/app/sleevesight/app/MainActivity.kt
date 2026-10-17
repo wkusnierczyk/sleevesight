@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.PipelineSummary
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -31,13 +32,14 @@ class MainActivity : ComponentActivity() {
                     notificationAccess = graph.notificationAccess,
                     firstRun = graph.firstRun,
                     openAccessSettings = ::openAccessSettings,
-                    settings = { openCredits ->
+                    settings = { links ->
                         SettingsScreen(
                             graph.settings,
                             graph.secrets,
                             graph.aiProviders,
                             graph.historyRetention::clear,
-                            openCredits,
+                            links.openCredits,
+                            links.openDiagnostics,
                             graph::playerLabel,
                         )
                     },
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity() {
                         val view by graph.pipeline.state.collectAsState()
                         PipelineSummary(view, onWrite = graph.pipeline::write)
                     },
+                    diagnostics = { DiagnosticsScreen(graph.diagnostics) },
                 )
             }
         }
