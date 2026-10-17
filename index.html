@@ -48,7 +48,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font
 a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
 a:hover{text-decoration-thickness:2px}
 a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
-.skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:1}
+.skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:2}
 .skip:focus{top:12px}
 .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
 header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 0}
@@ -144,8 +144,11 @@ footer p{margin:0 0 4px}
 }
 @media (prefers-reduced-motion: no-preference) and (max-width:560px){header.top .brand{animation-name:sl-settle-phone}}
 @media (prefers-reduced-motion: no-preference) and (max-width:340px){header.top .brand{animation-name:sl-settle-small}}
-/* Content still hidden by the intro shows at once when it takes focus or is the link target. */
-header.top nav:focus-within,main:focus-within,footer:focus-within,:root:has(:target) header.top nav,:root:has(:target) main,:root:has(:target) footer{animation:none}
+/* Content still hidden by the intro shows at once when it takes focus or is the link target. An
+   !important opacity outranks the animation without cancelling it: cancelling would restart it on blur.
+   `:has()` has a rule of its own, so a browser without it still keeps the focus rule. */
+header.top nav:focus-within,main:focus-within,footer:focus-within{opacity:1!important}
+:root:has(:target) header.top nav,:root:has(:target) main,:root:has(:target) footer{opacity:1!important}
 @keyframes sl-settle{from{transform:translate(4px,70px) scale(2.6)}}
 @keyframes sl-settle-phone{from{transform:translate(4px,56px) scale(2)}}
 @keyframes sl-settle-small{from{transform:translate(4px,50px) scale(1.7)}}
