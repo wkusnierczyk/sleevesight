@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
@@ -47,17 +48,19 @@ class MainActivity : ComponentActivity() {
                     notificationAccess = graph.notificationAccess,
                     firstRun = graph.firstRun,
                     openAccessSettings = ::openAccessSettings,
-                    settings = { openCredits ->
+                    settings = { links ->
                         SettingsScreen(
                             graph.settings,
                             graph.secrets,
                             graph.aiProviders,
                             graph.historyRetention::clear,
-                            openCredits,
+                            links.openCredits,
+                            links.openDiagnostics,
                             graph::playerLabel,
                         )
                     },
                     pipeline = { NowPlayingHome(homeFeed) },
+                    diagnostics = { DiagnosticsScreen(graph.diagnostics) },
                 )
             }
         }

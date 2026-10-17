@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import app.sleevesight.app.diagnostics.Diagnostics
+import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppPipelineParts
@@ -173,7 +175,25 @@ class AppGraph(
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
         )
 
+    /**
+     * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,
+     * the track changes and the caches' sizes, read when the screen asks, and what skip detection
+     * has learned (none supplied yet: #53).
+     */
+    val diagnostics =
+        Diagnostics(
+            log = DiagnosticsLog(),
+            readChanges = history::changes,
+            readCacheStats = { caches.stats() },
+            io = Dispatchers.IO,
+            // An export outlives the screen that started it.
+            scope = mainScope,
+            version = BuildConfig.VERSION_NAME,
+        )
+
     init {
+        // The events, in memory only, off the main thread.
+        pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players to follow*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
         // What the session layer sees is recorded whether or not the app is visible.
