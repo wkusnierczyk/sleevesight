@@ -36,6 +36,8 @@ import kotlin.time.Duration.Companion.seconds
  *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
+ * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
+ *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -56,6 +58,7 @@ data class Settings(
     val aiEffort: ReasoningEffort? = DEFAULT_AI_EFFORT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
+    val showDiagnostics: Boolean = false,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }

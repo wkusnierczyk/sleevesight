@@ -30,14 +30,24 @@ data object SettingsPage
 @Serializable
 data object CreditsPage
 
+/** The diagnostics screen, opened from [SettingsPage] while *Diagnostics* is on. */
+@Serializable
+data object DiagnosticsPage
+
+/** Where the settings screen leads: the credits, and the diagnostics screen. */
+class SettingsLinks(
+    val openCredits: () -> Unit,
+    val openDiagnostics: () -> Unit,
+)
+
 /**
  * The app's destinations. It opens on [FirstRun] until the user has continued past it and
  * notification access is on, and on [Home] after that. Continuing needs access on, so the
  * first-run screen is seen even when access was granted in Settings before the app was opened.
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
- * given the way to [CreditsPage], and [CreditsPage]. [Home] shows the pipeline's state, as
- * [pipeline] draws it.
+ * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
+ * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it.
  */
 @Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
 @Composable
@@ -46,8 +56,9 @@ fun SleevesightNavHost(
     firstRun: FirstRunAcknowledgement,
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
-    settings: @Composable (openCredits: () -> Unit) -> Unit = {},
+    settings: @Composable (links: SettingsLinks) -> Unit = {},
     pipeline: @Composable () -> Unit = { PipelineSummary(PipelineView(), onWrite = {}) },
+    diagnostics: @Composable () -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
     // Chosen once: a change of access later does not move the user off the screen they are on.
@@ -80,11 +91,18 @@ fun SleevesightNavHost(
             }
         }
         composable<SettingsPage> {
-            val openCredits = { navController.navigate(CreditsPage) }
-            if (firstRun.acknowledged) settings(openCredits) else FirstRunFirst(navController)
+            val links =
+                SettingsLinks(
+                    openCredits = { navController.navigate(CreditsPage) },
+                    openDiagnostics = { navController.navigate(DiagnosticsPage) },
+                )
+            if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
         composable<CreditsPage> {
             if (firstRun.acknowledged) CreditsScreen() else FirstRunFirst(navController)
+        }
+        composable<DiagnosticsPage> {
+            if (firstRun.acknowledged) diagnostics() else FirstRunFirst(navController)
         }
     }
 }
