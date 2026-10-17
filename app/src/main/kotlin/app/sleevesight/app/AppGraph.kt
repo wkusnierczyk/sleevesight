@@ -25,6 +25,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
+import app.sleevesight.app.session.NextInQueue
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SkipDetector
@@ -215,6 +216,8 @@ class AppGraph(
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
             onAction = userActions::acted,
+            // The next item in the shown player's queue, prepared ahead (D13).
+            next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
         )
 
     /**

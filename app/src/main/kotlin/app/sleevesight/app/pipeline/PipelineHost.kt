@@ -16,6 +16,7 @@ import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.CompletableDeferred
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -105,6 +107,11 @@ class PipelineKeys(
  * cannot be built is reported to [onFailure] and none runs until the next rebuild; a run that fails
  * (a bug: the stages map their failures to outcomes) is reported and ends, and the next track runs.
  *
+ * [next] is the next item in the shown player's queue (`NextInQueue`), which is prepared ahead
+ * while *Prepare the next track* is on (D13): the coordinator starts and grants the preparation
+ * ([Pipeline.prepare]) only once the current run's requests are over, and cancels it when the
+ * next item or the playing track changes.
+ *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds;
  * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too. [onAction] is
  * told when the coordinator takes a user's action (a tap on Write), for the time since the last
@@ -122,6 +129,7 @@ class PipelineHost(
     private val normalizer: Normalizer,
     private val onFailure: (Throwable) -> Unit = {},
     private val onAction: () -> Unit = {},
+    private val next: Flow<NowPlaying?> = emptyFlow(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
     private val coordinator = PipelineCoordinator()
@@ -155,6 +163,7 @@ class PipelineHost(
 
     // Touched only by the loop.
     private val runs = HashMap<RunId, RunHandle>()
+    private val preparations = HashMap<RunId, PreparationHandle>()
     private var building: Job? = null
 
     /** What the UI renders. */
@@ -163,6 +172,9 @@ class PipelineHost(
     /** For the tests: each view as it is published, none conflated. */
     @Volatile
     internal var published: ((PipelineView) -> Unit)? = null
+
+    /** For the tests: the preparations whose handles the host holds. */
+    internal val preparationsHeld: Int get() = preparations.size
 
     /** The diagnostics stream of every pipeline built, in order; a slow collector loses the oldest. */
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
@@ -221,6 +233,12 @@ class PipelineHost(
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
             launch {
+                val preparing = latest.map { it.prepareNextTrack != PrepareNextTrack.OFF }.distinctUntilChanged()
+                combine(next, preparing) { track, on -> track?.takeIf { on } }
+                    .distinctUntilChanged()
+                    .collect { queue.send(CoordinatorEvent.NextChanged(it)) }
+            }
+            launch {
                 changes.collect { change ->
                     change?.let {
                         val playing = it.nowPlaying
@@ -233,6 +251,8 @@ class PipelineHost(
     // The one consumer of the queue: each event through the coordinator, then its effects.
     private suspend fun loop(scope: CoroutineScope) {
         for (event in queue) {
+            // A preparation that ended needs its handle no more: no effect names it again.
+            if (event is CoordinatorEvent.PreparationEnded) preparations.remove(event.prep)
             val effects = coordinator.on(event)
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
@@ -255,9 +275,11 @@ class PipelineHost(
             is CoordinatorEffect.Swap -> swap(effect, scope)
             is CoordinatorEffect.StartRun -> startRun(effect)
             is CoordinatorEffect.CancelRun -> runs.remove(effect.run)?.job?.cancel()
-            is CoordinatorEffect.Grant -> runs[effect.run]?.grant(effect.step)
+            is CoordinatorEffect.Grant -> (runs[effect.run] ?: preparations[effect.run])?.grant(effect.step)
             is CoordinatorEffect.Decide -> runs[effect.run]?.decision?.complete(effect.write)
             CoordinatorEffect.Acted -> onAction()
+            is CoordinatorEffect.StartPreparation -> startPreparation(effect)
+            is CoordinatorEffect.CancelPreparation -> preparations.remove(effect.prep)?.job?.cancel()
         }
     }
 
@@ -295,6 +317,7 @@ class PipelineHost(
     ) {
         live.value?.scope?.cancel()
         runs.clear()
+        preparations.clear()
         val made = built.remove(effect.build)
         built.clear()
         if (!effect.built || made == null) {
@@ -330,13 +353,34 @@ class PipelineHost(
             }
     }
 
-    // One run's control: it asks the coordinator, and waits for its answer.
-    private inner class RunHandle(
-        private val id: RunId,
+    // A preparation of the next track on the live pipeline; a failure is logged by its type and
+    // ends it, as a run's does.
+    private fun startPreparation(effect: CoordinatorEffect.StartPreparation) {
+        val current = live.value ?: return
+        val handle = PreparationHandle(effect.prep)
+        preparations[effect.prep] = handle
+        handle.job =
+            current.scope.launch {
+                try {
+                    current.pipeline.prepare(effect.next, handle)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Exception,
+                ) {
+                    onFailure(e)
+                } finally {
+                    queue.trySend(CoordinatorEvent.PreparationEnded(effect.prep))
+                }
+            }
+    }
+
+    // What a run and a preparation share: they ask the coordinator for each step, and wait.
+    private abstract inner class StepHandle(
+        protected val id: RunId,
     ) : RunControl {
         var job: Job? = null
-        private val grants = RunStep.entries.associateWith { CompletableDeferred<Unit>() }
-        val decision = CompletableDeferred<Boolean>()
+        protected val grants = RunStep.entries.associateWith { CompletableDeferred<Unit>() }
 
         fun grant(step: RunStep) {
             grants.getValue(step).complete(Unit)
@@ -347,6 +391,30 @@ class PipelineHost(
             grants.getValue(step).await()
         }
 
+        override fun ended(step: RunStep) {
+            queue.trySend(CoordinatorEvent.StepEnded(id, step))
+        }
+    }
+
+    // A preparation's control: it never writes, and is never granted a model call.
+    private inner class PreparationHandle(
+        id: RunId,
+    ) : StepHandle(id) {
+        override suspend fun decide(settings: Settings): Boolean = false
+
+        override val waitsForTap: Boolean = false
+
+        override suspend fun awaitTap() = Unit
+
+        override fun decidedWithoutCall() = Unit
+    }
+
+    // One run's control: it asks the coordinator, and waits for its answer.
+    private inner class RunHandle(
+        id: RunId,
+    ) : StepHandle(id) {
+        val decision = CompletableDeferred<Boolean>()
+
         override suspend fun decide(settings: Settings): Boolean {
             queue.send(CoordinatorEvent.InsightAsked(id, AutoWrite.causes(settings)))
             return decision.await()
@@ -355,10 +423,6 @@ class PipelineHost(
         override val waitsForTap: Boolean = true
 
         override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
-
-        override fun ended(step: RunStep) {
-            queue.trySend(CoordinatorEvent.StepEnded(id, step))
-        }
 
         override fun decidedWithoutCall() {
             queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))

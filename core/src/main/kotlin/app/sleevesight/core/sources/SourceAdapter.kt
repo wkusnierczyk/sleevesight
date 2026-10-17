@@ -40,6 +40,17 @@ interface SourceAdapter {
     val consults: Set<SourceId> get() = setOf(id)
 
     /**
+     * Whether this adapter looks up the next track ahead, from the player's queue item (D13,
+     * `Pipeline.prepare`). A queue item has no length, so a result looked up ahead would be kept
+     * under a key the playing track never reads, and the requests made for it sent for nothing.
+     * Only an adapter that sends no request of its own prepares ahead: MusicBrainz's lines, made
+     * from the resolution, which name the artists for the genre labels. (Last.fm keeps its
+     * verdicts on artists' names, but its lookup ahead would send its own requests again when the
+     * track plays.)
+     */
+    val preparesAhead: Boolean get() = false
+
+    /**
      * Looks [track] up. Lines in the result must come in a deterministic order for the same
      * response, since [app.sleevesight.core.evidence.EvidenceSet] keeps it
      * when assigning ids. Each draft names its own source, which decides its id; an adapter may

@@ -8,7 +8,8 @@ import app.sleevesight.net.NetClient
  * The app's wiring, on the process's one client, which this creates from [HostPolicies.netConfig]
  * with the app's [appVersion] (its `versionName`). Called once per process, by `AppGraph` (#51):
  * the rate limiters belong to the client, so a second wiring would double every limit. The client
- * lives as long as the process.
+ * lives as long as the process. MusicBrainz's answers are kept for a short time
+ * ([PipelineWiring], `RememberedMusicBrainz`), for preparing the next track (D13).
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no
@@ -18,4 +19,10 @@ fun appPipelineWiring(
     appVersion: String,
     accentFolder: AccentFolder,
     resources: ResourceReader,
-): PipelineWiring = PipelineWiring(NetClient(HostPolicies.netConfig(appVersion)), accentFolder, resources)
+): PipelineWiring =
+    PipelineWiring(
+        NetClient(HostPolicies.netConfig(appVersion)),
+        accentFolder,
+        resources,
+        rememberMusicBrainz = true,
+    )
