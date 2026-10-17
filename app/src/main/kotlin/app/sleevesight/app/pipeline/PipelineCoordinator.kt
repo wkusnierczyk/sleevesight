@@ -217,7 +217,10 @@ data class CoordinatorState(
      * [insight]: its question whether to write, while undecided ([CoordinatorEvent.InsightAsked]);
      * [offered] while it offers Write; [calling] while its model call is under way. Requests and
      * questions are remembered while the run is not current, and granted if it becomes current
-     * again.
+     * again. [orphaned] once a report of another insight track has settled while it ran: it then
+     * holds no report and is never current again, and its reports to the ledger are ignored, so
+     * it cannot bring its track back; a report of its track that returns gets a run, and a
+     * decision, of its own.
      */
     data class Run(
         val id: RunId,
@@ -227,6 +230,7 @@ data class CoordinatorState(
         val insight: Boolean? = null,
         val offered: Boolean = false,
         val calling: Boolean = false,
+        val orphaned: Boolean = false,
     )
 
     val visible: Boolean get() = started > 0 || restarting
@@ -245,7 +249,11 @@ data class CoordinatorState(
         run: Run,
         report: Report,
     ): Boolean =
-        run.key == report.key || written(report.nowPlaying)?.let { sameInsightTrack(it.track, run.nowPlaying) } == true
+        !run.orphaned &&
+            (
+                run.key == report.key ||
+                    written(report.nowPlaying)?.let { sameInsightTrack(it.track, run.nowPlaying) } == true
+            )
 
     /** The run, while it is current: it holds the latest report, on the live pipeline, with no rebuild pending. */
     val current: Run? get() = run?.takeIf { run -> live && building == null && latest?.let { holds(run, it) } == true }
@@ -299,6 +307,7 @@ fun sameInsightTrack(
  * | any | Reported(key) | latest = the report; the run current only if it holds it; first action made if the cause is an action in Sleevesight | StartTimer |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
+ * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
  * | any | Settled, of the ledger's insight track | latest settled; the ledger's header from it; then as below | as below |
  * | no live pipeline, or a rebuild pending | Settled | as above | none (the swap starts it) |
  * | the run holds latest | Settled | as above | none |
@@ -312,10 +321,10 @@ fun sameInsightTrack(
  * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
  * | otherwise | WriteTapped | unchanged | none |
- * | the run, of the latest settled report's insight track | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
- * | the run, of the latest settled report's insight track | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
- * | the run, of another insight track than the latest settled report's | CardShown, CardWritten, DecidedWithoutCall | unchanged (the ledger stays empty) | none |
- * | the run, of the latest settled report's insight track | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
+ * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
+ * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
+ * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
+ * | the run, not orphaned | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
  * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
@@ -398,7 +407,19 @@ class PipelineCoordinator(
                 sameInsightTrack(ledger.track, latest.nowPlaying) -> ledger.copy(shown = latest.nowPlaying)
                 else -> null
             }
-        state = state.copy(latest = latest.copy(settled = true), ledger = kept)
+        val run =
+            state.run?.let {
+                if (sameInsightTrack(
+                        it.nowPlaying,
+                        latest.nowPlaying,
+                    )
+                ) {
+                    it
+                } else {
+                    it.copy(orphaned = true)
+                }
+            }
+        state = state.copy(latest = latest.copy(settled = true), ledger = kept, run = run)
         if (startsNow(latest)) startRun(latest)
     }
 
@@ -491,17 +512,16 @@ class PipelineCoordinator(
 
     // A run's report into the ledger: [written] or not, with [card] if it has one. A card written
     // by a call always [replaces] the entry's; one served from the cache only fills an empty slot,
-    // so the newest paid card survives a later cache hit of an older one. Ignored once a settled
-    // report of another insight track has emptied the ledger: it must not bring the old track back.
+    // so the newest paid card survives a later cache hit of an older one. Ignored from an orphaned
+    // run: a report of another insight track settled while it ran, and it must not bring its
+    // track back, whatever has been reported since.
     private fun record(
         id: RunId,
         written: Boolean,
         card: Card? = null,
         replaces: Boolean = false,
     ) {
-        val run = state.run?.takeIf { it.id == id } ?: return
-        val latest = state.latest
-        if (latest != null && latest.settled && !sameInsightTrack(latest.nowPlaying, run.nowPlaying)) return
+        val run = state.run?.takeIf { it.id == id && !it.orphaned } ?: return
         val recorded = entry(run, written)
         val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
         state = state.copy(ledger = recorded.copy(card = kept))

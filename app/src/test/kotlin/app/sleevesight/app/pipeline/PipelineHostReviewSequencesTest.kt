@@ -562,4 +562,35 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             assertEquals(2, provider.requestsFor("Alpha"))
             assertEquals("It is a song, take 2 [MB1].", shownText())
         }
+
+    @Test
+    fun `an old run's call that ends after its track returned brings nothing back, and the return decides afresh`() =
+        runTest {
+            provider.reply = { n -> "It is a song, take $n [MB1]." }
+            provider.streaming = 10.seconds
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            advanceTimeBy(1.seconds)
+            // A rebuild waits for the call; Bravo settles, then Alpha returns, at another length,
+            // and settles.
+            keyChanges.value++
+            play("Bravo")
+            advanceTimeBy(DEBOUNCE + 100.milliseconds)
+            play("Alpha", 279.seconds)
+            advanceTimeBy(DEBOUNCE + 100.milliseconds)
+            // The old call ends: its card does not bring back its entry (under the old length); the
+            // return gets its own run and decision, written after the first action.
+            advanceTimeBy(30.seconds)
+
+            assertEquals(2, provider.requestsFor("Alpha"))
+            assertEquals("It is a song, take 2 [MB1].", shownText())
+            assertEquals(
+                279.seconds,
+                host.state.value.track
+                    ?.nowPlaying
+                    ?.duration,
+            )
+        }
 }

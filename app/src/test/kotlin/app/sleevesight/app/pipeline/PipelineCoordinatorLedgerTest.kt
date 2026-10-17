@@ -132,7 +132,7 @@ class PipelineCoordinatorLedgerTest {
                 tap()
                 settle()
                 assertEquals("A #2", cardText())
-                // The card stays through another rebuild, and the AI service gone.
+                // The card stays through another rebuild.
                 keyChange()
                 settle()
                 assertEquals("A #2", cardText())
@@ -225,6 +225,52 @@ class PipelineCoordinatorLedgerTest {
                         ?.nowPlaying
                         ?.title,
                 )
+            },
+            Case(
+                "an old run's call ending before its track's return settles brings nothing back",
+                mapOf("A" to 2),
+                listOf("A", "A"),
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(1_000)
+                // A rebuild waits for the call; B settles meanwhile, orphaning A's run.
+                keyChange()
+                play("B")
+                advance(DEBOUNCE_MS + 100)
+                // A returns; the call ends (and the swap happens) before the return settles.
+                advance(8_000)
+                play("A")
+                advance(400)
+                // Swapped in, with no run yet: the return has not settled.
+                assertEquals(null, coordinator.state.run)
+                assertEquals(null, coordinator.state.ledger)
+                // The return settles: a run, and a decision, of its own (written, the first action made).
+                advance(30_000)
+                assertEquals("A #2", cardText())
+            },
+            Case(
+                "an old run's call ending after its track's return settled brings nothing back",
+                mapOf("A" to 2),
+                listOf("A", "A"),
+            ) {
+                streamMs = 10_000
+                play("A")
+                settle()
+                tap()
+                advance(1_000)
+                keyChange()
+                play("B")
+                advance(DEBOUNCE_MS + 100)
+                // A returns and settles while the old call still runs: it holds nothing.
+                play("A")
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(null, coordinator.state.ledger)
+                // The call ends: its card is ignored; the swap starts the return's own run.
+                advance(30_000)
+                assertEquals("A #2", cardText())
             },
         )
 
