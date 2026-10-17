@@ -51,6 +51,7 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+    private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
 
     /** `aiEffort` null is the provider's default, which needs a name of its own to be stored. */
     private const val PROVIDER_DEFAULT_EFFORT = "PROVIDER_DEFAULT"
@@ -85,6 +86,7 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
+            showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
         )
 
     fun write(
@@ -123,6 +125,7 @@ internal object SettingsCodec {
             defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
         )
         prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
     }
 
     /**
