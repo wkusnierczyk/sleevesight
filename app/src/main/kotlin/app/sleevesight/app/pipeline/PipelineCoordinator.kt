@@ -167,7 +167,10 @@ data class CoordinatorState(
      * whose metadata (artists, album, length) the header shows. Only a report of another insight
      * track, once settled, replaces the entry; runs, rebuilds and new keys never make [written]
      * false while it stands. So an insight written from a title alone stays when the artists
-     * arrive (#53 may revisit it); the header shows the artists.
+     * arrive, and the header shows the artists; and a rewrite (Write offered beside the card kept)
+     * runs under [track], not [shown] (#53 may revisit both). A track that returns after another
+     * has settled is a new decision (D5): the card in the store is served when the return's key
+     * matches it.
      */
     data class Ledger(
         val track: NowPlaying,

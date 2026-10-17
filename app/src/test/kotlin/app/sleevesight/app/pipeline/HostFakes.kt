@@ -95,6 +95,9 @@ internal class CardCache : PipelineCache {
     private val results = mutableMapOf<Triple<SourceId, String, Long?>, SourceResult>()
     var keepsResults = false
 
+    /** Forgets every card, as an eviction would. */
+    fun clearCards() = cards.clear()
+
     override suspend fun result(
         adapter: SourceAdapter,
         track: NormalizedTrack,

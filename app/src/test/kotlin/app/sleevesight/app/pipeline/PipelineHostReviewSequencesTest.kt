@@ -4,6 +4,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -336,5 +337,127 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             assertEquals("Alpha (Deluxe)", shown?.nowPlaying?.album)
             assertTrue(shown?.insight is InsightState.Written)
             assertEquals(1, provider.requestsFor("Alpha"))
+        }
+
+    // The card kept for a written track (the seventh review round): shown whenever its run has no
+    // insight of its own, with Write beside it only when a rewrite is offered.
+
+    private suspend fun kotlinx.coroutines.test.TestScope.writtenAlpha() {
+        started()
+        play("Alpha")
+        settle()
+        host.write()
+        settle()
+        assertEquals(1, provider.requestsFor("Alpha"))
+    }
+
+    private fun shownWritten(): Boolean =
+        host.state.value.track
+            ?.insight is InsightState.Written
+
+    @Test
+    fun `the AI key removed after a write keeps the card shown, with no Write`() =
+        runTest {
+            writtenAlpha()
+            keys = PipelineKeys()
+            keyChanges.value++
+            settle()
+
+            assertTrue(shownWritten())
+            assertEquals(false, host.state.value.rewrite)
+            assertEquals(1, provider.requestsFor("Alpha"))
+        }
+
+    @Test
+    fun `every source switched off after a write keeps the card shown`() =
+        runTest {
+            writtenAlpha()
+            settings.value = settings.value.copy(enabledSources = emptySet())
+            keyChanges.value++
+            settle()
+
+            assertTrue(shownWritten())
+            assertEquals(false, host.state.value.rewrite)
+        }
+
+    @Test
+    fun `the card stays shown while the replay gathers, and Write joins it once offered`() =
+        runTest {
+            writtenAlpha()
+            lastFm.byName = 10.seconds
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            advanceTimeBy(2.seconds)
+            assertTrue(
+                host.state.value.track
+                    ?.gathered == false,
+            )
+            assertTrue(shownWritten())
+            assertEquals(false, host.state.value.rewrite)
+
+            // Last.fm lands (10 s), the card is not found under the new evidence: Write offered.
+            advanceTimeBy(15.seconds)
+            assertTrue(shownWritten())
+            assertTrue(host.state.value.rewrite)
+        }
+
+    @Test
+    fun `a rewrite whose call fails brings the card back, with no retry`() =
+        runTest {
+            writtenAlpha()
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            provider.failure = IllegalStateException("a bug")
+            host.write()
+            settle()
+            settle()
+
+            assertEquals(2, provider.requestsFor("Alpha"))
+            assertTrue(shownWritten())
+            assertEquals(false, host.state.value.rewrite)
+        }
+
+    @Test
+    fun `a card kept lives as long as its ledger entry, so back to a track with no card, nothing kept is shown`() =
+        runTest {
+            settings.value = settings.value.copy(writeAutomatically = WriteAutomatically.NEVER)
+            writtenAlpha()
+            play("Bravo")
+            settle()
+            cache.clearCards()
+            play("Alpha")
+            settle()
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+
+            assertEquals(
+                InsightState.Idle(canWrite = true),
+                host.state.value.track
+                    ?.insight,
+            )
+            assertEquals(false, host.state.value.rewrite)
+        }
+
+    @Test
+    fun `back to a written track at another length after another track is a new decision`() =
+        runTest {
+            // As on `dev-1.0`, and as D5 allows: a track change, written under the default after
+            // the first action. The card kept is served only when the return's key matches it.
+            cache.keepsResults = true
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            settle()
+            play("Alpha", 279.seconds)
+            settle()
+            play("Bravo")
+            settle()
+            play("Alpha", 279.seconds)
+            settle()
+
+            assertEquals(2, provider.requestsFor("Alpha"))
         }
 }
