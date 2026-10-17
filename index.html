@@ -149,6 +149,9 @@ footer p{margin:0 0 4px}
    `:has()` has a rule of its own, so a browser without it still keeps the focus rule. */
 header.top nav:focus-within,main:focus-within,footer:focus-within{opacity:1!important}
 :root:has(:target) header.top nav,:root:has(:target) main,:root:has(:target) footer{opacity:1!important}
+/* The same moment settles the brand, so it does not cover what has just appeared. */
+header.top:focus-within .brand{transform:none!important}
+:root:has(main:focus-within,footer:focus-within,:target) header.top .brand{transform:none!important}
 @keyframes sl-settle{from{transform:translate(4px,70px) scale(2.6)}}
 @keyframes sl-settle-phone{from{transform:translate(4px,56px) scale(2)}}
 @keyframes sl-settle-small{from{transform:translate(4px,50px) scale(1.7)}}
