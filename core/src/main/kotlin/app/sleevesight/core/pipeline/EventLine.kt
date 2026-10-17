@@ -15,6 +15,7 @@ object EventLine {
             is PipelineEvent.Received -> "received   \"${e.nowPlaying.title}\" by ${e.nowPlaying.artists}"
             is PipelineEvent.Normalized -> "normalized ${e.key}${notes(e.track.notes)}"
             is PipelineEvent.Resolved -> "resolved   ${e.key}: ${outcomeKey(e.outcome)} in ${ms(e.latency)}"
+            is PipelineEvent.Prepared -> "prepared   ${e.key}: ${outcomeKey(e.outcome)} in ${ms(e.latency)}"
             is PipelineEvent.SourceLanded -> landed(e)
             is PipelineEvent.SourceFailed -> "failed     ${e.key}: ${e.source.tag} ${e.reason}"
             is PipelineEvent.NotCached -> "not cached ${e.key}: ${e.source.tag}, ${e.reason}"

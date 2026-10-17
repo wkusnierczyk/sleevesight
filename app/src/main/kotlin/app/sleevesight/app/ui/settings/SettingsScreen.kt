@@ -443,7 +443,6 @@ private fun InsightsSection(
         listOf(
             PrepareNextTrack.OFF to stringResource(R.string.settings_prepare_off),
             PrepareNextTrack.EVIDENCE to stringResource(R.string.settings_prepare_evidence),
-            PrepareNextTrack.EVIDENCE_AND_INSIGHT to stringResource(R.string.settings_prepare_evidence_and_insight),
         )
     ValueRow(
         title = stringResource(R.string.settings_prepare_next),

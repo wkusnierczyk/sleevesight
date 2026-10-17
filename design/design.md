@@ -74,7 +74,7 @@ These were established while designing, and checked in Phase 0 with the platform
 The media session carries more context than the design assumed. In order of reliability:
 
 1. **Spotify's metadata.** `CONTEXT_URI` and `CONTEXT_TITLE` name the playlist or album being played (`spotify:playlist:...` and the playlist's name), **without an account**.
-2. **The session queue.** Spotify publishes `getQueue()` (the upcoming tracks, with `spotify:track:` ids; 4 to 50 items, one fewer per track, reset when a track is opened through a deep link) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids), and YouTube Music its "Up next" (13 to 25 items, titles without media ids, starting with the playing track rather than after it).
+2. **The session queue.** Spotify publishes `getQueue()` (the playing track, then the upcoming ones, with `spotify:track:` ids; 4 to 50 items, one fewer per track, reset when a track is opened through a deep link; the playing track's media id matches the queue's first item in every capture, while its active queue item can lag a new track's queue for a moment) and `getQueueTitle()` ("Play Queue"). Castbox publishes its queue too (episode ids), and YouTube Music its "Up next" (13 to 25 items, titles without media ids, starting with the playing track rather than after it).
 3. **Session history.** Every track the app has seen play. Always available, but it only knows the past.
 4. **Spotify Web API, optional account.** `GET /playlists/{id}/items` returns the whole playlist, not only what is queued.
 
@@ -274,7 +274,7 @@ Prompt contracts are in the appendix.
 
 - Retrieval is cached per source and lookup key, as the evidence and outcome the app uses, never the raw response; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
-- Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default goes with preparing the next track ahead (D13), so the card is usually ready when the track starts.
+- Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default went with writing the next track's insight ahead (D13); that waits for [#172](https://github.com/wkusnierczyk/sleevesight/issues/172), so the card is written when the track starts, its lookups mostly done ahead (#20).
 
 ## User interface
 
@@ -328,7 +328,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
 | Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
 | Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
-| Insights | Prepare the next track: off, evidence, or evidence and insight; the insight only where *Write insights automatically* would write it (D13) | Evidence and insight |
+| Insights | Prepare the next track: off, or evidence (the next item in the player's queue looked up ahead by name; no insight is written ahead until [#172](https://github.com/wkusnierczyk/sleevesight/issues/172) shows a queue item carries its album and length) (D13, #20) | Evidence |
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
 | Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
@@ -346,8 +346,8 @@ Source switches decide what the model may use. The filter chips in the Sources s
 ## Privacy and security
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
-  - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track and, with *Prepare the next track* on (D13), for the next one in the player's queue.
-  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track and, with *Prepare the next track* set to *Evidence and insight* (the default, D13), for the next one. Each prompt also carries the user's style (D14), including any free text they wrote.
+  - To the enabled sources: the normalized title and artists, and the album name as the player reports it, for the playing track; and, with *Prepare the next track* on (D13), the title and artists of the next one in the player's queue, to MusicBrainz where enabled.
+  - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track only: the next one is not written ahead (D13, #20). Each prompt also carries the user's style (D14), including any free text they wrote.
   - To Spotify, only if a Spotify account is connected: requests for the playlist or album being played, made with the user's own token.
   - To the server named in that web address, when a player gives the album art only as a web address: a request for that image. The address itself may identify the album or episode.
 
@@ -515,6 +515,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-15 | D12: MusicBrainz tags are not adopted to fill Last.fm's gaps; whether they are the keyless labels when Last.fm is off is decided with the genre labels in Phase 2 | They fill 3 of Last.fm's 30 gaps (the gate, #46), at the cost of the licence conditions and a request per artist; with Last.fm off they would label 29 of 78 tracks instead of none. Last.fm's side is the simulator's frozen tags |
 | 2026-10-15 | D12 revised: MusicBrainz tags are a genre label source from Phase 1.0 (#84), labels only and never in prompts, attributed; the label sources are a user setting. The MetaBrainz inquiry (#100) is settled before the Play release: answered and its terms met, or the tags off by default in the release. Re-evaluated in Phase 2 (#101). Replaces the entry above | Whether the gaps they fill, and the 29 of 78 tracks they label without a Last.fm key, are worth another source is a judgement call, so it is the user's. Kept out of prompts, they stay clear of the AI providers' terms question (#9) |
 | 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
+| 2026-10-17 | D13 revised (#20): *Prepare the next track* is off or evidence, the default evidence: the next item is resolved by name, and MusicBrainz's answers kept in memory for when it plays; no insight is written ahead until #172 shows a queue item carries its album and length | A queue item has no album or length, which the caches key on, so an insight written ahead would be paid for again when the track plays (D5) |
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |

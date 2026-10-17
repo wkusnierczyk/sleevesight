@@ -2,8 +2,9 @@ package app.sleevesight.app.session
 
 /**
  * The queue a player publishes with `getQueue()` and `getQueueTitle()` (`design/architecture.md`,
- * *Session layer*). Spotify's holds the upcoming tracks after the playing one and is titled
- * "Play Queue"; YouTube Music's "Up next" starts with the playing track.
+ * *Session layer*). Spotify's starts with the playing track and the tracks after it, losing one
+ * item per track played, and is titled "Play Queue"; YouTube Music's "Up next" starts with the
+ * playing track too (Phase 0 probes).
  */
 data class SessionQueue(
     val title: String?,

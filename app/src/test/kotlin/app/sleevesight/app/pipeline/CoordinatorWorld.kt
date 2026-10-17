@@ -48,6 +48,21 @@ internal class World {
     var lookupMs = 0L
     var streamMs = 0L
 
+    /** How long a run's labels take. */
+    var labelsMs = 0L
+
+    /** How long a preparation's lookups take (D13). */
+    var prepareMs = 0L
+
+    /** The preparations started, cancelled, and granted their lookups, by title (D13). */
+    val preparations = mutableListOf<String>()
+    val preparationsCancelled = mutableListOf<String>()
+    val prepared = mutableListOf<String>()
+
+    /** Every grant of lookups or labels, in order: `run A`, `labels A`, `prepare B`, `prepare labels B`. */
+    val grants = mutableListOf<String>()
+    private val preparing = HashMap<RunId, String>()
+
     /** The causes the runs' settings write on (`AutoWrite.causes`): *On every track change* unless set. */
     var writesOn: Set<ChangeCause> = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
 
@@ -112,21 +127,60 @@ internal class World {
                 if (holdKeys) held += finished else schedule(0, finished)
             }
             is CoordinatorEffect.Swap -> Unit
-            is CoordinatorEffect.StartRun -> {
-                titles[effect.run] = effect.nowPlaying.title
-                keys[effect.run] = key(effect.nowPlaying)
-                if (effect.nowPlaying.artists.isEmpty()) withoutEvidence += effect.run
-                // With the cache, a key looked up before needs no lookups.
-                if (cache && keys.getValue(effect.run) in retrieved) {
-                    gathered(effect.run, delayMs = 0)
-                } else {
-                    schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
-                }
-            }
+            is CoordinatorEffect.StartRun -> startRun(effect)
             is CoordinatorEffect.CancelRun -> cancel(effect.run)
             is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
             is CoordinatorEffect.Decide -> if (effect.write) granted(effect.run, RunStep.MODEL_CALL)
             CoordinatorEffect.Acted -> actions++
+            is CoordinatorEffect.StartPreparation, is CoordinatorEffect.CancelPreparation -> preparation(effect)
+        }
+    }
+
+    private fun startRun(effect: CoordinatorEffect.StartRun) {
+        titles[effect.run] = effect.nowPlaying.title
+        keys[effect.run] = key(effect.nowPlaying)
+        if (effect.nowPlaying.artists.isEmpty()) withoutEvidence += effect.run
+        // With the cache, a key looked up before needs no lookups.
+        if (cache && keys.getValue(effect.run) in retrieved) {
+            gathered(effect.run, delayMs = 0)
+        } else {
+            schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
+        }
+    }
+
+    // A preparation started or cancelled (D13).
+    private fun preparation(effect: CoordinatorEffect) {
+        if (effect is CoordinatorEffect.StartPreparation) {
+            preparing[effect.prep] = effect.next.title
+            preparations += effect.next.title
+            schedule(0, CoordinatorEvent.StepRequested(effect.prep, RunStep.LOOKUPS), effect.prep)
+        } else if (effect is CoordinatorEffect.CancelPreparation) {
+            cancelled += effect.prep
+            preparationsCancelled += preparing.getValue(effect.prep)
+            // Its job's `finally` still reports its end.
+            schedule(0, CoordinatorEvent.PreparationEnded(effect.prep))
+        }
+    }
+
+    // A preparation granted [step]: its lookups take [prepareMs], then its labels, then it ends.
+    private fun preparationGranted(
+        prep: RunId,
+        step: RunStep,
+    ) {
+        val title = preparing.getValue(prep)
+        when (step) {
+            RunStep.LOOKUPS -> {
+                prepared += title
+                grants += "prepare $title"
+                schedule(prepareMs, CoordinatorEvent.StepEnded(prep, step), prep)
+                schedule(prepareMs, CoordinatorEvent.StepRequested(prep, RunStep.LABELS), prep)
+            }
+            RunStep.LABELS -> {
+                grants += "prepare labels $title"
+                schedule(0, CoordinatorEvent.StepEnded(prep, step), prep)
+                schedule(0, CoordinatorEvent.PreparationEnded(prep), prep)
+            }
+            RunStep.MODEL_CALL -> error("A preparation was granted a model call")
         }
     }
 
@@ -144,15 +198,20 @@ internal class World {
         run: RunId,
         step: RunStep,
     ) {
+        if (run in preparing) return preparationGranted(run, step)
         val title = titles.getValue(run)
         when (step) {
             RunStep.LOOKUPS -> {
+                grants += "run $title"
                 lookups += title
                 if (cache) retrieved += keys.getValue(run)
                 schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
                 gathered(run, lookupMs)
             }
-            RunStep.LABELS -> schedule(0, CoordinatorEvent.StepEnded(run, step), run)
+            RunStep.LABELS -> {
+                grants += "labels $title"
+                schedule(labelsMs, CoordinatorEvent.StepEnded(run, step), run)
+            }
             RunStep.MODEL_CALL -> {
                 calls[title] = (calls[title] ?: 0) + 1
                 calling += run
@@ -258,6 +317,12 @@ internal fun World.tap() = tap(coordinator.state.writeKey ?: key("No run offers 
 /** A tap on Write carrying [key], as a screen that showed that run sends it. */
 internal fun World.tap(key: RunKey) {
     send(CoordinatorEvent.WriteTapped(key))
+    advance(0)
+}
+
+/** The next item in the queue is now [title], or none (D13). */
+internal fun World.next(title: String?) {
+    send(CoordinatorEvent.NextChanged(title?.let { nowPlaying(it) }))
     advance(0)
 }
 

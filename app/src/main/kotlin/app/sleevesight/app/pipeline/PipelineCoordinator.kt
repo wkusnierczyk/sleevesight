@@ -120,6 +120,19 @@ sealed interface CoordinatorEvent {
     data class DecidedWithoutCall(
         val run: RunId,
     ) : CoordinatorEvent
+
+    /**
+     * The track to prepare ahead (D13) is now [next]: the item after the playing track in the shown
+     * player's queue (`NextInQueue`), or null when there is none or *Prepare the next track* is off.
+     */
+    data class NextChanged(
+        val next: NowPlaying?,
+    ) : CoordinatorEvent
+
+    /** Preparation [prep] ended: done, failed or cancelled (from its job's `finally`). */
+    data class PreparationEnded(
+        val prep: RunId,
+    ) : CoordinatorEvent
 }
 
 /** What the coordinator has done, for the host to carry out. */
@@ -151,7 +164,18 @@ sealed interface CoordinatorEffect {
         val run: RunId,
     ) : CoordinatorEffect
 
-    /** Let [run] start [step]: lookups, labels, or the model call a tap asked for. */
+    /** Start preparation [prep] of [next] on the live pipeline (D13, `Pipeline.prepare`). */
+    data class StartPreparation(
+        val prep: RunId,
+        val next: NowPlaying,
+    ) : CoordinatorEffect
+
+    /** Cancel preparation [prep]. */
+    data class CancelPreparation(
+        val prep: RunId,
+    ) : CoordinatorEffect
+
+    /** Let [run] (or a preparation) start [step]: lookups, labels, or the model call a tap asked for. */
     data class Grant(
         val run: RunId,
         val step: RunStep,
@@ -174,7 +198,9 @@ sealed interface CoordinatorEffect {
  * Everything the coordinator knows. [visible] while an activity is started, or one is restarting
  * after a configuration change; [allowed] (D6) once acknowledged, while visible or *Look up in the
  * background* is on. [ledger] is the insight of the current insight track ([Ledger]). [building]
- * is the rebuild waiting to be swapped in, and [built] its outcome once it is known.
+ * is the rebuild waiting to be swapped in, and [built] its outcome once it is known. [next] is the
+ * track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
+ * track whose preparation ended on the live pipeline, so it is not prepared again.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -190,6 +216,9 @@ data class CoordinatorState(
     val built: Boolean? = null,
     val live: Boolean = false,
     val runs: Long = 0,
+    val next: NowPlaying? = null,
+    val preparation: Preparation? = null,
+    val prepared: NowPlaying? = null,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -233,7 +262,9 @@ data class CoordinatorState(
      * The run in progress, of [nowPlaying] under [key]. [asked]: the steps it waits for;
      * [insight]: its question whether to write, while undecided, with the causes its settings
      * write on ([CoordinatorEvent.InsightAsked]);
-     * [offered] while it offers Write; [calling] while its model call is under way. Requests and
+     * [offered] while it offers Write; [calling] while its model call is under way; [labelled]
+     * once its labels step has ended (the last of its requests, asked for after its evidence), or
+     * the run has: a preparation waits for it, so it never stalls the run. Requests and
      * questions are remembered while the run is not current, and granted if it becomes current
      * again. [orphaned] once a report of another insight track has settled while it ran: it then
      * holds no report and is never current again, and its reports to the ledger are ignored, so
@@ -249,6 +280,17 @@ data class CoordinatorState(
         val offered: Boolean = false,
         val calling: Boolean = false,
         val orphaned: Boolean = false,
+        val labelled: Boolean = false,
+    )
+
+    /**
+     * A preparation of the next track (D13), of [nowPlaying]; [asked]: the steps it waits for. It
+     * is never granted a model call.
+     */
+    data class Preparation(
+        val id: RunId,
+        val nowPlaying: NowPlaying,
+        val asked: Set<RunStep> = emptySet(),
     )
 
     val visible: Boolean get() = started > 0 || restarting
@@ -275,6 +317,13 @@ data class CoordinatorState(
 
     /** The run, while it is current: it holds the latest report, on the live pipeline, with no rebuild pending. */
     val current: Run? get() = run?.takeIf { run -> live && building == null && latest?.let { holds(run, it) } == true }
+
+    /**
+     * Whether the next track may be prepared now (D13): requests are allowed, and the current run's
+     * requests are over (its labels step ended, or the run did), so a preparation never stalls or
+     * displaces the playing track's run.
+     */
+    val prepares: Boolean get() = allowed && current?.labelled == true
 
     /** Whether Write is offered for the track [key]: the current run's, while it waits for a tap. */
     fun offersWrite(key: RunKey): Boolean = writeKey == key
@@ -314,7 +363,14 @@ fun sameInsightTrack(
  * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
  * *Write insights* off), the user has acted since the app opened, and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
- * then records the decision. The table gives each event's own effects; the grants follow every row.
+ * then records the decision. Then the next track's preparation (D13, *Evidence*), while requests
+ * are allowed and the current run's requests are over (its labels step ended: [CoordinatorState.prepares]),
+ * so it never stalls or displaces the playing track's run (every StartRun, a new length or album
+ * of the playing track's included, also cancels a preparation in progress, which then starts again
+ * once the new run's requests are over): StartPreparation of the next track
+ * unless there is none, it was prepared on the live pipeline already, or it is the track playing;
+ * else Grant for each step the preparation waits for, never a model call. The table gives each
+ * event's own effects; the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
  * the run "holds" a report as [CoordinatorState.holds] says. A run of the ledger's written track
@@ -327,20 +383,21 @@ fun sameInsightTrack(
  * | any | ActivityStarted | started + 1; first action cleared if none was started and not restarting (the app opening) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
- * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight | StartTimer |
+ * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
  * | any | Settled, of the ledger's insight track | latest settled; the ledger's header from it; then as below | as below |
  * | no live pipeline, or a rebuild pending | Settled | as above | none (the swap starts it) |
  * | the run holds latest | Settled | as above | none |
- * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track) | CancelRun (old), StartRun |
- * | any | RebuildRequested | building = a new build; no run is current | Build |
+ * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track); a preparation cancelled, the next track kept | CancelRun (old), CancelPreparation (if one is cancelled), StartRun |
+ * | any | RebuildRequested | building = a new build; no run is current; a preparation cancelled, and nothing prepared on the new pipeline yet | CancelPreparation (if one is cancelled), Build |
  * | build not the one pending | RebuildFinished | unchanged | none |
  * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
- * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; then as for StepEnded(MODEL_CALL) | as above |
+ * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
+ * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; then as for StepEnded(MODEL_CALL) | as above |
  * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
@@ -349,6 +406,11 @@ fun sameInsightTrack(
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  * | the run, not orphaned | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
  * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
+ * | any | NextChanged(next) | next = it; a preparation of another track cancelled | CancelPreparation (if one is cancelled) |
+ * | the preparation | StepRequested(step) | the step waiting (granted once the preparation may run; a model call never) | none |
+ * | the preparation | PreparationEnded | none in progress; its track prepared | none |
+ * | an old preparation | StepRequested, PreparationEnded | unchanged | none |
+ * | a preparation, current or old | StepEnded | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
@@ -370,7 +432,10 @@ class PipelineCoordinator(
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
             else -> if (state.acknowledged) onAcknowledged(event)
         }
-        if (state.acknowledged) grants()
+        if (state.acknowledged) {
+            grants()
+            prepare()
+        }
         return effects.toList()
     }
 
@@ -381,6 +446,8 @@ class PipelineCoordinator(
             CoordinatorEvent.RebuildRequested -> rebuild()
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
+            is CoordinatorEvent.NextChanged -> nextChanged(event.next)
+            is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
             else -> fromRun(event)
         }
     }
@@ -388,9 +455,9 @@ class PipelineCoordinator(
     // What a run reports.
     private fun fromRun(event: CoordinatorEvent) {
         when (event) {
-            is CoordinatorEvent.StepRequested -> ofRun(event.run) { it.copy(asked = it.asked + event.step) }
+            is CoordinatorEvent.StepRequested -> requested(event.run, event.step)
             is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesOn) }
-            is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
+            is CoordinatorEvent.StepEnded -> stepEnded(event.run, event.step)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
             is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
             is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card, replaces = true)
@@ -410,6 +477,9 @@ class PipelineCoordinator(
     }
 
     private fun reported(event: CoordinatorEvent.Reported) {
+        // Another track playing: its run comes first, and the next item will change too.
+        val before = state.latest?.nowPlaying
+        if (before == null || !sameInsightTrack(before, event.nowPlaying)) cancelPreparation()
         val seq = (state.latest?.seq ?: 0) + 1
         state =
             state.copy(
@@ -458,7 +528,10 @@ class PipelineCoordinator(
 
     // A run of [report]; of the ledger's key and report for its written track, so the card paid
     // for is found under its own key.
+    // A preparation in progress is cancelled: the new run's lookups come first, and the
+    // preparation starts again, from what is kept, once they are over.
     private fun begin(report: CoordinatorState.Report) {
+        cancelPreparation()
         val id = RunId(state.runs + 1)
         val written = state.written(report.nowPlaying)
         val key = written?.key ?: report.key
@@ -468,6 +541,10 @@ class PipelineCoordinator(
     }
 
     private fun rebuild() {
+        // The preparation runs on the pipeline being replaced: the new one prepares again, from
+        // what is kept in memory.
+        cancelPreparation()
+        state = state.copy(prepared = null)
         val build = state.builds + 1
         state = state.copy(builds = build, building = build, built = null)
         effects += CoordinatorEffect.Build(build)
@@ -516,8 +593,76 @@ class PipelineCoordinator(
     // A run that ended waits for nothing: no call, no tap. Nothing then waits for it.
     private fun runEnded(id: RunId) {
         if (state.run?.id != id) return
-        ofRun(id) { it.copy(calling = false, offered = false, asked = emptySet(), insight = null) }
+        ofRun(id) { it.copy(calling = false, offered = false, asked = emptySet(), insight = null, labelled = true) }
         afterCall()
+    }
+
+    // A step asked for by the run, or by the preparation.
+    private fun requested(
+        id: RunId,
+        step: RunStep,
+    ) {
+        val preparation = state.preparation
+        if (preparation?.id == id) {
+            state = state.copy(preparation = preparation.copy(asked = preparation.asked + step))
+        } else {
+            ofRun(id) { it.copy(asked = it.asked + step) }
+        }
+    }
+
+    private fun stepEnded(
+        id: RunId,
+        step: RunStep,
+    ) {
+        when (step) {
+            RunStep.MODEL_CALL -> callEnded(id)
+            RunStep.LABELS -> ofRun(id) { it.copy(labelled = true) }
+            RunStep.LOOKUPS -> Unit
+        }
+    }
+
+    // The next track changed: a preparation of another one is cancelled.
+    private fun nextChanged(next: NowPlaying?) {
+        if (state.preparation?.nowPlaying != next) cancelPreparation()
+        state = state.copy(next = next)
+    }
+
+    private fun preparationEnded(id: RunId) {
+        val preparation = state.preparation?.takeIf { it.id == id } ?: return
+        state = state.copy(preparation = null, prepared = preparation.nowPlaying)
+    }
+
+    private fun cancelPreparation() {
+        val preparation = state.preparation ?: return
+        effects += CoordinatorEffect.CancelPreparation(preparation.id)
+        state = state.copy(preparation = null)
+    }
+
+    // The next track's preparation (D13), once the current run's requests are over: started when
+    // there is a next track not yet prepared and not the one playing, else granted each step it
+    // waits for, never a model call.
+    private fun prepare() {
+        if (!state.prepares) return
+        val preparation = state.preparation
+        if (preparation != null) {
+            preparation.asked.filter { it != RunStep.MODEL_CALL }.forEach {
+                effects += CoordinatorEffect.Grant(preparation.id, it)
+            }
+            state = state.copy(preparation = preparation.copy(asked = emptySet()))
+        } else {
+            state.next?.takeIf(::wanted)?.let { next ->
+                val id = RunId(state.runs + 1)
+                state = state.copy(runs = id.value, preparation = CoordinatorState.Preparation(id, next))
+                effects += CoordinatorEffect.StartPreparation(id, next)
+            }
+        }
+    }
+
+    // Whether [next] is to be prepared: not prepared on the live pipeline already, and not the
+    // track playing.
+    private fun wanted(next: NowPlaying): Boolean {
+        val playing = state.latest?.nowPlaying
+        return next != state.prepared && (playing == null || !sameInsightTrack(playing, next))
     }
 
     // What waited for the call: a pending swap, or a run of the latest report.
