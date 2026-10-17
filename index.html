@@ -7,7 +7,7 @@ layout: null
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight: liner notes for whatever you’re playing</title>
-<meta name="description" content="An open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.">
+<meta name="description" content="An open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song you are playing, with its genre labels.">
 <link rel="canonical" href="https://sleevesight.app/">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <meta name="color-scheme" content="light dark">
@@ -23,7 +23,7 @@ layout: null
 :root{
   --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
   --accent:#3346c9; --accent-soft:#e2e6fb; --on-accent:#ffffff;
-  --src-w:#46586e; --src-l:#c0362c; --src-mb:#7a4ba3; --ok:#2c7a4b;
+  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
   --f-ui:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"Roboto Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
   --h:28;
@@ -36,7 +36,7 @@ layout: null
 @media (prefers-color-scheme: dark){:root{
   --bg:#0d1015; --surface:#151920; --sunken:#10141a; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
   --accent:#8e9cff; --accent-soft:#232a4d; --on-accent:#0e1116;
-  --src-w:#9fb0c6; --src-l:#ff7d72; --src-mb:#c39be6; --ok:#5fc48a;
+  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6; --ok:#5fc48a;
   --s-c1:hsl(var(--h) 14% 12%); --s-c2:hsl(var(--h) 14% 16%); --s-c3:hsl(var(--h) 13% 21%);
   --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%); --s-onv:hsl(var(--h) 10% 70%);
   --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
@@ -88,7 +88,7 @@ figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
 .card h2{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
 .card p{margin:0;font-size:14px;line-height:1.5}
 .cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
-.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)}
+.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)}
 .check{margin-top:8px;font-size:11.5px;color:var(--ok)}
 figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
 
@@ -101,6 +101,15 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
 .after{margin:20px 0 0;color:var(--muted)}
+.planned{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 0 12px}
+.intro{margin:0 0 20px;max-width:44em}
+.boxes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.boxes li{background:var(--s-c1);color:var(--s-on);border-radius:20px;padding:18px}
+.boxes h3{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.boxes .what{margin:0 0 8px;font-size:19px;font-weight:650;font-stretch:92%}
+.boxes p{margin:0;font-size:15px;line-height:1.55}
+.legend{margin:14px 0 0;font-size:14px;color:var(--muted)}
+.legend .cite{margin:0 4px 0 0}
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 .two ul{margin:0;padding-left:1.2em}
@@ -115,7 +124,7 @@ footer p{margin:0 0 4px}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tiles{grid-template-columns:minmax(0,1fr)}
+  .tiles,.boxes{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){
   body{font-size:16px}
@@ -147,7 +156,7 @@ footer p{margin:0 0 4px}
 <div class="hero">
   <div>
     <h1>Liner notes for whatever you’re playing.</h1>
-    <p class="lede">Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres. Every fact links to where it came from.</p>
+    <p class="lede">Sleevesight is an open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song, with its genre labels. Every fact links to where it came from.</p>
     <p class="status">In development: not yet on Google Play</p>
     <div class="ctas">
       <a class="btn filled" href="design/simulator.html">Try the simulator</a>
@@ -166,10 +175,10 @@ footer p{margin:0 0 4px}
       <div aria-hidden="true">
         <p class="np-title">Sundown</p>
         <p class="np-meta"><strong>Gordon Lightfoot</strong><br>Sundown<br>Released 1974</p>
-        <ul class="genres"><li style="--gh:36">Folk</li><li style="--gh:150">Singer-songwriter</li></ul>
+        <ul class="genres"><li style="--gh:135">Folk</li><li style="--gh:135">Singer-songwriter</li></ul>
         <div class="card">
           <h2>Why it's interesting</h2>
-          <p>It was Lightfoot's only number one on the US Hot 100, and it also topped the Canadian chart.<span class="cite W">W1</span> He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home.<span class="cite W">W2</span></p>
+          <p>It was Lightfoot's only number one on the US Hot 100, and it also topped the Canadian chart.<span class="cite W">W3</span> He said the lyrics came from wondering what his girlfriend was doing out with friends while he wrote at home.<span class="cite W">W5</span></p>
           <p class="check">✓ Every sentence cited</p>
         </div>
       </div>
@@ -188,6 +197,18 @@ footer p{margin:0 0 4px}
     <li><h3>Check</h3><p>Before anything is shown, the citations are checked in code. Uncited sentences are flagged, and the evidence is listed underneath.</p></li>
   </ol>
   <p class="after">When little is documented about a track, Sleevesight says so instead of filling the gap.</p>
+</section>
+
+<section id="next" aria-labelledby="next-h">
+  <p class="planned">Planned</p>
+  <h2 id="next-h">Coming next: the song, the artist, the album</h2>
+  <p class="intro">A later version gives the song, each artist and the album an insight of their own, written and checked the same way.</p>
+  <ul class="boxes">
+    <li><h3>Song</h3><p class="what">Sundown</p><p>Written by Lightfoot and produced by Lenny Waronker, it was recorded in November 1973 at Eastern Sound in Toronto, with Red Shea on electric lead guitar.<span class="cite W">W1</span><span class="cite W">W2</span> It was certified Gold by the RIAA.<span class="cite W">W4</span></p></li>
+    <li><h3>Artist</h3><p class="what">Gordon Lightfoot</p><p>A Canadian singer-songwriter, born in Orillia, Ontario, in 1938, who died in 2023.<span class="cite L">L1</span> His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers and loneliness.<span class="cite L">L3</span></p></li>
+    <li><h3>Album</h3><p class="what">Sundown, 1974</p><p>His ninth studio album, released in January 1974, with the title track as its lead single.<span class="cite G">G1</span> It reached number one in the US and in Canada, where it stayed at the top for five weeks.<span class="cite G">G2</span></p></li>
+  </ul>
+  <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search</p>
 </section>
 
 <section id="choose" aria-labelledby="choose-h">
@@ -211,7 +232,7 @@ footer p{margin:0 0 4px}
       <p><strong>What leaves the phone, and to whom</strong></p>
       <ul>
         <li>To the sources you switched on: the track's title, artists and album, for the playing track and, by default, the next one in the queue.</li>
-        <li>To the AI service you chose: the same names, what the sources found, and your style setting. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
+        <li>To the AI service you chose: the same names and what the sources found. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
         <li>When a player gives the cover only as a web address: a request for that image to the server it names.</li>
       </ul>
       <p class="small">Nothing else leaves the phone. Your listening history stays on it. The app's first screen says all this before it starts.</p>
@@ -230,9 +251,9 @@ footer p{margin:0 0 4px}
   <ul class="links">
     <li><a href="design/simulator.html">Simulator</a><span>The whole flow over a real 80-track playlist, with frozen lookups</span></li>
     <li><a href="README.html">README</a><span>What it does, the settings, building it</span></li>
-    <li><a href="design/design.md">Design</a><span>The decisions and the reasoning behind them</span></li>
-    <li><a href="design/architecture.md">Architecture</a><span>Modules, the pipeline, privacy and security</span></li>
-    <li><a href="design/plan.md">Plan</a><span>The work to the first release</span></li>
+    <li><a href="design/design.html">Design</a><span>The decisions and the reasoning behind them</span></li>
+    <li><a href="design/architecture.html">Architecture</a><span>Modules, the pipeline, privacy and security</span></li>
+    <li><a href="design/plan.html">Plan</a><span>The work to the first release</span></li>
     <li><a href="mailto:support@sleevesight.app">support@sleevesight.app</a><span>Questions and support</span></li>
   </ul>
 </section>
