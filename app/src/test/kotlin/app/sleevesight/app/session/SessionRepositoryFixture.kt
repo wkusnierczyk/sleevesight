@@ -33,7 +33,12 @@ internal abstract class SessionRepositoryFixture {
 
     /** What an `http` art fetch waits for; each fetch takes the next one. */
     protected val fetches = mutableListOf<Pair<String, CompletableDeferred<ByteArray?>>>()
-    private val http = HttpArt { uri -> CompletableDeferred<ByteArray?>().also { fetches += uri to it }.await() }
+
+    /** Whether `http` art may be fetched, as the app gates it on its lookups being allowed (D6). */
+    protected val artAllowed = MutableStateFlow(true)
+    private val http =
+        HttpArt { uri -> CompletableDeferred<ByteArray?>().also { fetches += uri to it }.await() }
+            .onlyWhen { artAllowed }
     private val resolver = ApplicationProvider.getApplicationContext<android.app.Application>().contentResolver
 
     protected val repository =

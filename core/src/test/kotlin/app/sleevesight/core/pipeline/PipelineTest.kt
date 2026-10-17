@@ -552,4 +552,138 @@ class PipelineTest {
             assertIs<InsightState.Written>(pipeline.state.value!!.insight)
             assertEquals(1, provider.requests.size)
         }
+
+    // run(nowPlaying, control): the app's runs, each step granted by its coordinator.
+
+    /** A control whose grants and decision the test gives, recording what the run asked and reported. */
+    private class Granted(
+        private val write: Boolean = true,
+    ) : RunControl {
+        val grants = RunStep.entries.associateWith { kotlinx.coroutines.CompletableDeferred<Unit>() }
+        val asked = mutableListOf<RunStep>()
+        val ended = mutableListOf<RunStep>()
+        var decisions = 0
+        var withoutCall = 0
+        var cardsShown = 0
+        val cardsWritten = mutableListOf<String>()
+
+        override suspend fun await(step: RunStep) {
+            asked += step
+            grants.getValue(step).await()
+        }
+
+        override suspend fun decide(settings: Settings): Boolean {
+            decisions++
+            if (write) grants.getValue(RunStep.MODEL_CALL).await()
+            return write
+        }
+
+        override val waitsForTap: Boolean = true
+
+        override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
+
+        override fun ended(step: RunStep) {
+            ended += step
+        }
+
+        override fun decidedWithoutCall() {
+            withoutCall++
+        }
+
+        val cardsShownEmpty = mutableListOf<Unit>()
+
+        override fun cardShown(
+            card: InsightState.Written?,
+            evidence: app.sleevesight.core.evidence.EvidenceSet,
+        ) {
+            cardsShown++
+            if (card == null) cardsShownEmpty += Unit
+        }
+
+        override fun cardWritten(
+            card: InsightState.Written,
+            evidence: app.sleevesight.core.evidence.EvidenceSet,
+        ) {
+            cardsWritten += card.grounded.text
+        }
+    }
+
+    @Test
+    fun `a controlled run starts each step only once it is granted, and reports each end`() =
+        runTest {
+            val mb = mb()
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb), provider = provider)
+            val control = Granted()
+            backgroundScope.launch { pipeline.run(sundown, control) }
+            runCurrent()
+            assertEquals(listOf(RunStep.LOOKUPS), control.asked)
+            assertEquals(emptyList(), mb.asked)
+
+            control.grants.getValue(RunStep.LOOKUPS).complete(Unit)
+            runCurrent()
+            assertEquals(1, mb.asked.size)
+            assertEquals(listOf(RunStep.LOOKUPS, RunStep.LABELS), control.asked)
+            assertEquals(1, control.decisions)
+            assertEquals(0, provider.requests.size)
+
+            control.grants.getValue(RunStep.MODEL_CALL).complete(Unit)
+            control.grants.getValue(RunStep.LABELS).complete(Unit)
+            runCurrent()
+            assertEquals(1, provider.requests.size)
+            assertEquals(setOf(RunStep.LOOKUPS, RunStep.LABELS, RunStep.MODEL_CALL), control.ended.toSet())
+            // The card written, reported once.
+            assertEquals(listOf("It is a song [MB1]."), control.cardsWritten)
+        }
+
+    @Test
+    fun `a model call cut off reports its end`() =
+        runTest {
+            val provider = FakeProvider(delay = 10.seconds)
+            val pipeline = pipeline(listOf(mb()), provider = provider)
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            val run = backgroundScope.launch { pipeline.run(sundown, control) }
+            advanceTimeBy(2.seconds)
+            assertEquals(1, provider.requests.size)
+            assertTrue(RunStep.MODEL_CALL !in control.ended)
+
+            run.cancel()
+            runCurrent()
+            assertTrue(RunStep.MODEL_CALL in control.ended)
+            // A call cut off writes no card.
+            assertEquals(emptyList(), control.cardsWritten)
+        }
+
+    @Test
+    fun `a card kept is shown, reported as such, with no decision and no call`() =
+        runTest {
+            val cache = MemoryCache()
+            val first = pipeline(listOf(mb()), cache = cache)
+            first.run(sundown, write = true)
+            val control = Granted(write = false)
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            pipeline(listOf(mb()), cache = cache).run(sundown, control)
+
+            assertEquals(1, control.cardsShown)
+            assertEquals(emptyList(), control.cardsWritten)
+            assertEquals(0, control.withoutCall)
+            assertEquals(0, control.decisions)
+        }
+
+    @Test
+    fun `a reply kept as NO_EVIDENCE is a card shown from the cache, with none to show`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = FakeProvider(reply = { FakeProvider.done("NO_EVIDENCE") })
+            pipeline(listOf(mb()), provider = provider, cache = cache).run(sundown, write = true)
+            val control = Granted(write = false)
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            pipeline(listOf(mb()), provider = provider, cache = cache).run(sundown, control)
+
+            assertEquals(1, control.cardsShown)
+            assertEquals(1, control.cardsShownEmpty.size)
+            assertEquals(0, control.withoutCall)
+            assertEquals(1, provider.requests.size)
+        }
 }

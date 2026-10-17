@@ -30,4 +30,15 @@ object TrackIdentity {
             a.queueItemId != null && b.queueItemId != null -> a.queueItemId == b.queueItemId
             else -> a.title == b.title && (a.artists == b.artists || a.artists.isEmpty() || b.artists.isEmpty())
         }
+
+    /**
+     * Whether [track] is [last] playing on: the same track ([same]) with the same title. A new
+     * length, album or artists of it plays on; a title changing under one media id or queue item
+     * (a stream's next song) does not. The session history's rule for a row that continues
+     * (`HistoryRecorder.sameAsLast`) and the pipeline's for its insight (`sameInsightTrack`).
+     */
+    fun playsOn(
+        last: NowPlaying,
+        track: NowPlaying,
+    ): Boolean = same(last, track) && last.title == track.title
 }

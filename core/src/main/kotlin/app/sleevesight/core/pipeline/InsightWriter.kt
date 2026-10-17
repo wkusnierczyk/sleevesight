@@ -33,25 +33,27 @@ internal class InsightWriter(
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
-    /** Writes at once when [autoWrite]; else after [tap] returns, when there is one; else leaves it idle. */
-    suspend fun write(
-        autoWrite: Boolean,
-        tap: (suspend () -> Unit)?,
-    ) {
+    /**
+     * Writes at once when [control] decides so; else, when it waits for a tap, once the user taps
+     * Write; else leaves it offered. A model call reports its end to [control], however it ends.
+     */
+    suspend fun write(control: RunControl) {
         val ai = parts.ai
         val model = settings.aiModel ?: ai?.let { Settings.DEFAULT_MODELS[it.provider.id] }
         when {
             !settings.writeInsights || ai == null || model == null -> {
+                control.decidedWithoutCall()
                 show(InsightState.Idle(canWrite = false))
             }
 
             evidence.isEmpty() -> {
+                control.decidedWithoutCall()
                 emit(PipelineEvent.NoEvidence(key))
                 show(InsightState.NoEvidence)
             }
 
             else -> {
-                fromCacheOrModel(ai, model, autoWrite, tap)
+                fromCacheOrModel(ai, model, control)
             }
         }
     }
@@ -59,27 +61,28 @@ internal class InsightWriter(
     private suspend fun fromCacheOrModel(
         ai: AiAccess,
         model: String,
-        autoWrite: Boolean,
-        tap: (suspend () -> Unit)?,
+        control: RunControl,
     ) {
         val wanted = cardKey(ai, model)
         val kept = guard.attempt("read insight") { card(wanted) }
         when {
             kept != null -> {
                 emit(PipelineEvent.InsightCached(key))
-                show(checked(kept, cached = true, usage = null, complete = true))
+                val shown = checked(kept, cached = true, usage = null, complete = true)
+                control.cardShown(shown as? InsightState.Written, evidence)
+                show(shown)
             }
 
-            autoWrite -> {
-                call(ai, model, wanted)
+            control.decide(settings) -> {
+                call(ai, model, wanted, control)
             }
 
             else -> {
                 show(InsightState.Idle(canWrite = true))
                 emit(PipelineEvent.InsightWaits(key, WAITS_FOR_TAP))
-                if (tap != null) {
-                    tap()
-                    call(ai, model, wanted)
+                if (control.waitsForTap) {
+                    control.awaitTap()
+                    call(ai, model, wanted, control)
                 }
             }
         }
@@ -89,6 +92,20 @@ internal class InsightWriter(
         ai: AiAccess,
         model: String,
         card: CardKey,
+        control: RunControl,
+    ) {
+        try {
+            stream(ai, model, card, control)
+        } finally {
+            control.ended(RunStep.MODEL_CALL)
+        }
+    }
+
+    private suspend fun stream(
+        ai: AiAccess,
+        model: String,
+        card: CardKey,
+        control: RunControl,
     ) {
         emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
         show(InsightState.Writing(""))
@@ -109,7 +126,7 @@ internal class InsightWriter(
             }
         }
         when (val last = end) {
-            is CompletionEvent.Done -> finish(last, text.toString(), card, started.elapsedNow())
+            is CompletionEvent.Done -> finish(last, text.toString(), card, started.elapsedNow(), control)
             is CompletionEvent.Error -> {
                 emit(PipelineEvent.ModelFailed(key, last.kind))
                 show(InsightState.Failed(last.kind.name.lowercase()))
@@ -124,12 +141,15 @@ internal class InsightWriter(
         text: String,
         card: CardKey,
         latency: Duration,
+        control: RunControl,
     ) {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         if (done.stopReason == StopReason.REFUSAL) return show(InsightState.Failed(DECLINED))
         val complete = done.stopReason == StopReason.END
         if (complete) guard.attempt("write insight") { keep(card, text) }
-        show(checked(text, cached = false, usage = done.usage, complete = complete))
+        val written = checked(text, cached = false, usage = done.usage, complete = complete)
+        if (written is InsightState.Written) control.cardWritten(written, evidence)
+        show(written)
     }
 
     private fun checked(

@@ -27,7 +27,26 @@
     <string name="first_run_continue">Continue</string>
 
     <!-- Home, until the now-playing screen exists. -->
-    <string name="home_placeholder">This build does not show what is playing yet.</string>
+    <string name="home_placeholder">Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.</string>
+    <!-- The pipeline's state, plainly, until the home screen shows it (#52). -->
+    <string name="home_track">%1$s — %2$s</string>
+    <string name="home_source_state">%1$s: %2$s</string>
+    <string name="home_source_pending">looking</string>
+    <string name="home_source_found_song">the song</string>
+    <string name="home_source_found_artist">the artist only</string>
+    <string name="home_source_found_original">the original song</string>
+    <string name="home_source_rejected">rejected</string>
+    <string name="home_source_none">nothing found</string>
+    <string name="home_source_off">off</string>
+    <string name="home_source_unreachable">unreachable</string>
+    <string name="home_source_failed">failed</string>
+    <string name="home_source_needs_key">needs your key, in Settings</string>
+    <string name="home_source_cached">%1$s (kept)</string>
+    <string name="home_write">Write</string>
+    <string name="home_insight_writing">Writing…</string>
+    <string name="home_insight_no_evidence">Little is documented about this track.</string>
+    <string name="home_insight_failed">The insight could not be written (%1$s).</string>
+    <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
     <string name="home_what_leaves">What leaves the phone</string>

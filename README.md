@@ -2,7 +2,7 @@
 
 Liner notes for whatever is playing. Sleevesight is an open-source Android app that reads what your music player is playing and shows short, sourced insights about the song, its artists, its album and its genres.
 
-> **Status:** Phase 1, Android MVP, is under way. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design. The app so far is a skeleton: its first-run screen says what leaves the phone and leads to notification access, its settings screen holds the choices below and your keys, and it does not yet show what is playing. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://sleevesight.app/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
+> **Status:** Phase 1, Android MVP, is under way. The platform spike and the pipeline are done: the pipeline runs on a computer over a test playlist ([Pipeline CLI](#pipeline-cli)), and their findings are in the design. The app so far: its first-run screen says what leaves the phone and leads to notification access, its settings screen holds the choices below and your keys, and it looks the playing track up in the sources you switched on and, when you tap Write, has your AI service write the insight; under the default *Write insights automatically*, every track after that tap is written too, until you next open the app, and telling your skips from natural ends, for *When I skip*, comes next. While it is not on screen, it sends nothing, the covers included, unless you turn on *Look up in the background*. Until the home screen is built, it shows what it found as plain text. An insight already written stays when a changed key or setting means it would now be written from other evidence, with Write beside it to write it again; nothing is written again unless you tap. The design is in [design/design.md](design/design.md), the architecture in [design/architecture.md](design/architecture.md), and an interactive [simulator](https://sleevesight.app/design/simulator.html) simulates the full flow. Its lookups are frozen, and it has no AI service: the insight cards show the first facts found in place of a written insight, and the genre and sounds-like cards stay unwritten.
 
 ## What it does
 
@@ -36,7 +36,7 @@ Each change is saved at once; one that cannot be saved leaves the setting as it 
 
 | Setting | Default | Why |
 |---|---|---|
-| AI service, model, API key | No service until you choose one; then Anthropic's cheapest current model, Claude Haiku 5.5 | The key and its bill are yours, and an insight narrates a few lines, which needs no larger model. The model list comes from the service, with your key, once the app looks tracks up; until then the default is offered |
+| AI service, model, API key | No service until you choose one; then Anthropic's cheapest current model, Claude Haiku 5.5 | The key and its bill are yours, and an insight narrates a few lines, which needs no larger model. The model list comes from the service, with your key |
 | Reasoning effort | Low | An insight is short and waited for; the citation check, not the model's deliberation, keeps it honest |
 | Players to follow | Spotify on | A player appears, switched off, once it has had a media session (open, playing or paused) while Sleevesight has notification access; switching it on follows it at once |
 | Where to look | Every source on except the model's own knowledge | Last.fm and web search also need your key, entered under their switches |
@@ -57,7 +57,7 @@ Your API keys are encrypted with a key kept in the phone's Android Keystore, are
 
 ## Privacy
 
-Track, artist and album names, for the playing track and, by default, the next one in the queue, go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. When a player gives the cover only as a web address, the app fetches it from the server that address names, and the address itself may identify the album or episode. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names, for the playing track and, by default, the next one in the queue, go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. When a player gives the cover only as a web address, the app fetches it from the server that address names, while it is on screen (or with *Look up in the background* on), and the address itself may identify the album or episode. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
 
 ## Roadmap
 

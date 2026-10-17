@@ -66,6 +66,24 @@ class ListenerServiceTest {
     }
 
     @Test
+    fun aBoundListenerOpensNoDatabaseBeforeTheFirstRunIsAcknowledged() {
+        connectListener()
+        app.graph.pipeline
+        val cache = app.getDatabasePath("cache.db")
+        val history = app.getDatabasePath("history.db")
+        // Neither the caches nor the history's retention (which deletes old history) before it.
+        idleFor("no cache or history database before the first run") { !cache.exists() && !history.exists() }
+
+        // Then the cache is opened and its expired entries purged. (That the pipeline's settings
+        // are not read before is `AppPipelinePartsTest`'s; the session layer reads *Players to
+        // follow* before the acknowledgement, #48.)
+        FirstRunAcknowledgement(app).acknowledge()
+        idleUntil("the cache database opened") { cache.exists() }
+        // And the history's retention runs: *Keep history for* has a lifetime by default.
+        idleUntil("the history's retention ran") { history.exists() }
+    }
+
+    @Test
     fun theSystemsSessionsAndTheirChangesAreRead() {
         addSession()
         val system = SystemActiveSessions(app)

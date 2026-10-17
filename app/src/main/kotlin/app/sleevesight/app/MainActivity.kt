@@ -6,6 +6,9 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import app.sleevesight.app.ui.PipelineSummary
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -38,9 +41,28 @@ class MainActivity : ComponentActivity() {
                             graph::playerLabel,
                         )
                     },
+                    pipeline = {
+                        val view by graph.pipeline.state.collectAsState()
+                        PipelineSummary(view, onWrite = graph.pipeline::write)
+                    },
                 )
             }
         }
+    }
+
+    // The pipeline sends requests only while the app is visible, unless *Look up in the
+    // background* is on (D6). Started and stopped, not resumed and paused: a dialog or the split
+    // screen over the app leaves it visible. Counted, since a second instance of the activity is
+    // possible; a stop for a configuration change (a rotation) says so, so the start after it is
+    // not the app opening, which would ask for a new first action (D5).
+    override fun onStart() {
+        super.onStart()
+        graph.pipeline.activityStarted()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        graph.pipeline.activityStopped(changingConfigurations = isChangingConfigurations)
     }
 
     override fun onResume() {

@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.sleevesight.app.FirstRunAcknowledgement
+import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.session.NotificationAccess
 import kotlinx.serialization.Serializable
 
@@ -35,8 +36,10 @@ data object CreditsPage
  * first-run screen is seen even when access was granted in Settings before the app was opened.
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
- * given the way to [CreditsPage], and [CreditsPage].
+ * given the way to [CreditsPage], and [CreditsPage]. [Home] shows the pipeline's state, as
+ * [pipeline] draws it.
  */
+@Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
 @Composable
 fun SleevesightNavHost(
     notificationAccess: NotificationAccess,
@@ -44,6 +47,7 @@ fun SleevesightNavHost(
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
     settings: @Composable (openCredits: () -> Unit) -> Unit = {},
+    pipeline: @Composable () -> Unit = { PipelineSummary(PipelineView(), onWrite = {}) },
 ) {
     val granted by notificationAccess.granted.collectAsState()
     // Chosen once: a change of access later does not move the user off the screen they are on.
@@ -69,6 +73,7 @@ fun SleevesightNavHost(
                     accessGranted = granted,
                     onOpenFirstRun = { navController.navigate(FirstRun) },
                     onOpenSettings = { navController.navigate(SettingsPage) },
+                    pipeline = pipeline,
                 )
             } else {
                 FirstRunFirst(navController)
