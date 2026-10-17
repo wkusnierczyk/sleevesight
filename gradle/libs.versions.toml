@@ -15,6 +15,8 @@ androidx-compose-bom = "2026.06.01"
 androidx-activity = "1.12.4"
 androidx-navigation = "2.9.8"
 androidx-datastore = "1.2.1"
+# The art's colours (design, *User interface*): a Kotlin port of Google's material-color-utilities.
+materialkolor = "5.0.1"
 junit4 = "4.13.2"
 robolectric = "4.17"
 
@@ -49,5 +51,6 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
+materialkolor-utilities = { module = "com.materialkolor:material-color-utilities", version.ref = "materialkolor" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }

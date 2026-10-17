@@ -380,6 +380,7 @@ class RetrievalCacheTest {
                     GenreLabel("folk", "folk", 135, "Folk", "folk"),
                 ),
             labelArtists = listOf("mb-gl", "mb-other"),
+            firstReleased = "1974-01-01",
         )
     }
 

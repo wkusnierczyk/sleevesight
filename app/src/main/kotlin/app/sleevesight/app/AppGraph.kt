@@ -164,6 +164,7 @@ class AppGraph(
         PipelineHost(
             acknowledged = firstRun.state,
             nowPlaying = sessions.nowPlaying,
+            latestPlaying = { sessions.nowPlaying.value },
             settings = latestSettings.filterNotNull(),
             keyChanges = secrets.changes,
             readKeys = secrets::pipelineKeys,

@@ -78,6 +78,10 @@ val SourceAdapter.tag: String get() = id.tag
  * retrieval cache, so a cached track gets its labels too. The pipeline asks for their tags after
  * the evidence is assembled, so the insight does not wait for them.
  *
+ * [firstReleased] is the date of the recording's first release, as MusicBrainz's resolution gives
+ * it (`Resolution.firstReleaseDate`), on MusicBrainz's result only: kept with it in the retrieval
+ * cache, so a track served from the cache, which makes no resolution, still shows its year.
+ *
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
  * shown, but not kept in the retrieval cache.
@@ -91,6 +95,7 @@ data class SourceResult(
     val genres: List<GenreLabel> = emptyList(),
     val provisional: Boolean = false,
     val labelArtists: List<String> = emptyList(),
+    val firstReleased: String? = null,
 )
 
 /** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */
