@@ -68,10 +68,16 @@ import kotlin.coroutines.cancellation.CancellationException
  *   no insight of its own, offered or not; this says only whether Write is offered beside it. The
  *   card shows beside the run's own source states, with the evidence it cites.
  * @property rewriteFailed why the run's own insight failed, when the card paid for is shown in its
- *   place: the rewrite of that card failed (its call failed, or the run failed while writing),
- *   and the card written before is shown again, with no Write. Null otherwise.
+ *   place: the rewrite of that card failed (its call failed, or the run failed while writing) or
+ *   was stopped ([PipelineHost.STOPPED]), and the card written before is shown again, with
+ *   Rewrite while the coordinator offers Write again ([rewrite]). Null otherwise.
+ * @property retry whether Write is offered again beside the insight shown, which failed or was
+ *   stopped (#163): a tap is a new paid call. A run that failed while writing (a bug) has ended,
+ *   and offers nothing.
  * @property writeKey the key of the run Write (or Rewrite) is offered for, which a tap carries
  *   back ([PipelineHost.write]); null while none is offered.
+ * @property stopCall the model call under way that Stop is offered for, which a tap on Stop
+ *   carries back ([PipelineHost.stop]); null otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -79,7 +85,9 @@ data class PipelineView(
     val aiReady: Boolean = false,
     val rewrite: Boolean = false,
     val rewriteFailed: String? = null,
+    val retry: Boolean = false,
     val writeKey: RunKey? = null,
+    val stopCall: CallId? = null,
 )
 
 /**
@@ -210,6 +218,15 @@ class PipelineHost(
         queue.trySend(CoordinatorEvent.WriteTapped(key))
     }
 
+    /**
+     * The user tapped Stop offered for [call] ([PipelineView.stopCall]): the coordinator stops that
+     * model call if it is still under way, and no other. Unlike a tap on Write, it is never dropped
+     * for a track left meanwhile: stopping spends nothing.
+     */
+    fun stop(call: CallId) {
+        queue.trySend(CoordinatorEvent.StopTapped(call))
+    }
+
     /** Runs until [scope] is cancelled; called once. */
     fun start(scope: CoroutineScope) {
         scope.launch { run() }
@@ -276,7 +293,8 @@ class PipelineHost(
             is CoordinatorEffect.StartRun -> startRun(effect)
             is CoordinatorEffect.CancelRun -> runs.remove(effect.run)?.job?.cancel()
             is CoordinatorEffect.Grant -> (runs[effect.run] ?: preparations[effect.run])?.grant(effect.step)
-            is CoordinatorEffect.Decide -> runs[effect.run]?.decision?.complete(effect.write)
+            is CoordinatorEffect.Decide -> runs[effect.run]?.decided(effect.write)
+            is CoordinatorEffect.StopCall -> runs[effect.call.run]?.stop(effect.call.number)
             CoordinatorEffect.Acted -> onAction()
             is CoordinatorEffect.StartPreparation -> startPreparation(effect)
             is CoordinatorEffect.CancelPreparation -> preparations.remove(effect.prep)?.job?.cancel()
@@ -382,7 +400,8 @@ class PipelineHost(
         var job: Job? = null
         protected val grants = RunStep.entries.associateWith { CompletableDeferred<Unit>() }
 
-        fun grant(step: RunStep) {
+        // A step other than the model call, which a preparation is never granted.
+        open fun grant(step: RunStep) {
             grants.getValue(step).complete(Unit)
         }
 
@@ -409,20 +428,61 @@ class PipelineHost(
         override fun decidedWithoutCall() = Unit
     }
 
-    // One run's control: it asks the coordinator, and waits for its answer.
+    // One model call of a run: the tap that grants it, and the Stop that ends it.
+    private class CallGate {
+        val granted = CompletableDeferred<Unit>()
+        val stopped = CompletableDeferred<Unit>()
+    }
+
+    // One run's control: it asks the coordinator, and waits for its answer. Its model calls are
+    // numbered from 1 on every side, in the same order: the coordinator as it grants them
+    // (`CallId`), the loop as it carries out each grant (a tap's Grant, or Decide to write), the
+    // run as it makes each, after its grant. A Stop names its call's number, so it reaches that
+    // call alone.
     private inner class RunHandle(
         id: RunId,
     ) : StepHandle(id) {
-        val decision = CompletableDeferred<Boolean>()
+        private val decision = CompletableDeferred<Boolean>()
+        private val calls = ConcurrentHashMap<Int, CallGate>()
+
+        // The calls granted, touched only by the loop; the calls made, only by the run.
+        private var granted = 0
+        private var made = 0
+
+        private fun call(number: Int): CallGate = calls.computeIfAbsent(number) { CallGate() }
+
+        override fun grant(step: RunStep) {
+            if (step == RunStep.MODEL_CALL) call(++granted).granted.complete(Unit) else super.grant(step)
+        }
+
+        fun decided(write: Boolean) {
+            if (write) call(++granted).granted.complete(Unit)
+            decision.complete(write)
+        }
+
+        fun stop(number: Int) {
+            call(number).stopped.complete(Unit)
+        }
 
         override suspend fun decide(settings: Settings): Boolean {
             queue.send(CoordinatorEvent.InsightAsked(id, AutoWrite.causes(settings)))
-            return decision.await()
+            return decision.await().also { write -> if (write) made++ }
         }
 
         override val waitsForTap: Boolean = true
 
-        override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
+        override suspend fun awaitTap() {
+            call(made + 1).granted.await()
+            made++
+        }
+
+        override suspend fun awaitRetry(): Boolean {
+            queue.send(CoordinatorEvent.RetryAsked(id))
+            awaitTap()
+            return true
+        }
+
+        override suspend fun awaitStop() = call(made).stopped.await()
 
         override fun decidedWithoutCall() {
             queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
@@ -463,13 +523,16 @@ class PipelineHost(
                             )
                         }?.let { Shown(it.track, before.rewriteFailed) }
                     ?: Shown(null, null)
+            val insight = shown.track?.insight
             PipelineView(
                 track = shown.track,
-                rewrite = owner.rewrites() && shown.track?.insight is InsightState.Written,
+                rewrite = owner.rewrites() && insight is InsightState.Written,
                 needsKey = needsKey(current?.parts, now),
                 aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
                 rewriteFailed = shown.rewriteFailed,
+                retry = owner.writeKey != null && (insight is InsightState.Failed || insight == InsightState.Stopped),
                 writeKey = owner.writeKey,
+                stopCall = owner.stopCall,
             )
         }.collect {
             view.value = it
@@ -493,7 +556,12 @@ class PipelineHost(
     ): Shown {
         val own = failing(offering(track, owner), failedKey)
         val card = cardFor(owner, own)?.takeIf { lacksInsight(own) }
-        val failure = (own.insight as? InsightState.Failed)?.reason?.takeIf { card != null }
+        val failure =
+            when (val insight = own.insight) {
+                is InsightState.Failed -> insight.reason
+                InsightState.Stopped -> STOPPED
+                else -> null
+            }?.takeIf { card != null }
         return Shown(header(if (card != null) withCard(own, card) else own, owner), failure)
     }
 
@@ -556,5 +624,8 @@ class PipelineHost(
 
         /** The reason shown for an insight whose run failed. */
         const val FAILED: String = "failed"
+
+        /** [PipelineView.rewriteFailed] for a rewrite that was stopped. */
+        const val STOPPED: String = "stopped"
     }
 }

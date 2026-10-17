@@ -31,6 +31,7 @@ internal class World {
         val order: Long,
         val run: RunId?,
         val event: CoordinatorEvent,
+        val call: Long? = null,
     )
 
     private val queue = PriorityQueue<Scheduled>(compareBy<Scheduled>({ it.at }, { it.order }))
@@ -39,11 +40,23 @@ internal class World {
     private val calling = HashSet<RunId>()
     private val held = mutableListOf<CoordinatorEvent>()
 
+    // Each model call under way, by run (numbered across the world), and those stopped, whose
+    // scheduled events are dropped.
+    private val callOf = HashMap<RunId, Long>()
+    private val stoppedCalls = HashSet<Long>()
+    private var callCount = 0L
+
     val calls = linkedMapOf<String, Int>()
     val lookups = mutableListOf<String>()
 
     /** The tracks whose model call was cancelled while under way: paid for, and lost. */
     val cut = mutableListOf<String>()
+
+    /** The tracks whose model call the user stopped (Stop, #163). */
+    val stopped = mutableListOf<String>()
+
+    /** Whether the model calls fail (an error from the AI service): no card, and the run asks to retry. */
+    var failing = false
 
     var lookupMs = 0L
     var streamMs = 0L
@@ -115,8 +128,9 @@ internal class World {
         delayMs: Long,
         event: CoordinatorEvent,
         run: RunId? = null,
+        call: Long? = null,
     ) {
-        queue += Scheduled(now + delayMs, order++, run, event)
+        queue += Scheduled(now + delayMs, order++, run, event, call)
     }
 
     private fun perform(effect: CoordinatorEffect) {
@@ -131,6 +145,7 @@ internal class World {
             is CoordinatorEffect.CancelRun -> cancel(effect.run)
             is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
             is CoordinatorEffect.Decide -> if (effect.write) granted(effect.run, RunStep.MODEL_CALL)
+            is CoordinatorEffect.StopCall -> stop(effect.call.run)
             CoordinatorEffect.Acted -> actions++
             is CoordinatorEffect.StartPreparation, is CoordinatorEffect.CancelPreparation -> preparation(effect)
         }
@@ -184,6 +199,17 @@ internal class World {
         }
     }
 
+    // The call under way ends at once as stopped: no card, its end reported, and the run asks
+    // whether to call again, as `InsightWriter` does.
+    private fun stop(run: RunId) {
+        if (!calling.remove(run)) return
+        stoppedCalls += callOf.getValue(run)
+        pendingCards.remove(run)
+        stopped += titles.getValue(run)
+        schedule(0, CoordinatorEvent.StepEnded(run, RunStep.MODEL_CALL), run)
+        schedule(0, CoordinatorEvent.RetryAsked(run), run)
+    }
+
     private fun cancel(run: RunId) {
         cancelled += run
         // The run's job ends, and says so from its `finally`; a call cut off reports its end too.
@@ -215,9 +241,17 @@ internal class World {
             RunStep.MODEL_CALL -> {
                 calls[title] = (calls[title] ?: 0) + 1
                 calling += run
+                val call = ++callCount
+                callOf[run] = call
+                if (failing) {
+                    // A call that fails writes no card; the run then asks whether to call again.
+                    schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run, call)
+                    schedule(streamMs, CoordinatorEvent.RetryAsked(run), run, call)
+                    return
+                }
                 // The card is reported before the call's end; neither, for a call cut off.
-                schedule(streamMs, CoordinatorEvent.CardWritten(run, card("$title #${calls[title]}")), run)
-                schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run)
+                schedule(streamMs, CoordinatorEvent.CardWritten(run, card("$title #${calls[title]}")), run, call)
+                schedule(streamMs, CoordinatorEvent.StepEnded(run, step), run, call)
                 // Kept once it ends normally; a call cut off is not (`deliver` drops its end).
                 if (cache) pendingCards[run] = (keys.getValue(run) to service) to "$title #${calls[title]}"
             }
@@ -248,7 +282,7 @@ internal class World {
         while (queue.peek()?.let { it.at <= until } == true) {
             val next = queue.poll()
             now = next.at
-            deliver(next.run, next.event)
+            if (next.call == null || next.call !in stoppedCalls) deliver(next.run, next.event)
         }
         now = until
     }
@@ -317,6 +351,15 @@ internal fun World.tap() = tap(coordinator.state.writeKey ?: key("No run offers 
 /** A tap on Write carrying [key], as a screen that showed that run sends it. */
 internal fun World.tap(key: RunKey) {
     send(CoordinatorEvent.WriteTapped(key))
+    advance(0)
+}
+
+/** A tap on Stop as the screen sends it: for the call Stop is offered for (when none is, a call of no run). */
+internal fun World.stopTap() = stopTap(coordinator.state.stopCall ?: CallId(RunId(0), 1))
+
+/** A tap on Stop carrying [call], as a screen that showed that call sends it. */
+internal fun World.stopTap(call: CallId) {
+    send(CoordinatorEvent.StopTapped(call))
     advance(0)
 }
 

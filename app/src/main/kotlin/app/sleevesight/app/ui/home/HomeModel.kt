@@ -42,15 +42,37 @@ internal fun releaseYear(track: TrackState?): String? {
 
 /**
  * What the insight card needs besides the insight: the [track] it is of, and from the pipeline's
- * view and the settings, whether an insight can be written and whether Rewrite is offered.
+ * view and the settings, whether an insight can be written, what the pipeline offers beside it
+ * ([offers]), and why a rewrite failed or that it was stopped ([rewriteFailed]).
  */
 internal class InsightContext(
     val track: TrackState?,
     val aiReady: Boolean,
     val insightsOn: Boolean,
     val modelAllowed: Boolean,
-    val rewrite: Boolean,
+    val offers: InsightOffers,
     val rewriteFailed: String?,
+)
+
+/**
+ * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite]),
+ * Write again after a call that failed or was stopped ([retry]), and Stop while the call is under
+ * way ([stop]).
+ */
+internal class InsightOffers(
+    val rewrite: Boolean = false,
+    val retry: Boolean = false,
+    val stop: Boolean = false,
+)
+
+/**
+ * Where the insight card's taps go: Write and Rewrite ([onWrite]) and Stop ([onStop]) to the
+ * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line.
+ */
+internal class InsightActions(
+    val onWrite: () -> Unit,
+    val onStop: () -> Unit,
+    val onCite: (String) -> Unit,
 )
 
 /** A run of a sentence's text, or a citation in it. */

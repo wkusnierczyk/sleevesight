@@ -272,6 +272,67 @@ class PipelineCoordinatorLedgerTest {
                 advance(30_000)
                 assertEquals("A #2", cardText())
             },
+            // A call that failed, and Stop (#163): the ledger stays written, the card paid for kept.
+            Case(
+                "a rewrite stopped keeps the card paid for, and offers Rewrite again",
+                mapOf("A" to 2),
+                listOf("A", "A"),
+                "A",
+            ) {
+                play("A")
+                settle()
+                tap()
+                settle()
+                service++
+                keyChange()
+                settle()
+                streamMs = 10_000
+                tap()
+                advance(2_000)
+                stopTap()
+                settle()
+                assertEquals(listOf("A"), stopped)
+                assertEquals("A #1", cardText())
+                assertTrue(coordinator.state.rewrites())
+            },
+            Case(
+                "a rewrite that fails keeps the card paid for; a tap rewrites it",
+                mapOf("A" to 3),
+                listOf("A", "A"),
+            ) {
+                play("A")
+                settle()
+                tap()
+                settle()
+                service++
+                keyChange()
+                settle()
+                failing = true
+                tap()
+                settle()
+                assertEquals("A #1", cardText())
+                assertTrue(coordinator.state.rewrites())
+                failing = false
+                tap()
+                settle()
+                assertEquals("A #3", cardText())
+            },
+            Case(
+                "back to a track whose call was stopped, after another settled, is a new decision",
+                mapOf("Zero" to 1, "A" to 2, "B" to 1),
+                listOf("Zero", "A", "B", "A"),
+            ) {
+                acted()
+                streamMs = 10_000
+                play("A")
+                settle()
+                stopTap()
+                streamMs = 0
+                play("B")
+                settle()
+                play("A")
+                settle()
+            },
         )
 
     @Test

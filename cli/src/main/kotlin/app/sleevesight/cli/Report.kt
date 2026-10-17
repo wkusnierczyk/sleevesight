@@ -228,6 +228,7 @@ class Report(
                 is InsightState.Written -> "written"
                 InsightState.NoEvidence -> "no evidence"
                 is InsightState.Failed -> "failed: ${insight.reason}"
+                InsightState.Stopped -> "stopped"
             }
 
         fun cell(text: String): String = text.replace("|", "\\|").replace("\n", " ")

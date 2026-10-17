@@ -555,59 +555,6 @@ class PipelineTest {
 
     // run(nowPlaying, control): the app's runs, each step granted by its coordinator.
 
-    /** A control whose grants and decision the test gives, recording what the run asked and reported. */
-    private class Granted(
-        private val write: Boolean = true,
-    ) : RunControl {
-        val grants = RunStep.entries.associateWith { kotlinx.coroutines.CompletableDeferred<Unit>() }
-        val asked = mutableListOf<RunStep>()
-        val ended = mutableListOf<RunStep>()
-        var decisions = 0
-        var withoutCall = 0
-        var cardsShown = 0
-        val cardsWritten = mutableListOf<String>()
-
-        override suspend fun await(step: RunStep) {
-            asked += step
-            grants.getValue(step).await()
-        }
-
-        override suspend fun decide(settings: Settings): Boolean {
-            decisions++
-            if (write) grants.getValue(RunStep.MODEL_CALL).await()
-            return write
-        }
-
-        override val waitsForTap: Boolean = true
-
-        override suspend fun awaitTap() = grants.getValue(RunStep.MODEL_CALL).await()
-
-        override fun ended(step: RunStep) {
-            ended += step
-        }
-
-        override fun decidedWithoutCall() {
-            withoutCall++
-        }
-
-        val cardsShownEmpty = mutableListOf<Unit>()
-
-        override fun cardShown(
-            card: InsightState.Written?,
-            evidence: app.sleevesight.core.evidence.EvidenceSet,
-        ) {
-            cardsShown++
-            if (card == null) cardsShownEmpty += Unit
-        }
-
-        override fun cardWritten(
-            card: InsightState.Written,
-            evidence: app.sleevesight.core.evidence.EvidenceSet,
-        ) {
-            cardsWritten += card.grounded.text
-        }
-    }
-
     @Test
     fun `a controlled run starts each step only once it is granted, and reports each end`() =
         runTest {
