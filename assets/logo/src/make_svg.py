@@ -36,6 +36,10 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -2 64 36" role="i
   .eye {{ fill: none; stroke: #1f2328 }}
   .core {{ display: none }}
   .shut {{ stroke: #1f2328 }}
+  /* On dark, the eye is filled white and outlined in grey; the record's rim takes the outline's grey,
+     merging with it as the black rim does on light, and the groove gives way to a wider black disc
+     (.core), so the grey meets the black directly. The disc is drawn only on dark: on light, its edge
+     would darken the rim's antialiased edge where the lids clip it. */
   @media (prefers-color-scheme: dark) {{
     .bg {{ fill: #0d1015 }}
     .eye {{ fill: #ffffff; stroke: #8b949e }}
