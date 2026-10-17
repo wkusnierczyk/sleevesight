@@ -1,11 +1,13 @@
 // An Android application: SDK levels from the architecture (D10), Java 17, Compose,
 // kotlinx.serialization (Navigation Compose's type-safe routes are serializable), and the shared
-// checks, plus `checkManifest` on each variant's merged manifest. The release build is shrunk by
-// R8 and signed with the upload key when the environment names one (`design/release.md`).
+// checks, plus `checkManifest` on each variant's merged manifest and `checkApkClasses` on each
+// variant's APK (in `check`). The release build is shrunk by R8 and signed with the upload key when
+// the environment names one (`design/release.md`).
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.HasUnitTest
+import sleevesight.checks.CheckApkClasses
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
@@ -67,6 +69,10 @@ val graphRules = rootProject.layout.projectDirectory.file("config/module-graph.p
 val checkManifest = tasks.register("checkManifest") { group = "verification" }
 val checkDependencies = tasks.register("checkDependencies") { group = "verification" }
 val checkModuleGraph = tasks.register("checkModuleGraph") { group = "verification" }
+// In `check`, so CI's `build` packages and reads the APKs. It matters most for debug, the APK phones
+// install: R8 renames most of the release build's classes, and it fails on a missing class itself.
+val checkApkClasses = tasks.register("checkApkClasses") { group = "verification" }
+tasks.named("check") { dependsOn(checkApkClasses) }
 
 androidComponents {
     onVariants { variant ->
@@ -119,5 +125,14 @@ androidComponents {
                         }
             }
         checkModuleGraph.configure { dependsOn(graph) }
+
+        val apkClasses =
+            tasks.register<CheckApkClasses>("checkApkClasses$suffix") {
+                group = "verification"
+                description = "Fails when the APK's code refers to an app.sleevesight class no dex file of it defines."
+                apkDirectory = variant.artifacts.get(SingleArtifact.APK)
+                prefix = "Lapp/sleevesight/"
+            }
+        checkApkClasses.configure { dependsOn(apkClasses) }
     }
 }

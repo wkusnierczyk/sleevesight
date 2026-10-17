@@ -3,7 +3,13 @@
 // (and its `internal` declarations), while `main` cannot see it. So portable code that refers to
 // a JVM implementation does not compile, however it is written.
 //
-// - The module's jar carries both, and consumers and the test fixtures get `jvmMain` through it.
+// - Every outgoing variant of the module's code carries both. The jar does, which JVM consumers
+//   and the test fixtures take; so do `runtimeElements`' secondary variants `classes` and
+//   `resources`, which the Android Gradle plugin takes for a project dependency instead of the jar.
+//   Without them a debug APK lacked every `jvmMain` class and the app crashed on start (#177);
+//   `:app`'s `checkApkClasses` and the functional tests guard it. Gradle gives `apiElements` no
+//   secondary variant; one it gains gets `jvmMain`'s classes as well. (`mainSourceElements`, the
+//   source directories for coverage reports, lists `main`'s only; nothing here reads it.)
 //   The tests are associated with `main` and `jvmMain`, which gives them the internals of both;
 //   the test fixtures see the module through its jar, so they take the jar as a friend path.
 // - `jvmMain` shares `main`'s dependencies: `checkJvmMainDependencies` (in `check`) fails when
@@ -15,6 +21,7 @@
 // - The root `gradle.properties` sets `kotlin.build.archivesTaskOutputAsFriendModule=false`:
 //   `jvmMain` reads `main`'s internals from its classes, since the jar, which carries `jvmMain`,
 //   would be a cycle.
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import sleevesight.checks.CheckJvmMainDependencies
 import sleevesight.checks.CheckSourceRoots
@@ -37,6 +44,34 @@ compilations.named("test") {
 val jar = tasks.named<Jar>("jar")
 jar {
     from(jvmMain.output)
+}
+
+// `jvmMain`'s class directories, each with the task that writes it, as `main`'s are listed.
+val jvmMainClassDirs =
+    listOf(
+        tasks.named<JavaCompile>(jvmMain.compileJavaTaskName).flatMap { it.destinationDirectory },
+        tasks.named<KotlinCompile>("compileJvmMainKotlin").flatMap { it.destinationDirectory },
+    )
+val processJvmMainResources = tasks.named<ProcessResources>(jvmMain.processResourcesTaskName)
+
+fun ConfigurationVariant.addJvmMainClasses() {
+    for (dir in jvmMainClassDirs) {
+        artifact(dir) { type = ArtifactTypeDefinition.JVM_CLASS_DIRECTORY }
+    }
+}
+
+configurations.named("runtimeElements") {
+    // Named, not matched: if Gradle renamed them, the build fails here rather than ship without `jvmMain`.
+    outgoing.variants.named("classes") { addJvmMainClasses() }
+    outgoing.variants.named("resources") {
+        artifact(jvmMain.output.resourcesDir!!) {
+            type = ArtifactTypeDefinition.JVM_RESOURCES_DIRECTORY
+            builtBy(processJvmMainResources)
+        }
+    }
+}
+configurations.named("apiElements") {
+    outgoing.variants.matching { it.name == "classes" }.configureEach { addJvmMainClasses() }
 }
 
 val jarFile = jar.flatMap { it.archiveFile }

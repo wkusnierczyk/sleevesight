@@ -14,7 +14,8 @@ import kotlin.test.assertTrue
 /**
  * `sleevesight.jvm-main` on a small two-module build: portable code cannot see `jvmMain`, while
  * `jvmMain` sees `main`'s internals; the module's tests and test fixtures see the internals of
- * both; its jar and a consumer carry both; and `jvmMain` resolves exactly `main`'s dependencies.
+ * both; its jar, a consumer of the jar, and a consumer of its class and resource directories carry
+ * both; and `jvmMain` resolves exactly `main`'s dependencies.
  *
  * A functional test (`./gradlew :build-logic:functionalTest`, run by CI after the build): the
  * nested build resolves Kotlin from Maven Central, so it stays out of `check`.
@@ -55,9 +56,25 @@ class JvmMainSourceSetTest {
             "package p\n\nimport p.platform.platformSecret\n\n" +
                 "val fixture: Hasher = p.platform.JvmHasher\nval fixtureMain = secret()\nval fixtureJvm = platformSecret()\n",
         )
+        dir.write("lib/src/main/resources/p/main.txt", "main\n")
+        dir.write("lib/src/jvmMain/resources/p/platform/jvm.txt", "jvm\n")
+        // `elements` prints what the consumer's runtime classpath resolves to when it asks for
+        // `lib`'s class or resource directories rather than its jar, as the Android Gradle plugin does.
         dir.write(
             "consumer/build.gradle.kts",
-            "plugins { kotlin(\"jvm\") }\n\ndependencies { implementation(project(\":lib\")) }\n",
+            "plugins { kotlin(\"jvm\") }\n\ndependencies { implementation(project(\":lib\")) }\n\n" +
+                "fun elements(kind: String) = configurations.runtimeClasspath.get().incoming.artifactView {\n" +
+                "    attributes { attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(kind)) }\n" +
+                "}.files\n\n" +
+                "tasks.register(\"elements\") {\n" +
+                "    val classes = elements(LibraryElements.CLASSES)\n" +
+                "    val resources = elements(LibraryElements.RESOURCES)\n" +
+                "    inputs.files(classes, resources)\n" +
+                "    doLast {\n" +
+                "        classes.forEach { println(\"classes: \" + it.path) }\n" +
+                "        resources.forEach { println(\"resources: \" + it.path) }\n" +
+                "    }\n" +
+                "}\n",
         )
         dir.write("consumer/src/main/kotlin/c/Use.kt", "package c\n\nval used: p.Hasher = p.platform.JvmHasher\n")
     }
@@ -89,7 +106,26 @@ class JvmMainSourceSetTest {
         ZipFile(jar).use { zip ->
             assertNotNull(zip.getEntry("p/platform/JvmHasher.class"), "JvmHasher in the jar")
             assertNotNull(zip.getEntry("p/Hasher.class"), "Hasher in the jar")
+            assertNotNull(zip.getEntry("p/platform/jvm.txt"), "jvmMain's resource in the jar")
         }
+    }
+
+    // A consumer that takes class or resource directories, as the Android Gradle plugin takes a
+    // project dependency, gets `jvmMain` too: an APK built from `main`'s alone crashed (#177).
+    @Test
+    fun `a consumer of class and resource directories gets jvmMain`() {
+        project()
+        val output = runner(":consumer:elements").build().output
+        fun listed(kind: String) =
+            output.lines().filter { it.startsWith("$kind: ") }.map { File(it.removePrefix("$kind: ")) }
+        val classes = listed("classes")
+        val resources = listed("resources")
+        // `lib`'s directories, not its jar (external modules stay jars).
+        assertTrue((classes + resources).none { it.name == "lib.jar" }, output)
+        assertTrue(classes.any { it.resolve("p/platform/JvmHasher.class").isFile }, "JvmHasher in $classes")
+        assertTrue(classes.any { it.resolve("p/Hasher.class").isFile }, "Hasher in $classes")
+        assertTrue(resources.any { it.resolve("p/platform/jvm.txt").isFile }, "jvmMain's resource in $resources")
+        assertTrue(resources.any { it.resolve("p/main.txt").isFile }, "main's resource in $resources")
     }
 
     @Test
