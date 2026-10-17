@@ -2,11 +2,14 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.core.synthesis.GroundedText
 import org.junit.Assert.assertEquals
 import java.util.PriorityQueue
@@ -44,7 +47,12 @@ internal class World {
 
     var lookupMs = 0L
     var streamMs = 0L
-    var writesWhenActed = true
+
+    /** The causes the runs' settings write on (`AutoWrite.causes`): *On every track change* unless set. */
+    var writesOn: Set<ChangeCause> = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+
+    /** What the coordinator's effects have asked of the host other than runs: the actions taken. */
+    var actions = 0
     var holdKeys = false
     var buildFails = false
 
@@ -118,6 +126,7 @@ internal class World {
             is CoordinatorEffect.CancelRun -> cancel(effect.run)
             is CoordinatorEffect.Grant -> granted(effect.run, effect.step)
             is CoordinatorEffect.Decide -> if (effect.write) granted(effect.run, RunStep.MODEL_CALL)
+            CoordinatorEffect.Acted -> actions++
         }
     }
 
@@ -168,7 +177,7 @@ internal class World {
                     CoordinatorEvent.CardShown(run, cards[keys.getValue(run) to service]?.let(::card))
                 }
                 run in withoutEvidence -> CoordinatorEvent.DecidedWithoutCall(run)
-                else -> CoordinatorEvent.InsightAsked(run, writesWhenActed)
+                else -> CoordinatorEvent.InsightAsked(run, writesOn)
             }
         schedule(delayMs, insight, run)
         schedule(delayMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
@@ -215,6 +224,9 @@ internal class World {
             ?.grounded
             ?.text
 }
+
+/** The causes *Write insights automatically* writes on in [mode], with *Write insights* on. */
+internal fun mode(mode: WriteAutomatically): Set<ChangeCause> = AutoWrite.causes(Settings(writeAutomatically = mode))
 
 // The steps of a sequence.
 internal fun World.play(

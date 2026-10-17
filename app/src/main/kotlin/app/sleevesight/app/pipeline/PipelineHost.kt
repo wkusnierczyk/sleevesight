@@ -2,12 +2,10 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AutoWrite
-import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -15,6 +13,7 @@ import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.RunControl
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
+import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.wiring.SourceKeys
@@ -93,26 +92,29 @@ class PipelineKeys(
  * [RunControl] before each step that sends requests or spends, and reports when one ends, from a
  * `finally`.
  *
- * Nothing is read, built or sent before [acknowledged]: the session layer's reports, the settings
- * and the keys are collected only after it. A rebuild follows a key saved, replaced or removed
- * ([keyChanges]), a web engine switched or another AI service chosen; no pipeline is built until
- * the keys' first read succeeds. A pipeline that cannot be built is reported to [onFailure] and
- * none runs until the next rebuild; a run that fails (a bug: the stages map their failures to
- * outcomes) is reported and ends, and the next track runs.
+ * Nothing is read, built or sent before [acknowledged]: the session layer's reports ([changes]: each
+ * track with why it came to play, D5), the settings and the keys are collected only after it. A
+ * rebuild follows a key saved, replaced or removed ([keyChanges]), a web engine switched or another
+ * AI service chosen; no pipeline is built until the keys' first read succeeds. A pipeline that
+ * cannot be built is reported to [onFailure] and none runs until the next rebuild; a run that fails
+ * (a bug: the stages map their failures to outcomes) is reported and ends, and the next track runs.
  *
  * [state] is what the UI renders; [events] the diagnostics stream, across rebuilds;
- * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too.
+ * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too. [onAction] is
+ * told when the coordinator takes a user's action (a tap on Write), for the time since the last
+ * one that each track change is recorded with (D15).
  */
 @Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
     private val acknowledged: Flow<Boolean>,
-    private val nowPlaying: Flow<NowPlaying?>,
+    private val changes: Flow<TrackChange?>,
     private val settings: Flow<Settings>,
     private val keyChanges: Flow<Unit>,
     private val readKeys: suspend (ProviderId?) -> PipelineKeys,
     private val parts: (PipelineKeys, Settings) -> PipelineParts,
     private val normalizer: Normalizer,
     private val onFailure: (Throwable) -> Unit = {},
+    private val onAction: () -> Unit = {},
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
     private val coordinator = PipelineCoordinator()
@@ -202,8 +204,11 @@ class PipelineHost(
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
             launch {
-                nowPlaying.collect { playing ->
-                    playing?.let { queue.send(CoordinatorEvent.Reported(RunKey.of(normalizer, it), it)) }
+                changes.collect { change ->
+                    change?.let {
+                        val playing = it.nowPlaying
+                        queue.send(CoordinatorEvent.Reported(RunKey.of(normalizer, playing), playing, it.cause))
+                    }
                 }
             }
         }
@@ -235,6 +240,7 @@ class PipelineHost(
             is CoordinatorEffect.CancelRun -> runs.remove(effect.run)?.job?.cancel()
             is CoordinatorEffect.Grant -> runs[effect.run]?.grant(effect.step)
             is CoordinatorEffect.Decide -> runs[effect.run]?.decision?.complete(effect.write)
+            CoordinatorEffect.Acted -> onAction()
         }
     }
 
@@ -286,7 +292,7 @@ class PipelineHost(
 
     private fun startRun(effect: CoordinatorEffect.StartRun) {
         val current = live.value ?: return
-        val handle = RunHandle(effect.run, effect.cause)
+        val handle = RunHandle(effect.run)
         runs[effect.run] = handle
         failed.value = null
         handle.job =
@@ -310,7 +316,6 @@ class PipelineHost(
     // One run's control: it asks the coordinator, and waits for its answer.
     private inner class RunHandle(
         private val id: RunId,
-        private val cause: ChangeCause,
     ) : RunControl {
         var job: Job? = null
         private val grants = RunStep.entries.associateWith { CompletableDeferred<Unit>() }
@@ -326,7 +331,7 @@ class PipelineHost(
         }
 
         override suspend fun decide(settings: Settings): Boolean {
-            queue.send(CoordinatorEvent.InsightAsked(id, AutoWrite.writes(settings, cause, userHasActed = true)))
+            queue.send(CoordinatorEvent.InsightAsked(id, AutoWrite.causes(settings)))
             return decision.await()
         }
 

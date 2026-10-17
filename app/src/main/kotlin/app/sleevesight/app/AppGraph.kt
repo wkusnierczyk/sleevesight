@@ -24,7 +24,9 @@ import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.session.SessionRepository
+import app.sleevesight.app.session.SkipDetector
 import app.sleevesight.app.session.SystemActiveSessions
+import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
@@ -33,6 +35,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -45,6 +48,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -104,6 +108,15 @@ class AppGraph(
     private val normalizer = Normalizer(JvmAccentFolder)
 
     /**
+     * Skip detection (D5), with the user's *Crossfade* as last read (Autodetect before the first
+     * read). The session layer waits for it to relearn from the recorded track changes.
+     */
+    val skipDetector = SkipDetector { latestSettings.value?.crossfade ?: Crossfade.Autodetect }
+
+    /** When the user last acted in Sleevesight, for the track changes' features (D15). */
+    private val userActions = UserActions()
+
+    /**
      * The retrieval, artist and synthesis caches, in a database of their own under the app's
      * `databases/`, which the backup and transfer rules exclude: unlike the history, they can be
      * evicted or rebuilt at the cost of the lookups and paid calls again.
@@ -125,7 +138,8 @@ class AppGraph(
     val sessions: SessionRepository =
         SessionRepository(
             sessions = SystemActiveSessions(appContext),
-            acknowledged = firstRun.state,
+            // And skip detection has relearned from the recorded changes (`skipDetector`).
+            acknowledged = combine(firstRun.state, skipDetector.restored) { ack, restored -> ack && restored },
             // `http` art is a request like the pipeline's: only while lookups are allowed (D6).
             artLoader =
                 ArtLoader(
@@ -135,6 +149,7 @@ class AppGraph(
                 ),
             scope = mainScope,
             followed = settings.followedPlayers,
+            classify = skipDetector::classify,
         )
 
     /**
@@ -146,7 +161,14 @@ class AppGraph(
 
     /** The one writer of [history]: what the session layer sees, and the deletions below. */
     private val historyRecorder =
-        HistoryRecorder(sessions, history, Dispatchers.IO, latestSettings.filterNotNull().map { it.sessionGap })
+        HistoryRecorder(
+            sessions,
+            history,
+            Dispatchers.IO,
+            latestSettings.filterNotNull().map { it.sessionGap },
+            lastAction = userActions::lastAt,
+            onCleared = skipDetector::reset,
+        )
 
     /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
     val historyRetention =
@@ -161,7 +183,7 @@ class AppGraph(
     val pipeline: PipelineHost =
         PipelineHost(
             acknowledged = firstRun.state,
-            nowPlaying = sessions.nowPlaying,
+            changes = sessions.trackChanges,
             settings = latestSettings.filterNotNull(),
             keyChanges = secrets.changes,
             readKeys = secrets::pipelineKeys,
@@ -171,6 +193,7 @@ class AppGraph(
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
+            onAction = userActions::acted,
         )
 
     init {
@@ -179,6 +202,11 @@ class AppGraph(
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
+        // `history.db` opens only after the first run is acknowledged.
+        mainScope.launch {
+            firstRun.state.first { it }
+            skipDetector.restoreFrom(history, Dispatchers.IO)
+        }
         pipeline.start(pipelineScope)
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
         // settings are read only then); reads never return them either way.

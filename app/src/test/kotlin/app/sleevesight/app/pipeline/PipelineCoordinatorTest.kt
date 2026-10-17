@@ -2,6 +2,7 @@ package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.pipeline.RunStep
+import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -378,7 +379,7 @@ class PipelineCoordinatorTest {
                 "B",
             ) {
                 acted()
-                writesWhenActed = false
+                writesOn = mode(WriteAutomatically.WHEN_I_SKIP)
                 play("B")
                 settle()
             },

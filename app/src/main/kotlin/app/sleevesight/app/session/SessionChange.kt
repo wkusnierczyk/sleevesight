@@ -1,11 +1,12 @@
 package app.sleevesight.app.session
 
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.pipeline.ChangeCause
 import kotlin.time.Duration
 
 /**
- * A track change as the session layer saw it, kept for skip detection (D5; `design/design.md`,
- * *Track changes*), which #53 builds, and recorded with its features for learning it (D15,
+ * A track change as the session layer saw it, judged by skip detection (D5; `design/design.md`,
+ * *Track changes*; [SkipDetector]) and recorded with its features for learning it (D15,
  * `HistoryRecorder`). [SessionRepository.nowPlaying] changes only once the
  * player's reports have settled: up to [SessionRepository.MAX_SETTLE] after the change began,
  * unless the title or the queue item changes again in the last [SessionRepository.SETTLE] of
@@ -31,6 +32,11 @@ import kotlin.time.Duration
  *   [SessionRepository.MAX_STATES_BEFORE_CHANGE]: the pattern of states before the change, recorded
  *   with it for skip detection to learn from (D15). Every report is here, equal ones included,
  *   which [SessionRepository.playback], a state flow, would merge. Empty when [before] is null.
+ * @property cause why the track changed, as skip detection judged it when the change was published
+ *   ([SkipDetector.classify]): a skip in the player, or a natural end, which is also the verdict
+ *   when it cannot tell.
+ * @property learnedCrossfade the crossfade skip detection had learned for the player by then, which
+ *   the judgement used ([CrossfadeLearning]); null when none was learned.
  */
 data class SessionChange(
     val track: NowPlaying,
@@ -38,6 +44,8 @@ data class SessionChange(
     val before: PlaybackInfo?,
     val from: NowPlaying? = null,
     val states: List<StateReport> = emptyList(),
+    val cause: ChangeCause = ChangeCause.NATURAL_END,
+    val learnedCrossfade: Duration? = null,
 ) {
     /**
      * The time [from] had left at [changedAt]: its latest length less its position then,
