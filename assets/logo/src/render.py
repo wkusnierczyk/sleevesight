@@ -20,6 +20,9 @@ VB = (-16, -2, 64, 36)  # logo units; the logo's centre (16, 16) is the frame's 
 BG = {'light': '#fafbfc', 'dark': '#0d1015'}[theme]
 EYE_FILL, EYE_STROKE = {'light': ('none', '#1f2328'), 'dark': ('#ffffff', '#8b949e')}[theme]
 SHADOW = {'light': .22, 'dark': .55}[theme]
+# On dark, the record's rim merges with the eye's outline, and the groove is left out.
+RIM = {'light': '#1f2328', 'dark': '#8b949e'}[theme]
+GROOVE = {'light': '#57606a', 'dark': 'none'}[theme]
 
 # ---- easing ----
 def bezier(x1, y1, x2, y2):
@@ -102,8 +105,9 @@ def frame(t):
   <path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" transform="{sy(k)}" fill="{EYE_FILL}" stroke="{EYE_STROKE}" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <g clip-path="url(#eyeclip)"><g transform="rotate({rot:.3f} 16 16)">
-  <circle cx="16" cy="16" r="7.5" fill="#1f2328"/>
-  <circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>
+  <circle cx="16" cy="16" r="7.5" fill="{RIM}"/>
+  <circle cx="16" cy="16" r="5.7" fill="#1f2328"/>
+  <circle cx="16" cy="16" r="5.4" fill="none" stroke="{GROOVE}" stroke-width=".8"/>
   <circle cx="16" cy="16" r="3" fill="#cf222e"/>
   <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
   <path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
