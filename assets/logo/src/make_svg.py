@@ -34,10 +34,18 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -2 64 36" role="i
 <style>
   .bg {{ fill: #fafbfc }}
   .eye {{ fill: none; stroke: #1f2328 }}
+  .core {{ display: none }}
   .shut {{ stroke: #1f2328 }}
+  /* On dark, the eye is filled white and outlined in grey; the record's rim takes the outline's grey,
+     merging with it as the black rim does on light, and the groove gives way to a wider black disc
+     (.core), so the grey meets the black directly. The disc is drawn only on dark: on light, its edge
+     would darken the rim's antialiased edge where the lids clip it. */
   @media (prefers-color-scheme: dark) {{
     .bg {{ fill: #0d1015 }}
     .eye {{ fill: #ffffff; stroke: #8b949e }}
+    .rim {{ fill: #8b949e }}
+    .groove {{ display: none }}
+    .core {{ display: inline }}
     .shut {{ stroke: #8b949e }}
     .shadow {{ opacity: .55 }}
   }}
@@ -74,8 +82,9 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -2 64 36" role="i
   <path class="eye lid" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/>
 </g>
 <g clip-path="url(#eyeclip)"><g class="disc">
-  <circle cx="16" cy="16" r="7.5" fill="#1f2328"/>
-  <circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>
+  <circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/>
+  <circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/>
+  <circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>
   <circle cx="16" cy="16" r="3" fill="#cf222e"/>
   <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
   <path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
