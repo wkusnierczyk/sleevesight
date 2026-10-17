@@ -19,6 +19,7 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.synthesis.GroundedText
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -72,6 +73,17 @@ class PipelineSummaryTest {
             compose.onNodeWithText(needsKey).assertExists()
             val looking = stateText(R.string.settings_source_musicbrainz, R.string.home_source_pending)
             compose.onNodeWithText(looking).assertExists()
+            compose.onNodeWithTag(WRITE_TAG).performClick()
+            assertEquals(1, taps)
+        }
+    }
+
+    @Test
+    fun aRewriteShowsTheInsightPaidForAndWrite() {
+        var taps = 0
+        val written = InsightState.Written(GroundedText("It is a song.", emptyList()), cached = true)
+        show(PipelineView(track(written), aiReady = true, rewrite = true), onWrite = { taps++ }) {
+            compose.onNodeWithText("It is a song.").assertExists()
             compose.onNodeWithTag(WRITE_TAG).performClick()
             assertEquals(1, taps)
         }

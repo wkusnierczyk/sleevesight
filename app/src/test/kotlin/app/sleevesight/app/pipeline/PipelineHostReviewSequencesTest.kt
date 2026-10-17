@@ -38,11 +38,12 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             settle()
 
             assertEquals(1, provider.requestsFor("Alpha"))
-            assertEquals(
-                InsightState.Idle(canWrite = false),
+            // The card paid for stays, with Write beside it to rewrite it from the new evidence.
+            assertTrue(
                 host.state.value.track
-                    ?.insight,
+                    ?.insight is InsightState.Written,
             )
+            assertTrue(host.state.value.rewrite)
         }
 
     @Test
@@ -225,7 +226,7 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `a rebuild changing the card's key, then a new length, writes nothing without a tap`() =
+    fun `a rebuild changing the card's key, then a new length, keeps the card, and rewrites only on a tap`() =
         runTest {
             cache.keepsResults = true
             started()
@@ -239,10 +240,44 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             settle()
             play("Alpha", 280.seconds)
             settle()
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+            assertTrue(host.state.value.rewrite)
+
+            // A tap is the user asking: exactly one more call.
             host.write()
+            settle()
+            assertEquals(2, provider.requestsFor("Alpha"))
+        }
+
+    @Test
+    fun `a written track whose card cannot be read offers Write alone, and writes only on a tap`() =
+        runTest {
+            // The call fails, so no card was ever shown: written in the ledger, nothing to read.
+            provider.failure = IllegalStateException("a bug")
+            started()
+            play("Alpha")
+            settle()
+            host.write()
+            settle()
+            provider.failure = null
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
             settle()
 
             assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals(
+                InsightState.Idle(canWrite = true),
+                host.state.value.track
+                    ?.insight,
+            )
+            assertEquals(false, host.state.value.rewrite)
+            host.write()
+            settle()
+            assertEquals(2, provider.requestsFor("Alpha"))
         }
 
     @Test

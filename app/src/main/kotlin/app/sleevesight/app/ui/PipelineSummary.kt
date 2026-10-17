@@ -50,7 +50,7 @@ fun PipelineSummary(
                 ),
             )
         }
-        Insight(track.insight, view.aiReady, onWrite)
+        Insight(track.insight, view.aiReady, view.rewrite, onWrite)
     }
 }
 
@@ -58,6 +58,7 @@ fun PipelineSummary(
 private fun Insight(
     insight: InsightState,
     aiReady: Boolean,
+    rewrite: Boolean,
     onWrite: () -> Unit,
 ) {
     when (insight) {
@@ -72,7 +73,15 @@ private fun Insight(
         }
 
         is InsightState.Writing -> Text(insight.partial.ifEmpty { stringResource(R.string.home_insight_writing) })
-        is InsightState.Written -> Text(insight.grounded.text, style = MaterialTheme.typography.bodyLarge)
+        is InsightState.Written -> {
+            Text(insight.grounded.text, style = MaterialTheme.typography.bodyLarge)
+            // Written from evidence since changed: Write writes it again, on the user's tap.
+            if (rewrite) {
+                Button(onClick = onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
+                    Text(stringResource(R.string.home_write))
+                }
+            }
+        }
         InsightState.NoEvidence -> Text(stringResource(R.string.home_insight_no_evidence))
         is InsightState.Failed -> Text(stringResource(R.string.home_insight_failed, insight.reason))
     }

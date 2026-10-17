@@ -225,6 +225,12 @@ data class CoordinatorState(
 
     /** Whether Write is offered for the track [key]: the current run's, while it waits for a tap. */
     fun offersWrite(key: RunKey): Boolean = current?.let { it.key == key && it.offered && !it.calling } == true
+
+    /**
+     * Whether the Write offered is a rewrite: the current run is of the ledger's written track, so
+     * the card paid for stays shown beside it.
+     */
+    fun rewrites(): Boolean = current?.let { it.offered && !it.calling && written(it.nowPlaying) != null } == true
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
@@ -243,10 +249,13 @@ fun sameInsightTrack(
  *
  * After every event, once acknowledged, come the grants: while a run is current and requests are
  * [CoordinatorState.allowed], Grant for each step it waits for, and Decide for its question whether
- * to write. For the insight track the ledger has written, the answer is not to write, and no Write
- * is offered: the insight is written already. Else write when *Write insights automatically* writes
- * this change, the user has acted since the app opened, and the ledger has not decided this key
- * (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger then
+ * to write. For the insight track the ledger has written, the answer is never to write: the
+ * question comes only when a rebuild's run cannot find its card under its new card key (new
+ * evidence, another service), and Write is offered beside the card paid for, which the view keeps
+ * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when *Write
+ * insights automatically* writes this change, the user has acted since the app opened, and the
+ * ledger has not decided this key (a rebuild's run of it again is not a track change, D5); else
+ * offer Write. The ledger then
  * records the decision. The table gives each event's own effects; the grants follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
@@ -273,8 +282,8 @@ fun sameInsightTrack(
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting | none |
- * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key; first action made | Grant(MODEL_CALL) |
+ * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
  * | otherwise | WriteTapped | unchanged | none |
  * | the run | CardShown | the ledger written, under the run's key, unless written already | none |
  * | the run | DecidedWithoutCall | the ledger decided under the run's key, unless written already | none |
@@ -476,7 +485,9 @@ class PipelineCoordinator(
             // A rebuild's run of a key the ledger decided is not a track change (D5).
             val decided = ledger != null && ledger.key == run.key
             val write = writesWhenActed && state.acted && !written && !decided
-            next = next.copy(insight = null, offered = !write && !written, calling = write)
+            // For a written track, the question comes only when its card is not found (a rebuild
+            // changed the card's key): Write is offered beside the card paid for, to rewrite it.
+            next = next.copy(insight = null, offered = !write, calling = write)
             state = state.copy(ledger = entry(run, write))
             effects += CoordinatorEffect.Decide(run.id, write)
         }

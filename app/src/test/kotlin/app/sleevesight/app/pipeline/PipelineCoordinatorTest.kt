@@ -324,11 +324,9 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "a model call under way when a key changes is the only one paid",
-                mapOf("A" to 1),
+                "a model call under way when a key changes is the only one paid; a rewrite only on a tap",
+                mapOf("A" to 2),
                 listOf("A", "A"),
-                // Written: no Write offered for it again (the simulated world keeps no cards).
-                null,
             ) {
                 streamMs = 10_000
                 play("A")
@@ -338,6 +336,12 @@ class PipelineCoordinatorTest {
                 keyChange()
                 advance(30_000)
                 assertEquals(emptyList<String>(), cut)
+                // The replay finds no card (the simulated world keeps none here): Write offered
+                // beside the card paid for, to rewrite it.
+                assertEquals(mapOf("A" to 1), calls)
+                assertTrue(coordinator.state.rewrites())
+                tap()
+                advance(30_000)
             },
             Case("a rotation keeps the first action", mapOf("Zero" to 1, "B" to 1), listOf("Zero", "B")) {
                 acted()
@@ -460,11 +464,10 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "consecutive rebuilds keep the track written, and write it once",
+                "consecutive rebuilds keep the track written, write it once, and offer a rewrite",
                 mapOf("A" to 1),
                 listOf("A", "A", "A"),
-                // Written: no Write offered for it again (the simulated world keeps no cards here).
-                null,
+                "A",
             ) {
                 play("A")
                 settle()
@@ -475,6 +478,7 @@ class PipelineCoordinatorTest {
                 advance(500)
                 keyChange()
                 advance(10_000)
+                assertTrue(coordinator.state.rewrites())
             },
             Case(
                 "a rebuild in a newer track's debounce while the old track streams waits for the call",
@@ -625,9 +629,10 @@ class PipelineCoordinatorTest {
                 assertEquals(true, coordinator.state.ledger?.written)
             },
             Case(
-                "a rebuild changing the card's key, then a new length: nothing written without a tap",
+                "a rebuild changing the card's key, then a new length: a rewrite offered, nothing unasked",
                 mapOf("A" to 1),
                 listOf("A"),
+                "A",
             ) {
                 cache = true
                 play("A", seconds = 106)
@@ -639,7 +644,19 @@ class PipelineCoordinatorTest {
                 settle()
                 play("A", seconds = 280)
                 settle()
-                tap()
+                assertTrue(coordinator.state.rewrites())
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "a written track whose card is not found is never written without a tap, the first action made",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                acted()
+                play("A")
+                settle()
+                keyChange()
                 settle()
                 assertEquals(true, coordinator.state.ledger?.written)
             },

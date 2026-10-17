@@ -59,11 +59,15 @@ import kotlin.coroutines.cancellation.CancellationException
  *   for an adapter.
  * @property aiReady whether an insight can be written: an AI service is chosen, it has a client,
  *   and its key is saved and readable.
+ * @property rewrite whether Write is offered beside a written insight, to write it again: a rebuild
+ *   changed its card's key (new evidence, another service), so its run found no card, and the card
+ *   paid for is shown, with the evidence it cites, until a tap writes the new one.
  */
 data class PipelineView(
     val track: TrackState? = null,
     val needsKey: Set<SourceId> = emptySet(),
     val aiReady: Boolean = false,
+    val rewrite: Boolean = false,
 )
 
 /**
@@ -344,25 +348,74 @@ class PipelineHost(
     private suspend fun publish(latest: StateFlow<Settings>) {
         val tracks = live.flatMapLatest { it?.pipeline?.state ?: flowOf(null) }
         combine(tracks, live, snapshot, latest, failed) { track, current, owner, now, failedKey ->
-            val made = current?.parts
-            val adapters = made?.adapters?.map { it.id }?.toSet()
+            track?.let { keep(it, owner) }
             PipelineView(
-                track =
-                    (track ?: view.value.track)
-                        ?.let {
-                            offering(it, owner)
-                        }?.let { failing(it, failedKey) }
-                        ?.let { header(it, owner) },
-                needsKey =
-                    adapters?.let { ids -> KEYED_SOURCES.filter { now.isEnabled(it) && it !in ids }.toSet() }
-                        ?: view.value.needsKey,
-                aiReady = made?.let { it.ai != null } ?: view.value.aiReady,
+                track = shownTrack(track ?: view.value.track, owner, failedKey),
+                rewrite = keptFor(owner) != null,
+                needsKey = needsKey(current?.parts, now),
+                aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
             )
         }.collect {
             view.value = it
             published?.invoke(it)
         }
     }
+
+    // The track as shown: Write only while offered, the card kept beside a rewrite offer, a failed
+    // run as failed, and the header from the latest report.
+    private fun shownTrack(
+        track: TrackState?,
+        owner: CoordinatorState,
+        failedKey: RunKey?,
+    ): TrackState? {
+        val card = keptFor(owner)
+        return track
+            ?.let { offering(it, owner) }
+            ?.let { if (card != null && it.insight is InsightState.Idle) withCard(it, card) else it }
+            ?.let { failing(it, failedKey) }
+            ?.let { header(it, owner) }
+    }
+
+    private fun needsKey(
+        made: PipelineParts?,
+        now: Settings,
+    ): Set<SourceId> {
+        val adapters = made?.adapters?.map { it.id }?.toSet() ?: return view.value.needsKey
+        return KEYED_SOURCES.filter { now.isEnabled(it) && it !in adapters }.toSet()
+    }
+
+    // The card paid for, kept in memory for the ledger's written track while it stands: what a
+    // rebuild's run that cannot find it (its card key changed) shows beside Write. Touched by the
+    // publishing coroutine alone.
+    private var kept: Pair<RunKey, TrackState>? = null
+
+    private fun keep(
+        track: TrackState,
+        owner: CoordinatorState,
+    ) {
+        val ledger = owner.ledger?.takeIf { it.written && sameInsightTrack(it.track, track.nowPlaying) }
+        when {
+            ledger == null ->
+                if (owner.ledger?.let { sameInsightTrack(it.track, track.nowPlaying) } !=
+                    true
+                ) {
+                    kept = null
+                }
+            track.insight is InsightState.Written -> kept = ledger.key to track
+        }
+    }
+
+    // The card to show beside a rewrite offer, if one is kept for the ledger's key; none when it
+    // cannot be read (none was shown: the call failed or was cut off), and Write is offered alone.
+    private fun keptFor(owner: CoordinatorState): TrackState? {
+        val ledger = owner.ledger ?: return null
+        return kept?.takeIf { owner.rewrites() && it.first == ledger.key }?.second
+    }
+
+    private fun withCard(
+        track: TrackState,
+        card: TrackState,
+    ): TrackState = track.copy(insight = card.insight, evidence = card.evidence)
 
     // The header (artists, album, length) from the latest report of the ledger's insight track;
     // the run's input and its card's key stay its own.

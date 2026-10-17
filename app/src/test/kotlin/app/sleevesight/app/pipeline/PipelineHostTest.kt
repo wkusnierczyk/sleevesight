@@ -268,21 +268,27 @@ internal class PipelineHostTest : PipelineHostFixture() {
             assertEquals(1, provider.requests)
 
             // New evidence (a Last.fm key): the replay of the track shown is not a track change, and
-            // the ledger has it written, so its card (under the old evidence) is not offered again.
+            // finds no card under the new evidence: the card paid for stays, with Write beside it.
             keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
             keyChanges.value++
             settle()
             assertEquals(1, provider.requests)
-            assertEquals(
-                InsightState.Idle(canWrite = false),
+            assertTrue(
                 host.state.value.track
-                    ?.insight,
+                    ?.insight is InsightState.Written,
             )
+            assertTrue(host.state.value.rewrite)
+
+            // A tap rewrites it: one more call.
+            host.write()
+            settle()
+            assertEquals(2, provider.requests)
+            assertEquals(false, host.state.value.rewrite)
 
             // The next track is a change, written under the default after the first action.
             play("Two")
             settle()
-            assertEquals(2, provider.requests)
+            assertEquals(3, provider.requests)
         }
 
     @Test
