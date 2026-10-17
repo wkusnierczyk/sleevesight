@@ -274,7 +274,7 @@ Prompt contracts are in the appendix.
 
 - Retrieval is cached per source and lookup key, as the evidence and outcome the app uses, never the raw response; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
 - Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
-- Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default went with writing the next track's insight ahead (D13); that waits for [#172](https://github.com/wkusnierczyk/sleevesight/issues/172), so the card is written when the track starts, its lookups mostly done ahead (#20).
+- Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default went with writing the next track's insight ahead (D13); Spotify's queue gives no album or length to key it on ([#172](https://github.com/wkusnierczyk/sleevesight/issues/172)), so the card is written when the track starts, its lookups mostly done ahead (#20).
 
 ## User interface
 
@@ -328,7 +328,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Insights | Write insights (off: no AI calls at all; evidence is still shown) | On |
 | Insights | Write insights automatically: on every track change, when I skip, or never (D5) | On every track change |
 | Insights | Crossfade, for telling skips from natural ends under *When I skip* (D5) | Autodetect |
-| Insights | Prepare the next track: off, or evidence (the next item in the player's queue looked up ahead by name; no insight is written ahead until [#172](https://github.com/wkusnierczyk/sleevesight/issues/172) shows a queue item carries its album and length) (D13, #20) | Evidence |
+| Insights | Prepare the next track: off, or evidence (the next item in the player's queue looked up ahead by name; no insight is written ahead: Spotify's queue items carry no album or length, [#172](https://github.com/wkusnierczyk/sleevesight/issues/172)) (D13, #20) | Evidence |
 | Insights | Style: a preset or free text, with overrides per card under *Advanced* (D14) | Each card's built-in style |
 | Lookups | Look up in the background (D6) | Off |
 | Lookups | Cache lifetime per source (D9) | MusicBrainz, Wikidata and Discogs 30 days, Wikipedia and Last.fm 7 days, web search 1 day |
@@ -516,6 +516,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-15 | D12 revised: MusicBrainz tags are a genre label source from Phase 1.0 (#84), labels only and never in prompts, attributed; the label sources are a user setting. The MetaBrainz inquiry (#100) is settled before the Play release: answered and its terms met, or the tags off by default in the release. Re-evaluated in Phase 2 (#101). Replaces the entry above | Whether the gaps they fill, and the 29 of 78 tracks they label without a Last.fm key, are worth another source is a judgement call, so it is the user's. Kept out of prompts, they stay clear of the AI providers' terms question (#9) |
 | 2026-10-12 | D13: prepare the next track in the queue ahead, a user setting (off, evidence, evidence and insight; the default the last) | The card is ready when the track plays, and the slow MusicBrainz lookups are done before they are needed |
 | 2026-10-17 | D13 revised (#20): *Prepare the next track* is off or evidence, the default evidence: the next item is resolved by name, and MusicBrainz's answers kept in memory for when it plays; no insight is written ahead until #172 shows a queue item carries its album and length | A queue item has no album or length, which the caches key on, so an insight written ahead would be paid for again when the track plays (D5) |
+| 2026-10-17 | D13 revised (#172): no insight is written ahead; settles the *until #172* of the entry above | Spotify's queue items carry no album or length. The wait for the insight when a track starts is accepted, so neither reading Castbox's queue extras (which carry both) nor keying a card prepared ahead on Spotify's track id is worth its machinery |
 | 2026-10-12 | D14: a prompt style for insights, with presets, free text and overrides per card, over a fixed contract | The user shapes the writing; the grounding check keeps its guarantees |
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |
