@@ -47,6 +47,16 @@ sealed interface PipelineEvent {
         val latency: Duration,
     ) : PipelineEvent
 
+    /**
+     * The next track in the player's queue was prepared ahead (D13): resolved by name, with no
+     * length, and [outcome] is that resolution's. Nothing of it is shown or kept as the track's own.
+     */
+    data class Prepared(
+        override val key: String,
+        val outcome: Outcome,
+        val latency: Duration,
+    ) : PipelineEvent
+
     /** A source landed, from the network or, when [cached], the retrieval cache. */
     data class SourceLanded(
         override val key: String,

@@ -25,7 +25,7 @@ class SettingsTest {
         assertTrue(defaults.writeInsights)
         assertEquals(WriteAutomatically.ON_EVERY_TRACK_CHANGE, defaults.writeAutomatically)
         assertEquals(Crossfade.Autodetect, defaults.crossfade)
-        assertEquals(PrepareNextTrack.EVIDENCE_AND_INSIGHT, defaults.prepareNextTrack)
+        assertEquals(PrepareNextTrack.EVIDENCE, defaults.prepareNextTrack)
         assertFalse(defaults.lookUpInBackground)
     }
 

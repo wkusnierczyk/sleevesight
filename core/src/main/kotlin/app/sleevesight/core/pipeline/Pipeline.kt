@@ -161,6 +161,18 @@ class Pipeline(
     ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control).run()
 
     /**
+     * Prepares [next], the next item in the player's queue, ahead of its play (D13, *Evidence*):
+     * its resolution by name and what the playing track's run then finds by name or id
+     * ([Preparation]). Publishes nothing, keeps nothing as the track's own, and writes no insight;
+     * each step that sends requests starts once [control] grants it.
+     */
+    suspend fun prepare(
+        next: NowPlaying,
+        control: RunControl,
+    ) = Preparation(parts, time, settings(), parts.normalizer.normalize(next), control) { eventFlow.tryEmit(it) }
+        .run()
+
+    /**
      * Runs the pipeline for [nowPlaying] once and returns its final state: with the insight written
      * when [write] (and insights are on, with an AI service set up), else with its evidence only.
      */

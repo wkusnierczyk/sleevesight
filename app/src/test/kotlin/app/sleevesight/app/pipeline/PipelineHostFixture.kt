@@ -50,6 +50,10 @@ internal abstract class PipelineHostFixture {
     protected val provider = CountingProvider()
     protected val cache = CardCache()
 
+    /** The next item in the queue (D13), and each resolution asked: the lookup key and the length. */
+    protected val next = MutableStateFlow<NowPlaying?>(null)
+    protected val resolved = mutableListOf<Pair<String, Duration?>>()
+
     protected val host =
         PipelineHost(
             acknowledged = acknowledged,
@@ -64,6 +68,7 @@ internal abstract class PipelineHostFixture {
             },
             onFailure = { failures += it },
             onAction = { actions++ },
+            next = next,
             normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, _ ->
                 builds++
@@ -71,7 +76,11 @@ internal abstract class PipelineHostFixture {
                 PipelineParts(
                     normalizer = Normalizer(JvmAccentFolder),
                     adapters = listOfNotNull(musicBrainz, keys.sources.lastFm?.let { lastFm }),
-                    resolver = TrackResolver { _, _ -> Resolution(Outcome.SongArticle, recordingMbid = "rec") },
+                    resolver =
+                        TrackResolver { track, duration ->
+                            resolved += track.lookupKey to duration
+                            Resolution(Outcome.SongArticle, recordingMbid = "rec")
+                        },
                     hasher = JvmHasher,
                     ai = keys.ai?.let { AiAccess(provider, it) },
                     cache = cache,
