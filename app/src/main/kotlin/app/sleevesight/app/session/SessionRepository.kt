@@ -86,6 +86,10 @@ class SessionRepository(
     private val artState = MutableStateFlow<Bitmap?>(null)
     private val changeState = MutableStateFlow<SessionChange?>(null)
     private val trackChangeState = MutableStateFlow<TrackChange?>(null)
+
+    // The cause the track shown carries, and that track as last published: set where a change is
+    // judged, dropped at any break ([CarriedCause.next]). Touched on the main thread alone.
+    private var carried: CarriedCause? = null
     private val playingState = MutableStateFlow<NowPlaying?>(null)
     private val seenState = MutableStateFlow<Set<String>>(emptySet())
 
@@ -105,11 +109,12 @@ class SessionRepository(
 
     /**
      * [nowPlaying] with why its track came to play, for the pipeline (D5): the cause of the change
-     * into it, as skip detection judged it ([classify]; [SessionChange.cause]), while it plays on
-     * that change's track ([TrackIdentity.playsOn]: a new length, album or artists of it keep the
-     * cause); [ChangeCause.NATURAL_END] for a track with no change into it (the first found, a
-     * title changing under one media id), the verdict when detection cannot tell. Published with
-     * [nowPlaying] and [lastChange], so a report never pairs with another track's cause.
+     * judged into it ([classify]; [SessionChange.cause]), kept only across the reports published
+     * after it that each play on the one before ([TrackIdentity.playsOn]: a new length, album or
+     * artists); any break (another track, no track, a track after none, the layer stopped) drops
+     * it, and a track with no judged change into it is [ChangeCause.NATURAL_END], the verdict when
+     * detection cannot tell ([CarriedCause]). Published with [nowPlaying] and [lastChange], so a
+     * report never pairs with another track's cause.
      */
     val trackChanges: StateFlow<TrackChange?> = trackChangeState.asStateFlow()
 
@@ -187,6 +192,7 @@ class SessionRepository(
         publish()
         // Not replayed to a collector after the next start; `publish` has cleared `lastShown`.
         changeState.value = null
+        carried = null
     }
 
     private fun onSessionsChanged(active: List<PlayerSession>) {
@@ -218,6 +224,7 @@ class SessionRepository(
         val switched = shown !== lastShown
         lastShown = shown
         val previous = nowPlayingState.value
+        var judgedCause: ChangeCause? = null
         val track = shown?.track
         nowPlayingState.value = track
         if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
@@ -226,7 +233,7 @@ class SessionRepository(
             // Whatever order the sessions settle in, the times never go back: a change that began
             // before the last one published (a hidden player's, shown once the other paused) is
             // timed now, as a switch. Judged once, as published.
-            changeState.value =
+            val judged =
                 classify(
                     if (last != null && change.changedAt < last.changedAt) {
                         SessionChange(track, clock(), null, from = previous)
@@ -234,20 +241,23 @@ class SessionRepository(
                         change
                     },
                 )
+            changeState.value = judged
+            judgedCause = judged.cause
         }
-        trackChangeState.value = track?.let(::withCause)
+        publishCause(previous, track, judgedCause)
         // After the change, so a collector that sees a new track playing finds its change.
         publishPlaying(shown)
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
     }
 
-    /**
-     * [track] with the cause of the change into it, while it plays on that change's track; else a
-     * natural end ([trackChanges]).
-     */
-    private fun withCause(track: NowPlaying): TrackChange {
-        val cause = changeState.value?.takeIf { TrackIdentity.playsOn(it.track, track) }?.cause
-        return TrackChange(track, cause ?: ChangeCause.NATURAL_END)
+    /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */
+    private fun publishCause(
+        previous: NowPlaying?,
+        track: NowPlaying?,
+        judged: ChangeCause?,
+    ) {
+        carried = CarriedCause.next(carried, previous, track, judged)
+        trackChangeState.value = track?.let { TrackChange(it, carried?.cause ?: ChangeCause.NATURAL_END) }
     }
 
     /** Publishes [playing] from [shown]'s settled track and state, unless its reports are still settling. */

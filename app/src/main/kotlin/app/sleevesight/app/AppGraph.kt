@@ -108,8 +108,8 @@ class AppGraph(
     private val normalizer = Normalizer(JvmAccentFolder)
 
     /**
-     * Skip detection (D5), with the user's *Crossfade* as last read (Autodetect before the first
-     * read). The session layer waits for it to relearn from the recorded track changes.
+     * Skip detection (D5), with the user's *Crossfade* as last read. The session layer waits for it
+     * to relearn from the recorded track changes, and for the settings' first read.
      */
     val skipDetector = SkipDetector { latestSettings.value?.crossfade ?: Crossfade.Autodetect }
 
@@ -138,8 +138,12 @@ class AppGraph(
     val sessions: SessionRepository =
         SessionRepository(
             sessions = SystemActiveSessions(appContext),
-            // And skip detection has relearned from the recorded changes (`skipDetector`).
-            acknowledged = combine(firstRun.state, skipDetector.restored) { ack, restored -> ack && restored },
+            // And skip detection has relearned from the recorded changes (`skipDetector`), with
+            // the settings read, so no change is judged under Autodetect when *Crossfade* is fixed.
+            acknowledged =
+                combine(firstRun.state, skipDetector.restored, latestSettings) { ack, restored, read ->
+                    ack && restored && read != null
+                },
             // `http` art is a request like the pipeline's: only while lookups are allowed (D6).
             artLoader =
                 ArtLoader(

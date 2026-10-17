@@ -122,7 +122,42 @@ internal class SessionSkipDetectionTest : SessionRepositoryFixture() {
                 ?.title,
         )
         assertEquals(ChangeCause.NATURAL_END, repository.trackChanges.value?.cause)
+
+        // And back to Song 1 on its own: the skip into it before does not come back.
+        stream.send(metadata(title = "Song 1", mediaId = "radio", durationMs = 180_000))
+        settle()
+        assertEquals("Song 1", shown().nowPlaying.title)
+        assertEquals(ChangeCause.NATURAL_END, shown().cause)
     }
+
+    @Test
+    fun aTrackResumedAfterNoneWasShownDoesNotTakeTheSkipBefore() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val spotify = spotify()
+        spotify.playingAt(6_500, leftAtChangeMs = 23_000)
+        spotify.changeTo("Carefree Highway")
+        assertEquals(ChangeCause.SKIP_IN_PLAYER, shown().cause)
+
+        // Spotify closed; another player's track, found with no change into it; then Spotify back
+        // on the track it was skipped to, again with no change into it.
+        system.change(emptyList())
+        settle()
+        assertNull(repository.trackChanges.value)
+        system.change(listOf(FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song", durationMs = 200_000))))
+        settle()
+        assertEquals(TrackChange(checkNotNull(repository.nowPlaying.value)), shown())
+        system.change(emptyList())
+        settle()
+        system.change(
+            listOf(FakeSession(SPOTIFY, metadata = metadata(title = "Carefree Highway", durationMs = 200_000))),
+        )
+        settle()
+
+        assertEquals("Carefree Highway", shown().nowPlaying.title)
+        assertEquals(ChangeCause.NATURAL_END, shown().cause)
+    }
+
+    private fun shown(): TrackChange = checkNotNull(repository.trackChanges.value)
 
     @Test
     fun aSwitchToAnotherPlayersTrackEndedOnItsOwn() {

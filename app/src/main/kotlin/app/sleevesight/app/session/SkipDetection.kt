@@ -2,6 +2,7 @@ package app.sleevesight.app.session
 
 import android.database.SQLException
 import android.util.Log
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
@@ -177,14 +178,19 @@ data class CrossfadeLearning(
  *
  * What it has learned lasts across restarts through the record of track changes (D15): before the
  * session layer reads any session, [restoreFrom] relearns from the latest [RESTORED] changes
- * recorded, oldest first, and the session layer waits for it ([restored]). So it is lost with them,
- * on *Clear history* ([reset]), or when they are older than *Keep history for*.
+ * recorded, oldest first, and the session layer waits for it ([restored]). So at each start it is
+ * relearned only from what is still recorded: changes older than *Keep history for* are not, though
+ * their deletion does not reset the running detector. *Clear history* resets it at once ([reset]),
+ * and a restore whose read a reset overtook applies nothing.
  */
 class SkipDetector(
     private val crossfade: () -> Crossfade,
 ) {
     private val lock = Any()
     private var learning: Map<String, CrossfadeLearning> = emptyMap()
+
+    // Advanced by each reset: a restore read before it learns nothing from what it read.
+    private var generation = 0L
     private val learnedState = MutableStateFlow<Map<String, Duration>>(emptyMap())
     private val restoredState = MutableStateFlow(false)
 
@@ -210,35 +216,53 @@ class SkipDetector(
             change.copy(cause = cause, learnedCrossfade = before)
         }
 
-    /** Learns from [newestFirst], recorded changes as the store pages them, oldest first; then [restored]. */
-    fun restore(newestFirst: List<TrackChangeRecord>) {
-        synchronized(lock) { newestFirst.asReversed().forEach { learnFrom(ChangeFeatures.of(it)) } }
+    /**
+     * Learns from [newestFirst], recorded changes as the store pages them, oldest first, unless a
+     * [reset] came after [readAt] (the generation when they were read): then the changes may be
+     * deleted ones. [restored] either way.
+     */
+    fun restore(
+        newestFirst: List<TrackChangeRecord>,
+        readAt: Long = generation(),
+    ) {
+        synchronized(lock) {
+            if (readAt == generation) newestFirst.asReversed().forEach { learnFrom(ChangeFeatures.of(it)) }
+        }
         restoredState.value = true
     }
 
+    /** The generation now: what [restore] compares with the one its changes were read at. */
+    fun generation(): Long = synchronized(lock) { generation }
+
     /**
      * Relearns from the latest [RESTORED] changes in [history], read on [io]; a read that fails is
-     * logged by its type and learns nothing. [restored] however the read ends. Called once, at the start of the
-     * process, before the session layer reads any session, so no change of this process is among them.
+     * logged by its type and learns nothing, and so does one a *Clear history* overtook. [restored]
+     * however the read ends. Called once, at the start of the process, before the session layer
+     * reads any session, so no change of this process is among them.
      */
     suspend fun restoreFrom(
         history: SessionHistory,
         io: CoroutineContext,
-    ) {
+    ) = restoreFrom { withContext(io) { history.changes(RESTORED).changes } }
+
+    /** [restoreFrom] with the changes from [read], newest first. */
+    internal suspend fun restoreFrom(read: suspend () -> List<TrackChangeRecord>) {
+        val readAt = generation()
         var records = emptyList<TrackChangeRecord>()
         try {
-            records = withContext(io) { history.changes(RESTORED).changes }
+            records = read()
         } catch (e: SQLException) {
             Log.w(TAG, "Skip detection could not read the track changes: ${e::class.simpleName}")
         } finally {
             // Whatever ends the read, the session layer, which waits for this, is not held up.
-            restore(records)
+            restore(records, readAt)
         }
     }
 
     /** Forgets what was learned: *Clear history* deleted the changes it was learned from. */
     fun reset() {
         synchronized(lock) {
+            generation++
             learning = emptyMap()
             learnedState.value = emptyMap()
         }
@@ -258,5 +282,38 @@ class SkipDetector(
         const val RESTORED: Int = 200
 
         private const val TAG = "Sleevesight"
+    }
+}
+
+/**
+ * The cause the track shown carries ([SessionRepository.trackChanges]), and that track as last
+ * published. A cause belongs to the change skip detection judged, and is carried only across the
+ * reports after it that each play on the one before ([TrackIdentity.playsOn]: a new length, album or
+ * artists): any break drops it, and a track with none carried ended on its own.
+ */
+data class CarriedCause(
+    val track: NowPlaying,
+    val cause: ChangeCause,
+) {
+    companion object {
+        /**
+         * What is carried once [track] is published after [previous]: a change into it judged
+         * [judged]; else the cause [carried] while [track] plays on it, a report of the same track
+         * after the one before; else nothing: no track, a track after none, or another track (a
+         * title changing under one media id) with no judged change into it.
+         */
+        fun next(
+            carried: CarriedCause?,
+            previous: NowPlaying?,
+            track: NowPlaying?,
+            judged: ChangeCause?,
+        ): CarriedCause? =
+            when {
+                track == null -> null
+                judged != null -> CarriedCause(track, judged)
+                previous == null -> null
+                carried != null && TrackIdentity.playsOn(carried.track, track) -> CarriedCause(track, carried.cause)
+                else -> null
+            }
     }
 }

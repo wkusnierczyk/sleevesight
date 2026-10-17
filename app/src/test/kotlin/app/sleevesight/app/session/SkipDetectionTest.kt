@@ -8,6 +8,7 @@ import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -288,6 +289,59 @@ class SkipDetectionTest {
     }
 
     @Test
+    fun aCauseIsCarriedOnlyAcrossReportsThatPlayOnAndAnyBreakDropsIt() {
+        val b = NowPlaying(title = "B", artists = "Artist", player = SPOTIFY, mediaId = "b")
+        val filledIn = b.copy(album = "Album", duration = 200.seconds)
+        val nextSong = b.copy(title = "C")
+        val skippedTo = CarriedCause(b, SKIP_IN_PLAYER)
+        // The cause carried before, the track before, the track now, the change judged into it.
+        val rows =
+            listOf(
+                Triple("a change judged into it", Given(null, A, b, SKIP_IN_PLAYER), skippedTo),
+                Triple("a natural end judged", Given(skippedTo, A, b, NATURAL_END), CarriedCause(b, NATURAL_END)),
+                Triple("the same track again", Given(skippedTo, b, b, null), skippedTo),
+                Triple(
+                    "filled in: plays on",
+                    Given(skippedTo, b, filledIn, null),
+                    CarriedCause(filledIn, SKIP_IN_PLAYER),
+                ),
+                Triple("a new title under one media id", Given(skippedTo, b, nextSong, null), null),
+                Triple("no track", Given(skippedTo, b, null, null), null),
+                Triple("a track after none", Given(skippedTo, null, b, null), null),
+                Triple("nothing carried", Given(null, b, filledIn, null), null),
+            )
+        for ((name, given, expected) in rows) {
+            assertEquals(name, expected, CarriedCause.next(given.carried, given.previous, given.track, given.judged))
+        }
+    }
+
+    private data class Given(
+        val carried: CarriedCause?,
+        val previous: NowPlaying?,
+        val track: NowPlaying?,
+        val judged: ChangeCause?,
+    )
+
+    @Test
+    fun aRestoreAClearOvertookLearnsNothing() {
+        val records = listOf(record(12.seconds, clustered()), record(12.seconds, clustered()))
+        val cleared = SkipDetector { Crossfade.Autodetect }
+        runBlocking {
+            cleared.restoreFrom {
+                // *Clear history* between the read and the restore.
+                cleared.reset()
+                records
+            }
+        }
+        assertTrue(cleared.restored.value)
+        assertEquals(emptyMap<String, Duration>(), cleared.learned.value)
+
+        val kept = SkipDetector { Crossfade.Autodetect }
+        runBlocking { kept.restoreFrom { records } }
+        assertEquals(mapOf(SPOTIFY to 12.seconds), kept.learned.value)
+    }
+
+    @Test
     fun theLatestActionBeforeAChangeIsTheOneTimed() {
         var now = 0L
         val actions = UserActions { now }
@@ -305,6 +359,7 @@ class SkipDetectionTest {
         const val SPOTIFY = "com.spotify.music"
         const val YOUTUBE = "com.google.android.apps.youtube.music"
         const val AT = 100_000L
+        val A = NowPlaying(title = "A", artists = "Artist", player = SPOTIFY, mediaId = "a")
         val LENGTH: Duration = 200.seconds
         val FIXED_0 = Crossfade.Fixed(Duration.ZERO)
         val FIXED_12 = Crossfade.Fixed(12.seconds)
