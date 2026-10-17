@@ -68,6 +68,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property rewriteFailed why the run's own insight failed, when the card paid for is shown in its
  *   place: the rewrite of that card failed (its call failed, or the run failed while writing),
  *   and the card written before is shown again, with no Write. Null otherwise.
+ * @property writeKey the key of the run Write (or Rewrite) is offered for, which a tap carries
+ *   back ([PipelineHost.write]); null while none is offered.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -75,6 +77,7 @@ data class PipelineView(
     val aiReady: Boolean = false,
     val rewrite: Boolean = false,
     val rewriteFailed: String? = null,
+    val writeKey: RunKey? = null,
 )
 
 /**
@@ -109,6 +112,7 @@ class PipelineKeys(
 class PipelineHost(
     private val acknowledged: Flow<Boolean>,
     private val nowPlaying: Flow<NowPlaying?>,
+    private val latestPlaying: () -> NowPlaying?,
     private val settings: Flow<Settings>,
     private val keyChanges: Flow<Unit>,
     private val readKeys: suspend (ProviderId?) -> PipelineKeys,
@@ -176,9 +180,19 @@ class PipelineHost(
         queue.trySend(CoordinatorEvent.ActivityStopped(changingConfigurations))
     }
 
-    /** The user tapped Write: the coordinator writes the current track's insight if it offers Write. */
-    fun write() {
-        queue.trySend(CoordinatorEvent.WriteTapped)
+    /**
+     * The user tapped Write (or Rewrite) offered under [key] ([PipelineView.writeKey]) beside the
+     * track [shown]: the coordinator writes that run's insight if it still offers Write. A tap on a
+     * track the session layer no longer shows ([latestPlaying], read now: its report may not have
+     * reached the coordinator yet) is dropped, so it never pays for the track just left.
+     */
+    fun write(
+        key: RunKey,
+        shown: NowPlaying,
+    ) {
+        val latest = latestPlaying() ?: return
+        if (!sameInsightTrack(shown, latest)) return
+        queue.trySend(CoordinatorEvent.WriteTapped(key))
     }
 
     /** Runs until [scope] is cancelled; called once. */
@@ -385,6 +399,7 @@ class PipelineHost(
                 needsKey = needsKey(current?.parts, now),
                 aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
                 rewriteFailed = shown.rewriteFailed,
+                writeKey = owner.writeKey,
             )
         }.collect {
             view.value = it

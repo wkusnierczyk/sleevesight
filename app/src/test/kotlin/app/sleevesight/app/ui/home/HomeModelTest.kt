@@ -15,9 +15,12 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.SourceResult
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -51,6 +54,20 @@ class HomeModelTest {
     }
 
     @Test
+    fun aFreshRunAndAFullyCachedRunShowTheSameYear() {
+        val date = "1974-03-25"
+        val result = SourceResult(Outcome.SongArticle, emptyList(), 1.seconds, firstReleased = date)
+        val fresh =
+            track(sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = false))).copy(
+                resolution = Resolution(firstRelease = FirstRelease(date, "Sundown", null, "rel", "Album")),
+            )
+        // Every source from the cache: no resolution, MusicBrainz's result as it was kept.
+        val cached = track(sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = true)))
+        assertEquals("1974", releaseYear(fresh))
+        assertEquals(releaseYear(fresh), releaseYear(cached))
+    }
+
+    @Test
     fun aSentenceSplitsIntoTextAndCitations() {
         assertEquals(
             listOf(
@@ -73,6 +90,14 @@ class HomeModelTest {
         assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true))
         assertEquals(CiteKind.UNKNOWN, citeKind("M", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("MB1", null, modelAllowed = false))
+    }
+
+    @Test
+    fun aCardIsReadWithTheModelsKnowledgeAsItWasAllowedWhenChecked() {
+        val reply = "It was recorded in 1973 [MB1]. It is loved [M]."
+        assertTrue(modelAllowedIn(HomeFixtures.written(reply, allowModel = true).grounded))
+        assertFalse(modelAllowedIn(HomeFixtures.written(reply, allowModel = false).grounded))
+        assertFalse(modelAllowedIn(HomeFixtures.written("It was recorded in 1973 [MB1].", allowModel = true).grounded))
     }
 
     @Test

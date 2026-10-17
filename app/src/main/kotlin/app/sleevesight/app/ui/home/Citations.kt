@@ -13,7 +13,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.em
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.synthesis.CheckedSentence
+import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
 // The insight's prose as text, with its citations as chips: plain text only (architecture,
@@ -24,25 +26,35 @@ import app.sleevesight.core.synthesis.SentenceStatus
 internal fun paragraphsOf(text: String): List<String> =
     text.split(BLANK_LINE).map(String::trim).filter(String::isNotEmpty)
 
-/** A checked paragraph: a sentence uncited, or citing a line that does not exist, is underlined. */
+/**
+ * A checked paragraph of [grounded]: a sentence uncited, or citing a line that does not exist, is
+ * underlined. Its citations are read as the check read them, against the card's own evidence and
+ * with the model's own knowledge as it was allowed when the card was written ([modelAllowedIn]),
+ * not as the settings now allow it: a card kept stays as it was checked.
+ */
 @Composable
 internal fun checkedProse(
     paragraph: List<CheckedSentence>,
-    context: InsightContext,
+    grounded: GroundedText,
+    evidence: EvidenceSet?,
     onCite: (String) -> Unit,
 ): AnnotatedString {
     val styles = citeStyles()
     val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
+    val policy = CitePolicy(evidence, modelAllowedIn(grounded))
     return buildAnnotatedString {
         paragraph.forEachIndexed { i, sentence ->
             if (i > 0) append(' ')
             val doubtful = sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
-            appendSentence(sentence.text, context, styles, onCite, if (doubtful) flagged else null)
+            appendSentence(sentence.text, policy, styles, onCite, if (doubtful) flagged else null)
         }
     }
 }
 
-/** A paragraph still being written: its citations show, the underlines wait for the check. */
+/**
+ * A paragraph still being written: its citations show, read as the settings allow them now, under
+ * which it is written; the underlines wait for the check.
+ */
 @Composable
 internal fun uncheckedProse(
     paragraph: String,
@@ -50,8 +62,15 @@ internal fun uncheckedProse(
     onCite: (String) -> Unit,
 ): AnnotatedString {
     val styles = citeStyles()
-    return buildAnnotatedString { appendSentence(paragraph, context, styles, onCite, null) }
+    val policy = CitePolicy(context.track?.evidence, context.modelAllowed)
+    return buildAnnotatedString { appendSentence(paragraph, policy, styles, onCite, null) }
 }
+
+// What a citation is read against: the evidence, and whether the model's own knowledge may be cited.
+private class CitePolicy(
+    val evidence: EvidenceSet?,
+    val modelAllowed: Boolean,
+)
 
 private class CiteStyles(
     val line: SpanStyle,
@@ -76,27 +95,27 @@ private fun citeStyles(): CiteStyles {
 
 private fun AnnotatedString.Builder.appendSentence(
     text: String,
-    context: InsightContext,
+    policy: CitePolicy,
     styles: CiteStyles,
     onCite: (String) -> Unit,
     flagged: SpanStyle?,
 ) {
     for (segment in segments(text)) {
         when (segment) {
-            is Segment.Text ->
-                if (flagged !=
-                    null
-                ) {
-                    withStyle(flagged) { append(segment.text) }
-                } else {
-                    append(segment.text)
-                }
+            is Segment.Text -> appendText(segment.text, flagged)
             is Segment.Cite -> {
-                val kind = citeKind(segment.id, context.track?.evidence, context.modelAllowed)
+                val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed)
                 appendCite(segment.id, kind, styles, onCite)
             }
         }
     }
+}
+
+private fun AnnotatedString.Builder.appendText(
+    text: String,
+    flagged: SpanStyle?,
+) {
+    if (flagged == null) append(text) else withStyle(flagged) { append(text) }
 }
 
 // A citation as a chip: a line's scrolls to it; the model's and a missing line's only say what they are.

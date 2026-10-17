@@ -22,11 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.LinkAnnotation
@@ -85,8 +88,9 @@ internal fun PlayerRow(
         modifier =
             Modifier
                 .testTag(PLAYER_TAG)
+                .minimumInteractiveComponentSize()
                 .clip(RoundedCornerShape(8.dp))
-                .clickable(onClickLabel = open) {
+                .clickable(onClickLabel = open, role = Role.Button) {
                     if (!openPlayerScreen(context, actions.playerActivity())) {
                         Toast.makeText(context, none, Toast.LENGTH_SHORT).show()
                     }
@@ -289,9 +293,10 @@ private fun GenreChip(
         modifier =
             Modifier
                 .testTag(GENRE_PREFIX + label.genre.identity)
+                .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(container, shape)
-                .clickable(onClick = onClick)
+                .selectable(selected = selected, role = Role.Button, onClick = onClick)
                 .then(if (selected) Modifier.background(content.copy(alpha = SELECTED_ALPHA), shape) else Modifier)
                 .padding(horizontal = 12.dp, vertical = 6.dp),
     )

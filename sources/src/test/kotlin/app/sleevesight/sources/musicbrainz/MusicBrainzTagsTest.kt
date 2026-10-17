@@ -6,6 +6,7 @@ import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.net.NetError
@@ -62,7 +63,15 @@ class MusicBrainzTagsTest {
             val result = MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED))
             assertEquals(listOf("mb-a"), result.labelArtists)
             assertTrue(result.genres.isEmpty())
-            assertEquals(2, MusicBrainzSource().extractionVersion)
+            assertEquals(3, MusicBrainzSource().extractionVersion)
+        }
+
+    @Test
+    fun `the adapter keeps the first release's date, for a track later served from the cache`() =
+        runTest {
+            val released = RESOLVED.copy(firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"))
+            assertEquals("1974-01", MusicBrainzSource().lookup(TRACK, CompletableDeferred(released)).firstReleased)
+            assertEquals(null, MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED)).firstReleased)
         }
 
     @Test

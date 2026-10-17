@@ -95,7 +95,7 @@ private fun Written(
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
-    for (paragraph in paragraphs) Prose(checkedProse(paragraph, context, onCite))
+    for (paragraph in paragraphs) Prose(checkedProse(paragraph, insight.grounded, context.track?.evidence, onCite))
     Meta(insight.grounded, insight.cached)
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
     context.rewriteFailed?.let { Quiet(stringResource(R.string.home_rewrite_failed, failureText(it))) }

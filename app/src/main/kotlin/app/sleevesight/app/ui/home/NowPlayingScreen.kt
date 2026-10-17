@@ -25,6 +25,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,7 +33,8 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * What the home screen reads, and where its actions go: the pipeline's view, the session layer's
  * track, playback and art, and the settings, all as published; a tap on Write goes to the pipeline
- * ([write]), which decides whether it writes.
+ * ([write]) with the key it was offered under and the track it was shown beside, and the pipeline
+ * decides whether it writes.
  *
  * @property playerLabel a player's name, from its package.
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
@@ -47,7 +49,7 @@ class HomeFeed(
     val normalizer: Normalizer,
     val playerLabel: (String) -> String,
     val playerActivity: () -> PendingIntent?,
-    val write: () -> Unit,
+    val write: (RunKey, NowPlaying) -> Unit,
 )
 
 /** The now-playing part of the home screen, from [feed]. */
@@ -83,7 +85,7 @@ internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
-    val write: () -> Unit = {},
+    val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
 )
 
 /**
@@ -134,7 +136,9 @@ internal fun NowPlayingContent(
                 ArtAndProgress(state.art, state.playback, header.duration)
                 KeyData(normalized, header, releaseYear(track))
                 Genres(track, settings)
-                InsightCard(track?.insight ?: NOT_YET, insight, actions.write, focus::cite)
+                // A tap carries what it was shown for: the run Write is offered for, beside this track.
+                val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
+                InsightCard(track?.insight ?: NOT_YET, insight, onWrite, focus::cite)
                 SourcesSection(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),

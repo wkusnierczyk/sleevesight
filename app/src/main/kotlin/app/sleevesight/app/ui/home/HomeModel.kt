@@ -9,6 +9,8 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
+import app.sleevesight.core.synthesis.GroundedText
+import app.sleevesight.core.synthesis.SentenceStatus
 
 // What the home screen shows, worked out from what the session layer and the pipeline publish, as
 // plain functions so the tests need no screen. Nothing here decides anything for the pipeline.
@@ -27,15 +29,16 @@ internal fun trackFor(
 /**
  * The year the recording was first released, as MusicBrainz's resolution gives it (`plan.md`,
  * *Release-date semantics*: the first release as "Released"; the release being played is the `P`
- * line). Null when the run made no resolution (every source served from the cache) or found none.
+ * line). From MusicBrainz's result, which keeps it in the retrieval cache, so a track served from
+ * the cache (which makes no resolution) shows the same year; else from the run's resolution.
+ * Null when MusicBrainz found none.
  */
-internal fun releaseYear(track: TrackState?): String? =
-    track
-        ?.resolution
-        ?.firstRelease
-        ?.date
+internal fun releaseYear(track: TrackState?): String? {
+    val kept = (track?.sources?.get(SourceId.MUSICBRAINZ) as? SourceState.Done)?.result?.firstReleased
+    return (kept ?: track?.resolution?.firstReleaseDate)
         ?.take(YEAR_LENGTH)
         ?.takeIf { it.length == YEAR_LENGTH && it.all(Char::isDigit) }
+}
 
 /**
  * What the insight card needs besides the insight: the [track] it is of, and from the pipeline's
@@ -76,6 +79,15 @@ internal fun segments(sentence: String): List<Segment> {
     if (at < sentence.length) out += Segment.Text(sentence.substring(at))
     return out
 }
+
+/**
+ * Whether the model's own knowledge was allowed when [grounded] was checked: then a sentence citing
+ * `[M]` with nothing else wrong is `MODEL`; when it was not, every sentence citing `[M]` is
+ * `UNKNOWN`, so no sentence is `MODEL`. A card kept from before is read by this, not by the
+ * settings now.
+ */
+internal fun modelAllowedIn(grounded: GroundedText): Boolean =
+    grounded.paragraphs.any { paragraph -> paragraph.any { it.status == SentenceStatus.MODEL } }
 
 /** How a citation chip shows: a line it can scroll to, the model's own knowledge, or a line that does not exist. */
 internal enum class CiteKind { LINE, MODEL, UNKNOWN }

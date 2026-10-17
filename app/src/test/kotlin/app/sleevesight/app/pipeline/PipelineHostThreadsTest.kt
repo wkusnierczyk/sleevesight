@@ -101,6 +101,8 @@ class PipelineHostThreadsTest {
         PipelineHost(
             acknowledged = MutableStateFlow(true),
             nowPlaying = reports.receiveAsFlow(),
+            // No Write is tapped here.
+            latestPlaying = { null },
             settings = MutableStateFlow(Settings()),
             keyChanges = keyChanges.map { },
             readKeys = {

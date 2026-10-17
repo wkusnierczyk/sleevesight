@@ -79,12 +79,13 @@ internal object HomeFixtures {
         insight = insight,
     )
 
-    /** [reply], checked against [evidence], as written. */
+    /** [reply], checked against [evidence] as written, the model's own knowledge allowed or not. */
     fun written(
         reply: String,
         cached: Boolean = false,
+        allowModel: Boolean = false,
     ): InsightState.Written {
-        val grounded = (GroundingCheck.check(reply, evidence, allowModel = false) as InsightReply.Written).grounded
+        val grounded = (GroundingCheck.check(reply, evidence, allowModel) as InsightReply.Written).grounded
         return InsightState.Written(grounded, cached)
     }
 }

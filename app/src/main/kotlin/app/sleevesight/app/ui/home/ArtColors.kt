@@ -32,11 +32,20 @@ internal fun ArtTheme(
 ) {
     val dark = isSystemInDarkTheme()
     val scheme by produceState<ColorScheme?>(initialValue = null, art, dark) {
-        value = art?.let { withContext(Dispatchers.Default) { artScheme(it, dark) } }
+        value = art?.let { withContext(Dispatchers.Default) { safeArtScheme(it, dark) } }
     }
     val current = scheme
     if (current == null) content() else MaterialTheme(colorScheme = current, content = content)
 }
+
+/**
+ * [artScheme], or null when the art cannot be read (recycled meanwhile, or no memory for a copy):
+ * the app's own colours then, never a crash.
+ */
+internal fun safeArtScheme(
+    art: Bitmap,
+    dark: Boolean,
+): ColorScheme? = runCatching { artScheme(art, dark) }.getOrNull()
 
 /** The scheme seeded by [art]'s most suitable colour; null when the art has no pixels. */
 internal fun artScheme(
@@ -53,9 +62,7 @@ internal fun artScheme(
  * when nothing is colourful enough).
  */
 internal fun artSeed(art: Bitmap): Int? {
-    if (art.width <= 0 || art.height <= 0) return null
-    // A hardware bitmap's pixels cannot be read; a copy in memory can.
-    val readable = if (art.config == Bitmap.Config.HARDWARE) art.copy(Bitmap.Config.ARGB_8888, false) else art
+    val readable = readable(art) ?: return null
     val ratio = minOf(1f, SAMPLE.toFloat() / maxOf(readable.width, readable.height))
     val small =
         if (ratio < 1f) {
@@ -69,6 +76,17 @@ internal fun artSeed(art: Bitmap): Int? {
     if (readable !== art && readable !== small) readable.recycle()
     return Score.score(QuantizerCelebi.quantize(pixels, COLOURS)).firstOrNull()
 }
+
+/**
+ * [art] with pixels that can be read, or null: recycled, empty, or a hardware bitmap (whose pixels
+ * cannot be read) with no room for a copy in memory.
+ */
+private fun readable(art: Bitmap): Bitmap? =
+    when {
+        art.isRecycled || art.width <= 0 || art.height <= 0 -> null
+        art.config == Bitmap.Config.HARDWARE -> art.copy(Bitmap.Config.ARGB_8888, false)
+        else -> art
+    }
 
 private fun DynamicScheme.toColorScheme(dark: Boolean): ColorScheme {
     val base = if (dark) darkColorScheme() else lightColorScheme()

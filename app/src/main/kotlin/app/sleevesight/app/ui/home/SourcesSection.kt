@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -12,10 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,8 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -96,12 +99,16 @@ private fun StatusChip(
     val label = stringResource(R.string.home_source_chip, chip.source.tag, statusText(chip.status))
     val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
     val shape = RoundedCornerShape(8.dp)
-    val description = stringResource(R.string.home_source_filter, sourceName(chip.source))
+    // The chip's own text is what it says; the filter is its action and its state.
+    val action = stringResource(R.string.home_source_filter, sourceName(chip.source))
+    val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
     val toggle =
         if (filtering) {
             Modifier
-                .toggleable(value = shown, role = Role.Switch, onValueChange = { onToggle() })
-                .semantics { contentDescription = description }
+                .semantics {
+                    stateDescription = state
+                    toggleableState = ToggleableState(shown)
+                }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
         } else {
             Modifier
         }
@@ -119,6 +126,7 @@ private fun StatusChip(
         modifier =
             Modifier
                 .testTag(CHIP_PREFIX + chip.source.tag)
+                .then(if (filtering) Modifier.minimumInteractiveComponentSize() else Modifier)
                 .background(if (filtering && shown) colors.secondaryContainer else Color.Transparent, shape)
                 .border(1.dp, colors.outlineVariant, shape)
                 .then(toggle)

@@ -5,6 +5,7 @@ import android.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,5 +29,12 @@ class ArtColorsTest {
         assertNotNull(red)
         assertNotEquals(red?.primary, blue?.primary)
         assertNotEquals(red?.surface, artScheme(art(Color.RED), dark = true)?.surface)
+    }
+
+    @Test
+    fun artThatCannotBeReadFallsBackToTheAppsColours() {
+        val recycled = art(Color.RED).apply { recycle() }
+        assertNull(artSeed(recycled))
+        assertNull(safeArtScheme(recycled, dark = false))
     }
 }
