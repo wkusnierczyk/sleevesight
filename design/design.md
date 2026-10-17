@@ -365,7 +365,7 @@ Enforced in CI rather than stated as policy:
 
 ## Diagnostics
 
-- A pipeline log screen, hidden behind a developer setting, mirrors the simulator's log: session events, normalization, each adapter's typed outcome and latency, cache hits, model calls, grounding-check counts. Beside it, the track changes recorded with their features, and what skip detection has learned, with a reset (D15). Exported on request only, to a file the user chooses.
+- A pipeline log screen, hidden behind a developer setting, mirrors the simulator's log: session events, normalization, each adapter's typed outcome and latency, cache hits, model calls, grounding-check counts. Beside it, the track changes recorded with their features, and what skip detection has learned, with a reset that lasts across restarts and keeps the history (D15). Exported on request only, to a file the user chooses.
 - A coverage report (Phase 0.5) runs the pipeline over a playlist fixture and reports, per source, how many tracks resolved to each outcome, and per track, how many evidence lines and genre labels it got.
 
 ## Phases and gates

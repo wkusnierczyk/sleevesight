@@ -109,9 +109,14 @@ stateInsert:
 INSERT INTO track_change_state (change_id, seq, received_before_ms, status, position_ms, position_before_ms, speed)
 VALUES (?, ?, ?, ?, ?, ?, ?);
 
--- A page of changes, newest first: those before the id `before`, at most `limit`.
+-- A page of changes, newest first: those before the id `before` and after the id `after`, at most
+-- `limit`.
 trackChangesBefore:
-SELECT * FROM track_change WHERE id < :before ORDER BY id DESC LIMIT :limit;
+SELECT * FROM track_change WHERE id < :before AND id > :after ORDER BY id DESC LIMIT :limit;
+
+-- The id of the newest change, 0 with none. Ids only grow (`AUTOINCREMENT`), through deletions.
+trackChangeLastId:
+SELECT coalesce(max(id), 0) FROM track_change;
 
 -- The states of the changes from id `first` to `last`, a page's, by change and in order.
 statesBetween:

@@ -8,8 +8,8 @@ import kotlin.time.Duration
  * (`design/architecture.md`, *Learning skip detection*, D15). In Phase 1 that is the crossfade
  * learned from natural ends (D5); the learned model per player comes later.
  *
- * Skip detection supplies it (#53); until it does, the screen is given none and says that nothing
- * is learned. The learning keeps its own state: the screen only shows it and asks for the reset,
+ * Skip detection supplies it (`SkipDetectorLearning`); a screen given none says that nothing is
+ * learned. The learning keeps its own state: the screen only shows it and asks for the reset,
  * and says whether the reset was made, as *Clear history* does.
  */
 interface SkipLearning {
