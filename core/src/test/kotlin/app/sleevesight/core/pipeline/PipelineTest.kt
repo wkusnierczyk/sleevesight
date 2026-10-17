@@ -590,11 +590,14 @@ class PipelineTest {
             withoutCall++
         }
 
+        val cardsShownEmpty = mutableListOf<Unit>()
+
         override fun cardShown(
-            card: InsightState.Written,
+            card: InsightState.Written?,
             evidence: app.sleevesight.core.evidence.EvidenceSet,
         ) {
             cardsShown++
+            if (card == null) cardsShownEmpty += Unit
         }
 
         override fun cardWritten(
@@ -666,5 +669,21 @@ class PipelineTest {
             assertEquals(emptyList(), control.cardsWritten)
             assertEquals(0, control.withoutCall)
             assertEquals(0, control.decisions)
+        }
+
+    @Test
+    fun `a reply kept as NO_EVIDENCE is a card shown from the cache, with none to show`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = FakeProvider(reply = { FakeProvider.done("NO_EVIDENCE") })
+            pipeline(listOf(mb()), provider = provider, cache = cache).run(sundown, write = true)
+            val control = Granted(write = false)
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            pipeline(listOf(mb()), provider = provider, cache = cache).run(sundown, control)
+
+            assertEquals(1, control.cardsShown)
+            assertEquals(1, control.cardsShownEmpty.size)
+            assertEquals(0, control.withoutCall)
+            assertEquals(1, provider.requests.size)
         }
 }

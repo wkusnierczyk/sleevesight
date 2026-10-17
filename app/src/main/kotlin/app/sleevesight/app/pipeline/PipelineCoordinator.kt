@@ -91,10 +91,13 @@ sealed interface CoordinatorEvent {
         val run: RunId,
     ) : CoordinatorEvent
 
-    /** Run [run] showed [card], kept in the synthesis cache: its insight is written, with no call. */
+    /**
+     * Run [run] was served its insight from the synthesis cache: written, with no call. [card] is
+     * the card, or null for a reply kept as `NO_EVIDENCE`.
+     */
     data class CardShown(
         val run: RunId,
-        val card: Card,
+        val card: Card?,
     ) : CoordinatorEvent
 
     /** Run [run]'s model call wrote [card] (before the call's end is reported). */
@@ -103,7 +106,7 @@ sealed interface CoordinatorEvent {
         val card: Card,
     ) : CoordinatorEvent
 
-    /** Run [run] decided its insight without a call (no evidence, no AI service, insights off). */
+    /** Run [run] decided its insight with no call and nothing cached (no evidence, no AI service, insights off). */
     data class DecidedWithoutCall(
         val run: RunId,
     ) : CoordinatorEvent
@@ -181,10 +184,11 @@ data class CoordinatorState(
      * under, so a card is found again under its own key; [shown] is the latest report of the track,
      * whose metadata (artists, album, length) the header shows. Only a report of another insight
      * track, once settled, replaces the entry; runs, rebuilds and new keys never make [written]
-     * false while it stands. [card] is the card paid for, as its run reported it (written by a call,
-     * or shown from the cache), with the evidence it cites: what the view shows whenever the
-     * track's run has no insight of its own. A newer card for the entry (a rewrite) replaces it;
-     * a call that fails or is cut off adds none; it goes with the entry. So an insight written
+     * false while it stands; every cache hit counts as written, a reply kept as `NO_EVIDENCE`
+     * included. [card] is the card paid for, as its run reported it, with the evidence it cites:
+     * what the view shows whenever the track's run has no insight of its own. A card written by a
+     * call (a rewrite included) always replaces it; one served from the cache only fills an empty
+     * slot; a call that fails or is cut off adds none; it goes with the entry. So an insight written
      * from a title alone stays when the artists
      * arrive, and the header shows the artists; and a rewrite (Write offered beside the card kept)
      * runs under [track], not [shown] (#53 may revisit both). A track that returns after another
@@ -308,9 +312,10 @@ fun sameInsightTrack(
  * | the run (current or not) | StepRequested(step), InsightAsked(w) | the step or the question waiting; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run offering Write, allowed | WriteTapped | calling; the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL) |
  * | otherwise | WriteTapped | unchanged | none |
- * | the run | CardShown(card) | the ledger written, under the run's key, unless written already; its card | none |
- * | the run | CardWritten(card) | the ledger's card (the ledger written already, when the call was granted) | none |
- * | the run | DecidedWithoutCall | the ledger decided under the run's key, unless written already | none |
+ * | the run, of the latest settled report's insight track | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
+ * | the run, of the latest settled report's insight track | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
+ * | the run, of another insight track than the latest settled report's | CardShown, CardWritten, DecidedWithoutCall | unchanged (the ledger stays empty) | none |
+ * | the run, of the latest settled report's insight track | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
  * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
@@ -355,8 +360,8 @@ class PipelineCoordinator(
             is CoordinatorEvent.InsightAsked -> ofRun(event.run) { it.copy(insight = event.writesWhenActed) }
             is CoordinatorEvent.StepEnded -> if (event.step == RunStep.MODEL_CALL) callEnded(event.run)
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
-            is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card)
-            is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card)
+            is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
+            is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card, replaces = true)
             is CoordinatorEvent.DecidedWithoutCall -> record(event.run, written = false)
             else -> Unit
         }
@@ -484,14 +489,22 @@ class PipelineCoordinator(
         state = state.copy(run = change(run))
     }
 
+    // A run's report into the ledger: [written] or not, with [card] if it has one. A card written
+    // by a call always [replaces] the entry's; one served from the cache only fills an empty slot,
+    // so the newest paid card survives a later cache hit of an older one. Ignored once a settled
+    // report of another insight track has emptied the ledger: it must not bring the old track back.
     private fun record(
         id: RunId,
         written: Boolean,
         card: Card? = null,
+        replaces: Boolean = false,
     ) {
         val run = state.run?.takeIf { it.id == id } ?: return
+        val latest = state.latest
+        if (latest != null && latest.settled && !sameInsightTrack(latest.nowPlaying, run.nowPlaying)) return
         val recorded = entry(run, written)
-        state = state.copy(ledger = if (card != null) recorded.copy(card = card) else recorded)
+        val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
+        state = state.copy(ledger = recorded.copy(card = kept))
     }
 
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under

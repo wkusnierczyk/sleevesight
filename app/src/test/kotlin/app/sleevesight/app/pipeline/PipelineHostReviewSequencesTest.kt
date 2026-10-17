@@ -509,4 +509,57 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             )
             assertEquals(false, host.state.value.rewrite)
         }
+
+    // The card rules (the ninth review round).
+
+    @Test
+    fun `a reply kept as NO_EVIDENCE is written, so a new length after its cache hit is held`() =
+        runTest {
+            provider.reply = { "NO_EVIDENCE" }
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            host.write()
+            settle()
+            assertEquals(
+                InsightState.NoEvidence,
+                host.state.value.track
+                    ?.insight,
+            )
+            play("Bravo")
+            settle()
+            // Alpha again: its reply served from the cache, which is written, with no card.
+            play("Alpha", 106.seconds)
+            settle()
+            play("Alpha", 279.seconds)
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+        }
+
+    @Test
+    fun `the newest paid card survives a later cache hit of an older one`() =
+        runTest {
+            provider.reply = { n -> "It is a song, take $n [MB1]." }
+            writtenAlpha()
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            host.write()
+            settle()
+            assertEquals("It is a song, take 2 [MB1].", shownText())
+
+            // Back to the first evidence: the cache serves take 1, which does not replace take 2.
+            keys = PipelineKeys(ai = Secret("ai"))
+            keyChanges.value++
+            settle()
+            assertEquals("It is a song, take 1 [MB1].", shownText())
+            // The AI key removed: the card paid for, shown in place of none, is the newest.
+            keys = PipelineKeys()
+            keyChanges.value++
+            settle()
+
+            assertEquals(2, provider.requestsFor("Alpha"))
+            assertEquals("It is a song, take 2 [MB1].", shownText())
+        }
 }

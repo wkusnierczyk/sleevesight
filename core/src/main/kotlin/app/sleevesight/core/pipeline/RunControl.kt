@@ -46,12 +46,18 @@ interface RunControl {
     /** A step that was granted ended: done, failed or cancelled. Reported from a `finally`. */
     fun ended(step: RunStep)
 
-    /** The insight was decided without a model call: nothing to write from, no AI service set up, or insights off. */
+    /**
+     * The insight was decided with no model call and nothing from the cache: nothing to write
+     * from, no AI service set up, or insights off.
+     */
     fun decidedWithoutCall()
 
-    /** The insight was served from the synthesis cache, as [card] from [evidence]: written, with no call. */
+    /**
+     * The insight was served from the synthesis cache, with no call: a reply paid for once, so
+     * written. [card] is the card from [evidence], or null when the reply kept was `NO_EVIDENCE`.
+     */
     fun cardShown(
-        card: InsightState.Written,
+        card: InsightState.Written?,
         evidence: EvidenceSet,
     ) = decidedWithoutCall()
 

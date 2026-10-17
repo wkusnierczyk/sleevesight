@@ -69,7 +69,7 @@ internal class InsightWriter(
             kept != null -> {
                 emit(PipelineEvent.InsightCached(key))
                 val shown = checked(kept, cached = true, usage = null, complete = true)
-                if (shown is InsightState.Written) control.cardShown(shown, evidence) else control.decidedWithoutCall()
+                control.cardShown(shown as? InsightState.Written, evidence)
                 show(shown)
             }
 

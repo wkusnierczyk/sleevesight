@@ -343,10 +343,10 @@ class PipelineHost(
         }
 
         override fun cardShown(
-            card: InsightState.Written,
+            card: InsightState.Written?,
             evidence: EvidenceSet,
         ) {
-            queue.trySend(CoordinatorEvent.CardShown(id, Card(card, evidence)))
+            queue.trySend(CoordinatorEvent.CardShown(id, card?.let { Card(it, evidence) }))
         }
 
         override fun cardWritten(
