@@ -63,16 +63,18 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property rewrite whether Write is offered beside the written insight shown, to write it again: a
  *   rebuild changed its card's key (new evidence, another service), so its run found no card. The
  *   card paid for (the ledger's, with the evidence it cites) is shown whenever the track's run has
- *   no insight of its own, offered or not; this says only whether Write is offered beside it. For
- *   the home screen (#52): a rewrite that fails is not signalled (the card paid for comes back,
- *   with no Write), and the card shows beside the run's own source states, not those it was
- *   written from.
+ *   no insight of its own, offered or not; this says only whether Write is offered beside it. The
+ *   card shows beside the run's own source states, with the evidence it cites.
+ * @property rewriteFailed why the run's own insight failed, when the card paid for is shown in its
+ *   place: the rewrite of that card failed (its call failed, or the run failed while writing),
+ *   and the card written before is shown again, with no Write. Null otherwise.
  */
 data class PipelineView(
     val track: TrackState? = null,
     val needsKey: Set<SourceId> = emptySet(),
     val aiReady: Boolean = false,
     val rewrite: Boolean = false,
+    val rewriteFailed: String? = null,
 )
 
 /**
@@ -363,12 +365,26 @@ class PipelineHost(
     private suspend fun publish(latest: StateFlow<Settings>) {
         val tracks = live.flatMapLatest { it?.pipeline?.state ?: flowOf(null) }
         combine(tracks, live, snapshot, latest, failed) { track, current, owner, now, failedKey ->
-            val shown = shownTrack(track ?: view.value.track, owner, failedKey)
+            // Until the live pipeline publishes, the track shown before, with what it said of a
+            // rewrite that failed.
+            val before = view.value
+            val shown =
+                track?.let { shownTrack(it, owner, failedKey) }
+                    ?: before.track
+                        ?.let {
+                            shownTrack(
+                                it,
+                                owner,
+                                failedKey,
+                            )
+                        }?.let { Shown(it.track, before.rewriteFailed) }
+                    ?: Shown(null, null)
             PipelineView(
-                track = shown,
-                rewrite = owner.rewrites() && shown?.insight is InsightState.Written,
+                track = shown.track,
+                rewrite = owner.rewrites() && shown.track?.insight is InsightState.Written,
                 needsKey = needsKey(current?.parts, now),
                 aiReady = current?.parts?.let { it.ai != null } ?: view.value.aiReady,
+                rewriteFailed = shown.rewriteFailed,
             )
         }.collect {
             view.value = it
@@ -376,21 +392,25 @@ class PipelineHost(
         }
     }
 
+    // A track as shown, and why its own insight failed when the card paid for is in its place.
+    private class Shown(
+        val track: TrackState?,
+        val rewriteFailed: String?,
+    )
+
     // The track as shown: Write withdrawn unless offered; a run that failed while writing as
-    // failed; the card paid for (from the ledger) in place of an insight its run lacks; and the
-    // header from the ledger's latest report.
+    // failed; the card paid for (from the ledger) in place of an insight its run lacks, saying so
+    // when the run's own failed (a rewrite); and the header from the ledger's latest report.
     private fun shownTrack(
-        track: TrackState?,
+        track: TrackState,
         owner: CoordinatorState,
         failedKey: RunKey?,
-    ): TrackState? =
-        track
-            ?.let { offering(it, owner) }
-            ?.let { failing(it, failedKey) }
-            ?.let { own ->
-                val card = cardFor(owner, own)
-                if (card != null && lacksInsight(own)) withCard(own, card) else own
-            }?.let { header(it, owner) }
+    ): Shown {
+        val own = failing(offering(track, owner), failedKey)
+        val card = cardFor(owner, own)?.takeIf { lacksInsight(own) }
+        val failure = (own.insight as? InsightState.Failed)?.reason?.takeIf { card != null }
+        return Shown(header(if (card != null) withCard(own, card) else own, owner), failure)
+    }
 
     private fun needsKey(
         made: PipelineParts?,

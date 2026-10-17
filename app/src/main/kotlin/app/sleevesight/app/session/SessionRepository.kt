@@ -1,5 +1,6 @@
 package app.sleevesight.app.session
 
+import android.app.PendingIntent
 import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -62,7 +63,8 @@ import kotlin.time.Duration.Companion.seconds
  * a change. All callbacks and [scope] run on the main thread; [scope]'s dispatcher is the main
  * one, or a test dispatcher whose virtual time runs the [SETTLE] window.
  *
- * Transport controls and handoff to the player are Phase 2.
+ * Transport controls and handoff to the player are Phase 2; the player's own screen opens from the
+ * home screen ([playerActivity]).
  */
 class SessionRepository(
     private val sessions: ActiveSessions,
@@ -119,6 +121,13 @@ class SessionRepository(
 
     /** The players with an active session since the process started, followed or not: for *Players to follow*. */
     val seenPlayers: StateFlow<Set<String>> = seenState.asStateFlow()
+
+    /**
+     * The own screen of the player whose track is shown (its session activity), for the home
+     * screen's player row; null when there is no such player or it names none. Read when asked,
+     * on the main thread: it asks the player's session, so it is not published with every state.
+     */
+    fun playerActivity(): PendingIntent? = lastShown?.session?.sessionActivity
 
     private var gate: Job? = null
     private var listening = false

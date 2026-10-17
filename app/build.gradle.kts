@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
+    // The now-playing screen's colours from the album art (design, *User interface*).
+    implementation(libs.materialkolor.utilities)
     implementation(libs.kotlinx.coroutines.core)
     // Navigation's typed routes compile against it; declared so compile and runtime agree with
     // the version `:core` brings at runtime.

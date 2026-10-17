@@ -1,5 +1,6 @@
 package app.sleevesight.app.session
 
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.media.MediaMetadata
@@ -25,6 +26,9 @@ interface PlayerSession {
     val playbackState: PlaybackState?
     val queue: List<MediaSession.QueueItem>?
     val queueTitle: CharSequence?
+
+    /** The player's own screen for this session, when it names one: the home screen's player row opens it. */
+    val sessionActivity: PendingIntent? get() = null
 
     /** Registers [callback] for this session's changes, delivered on the main thread. */
     fun register(callback: MediaController.Callback)
@@ -53,6 +57,7 @@ class ControllerSession(
     override val playbackState: PlaybackState? get() = controller.playbackState
     override val queue: List<MediaSession.QueueItem>? get() = controller.queue
     override val queueTitle: CharSequence? get() = controller.queueTitle
+    override val sessionActivity: PendingIntent? get() = controller.sessionActivity
 
     override fun register(callback: MediaController.Callback) {
         controller.registerCallback(callback, Handler(Looper.getMainLooper()))

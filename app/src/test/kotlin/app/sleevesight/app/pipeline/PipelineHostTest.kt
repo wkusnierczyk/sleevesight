@@ -292,6 +292,39 @@ internal class PipelineHostTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `a rewrite that fails shows the card paid for again, and says the rewrite failed`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            host.write()
+            settle()
+            assertEquals(null, host.state.value.rewriteFailed)
+
+            // New evidence: the card paid for stays, with Write beside it.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertTrue(host.state.value.rewrite)
+
+            // The rewrite's call fails: the card written before comes back, saying so, with no Write.
+            provider.failure = IllegalStateException("a bug")
+            host.write()
+            settle()
+            assertEquals(2, provider.requests)
+            val view = host.state.value
+            assertTrue(view.track?.insight is InsightState.Written)
+            assertEquals(PipelineHost.FAILED, view.rewriteFailed)
+            assertEquals(false, view.rewrite)
+
+            // The next track is a track of its own: nothing failed there.
+            provider.failure = null
+            play("Two")
+            settle()
+            assertEquals(null, host.state.value.rewriteFailed)
+        }
+
+    @Test
     fun `a rebuild that changes nothing in the card's key serves the card kept, with no call`() =
         runTest {
             started()

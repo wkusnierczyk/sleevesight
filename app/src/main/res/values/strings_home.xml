@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home screen (design, Home screen, top to bottom; architecture, Errors and empty states). -->
+<resources>
+    <string name="home_placeholder">Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.</string>
+    <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
+    <string name="home_turn_on_access">Turn on notification access</string>
+    <string name="home_what_leaves">What leaves the phone</string>
+    <string name="home_settings">Settings</string>
+
+    <!-- Player row. -->
+    <string name="home_player_state">%1$s · %2$s</string>
+    <string name="home_state_playing">Playing</string>
+    <string name="home_state_paused">Paused</string>
+    <string name="home_state_stopped">Stopped</string>
+    <string name="home_state_buffering">Buffering</string>
+    <string name="home_state_error">Error</string>
+    <string name="home_open_player">Open %1$s</string>
+    <string name="home_player_no_screen">%1$s has no screen of its own to open.</string>
+
+    <!-- Album art, progress and key data. -->
+    <string name="home_art">Album art</string>
+    <string name="home_progress">Playback position</string>
+    <string name="home_title_from">From %1$s</string>
+    <string name="home_album_none">Album not reported</string>
+    <string name="home_released">Released %1$s</string>
+
+    <!-- Genre labels. -->
+    <string name="home_genres">Genres of the artists</string>
+    <string name="home_genres_none">No genre labels for these artists in your sources.</string>
+    <string name="home_genres_off">Genre labels are off in Settings.</string>
+    <string name="home_genre_from">%1$s comes from the artist’s tags on:</string>
+    <string name="home_genre_licence">licence</string>
+
+    <!-- The insight. -->
+    <string name="home_insight_title">Why it’s interesting</string>
+    <string name="home_write">Write insight</string>
+    <string name="home_rewrite">Rewrite</string>
+    <string name="home_insight_gathering">Gathering evidence…</string>
+    <string name="home_insight_preparing">Getting the insight ready…</string>
+    <string name="home_insight_tap_write">Tap Write insight to have it written from the sources below.</string>
+    <string name="home_insight_writing">Writing…</string>
+    <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
+    <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
+    <string name="home_insight_no_evidence">Not enough is documented here to say anything reliable. The sources below are all there is.</string>
+    <string name="home_insight_failed">The insight could not be written: %1$s.</string>
+    <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
+    <string name="home_rewrite_offered">Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.</string>
+    <string name="home_rewrite_failed">Rewriting failed: %1$s. This is the insight written earlier.</string>
+    <string name="home_meta_grounded">%1$d of %2$d sentences grounded</string>
+    <string name="home_meta_model">%1$d from the model’s own knowledge</string>
+    <string name="home_meta_uncited">%1$d uncited</string>
+    <string name="home_meta_unknown">%1$d cite missing evidence</string>
+    <string name="home_meta_kept">kept from before</string>
+    <string name="home_cite">Source %1$s</string>
+    <string name="home_cite_model">From the model’s own knowledge, not verified</string>
+    <string name="home_cite_unknown">%1$s: no such evidence line</string>
+
+    <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
+    <string name="home_failure_offline">no connection</string>
+    <string name="home_failure_unauthorized">the AI service did not accept the key</string>
+    <string name="home_failure_billing">the AI service account needs credit</string>
+    <string name="home_failure_rate_limited">too many requests just now</string>
+    <string name="home_failure_overloaded">the AI service is busy</string>
+    <string name="home_failure_server">the AI service had a problem</string>
+    <string name="home_failure_model_not_found">the AI service does not know the model</string>
+    <string name="home_failure_request_too_large">the request was too large</string>
+    <string name="home_failure_incomplete">the reply stopped before it ended</string>
+    <string name="home_failure_declined">the model declined to write it</string>
+    <string name="home_failure_failed">something went wrong</string>
+    <string name="home_failure_other">something went wrong (%1$s)</string>
+
+    <!-- Sources. -->
+    <string name="home_sources_title">Sources</string>
+    <string name="home_source_chip">%1$s %2$s</string>
+    <string name="home_source_pending">looking</string>
+    <string name="home_source_found_song">the song</string>
+    <string name="home_source_found_artist">the artist only</string>
+    <string name="home_source_found_original">the original song</string>
+    <string name="home_source_rejected">rejected</string>
+    <string name="home_source_none">nothing found</string>
+    <string name="home_source_off">off</string>
+    <string name="home_source_unreachable">unreachable</string>
+    <string name="home_source_failed">failed</string>
+    <string name="home_source_needs_key">needs your key, in Settings</string>
+    <string name="home_source_cached">%1$s (kept)</string>
+    <string name="home_source_release">release</string>
+    <string name="home_source_model_allowed">allowed</string>
+    <string name="home_source_filter">Show or hide the lines of %1$s</string>
+    <string name="home_evidence_looking">Looking…</string>
+    <string name="home_evidence_empty">No source returned anything about this.</string>
+    <string name="home_evidence_cited">The lines the insight cites, found when it was written.</string>
+    <string name="home_unverified">Found, but not verified, so not cited</string>
+    <string name="home_rejected_title">Rejected matches</string>
+    <string name="home_rejected">%1$s: %2$s</string>
+    <string name="home_rejected_subject">%1$s, %2$s: %3$s</string>
+    <string name="home_scope_song">song</string>
+    <string name="home_scope_artist">artist</string>
+    <string name="home_scope_original_song">original song</string>
+    <string name="home_scope_release">release</string>
+    <string name="home_scope_web">web</string>
+    <string name="home_source_name_wikidata">Wikidata</string>
+    <string name="home_source_name_discogs">Discogs</string>
+    <string name="home_source_name_player">the player</string>
+</resources>
