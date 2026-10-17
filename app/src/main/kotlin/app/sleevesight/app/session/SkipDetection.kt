@@ -6,13 +6,11 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ChangeCause
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.CoroutineContext
+import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -178,10 +176,11 @@ data class CrossfadeLearning(
  *
  * What it has learned lasts across restarts through the record of track changes (D15): before the
  * session layer reads any session, [restoreFrom] relearns from the latest [RESTORED] changes
- * recorded, oldest first, and the session layer waits for it ([restored]). So at each start it is
- * relearned only from what is still recorded: changes older than *Keep history for* are not, though
- * their deletion does not reset the running detector. *Clear history* resets it at once ([reset]),
- * and a restore whose read a reset overtook applies nothing.
+ * recorded since the learning was last reset (`SkipDetectorLearning`), oldest first, and the session
+ * layer waits for it ([restored]). So at each start it is relearned only from what is still recorded:
+ * changes older than *Keep history for* are not, though their deletion does not reset the running
+ * detector. *Clear history* and the diagnostics screen's reset reset it at once ([reset]), and a
+ * restore whose read a reset overtook applies nothing.
  */
 class SkipDetector(
     private val crossfade: () -> Crossfade,
@@ -235,31 +234,31 @@ class SkipDetector(
     fun generation(): Long = synchronized(lock) { generation }
 
     /**
-     * Relearns from the latest [RESTORED] changes in [history], read on [io]; a read that fails is
-     * logged by its type and learns nothing, and so does one a *Clear history* overtook. [restored]
-     * however the read ends. Called once, at the start of the process, before the session layer
-     * reads any session, so no change of this process is among them.
+     * Relearns from the recorded changes [read] gives, newest first (`SkipDetectorLearning.restore`:
+     * the latest [RESTORED] since the learning was last reset); a read that fails is logged by its
+     * type and learns nothing, and so does one a reset overtook. [restored] however the read ends.
+     * Called once, at the start of the process, before the session layer reads any session, so no
+     * change of this process is among them.
      */
-    suspend fun restoreFrom(
-        history: SessionHistory,
-        io: CoroutineContext,
-    ) = restoreFrom { withContext(io) { history.changes(RESTORED).changes } }
-
-    /** [restoreFrom] with the changes from [read], newest first. */
-    internal suspend fun restoreFrom(read: suspend () -> List<TrackChangeRecord>) {
+    suspend fun restoreFrom(read: suspend () -> List<TrackChangeRecord>) {
         val readAt = generation()
         var records = emptyList<TrackChangeRecord>()
         try {
             records = read()
         } catch (e: SQLException) {
             Log.w(TAG, "Skip detection could not read the track changes: ${e::class.simpleName}")
+        } catch (e: IOException) {
+            Log.w(TAG, "Skip detection could not read when it was last reset: ${e::class.simpleName}")
         } finally {
             // Whatever ends the read, the session layer, which waits for this, is not held up.
             restore(records, readAt)
         }
     }
 
-    /** Forgets what was learned: *Clear history* deleted the changes it was learned from. */
+    /**
+     * Forgets what was learned, and makes a restore under way learn nothing: *Clear history* deleted
+     * the changes it was learned from, or the user reset it (`SkipDetectorLearning.reset`).
+     */
     fun reset() {
         synchronized(lock) {
             generation++

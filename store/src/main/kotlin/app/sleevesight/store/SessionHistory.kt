@@ -46,6 +46,7 @@ import kotlin.time.Instant
  * come from one writer, in the order the tracks played, and [clear] and [deleteOlderThan] from the
  * same writer, so they are ordered with the writes. Each is one transaction.
  */
+@Suppress("TooManyFunctions") // One for each way the history is written, read or deleted.
 class SessionHistory(
     driver: SqlDriver,
 ) {
@@ -143,18 +144,20 @@ class SessionHistory(
 
     /**
      * A page of the track changes recorded, newest first: at most [limit], older than the page that
-     * gave [before] as its [TrackChangePage.next], or the latest with none. For the diagnostics
-     * screen (#54) and, later, learning (D15). Pages are by the order the changes were written, so
+     * gave [before] as its [TrackChangePage.next], or the latest with none; and only those recorded
+     * after the change [after] names ([lastChangeId]), all with 0. For the diagnostics screen (#54)
+     * and skip detection's learning (D5, D15). Pages are by the order the changes were written, so
      * changes written meanwhile do not shift a later page.
      */
     fun changes(
         limit: Int,
         before: Long? = null,
+        after: Long = 0,
     ): TrackChangePage {
         require(limit > 0) { "A page holds at least one change, was $limit" }
         return queries.transactionWithResult {
             // One more than asked, to know whether an older page follows.
-            val rows = queries.trackChangesBefore(before ?: Long.MAX_VALUE, limit + 1L).executeAsList()
+            val rows = queries.trackChangesBefore(before ?: Long.MAX_VALUE, after, limit + 1L).executeAsList()
             val page = rows.take(limit)
             val states =
                 if (page.isEmpty()) {
@@ -171,6 +174,13 @@ class SessionHistory(
             )
         }
     }
+
+    /**
+     * The id of the newest change recorded, 0 with none: a mark that [changes] can read after. Ids
+     * only grow, through *Keep history for*'s deletions and *Clear history* (`AUTOINCREMENT`), and do
+     * not depend on the clock.
+     */
+    fun lastChangeId(): Long = queries.trackChangeLastId().executeAsOne()
 
     /**
      * Deletes what is older than [lifetime], the user's *Keep history for*, in one transaction: the

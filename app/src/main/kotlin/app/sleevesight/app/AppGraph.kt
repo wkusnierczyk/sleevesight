@@ -23,10 +23,12 @@ import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.ArtLoader
+import app.sleevesight.app.session.DataStoreLearningMark
 import app.sleevesight.app.session.HttpArt
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.SkipDetector
+import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
@@ -176,6 +178,18 @@ class AppGraph(
             onCleared = skipDetector::reset,
         )
 
+    /**
+     * What skip detection has learned, relearned at each start from the changes recorded since its
+     * last reset, which the diagnostics screen offers; the mark of that reset in a file of its own.
+     */
+    val skipLearning =
+        SkipDetectorLearning(
+            skipDetector,
+            history,
+            DataStoreLearningMark(preferences(appContext, SKIP_DETECTION_FILE)),
+            Dispatchers.IO,
+        )
+
     /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
     val historyRetention =
         HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
@@ -205,7 +219,7 @@ class AppGraph(
     /**
      * The diagnostics screen's: the pipeline's events kept in memory from the start of the process,
      * the track changes and the caches' sizes, read when the screen asks, and what skip detection
-     * has learned (none supplied yet: #53).
+     * has learned, with its reset ([skipLearning]).
      */
     val diagnostics =
         Diagnostics(
@@ -216,6 +230,7 @@ class AppGraph(
             // An export outlives the screen that started it.
             scope = mainScope,
             version = BuildConfig.VERSION_NAME,
+            skipLearning = skipLearning,
         )
 
     init {
@@ -229,7 +244,7 @@ class AppGraph(
         // `history.db` opens only after the first run is acknowledged.
         mainScope.launch {
             firstRun.state.first { it }
-            skipDetector.restoreFrom(history, Dispatchers.IO)
+            skipLearning.restore()
         }
         pipeline.start(pipelineScope)
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
@@ -259,6 +274,7 @@ class AppGraph(
         const val TAG = "Sleevesight"
         const val SETTINGS_FILE = "settings"
         const val SECRETS_FILE = "secrets"
+        const val SKIP_DETECTION_FILE = "skip_detection"
         const val HISTORY_DATABASE = "history.db"
         const val CACHE_DATABASE = "cache.db"
 
