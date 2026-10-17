@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.core.net.toUri
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -25,6 +27,17 @@ fun interface HttpArt {
         val NONE = HttpArt { null }
     }
 }
+
+/**
+ * This fetch, waiting first until [allowed] is true: in the app, while lookups are allowed (D6). A
+ * fetch for a track no longer shown is cancelled with its load, so on return only the current
+ * track's art is fetched. [allowed] is read at each fetch.
+ */
+fun HttpArt.onlyWhen(allowed: () -> Flow<Boolean>): HttpArt =
+    HttpArt { uri ->
+        allowed().first { it }
+        fetch(uri)
+    }
 
 /**
  * Turns the art sources of a track ([SessionMapping.artSources]) into a bitmap, trying each in

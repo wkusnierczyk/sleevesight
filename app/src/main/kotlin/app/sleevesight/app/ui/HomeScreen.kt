@@ -16,17 +16,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.SleevesightTheme
 
 /**
- * Where the first-run flow lands. A placeholder until the now-playing screen: it says whether
- * notification access is on, and leads back to the first-run screen and to the settings.
+ * Where the first-run flow lands. A placeholder until the now-playing screen (#52): it says whether
+ * notification access is on, shows the pipeline's state ([pipeline], [PipelineSummary]) while it
+ * is, and leads back to the first-run screen and to the settings.
  */
 @Composable
 fun HomeScreen(
     accessGranted: Boolean,
     onOpenFirstRun: () -> Unit,
     onOpenSettings: () -> Unit,
+    pipeline: @Composable () -> Unit = {},
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -35,7 +38,7 @@ fun HomeScreen(
         ) {
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
             if (accessGranted) {
-                Text(stringResource(R.string.home_placeholder), style = MaterialTheme.typography.bodyLarge)
+                pipeline()
                 TextButton(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_what_leaves)) }
             } else {
                 Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
@@ -49,7 +52,11 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 private fun HomeAccessOnPreview() {
-    SleevesightTheme { HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) }
+    SleevesightTheme {
+        HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) {
+            PipelineSummary(PipelineView(), onWrite = {})
+        }
+    }
 }
 
 @Preview(showBackground = true)

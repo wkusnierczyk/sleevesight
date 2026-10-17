@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- The pipeline's lookups and the AI service's calls, through `:net` alone (`:wiring`), and
+         only for the sources and the service the user switched on (`checkManifest` allows this
+         one permission, besides androidx.core's own). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- No backup and no transfer to another phone: either would take the session history and
          the keys off the phone, which the first-run screen says stay on it. allowBackup="false"
          turns both off before Android 12, so there is no fullBackupContent; from 12 on,

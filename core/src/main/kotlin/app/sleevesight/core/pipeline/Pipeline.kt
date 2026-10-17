@@ -142,13 +142,23 @@ class Pipeline(
             .debounce(DEBOUNCE)
             .map { change -> change to parts.normalizer.normalize(change.nowPlaying) }
             .distinctUntilChangedBy { (change, track) ->
-                RunKey(track, change.nowPlaying.album, change.nowPlaying.duration?.inWholeSeconds)
+                RunKey.of(track, change.nowPlaying)
             }.collectLatest { (change, track) ->
                 val current = settings()
                 val writes = AutoWrite.writes(current, change.cause, acted.value)
-                start(change.nowPlaying, track, current).run(autoWrite = writes, waitForTap = true)
+                start(change.nowPlaying, track, current, Followed(writes, taps)).run()
             }
     }
+
+    /**
+     * Runs the pipeline for [nowPlaying] once, each step that sends requests or spends starting
+     * only once [control] grants it, and returns its final state: the app's loop, whose
+     * coordinator decides when (#51). The state is published as for [follow].
+     */
+    suspend fun run(
+        nowPlaying: NowPlaying,
+        control: RunControl,
+    ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control).run()
 
     /**
      * Runs the pipeline for [nowPlaying] once and returns its final state: with the insight written
@@ -159,20 +169,21 @@ class Pipeline(
         write: Boolean,
     ): TrackState {
         val track = parts.normalizer.normalize(nowPlaying)
-        return start(nowPlaying, track, settings()).run(autoWrite = write, waitForTap = false)
+        return start(nowPlaying, track, settings(), RunControl.Unattended(write)).run()
     }
 
     private fun start(
         nowPlaying: NowPlaying,
         track: NormalizedTrack,
         current: Settings,
+        control: RunControl,
     ): TrackRun {
         val token = runs.updateAndGetValue()
         return TrackRun(
             parts = parts,
             time = time,
             input = RunInput(current, nowPlaying, track),
-            taps = taps,
+            control = control,
             onEvent = { eventFlow.tryEmit(it) },
             publish = { state -> if (runs.value == token) stateFlow.value = state },
         )
@@ -185,19 +196,35 @@ class Pipeline(
         }
     }
 
-    // Everything a run reads from a change: two changes with the same key give the same run. The
-    // length in whole seconds, as the cache keys hold it, so a player's millisecond jitter is no change.
-    private data class RunKey(
-        val track: NormalizedTrack,
-        val album: String?,
-        val seconds: Long?,
-    )
-
     companion object {
         /** How long a track change waits for the next before it runs: skips settle first. */
         val DEBOUNCE: Duration = 650.milliseconds
 
         /** Events kept for a slow collector before the oldest are dropped. */
         const val EVENT_BUFFER: Int = 256
+    }
+}
+
+/**
+ * Everything a run reads from a report: two reports with the same key give the same run (the
+ * normalized track, its credited artists and work included, the album and the length). The length
+ * in whole seconds, as the cache keys hold it, so a player's millisecond jitter is no change.
+ */
+data class RunKey(
+    val track: NormalizedTrack,
+    val album: String?,
+    val seconds: Long?,
+) {
+    companion object {
+        fun of(
+            track: NormalizedTrack,
+            nowPlaying: NowPlaying,
+        ): RunKey = RunKey(track, nowPlaying.album, nowPlaying.duration?.inWholeSeconds)
+
+        /** The key of [nowPlaying], normalized by [normalizer]. */
+        fun of(
+            normalizer: Normalizer,
+            nowPlaying: NowPlaying,
+        ): RunKey = of(normalizer.normalize(nowPlaying), nowPlaying)
     }
 }

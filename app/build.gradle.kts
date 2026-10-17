@@ -10,6 +10,8 @@ val appVersion = ReleaseVersion.parse(providers.gradleProperty("sleevesight.vers
 
 android {
     namespace = "app.sleevesight.app"
+    // `BuildConfig.VERSION_NAME`, for the User-Agent the app's one `NetClient` sends (`:wiring`).
+    buildFeatures.buildConfig = true
     defaultConfig {
         applicationId = "app.sleevesight"
         versionCode = appVersion.code
