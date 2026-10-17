@@ -11,7 +11,6 @@ import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
 import app.sleevesight.core.synthesis.InsightReply
-import kotlinx.coroutines.flow.transformWhile
 import kotlin.time.Duration
 import kotlin.time.TimeMark
 
@@ -121,33 +120,29 @@ internal class InsightWriter(
         val text = StringBuilder()
         var end: CompletionEvent? = null
         var started: TimeMark? = null
-        // The request goes out only if no Stop came first. The reply's end (Done or Error) closes
-        // the stream at once, without waiting for the transport to close.
+        // The request goes out only if no Stop came first. The stream is read to its end, as the
+        // transport closes it (the CLI's recorder keeps a reply only then); a Stop meanwhile
+        // cancels it.
         val ran =
             control.unlessStopped {
                 emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
                 show(InsightState.Writing(""))
                 started = time.timeSource.markNow()
-                ai.provider
-                    .stream(request, ai.key)
-                    .transformWhile { event ->
-                        emit(event)
-                        event is CompletionEvent.Delta
-                    }.collect { event ->
-                        when (event) {
-                            is CompletionEvent.Delta -> {
-                                text.append(event.text)
-                                show(InsightState.Writing(text.toString()))
-                            }
+                ai.provider.stream(request, ai.key).collect { event ->
+                    when (event) {
+                        is CompletionEvent.Delta -> {
+                            text.append(event.text)
+                            show(InsightState.Writing(text.toString()))
+                        }
 
-                            is CompletionEvent.Done, is CompletionEvent.Error -> {
-                                end = event
-                            }
+                        is CompletionEvent.Done, is CompletionEvent.Error -> {
+                            end = event
                         }
                     }
+                }
             }
-        // Once the reply's end has come, it is the outcome: what was paid for is kept, whatever a
-        // Stop did after it.
+        // Once the reply's end has come (Done or Error), it is the outcome, whatever a Stop did
+        // after it while the transport was still open: what was paid for is kept.
         return when (val last = end) {
             is CompletionEvent.Done -> finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control)
             is CompletionEvent.Error -> {

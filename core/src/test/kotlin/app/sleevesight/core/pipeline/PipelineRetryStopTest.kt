@@ -12,9 +12,9 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
@@ -169,46 +169,102 @@ class PipelineRetryStopTest {
             assertEquals(1, events.count { it is PipelineEvent.ModelStopped })
         }
 
+    /**
+     * A provider whose reply ends ([reply]'s last event: `Done`, as at `message_stop`, or `Error`)
+     * while the transport stays open until [release] completes, as a body read to its end does.
+     */
+    private class HeldOpen(
+        private val reply: List<CompletionEvent>,
+    ) : AiProvider {
+        override val id: ProviderId = ProviderId.ANTHROPIC
+        val release = CompletableDeferred<Unit>()
+        var ended = false
+        var cancelled = false
+
+        override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
+
+        override fun stream(
+            request: CompletionRequest,
+            key: Secret,
+        ): Flow<CompletionEvent> =
+            flow {
+                reply.forEach { emit(it) }
+                try {
+                    release.await()
+                    ended = true
+                } catch (e: CancellationException) {
+                    cancelled = true
+                    throw e
+                }
+            }
+    }
+
+    // What a run of a reply held open came to.
+    private class Held(
+        val insight: InsightState,
+        val control: Granted,
+    )
+
+    // Runs [provider]'s reply under a control that grants everything; once the reply's end is in
+    // and the transport still open, stops the call when [stop], else releases the transport. In
+    // neither case is the call stopped.
+    private fun TestScope.heldOpen(
+        provider: HeldOpen,
+        cache: MemoryCache,
+        stop: Boolean,
+    ): Held {
+        val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
+        val events = recording(pipeline)
+        val control = Granted()
+        RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+        control.retries.trySend(false)
+        val run = backgroundScope.launch { pipeline.run(sundown, control) }
+        runCurrent()
+        // The reply's end is in, and the stream is still read: nothing is decided yet.
+        assertTrue(run.isActive)
+        assertIs<InsightState.Writing>(pipeline.state.value!!.insight)
+        if (stop) control.stop.complete(Unit) else provider.release.complete(Unit)
+        runCurrent()
+        assertTrue(run.isCompleted)
+        assertEquals(0, events.count { it is PipelineEvent.ModelStopped })
+        return Held(pipeline.state.value!!.insight, control)
+    }
+
     @Test
-    fun `a reply whose end has come is kept, however long the transport stays open, and a Stop then changes nothing`() =
+    fun `a reply whose end has come is kept when a Stop lands before the transport closes`() =
         runTest {
             val cache = MemoryCache()
-            var closed = false
-            // The reply ends (`Done`, as at `message_stop`), and the body stays open.
-            val provider =
-                object : AiProvider {
-                    override val id: ProviderId = ProviderId.ANTHROPIC
+            val provider = HeldOpen(FakeProvider.done("It is a song [MB1]."))
+            val held = heldOpen(provider, cache, stop = true)
 
-                    override suspend fun models(key: Secret): ModelList = ModelList.Listed(emptyList())
-
-                    override fun stream(
-                        request: CompletionRequest,
-                        key: Secret,
-                    ): Flow<CompletionEvent> =
-                        flow {
-                            try {
-                                FakeProvider.done("It is a song [MB1].").forEach { emit(it) }
-                                awaitCancellation()
-                            } finally {
-                                closed = true
-                            }
-                        }
-                }
-            val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
-            val control = Granted()
-            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
-            val run = backgroundScope.launch { pipeline.run(sundown, control) }
-            runCurrent()
-            // The Stop lands after the reply's end, while the transport would still be open.
-            control.stop.complete(Unit)
-            runCurrent()
-
-            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
-            assertEquals(listOf("It is a song [MB1]."), control.cardsWritten)
+            assertIs<InsightState.Written>(held.insight)
+            assertEquals(listOf("It is a song [MB1]."), held.control.cardsWritten)
             assertEquals(1, cache.cards.size)
-            assertEquals(0, control.retriesAsked)
-            // The stream was closed at the reply's end, not left waiting for the transport.
-            assertTrue(closed)
-            assertTrue(run.isCompleted)
+            assertEquals(0, held.control.retriesAsked)
+            // The Stop cut the open transport.
+            assertTrue(provider.cancelled)
+        }
+
+    @Test
+    fun `a reply that failed stays failed when a Stop lands before the transport closes`() =
+        runTest {
+            val provider = HeldOpen(listOf(CompletionEvent.Error(AiErrorKind.OVERLOADED)))
+            val held = heldOpen(provider, MemoryCache(), stop = true)
+
+            assertEquals(InsightState.Failed("overloaded"), held.insight)
+            assertTrue(provider.cancelled)
+        }
+
+    @Test
+    fun `with no Stop, the stream is read until the transport closes, and the reply then kept`() =
+        runTest {
+            val cache = MemoryCache()
+            val provider = HeldOpen(FakeProvider.done("It is a song [MB1]."))
+            val held = heldOpen(provider, cache, stop = false)
+
+            assertIs<InsightState.Written>(held.insight)
+            assertEquals(1, cache.cards.size)
+            assertTrue(provider.ended)
+            assertEquals(false, provider.cancelled)
         }
 }

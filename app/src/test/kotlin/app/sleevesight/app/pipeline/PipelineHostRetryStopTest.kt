@@ -137,6 +137,31 @@ internal class PipelineHostRetryStopTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `an automatic call that fails, then a tap's call, and a late Stop for the first stops nothing`() =
+        runTest {
+            started()
+            play("Zero")
+            settle()
+            tap()
+            settle()
+            provider.error = AiErrorKind.SERVER
+            play("Sundown")
+            settle()
+            assertTrue(host.state.value.retry)
+
+            provider.error = null
+            provider.streaming = 10.seconds
+            tap()
+            advanceTimeBy(2.seconds)
+            val second = checkNotNull(host.state.value.stopCall)
+            assertEquals(2, second.number)
+            host.stop(second.copy(number = 1))
+            advanceTimeBy(20.seconds)
+            assertEquals(2, provider.requestsFor("Sundown"))
+            assertTrue(insight() is InsightState.Written)
+        }
+
+    @Test
     fun `a rewrite stopped shows the card paid for again, says so, and offers Rewrite again`() =
         runTest {
             started()

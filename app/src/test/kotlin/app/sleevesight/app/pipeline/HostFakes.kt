@@ -92,9 +92,8 @@ internal class CountingProvider : AiProvider {
             }
             emit(CompletionEvent.Delta(reply(requests)))
             delay(streaming)
-            // Counted as the reply reaches its end: the pipeline closes the stream at `Done`.
-            completed++
             emit(CompletionEvent.Done(Usage(inputTokens = 10, outputTokens = 5), StopReason.END))
+            completed++
         }
 }
 
