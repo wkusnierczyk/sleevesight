@@ -160,6 +160,37 @@
     <string name="settings_clear_history_done">History cleared.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources and their licences</string>
+    <string name="settings_section_developer">Developer</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_summary">Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.</string>
+    <string name="settings_diagnostics_open">Open diagnostics</string>
+    <string name="settings_diagnostics_open_value">Kept on this phone unless you export them</string>
+
+    <!-- Diagnostics: the pipeline's log, the track changes and what skip detection has learned (design, Diagnostics). -->
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_export">Export</string>
+    <string name="diagnostics_exporting">Exporting…</string>
+    <string name="diagnostics_exported">Exported.</string>
+    <string name="diagnostics_exported_incomplete">Exported, but part of it could not be read: the file says which.</string>
+    <string name="diagnostics_export_failed">The diagnostics could not be exported. Try again.</string>
+    <string name="diagnostics_tab_events">Events</string>
+    <string name="diagnostics_tab_changes">Track changes</string>
+    <string name="diagnostics_tab_learned">Skip detection</string>
+    <string name="diagnostics_caches">Caches</string>
+    <string name="diagnostics_caches_failed">The caches could not be read.</string>
+    <string name="diagnostics_no_events">No events since Sleevesight started.</string>
+    <string name="diagnostics_no_changes">No track changes recorded.</string>
+    <string name="diagnostics_changes_failed">The track changes could not be read.</string>
+    <string name="diagnostics_loading">Loading…</string>
+    <string name="diagnostics_older_changes">Older changes</string>
+    <string name="diagnostics_learned_hint">What skip detection has learned on this phone, per player. It adjusts detection within its fixed rules.</string>
+    <string name="diagnostics_not_learning">Skip detection learns nothing in this version.</string>
+    <string name="diagnostics_nothing_learned">Nothing learned yet.</string>
+    <string name="diagnostics_reset">Reset</string>
+    <string name="diagnostics_reset_title">Reset what skip detection has learned?</string>
+    <string name="diagnostics_reset_done">What skip detection had learned is forgotten.</string>
+    <string name="diagnostics_reset_failed">What skip detection has learned could not be reset. Try again.</string>
+    <string name="diagnostics_reset_explained">Skip detection goes back to its fixed rules until it learns again from the next track changes. The track changes recorded are kept.</string>
 
     <plurals name="settings_days">
         <item quantity="one">%d day</item>

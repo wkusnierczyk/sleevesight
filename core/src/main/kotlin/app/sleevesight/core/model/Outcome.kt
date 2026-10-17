@@ -29,3 +29,18 @@ sealed interface Outcome {
     /** A network or source error. */
     data object Unreachable : Outcome
 }
+
+/**
+ * An outcome as the design names it (`song_article`, `rejected`, …), for logs and reports. Not a
+ * storage format: the retrieval cache keeps its own names, which must never change.
+ */
+fun outcomeKey(outcome: Outcome): String =
+    when (outcome) {
+        Outcome.SongArticle -> "song_article"
+        Outcome.ArtistArticle -> "artist_article"
+        Outcome.OriginalSong -> "original_song"
+        is Outcome.Rejected -> "rejected"
+        Outcome.None -> "none"
+        Outcome.SourceOff -> "source_off"
+        Outcome.Unreachable -> "unreachable"
+    }

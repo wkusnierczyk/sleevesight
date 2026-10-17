@@ -6,6 +6,7 @@ package app.sleevesight.cli
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.model.outcomeKey
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
@@ -284,15 +285,3 @@ object Gate {
     /** [share] as a percentage, to one decimal. */
     fun percent(share: Double): String = "${(share * PER_MILLE).toLong() / PER_CENT} %"
 }
-
-/** An outcome as the design names it (`song_article`, `rejected`, …). */
-fun outcomeKey(outcome: Outcome): String =
-    when (outcome) {
-        Outcome.SongArticle -> "song_article"
-        Outcome.ArtistArticle -> "artist_article"
-        Outcome.OriginalSong -> "original_song"
-        is Outcome.Rejected -> "rejected"
-        Outcome.None -> "none"
-        Outcome.SourceOff -> "source_off"
-        Outcome.Unreachable -> "unreachable"
-    }

@@ -74,6 +74,7 @@ class SettingsCodecTest {
                 aiEffort = ReasoningEffort.HIGH,
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
+                showDiagnostics = true,
             )
         assertEquals(changed, roundTrip(changed))
     }
