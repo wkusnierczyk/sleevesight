@@ -10,8 +10,9 @@ import org.junit.Test
 /**
  * *Write insights automatically* in each of its modes (D5; architecture, *Writing insights
  * automatically*), through [PipelineCoordinator]: which changes write without a tap, by the cause
- * the session layer gives the latest report, and nothing before the user's first action after the
- * app opens.
+ * the session layer gives the latest report, and nothing before the user's first action since the
+ * app started: a cold start, a new process, with a new coordinator; a return to the app keeps it
+ * (#190).
  */
 class PipelineCoordinatorAutoWriteTest {
     private val cases =
@@ -111,15 +112,25 @@ class PipelineCoordinatorAutoWriteTest {
             assertEquals("$each, before any action", emptyMap<String, Int>(), world.calls)
             assertTrue("$each, Write offered", world.offersWriteFor("A"))
 
-            // An action, then the app opening again: nothing until the next action.
+            // An action, then a return to the app: the action stands, and the mode decides.
             world.tap()
             world.settle()
             world.hide()
             world.show()
             world.play("B", SKIP_IN_PLAYER)
             world.settle()
-            assertEquals("$each, after the app opened", mapOf("A" to 1), world.calls)
-            assertTrue("$each, Write offered after the app opened", world.offersWriteFor("B"))
+            val skips = SKIP_IN_PLAYER in mode(each)
+            val expected = if (skips) mapOf("A" to 1, "B" to 1) else mapOf("A" to 1)
+            assertEquals("$each, after a return to the app", expected, world.calls)
+            assertEquals("$each, Write offered after a return", !skips, world.offersWriteFor("B"))
+
+            // A new process: a new coordinator, with no first action, whatever the one before had.
+            val fresh = started()
+            fresh.writesOn = mode(each)
+            fresh.play("B", SKIP_IN_PLAYER)
+            fresh.settle()
+            assertEquals("$each, after a cold start", emptyMap<String, Int>(), fresh.calls)
+            assertTrue("$each, Write offered after a cold start", fresh.offersWriteFor("B"))
         }
     }
 
