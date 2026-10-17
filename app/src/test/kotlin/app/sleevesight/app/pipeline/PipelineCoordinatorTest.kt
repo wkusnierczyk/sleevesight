@@ -97,7 +97,7 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "Write, hide, another track, show: nothing is written until a tap",
+                "Write, hide, another track, show: the first action stands, and the track is written on return",
                 mapOf("Zero" to 1, "B" to 1),
                 listOf("Zero", "B"),
             ) {
@@ -105,11 +105,41 @@ class PipelineCoordinatorTest {
                 hide()
                 play("B")
                 settle()
+                assertEquals(listOf("Zero"), lookups)
                 show()
                 settle()
-                assertEquals(mapOf("Zero" to 1), calls)
-                assertTrue(offersWriteFor("B"))
-                tap()
+            },
+            Case(
+                "a return from the background keeps the first action (#190)",
+                mapOf("Zero" to 1, "B" to 1, "C" to 1),
+                listOf("Zero", "B", "C"),
+            ) {
+                // The user switches to the player to skip, and comes back.
+                acted()
+                hide()
+                play("B", ChangeCause.SKIP_IN_PLAYER)
+                advance(100)
+                show()
+                settle()
+                play("C")
+                settle()
+            },
+            Case(
+                "the screen turned off and on keeps the first action (#190)",
+                mapOf("Zero" to 1, "A" to 1, "B" to 1),
+                listOf("Zero", "A", "B"),
+            ) {
+                // Off and on is a stop and a start that are not a configuration change, a track
+                // ending while the screen is off included.
+                acted()
+                hide()
+                show()
+                play("A")
+                settle()
+                hide()
+                play("B")
+                settle()
+                show()
                 settle()
             },
             Case("a newer track's action does not authorise the older run's write", mapOf("B" to 1), listOf("A", "B")) {
@@ -123,9 +153,8 @@ class PipelineCoordinatorTest {
             },
             Case(
                 "returning during a newer track's debounce does not resume the older one",
-                mapOf("Zero" to 1),
+                mapOf("Zero" to 1, "B" to 1),
                 listOf("Zero", "B"),
-                "B",
             ) {
                 acted()
                 hide()
@@ -179,10 +208,9 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "an opening during a rebuild clears the first action",
-                mapOf("Zero" to 1),
+                "a return during a rebuild keeps the first action",
+                mapOf("Zero" to 1, "B" to 1),
                 listOf("Zero", "Zero", "B"),
-                "B",
             ) {
                 acted()
                 holdKeys = true
@@ -247,9 +275,8 @@ class PipelineCoordinatorTest {
             },
             Case(
                 "a skip while streaming hidden, then a rebuild, goes on when shown",
-                mapOf("A" to 1),
+                mapOf("A" to 1, "B" to 1),
                 listOf("A", "B"),
-                "B",
             ) {
                 streamMs = 10_000
                 play("A")
