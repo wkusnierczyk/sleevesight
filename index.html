@@ -6,14 +6,14 @@ layout: null
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sleevesight: liner notes for whatever you’re playing</title>
+<title>Sleevesight: liner notes for whatever you're playing</title>
 <meta name="description" content="An open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song you are playing, with its genre labels.">
 <link rel="canonical" href="https://sleevesight.app/">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sleevesight">
-<meta property="og:title" content="Sleevesight: liner notes for whatever you’re playing">
+<meta property="og:title" content="Sleevesight: liner notes for whatever you're playing">
 <meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key. Nothing collected.">
 <meta property="og:url" content="https://sleevesight.app/">
 <meta name="twitter:card" content="summary">
@@ -150,9 +150,9 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .legend .cite{margin:0 4px 0 0}
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
-.two ul{margin:0;padding-left:1.2em}
+.two ul{margin:1em 0;padding-left:1.2em}
 .two li{margin-bottom:8px}
-.none{font-size:19px;font-weight:600;margin:0 0 12px}
+.lead{font-size:19px;font-weight:600;margin:0 0 12px}
 .small{font-size:15px;color:var(--muted)}
 .links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 32px}
 .links span{display:block;font-size:15px;color:var(--muted)}
@@ -220,11 +220,11 @@ footer p{margin:0 0 4px}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tiles,.boxes{grid-template-columns:minmax(0,1fr)}
+  .tiles,.boxes,.two{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){
   body{font-size:16px}
-  .steps,.two,.links{grid-template-columns:minmax(0,1fr)}
+  .steps,.links{grid-template-columns:minmax(0,1fr)}
   section{padding:36px 0}
 }
 </style>
@@ -255,7 +255,7 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
 <main id="main">
 <div class="hero">
   <div>
-    <h1>Liner notes for whatever you’re playing.</h1>
+    <h1>Liner notes for whatever you're playing</h1>
     <p class="lede">Sleevesight is an open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song, with its genre labels. Every fact links to where it came from.</p>
     <p class="status">In development: not yet on Google Play</p>
     <div class="ctas">
@@ -292,7 +292,7 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
   <h2 id="how-h">How it works</h2>
   <ol class="steps">
     <li><h3>Read</h3><p>Android tells the app what your player is playing: title, artists, album and cover. Sleevesight never touches the audio.</p></li>
-    <li><h3>Look up</h3><p>The track is cleaned of tags like “2006 Remaster” and matched in the sources you switched on. Matches that fail an identity check are shown as rejected, not used quietly.</p></li>
+    <li><h3>Look up</h3><p>The track is cleaned of tags like "2006 Remaster" and matched in the sources you switched on. Matches that fail an identity check are shown as rejected, not used quietly.</p></li>
     <li><h3>Write</h3><p>The AI service you chose turns what was found into a few sentences, citing the evidence. It may not add facts of its own unless you allow it, and then they are marked.</p></li>
     <li><h3>Check</h3><p>Before anything is shown, the citations are checked in code. Uncited sentences are flagged, and the evidence is listed underneath.</p></li>
   </ol>
@@ -324,12 +324,12 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
   <h2 id="privacy-h">Privacy</h2>
   <div class="two">
     <div>
-      <p class="none">Sleevesight collects nothing.</p>
+      <p class="lead">Sleevesight collects nothing</p>
       <p>No accounts of our own, no telemetry, no analytics, no ads. Your API keys are stored encrypted on the phone and never logged.</p>
       <p class="small">The full privacy policy will be published here before the Google Play release.</p>
     </div>
     <div>
-      <p><strong>What leaves the phone, and to whom</strong></p>
+      <p class="lead">What leaves the phone, and to whom</p>
       <ul>
         <li>To the sources you switched on: the track's title, artists and album, for the playing track and, by default, the next one in the queue.</li>
         <li>To the AI service you chose: the same names and what the sources found. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
