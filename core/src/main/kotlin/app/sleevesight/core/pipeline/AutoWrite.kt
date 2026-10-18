@@ -30,7 +30,8 @@ data class TrackChange(
  * Whether an insight is written without a tap (D5; `design/architecture.md`, *Writing insights
  * automatically*):
  *
- * - never while *Write insights* is off, or before the user's first action after the app opens;
+ * - never while *Write insights* is off, or before the user's first action since the app started
+ *   (in the app, a cold start: a return to it keeps the first action);
  * - *On every track change*: every track;
  * - *When I skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
  * - *Never*: none.
