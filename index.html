@@ -287,7 +287,10 @@ document.documentElement.classList.add('js');
   </div>
 
   <!-- Until the app's home screen can be captured (#52), a mock in the simulator's style, with the
-       simulator's generated cover, not the real art. -->
+       simulator's generated cover (`coverFor("Rubber Soul|The Beatles")`), not the real art. The
+       genre labels and the insight, with its citations, are the pipeline's own output from live runs
+       of `:cli` on the track (2026-10-18: Claude Haiku 5.5; MusicBrainz, Wikipedia and Last.fm; web
+       search off), coloured by the app's genre families. -->
   <figure class="mock">
     <div class="phone" role="img" aria-labelledby="mock-desc">
       <div class="prow" aria-hidden="true"><span class="dot"></span><div><b>Spotify</b> <span>· Playing</span></div></div>
@@ -297,7 +300,7 @@ document.documentElement.classList.add('js');
       <div aria-hidden="true">
         <p class="np-title">Michelle</p>
         <p class="np-meta"><strong>The Beatles</strong><br>Rubber Soul<br>Released 1965</p>
-        <ul class="genres"><li style="--gh:135">Classic Rock</li><li style="--gh:135">Rock</li><li style="--gh:135">Pop</li></ul>
+        <ul class="genres"><li style="--gh:8">Classic Rock</li><li style="--gh:8">Rock</li><li style="--gh:328">Pop</li></ul>
         <div class="card">
           <h2>Why it's interesting</h2>
           <p>Michelle is a Beatles song from the 1965 album <i>Rubber Soul</i>.<span class="cite MB">MB1</span><span class="cite W">W1</span> It was written by John Lennon and Paul McCartney,<span class="cite MB">MB2</span> and it won the Grammy Award for Song of the Year in 1967.<span class="cite W">W2</span> On this recording, Paul McCartney sings lead vocals and plays acoustic guitar and electric bass, with George Harrison, John Lennon and Ringo Starr also performing.<span class="cite MB">MB4</span><span class="cite MB">MB5</span><span class="cite MB">MB6</span><span class="cite MB">MB7</span></p>
@@ -305,7 +308,7 @@ document.documentElement.classList.add('js');
         </div>
       </div>
     </div>
-    <p id="mock-desc" hidden>A phone showing Sleevesight while Spotify plays Michelle by The Beatles: the cover, the title, artist, album and year, the genre labels Classic Rock, Rock and Pop, and a short insight whose three sentences each carry citations to MusicBrainz and Wikipedia.</p>
+    <p id="mock-desc" hidden>A phone showing Sleevesight while Spotify plays Michelle by The Beatles: the cover, the title, artist, album and year, the genre labels Classic Rock, Rock and Pop, and a short insight of three sentences, each cited, to MusicBrainz and Wikipedia.</p>
     <figcaption>Mock home screen design</figcaption>
   </figure>
 </div>
@@ -325,8 +328,8 @@ document.documentElement.classList.add('js');
   <h2 id="next-h">Planned: coming next</h2>
   <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way. It also lets you ask follow-up questions about what is playing, answered by your AI service on your own key, and export the tracks you listened to, with their insights, to a file. And it shows the languages a song is sung in, or none for an instrumental.</p>
   <ul class="boxes">
-    <li><h3>Song</h3><p class="what">Michelle</p><p>George Martin composed the melody of the guitar solo, and showed Harrison the notes during the session.<span class="cite W">W1</span> It topped the charts in Italy for eight weeks, and in France for five, as the lead track of an EP.<span class="cite W">W2</span></p></li>
-    <li><h3>Artist</h3><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="cite L">L1</span><span class="cite L">L2</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the counterculture of the 1960s.<span class="cite L">L3</span></p></li>
+    <li><h3>Song</h3><p class="what">Michelle</p><p>George Martin recalled composing the melody of the guitar solo, and showed Harrison the notes during the session.<span class="cite W">W1</span> It topped the charts in Italy for eight weeks, and in France for five, as the lead track of an EP.<span class="cite W">W2</span></p></li>
+    <li><h3>Artist</h3><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="cite L">L1</span><span class="cite L">L2</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="cite L">L3</span></p></li>
     <li><h3>Album</h3><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="cite G">G1</span> It spent nine weeks at number one in the UK, and six in the US from early January 1966.<span class="cite G">G2</span></p></li>
   </ul>
   <ul class="boxes pair">
