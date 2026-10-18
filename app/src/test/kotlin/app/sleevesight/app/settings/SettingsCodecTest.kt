@@ -2,6 +2,7 @@ package app.sleevesight.app.settings
 
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -65,6 +66,7 @@ class SettingsCodecTest {
                 labelSources = setOf(LabelSource.LASTFM),
                 writeInsights = false,
                 writeAutomatically = WriteAutomatically.WHEN_I_SKIP,
+                pauseAutoWriteAfter = 10,
                 crossfade = Crossfade.Fixed(6.seconds),
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
@@ -83,6 +85,12 @@ class SettingsCodecTest {
     fun keepingTheHistoryForeverIsKeptApartFromNoChoice() {
         assertNull(roundTrip(Settings(historyLifetime = null)).historyLifetime)
         assertEquals(Settings.DEFAULT_HISTORY_LIFETIME, roundTrip(Settings()).historyLifetime)
+    }
+
+    @Test
+    fun neverPausingAutomaticWritingIsKeptApartFromNoChoice() {
+        assertNull(roundTrip(Settings(pauseAutoWriteAfter = null)).pauseAutoWriteAfter)
+        assertEquals(Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER, roundTrip(Settings()).pauseAutoWriteAfter)
     }
 
     @Test
@@ -211,6 +219,7 @@ class SettingsCodecTest {
                 stringPreferencesKey("insights.write_automatically") to "SOMETIMES",
                 stringPreferencesKey("insights.prepare_next_track") to "",
                 longPreferencesKey("insights.crossfade_ms") to 60_000L,
+                intPreferencesKey("insights.pause_auto_write_after") to -3,
                 longPreferencesKey("cache.lifetime_ms.WEB") to -1L,
                 longPreferencesKey("cache.artist_lifetime_ms") to 0L,
                 longPreferencesKey("cache.size_limit") to -5L,

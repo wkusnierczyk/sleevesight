@@ -23,6 +23,11 @@ import kotlin.time.Duration.Companion.seconds
  * @property labelSources the sources whose tags give genre labels (D12, #84); ask [givesLabels],
  *   which also needs the source on under *Where to look*. See [DEFAULT_LABEL_SOURCES].
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
+ * @property pauseAutoWriteAfter *Pause automatic writing after* (#203): the track changes reported
+ *   while Sleevesight is not on screen that are written as usual; at the next, the user's first
+ *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
+ *   action lasts as long as the process.
+ *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property artistCacheLifetime how long a credited artist's MusicBrainz id, or the finding that it
@@ -49,6 +54,7 @@ data class Settings(
     val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
+    val pauseAutoWriteAfter: Int? = DEFAULT_PAUSE_AUTO_WRITE_AFTER,
     val crossfade: Crossfade = Crossfade.Autodetect,
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
@@ -66,6 +72,9 @@ data class Settings(
             "The history lifetime must be positive, was $historyLifetime"
         }
         require(sessionGap.isPositive()) { "The session gap must be positive, was $sessionGap" }
+        require(pauseAutoWriteAfter == null || pauseAutoWriteAfter > 0) {
+            "Automatic writing must pause after a positive number of track changes, was $pauseAutoWriteAfter"
+        }
     }
 
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
@@ -177,6 +186,25 @@ data class Settings(
          * A user who prefers more deliberate cards raises it, or chooses the provider's default.
          */
         val DEFAULT_AI_EFFORT: ReasoningEffort = ReasoningEffort.LOW
+
+        /**
+         * 5 track changes (#203). Since #190 the first action lasts as long as the process, which
+         * the notification listener keeps alive for days, so one tap would keep automatic writing
+         * going, a paid call on the user's key per track, long after they last looked: with *Look
+         * up in the background* on, for every track played; with it off, for the track playing
+         * whenever the app comes back. Five tracks (some 15 to 20 minutes of listening) let
+         * writing go on through a short absence, someone controlling playback from the player or
+         * a lock screen for a while, and bound what one forgotten tap costs to five unattended
+         * calls: five tracks are written while away, and the sixth waits for a tap. The choices
+         * offered are [PAUSE_AUTO_WRITE_CHOICES], and *Off*.
+         */
+        const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
+
+        /**
+         * The choices of *Pause automatic writing after*, besides *Off*: 3 (a few minutes away), 5
+         * (the default), 10 (an album side or a commute).
+         */
+        val PAUSE_AUTO_WRITE_CHOICES: List<Int> = listOf(3, 5, 10)
 
         private const val HISTORY_DAYS = 90
 

@@ -336,6 +336,21 @@ class SettingsScreenTest {
         }
 
     @Test
+    fun thePauseOfAutomaticWritingIsChosen() =
+        show {
+            // The cost of automatic writing is said where it is set.
+            compose.onNodeWithText(text(R.string.settings_write_automatically_summary)).performScrollTo()
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
+            val ten = app.resources.getQuantityString(R.plurals.settings_track_changes_away, 10, 10)
+            compose.onNodeWithText(ten).performClick()
+            waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
+
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write_off)).performClick()
+            waitFor("the pause off") { current().pauseAutoWriteAfter == null }
+        }
+
+    @Test
     fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
         runBlocking { settings.update { it.copy(historyLifetime = 12.hours, sessionGap = 45.minutes) } }
         show {

@@ -423,6 +423,7 @@ private fun InsightsSection(
     ValueRow(
         title = stringResource(R.string.settings_write_automatically),
         value = modes.first { it.first == settings.writeAutomatically }.second,
+        summary = stringResource(R.string.settings_write_automatically_summary),
         onClick =
             {
                 open(
@@ -437,6 +438,7 @@ private fun InsightsSection(
             }.takeIf { settings.writeInsights },
     )
 
+    PauseAutoWriteRow(settings, update, open)
     CrossfadeRow(settings, update, open)
 
     val preparations =

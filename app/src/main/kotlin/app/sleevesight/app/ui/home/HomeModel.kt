@@ -57,12 +57,14 @@ internal class InsightContext(
 /**
  * What the pipeline offers beside the insight shown: Rewrite beside the card paid for ([rewrite]),
  * Write again after a call that failed or was stopped ([retry]), and Stop while the call is under
- * way ([stop]).
+ * way ([stop]); and whether the Write offered is offered only because automatic writing paused
+ * while the app was not on screen ([paused], #203).
  */
 internal class InsightOffers(
     val rewrite: Boolean = false,
     val retry: Boolean = false,
     val stop: Boolean = false,
+    val paused: Boolean = false,
 )
 
 /**

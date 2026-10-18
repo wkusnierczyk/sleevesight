@@ -99,6 +99,10 @@
     <string name="settings_write_insights">Write insights</string>
     <string name="settings_write_insights_summary">Off: no AI calls at all. The evidence is still shown.</string>
     <string name="settings_write_automatically">Write insights automatically</string>
+    <string name="settings_write_automatically_summary">Each insight written is a paid call on your AI service key.</string>
+    <string name="settings_pause_auto_write">Pause automatic writing after</string>
+    <string name="settings_pause_auto_write_summary">Track changes while Sleevesight is not on screen, counted again from each time you open it. With 5, up to five tracks are written while you are away; from the sixth, nothing more is written until you tap Write insight.</string>
+    <string name="settings_pause_auto_write_off">Off: never pause</string>
     <string name="settings_write_every_change">On every track change</string>
     <string name="settings_write_when_skip">When I skip</string>
     <string name="settings_write_never">Never: only when I tap Write</string>
@@ -113,7 +117,7 @@
 
     <string name="settings_section_lookups">Lookups</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen.</string>
+    <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>
     <string name="settings_cache_lifetimes">How long each source’s findings are kept</string>
     <string name="settings_cache_wikipedia">Wikipedia</string>
     <string name="settings_cache_wikidata">Wikidata</string>
@@ -165,6 +169,10 @@
     <string name="diagnostics_reset_failed">What skip detection has learned could not be reset. Try again.</string>
     <string name="diagnostics_reset_explained">Skip detection goes back to its fixed rules until it learns again from the next track changes. The track changes recorded are kept.</string>
 
+    <plurals name="settings_track_changes_away">
+        <item quantity="one">%d track change away</item>
+        <item quantity="other">%d track changes away</item>
+    </plurals>
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

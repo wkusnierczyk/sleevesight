@@ -157,6 +157,20 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun writeOfferedBecauseAutomaticWritingPausedSaysSo() {
+        val offered = track(insight = InsightState.Idle(canWrite = true))
+        show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey, lapsed = true))) {
+            compose.onNodeWithText(text(R.string.home_insight_paused)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.home_insight_tap_write)).assertDoesNotExist()
+            compose.onNodeWithTag(WRITE_TAG).assertExists()
+        }
+        show(state(PipelineView(offered, aiReady = true, writeKey = sundownKey))) {
+            compose.onNodeWithText(text(R.string.home_insight_paused)).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_insight_tap_write)).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun anIdleInsightSaysWhy() {
         val idle = track(insight = InsightState.Idle(canWrite = false))
         show(state(PipelineView(idle, aiReady = true), Settings(writeInsights = false))) {
