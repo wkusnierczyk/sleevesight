@@ -34,6 +34,14 @@ class EvidenceSet private constructor(
 
     fun isEmpty(): Boolean = lines.isEmpty()
 
+    /**
+     * Whether nothing was found: no line from a source that retrieves. The player's own release
+     * line ([SourceId.PLAYER], `P`) does not count, as it repeats what the player reports, which the
+     * insight prompt gives the model in its track block anyway: a set with only that line has nothing
+     * to narrate that the card's header does not already show (#193).
+     */
+    fun foundNothing(): Boolean = lines.all { it.source == SourceId.PLAYER }
+
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
 
     override fun hashCode(): Int = lines.hashCode()

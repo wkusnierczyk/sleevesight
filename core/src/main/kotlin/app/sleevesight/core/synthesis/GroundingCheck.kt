@@ -72,8 +72,8 @@ sealed interface InsightReply {
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
  * its `NO_EVIDENCE` test, rule for rule but for two deviations from the Phase 0.5 gate (#46): an
- * abbreviation does not end a sentence ([splitSentences]), and the prompt's fixed sentence for a
- * gap, [GAP_SENTENCE], is a hedge. The tests compare it with the simulator's own code on the same
+ * abbreviation does not end a sentence ([splitSentences]), and prompt version 2's fixed sentence
+ * for a gap, [GAP_SENTENCE], is a hedge. The tests compare it with the simulator's own code on the same
  * replies (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
@@ -85,10 +85,12 @@ object GroundingCheck {
     const val MODEL_ID: String = "M"
 
     /**
-     * The one sentence a reply may end with, uncited, to state that the evidence covers only part
-     * of what it would say: the insight prompt asks for exactly this (#46). A hedge when it is the
-     * whole sentence, as written; other wordings of a gap are hedges only as the simulator's
-     * patterns allow.
+     * The sentence insight prompt version 2 asked a reply to end with, uncited, to state that the
+     * evidence covers only part of what it would say (#46). Version 3 asks for no gap sentence
+     * (#193), but the check still reads this one as a hedge, so a reply written under version 2 (a
+     * recorded one, or a card kept under its version 2 key) reads as it did, and a version 3 reply
+     * that writes it anyway is not flagged as uncited. A hedge when it is the whole sentence,
+     * as written; other wordings of a gap are hedges only as the simulator's patterns allow.
      */
     const val GAP_SENTENCE: String = "Little else is documented."
 

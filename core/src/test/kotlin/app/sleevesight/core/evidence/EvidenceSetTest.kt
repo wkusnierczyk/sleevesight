@@ -6,8 +6,10 @@ import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.RegressionCase
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class EvidenceSetTest {
@@ -47,6 +49,14 @@ class EvidenceSetTest {
     private fun set(drafts: List<EvidenceDraft>) = EvidenceSet.of(drafts, JvmHasher)
 
     private fun landingIn(vararg order: SourceId) = set(order.flatMap { retrieval.getValue(it) })
+
+    @Test
+    fun `nothing was found when no line comes from a source that retrieves`() {
+        assertTrue(set(emptyList()).foundNothing())
+        assertTrue(landingIn(SourceId.PLAYER).foundNothing(), "the player's own release alone")
+        assertFalse(landingIn(SourceId.WEB).foundNothing())
+        assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).foundNothing())
+    }
 
     @Test
     fun `ids are the source tag and a position within the source`() {

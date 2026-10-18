@@ -141,7 +141,8 @@ object Gate {
         results: List<TrackResult>,
         insightsAsked: Boolean,
     ): List<Criterion> {
-        val withEvidence = results.filter { it.state.evidence?.isEmpty() == false }
+        // The tracks something was found for: the others get no call (`EvidenceSet.foundNothing`).
+        val withEvidence = results.filter { it.state.evidence?.foundNothing() == false }
         val written = withEvidence.mapNotNull { (it.state.insight as? InsightState.Written)?.grounded?.counts }
         val failed =
             withEvidence.mapNotNull { r ->
