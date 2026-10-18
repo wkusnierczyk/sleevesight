@@ -80,4 +80,4 @@ A change is published on this page, with the date above. Its history is in the [
 
 ## Contact
 
-[support@sleevesight.app](mailto:support@sleevesight.app)
+Sleevesight is made by Waclaw Kusnierczyk, who is responsible for this policy. Questions about it, or about your data: [support@sleevesight.app](mailto:support@sleevesight.app).
