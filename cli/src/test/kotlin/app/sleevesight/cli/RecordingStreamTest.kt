@@ -30,6 +30,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import java.io.File
@@ -115,8 +116,16 @@ class RecordingStreamTest {
             var insight: InsightState? = null
             val run = launch { insight = pipeline.run(playing, write = true).insight }
 
-            // A run that makes no call fails here rather than hanging the build.
-            withTimeout(HELD_WITHIN) { live.held.await() }
+            // A run that makes no call fails here as soon as it ends, rather than at the timeout
+            // or hanging the build.
+            val called =
+                withTimeout(HELD_WITHIN) {
+                    select {
+                        live.held.onAwait { true }
+                        run.onJoin { false }
+                    }
+                }
+            assertTrue(called, "no call made")
             // The reply's end is in; the run reads on until the transport ends.
             repeat(SPINS) { yield() }
             assertTrue(run.isActive)

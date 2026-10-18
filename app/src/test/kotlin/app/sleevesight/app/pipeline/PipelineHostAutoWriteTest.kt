@@ -5,12 +5,14 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.time.Duration.Companion.hours
 
 /**
  * The session layer's cause reaching the decision through the host (D5): under *When I skip*, a
@@ -49,9 +51,9 @@ internal class PipelineHostAutoWriteTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `a cold start waits for the first action`() =
+    fun `a new host starts without the first action, as a new process does`() =
         runTest {
-            // A new host, as a new process makes: a skip is not written until a tap.
+            // One host per process: a skip is not written until a tap.
             started()
             play("One", cause = ChangeCause.SKIP_IN_PLAYER)
             settle()
@@ -61,6 +63,26 @@ internal class PipelineHostAutoWriteTest : PipelineHostFixture() {
                 host.state.value.track
                     ?.insight,
             )
+        }
+
+    @Test
+    fun `a start after a long absence keeps the first action`() =
+        runTest {
+            // Hours away, with track changes reported, then the app shown again: a return, not an
+            // opening (#190). Three changes away stay below the default pause, 5 (#203), so the
+            // first action cannot expire and only the start is tested.
+            actedThenAway()
+            for (title in listOf("Two", "Three", "Four")) {
+                advanceTimeBy(1.hours)
+                play(title, cause = ChangeCause.SKIP_IN_PLAYER)
+                settle()
+            }
+            advanceTimeBy(1.hours)
+            host.activityStarted()
+            settle()
+            assertEquals(0, provider.requestsFor("Two"))
+            assertEquals(1, provider.requestsFor("Four"))
+            assertFalse(host.state.value.lapsed)
         }
 
     @Test

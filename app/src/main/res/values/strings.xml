@@ -101,7 +101,7 @@
     <string name="settings_write_automatically">Write insights automatically</string>
     <string name="settings_write_automatically_summary">Each insight written is a paid call on your AI service key.</string>
     <string name="settings_pause_auto_write">Pause automatic writing after</string>
-    <string name="settings_pause_auto_write_summary">Track changes while Sleevesight is not on screen, counted again from each time you open it. With 5, up to five tracks are written while you are away; from the sixth, nothing more is written until you tap Write insight.</string>
+    <string name="settings_pause_auto_write_summary">Track changes while Sleevesight is not on screen, counted again from each time you open it.</string>
     <string name="settings_pause_auto_write_off">Off: never pause</string>
     <string name="settings_write_every_change">On every track change</string>
     <string name="settings_write_when_skip">When I skip</string>
@@ -172,6 +172,11 @@
     <plurals name="settings_track_changes_away">
         <item quantity="one">%d track change away</item>
         <item quantity="other">%d track changes away</item>
+    </plurals>
+    <!-- Follows settings_pause_auto_write_summary for the count chosen; left out under Off. -->
+    <plurals name="settings_pause_auto_write_summary_count">
+        <item quantity="one">With %1$d, %1$d track is written while you are away; after that, nothing more is written until you tap Write insight.</item>
+        <item quantity="other">With %1$d, up to %1$d tracks are written while you are away; after that, nothing more is written until you tap Write insight.</item>
     </plurals>
     <plurals name="settings_days">
         <item quantity="one">%d day</item>

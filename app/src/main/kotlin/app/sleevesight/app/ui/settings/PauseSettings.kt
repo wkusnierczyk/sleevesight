@@ -25,7 +25,7 @@ internal fun PauseAutoWriteRow(
     ValueRow(
         title = stringResource(R.string.settings_pause_auto_write),
         value = options.first { it.first == settings.pauseAutoWriteAfter }.second,
-        summary = stringResource(R.string.settings_pause_auto_write_summary),
+        summary = pauseSummary(settings.pauseAutoWriteAfter),
         onClick =
             {
                 val chosen = settings.pauseAutoWriteAfter
@@ -36,6 +36,18 @@ internal fun PauseAutoWriteRow(
                 )
             }.takeIf { settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER },
     )
+}
+
+/**
+ * What *Pause automatic writing after* counts, then what the count chosen, [count], does: none
+ * under *Off*, which never pauses.
+ */
+@Composable
+private fun pauseSummary(count: Int?): String {
+    val counted = stringResource(R.string.settings_pause_auto_write_summary)
+    if (count == null) return counted
+    val what = pluralStringResource(R.plurals.settings_pause_auto_write_summary_count, count, count)
+    return "$counted $what"
 }
 
 /** A choice of *Pause automatic writing after*: [count] track changes away. */
