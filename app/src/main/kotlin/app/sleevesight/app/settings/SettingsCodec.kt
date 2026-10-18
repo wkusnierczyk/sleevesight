@@ -3,6 +3,7 @@ package app.sleevesight.app.settings
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -44,6 +45,7 @@ internal object SettingsCodec {
     private val LABELS_OFF = stringSetPreferencesKey("labels.off")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
+    private val PAUSE_AUTO_WRITE = intPreferencesKey("insights.pause_auto_write_after")
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
@@ -72,6 +74,7 @@ internal object SettingsCodec {
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
             writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
+            pauseAutoWriteAfter = pauseOf(prefs[PAUSE_AUTO_WRITE], defaults.pauseAutoWriteAfter),
             crossfade = readCrossfade(prefs),
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
@@ -103,6 +106,11 @@ internal object SettingsCodec {
         writeSwitches(settings.labelSources, defaults.labelSources, prefs, LABELS_ON, LABELS_OFF)
         prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
+        prefs.put(
+            PAUSE_AUTO_WRITE,
+            settings.pauseAutoWriteAfter ?: NEVER_PAUSE,
+            defaults.pauseAutoWriteAfter ?: NEVER_PAUSE,
+        )
         prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
         prefs.put(PREPARE_NEXT, settings.prepareNextTrack.name, defaults.prepareNextTrack.name)
         prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
@@ -207,6 +215,19 @@ internal object SettingsCodec {
 }
 
 private inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }
+
+/** `pauseAutoWriteAfter` null is *Off*, which needs a value of its own to be stored. */
+private const val NEVER_PAUSE = 0
+
+/** *Pause automatic writing after* as [stored]: *Off*, a positive count, or else the [default]. */
+private fun pauseOf(
+    stored: Int?,
+    default: Int?,
+): Int? =
+    when (stored) {
+        NEVER_PAUSE -> null
+        else -> stored?.takeIf { it > 0 } ?: default
+    }
 
 /** Stores [value], or removes the key when it is the default or null. */
 private fun <T : Any> MutablePreferences.put(

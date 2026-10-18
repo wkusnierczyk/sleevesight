@@ -127,4 +127,14 @@ class SettingsTest {
         assertFailsWith<IllegalArgumentException> { defaults.copy(historyLifetime = Duration.ZERO) }
         assertFailsWith<IllegalArgumentException> { defaults.copy(sessionGap = Duration.ZERO) }
     }
+
+    @Test
+    fun `automatic writing pauses after 5 track changes away, or never, and after a positive number`() {
+        assertEquals(5, defaults.pauseAutoWriteAfter)
+        assertTrue(Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER in Settings.PAUSE_AUTO_WRITE_CHOICES)
+        // Off.
+        defaults.copy(pauseAutoWriteAfter = null)
+        assertFailsWith<IllegalArgumentException> { defaults.copy(pauseAutoWriteAfter = 0) }
+        assertFailsWith<IllegalArgumentException> { defaults.copy(pauseAutoWriteAfter = -1) }
+    }
 }

@@ -54,7 +54,9 @@ private fun InsightBody(
     when (insight) {
         is InsightState.Idle -> {
             if (insight.canWrite) {
-                Quiet(stringResource(R.string.home_insight_tap_write))
+                // Offered because automatic writing paused while the app was away (#203): say so.
+                val why = if (context.offers.paused) R.string.home_insight_paused else R.string.home_insight_tap_write
+                Quiet(stringResource(why))
                 WriteButton(actions.onWrite)
             } else {
                 Quiet(stringResource(idleReason(context)))

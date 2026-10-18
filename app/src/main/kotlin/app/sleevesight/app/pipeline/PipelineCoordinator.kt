@@ -77,7 +77,8 @@ sealed interface CoordinatorEvent {
 
     /**
      * An activity started (`MainActivity.onStart`). Never the app opening on its own: a return to
-     * the app, the screen turned on, keeps the first action ([CoordinatorState.acted]).
+     * the app, the screen turned on, keeps the first action ([CoordinatorState.acted]), and starts
+     * the count of track changes away again ([CoordinatorState.away], #203).
      */
     data object ActivityStarted : CoordinatorEvent
 
@@ -89,6 +90,14 @@ sealed interface CoordinatorEvent {
     /** *Look up in the background* switched. */
     data class BackgroundChanged(
         val on: Boolean,
+    ) : CoordinatorEvent
+
+    /**
+     * *Pause automatic writing after* switched (#203): the first action expires at the [after]-th
+     * track change reported while no activity is started; null for *Off*, never.
+     */
+    data class PauseAutoWriteChanged(
+        val after: Int?,
     ) : CoordinatorEvent
 
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
@@ -287,11 +296,15 @@ sealed interface CoordinatorEffect {
  * after a configuration change; [allowed] (D6) once acknowledged, while visible or *Look up in the
  * background* is on. [acted]: the user's first action since the app started (D5, #190). Only a
  * cold start, a new process, starts without it: the host makes one coordinator per process
- * (`PipelineHost`, held by `AppGraph`, which the `Application` holds), and no event clears it, so
- * a return to the app from the background, the screen turned off and on, or a configuration change
- * keeps it. [ledger] is the insight of the current insight track ([Ledger]). [building]
- * is the rebuild waiting to be swapped in, and [built] its outcome once it is known. [next] is the
- * track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
+ * (`PipelineHost`, held by `AppGraph`, which the `Application` holds), so a return to the app from
+ * the background, the screen turned off and on, or a configuration change keeps it. Only its
+ * expiry clears it (#203): [away] counts the track changes reported while no activity is started
+ * (a report of another insight track than the report before), from the last activity start or
+ * action, and at the [pauseAfter]-th (*Pause automatic writing after*; null for *Off*) the first
+ * action, if made, expires: [acted] false and [expired] true, until the user acts again. An
+ * activity start resets [away], not [expired]. [ledger] is the insight of the current insight
+ * track ([Ledger]). [building] is the rebuild waiting to be swapped in, and [built] its outcome
+ * once it is known. [next] is the track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
  * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
  * the phone's connection as last reported (online until told otherwise), and [returns] counts its
  * returns, from offline to online, so a run knows whether the network came back after its lookups
@@ -303,6 +316,9 @@ data class CoordinatorState(
     val restarting: Boolean = false,
     val background: Boolean = false,
     val acted: Boolean = false,
+    val pauseAfter: Int? = null,
+    val away: Int = 0,
+    val expired: Boolean = false,
     val latest: Report? = null,
     val run: Run? = null,
     val ledger: Ledger? = null,
@@ -398,6 +414,8 @@ data class CoordinatorState(
      * again the sources its run before found unreachable (#192). [keepsTap] while such a run has not
      * decided and a run it replaced, itself or one before it, offered Write: a tap shown for that
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
+     * [lapsed] when it offers Write only because the first action expired (#203): it would have
+     * written had the first action stood; carried to a run that asks again in its place.
      */
     data class Run(
         val id: RunId,
@@ -416,6 +434,7 @@ data class CoordinatorState(
         val again: Boolean = false,
         val keepsTap: Boolean = false,
         val tapped: Boolean = false,
+        val lapsed: Boolean = false,
     )
 
     /**
@@ -494,6 +513,12 @@ data class CoordinatorState(
      * the card paid for stays shown beside it.
      */
     fun rewrites(): Boolean = current?.let { it.offered && !it.calling && written(it.nowPlaying) != null } == true
+
+    /**
+     * Whether the Write offered is offered only because the first action expired (#203): the
+     * current run's decision would have written had it stood, and the user has not acted since.
+     */
+    val lapsed: Boolean get() = expired && current?.takeIf { it.offered && !it.calling }?.lapsed == true
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
@@ -542,11 +567,12 @@ fun sameInsightTrack(
  * on under the run's settings (`InsightAsked.writesOn`: every cause under *On every track change*,
  * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
  * *Write insights* off), the user has acted since the app started (a cold start: a return to the
- * app keeps the first action), and the ledger has not decided
- * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
- * then records the decision. A model call that fails or is stopped (#163) leaves the ledger
- * written, as every call granted does, so nothing writes the track again without a tap: its run
- * offers Write again, and a tap on it is a new paid call. Then the next track's preparation (D13,
+ * app keeps the first action) and that first action has not expired, and the ledger has not decided
+ * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
+ * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
+ * view says why. The ledger then records the decision. A model call that fails or is stopped
+ * (#163) leaves the ledger written, as every call granted does, so nothing writes the track again
+ * without a tap: its run offers Write again, and a tap on it is a new paid call. Then the next track's preparation (D13,
  * *Evidence*), while requests
  * are allowed and the current run's requests are over (its labels step ended: [CoordinatorState.prepares]),
  * so it never stalls or displaces the playing track's run (every StartRun, a new length or album
@@ -554,7 +580,13 @@ fun sameInsightTrack(
  * once the new run's requests are over): StartPreparation of the next track
  * unless there is none, it was prepared on the live pipeline already, or it is the track playing;
  * else Grant for each step the preparation waits for, never a model call, a Stop or Write again
- * (they act on the run alone). The table gives each
+ * (they act on the run alone). Automatic writing expires when the app is unattended (#203): a
+ * track change (a report of another insight track than the report before) while no activity is
+ * started counts one more away, an activity start resets the count, and at the count *Pause
+ * automatic writing after* names ([CoordinatorEvent.PauseAutoWriteChanged], none for *Off*) the
+ * first action, if made, expires, so that track and the ones after it offer Write until the user
+ * acts again. "The first action made" (a tap, a kept tap, an action in Sleevesight) also undoes an
+ * expiry and resets the count. The table gives each
  * event's own effects; asking again, the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
@@ -563,12 +595,14 @@ fun sameInsightTrack(
  *
  * | State | Event | New state | Effects |
  * |---|---|---|---|
- * | not acknowledged | anything but the four below | unchanged | none |
+ * | not acknowledged | anything but the five below | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
- * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it) | none |
+ * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it); the count of track changes away reset, a first action expired staying expired (#203) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
+ * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
+ * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; at the pause's count, with the first action made: the first action expired (acted false), until the user acts again; with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
@@ -622,6 +656,7 @@ class PipelineCoordinator(
             CoordinatorEvent.ActivityStarted -> started()
             is CoordinatorEvent.ActivityStopped -> stopped(event.changingConfigurations)
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
+            is CoordinatorEvent.PauseAutoWriteChanged -> state = state.copy(pauseAfter = event.after)
             else -> if (state.acknowledged) onAcknowledged(event)
         }
         if (state.acknowledged) {
@@ -668,8 +703,22 @@ class PipelineCoordinator(
     }
 
     // The first action stays: only a new process, with a new coordinator, starts without it (#190).
+    // The count of track changes away starts again; a first action expired stays so (#203).
     private fun started() {
-        state = state.copy(started = state.started + 1, restarting = false)
+        state = state.copy(started = state.started + 1, restarting = false, away = 0)
+    }
+
+    // The user acted: the first action made, any expiry of it undone, and the count away reset.
+    private fun act() {
+        state = state.copy(acted = true, expired = false, away = 0)
+    }
+
+    // A track change reported while no activity is started (#203): one more away, and at the
+    // count *Pause automatic writing after* names, the first action, if made, expires.
+    private fun counted() {
+        val away = state.away + 1
+        val expires = state.acted && state.pauseAfter?.let { away >= it } == true
+        state = state.copy(away = away, acted = state.acted && !expires, expired = state.expired || expires)
     }
 
     // A return of the network, from offline to online, is counted (#192).
@@ -686,13 +735,14 @@ class PipelineCoordinator(
     private fun reported(event: CoordinatorEvent.Reported) {
         // Another track playing: its run comes first, and the next item will change too.
         val before = state.latest?.nowPlaying
-        if (before == null || !sameInsightTrack(before, event.nowPlaying)) cancelPreparation()
+        val another = before == null || !sameInsightTrack(before, event.nowPlaying)
+        if (another) cancelPreparation()
         val seq = (state.latest?.seq ?: 0) + 1
-        state =
-            state.copy(
-                latest = CoordinatorState.Report(seq, event.key, event.nowPlaying, event.cause),
-                acted = state.acted || event.cause == ChangeCause.USER_ACTION,
-            )
+        state = state.copy(latest = CoordinatorState.Report(seq, event.key, event.nowPlaying, event.cause))
+        when {
+            event.cause == ChangeCause.USER_ACTION -> act()
+            another && !state.visible -> counted()
+        }
         effects += CoordinatorEffect.StartTimer(seq)
     }
 
@@ -765,6 +815,7 @@ class PipelineCoordinator(
                 again = true,
                 keepsTap = run.offered || run.keepsTap,
                 tapped = run.keepsTap && run.tapped,
+                lapsed = run.lapsed,
             )
         state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
@@ -806,10 +857,10 @@ class PipelineCoordinator(
         val run = state.current?.takeIf { state.writeKey == key } ?: return
         state =
             state.copy(
-                run = run.copy(offered = false, calling = true, calls = run.calls + 1),
+                run = run.copy(offered = false, calling = true, calls = run.calls + 1, lapsed = false),
                 ledger = entry(run, written = true),
-                acted = true,
             )
+        act()
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
         effects += CoordinatorEffect.Acted
     }
@@ -818,7 +869,8 @@ class PipelineCoordinator(
     // same key, decides, and taken now (the first action). Whether it was kept.
     private fun keepsTap(key: RunKey): Boolean {
         val keeping = state.current?.takeIf { it.keepsTap && !it.tapped && it.key == key } ?: return false
-        state = state.copy(run = keeping.copy(tapped = true), acted = true)
+        state = state.copy(run = keeping.copy(tapped = true))
+        act()
         effects += CoordinatorEffect.Acted
         return true
     }
@@ -1003,7 +1055,9 @@ class PipelineCoordinator(
         var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {
-            val write = writes(run, writesOn)
+            val write = writes(run, writesOn, state.acted)
+            // Write offered only because the first action expired (#203): it would have written.
+            val lapsed = !write && state.expired && (run.lapsed || writes(run, writesOn, acted = true))
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next =
@@ -1014,6 +1068,7 @@ class PipelineCoordinator(
                     calls = next.calls + if (write) 1 else 0,
                     keepsTap = false,
                     tapped = false,
+                    lapsed = lapsed,
                 )
             state = state.copy(ledger = entry(run, write))
             effects += CoordinatorEffect.Decide(run.id, write)
@@ -1021,10 +1076,12 @@ class PipelineCoordinator(
         state = state.copy(run = next)
     }
 
-    // The answer to [run]'s question whether to write, under the causes its settings write on.
+    // The answer to [run]'s question whether to write, under the causes its settings write on,
+    // with the first action made or not ([acted]).
     private fun writes(
         run: CoordinatorState.Run,
         writesOn: Set<ChangeCause>,
+        acted: Boolean,
     ): Boolean {
         // A tap kept for it (#192) answers as a tap: one call, the ledger written.
         if (run.tapped) return true
@@ -1033,7 +1090,7 @@ class PipelineCoordinator(
         // The cause of the latest report, which the run, being current, holds: the latest word
         // on how the user came to this track (a skip back to it during its run included).
         val cause = state.latest?.cause
-        val writes = cause != null && cause in writesOn && state.acted && !written
+        val writes = cause != null && cause in writesOn && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
         // the same settings, once a source unreachable when it was made has returned lines.

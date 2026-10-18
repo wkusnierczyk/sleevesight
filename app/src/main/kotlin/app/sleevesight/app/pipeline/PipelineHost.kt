@@ -81,6 +81,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property offline whether the phone is offline, as the coordinator last heard it
  *   ([CoordinatorState.online], #192): its unreachable sources stay so until it is back online,
  *   and the playing track's are then asked again.
+ * @property lapsed whether the Write offered is offered only because automatic writing paused
+ *   ([CoordinatorState.lapsed], #203): the app was not on screen for the track changes *Pause
+ *   automatic writing after* names, so the first action expired, and a tap resumes it.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -92,6 +95,7 @@ data class PipelineView(
     val writeKey: RunKey? = null,
     val stopCall: CallId? = null,
     val offline: Boolean = false,
+    val lapsed: Boolean = false,
 )
 
 /**
@@ -129,6 +133,9 @@ class PipelineKeys(
  * told when the coordinator takes a user's action (a tap on Write), for the time since the last
  * one that each track change is recorded with (D15).
  *
+ * *Pause automatic writing after* reaches the coordinator as `PauseAutoWriteChanged`, from the
+ * settings as *Look up in the background* does (#203).
+ *
  * [online] is whether the phone is online (its default network has validated internet access),
  * collected after the acknowledgement: when it comes back, the playing track's run asks again the
  * sources it found unreachable (#192), as the coordinator decides.
@@ -151,7 +158,7 @@ class PipelineHost(
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
 
     // One per process, never recreated or persisted: its `acted` starting false is what makes a
-    // cold start wait for the first action (D5, #190).
+    // cold start wait for the first action (D5, #190); only its expiry clears it after (#203).
     private val coordinator = PipelineCoordinator()
     private val snapshot = MutableStateFlow(coordinator.state)
     private val view = MutableStateFlow(PipelineView())
@@ -255,6 +262,11 @@ class PipelineHost(
             launch {
                 latest.map { it.lookUpInBackground }.distinctUntilChanged().collect {
                     queue.send(CoordinatorEvent.BackgroundChanged(it))
+                }
+            }
+            launch {
+                latest.map { it.pauseAutoWriteAfter }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.PauseAutoWriteChanged(it))
                 }
             }
             launch {
@@ -573,6 +585,7 @@ class PipelineHost(
                 writeKey = owner.writeKey,
                 stopCall = owner.stopCall,
                 offline = !owner.online,
+                lapsed = owner.lapsed,
             )
         }.collect {
             view.value = it

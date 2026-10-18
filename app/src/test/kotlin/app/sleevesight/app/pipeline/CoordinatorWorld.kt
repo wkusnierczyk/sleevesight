@@ -470,6 +470,12 @@ internal fun World.background(on: Boolean) {
     advance(0)
 }
 
+/** *Pause automatic writing after* set to [after] track changes away, or *Off* (#203). */
+internal fun World.pause(after: Int?) {
+    send(CoordinatorEvent.PauseAutoWriteChanged(after))
+    advance(0)
+}
+
 /** A first action made: Zero played and written on a tap. */
 internal fun World.acted() {
     play("Zero")

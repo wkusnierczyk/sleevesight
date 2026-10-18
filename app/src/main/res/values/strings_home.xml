@@ -38,6 +38,7 @@
     <string name="home_insight_gathering">Gathering evidence…</string>
     <string name="home_insight_preparing">Getting the insight ready…</string>
     <string name="home_insight_tap_write">Tap Write insight to have it written from the sources below.</string>
+    <string name="home_insight_paused">Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.</string>
     <string name="home_insight_writing">Writing…</string>
     <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
     <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>

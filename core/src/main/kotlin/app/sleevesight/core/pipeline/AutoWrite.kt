@@ -31,7 +31,8 @@ data class TrackChange(
  * automatically*):
  *
  * - never while *Write insights* is off, or before the user's first action since the app started
- *   (in the app, a cold start: a return to it keeps the first action);
+ *   (in the app, a cold start: a return to it keeps the first action, until it expires after the
+ *   track changes *Pause automatic writing after* names while the app is not on screen, #203);
  * - *On every track change*: every track;
  * - *When I skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
  * - *Never*: none.

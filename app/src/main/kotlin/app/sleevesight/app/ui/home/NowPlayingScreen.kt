@@ -130,6 +130,7 @@ internal fun NowPlayingContent(
                     rewrite = view.rewrite && track != null,
                     retry = view.retry && track != null,
                     stop = view.stopCall != null && track != null,
+                    paused = view.lapsed && track != null,
                 ),
             rewriteFailed = view.rewriteFailed.takeIf { track != null },
         )
