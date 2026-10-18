@@ -15,7 +15,7 @@ This policy covers Sleevesight, the Android app (package `app.sleevesight`), and
 
 ## In short
 
-Sleevesight has no server, no accounts, no telemetry, no crash reporting, no analytics and no ads: nothing you play, and nothing the app sends, reaches its developer. To write about the song you are playing, the app sends the track's names from your phone straight to the sources you switch on and to the AI service you choose, using your own API keys. Google Play's data safety section counts that as data the app collects, since it leaves the phone. Everything else stays on your phone.
+Sleevesight has no server, no accounts, no telemetry, no crash reporting of its own, no analytics and no ads: nothing you play, and nothing the app sends, reaches its developer. To write about the song you are playing, the app sends the track's names from your phone straight to the sources you switch on and to the AI service you choose, using your own API keys. Google Play's data safety section counts that as data the app collects, since it leaves the phone. Everything else stays on your phone.
 
 ## What the app reads on the phone
 
@@ -25,7 +25,7 @@ Sleevesight needs notification access, which is how Android lets an app read wha
 
 Requests go straight from your phone to each service. None passes through a server of Sleevesight's.
 
-- **To the sources you switch on** (MusicBrainz and Wikidata, Wikipedia, Last.fm, and the Exa web search): the title and artists of the playing track, cleaned of tags such as "2006 Remaster". Last.fm gets the artists' names only, and Wikidata the identifiers MusicBrainz gave. The album name does not go to the sources. While *Prepare the next track* is set to *Evidence*, as it is by default, the title and artists of the next track in the player's queue also go to MusicBrainz, if switched on, before that track plays.
+- **To the sources you switch on** (MusicBrainz and Wikidata, Wikipedia, Last.fm, and the Exa web search): the title and artists of the playing track, cleaned of tags such as "2006 Remaster"; Exa also gets the film or show a title says it is from. Last.fm gets the artists' names only, and Wikidata only identifiers (from MusicBrainz or Wikipedia), never a name. The album name does not go to the sources. While *Prepare the next track* is set to *Evidence*, as it is by default, the title and artists of the next track in the player's queue also go to MusicBrainz, if switched on, before that track plays.
 - **To the AI service you choose** (Anthropic): the title, artists and album, and what the sources found. This is for the playing track only. Each insight is a request of its own, with no conversation kept between them. It is made with your API key, so the service handles it under its terms for your account.
 - **Your API keys** go only to the service each belongs to, with each request to it.
 - **To Spotify**, only if you connect a Spotify account, once the app offers that: requests for the playlist or album being played, made with your own token.
