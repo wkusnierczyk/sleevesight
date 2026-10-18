@@ -168,6 +168,119 @@ class PipelineCoordinatorBackOnlineTest {
                 assertEquals(false, coordinator.state.run?.tapped)
             },
             Case(
+                "no AI service, then a key saved offline: the rebuild finding nothing never makes it write on return",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A", "A"),
+                "A",
+            ) {
+                acted()
+                network(online = false)
+                noAi = true
+                play("A")
+                settle()
+                noAi = false
+                keyChange()
+                settle()
+                network(online = true)
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "nothing to narrate under Never, the mode switched since: asked again, Write offered, no call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                acted()
+                network(online = false)
+                play("A")
+                settle()
+                writesOn = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+                network(online = true)
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "nothing to narrate, model knowledge turned on since, nothing new found: Write offered, no call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                acted()
+                network(online = false)
+                play("A")
+                settle()
+                allowModel = true
+                // The phone says it is back, but the web search is still unreachable.
+                send(CoordinatorEvent.NetworkChanged(true))
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "asking again brings no evidence from the sources asked (a source switched on since does): no call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                acted()
+                network(online = false)
+                play("A")
+                settle()
+                newSource = true
+                send(CoordinatorEvent.NetworkChanged(true))
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "a kept tap survives a second ask-again before the decision: one call",
+                mapOf("A" to 1),
+                listOf("A", "A", "A"),
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                lookupMs = 2_000
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                send(CoordinatorEvent.NetworkChanged(true))
+                send(CoordinatorEvent.WriteTapped(offered))
+                // The replacement's lookups go out offline, and the network flaps meanwhile.
+                advance(0)
+                send(CoordinatorEvent.NetworkChanged(false))
+                send(CoordinatorEvent.NetworkChanged(true))
+                offline = false
+                settle()
+                assertEquals(listOf("A", "A"), askedAgain)
+                assertEquals(1, actions)
+                assertEquals(true, coordinator.state.ledger?.written)
+            },
+            Case(
+                "a kept tap for a run asking again that is served from the cache answers nothing",
+                emptyMap(),
+                listOf("A", "A"),
+            ) {
+                cache = true
+                cards[key("A") to 0] = "A, kept"
+                // The run offline finds no card under its service; the replacement does.
+                service = 1
+                writesOn = mode(WriteAutomatically.NEVER)
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                send(CoordinatorEvent.NetworkChanged(true))
+                send(CoordinatorEvent.WriteTapped(offered))
+                service = 0
+                offline = false
+                settle()
+                assertEquals(listOf("A"), cardsShown)
+                assertEquals(false, coordinator.state.run?.tapped)
+                assertEquals("A, kept", cardText())
+            },
+            Case(
                 "back online with nothing unreachable does nothing",
                 mapOf("Zero" to 1, "A" to 1),
                 listOf("Zero", "A"),

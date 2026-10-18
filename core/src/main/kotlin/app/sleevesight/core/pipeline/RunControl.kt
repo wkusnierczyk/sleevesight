@@ -76,18 +76,17 @@ interface RunControl {
     fun gathered(gathered: Gathered) = Unit
 
     /**
-     * The insight was decided with no model call and nothing from the cache, for lack of evidence:
-     * the evidence has nothing to narrate (`EvidenceSet.nothingToNarrate`), which new evidence may
-     * change (back online, #192).
+     * The insight was decided with no model call and nothing from the cache: insights off, or no
+     * AI service set up; by default also for nothing to narrate ([nothingToNarrate]).
      */
     fun decidedWithoutCall()
 
     /**
-     * The insight was decided with no model call and nothing from the cache because it cannot be
-     * written now: insights off, or no AI service set up. New evidence does not change that. By
-     * default as [decidedWithoutCall].
+     * The insight was decided with no model call and nothing from the cache for lack of evidence:
+     * it has nothing to narrate under [settings], the run's (`EvidenceSet.nothingToNarrate`), which
+     * new evidence may change (back online, #192). By default as [decidedWithoutCall].
      */
-    fun cannotWrite() = decidedWithoutCall()
+    fun nothingToNarrate(settings: Settings) = decidedWithoutCall()
 
     /**
      * The insight was served from the synthesis cache, with no call: a reply paid for once, so

@@ -1,5 +1,7 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -20,6 +22,7 @@ import org.junit.Assert.assertEquals
 import java.util.PriorityQueue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 // The simulated world `PipelineCoordinatorTest` runs its sequences in, and the steps of a sequence.
 
@@ -106,6 +109,15 @@ internal class World {
 
     /** Whether no AI service is set up: a run with evidence decides without a call, for no lack of it. */
     var noAi = false
+
+    /**
+     * Whether the runs' settings allow the model's own knowledge: then the player's release alone
+     * is something to narrate (`EvidenceSet.nothingToNarrate`), and an offline run asks whether to write.
+     */
+    var allowModel = false
+
+    /** Whether a source switched on since (Last.fm) finds a line, offline or not. */
+    var newSource = false
 
     /** The runs started to ask their unreachable sources again (#192), by title, and what they carried. */
     val askedAgain = mutableListOf<String>()
@@ -312,20 +324,37 @@ internal class World {
                     CoordinatorEvent.CardShown(run, cards[keys.getValue(run) to service]?.let(::card))
                 }
                 noAi -> CoordinatorEvent.DecidedWithoutCall(run)
-                run in withoutEvidence || (unreachable && !offlineFinds) -> {
-                    CoordinatorEvent.DecidedWithoutCall(run, forLackOfEvidence = true)
+                run in withoutEvidence || (unreachable && !offlineFinds && !newSource && !allowModel) -> {
+                    CoordinatorEvent.DecidedWithoutCall(run, WriteSettings(writesOn, allowModel))
                 }
-                else -> CoordinatorEvent.InsightAsked(run, writesOn)
+                else -> CoordinatorEvent.InsightAsked(run, writesOn, allowModel)
             }
         schedule(delayMs, insight, run)
         schedule(delayMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
     }
 
+    // What the sources ended with: MusicBrainz finds nothing to cite; the web search a line, or
+    // is unreachable; Last.fm, once switched on ([newSource]), a line.
     private fun sources(unreachable: Boolean): Gathered {
-        fun done(outcome: Outcome) = SourceState.Done(SourceResult(outcome, emptyList(), Duration.ZERO), cached = false)
+        fun done(
+            source: SourceId,
+            outcome: Outcome,
+        ): SourceState {
+            val lines = if (outcome == Outcome.SongArticle) listOf(line(source)) else emptyList()
+            return SourceState.Done(SourceResult(outcome, lines, Duration.ZERO), cached = false)
+        }
         val web = if (unreachable) Outcome.Unreachable else Outcome.SongArticle
-        return Gathered(mapOf(SourceId.MUSICBRAINZ to done(Outcome.SongArticle), SourceId.WEB to done(web)), null)
+        val found =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(SourceId.MUSICBRAINZ, Outcome.None),
+                SourceId.WEB to done(SourceId.WEB, web),
+            )
+        val lastFm = if (newSource) mapOf(SourceId.LASTFM to done(SourceId.LASTFM, Outcome.SongArticle)) else emptyMap()
+        return Gathered(found + lastFm, null)
     }
+
+    private fun line(source: SourceId) =
+        EvidenceDraft(source, Scope.SONG, "A line from ${source.tag}.", null, Instant.parse("2026-10-18T12:00:00Z"))
 
     /** Lets [ms] pass, delivering what falls due; what a cancelled run would have sent is dropped. */
     fun advance(ms: Long) {

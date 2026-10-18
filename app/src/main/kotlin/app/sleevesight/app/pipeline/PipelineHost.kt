@@ -6,7 +6,6 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
-import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
@@ -496,7 +495,8 @@ class PipelineHost(
         }
 
         override suspend fun decide(settings: Settings): Boolean {
-            queue.send(CoordinatorEvent.InsightAsked(id, AutoWrite.causes(settings)))
+            val decides = WriteSettings.of(settings)
+            queue.send(CoordinatorEvent.InsightAsked(id, decides.writesOn, decides.allowModel))
             return decision.await().also { write -> if (write) made++ }
         }
 
@@ -516,11 +516,11 @@ class PipelineHost(
         override suspend fun awaitStop() = call(made).stopped.await()
 
         override fun decidedWithoutCall() {
-            queue.trySend(CoordinatorEvent.DecidedWithoutCall(id, forLackOfEvidence = true))
+            queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
         }
 
-        override fun cannotWrite() {
-            queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
+        override fun nothingToNarrate(settings: Settings) {
+            queue.trySend(CoordinatorEvent.DecidedWithoutCall(id, WriteSettings.of(settings)))
         }
 
         override fun gathered(gathered: Gathered) {
