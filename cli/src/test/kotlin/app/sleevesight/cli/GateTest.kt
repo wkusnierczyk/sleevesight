@@ -72,6 +72,27 @@ class GateTest {
     private fun collision(vararg results: TrackResult) = Gate.evaluate(results.toList(), insightsAsked = false)[2]
 
     @Test
+    fun `the tally leaves out a track with nothing to narrate, as the writer decides it`() {
+        val release =
+            EvidenceSet.of(
+                listOf(EvidenceDraft(SourceId.PLAYER, Scope.RELEASE, "On the release \"X\".", null, at)),
+                JvmHasher,
+            )
+        val results =
+            listOf(
+                state(1, reply = "A fact. [MB1]"),
+                state(2).let { it.copy(state = it.state.copy(evidence = release, insight = InsightState.NoEvidence)) },
+            )
+        // Model knowledge off: the release alone had nothing to narrate, so no call was due.
+        val off = Gate.evaluate(results, insightsAsked = true, allowModel = false).first()
+        assertEquals(Verdict.PASS, off.verdict)
+        assertTrue("1 of 1 insights written" in off.detail, off.detail)
+        // Model knowledge on: the release alone is narrated, so the track counts.
+        val on = Gate.evaluate(results, insightsAsked = true, allowModel = true).first()
+        assertTrue("1 of 2 insights written" in on.detail, on.detail)
+    }
+
+    @Test
     fun `nothing to check is not checked, not passed, and not incomplete`() {
         val criteria = Gate.evaluate(listOf(state(1)), insightsAsked = false)
         assertEquals(listOf(Verdict.NOT_CHECKED, Verdict.NOT_CHECKED, Verdict.NOT_CHECKED), criteria.map { it.verdict })

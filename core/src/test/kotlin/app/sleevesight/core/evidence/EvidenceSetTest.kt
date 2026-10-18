@@ -6,8 +6,10 @@ import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.RegressionCase
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Instant
 
 class EvidenceSetTest {
@@ -47,6 +49,17 @@ class EvidenceSetTest {
     private fun set(drafts: List<EvidenceDraft>) = EvidenceSet.of(drafts, JvmHasher)
 
     private fun landingIn(vararg order: SourceId) = set(order.flatMap { retrieval.getValue(it) })
+
+    @Test
+    fun `nothing to narrate is no line, or the player's release alone with model knowledge off`() {
+        for (allowModel in listOf(false, true)) {
+            assertTrue(set(emptyList()).nothingToNarrate(allowModel), "no line, model knowledge $allowModel")
+            assertFalse(landingIn(SourceId.WEB).nothingToNarrate(allowModel))
+            assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).nothingToNarrate(allowModel))
+        }
+        assertTrue(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = false), "the release alone")
+        assertFalse(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = true), "the release and [M]")
+    }
 
     @Test
     fun `ids are the source tag and a position within the source`() {

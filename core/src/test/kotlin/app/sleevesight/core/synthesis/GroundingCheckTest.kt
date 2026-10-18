@@ -144,9 +144,12 @@ class GroundingCheckTest {
         )
     }
 
-    /** The prompt's fixed sentence for a gap is a hedge, as written; other wordings as the simulator's (#46). */
+    /**
+     * Prompt version 2's fixed sentence for a gap is a hedge, as written; other wordings as the
+     * simulator's (#46). Version 3 asks for none, and the check still reads it (#193).
+     */
     @Test
-    fun `the prompt's gap sentence is a hedge, other wordings as before`() {
+    fun `version 2's gap sentence is a hedge, other wordings as before`() {
         val reply =
             "It was a single. [P1] Little else is documented. Beyond that, little else is documented about it. " +
                 "Little more is known. Little is known about the B-side."
