@@ -116,7 +116,7 @@ class Pipeline(
     /** The current track's state, null before the first track. */
     val state: StateFlow<TrackState?> = stateFlow.asStateFlow()
 
-    /** The user acted in the app (after it opened, nothing is written until they do; D5). */
+    /** The user acted in the app (after it started, nothing is written until they do; D5). */
     fun userActed() {
         acted.value = true
     }
