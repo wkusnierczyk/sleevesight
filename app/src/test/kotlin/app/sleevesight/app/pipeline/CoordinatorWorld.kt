@@ -119,6 +119,12 @@ internal class World {
     /** Whether a source switched on since (Last.fm) finds a line, offline or not. */
     var newSource = false
 
+    /**
+     * Wikipedia, when looked up: null while it is not; true while it is unreachable on its own (the
+     * network back, Wikipedia not yet), false once it answers with a line. Offline, it is unreachable.
+     */
+    var wikipediaDown: Boolean? = null
+
     /** The runs started to ask their unreachable sources again (#192), by title, and what they carried. */
     val askedAgain = mutableListOf<String>()
     val carried = mutableListOf<Gathered>()
@@ -350,7 +356,12 @@ internal class World {
                 SourceId.WEB to done(SourceId.WEB, web),
             )
         val lastFm = if (newSource) mapOf(SourceId.LASTFM to done(SourceId.LASTFM, Outcome.SongArticle)) else emptyMap()
-        return Gathered(found + lastFm, null)
+        val wikipedia =
+            wikipediaDown?.let { down ->
+                val outcome = if (unreachable || down) Outcome.Unreachable else Outcome.SongArticle
+                mapOf(SourceId.WIKIPEDIA to done(SourceId.WIKIPEDIA, outcome))
+            } ?: emptyMap()
+        return Gathered(found + lastFm + wikipedia, null)
     }
 
     private fun line(source: SourceId) =

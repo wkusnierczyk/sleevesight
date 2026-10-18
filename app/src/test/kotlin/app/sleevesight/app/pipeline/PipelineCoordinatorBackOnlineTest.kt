@@ -281,6 +281,70 @@ class PipelineCoordinatorBackOnlineTest {
                 assertEquals("A, kept", cardText())
             },
             Case(
+                "two sources unreachable, one back, the network flaps before the decision: written once",
+                mapOf("Zero" to 1, "A" to 1),
+                listOf("Zero", "A", "A", "A"),
+            ) {
+                acted()
+                wikipediaDown = true
+                lookupMs = 2_000
+                network(online = false)
+                play("A")
+                settle()
+                // Back: the web search answers, Wikipedia not yet; the network flaps during the lookups.
+                network(online = true)
+                send(CoordinatorEvent.NetworkChanged(false))
+                send(CoordinatorEvent.NetworkChanged(true))
+                settle()
+                assertEquals(listOf("A", "A"), askedAgain)
+            },
+            Case(
+                "a kept tap dropped by the run's end is not carried to a later replacement: no call",
+                emptyMap(),
+                listOf("A", "A", "A"),
+                "A",
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                send(CoordinatorEvent.NetworkChanged(true))
+                send(CoordinatorEvent.WriteTapped(offered))
+                val kept = checkNotNull(coordinator.state.run)
+                assertEquals(true, kept.tapped)
+                // The replacement ends (its job fails, say) before it decides.
+                send(CoordinatorEvent.RunEnded(kept.id))
+                assertEquals(false, coordinator.state.run?.tapped)
+                settle()
+                network(online = false)
+                network(online = true)
+                settle()
+                assertEquals(listOf("A", "A"), askedAgain)
+            },
+            Case(
+                "the snapshot cleared by asking again under other settings: back to them, Write offered, no call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A", "A"),
+                "A",
+            ) {
+                acted()
+                network(online = false)
+                play("A")
+                settle()
+                writesOn = mode(WriteAutomatically.NEVER)
+                // Back, but the web search still unreachable: nothing to narrate again, under Never.
+                send(CoordinatorEvent.NetworkChanged(true))
+                settle()
+                assertEquals(null, coordinator.state.ledger?.wouldWrite)
+                writesOn = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+                network(online = false)
+                network(online = true)
+                settle()
+                assertEquals(listOf("A", "A"), askedAgain)
+            },
+            Case(
                 "back online with nothing unreachable does nothing",
                 mapOf("Zero" to 1, "A" to 1),
                 listOf("Zero", "A"),

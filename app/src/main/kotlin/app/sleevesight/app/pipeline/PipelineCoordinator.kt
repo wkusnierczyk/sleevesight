@@ -340,10 +340,12 @@ data class CoordinatorState(
      * when it was made with no call for nothing to narrate (`DecidedWithoutCall.nothingToNarrate`)
      * and the grant's own check would have written without a tap had there been evidence (the
      * latest report's cause among the causes its settings write on, the first action made, the
-     * key neither written nor decided before): the settings it was decided under. A run that asks
-     * again may then write without a tap, under the same settings, with new evidence; a run of
-     * the key asking again that again finds nothing to narrate keeps it; any other decision (a
-     * Decide, a tap, a card, a rebuild's run) replaces the entry without it.
+     * key neither written nor decided before): the settings it was decided under, and the sources
+     * unreachable then ([WouldWrite]). A run that asks again may then write without a tap, under
+     * the same settings, once one of those sources has returned lines; a run of the key asking
+     * again that again finds nothing to narrate keeps it, under the same settings (else it is
+     * cleared); any other decision (a Decide, a tap, a card, a rebuild's run) replaces the entry
+     * without it.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -351,8 +353,24 @@ data class CoordinatorState(
         val written: Boolean,
         val shown: NowPlaying = track,
         val card: Card? = null,
-        val wouldWrite: WriteSettings? = null,
+        val wouldWrite: WouldWrite? = null,
     )
+
+    /**
+     * What a decision for nothing to narrate that would have written leaves (#192): the
+     * [settings] it was made under, and the sources [unreachable] then, against which a run that
+     * asks again measures new evidence, however many replacements came between.
+     */
+    data class WouldWrite(
+        val settings: WriteSettings,
+        val unreachable: Set<SourceId>,
+    ) {
+        /** Whether [gathered] holds lines from a source unreachable when the decision was made. */
+        fun brought(gathered: Gathered?): Boolean =
+            unreachable.any { source ->
+                (gathered?.sources?.get(source) as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
+            }
+    }
 
     /** The latest report: its number, track and cause, and whether its debounce has passed. */
     data class Report(
@@ -376,9 +394,8 @@ data class CoordinatorState(
      * holds no report and is never current again, and its reports to the ledger are ignored, so
      * it cannot bring its track back; a report of its track that returns gets a run, and a
      * decision, of its own. [gathered] is what its sources ended with, once every one has landed;
-     * [lookedUp] the network's [returns] when its lookups were granted; [before], when it asks
-     * again the sources its run before found unreachable (#192), what that run gathered (so
-     * whether they brought new evidence is known; [again]). [keepsTap] while such a run has not
+     * [lookedUp] the network's [returns] when its lookups were granted; [again] whether it asks
+     * again the sources its run before found unreachable (#192). [keepsTap] while such a run has not
      * decided and a run it replaced, itself or one before it, offered Write: a tap shown for that
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
      */
@@ -396,23 +413,10 @@ data class CoordinatorState(
         val labelled: Boolean = false,
         val gathered: Gathered? = null,
         val lookedUp: Long? = null,
-        val before: Gathered? = null,
+        val again: Boolean = false,
         val keepsTap: Boolean = false,
         val tapped: Boolean = false,
-    ) {
-        /** Whether it asks again the sources its run before found unreachable (#192). */
-        val again: Boolean get() = before != null
-
-        /**
-         * Whether asking again brought new evidence: a source unreachable [before] returned
-         * lines now.
-         */
-        val broughtEvidence: Boolean
-            get() =
-                before?.unreachable?.any { source ->
-                    (gathered?.sources?.get(source) as? SourceState.Done)?.result?.evidence?.isNotEmpty() == true
-                } == true
-    }
+    )
 
     /**
      * A preparation of the next track (D13), of [nowPlaying]; [asked]: the steps it waits for. It
@@ -516,11 +520,12 @@ fun sameInsightTrack(
  * first decision was made with no call for nothing to narrate and would have written had there
  * been evidence ([CoordinatorState.Ledger.wouldWrite], the settings it was decided under, set by
  * DecidedWithoutCall from the grant's own check); the run's settings still give the same causes
- * and the same model-knowledge switch; and the sources asked again brought evidence lines
- * ([CoordinatorState.Run.broughtEvidence]); and the grant's check holds now. Else Write is
- * offered, never written unasked: Write offered before, insights off, no AI service, a setting
- * changed since, nothing new found. A later decision for the key never sets it: a run asking
- * again that again finds nothing to narrate keeps it, under the same settings; any other
+ * and the same model-knowledge switch; a source unreachable when it was made has returned lines
+ * ([CoordinatorState.WouldWrite], kept with it, so it holds however many replacements came
+ * between); and the grant's check holds now. Else Write is offered, never written unasked:
+ * Write offered before, insights off, no AI service, a setting changed since, nothing new found.
+ * A later decision for the key never sets it: a run asking again that again finds nothing to
+ * narrate keeps it under the same settings, and clears it under others; any other
  * (a Decide, a tap, a card, a rebuild's run) replaces the entry without it, and so does a report
  * of another insight track, which empties the ledger. One written is not written again without a
  * tap. A tap shown for a run replaced, which offered Write, is kept until a replacement decides,
@@ -577,8 +582,8 @@ fun sameInsightTrack(
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
  * | the run, its model call under way | StepEnded(MODEL_CALL) | calling = false; then a pending swap, or a run of latest if settled and not held | as for RebuildFinished, or StartRun |
  * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
- * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped; then as for StepEnded(MODEL_CALL) | as above |
- * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; a kept tap dropped (keepsTap and tapped cleared); then as for StepEnded(MODEL_CALL) | as above |
+ * | the run (current or not) | StepRequested(step), InsightAsked(causes, model knowledge) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
  * | current run asking again, not yet decided, a run it replaced (or one before) offering Write, no tap kept yet, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
@@ -757,9 +762,9 @@ class PipelineCoordinator(
                 id,
                 run.key,
                 run.nowPlaying,
-                before = run.gathered,
+                again = true,
                 keepsTap = run.offered || run.keepsTap,
-                tapped = run.tapped,
+                tapped = run.keepsTap && run.tapped,
             )
         state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
@@ -842,6 +847,7 @@ class PipelineCoordinator(
                 insight = null,
                 labelled = true,
                 keepsTap = false,
+                tapped = false,
             )
         }
         afterCall()
@@ -964,14 +970,15 @@ class PipelineCoordinator(
         before: CoordinatorState.Ledger?,
         recorded: CoordinatorState.Ledger,
         settings: WriteSettings,
-    ): WriteSettings? {
+    ): CoordinatorState.WouldWrite? {
         val cause = state.latest?.cause
         val first = before == null || before.key != run.key
         val writes = cause != null && cause in settings.writesOn && state.acted && state.current?.id == run.id
+        val unreachable = run.gathered?.unreachable.orEmpty()
         return when {
             recorded.written -> null
-            first -> settings.takeIf { writes }
-            else -> before?.wouldWrite?.takeIf { run.again && it == settings }
+            first -> CoordinatorState.WouldWrite(settings, unreachable).takeIf { writes }
+            else -> before?.wouldWrite?.takeIf { run.again && it.settings == settings }
         }
     }
 
@@ -1029,10 +1036,11 @@ class PipelineCoordinator(
         val writes = cause != null && cause in writesOn && state.acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
-        // the same settings, with new evidence from the sources asked again.
+        // the same settings, once a source unreachable when it was made has returned lines.
         val decided = ledger != null && ledger.key == run.key
+        val would = ledger?.wouldWrite
         val asWouldHave =
-            run.again && ledger?.wouldWrite == WriteSettings(writesOn, run.allowModel) && run.broughtEvidence
+            run.again && would?.settings == WriteSettings(writesOn, run.allowModel) && would.brought(run.gathered)
         return writes && (!decided || asWouldHave)
     }
 }
