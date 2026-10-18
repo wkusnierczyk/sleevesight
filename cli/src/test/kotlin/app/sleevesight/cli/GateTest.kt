@@ -93,6 +93,33 @@ class GateTest {
     }
 
     @Test
+    fun `with model knowledge on, the release alone of a report with no artists is still left out`() {
+        val release =
+            EvidenceSet.of(
+                listOf(EvidenceDraft(SourceId.PLAYER, Scope.RELEASE, "On the release \"X\".", null, at)),
+                JvmHasher,
+            )
+        val titleFirst = Cli.nowPlaying(2).copy(artists = "")
+        val results =
+            listOf(
+                state(1, reply = "A fact. [MB1]"),
+                state(2).let {
+                    it.copy(
+                        state =
+                            it.state.copy(
+                                nowPlaying = titleFirst,
+                                normalized = Normalizer(JvmAccentFolder).normalize(titleFirst),
+                                evidence = release,
+                                insight = InsightState.NoEvidence,
+                            ),
+                    )
+                },
+            )
+        val on = Gate.evaluate(results, insightsAsked = true, allowModel = true).first()
+        assertTrue("1 of 1 insights written" in on.detail, on.detail)
+    }
+
+    @Test
     fun `nothing to check is not checked, not passed, and not incomplete`() {
         val criteria = Gate.evaluate(listOf(state(1)), insightsAsked = false)
         assertEquals(listOf(Verdict.NOT_CHECKED, Verdict.NOT_CHECKED, Verdict.NOT_CHECKED), criteria.map { it.verdict })

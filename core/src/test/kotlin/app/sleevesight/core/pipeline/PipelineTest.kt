@@ -376,6 +376,25 @@ class PipelineTest {
         }
 
     @Test
+    fun `with model knowledge on, the release alone gets a call only once the report names the artists`() =
+        runTest {
+            settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
+            val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [M].") }
+            val empty = FakeAdapter(SourceId.WEB) { _, _ -> SourceResult(Outcome.None, emptyList(), 0.seconds) }
+            val pipeline = pipeline(listOf(empty), provider = provider)
+
+            // Some players report the title and album before the artists (#204).
+            val titleFirst = pipeline.run(sundown.copy(artists = ""), write = true)
+            assertEquals(listOf("P1"), titleFirst.evidence?.ids)
+            assertEquals(InsightState.NoEvidence, titleFirst.insight)
+            assertEquals(0, provider.requests.size)
+
+            val withArtists = pipeline.run(sundown, write = true)
+            assertEquals(1, provider.requests.size)
+            assertEquals(1, assertIs<InsightState.Written>(withArtists.insight).grounded.counts.model)
+        }
+
+    @Test
     fun `no line at all is no call, even with model knowledge on`() =
         runTest {
             settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
