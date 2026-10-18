@@ -145,7 +145,7 @@ internal class TrackRun(
             try {
                 resolved = parts.resolver.resolve(track, nowPlaying.duration)
                 resolution.complete(resolved)
-                emit(PipelineEvent.Resolved(key, resolved.outcome, started.elapsedNow()))
+                emit(PipelineEvent.Resolved(key, resolved.outcome, started.elapsedNow(), resolved.failure))
                 update { it.copy(resolution = resolved) }
             } catch (e: CancellationException) {
                 throw e
