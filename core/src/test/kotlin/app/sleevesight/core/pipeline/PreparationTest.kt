@@ -17,6 +17,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -69,10 +70,14 @@ class PreparationTest {
     private val cache = MemoryCache()
 
     private val steps = mutableListOf<String>()
+
+    // While set, a step asked for waits for it: requests not allowed, so the grant not yet given.
+    private var held: CompletableDeferred<Unit>? = null
     private val control =
         object : RunControl {
             override suspend fun await(step: RunStep) {
                 steps += "await $step"
+                held?.await()
             }
 
             override suspend fun decide(settings: Settings): Boolean = error("a preparation never asks to write")
@@ -137,7 +142,7 @@ class PreparationTest {
         }
 
     @Test
-    fun `an unreachable resolution is tried once more, after the wait, within the same lookups step`() =
+    fun `an unreachable resolution is tried once more, after the wait, in a lookups step of its own`() =
         runTest {
             answers += Resolution.unreachable("RateLimited")
             val pipeline = pipeline()
@@ -162,7 +167,59 @@ class PreparationTest {
             // What carries over follows the second try, as it would the first.
             assertEquals(listOf("next artist|next song"), musicBrainz.inner.asked)
             assertEquals(listOf("artist-1"), tagRequests)
-            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS", "await LABELS", "ended LABELS"), steps)
+            assertEquals(
+                List(2) { listOf("await LOOKUPS", "ended LOOKUPS") }.flatten() + listOf("await LABELS", "ended LABELS"),
+                steps,
+            )
+        }
+
+    @Test
+    fun `the second try waits for its lookups step to be granted again`() =
+        runTest {
+            answers += Resolution.unreachable("RateLimited")
+            val pipeline = pipeline()
+            backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            runCurrent()
+            val grant = CompletableDeferred<Unit>()
+            held = grant
+            advanceTimeBy(Preparation.RETRY_WAIT * 4)
+            assertEquals(1, resolved.size, "not while requests are not allowed")
+            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS", "await LOOKUPS"), steps)
+
+            grant.complete(Unit)
+            runCurrent()
+            assertEquals(2, resolved.size)
+            assertEquals(listOf("ended LOOKUPS", "await LABELS", "ended LABELS"), steps.drop(3))
+        }
+
+    @Test
+    fun `a preparation cancelled while it waits for its second grant ends no step it was not granted`() =
+        runTest {
+            answers += Resolution.unreachable("Offline")
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+            val job = backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            runCurrent()
+            held = CompletableDeferred()
+            advanceTimeBy(Preparation.RETRY_WAIT * 2)
+            job.cancel()
+            runCurrent()
+
+            assertEquals(1, resolved.size)
+            assertEquals(1, events.count { it is PipelineEvent.Prepared })
+            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS", "await LOOKUPS"), steps)
+        }
+
+    @Test
+    fun `a failure that would fail again is not tried again`() =
+        runTest {
+            for (failure in listOf("status 400", "Parse", "Unauthorized")) {
+                resolved.clear()
+                answers += Resolution.unreachable(failure)
+                pipeline().prepare(nowPlaying("Next Song", "Next Artist"), control)
+                advanceUntilIdle()
+                assertEquals(1, resolved.size, failure)
+            }
         }
 
     @Test

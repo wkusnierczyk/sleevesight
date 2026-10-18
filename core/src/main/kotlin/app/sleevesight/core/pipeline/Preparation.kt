@@ -36,8 +36,9 @@ import kotlin.time.Duration.Companion.seconds
  * queue items carry neither album nor length). Nothing is prepared with MusicBrainz switched off:
  * its lookup is what is slow.
  * Each step that sends requests starts once [control] grants it, as a run's do. A resolution that
- * ends unreachable is tried once more, [RETRY_WAIT] later, within the same granted lookups step
- * (#191); a new run cancels the preparation, waiting or not.
+ * ends unreachable for a passing failure is tried once more, [RETRY_WAIT] later (#191): the
+ * lookups step ends, and is asked for again after the wait, so the second try, like the first,
+ * waits until requests are allowed. A new run cancels the preparation, waiting or not.
  */
 internal class Preparation(
     private val parts: PipelineParts,
@@ -69,31 +70,42 @@ internal class Preparation(
         }
     }
 
-    // The resolution by name, then the adapters that prepare ahead, given it.
+    // The resolution by name, then the adapters that prepare ahead, given it; each try in a
+    // lookups step of its own. Null from the first step: to be tried again.
     private suspend fun lookUp(): List<SourceResult> {
-        val adapters = parts.adapters.filter { settings.isEnabled(it.id) && it.preparesAhead }
+        val first =
+            lookups {
+                val resolution = resolve(again = false)
+                if (resolution != null && triesAgain(resolution)) null else adapters(resolution)
+            }
+        if (first != null) return first
+        delay(RETRY_WAIT)
+        return lookups { adapters(resolve(again = true)) }
+    }
+
+    // [block] in a lookups step: started once granted, its end reported once it was.
+    private suspend fun <T> lookups(block: suspend () -> T): T {
         control.await(RunStep.LOOKUPS)
         try {
-            val resolution = resolve() ?: return emptyList()
-            val resolved = CompletableDeferred(resolution)
-            return coroutineScope {
-                adapters.map { adapter -> async { lookup(adapter, resolved) } }.awaitAll().filterNotNull()
-            }
+            return block()
         } finally {
             control.ended(RunStep.LOOKUPS)
         }
     }
 
-    // By name only: a queue item has no length. Unreachable, it is tried once more after
-    // [RETRY_WAIT]. Null if the resolver failed (a bug: it maps its failures to outcomes).
-    private suspend fun resolve(): Resolution? {
-        val first = resolveOnce(again = false)
-        if (first?.outcome != Outcome.Unreachable) return first
-        delay(RETRY_WAIT)
-        return resolveOnce(again = true)
+    // The adapters that prepare ahead, given [resolution]; none if the resolver failed.
+    private suspend fun adapters(resolution: Resolution?): List<SourceResult> {
+        if (resolution == null) return emptyList()
+        val adapters = parts.adapters.filter { settings.isEnabled(it.id) && it.preparesAhead }
+        val resolved = CompletableDeferred(resolution)
+        return coroutineScope {
+            adapters.map { adapter -> async { lookup(adapter, resolved) } }.awaitAll().filterNotNull()
+        }
     }
 
-    private suspend fun resolveOnce(again: Boolean): Resolution? {
+    // By name only: a queue item has no length. Null if the resolver failed (a bug: it maps its
+    // failures to outcomes).
+    private suspend fun resolve(again: Boolean): Resolution? {
         val started = time.timeSource.markNow()
         return try {
             parts.resolver.resolve(track, null).also {
@@ -127,14 +139,26 @@ internal class Preparation(
 
     companion object {
         /**
-         * How long a preparation whose resolution ended unreachable waits before its one more try
-         * (#191). MusicBrainz can refuse requests (503) for a moment when the pool it shares among
-         * its clients runs out, however slowly one client sends, and the client's own retries end
-         * within about 2 s at its one request a second; a while later, it answers again. A
-         * preparation runs minutes before its track plays, and the user never waits for it, so it
-         * can wait this long, and one more try bounds what it sends. A constant, not a setting:
-         * nothing in it is the user's to choose.
+         * How long a preparation whose resolution ended unreachable for a passing failure
+         * ([PASSING]) waits before its one more try (#191). MusicBrainz can refuse requests (503)
+         * for a moment when the pool it shares among its clients runs out, however slowly one
+         * client sends, and the client's own retries end within about 2 s at its one request a
+         * second; a while later, it answers again. A preparation runs minutes before its track
+         * plays, and the user never waits for it, so it can wait this long, and one more try
+         * bounds what it sends. A constant, not a setting: nothing in it is the user's to choose.
          */
         val RETRY_WAIT: Duration = 15.seconds
+
+        /**
+         * The failures tried again: those `:net` retries itself (`KtorNetClient.retryWait`), as
+         * `Lookup.Failed` names them (`JsonAccess.describe` in `:sources`, the `NetError`'s type).
+         * Any other, such as an unexpected status (`status 400`) or an answer that cannot be read
+         * (`Parse`), would fail the same way again.
+         */
+        val PASSING: Set<String> = setOf("RateLimited", "Server", "Offline")
+
+        // Whether [resolution] ended unreachable for a passing failure.
+        internal fun triesAgain(resolution: Resolution): Boolean =
+            resolution.outcome == Outcome.Unreachable && resolution.failure in PASSING
     }
 }
