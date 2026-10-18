@@ -540,6 +540,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
                     ?.title,
             )
             assertEquals(1, provider.requestsFor("Two"))
+            assertEquals("Zero and Two paid for, One (left while hidden) not", 2, provider.requests)
             assertTrue(
                 host.state.value.track
                     ?.insight is InsightState.Written,
