@@ -150,6 +150,9 @@ class PipelineHost(
     private val online: Flow<Boolean> = emptyFlow(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
+
+    // One per process, never recreated or persisted: its `acted` starting false is what makes a
+    // cold start wait for the first action (D5, #190).
     private val coordinator = PipelineCoordinator()
     private val snapshot = MutableStateFlow(coordinator.state)
     private val view = MutableStateFlow(PipelineView())

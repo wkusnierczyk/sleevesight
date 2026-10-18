@@ -201,7 +201,9 @@ class AppGraph(
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
      * also in the background when the user turns that on (D6); nothing before the first run is
      * acknowledged. Runs off the main thread, since the adapters parse their responses where they
-     * are called.
+     * are called. One per process, like this graph: its coordinator's first action starting unset
+     * is what makes a cold start wait for the user's first action (D5, #190), so it is never
+     * recreated or persisted.
      */
     val pipeline: PipelineHost =
         PipelineHost(

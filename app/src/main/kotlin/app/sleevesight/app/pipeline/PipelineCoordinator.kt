@@ -54,7 +54,10 @@ sealed interface CoordinatorEvent {
         val report: Long,
     ) : CoordinatorEvent
 
-    /** An activity started (`MainActivity.onStart`). */
+    /**
+     * An activity started (`MainActivity.onStart`). Never the app opening on its own: a return to
+     * the app, the screen turned on, keeps the first action ([CoordinatorState.acted]).
+     */
     data object ActivityStarted : CoordinatorEvent
 
     /** An activity stopped; [changingConfigurations] for a rotation, whose new activity starts at once. */
@@ -251,7 +254,11 @@ sealed interface CoordinatorEffect {
 /**
  * Everything the coordinator knows. [visible] while an activity is started, or one is restarting
  * after a configuration change; [allowed] (D6) once acknowledged, while visible or *Look up in the
- * background* is on. [ledger] is the insight of the current insight track ([Ledger]). [building]
+ * background* is on. [acted]: the user's first action since the app started (D5, #190). Only a
+ * cold start, a new process, starts without it: the host makes one coordinator per process
+ * (`PipelineHost`, held by `AppGraph`, which the `Application` holds), and no event clears it, so
+ * a return to the app from the background, the screen turned off and on, or a configuration change
+ * keeps it. [ledger] is the insight of the current insight track ([Ledger]). [building]
  * is the rebuild waiting to be swapped in, and [built] its outcome once it is known. [next] is the
  * track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
  * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
@@ -460,7 +467,8 @@ fun sameInsightTrack(
  * latest report's cause, which the current run holds, is one *Write insights automatically* writes
  * on under the run's settings (`InsightAsked.writesOn`: every cause under *On every track change*,
  * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
- * *Write insights* off), the user has acted since the app opened, and the ledger has not decided
+ * *Write insights* off), the user has acted since the app started (a cold start: a return to the
+ * app keeps the first action), and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write. The ledger
  * then records the decision. A model call that fails or is stopped (#163) leaves the ledger
  * written, as every call granted does, so nothing writes the track again without a tap: its run
@@ -483,7 +491,7 @@ fun sameInsightTrack(
  * |---|---|---|---|
  * | not acknowledged | anything but the four below | unchanged | none |
  * | any | Acknowledged | acknowledged | none |
- * | any | ActivityStarted | started + 1; first action cleared if none was started and not restarting (the app opening) | none |
+ * | any | ActivityStarted | started + 1; restarting = false; the first action kept (only a new process, with a new coordinator, starts without it) | none |
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
@@ -580,9 +588,9 @@ class PipelineCoordinator(
         }
     }
 
+    // The first action stays: only a new process, with a new coordinator, starts without it (#190).
     private fun started() {
-        val opening = state.started == 0 && !state.restarting
-        state = state.copy(started = state.started + 1, restarting = false, acted = state.acted && !opening)
+        state = state.copy(started = state.started + 1, restarting = false)
     }
 
     // A return of the network, from offline to online, is counted (#192).

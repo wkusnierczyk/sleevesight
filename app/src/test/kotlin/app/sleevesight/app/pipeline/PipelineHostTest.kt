@@ -507,14 +507,14 @@ internal class PipelineHostTest : PipelineHostFixture() {
             assertEquals(0, musicBrainz.cancelled)
             assertEquals(1, provider.requests)
 
-            // Turned on in the background (no new opening, so the first action stands): it writes.
+            // Turned on in the background (the first action stands): it writes.
             settings.value = settings.value.copy(lookUpInBackground = true)
             settle()
             assertEquals(2, provider.requests)
         }
 
     @Test
-    fun `after the app opens again nothing is written until a tap, the track waiting included`() =
+    fun `a return to the app keeps the first action, and the track waiting is written`() =
         runTest {
             started()
             play("Zero")
@@ -524,9 +524,12 @@ internal class PipelineHostTest : PipelineHostFixture() {
             musicBrainz.byName = 2.seconds
             play("One")
             advanceTimeBy(DEBOUNCE + 1.seconds)
+            // To the player and back (or the screen off and on): a stop and a start, not a
+            // configuration change, so not a cold start (#190).
             host.activityStopped(changingConfigurations = false)
             play("Two")
             settle()
+            assertEquals(1, provider.requests)
 
             host.activityStarted()
             settle()
@@ -536,20 +539,17 @@ internal class PipelineHostTest : PipelineHostFixture() {
                     ?.nowPlaying
                     ?.title,
             )
-            assertEquals(
-                InsightState.Idle(canWrite = true),
+            assertEquals(1, provider.requestsFor("Two"))
+            assertEquals("Zero and Two paid for, One (left while hidden) not", 2, provider.requests)
+            assertTrue(
                 host.state.value.track
-                    ?.insight,
+                    ?.insight is InsightState.Written,
             )
-            assertEquals(1, provider.requests)
-
-            tap()
-            settle()
-            assertEquals(2, provider.requests)
+            assertEquals("written without a tap", 1, actions)
         }
 
     @Test
-    fun `a rotation is not the app opening, so the first action stands`() =
+    fun `a rotation keeps the first action`() =
         runTest {
             started()
             play("One")
