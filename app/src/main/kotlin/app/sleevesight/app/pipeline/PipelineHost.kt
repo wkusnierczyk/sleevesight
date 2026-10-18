@@ -501,6 +501,10 @@ class PipelineHost(
         override suspend fun awaitStop() = call(made).stopped.await()
 
         override fun decidedWithoutCall() {
+            queue.trySend(CoordinatorEvent.DecidedWithoutCall(id, forLackOfEvidence = true))
+        }
+
+        override fun cannotWrite() {
             queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
         }
 

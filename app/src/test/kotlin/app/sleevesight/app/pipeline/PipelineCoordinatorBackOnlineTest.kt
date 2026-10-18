@@ -89,6 +89,85 @@ class PipelineCoordinatorBackOnlineTest {
                 settle()
             },
             Case(
+                "a mode changed since Write was offered: asked again, Write offered, no call",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A"),
+                "A",
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                acted()
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                assertTrue(offersWriteFor("A"))
+                writesOn = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+                network(online = true)
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "a key saved since there was no AI service: the rebuild offers Write, and asking again does not write",
+                mapOf("Zero" to 1),
+                listOf("Zero", "A", "A", "A"),
+                "A",
+            ) {
+                acted()
+                network(online = false)
+                offlineFinds = true
+                noAi = true
+                play("A")
+                settle()
+                noAi = false
+                keyChange()
+                settle()
+                assertTrue(offersWriteFor("A"))
+                network(online = true)
+                settle()
+                assertEquals(listOf("A"), askedAgain)
+            },
+            Case(
+                "a tap queued right behind the return is kept, and answers the run asking again: one call",
+                mapOf("A" to 1),
+                listOf("A", "A"),
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                send(CoordinatorEvent.NetworkChanged(true))
+                offline = false
+                send(CoordinatorEvent.WriteTapped(offered))
+                assertEquals(listOf("A"), askedAgain)
+                assertEquals(1, actions)
+                settle()
+                assertEquals(true, coordinator.state.ledger?.written)
+                // A second tap on the stale Write does nothing more.
+                tap(offered)
+                settle()
+            },
+            Case(
+                "a tap kept for a run asking again that then decides without a call answers nothing",
+                emptyMap(),
+                listOf("A", "A"),
+            ) {
+                writesOn = mode(WriteAutomatically.NEVER)
+                network(online = false)
+                offlineFinds = true
+                play("A")
+                settle()
+                val offered = checkNotNull(coordinator.state.writeKey)
+                // The replacement decides without a call (its AI service gone, say).
+                noAi = true
+                send(CoordinatorEvent.NetworkChanged(true))
+                offline = false
+                send(CoordinatorEvent.WriteTapped(offered))
+                settle()
+                assertEquals(false, coordinator.state.run?.tapped)
+            },
+            Case(
                 "back online with nothing unreachable does nothing",
                 mapOf("Zero" to 1, "A" to 1),
                 listOf("Zero", "A"),

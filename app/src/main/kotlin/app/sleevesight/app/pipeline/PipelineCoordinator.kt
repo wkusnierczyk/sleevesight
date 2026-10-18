@@ -150,6 +150,9 @@ sealed interface CoordinatorEvent {
     /** Run [run] decided its insight with no call and nothing cached (no evidence, no AI service, insights off). */
     data class DecidedWithoutCall(
         val run: RunId,
+        // For lack of evidence (`RunControl.decidedWithoutCall`), which new evidence may change
+        // (#192); not when insights are off or no AI service is set up (`RunControl.cannotWrite`).
+        val forLackOfEvidence: Boolean = false,
     ) : CoordinatorEvent
 
     /**
@@ -305,7 +308,10 @@ data class CoordinatorState(
      * not [shown]: it is a rebuild's run, which starts under the key the card was written under so
      * that the card is found when the rebuild changed nothing in it. A track that returns after
      * another has settled is a new decision (D5): the card in the store is served when the
-     * return's key matches it.
+     * return's key matches it. [lacked] when it was decided, not written, with no call for lack
+     * of evidence (`DecidedWithoutCall.forLackOfEvidence`), which new evidence may change: a run
+     * that asks again (#192) then decides afresh; any other decision (Write offered, insights off,
+     * no AI service) stands.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -313,6 +319,7 @@ data class CoordinatorState(
         val written: Boolean,
         val shown: NowPlaying = track,
         val card: Card? = null,
+        val lacked: Boolean = false,
     )
 
     /** The latest report: its number, track and cause, and whether its debounce has passed. */
@@ -339,7 +346,9 @@ data class CoordinatorState(
      * decision, of its own. [gathered] is what its sources ended with, once every one has landed;
      * [lookedUp] the network's [returns] when its lookups were granted; [again] whether it asks
      * again the sources its run before found unreachable (#192), whose decision is then made
-     * afresh, as the track's first was, even for a key the ledger decided without writing.
+     * afresh, as the track's first was, when the ledger decided its key for lack of evidence
+     * ([Ledger.lacked]). [keepsTap] while such a run has not decided and the run it replaced
+     * offered Write: a tap shown for that run is kept ([tapped]) and answers its question as a tap.
      */
     data class Run(
         val id: RunId,
@@ -355,6 +364,8 @@ data class CoordinatorState(
         val gathered: Gathered? = null,
         val lookedUp: Long? = null,
         val again: Boolean = false,
+        val keepsTap: Boolean = false,
+        val tapped: Boolean = false,
     )
 
     /**
@@ -454,10 +465,14 @@ fun sameInsightTrack(
  * run with no model call under way, its sources landed with some unreachable, and the network
  * back since its lookups were granted), the run is replaced by a run of its key and report that
  * asks again only those sources, keeping what the others found ([CoordinatorEffect.StartRun]'s
- * `again`), as a cancelled run's replacement does: a preparation in progress is cancelled. Its
- * decision is made as the track's first was, by the latest report's cause and the first action,
- * even for a key the ledger decided without writing (nothing found, Write offered): a track not
- * yet written may be written; one written is not, without a tap. The grants: while a run is
+ * `again`), as a cancelled run's replacement does: a preparation in progress is cancelled. When
+ * the ledger decided its key with no call for lack of evidence ([CoordinatorState.Ledger.lacked]),
+ * its decision is made afresh, as the track's first was, by the latest report's cause and the
+ * first action: a track not yet written may be written now that there is evidence. Any other
+ * decision stands (Write offered, insights off, no AI service: a rebuild's run of it), and one
+ * written is not written again without a tap. A tap shown for the run replaced, which offered
+ * Write, is kept until the replacement decides, and answers its question as a tap: one call, the
+ * ledger written ([CoordinatorState.Run.keepsTap]). The grants: while a run is
  * current and requests are [CoordinatorState.allowed], Grant for each step it waits for (the
  * network's returns kept with its lookups), and Decide for its question whether
  * to write. For the insight track the ledger has written, the answer is never to write: the
@@ -510,6 +525,7 @@ fun sameInsightTrack(
  * | the run | StepEnded(LABELS) | labelled: its requests are over | none |
  * | the run | RunEnded | calling, offered, the steps it waits for and its question cleared; labelled; then as for StepEnded(MODEL_CALL) | as above |
  * | the run (current or not) | StepRequested(step), InsightAsked(causes) | the step or the question waiting, with the causes its settings write on; for the ledger's written track (its card not found), answered by offering Write to rewrite it, never by writing | none |
+ * | current run asking again, not yet decided, the run it replaced offering Write, allowed, of the tap's key | WriteTapped(key) | the tap kept: it answers the run's question as a tap (one call, the ledger written); first action made | Acted |
  * | current run offering Write, allowed, of the tap's key | WriteTapped(key) | calling (its next call); the ledger written, under the run's key (or kept, if written already: a rewrite); first action made | Grant(MODEL_CALL), Acted |
  * | otherwise (a tap for another run's key included) | WriteTapped(key) | unchanged | none |
  * | the run, the tap's call under way | StopTapped(call) | unchanged (the call ends with its StepEnded; the ledger stays written, so nothing writes it again without a tap) | StopCall(call) |
@@ -518,7 +534,7 @@ fun sameInsightTrack(
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted) | none |
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
- * | the run, not orphaned | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already | none |
+ * | the run, not orphaned | DecidedWithoutCall | the ledger decided (not written), under the run's key, unless written already; lacked, when for lack of evidence | none |
  * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall, RetryAsked | unchanged | none |
  * | any | NextChanged(next) | next = it; a preparation of another track cancelled | CancelPreparation (if one is cancelled) |
  * | the preparation | StepRequested(step) | the step waiting (granted once the preparation may run; a model call never) | none |
@@ -582,7 +598,9 @@ class PipelineCoordinator(
             is CoordinatorEvent.RunEnded -> runEnded(event.run)
             is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
             is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card, replaces = true)
-            is CoordinatorEvent.DecidedWithoutCall -> record(event.run, written = false)
+            is CoordinatorEvent.DecidedWithoutCall -> {
+                record(event.run, written = false, lacked = event.forLackOfEvidence)
+            }
             is CoordinatorEvent.SourcesGathered -> ofRun(event.run) { it.copy(gathered = event.gathered) }
             else -> Unit
         }
@@ -676,7 +694,9 @@ class PipelineCoordinator(
         cancelPreparation()
         effects += CoordinatorEffect.CancelRun(run.id)
         val id = RunId(state.runs + 1)
-        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, run.key, run.nowPlaying, again = true))
+        // A tap shown for the run replaced, which offered Write, may still be on its way.
+        val replacement = CoordinatorState.Run(id, run.key, run.nowPlaying, again = true, keepsTap = run.offered)
+        state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
     }
 
@@ -711,9 +731,9 @@ class PipelineCoordinator(
     }
 
     private fun tapped(key: RunKey) {
+        if (!state.allowed || keepsTap(key)) return
         // Only the run Write is offered for, while it may be granted.
-        if (state.writeKey != key || !state.allowed) return
-        val run = state.current ?: return
+        val run = state.current?.takeIf { state.writeKey == key } ?: return
         state =
             state.copy(
                 run = run.copy(offered = false, calling = true, calls = run.calls + 1),
@@ -722,6 +742,15 @@ class PipelineCoordinator(
             )
         effects += CoordinatorEffect.Grant(run.id, RunStep.MODEL_CALL)
         effects += CoordinatorEffect.Acted
+    }
+
+    // A tap shown for the run an ask-again replaced (#192): kept until its replacement, of the
+    // same key, decides, and taken now (the first action). Whether it was kept.
+    private fun keepsTap(key: RunKey): Boolean {
+        val keeping = state.current?.takeIf { it.keepsTap && !it.tapped && it.key == key } ?: return false
+        state = state.copy(run = keeping.copy(tapped = true), acted = true)
+        effects += CoordinatorEffect.Acted
+        return true
     }
 
     // Only the call Stop was shown for, while it is under way. Stopping spends nothing, so it
@@ -740,7 +769,16 @@ class PipelineCoordinator(
     // A run that ended waits for nothing: no call, no tap. Nothing then waits for it.
     private fun runEnded(id: RunId) {
         if (state.run?.id != id) return
-        ofRun(id) { it.copy(calling = false, offered = false, asked = emptySet(), insight = null, labelled = true) }
+        ofRun(id) {
+            it.copy(
+                calling = false,
+                offered = false,
+                asked = emptySet(),
+                insight = null,
+                labelled = true,
+                keepsTap = false,
+            )
+        }
         afterCall()
     }
 
@@ -837,11 +875,17 @@ class PipelineCoordinator(
         written: Boolean,
         card: Card? = null,
         replaces: Boolean = false,
+        lacked: Boolean = false,
     ) {
         val run = state.run?.takeIf { it.id == id && !it.orphaned } ?: return
         val recorded = entry(run, written)
         val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
-        state = state.copy(ledger = recorded.copy(card = kept))
+        // The run has decided: a tap kept for it has nothing left to answer.
+        state =
+            state.copy(
+                ledger = recorded.copy(card = kept, lacked = lacked && !recorded.written),
+                run = run.copy(keepsTap = false, tapped = false),
+            )
     }
 
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under
@@ -865,22 +909,39 @@ class PipelineCoordinator(
         var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {
-            val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
-            val written = ledger?.written == true
-            // A rebuild's run of a key the ledger decided is not a track change (D5); a run that
-            // asks again (#192) decides as the track's first run did.
-            val decided = ledger != null && ledger.key == run.key && !run.again
-            // The cause of the latest report, which the run, being current, holds: the latest word
-            // on how the user came to this track (a skip back to it during its run included).
-            val cause = state.latest?.cause
-            val write = cause != null && cause in writesOn && state.acted && !written && !decided
+            val write = writes(run, writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next =
-                next.copy(insight = null, offered = !write, calling = write, calls = next.calls + if (write) 1 else 0)
+                next.copy(
+                    insight = null,
+                    offered = !write,
+                    calling = write,
+                    calls = next.calls + if (write) 1 else 0,
+                    keepsTap = false,
+                    tapped = false,
+                )
             state = state.copy(ledger = entry(run, write))
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
+    }
+
+    // The answer to [run]'s question whether to write, under the causes its settings write on.
+    private fun writes(
+        run: CoordinatorState.Run,
+        writesOn: Set<ChangeCause>,
+    ): Boolean {
+        // A tap kept for it (#192) answers as a tap: one call, the ledger written.
+        if (run.tapped) return true
+        val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
+        val written = ledger?.written == true
+        // A rebuild's run of a key the ledger decided is not a track change (D5); a run that
+        // asks again (#192) decides afresh only after a decision for lack of evidence.
+        val decided = ledger != null && ledger.key == run.key && !(run.again && ledger.lacked)
+        // The cause of the latest report, which the run, being current, holds: the latest word
+        // on how the user came to this track (a skip back to it during its run included).
+        val cause = state.latest?.cause
+        return cause != null && cause in writesOn && state.acted && !written && !decided
     }
 }

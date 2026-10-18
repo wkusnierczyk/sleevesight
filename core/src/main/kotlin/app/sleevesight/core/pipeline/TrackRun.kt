@@ -133,7 +133,7 @@ internal class TrackRun(
     private suspend fun gather() {
         input.again?.let { again ->
             val asked = again.unreachable.filter { source -> enabled.any { it.id == source } }
-            emit(PipelineEvent.AskedAgain(key, asked.sortedBy { it.ordinal }))
+            if (asked.isNotEmpty()) emit(PipelineEvent.AskedAgain(key, asked.sortedBy { it.ordinal }))
         }
         val misses = enabled.filter { adapter -> adapter.id !in keptBefore && !fromCache(adapter) }
         if (misses.isEmpty()) return

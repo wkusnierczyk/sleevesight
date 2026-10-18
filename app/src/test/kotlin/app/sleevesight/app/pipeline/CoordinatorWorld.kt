@@ -95,6 +95,9 @@ internal class World {
     /** Whether lookups made offline still find something (MusicBrainz from its cache, say). */
     var offlineFinds = false
 
+    /** Whether no AI service is set up: a run with evidence decides without a call, for no lack of it. */
+    var noAi = false
+
     /** The runs started to ask their unreachable sources again (#192), by title, and what they carried. */
     val askedAgain = mutableListOf<String>()
     val carried = mutableListOf<Gathered>()
@@ -298,7 +301,10 @@ internal class World {
                     cardsShown += titles.getValue(run)
                     CoordinatorEvent.CardShown(run, cards[keys.getValue(run) to service]?.let(::card))
                 }
-                run in withoutEvidence || (unreachable && !offlineFinds) -> CoordinatorEvent.DecidedWithoutCall(run)
+                noAi -> CoordinatorEvent.DecidedWithoutCall(run)
+                run in withoutEvidence || (unreachable && !offlineFinds) -> {
+                    CoordinatorEvent.DecidedWithoutCall(run, forLackOfEvidence = true)
+                }
                 else -> CoordinatorEvent.InsightAsked(run, writesOn)
             }
         schedule(delayMs, insight, run)

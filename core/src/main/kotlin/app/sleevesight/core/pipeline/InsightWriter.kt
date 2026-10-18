@@ -44,7 +44,7 @@ internal class InsightWriter(
         val model = settings.aiModel ?: ai?.let { Settings.DEFAULT_MODELS[it.provider.id] }
         when {
             !settings.writeInsights || ai == null || model == null -> {
-                control.decidedWithoutCall()
+                control.cannotWrite()
                 show(InsightState.Idle(canWrite = false))
             }
 
