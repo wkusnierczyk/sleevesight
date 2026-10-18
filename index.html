@@ -167,8 +167,8 @@ footer p{margin:0 0 4px}
    names no section, and the browser holds no note that the intro has played (`sl-intro-played` in
    `localStorage`). The note is written as the intro starts, so a reload part way through skips it;
    where storage is blocked, the intro plays on every visit, as it did before the note. The footer's
-   "Play the intro again" (`.replay`, shown by the script, and not under "reduce motion") plays it
-   once more in place.
+   "Play the intro again" (`.replay`, shown by the script whenever motion is allowed) plays it once
+   more in place.
    First the logo alone plays large in the middle of the window (`.splash`): a record slides out of
    its sleeve, the eye forms around it, blinks, the record turns twice, the eye blinks again, and the
    sleeve comes back as the eye fades. (Considered: the sleeve leaving the window altogether before it
@@ -406,10 +406,15 @@ document.documentElement.classList.add('js');
 
   // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
   // key (a screen reader's cursor), so either ends the intro too.
-  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'];
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'], back = false;
+  // A replay started from the keyboard leaves focus on its button at the foot of the page, out of view
+  // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`), unless it
+  // has already moved elsewhere (a screen reader's cursor). The focus comes before the class goes, so
+  // it does not blink the logo again.
   function end() {
-    root.classList.remove('sl-intro');
     stops.forEach(function (e) { removeEventListener(e, end); });
+    if (back) { back = false; if (document.activeElement === again) brand.focus({preventScroll: true}); }
+    root.classList.remove('sl-intro');
   }
   function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
   brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-blink') end(); });
@@ -442,14 +447,18 @@ document.documentElement.classList.add('js');
   // The replay: back to the top, with the header large, at once, so the splash flies to where the
   // logo will be; then the intro as on a first visit. Taking the class off and reading the layout
   // before putting it back restarts the animations. The stops listen from the next frame on, after
-  // the scroll event of the jump to the top, which would otherwise end the intro at once.
-  var replay = document.querySelector('.replay'), still = matchMedia('(prefers-reduced-motion: reduce)');
-  function offer() { replay.hidden = still.matches; }
+  // the scroll event of the jump to the top, which would otherwise end the intro at once. It is offered
+  // on the same condition as the first visit's intro (`no-preference`, not "not `reduce`"), so a browser
+  // that knows neither value offers neither.
+  var replay = document.querySelector('.replay'), again = replay.querySelector('button'),
+      moving = matchMedia('(prefers-reduced-motion: no-preference)');
+  function offer() { replay.hidden = !moving.matches; }
   offer();
-  if (still.addEventListener) still.addEventListener('change', offer);
-  replay.querySelector('button').addEventListener('click', function () {
-    if (still.matches) return;
+  if (moving.addEventListener) moving.addEventListener('change', offer);
+  again.addEventListener('click', function (e) {
+    if (!moving.matches) return;
     end();
+    back = e.detail === 0;
     scrollTo(0, 0);
     root.classList.add('sl-still');
     root.classList.remove('sl-compact');
@@ -460,7 +469,7 @@ document.documentElement.classList.add('js');
   });
 
   function play() {
-    if (still.matches || root.classList.contains('sl-intro')) return;
+    if (!moving.matches || root.classList.contains('sl-intro')) return;
     brand.classList.add('play');
   }
   brand.addEventListener('pointerenter', play);

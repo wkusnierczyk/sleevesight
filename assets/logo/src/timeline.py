@@ -25,6 +25,7 @@ END = 10.0
 B1, B2 = 400, 3100            # the blinks' starts
 CL, SH, OP = 100, 40, 140     # each blink: closing, shut, opening
 SHUT_ON, SHUT_OFF = .8, .2    # the closed lid's line shows from this far into closing to this far into opening
+CLOSED = .02                  # the lid's vertical scale while the eye is shut
 SPIN_S, SPIN_D, TURNS = 900, 2000, 2
 
 # ---- easing: cubic-bezier control points (x1, y1, x2, y2) ----

@@ -12,7 +12,7 @@ The sleeve art, sundown.json, is coverFor("Sundown|Gordon Lightfoot") from desig
 """
 import json, os, subprocess, sys
 from timeline import (VB, S, X0, OFF, HALF, EYE_IN, EXIT, LOGO, RETURN, EYE_OUT, END,
-                      B1, B2, CL, SH, OP, SHUT_ON, SHUT_OFF, SPIN_S, SPIN_D, TURNS, EASE)
+                      B1, B2, CL, SH, OP, SHUT_ON, SHUT_OFF, CLOSED, SPIN_S, SPIN_D, TURNS, EASE)
 
 theme, out = sys.argv[1], sys.argv[2]
 FPS = int(sys.argv[3]) if len(sys.argv) > 3 else 60
@@ -64,9 +64,9 @@ def eye_opacity(t):
 # The logo animation, in ms from LOGO.
 def lid(ms):
     for s in (B1, B2):
-        if s <= ms < s + CL: return 1 - .98 * CLOSE((ms - s) / CL)
-        if s + CL <= ms < s + CL + SH: return .02
-        if s + CL + SH <= ms < s + CL + SH + OP: return .02 + .98 * OPEN((ms - s - CL - SH) / OP)
+        if s <= ms < s + CL: return 1 - (1 - CLOSED) * CLOSE((ms - s) / CL)
+        if s + CL <= ms < s + CL + SH: return CLOSED
+        if s + CL + SH <= ms < s + CL + SH + OP: return CLOSED + (1 - CLOSED) * OPEN((ms - s - CL - SH) / OP)
     return 1.0
 def shut(ms):
     return any(s + CL * SHUT_ON <= ms < s + CL + SH + OP * SHUT_OFF for s in (B1, B2))

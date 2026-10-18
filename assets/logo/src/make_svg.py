@@ -9,12 +9,13 @@ The sleeve art, sundown.json, is coverFor("Sundown|Gordon Lightfoot") from desig
 """
 import json, os, sys
 from timeline import (VB, S, X0, OFF, HALF, EYE_IN, EXIT, LOGO, RETURN, EYE_OUT, END,
-                      B1, B2, CL, SH, OP, SHUT_ON, SHUT_OFF, SPIN_S, SPIN_D, TURNS, EASE)
+                      B1, B2, CL, SH, OP, SHUT_ON, SHUT_OFF, CLOSED, SPIN_S, SPIN_D, TURNS, EASE)
 
 pc = lambda s: f'{s / END * 100:.2f}%'                        # a time as a keyframe percentage
 num = lambda v: (f'{v:g}'[1:] if 0 < v < 1 else f'{v:g}')     # CSS's short form: .45, 0, 1
 ease = lambda k: 'cubic-bezier(' + ','.join(map(num, EASE[k])) + ')'
 vb = ' '.join(map(str, VB))
+at = lambda ms: LOGO + ms / 1000                              # ms from LOGO, as seconds from the start
 
 cover = json.load(open(os.path.join(os.path.dirname(__file__) or '.', 'sundown.json')))['svg']
 cover_inner = cover[cover.index('>') + 1: cover.rindex('</svg>')]
@@ -23,13 +24,12 @@ cover_inner = cover[cover.index('>') + 1: cover.rindex('</svg>')]
 CE, OE = ease('close'), ease('open')
 blink, shut = ['0%{transform:scaleY(1);animation-timing-function:' + CE + '}'], ['0%{opacity:0}']
 for b in (B1, B2):
-    s = LOGO + b / 1000
-    blink += [f'{pc(s)}{{transform:scaleY(1);animation-timing-function:{CE}}}',
-              f'{pc(s + CL / 1000)},{pc(s + (CL + SH) / 1000)}{{transform:scaleY(.02);animation-timing-function:{OE}}}',
-              f'{pc(s + (CL + SH + OP) / 1000)}{{transform:scaleY(1);animation-timing-function:{CE}}}']
-    shut += [f'{pc(s + CL * SHUT_ON / 1000)}{{opacity:1}}', f'{pc(s + (CL + SH + OP * SHUT_OFF) / 1000)}{{opacity:0}}']
+    blink += [f'{pc(at(b))}{{transform:scaleY(1);animation-timing-function:{CE}}}',
+              f'{pc(at(b + CL))},{pc(at(b + CL + SH))}{{transform:scaleY({num(CLOSED)});animation-timing-function:{OE}}}',
+              f'{pc(at(b + CL + SH + OP))}{{transform:scaleY(1);animation-timing-function:{CE}}}']
+    shut += [f'{pc(at(b + CL * SHUT_ON))}{{opacity:1}}', f'{pc(at(b + CL + SH + OP * SHUT_OFF))}{{opacity:0}}']
 blink.append('100%{transform:scaleY(1)}')
-spin = (LOGO + SPIN_S / 1000, LOGO + (SPIN_S + SPIN_D) / 1000)
+spin = (at(SPIN_S), at(SPIN_S + SPIN_D))
 turns = {1: 'One turn', 2: 'Two turns'}.get(TURNS, f'{TURNS} turns')
 
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" role="img" aria-label="Sleevesight: a record slides out of its sleeve and becomes an eye">
