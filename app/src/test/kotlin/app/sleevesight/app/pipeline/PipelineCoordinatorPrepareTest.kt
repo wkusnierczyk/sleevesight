@@ -85,6 +85,45 @@ class PipelineCoordinatorPrepareTest {
     }
 
     @Test
+    fun `a preparation's second try is granted only while requests are allowed`() {
+        val world = started()
+        with(world) {
+            retrying += "B"
+            play("A")
+            next("B")
+            settle()
+            assertEquals(listOf("prepare B"), grants.filter { it.startsWith("prepare") })
+            hide()
+            advance(RETRY_MS * 2)
+            assertEquals("hidden, the second try waits", listOf("prepare B"), preparationGrants())
+            show()
+            settle()
+            assertEquals(
+                listOf("prepare B", "prepare B", "prepare labels B"),
+                grants.filter { it.startsWith("prepare") },
+            )
+        }
+    }
+
+    @Test
+    fun `a preparation waiting for its second grant is cancelled as any other`() {
+        val world = started()
+        with(world) {
+            retrying += "B"
+            play("A")
+            next("B")
+            settle()
+            hide()
+            advance(RETRY_MS * 2)
+            next("C")
+            assertEquals(listOf("B"), preparationsCancelled)
+            show()
+            settle()
+            assertEquals(listOf("prepare B", "prepare C", "prepare labels C"), preparationGrants())
+        }
+    }
+
+    @Test
     fun `a preparation for a track no longer next is cancelled, and the new next one prepared`() {
         val world = started()
         with(world) {
@@ -232,4 +271,6 @@ class PipelineCoordinatorPrepareTest {
         assertEquals(emptyList<CoordinatorEffect>(), effects)
         assertEquals(null, coordinator.state.next)
     }
+
+    private fun World.preparationGrants() = grants.filter { it.startsWith("prepare") }
 }

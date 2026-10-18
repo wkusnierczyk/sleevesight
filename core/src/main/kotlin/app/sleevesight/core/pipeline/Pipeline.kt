@@ -34,7 +34,7 @@ import kotlin.time.TimeSource
 /**
  * Resolution, steps 1 to 4 (`design/architecture.md`, *Entity resolution*): `RecordingResolver` over
  * MusicBrainz in the app and the CLI, a fake in tests. It never throws for a failed lookup, which is
- * [Resolution.UNREACHABLE].
+ * [Resolution.unreachable].
  */
 fun interface TrackResolver {
     suspend fun resolve(
