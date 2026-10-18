@@ -14,3 +14,6 @@ captures/
 
 # JVM heap dumps
 *.hprof
+
+# Python bytecode (assets/logo/src imports timeline.py)
+__pycache__/

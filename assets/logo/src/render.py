@@ -1,6 +1,7 @@
 """The sleeve-to-eye animation as video: each frame drawn as SVG, rasterised by rsvg-convert.
 
-The timeline matches make_svg.py, which makes the vector version. From assets/logo:
+The timeline and geometry come from timeline.py, shared with make_svg.py, which makes the vector
+version. From assets/logo:
 
     python3 src/render.py light frames-light          # 600 PNG frames, 1920x1080
     ffmpeg -framerate 60 -i frames-light/f%05d.png -c:v libx264 -profile:v main -level 4.2 \
@@ -10,12 +11,13 @@ and the same for dark. `python3 src/render.py light stills 60 2.5` renders one s
 The sleeve art, sundown.json, is coverFor("Sundown|Gordon Lightfoot") from design/simulator.html.
 """
 import json, os, subprocess, sys
+from timeline import (VB, S, X0, OFF, HALF, EYE_IN, EXIT, LOGO, RETURN, EYE_OUT, END,
+                      B1, B2, CL, SH, OP, SHUT_ON, SHUT_OFF, SPIN_S, SPIN_D, TURNS, EASE)
 
 theme, out = sys.argv[1], sys.argv[2]
 FPS = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 STILL = float(sys.argv[4]) if len(sys.argv) > 4 else None
 W, H = 1920, 1080
-VB = (-16, -2, 64, 36)  # logo units; the logo's centre (16, 16) is the frame's centre
 
 BG = {'light': '#fafbfc', 'dark': '#0d1015'}[theme]
 EYE_FILL, EYE_STROKE = {'light': ('none', '#1f2328'), 'dark': ('#ffffff', '#8b949e')}[theme]
@@ -39,27 +41,15 @@ def bezier(x1, y1, x2, y2):
             t = min(1, max(0, t - cx / d))
         return 3 * y1 * t * (1 - t) ** 2 + 3 * y2 * t ** 2 * (1 - t) + t ** 3
     return f
-CLOSE, OPEN = bezier(.5, 0, 1, 1), bezier(0, 0, .4, 1)
-TURNTABLE = bezier(.45, 0, .55, 1)
-SETTLE, LEAVE, ARRIVE = bezier(.45, 0, .2, 1), bezier(.55, 0, 1, .45), bezier(0, .55, .45, 1)
+CLOSE, OPEN, TURNTABLE = (bezier(*EASE[k]) for k in ('close', 'open', 'turntable'))
+SETTLE, LEAVE, ARRIVE = (bezier(*EASE[k]) for k in ('settle', 'leave', 'arrive'))
 LINEAR = lambda x: x
 
 def seg(t, a, b, ease=LINEAR):
     """Progress 0..1 of t through [a, b]."""
     return ease(min(1, max(0, (t - a) / (b - a))))
 
-# ---- timeline (seconds) ----
-S = 16.4                      # sleeve side: a 12 3/8" jacket around a 12" record of diameter 15
-X0 = 16 - S / 2               # sleeve's left edge, centred over the record
-HALF = (.8, 1.7)              # slides left by half, uncovering the record's right half
-EYE_IN = (1.8, 2.3)           # the eye's right corner appears
-EXIT = (2.8, 3.8)             # the sleeve leaves to the left; the record's left half and the left corner show
-LOGO = 4.0                    # the logo animation: blink, two turns, blink (as on the page)
-RETURN = (8.4, 9.4)           # a second after it ends, the sleeve comes back over the record
-EYE_OUT = (8.6, 9.3)
-END = 10.0
-OFF = VB[0] - S - 2           # left edge once out of frame (the shadow included)
-
+# ---- the timeline (timeline.py) at time t ----
 def sleeve_x(t):
     if t < EXIT[0]:
         return X0 - S / 2 * seg(t, *HALF, SETTLE)
@@ -71,10 +61,7 @@ def sleeve_x(t):
 def eye_opacity(t):
     return seg(t, *EYE_IN) * (1 - seg(t, *EYE_OUT))
 
-# The logo animation, in ms from LOGO, as in the explorer's "As now" preset.
-B1, CL, SH, OP = 400, 100, 40, 140
-SPIN_S, SPIN_D, TURNS = 900, 2000, 2
-B2 = 3100
+# The logo animation, in ms from LOGO.
 def lid(ms):
     for s in (B1, B2):
         if s <= ms < s + CL: return 1 - .98 * CLOSE((ms - s) / CL)
@@ -82,7 +69,7 @@ def lid(ms):
         if s + CL + SH <= ms < s + CL + SH + OP: return .02 + .98 * OPEN((ms - s - CL - SH) / OP)
     return 1.0
 def shut(ms):
-    return any(s + CL * .8 <= ms < s + CL + SH + OP * .2 for s in (B1, B2))
+    return any(s + CL * SHUT_ON <= ms < s + CL + SH + OP * SHUT_OFF for s in (B1, B2))
 def angle(ms):
     return 360 * TURNS * TURNTABLE(min(1, max(0, (ms - SPIN_S) / SPIN_D)))
 
