@@ -340,27 +340,59 @@ class SettingsScreenTest {
         show {
             // The cost of automatic writing is said where it is set.
             compose.onNodeWithText(text(R.string.settings_write_automatically_summary)).performScrollTo()
-            // The summary says what the count chosen does: the default, 5, at first.
-            compose.onNodeWithText(pauseSummary(5)).performScrollTo().assertIsDisplayed()
+            // The summary says what the count chosen does: the default, 5, at first, with nothing
+            // written away while *Look up in the background* is off.
+            compose.onNodeWithText(pauseSummary(5, background = false)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             val ten = app.resources.getQuantityString(R.plurals.settings_track_changes_away, 10, 10)
             compose.onNodeWithText(ten).performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
-            compose.onNodeWithText(pauseSummary(10)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(pauseSummary(10, background = false)).performScrollTo().assertIsDisplayed()
+
+            // With it on, the count bounds what is written away.
+            compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
+            waitFor("look-up in the background stored on") { current().lookUpInBackground }
+            compose.onNodeWithText(pauseSummary(10, background = true)).performScrollTo().assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write_off)).performClick()
             waitFor("the pause off") { current().pauseAutoWriteAfter == null }
             // Under *Off*, nothing pauses, so no count is explained.
-            compose.onNodeWithText(pauseSummary(null)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(pauseSummary(null, background = true)).performScrollTo().assertIsDisplayed()
         }
 
-    // The summary of *Pause automatic writing after* for [count], or for *Off*.
-    private fun pauseSummary(count: Int?): String {
+    @Test
+    fun aPauseAfterOneTrackChangeIsSummedUpInTheSingular() {
+        runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true) } }
+        show {
+            // "Up to": under *When I skip*, a natural end is counted but not written.
+            val written = pauseSummary(1, background = true)
+            assertTrue(written, written.contains("up to 1 track is written"))
+            compose.onNodeWithText(written).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
+            waitFor("look-up in the background stored off") { !current().lookUpInBackground }
+            val away = pauseSummary(1, background = false)
+            assertTrue(away, away.contains("nothing is written while you are away"))
+            compose.onNodeWithText(away).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    // The summary of *Pause automatic writing after* for [count], or for *Off*, with *Look up in
+    // the background* as [background].
+    private fun pauseSummary(
+        count: Int?,
+        background: Boolean,
+    ): String {
         val counted = text(R.string.settings_pause_auto_write_summary)
         if (count == null) return counted
-        val what = app.resources.getQuantityString(R.plurals.settings_pause_auto_write_summary_count, count, count)
-        return "$counted $what"
+        val plural =
+            if (background) {
+                R.plurals.settings_pause_auto_write_summary_count
+            } else {
+                R.plurals.settings_pause_auto_write_summary_count_foreground
+            }
+        return "$counted ${app.resources.getQuantityString(plural, count, count)}"
     }
 
     @Test
