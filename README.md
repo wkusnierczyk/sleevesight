@@ -61,7 +61,7 @@ Your API keys are encrypted with a key kept in the phone's Android Keystore, are
 
 ## Privacy
 
-Track, artist and album names for the playing track go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. By default, the title and artists of the next track in the player's queue also go to MusicBrainz, if you switched it on, ahead of its play. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. When a player gives the cover only as a web address, the app fetches it from the server that address names, while it is on screen (or with *Look up in the background* on), and the address itself may identify the album or episode. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device.
+Track, artist and album names for the playing track go to the sources you enabled, and, with what those sources found and your style setting, to the AI service you chose. By default, the title and artists of the next track in the player's queue also go to MusicBrainz, if you switched it on, ahead of its play. If you connect a Spotify account, the app also asks Spotify for the playlist or album being played. When a player gives the cover only as a web address, the app fetches it from the server that address names, while it is on screen (or with *Look up in the background* on), and the address itself may identify the album or episode. Nothing else leaves the phone. No accounts of our own, no telemetry, no analytics, no ads. Keys are stored encrypted on the device. The full [privacy policy](https://sleevesight.app/privacy.html) is on the site.
 
 ## Roadmap
 
