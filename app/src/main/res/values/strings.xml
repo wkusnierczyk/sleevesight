@@ -180,8 +180,8 @@
     </plurals>
     <!-- As settings_pause_auto_write_summary_count, with Look up in the background off: nothing is written away, and the count decides whether writing goes on when the app is back on screen. -->
     <plurals name="settings_pause_auto_write_summary_count_foreground">
-        <item quantity="one">With %1$d, nothing is written while you are away, as “Look up in the background” is off. Back within %1$d track change, writing goes on; after more, nothing is written until you tap Write insight.</item>
-        <item quantity="other">With %1$d, nothing is written while you are away, as “Look up in the background” is off. Back within %1$d track changes, writing goes on; after more, nothing is written until you tap Write insight.</item>
+        <item quantity="one">With %1$d, nothing is written while you are away, as “Look up in the background” is off. Back within %1$d track change, writing goes on; back after more, nothing is written until you tap Write insight.</item>
+        <item quantity="other">With %1$d, nothing is written while you are away, as “Look up in the background” is off. Back within %1$d track changes, writing goes on; back after more, nothing is written until you tap Write insight.</item>
     </plurals>
     <plurals name="settings_days">
         <item quantity="one">%d day</item>
