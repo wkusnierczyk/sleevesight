@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
@@ -57,6 +58,22 @@ sealed interface SourceState {
     data class Failed(
         val reason: String,
     ) : SourceState
+}
+
+/**
+ * What a run's sources ended with, once every one has landed ([RunControl.gathered]): each
+ * source's state, and MusicBrainz's resolution when the run made one (null when nothing needed
+ * it, or it was not made). A later run of the same track started with it ([Pipeline.run]'s
+ * `again`, #192) asks again only the sources [unreachable] here, and keeps the others as they
+ * landed.
+ */
+data class Gathered(
+    val sources: Map<SourceId, SourceState>,
+    val resolution: Resolution?,
+) {
+    /** The sources that ended `Unreachable`: a network or source error. */
+    val unreachable: Set<SourceId>
+        get() = sources.filterValues { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable }.keys
 }
 
 /** The home insight's progress (`design/architecture.md`, *State*; *Errors and empty states*). */

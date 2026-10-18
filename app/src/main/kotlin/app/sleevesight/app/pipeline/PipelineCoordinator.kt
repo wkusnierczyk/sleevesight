@@ -7,6 +7,7 @@ import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
@@ -160,6 +161,23 @@ sealed interface CoordinatorEvent {
     data class PreparationEnded(
         val prep: RunId,
     ) : CoordinatorEvent
+
+    /**
+     * The phone's connection changed (#192): [online] while its default network has validated
+     * internet access (`ConnectivityManager`, through the host's `online`).
+     */
+    data class NetworkChanged(
+        val online: Boolean,
+    ) : CoordinatorEvent
+
+    /**
+     * Every source of run [run] has landed: [gathered] is what they ended with, reported before
+     * its evidence is assembled (`RunControl.gathered`).
+     */
+    data class SourcesGathered(
+        val run: RunId,
+        val gathered: Gathered,
+    ) : CoordinatorEvent
 }
 
 /** What the coordinator has done, for the host to carry out. */
@@ -180,10 +198,14 @@ sealed interface CoordinatorEffect {
         val built: Boolean,
     ) : CoordinatorEffect
 
-    /** Start run [run] of [nowPlaying] on the live pipeline. */
+    /**
+     * Start run [run] of [nowPlaying] on the live pipeline; with [again], what the run before it
+     * gathered, asking again only the sources that were unreachable (#192, `Pipeline.run`).
+     */
     data class StartRun(
         val run: RunId,
         val nowPlaying: NowPlaying,
+        val again: Gathered? = null,
     ) : CoordinatorEffect
 
     /** Cancel run [run]. */
@@ -232,7 +254,10 @@ sealed interface CoordinatorEffect {
  * background* is on. [ledger] is the insight of the current insight track ([Ledger]). [building]
  * is the rebuild waiting to be swapped in, and [built] its outcome once it is known. [next] is the
  * track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
- * track whose preparation ended on the live pipeline, so it is not prepared again.
+ * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
+ * the phone's connection as last reported (online until told otherwise), and [returns] counts its
+ * returns, from offline to online, so a run knows whether the network came back after its lookups
+ * were granted (#192).
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -251,6 +276,8 @@ data class CoordinatorState(
     val next: NowPlaying? = null,
     val preparation: Preparation? = null,
     val prepared: NowPlaying? = null,
+    val online: Boolean = true,
+    val returns: Long = 0,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -302,7 +329,10 @@ data class CoordinatorState(
      * again. [orphaned] once a report of another insight track has settled while it ran: it then
      * holds no report and is never current again, and its reports to the ledger are ignored, so
      * it cannot bring its track back; a report of its track that returns gets a run, and a
-     * decision, of its own.
+     * decision, of its own. [gathered] is what its sources ended with, once every one has landed;
+     * [lookedUp] the network's [returns] when its lookups were granted; [again] whether it asks
+     * again the sources its run before found unreachable (#192), whose decision is then made
+     * afresh, as the track's first was, even for a key the ledger decided without writing.
      */
     data class Run(
         val id: RunId,
@@ -315,6 +345,9 @@ data class CoordinatorState(
         val calls: Int = 0,
         val orphaned: Boolean = false,
         val labelled: Boolean = false,
+        val gathered: Gathered? = null,
+        val lookedUp: Long? = null,
+        val again: Boolean = false,
     )
 
     /**
@@ -359,6 +392,23 @@ data class CoordinatorState(
      */
     val prepares: Boolean get() = allowed && current?.labelled == true
 
+    /**
+     * Whether the playing track's run asks its unreachable sources again now (back online, #192):
+     * requests are allowed, the phone is online, and the current run has no model call under way
+     * (what it costs is not lost), its sources have landed with some unreachable, and the network
+     * came back after its lookups were granted. Once per return: the run that asks again has its
+     * lookups granted after it.
+     */
+    val asksAgain: Boolean
+        get() {
+            val run = current ?: return false
+            return allowed &&
+                online &&
+                !run.calling &&
+                run.gathered?.unreachable?.isNotEmpty() == true &&
+                run.lookedUp?.let { it < returns } == true
+        }
+
     /** Whether Write is offered for the track [key]: the current run's, while it waits for a tap. */
     fun offersWrite(key: RunKey): Boolean = writeKey == key
 
@@ -392,8 +442,17 @@ fun sameInsightTrack(
  * threads, no time; [PipelineHost] carries the effects out and feeds the events back from one
  * queue.
  *
- * After every event, once acknowledged, come the grants: while a run is current and requests are
- * [CoordinatorState.allowed], Grant for each step it waits for, and Decide for its question whether
+ * After every event, once acknowledged, comes asking again, then the grants. Asking again (back
+ * online, #192): when [CoordinatorState.asksAgain] (requests allowed, the phone online, the current
+ * run with no model call under way, its sources landed with some unreachable, and the network
+ * back since its lookups were granted), the run is replaced by a run of its key and report that
+ * asks again only those sources, keeping what the others found ([CoordinatorEffect.StartRun]'s
+ * `again`), as a cancelled run's replacement does: a preparation in progress is cancelled. Its
+ * decision is made as the track's first was, by the latest report's cause and the first action,
+ * even for a key the ledger decided without writing (nothing found, Write offered): a track not
+ * yet written may be written; one written is not, without a tap. The grants: while a run is
+ * current and requests are [CoordinatorState.allowed], Grant for each step it waits for (the
+ * network's returns kept with its lookups), and Decide for its question whether
  * to write. For the insight track the ledger has written, the answer is never to write: the
  * question comes only when a rebuild's run cannot find its card under its new card key (new
  * evidence, another service), and Write is offered beside the card paid for, which the view keeps
@@ -414,7 +473,7 @@ fun sameInsightTrack(
  * unless there is none, it was prepared on the live pipeline already, or it is the track playing;
  * else Grant for each step the preparation waits for, never a model call, a Stop or Write again
  * (they act on the run alone). The table gives each
- * event's own effects; the grants and the preparation follow every row.
+ * event's own effects; asking again, the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
  * a report's `RunKey`; "the ledger's written track" is the insight track whose entry is written;
  * the run "holds" a report as [CoordinatorState.holds] says. A run of the ledger's written track
@@ -458,6 +517,9 @@ fun sameInsightTrack(
  * | the preparation | PreparationEnded | none in progress; its track prepared | none |
  * | an old preparation | StepRequested, PreparationEnded | unchanged | none |
  * | a preparation, current or old | StepEnded | unchanged | none |
+ * | any | NetworkChanged(online) | online = it; one more return when it was offline and is online | none |
+ * | the run | SourcesGathered(gathered) | what its sources ended with kept | none |
+ * | an old run | SourcesGathered | unchanged | none |
  */
 @Suppress("TooManyFunctions") // One for each kind of event, mostly: the table, row by row.
 class PipelineCoordinator(
@@ -480,6 +542,7 @@ class PipelineCoordinator(
             else -> if (state.acknowledged) onAcknowledged(event)
         }
         if (state.acknowledged) {
+            askAgain()
             grants()
             prepare()
         }
@@ -496,6 +559,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
             is CoordinatorEvent.NextChanged -> nextChanged(event.next)
             is CoordinatorEvent.PreparationEnded -> preparationEnded(event.prep)
+            is CoordinatorEvent.NetworkChanged -> network(event.online)
             else -> fromRun(event)
         }
     }
@@ -511,6 +575,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.CardShown -> record(event.run, written = true, card = event.card, replaces = false)
             is CoordinatorEvent.CardWritten -> record(event.run, written = true, card = event.card, replaces = true)
             is CoordinatorEvent.DecidedWithoutCall -> record(event.run, written = false)
+            is CoordinatorEvent.SourcesGathered -> ofRun(event.run) { it.copy(gathered = event.gathered) }
             else -> Unit
         }
     }
@@ -518,6 +583,12 @@ class PipelineCoordinator(
     private fun started() {
         val opening = state.started == 0 && !state.restarting
         state = state.copy(started = state.started + 1, restarting = false, acted = state.acted && !opening)
+    }
+
+    // A return of the network, from offline to online, is counted (#192).
+    private fun network(online: Boolean) {
+        val returned = online && !state.online
+        state = state.copy(online = online, returns = state.returns + if (returned) 1 else 0)
     }
 
     private fun stopped(changingConfigurations: Boolean) {
@@ -587,6 +658,18 @@ class PipelineCoordinator(
         val playing = written?.track ?: report.nowPlaying
         state = state.copy(runs = id.value, run = CoordinatorState.Run(id, key, playing))
         effects += CoordinatorEffect.StartRun(id, playing)
+    }
+
+    // Back online (#192): the current run is replaced by one of its key and report that asks again
+    // the sources it found unreachable, and keeps what the others found.
+    private fun askAgain() {
+        if (!state.asksAgain) return
+        val run = state.current ?: return
+        cancelPreparation()
+        effects += CoordinatorEffect.CancelRun(run.id)
+        val id = RunId(state.runs + 1)
+        state = state.copy(runs = id.value, run = CoordinatorState.Run(id, run.key, run.nowPlaying, again = true))
+        effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
     }
 
     private fun rebuild() {
@@ -770,13 +853,15 @@ class PipelineCoordinator(
         val run = state.current ?: return
         if (!state.allowed) return
         run.asked.forEach { effects += CoordinatorEffect.Grant(run.id, it) }
-        var next = run.copy(asked = emptySet())
+        val lookedUp = if (RunStep.LOOKUPS in run.asked) state.returns else run.lookedUp
+        var next = run.copy(asked = emptySet(), lookedUp = lookedUp)
         val writesOn = run.insight
         if (writesOn != null) {
             val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
             val written = ledger?.written == true
-            // A rebuild's run of a key the ledger decided is not a track change (D5).
-            val decided = ledger != null && ledger.key == run.key
+            // A rebuild's run of a key the ledger decided is not a track change (D5); a run that
+            // asks again (#192) decides as the track's first run did.
+            val decided = ledger != null && ledger.key == run.key && !run.again
             // The cause of the latest report, which the run, being current, holds: the latest word
             // on how the user came to this track (a skip back to it during its run included).
             val cause = state.latest?.cause

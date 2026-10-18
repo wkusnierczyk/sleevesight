@@ -92,6 +92,7 @@
     <string name="home_source_filter">Show or hide the lines of %1$s</string>
     <string name="home_source_lines_shown">lines shown</string>
     <string name="home_source_lines_hidden">lines hidden</string>
+    <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
     <string name="home_evidence_looking">Looking…</string>
     <string name="home_evidence_empty">No source returned anything about this.</string>
     <string name="home_evidence_cited">The lines the insight cites, found when it was written.</string>

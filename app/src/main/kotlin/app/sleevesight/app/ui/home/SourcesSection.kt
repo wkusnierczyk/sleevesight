@@ -37,10 +37,12 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
 /**
@@ -52,6 +54,8 @@ import app.sleevesight.core.pipeline.TrackState
  *
  * When the insight shown is the one written earlier ([cardKept]: Rewrite is offered, or a rewrite
  * failed), the lines are those it cites, found when it was written, beside the sources' states now.
+ * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
+ * sources are asked again once it is back online.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -60,6 +64,7 @@ internal fun SourcesSection(
     chips: List<SourceChip>,
     focus: LineFocus,
     cardKept: Boolean,
+    offline: Boolean = false,
 ) {
     val hidden = focus.hidden
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -71,6 +76,7 @@ internal fun SourcesSection(
                 StatusChip(chip, filtering = filters, shown = chip.filters.none { it in hidden }) { focus.toggle(chip) }
             }
         }
+        if (offline) Small(stringResource(R.string.home_sources_offline))
         if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
         when {
             lines.isNotEmpty() -> {
@@ -87,6 +93,18 @@ internal fun SourcesSection(
         track?.let { Rejected(rejectedMatches(it)) }
     }
 }
+
+/**
+ * Whether the *Sources* section says the phone is offline (#192): while it is ([view]'s
+ * `offline`), for a [track] with a source unreachable, which is asked again once the phone is
+ * back online.
+ */
+internal fun offlineShown(
+    view: PipelineView,
+    track: TrackState?,
+): Boolean =
+    view.offline &&
+        track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
 
 @Composable
 private fun StatusChip(
