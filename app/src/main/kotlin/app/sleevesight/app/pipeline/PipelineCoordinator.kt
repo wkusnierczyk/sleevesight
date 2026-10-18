@@ -93,8 +93,9 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * *Pause automatic writing after* switched (#203): the first action expires at the [after]-th
-     * track change reported while no activity is started; null for *Off*, never.
+     * *Pause automatic writing after* switched (#203): [after] track changes reported while no
+     * activity is started are written as usual, and the first action expires at the next one; null
+     * for *Off*, never.
      */
     data class PauseAutoWriteChanged(
         val after: Int?,
@@ -300,8 +301,9 @@ sealed interface CoordinatorEffect {
  * the background, the screen turned off and on, or a configuration change keeps it. Only its
  * expiry clears it (#203): [away] counts the track changes reported while no activity is started
  * (a report of another insight track than the report before), from the last activity start or
- * action, and at the [pauseAfter]-th (*Pause automatic writing after*; null for *Off*) the first
- * action, if made, expires: [acted] false and [expired] true, until the user acts again. An
+ * action, and once it passes [pauseAfter] (*Pause automatic writing after*; null for *Off*), at
+ * the next change after that many, the first action, if made, expires: [acted] false and
+ * [expired] true, until the user acts again, and a tap kept for the run (#192) is dropped. An
  * activity start resets [away], not [expired]. [ledger] is the insight of the current insight
  * track ([Ledger]). [building] is the rebuild waiting to be swapped in, and [built] its outcome
  * once it is known. [next] is the track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
@@ -361,7 +363,12 @@ data class CoordinatorState(
      * the same settings, once one of those sources has returned lines; a run of the key asking
      * again that again finds nothing to narrate keeps it, under the same settings (else it is
      * cleared); any other decision (a Decide, a tap, a card, a rebuild's run) replaces the entry
-     * without it.
+     * without it. [paused] (#203) is the settings of a decision that offered Write, or found nothing
+     * to narrate, only because the first action had expired: a run of the key asking again under
+     * the same settings, with the latest report's cause still one they write on, says so too
+     * ([Run.lapsed]). It never decides a write. A lapsed Decide sets it; a decision for nothing to
+     * narrate sets it as [wouldWrite] is set, with the first action expired in place of made, and a
+     * run of the key asking again keeps it under the same settings; any other decision drops it.
      */
     data class Ledger(
         val track: NowPlaying,
@@ -370,6 +377,7 @@ data class CoordinatorState(
         val shown: NowPlaying = track,
         val card: Card? = null,
         val wouldWrite: WouldWrite? = null,
+        val paused: WriteSettings? = null,
     )
 
     /**
@@ -415,7 +423,8 @@ data class CoordinatorState(
      * decided and a run it replaced, itself or one before it, offered Write: a tap shown for that
      * run is kept ([tapped]), through further replacements, and answers its question as a tap.
      * [lapsed] when it offers Write only because the first action expired (#203): it would have
-     * written had the first action stood; carried to a run that asks again in its place.
+     * written had the first action stood, or it asks again for a key whose decision was paused
+     * ([Ledger.paused]) under its own settings and cause.
      */
     data class Run(
         val id: RunId,
@@ -584,8 +593,9 @@ fun sameInsightTrack(
  * track change (a report of another insight track than the report before) while no activity is
  * started counts one more away, an activity start resets the count, and at the count *Pause
  * automatic writing after* names ([CoordinatorEvent.PauseAutoWriteChanged], none for *Off*) the
- * first action, if made, expires, so that track and the ones after it offer Write until the user
- * acts again. "The first action made" (a tap, a kept tap, an action in Sleevesight) also undoes an
+ * first action, if made, expires at the next change after that many (so that many are written as
+ * usual), and that track and the ones after it offer Write until the user acts again; a tap kept
+ * for the run is dropped then, so it pays for nothing. "The first action made" (a tap, a kept tap, an action in Sleevesight) also undoes an
  * expiry and resets the count. The table gives each
  * event's own effects; asking again, the grants and the preparation follow every row.
  * "The run" is the run in progress; "an old run" is any other, cancelled or replaced. "The key" is
@@ -602,7 +612,7 @@ fun sameInsightTrack(
  * | any | BackgroundChanged(on) | background = on | none |
  * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
- * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; at the pause's count, with the first action made: the first action expired (acted false), until the user acts again; with *Off*, never | as above |
+ * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
  * | any | Settled, of another insight track than the ledger's | latest settled; the ledger emptied; then as below | as below |
  * | a run of another insight track in progress | Settled | latest settled; the run orphaned (it holds nothing, its ledger reports are ignored); then as below | as below |
@@ -627,7 +637,7 @@ fun sameInsightTrack(
  * | the run, not orphaned | CardShown(card or none) | the ledger written, under the run's key, unless written already; the card only if the ledger has none; a kept tap dropped | none |
  * | the run, not orphaned | CardWritten(card) | the ledger's card replaced (the ledger written already, when the call was granted); a kept tap dropped | none |
  * | the run, orphaned (a report of another insight track settled while it ran) | CardShown, CardWritten, DecidedWithoutCall | unchanged | none |
- * | the run, not orphaned | DecidedWithoutCall(nothing to narrate?) | the ledger decided (not written), under the run's key, unless written already; would-write with the run's settings only when for nothing to narrate, the key's first decision, by the current run, and the grant's check would have written; kept, under the same settings, by a run of the key asking again; else none; a kept tap dropped | none |
+ * | the run, not orphaned | DecidedWithoutCall(nothing to narrate?) | the ledger decided (not written), under the run's key, unless written already; would-write with the run's settings only when for nothing to narrate, the key's first decision, by the current run, and the grant's check would have written; kept, under the same settings, by a run of the key asking again; else none; paused (#203) likewise, with the first action expired in place of made; a kept tap dropped | none |
  * | an old run | StepRequested, InsightAsked, StepEnded, RunEnded, CardShown, CardWritten, DecidedWithoutCall, RetryAsked | unchanged | none |
  * | any | NextChanged(next) | next = it; a preparation of another track cancelled | CancelPreparation (if one is cancelled) |
  * | the preparation | StepRequested(step) | the step waiting (granted once the preparation may run; a model call never) | none |
@@ -713,12 +723,14 @@ class PipelineCoordinator(
         state = state.copy(acted = true, expired = false, away = 0)
     }
 
-    // A track change reported while no activity is started (#203): one more away, and at the
-    // count *Pause automatic writing after* names, the first action, if made, expires.
+    // A track change reported while no activity is started (#203): one more away, and past the
+    // count *Pause automatic writing after* names, the first action, if made, expires. A tap kept
+    // for the run (#192) goes with it: it was made before, and must not pay after.
     private fun counted() {
         val away = state.away + 1
-        val expires = state.acted && state.pauseAfter?.let { away >= it } == true
+        val expires = state.acted && state.pauseAfter?.let { away > it } == true
         state = state.copy(away = away, acted = state.acted && !expires, expired = state.expired || expires)
+        if (expires) state = state.copy(run = state.run?.copy(keepsTap = false, tapped = false))
     }
 
     // A return of the network, from offline to online, is counted (#192).
@@ -815,7 +827,6 @@ class PipelineCoordinator(
                 again = true,
                 keepsTap = run.offered || run.keepsTap,
                 tapped = run.keepsTap && run.tapped,
-                lapsed = run.lapsed,
             )
         state = state.copy(runs = id.value, run = replacement)
         effects += CoordinatorEffect.StartRun(id, run.nowPlaying, again = run.gathered)
@@ -1005,10 +1016,11 @@ class PipelineCoordinator(
         val recorded = entry(run, written)
         val kept = if (card != null && (replaces || recorded.card == null)) card else recorded.card
         val would = nothingToNarrate?.let { wouldWrite(run, before, recorded, it) }
+        val paused = nothingToNarrate?.let { pausedFor(run, before, recorded, it) }
         // The run has decided: a tap kept for it has nothing left to answer.
         state =
             state.copy(
-                ledger = recorded.copy(card = kept, wouldWrite = would),
+                ledger = recorded.copy(card = kept, wouldWrite = would, paused = paused),
                 run = run.copy(keepsTap = false, tapped = false),
             )
     }
@@ -1034,6 +1046,25 @@ class PipelineCoordinator(
         }
     }
 
+    // What a decision with no call for nothing to narrate, under [settings], leaves for the line
+    // saying why Write is offered (#203): as [wouldWrite], with the first action expired in place
+    // of made. Never a write.
+    private fun pausedFor(
+        run: CoordinatorState.Run,
+        before: CoordinatorState.Ledger?,
+        recorded: CoordinatorState.Ledger,
+        settings: WriteSettings,
+    ): WriteSettings? {
+        val cause = state.latest?.cause
+        val first = before == null || before.key != run.key
+        val blocked = cause != null && cause in settings.writesOn && state.expired && state.current?.id == run.id
+        return when {
+            recorded.written -> null
+            first -> settings.takeIf { blocked }
+            else -> before?.paused?.takeIf { run.again && it == settings }
+        }
+    }
+
     // The ledger after [run] decided, [written] or not: an entry written stays as it is, under
     // the key its card was written under; else it is the run's.
     private fun entry(
@@ -1056,8 +1087,7 @@ class PipelineCoordinator(
         val writesOn = run.insight
         if (writesOn != null) {
             val write = writes(run, writesOn, state.acted)
-            // Write offered only because the first action expired (#203): it would have written.
-            val lapsed = !write && state.expired && (run.lapsed || writes(run, writesOn, acted = true))
+            val lapsed = !write && lapsed(run, writesOn)
             // For a written track, the question comes only when its card is not found (a rebuild
             // changed the card's key): Write is offered beside the card paid for, to rewrite it.
             next =
@@ -1070,10 +1100,31 @@ class PipelineCoordinator(
                     tapped = false,
                     lapsed = lapsed,
                 )
-            state = state.copy(ledger = entry(run, write))
+            val decided = entry(run, write)
+            val settings = WriteSettings(writesOn, run.allowModel)
+            state = state.copy(ledger = if (lapsed) decided.copy(paused = settings) else decided)
             effects += CoordinatorEffect.Decide(run.id, write)
         }
         state = state.copy(run = next)
+    }
+
+    // Whether Write is offered for [run] only because the first action expired (#203): it would
+    // have written had the first action stood, or it asks again for a key whose decision was
+    // paused under the same settings, the latest report's cause still one they write on. Read
+    // under the run's own settings, so a mode changed since does not show it.
+    private fun lapsed(
+        run: CoordinatorState.Run,
+        writesOn: Set<ChangeCause>,
+    ): Boolean {
+        if (!state.expired) return false
+        val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
+        val cause = state.latest?.cause
+        val carried =
+            run.again &&
+                ledger?.key == run.key &&
+                ledger.paused == WriteSettings(writesOn, run.allowModel) &&
+                cause in writesOn
+        return carried || writes(run, writesOn, acted = true)
     }
 
     // The answer to [run]'s question whether to write, under the causes its settings write on,

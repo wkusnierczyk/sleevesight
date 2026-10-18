@@ -24,8 +24,9 @@ import kotlin.time.Duration.Companion.seconds
  *   which also needs the source on under *Where to look*. See [DEFAULT_LABEL_SOURCES].
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
  * @property pauseAutoWriteAfter *Pause automatic writing after* (#203): the track changes reported
- *   while Sleevesight is not on screen after which the user's first action expires, so nothing more
- *   is written without a new tap; null is *Off*, and the first action lasts as long as the process.
+ *   while Sleevesight is not on screen that are written as usual; at the next, the user's first
+ *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
+ *   action lasts as long as the process.
  *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
@@ -193,8 +194,9 @@ data class Settings(
          * up in the background* on, for every track played; with it off, for the track playing
          * whenever the app comes back. Five tracks (some 15 to 20 minutes of listening) let
          * writing go on through a short absence, someone controlling playback from the player or
-         * a lock screen for a while, and bound what one forgotten tap costs to four unattended
-         * calls. The choices offered are [PAUSE_AUTO_WRITE_CHOICES], and *Off*.
+         * a lock screen for a while, and bound what one forgotten tap costs to five unattended
+         * calls: five tracks are written while away, and the sixth waits for a tap. The choices
+         * offered are [PAUSE_AUTO_WRITE_CHOICES], and *Off*.
          */
         const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
 

@@ -3,40 +3,27 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.core.pipeline.ChangeCause.USER_ACTION
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Automatic writing expires when the app is unattended (#203), through [PipelineCoordinator]: the
  * track changes reported while no activity is started are counted, an activity start resets the
- * count, and at the count *Pause automatic writing after* names the first action expires, so
- * nothing more is written without a new tap. *Off* never expires it.
+ * count, and with *Pause automatic writing after* at n, n changes away are written as usual and the
+ * first action expires at the next, so nothing more is written without a new tap. *Off* never
+ * expires it.
  */
 class PipelineCoordinatorPauseTest {
     private val cases =
         listOf(
             Case(
-                "background on, 3 tracks away: the first two are written, the third offers Write",
-                mapOf("Zero" to 1, "A" to 1, "B" to 1),
-                listOf("Zero", "A", "B", "C", "D"),
-                "D",
-            ) {
-                pause(3)
-                acted()
-                background(true)
-                hide()
-                for (title in listOf("A", "B", "C", "D")) {
-                    play(title)
-                    settle()
-                }
-            },
-            Case(
-                "the default, 5 tracks away: four are written, the fifth offers Write",
-                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1, "D" to 1),
+                "background on, 3: three tracks away are written, the fourth offers Write",
+                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1),
                 listOf("Zero", "A", "B", "C", "D", "E"),
                 "E",
             ) {
-                pause(5)
+                pause(3)
                 acted()
                 background(true)
                 hide()
@@ -46,7 +33,22 @@ class PipelineCoordinatorPauseTest {
                 }
             },
             Case(
-                "background off, a return after 3 or more tracks away waits for a tap",
+                "the default, 5: five tracks away are written, the sixth offers Write",
+                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1, "D" to 1, "E" to 1),
+                listOf("Zero", "A", "B", "C", "D", "E", "F"),
+                "F",
+            ) {
+                pause(5)
+                acted()
+                background(true)
+                hide()
+                for (title in listOf("A", "B", "C", "D", "E", "F")) {
+                    play(title)
+                    settle()
+                }
+            },
+            Case(
+                "background off, a return after 4 changes away (3 + 1) waits for a tap",
                 mapOf("Zero" to 1),
                 listOf("Zero", "D"),
                 "D",
@@ -62,10 +64,9 @@ class PipelineCoordinatorPauseTest {
                 settle()
             },
             Case(
-                "background off, a return after exactly 3 tracks away waits for a tap",
-                mapOf("Zero" to 1),
+                "background off, a return after exactly 3 changes away keeps the first action",
+                mapOf("Zero" to 1, "C" to 1),
                 listOf("Zero", "C"),
-                "C",
             ) {
                 pause(3)
                 acted()
@@ -78,7 +79,7 @@ class PipelineCoordinatorPauseTest {
                 settle()
             },
             Case(
-                "background off, a return before 3 tracks away keeps the first action",
+                "background off, a return before 3 changes away keeps the first action",
                 mapOf("Zero" to 1, "B" to 1),
                 listOf("Zero", "B"),
             ) {
@@ -108,29 +109,27 @@ class PipelineCoordinatorPauseTest {
             },
             Case(
                 "a tap after the pause writes, and automatic writing goes on, counted afresh",
-                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1),
-                listOf("Zero", "A", "B", "C", "D", "E"),
-                "E",
+                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1, "D" to 1, "E" to 1),
+                listOf("Zero", "A", "B", "C", "D", "E", "F"),
+                "F",
             ) {
                 pause(2)
                 acted()
                 background(true)
                 hide()
-                play("A")
-                settle()
-                play("B")
-                settle()
-                // Back, and a tap on the Write B offers: written, and the first action made again.
+                for (title in listOf("A", "B", "C")) {
+                    play(title)
+                    settle()
+                }
+                // Back, and a tap on the Write C offers: written, and the first action made again.
                 show()
                 tap()
                 settle()
                 hide()
-                play("C")
-                settle()
-                play("D")
-                settle()
-                play("E")
-                settle()
+                for (title in listOf("D", "E", "F")) {
+                    play(title)
+                    settle()
+                }
             },
             Case(
                 "the count does not run while the app is on screen",
@@ -146,23 +145,23 @@ class PipelineCoordinatorPauseTest {
             },
             Case(
                 "a return to the app starts the count again",
-                mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1, "D" to 1),
-                listOf("Zero", "A", "B", "C", "D"),
+                (listOf("Zero", "A", "B", "C", "D", "E", "F")).associateWith { 1 },
+                listOf("Zero", "A", "B", "C", "D", "E", "F"),
             ) {
                 pause(3)
                 acted()
                 background(true)
                 hide()
-                play("A")
-                settle()
-                play("B")
-                settle()
+                for (title in listOf("A", "B", "C")) {
+                    play(title)
+                    settle()
+                }
                 show()
                 hide()
-                play("C")
-                settle()
-                play("D")
-                settle()
+                for (title in listOf("D", "E", "F")) {
+                    play(title)
+                    settle()
+                }
             },
             Case(
                 "a new length of the playing track is no track change",
@@ -170,7 +169,7 @@ class PipelineCoordinatorPauseTest {
                 listOf("Zero", "A", "B"),
                 "B",
             ) {
-                pause(2)
+                pause(1)
                 acted()
                 background(true)
                 hide()
@@ -182,14 +181,15 @@ class PipelineCoordinatorPauseTest {
                 settle()
             },
             Case(
-                "a track reported while a configuration change restarts the activity is not away",
-                mapOf("Zero" to 1, "A" to 1),
-                listOf("Zero", "A"),
+                "tracks reported while a configuration change restarts the activity are not away",
+                mapOf("Zero" to 1, "B" to 1),
+                listOf("Zero", "B"),
             ) {
                 pause(1)
                 acted()
                 send(CoordinatorEvent.ActivityStopped(changingConfigurations = true))
                 play("A")
+                play("B")
                 show()
                 settle()
             },
@@ -198,7 +198,7 @@ class PipelineCoordinatorPauseTest {
                 mapOf("Zero" to 1, "A" to 1, "B" to 1, "C" to 1),
                 listOf("Zero", "A", "B", "C"),
             ) {
-                pause(2)
+                pause(1)
                 acted()
                 background(true)
                 hide()
@@ -217,7 +217,7 @@ class PipelineCoordinatorPauseTest {
     @Test
     fun theHomeScreenIsToldWhyWriteIsOffered() {
         val world = started()
-        world.pause(2)
+        world.pause(1)
         world.acted()
         world.background(true)
         world.hide()
@@ -246,9 +246,11 @@ class PipelineCoordinatorPauseTest {
         fresh.pause(1)
         fresh.background(true)
         fresh.hide()
-        fresh.play("A")
-        fresh.settle()
-        assertTrue("A offers Write", fresh.offersWriteFor("A"))
+        for (title in listOf("A", "B")) {
+            fresh.play(title)
+            fresh.settle()
+        }
+        assertTrue("B offers Write", fresh.offersWriteFor("B"))
         assertFalse("before any action, nothing expired", fresh.coordinator.state.expired)
         assertFalse("before any action, not lapsed", fresh.coordinator.state.lapsed)
 
@@ -259,19 +261,22 @@ class PipelineCoordinatorPauseTest {
         never.acted()
         never.background(true)
         never.hide()
-        never.play("A")
-        never.settle()
-        assertTrue("A offers Write", never.offersWriteFor("A"))
+        for (title in listOf("A", "B")) {
+            never.play(title)
+            never.settle()
+        }
+        assertTrue("B offers Write", never.offersWriteFor("B"))
         assertTrue("the first action expired", never.coordinator.state.expired)
         assertFalse("but Write is offered under Never anyway", never.coordinator.state.lapsed)
     }
 
     @Test
-    fun anExpiredFirstActionMeansTheRunAskingAgainOffersWrite() {
-        // Offline at the pause: the track decided for nothing to narrate, with no first action,
-        // so back online its run asking again offers Write (#192).
+    fun offlineAtThePauseTheRunAskingAgainOffersWriteAndSaysWhy() {
+        // Offline at the pause: B decided for nothing to narrate with the first action expired, so
+        // it would not have written (no would-write), only because of the expiry (paused). Back
+        // online its run asking again offers Write (#192), and the view says why.
         val world = started()
-        world.pause(2)
+        world.pause(1)
         world.acted()
         world.background(true)
         world.hide()
@@ -280,16 +285,15 @@ class PipelineCoordinatorPauseTest {
         world.network(online = false)
         world.play("B")
         world.settle()
-        assertEquals(
-            null,
-            world.coordinator.state.ledger
-                ?.wouldWrite,
-        )
+        val ledger = world.coordinator.state.ledger
+        assertNull(ledger?.wouldWrite)
+        assertTrue("paused", ledger?.paused != null)
         world.network(online = true)
         world.settle()
         assertEquals(listOf("B"), world.askedAgain)
         assertEquals(mapOf("Zero" to 1, "A" to 1), world.calls)
         assertTrue("B offers Write", world.offersWriteFor("B"))
+        assertTrue("because the first action expired", world.coordinator.state.lapsed)
     }
 
     @Test
@@ -298,7 +302,7 @@ class PipelineCoordinatorPauseTest {
         // written. A skip away and back expires the first action before B settles again, so back
         // online its run asking again offers Write, and says why.
         val world = started()
-        world.pause(3)
+        world.pause(2)
         world.acted()
         world.background(true)
         world.hide()
@@ -323,6 +327,77 @@ class PipelineCoordinatorPauseTest {
         assertEquals(mapOf("Zero" to 1, "A" to 1), world.calls)
         assertTrue("B offers Write", world.offersWriteFor("B"))
         assertTrue("because the first action expired", world.coordinator.state.lapsed)
+    }
+
+    @Test
+    fun theReasonForAPausedWriteIsReadUnderTheSettingsOfTheRunAskingAgain() {
+        // B, offline, finds something and offers Write only because the first action expired. Back
+        // on screen, the mode is set to Never, then the network returns: the run asking again offers
+        // Write because of Never, so the view does not say the pause is why. Under the same mode it
+        // does.
+        for (never in listOf(false, true)) {
+            val world = started()
+            world.pause(1)
+            world.acted()
+            world.background(true)
+            world.hide()
+            world.play("A")
+            world.settle()
+            world.offlineFinds = true
+            world.network(online = false)
+            world.play("B")
+            world.settle()
+            assertTrue("B offers Write", world.offersWriteFor("B"))
+            assertTrue("because of the pause", world.coordinator.state.lapsed)
+            world.show()
+            if (never) world.writesOn = emptySet()
+            world.network(online = true)
+            world.settle()
+            assertEquals(listOf("B"), world.askedAgain)
+            assertEquals(mapOf("Zero" to 1, "A" to 1), world.calls)
+            assertTrue("B offers Write again, never = $never", world.offersWriteFor("B"))
+            assertEquals("lapsed, never = $never", !never, world.coordinator.state.lapsed)
+        }
+    }
+
+    @Test
+    fun aTapKeptForARunAskingAgainIsDroppedWhenTheFirstActionExpires() {
+        // A, offline before any action, offers Write; back online its run asks again, slowly, and a
+        // tap shown for A is kept for it (#192). The app is left, and six tracks are skipped
+        // through and back to A before its evidence arrives: the first action expired at the
+        // sixth, and the kept tap with it, so A offers Write and nothing is paid. With the pause
+        // off, the kept tap writes A, as before.
+        for (after in listOf(5, null)) {
+            val world = started()
+            world.pause(after)
+            world.offlineFinds = true
+            world.network(online = false)
+            world.play("A")
+            world.settle()
+            assertTrue("A offers Write", world.offersWriteFor("A"))
+            world.lookupMs = 5_000
+            world.network(online = true)
+            world.tap(world.key("A"))
+            assertTrue(
+                "the tap kept",
+                world.coordinator.state.run
+                    ?.tapped == true,
+            )
+            world.background(true)
+            world.hide()
+            for (title in listOf("B", "C", "D", "E", "F", "A")) {
+                world.play(title)
+                world.advance(400)
+            }
+            world.settle()
+            assertEquals(listOf("A"), world.askedAgain)
+            if (after == null) {
+                assertEquals(mapOf("A" to 1), world.calls)
+            } else {
+                assertEquals(emptyMap<String, Int>(), world.calls)
+                assertTrue("A offers Write", world.offersWriteFor("A"))
+            }
+        }
     }
 
     private companion object {

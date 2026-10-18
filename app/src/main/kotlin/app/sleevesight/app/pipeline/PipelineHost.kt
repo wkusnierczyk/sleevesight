@@ -82,8 +82,8 @@ import kotlin.coroutines.cancellation.CancellationException
  *   ([CoordinatorState.online], #192): its unreachable sources stay so until it is back online,
  *   and the playing track's are then asked again.
  * @property lapsed whether the Write offered is offered only because automatic writing paused
- *   ([CoordinatorState.lapsed], #203): the app was not on screen for the track changes *Pause
- *   automatic writing after* names, so the first action expired, and a tap resumes it.
+ *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
+ *   *Pause automatic writing after* names, so the first action expired, and a tap resumes it.
  */
 data class PipelineView(
     val track: TrackState? = null,

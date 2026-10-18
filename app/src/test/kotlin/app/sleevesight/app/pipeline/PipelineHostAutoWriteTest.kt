@@ -66,13 +66,14 @@ internal class PipelineHostAutoWriteTest : PipelineHostFixture() {
     @Test
     fun `automatic writing pauses after the track changes away the setting names, and the view says why`() =
         runTest {
-            settings.value = settings.value.copy(pauseAutoWriteAfter = 2, lookUpInBackground = true)
+            settings.value = settings.value.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true)
             actedThenAway()
             play("Two")
             settle()
             assertEquals(1, provider.requestsFor("Two"))
             assertFalse("written, not offered", host.state.value.lapsed)
 
+            // The second change away: past the pause.
             play("Three")
             settle()
             assertEquals(0, provider.requestsFor("Three"))

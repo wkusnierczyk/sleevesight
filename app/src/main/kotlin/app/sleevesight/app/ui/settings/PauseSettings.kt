@@ -5,10 +5,12 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 
 /**
  * *Pause automatic writing after* (#203): *Off*, or a number of track changes while Sleevesight is
- * not on screen; a value stored that is not among the choices is offered too.
+ * not on screen; a value stored that is not among the choices is offered too. Fixed while nothing
+ * is written automatically (*Write insights* off, or *Write insights automatically* under *Never*).
  */
 @Composable
 internal fun PauseAutoWriteRow(
@@ -32,7 +34,7 @@ internal fun PauseAutoWriteRow(
                         update { it.copy(pauseAutoWriteAfter = n) }
                     },
                 )
-            }.takeIf { settings.writeInsights },
+            }.takeIf { settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER },
     )
 }
 
