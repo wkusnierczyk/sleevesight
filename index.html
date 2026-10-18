@@ -17,7 +17,8 @@ layout: null
 <meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key. Nothing collected.">
 <meta property="og:url" content="https://sleevesight.app/">
 <meta name="twitter:card" content="summary">
-<!-- The landing page: no theme, no web fonts, no analytics, and one short script, for the header.
+<!-- The landing page: no theme, no web fonts, no analytics, and short scripts, for the header and the
+     intro. The one thing it keeps in the browser is a note that the intro has played (`localStorage`).
      The palette is the simulator's (`design/simulator.html`), so the page and the app share one look. -->
 <style>
 :root{
@@ -158,8 +159,16 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .links span{display:block;font-size:15px;color:var(--muted)}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:14px;color:var(--muted)}
 footer p{margin:0 0 4px}
+.replay button{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.replay button:hover{text-decoration-thickness:2px}
+.replay button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
 
-/* The intro (`.sl-intro`, set by the script when motion is allowed and the address names no section).
+/* The intro (`.sl-intro`), on a first visit: set by the scripts when motion is allowed, the address
+   names no section, and the browser holds no note that the intro has played (`sl-intro-played` in
+   `localStorage`). The note is written as the intro starts, so a reload part way through skips it;
+   where storage is blocked, the intro plays on every visit, as it did before the note. The footer's
+   "Play the intro again" (`.replay`, shown by the script, and not under "reduce motion") plays it
+   once more in place.
    First the logo alone plays large in the middle of the window (`.splash`): a record slides out of
    its sleeve, the eye forms around it, blinks, the record turns twice, the eye blinks again, and the
    sleeve comes back as the eye fades. (Considered: the sleeve leaving the window altogether before it
@@ -230,7 +239,12 @@ footer p{margin:0 0 4px}
 </style>
 <script>
 document.documentElement.classList.add('js');
-if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matches) document.documentElement.classList.add('sl-wait');
+// Set before the first paint, so that a later visit, which skips the intro, never shows the page hidden.
+(function () {
+  if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  try { if (localStorage.getItem('sl-intro-played')) return; } catch (e) {}
+  document.documentElement.classList.add('sl-wait');
+})();
 </script>
 </head>
 <body>
@@ -363,7 +377,8 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
 
 <footer>
   <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
-  <p>This site sets no cookies and loads nothing from anywhere else.</p>
+  <p>This site sets no cookies and loads nothing from anywhere else. The one thing it keeps in your browser is a note that the intro has played.</p>
+  <p class="replay" hidden><button type="button">Play the intro again</button></p>
 </footer>
 </div>
 <script>
@@ -389,7 +404,16 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
   addEventListener('resize', measure);
   addEventListener('scroll', onScroll, {passive: true});
 
-  if (root.classList.contains('sl-wait')) {
+  // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
+  // key (a screen reader's cursor), so either ends the intro too.
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'];
+  function end() {
+    root.classList.remove('sl-intro');
+    stops.forEach(function (e) { removeEventListener(e, end); });
+  }
+  function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
+  brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-blink') end(); });
+  function intro() {
     // The splash starts in the middle of the window and shrinks onto the header's logo. In logo units
     // (32 across, the eye's centre at 16), the sleeve waits to the left of the eye, `wait` units from
     // where it started: 42.2 as in the animated logo, less if that would take it out of the window, but
@@ -406,19 +430,35 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
     root.style.setProperty('--fx', logo.left - x + 'px');
     root.style.setProperty('--fy', logo.top - y + 'px');
     root.style.setProperty('--fs', logo.width / big);
-    root.classList.replace('sl-wait', 'sl-intro');
-    // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
-    // key (a screen reader's cursor), so either ends the intro too.
-    var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'];
-    var end = function () {
-      root.classList.remove('sl-intro');
-      stops.forEach(function (e) { removeEventListener(e, end); });
-    };
-    stops.forEach(function (e) { addEventListener(e, end, {passive: true}); });
-    brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-blink') end(); });
+    root.classList.remove('sl-wait');
+    root.classList.add('sl-intro');
+    try { localStorage.setItem('sl-intro-played', '1'); } catch (e) {}
+  }
+  if (root.classList.contains('sl-wait')) {
+    intro();
+    listen();
   }
 
-  var still = matchMedia('(prefers-reduced-motion: reduce)');
+  // The replay: back to the top, with the header large, at once, so the splash flies to where the
+  // logo will be; then the intro as on a first visit. Taking the class off and reading the layout
+  // before putting it back restarts the animations. The stops listen from the next frame on, after
+  // the scroll event of the jump to the top, which would otherwise end the intro at once.
+  var replay = document.querySelector('.replay'), still = matchMedia('(prefers-reduced-motion: reduce)');
+  function offer() { replay.hidden = still.matches; }
+  offer();
+  if (still.addEventListener) still.addEventListener('change', offer);
+  replay.querySelector('button').addEventListener('click', function () {
+    if (still.matches) return;
+    end();
+    scrollTo(0, 0);
+    root.classList.add('sl-still');
+    root.classList.remove('sl-compact');
+    void bar.offsetHeight;
+    root.classList.remove('sl-still');
+    intro();
+    requestAnimationFrame(listen);
+  });
+
   function play() {
     if (still.matches || root.classList.contains('sl-intro')) return;
     brand.classList.add('play');
