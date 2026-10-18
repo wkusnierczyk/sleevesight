@@ -34,8 +34,8 @@ object ResolutionThresholds {
  * recording on MusicBrainz, its first release, each credited artist's MusicBrainz id, and whether
  * it is a cover. Deterministic: the same answers from MusicBrainz give the same [Resolution].
  *
- * [resolve] never throws, apart from cancellation: a failed lookup is [Resolution.UNREACHABLE], so
- * the pipeline can complete the adapters' `Deferred<Resolution>` normally.
+ * [resolve] never throws, apart from cancellation: a failed lookup is [Resolution.unreachable], with
+ * the lookup's reason, so the pipeline can complete the adapters' `Deferred<Resolution>` normally.
  */
 class RecordingResolver(
     private val musicBrainz: MusicBrainzLookup,
@@ -56,7 +56,7 @@ class RecordingResolver(
             }
         return when (search) {
             null, is Lookup.NotFound -> Resolution.NONE
-            is Lookup.Failed -> Resolution.UNREACHABLE
+            is Lookup.Failed -> Resolution.unreachable(search.reason)
             is Lookup.Found -> choose(track, duration, search.value)
         }
     }
@@ -70,7 +70,7 @@ class RecordingResolver(
         val leaders = Leaders(musicBrainz, names)
         val confirmed =
             leaders.confirm(searched.filter { it.titleMatches && it.durationMatches && it.led.isNotEmpty() })
-                ?: return Resolution.UNREACHABLE
+                ?: return Resolution.unreachable(checkNotNull(leaders.failure))
         val candidates = searched.map { it.identified(confirmed) }
         // Every candidate whose title and length fit and that names one of the track's artists, by
         // name or as a band's leader, confirmed or not: the same-name check weighs them all.
@@ -355,6 +355,10 @@ class RecordingResolver(
         /** The recordings fetched, so the chosen one is not fetched twice. */
         val details: MutableMap<String, MbRecordingDetail> = mutableMapOf()
 
+        /** The reason of the lookup that made [confirm] return null. */
+        var failure: String? = null
+            private set
+
         /**
          * For each (artist, band id) of [candidates]' band credits, every id of a performer of the
          * artist's name on up to [TRIES] of the band's recordings, chosen as above: none when
@@ -378,7 +382,10 @@ class RecordingResolver(
                         when (val detail = detail(candidate.recording.mbid)) {
                             is Lookup.Found -> detail.value.artistRelations
                             is Lookup.NotFound -> emptyList()
-                            is Lookup.Failed -> return null
+                            is Lookup.Failed -> {
+                                failure = detail.reason
+                                return null
+                            }
                         }
                     leaders +=
                         relations

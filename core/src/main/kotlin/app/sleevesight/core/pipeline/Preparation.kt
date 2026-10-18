@@ -2,6 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NormalizedTrack
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
@@ -11,7 +12,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Preparing the next track ahead, *Evidence* (D13; `design/architecture.md`, *Preparing the next
@@ -31,7 +35,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * reads (its evidence lacks the album's line), so the track would be paid for twice (#172: Spotify's
  * queue items carry neither album nor length). Nothing is prepared with MusicBrainz switched off:
  * its lookup is what is slow.
- * Each step that sends requests starts once [control] grants it, as a run's do.
+ * Each step that sends requests starts once [control] grants it, as a run's do. A resolution that
+ * ends unreachable is tried once more, [RETRY_WAIT] later, within the same granted lookups step
+ * (#191); a new run cancels the preparation, waiting or not.
  */
 internal class Preparation(
     private val parts: PipelineParts,
@@ -78,13 +84,20 @@ internal class Preparation(
         }
     }
 
-    // By name only: a queue item has no length. Null if the resolver failed (a bug: it maps its
-    // failures to outcomes).
+    // By name only: a queue item has no length. Unreachable, it is tried once more after
+    // [RETRY_WAIT]. Null if the resolver failed (a bug: it maps its failures to outcomes).
     private suspend fun resolve(): Resolution? {
+        val first = resolveOnce(again = false)
+        if (first?.outcome != Outcome.Unreachable) return first
+        delay(RETRY_WAIT)
+        return resolveOnce(again = true)
+    }
+
+    private suspend fun resolveOnce(again: Boolean): Resolution? {
         val started = time.timeSource.markNow()
         return try {
             parts.resolver.resolve(track, null).also {
-                onEvent(PipelineEvent.Prepared(key, it.outcome, started.elapsedNow()))
+                onEvent(PipelineEvent.Prepared(key, it.outcome, started.elapsedNow(), it.failure, again))
             }
         } catch (e: CancellationException) {
             throw e
@@ -111,4 +124,17 @@ internal class Preparation(
             onEvent(PipelineEvent.SourceFailed(key, adapter.id, TrackRun.nameOf(e)))
             null
         }
+
+    companion object {
+        /**
+         * How long a preparation whose resolution ended unreachable waits before its one more try
+         * (#191). MusicBrainz can refuse requests (503) for a moment when the pool it shares among
+         * its clients runs out, however slowly one client sends, and the client's own retries end
+         * within about 2 s at its one request a second; a while later, it answers again. A
+         * preparation runs minutes before its track plays, and the user never waits for it, so it
+         * can wait this long, and one more try bounds what it sends. A constant, not a setting:
+         * nothing in it is the user's to choose.
+         */
+        val RETRY_WAIT: Duration = 15.seconds
+    }
 }

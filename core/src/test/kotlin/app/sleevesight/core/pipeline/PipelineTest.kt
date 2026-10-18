@@ -232,7 +232,7 @@ class PipelineTest {
     fun `a result verified against a resolution that could not be made is not cached`() =
         runTest {
             val cache = MemoryCache()
-            val unreachable = FakeResolver(resolution = Resolution.UNREACHABLE)
+            val unreachable = FakeResolver(resolution = Resolution.unreachable("Offline"))
             val pipeline = pipeline(listOf(wikipedia()), unreachable, cache = cache)
             val events = recording(pipeline)
 
