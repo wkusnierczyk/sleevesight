@@ -408,11 +408,12 @@ document.documentElement.classList.add('js');
   // key (a screen reader's cursor), so either ends the intro too.
   var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'], back = false;
   // A replay started from the keyboard leaves focus on its button at the foot of the page, out of view
-  // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`). The focus
-  // comes before the class goes, so it does not blink the logo again.
+  // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`), unless it
+  // has already moved elsewhere (a screen reader's cursor). The focus comes before the class goes, so
+  // it does not blink the logo again.
   function end() {
     stops.forEach(function (e) { removeEventListener(e, end); });
-    if (back) { back = false; brand.focus({preventScroll: true}); }
+    if (back) { back = false; if (document.activeElement === again) brand.focus({preventScroll: true}); }
     root.classList.remove('sl-intro');
   }
   function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
@@ -449,11 +450,12 @@ document.documentElement.classList.add('js');
   // the scroll event of the jump to the top, which would otherwise end the intro at once. It is offered
   // on the same condition as the first visit's intro (`no-preference`, not "not `reduce`"), so a browser
   // that knows neither value offers neither.
-  var replay = document.querySelector('.replay'), moving = matchMedia('(prefers-reduced-motion: no-preference)');
+  var replay = document.querySelector('.replay'), again = replay.querySelector('button'),
+      moving = matchMedia('(prefers-reduced-motion: no-preference)');
   function offer() { replay.hidden = !moving.matches; }
   offer();
   if (moving.addEventListener) moving.addEventListener('change', offer);
-  replay.querySelector('button').addEventListener('click', function (e) {
+  again.addEventListener('click', function (e) {
     if (!moving.matches) return;
     end();
     back = e.detail === 0;
