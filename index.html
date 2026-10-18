@@ -149,7 +149,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .boxes.pair{margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .boxes .langs{margin:0 0 8px;font-weight:600}
 .boxes .ask{margin:0 0 8px;color:var(--s-onv)}
-.boxes .who{margin-right:6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.boxes .note{margin-top:8px;font-size:13px;color:var(--s-onv)}
+.boxes .who{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
 .legend{margin:14px 0 0;font-size:14px;color:var(--muted)}
 .legend .cite{margin:0 4px 0 0}
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
@@ -319,15 +320,15 @@ document.documentElement.classList.add('js');
 
 <section id="next" aria-labelledby="next-h">
   <h2 id="next-h">Planned: coming next</h2>
-  <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way. It also lets you ask follow-up questions about what is playing, answered by your AI service on your own key, and export the tracks you listened to, with their insights, to a file. And it shows the languages a song is sung in, or none for an instrumental, and the song's insight says more when the sources do.</p>
+  <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way. It also lets you ask follow-up questions about what is playing, answered by your AI service on your own key, and export the tracks you listened to, with their insights, to a file. And it shows the languages a song is sung in, or none for an instrumental.</p>
   <ul class="boxes">
     <li><h3>Song</h3><p class="what">Sundown</p><p>Written by Lightfoot and produced by Lenny Waronker, it was recorded in November 1973 at Eastern Sound in Toronto, with Red Shea on electric lead guitar.<span class="cite W">W1</span><span class="cite W">W2</span> It was certified Gold by the RIAA.<span class="cite W">W4</span></p></li>
     <li><h3>Artist</h3><p class="what">Gordon Lightfoot</p><p>A Canadian singer-songwriter, born in Orillia, Ontario, in 1938, who died in 2023.<span class="cite L">L1</span> His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers and loneliness.<span class="cite L">L3</span></p></li>
     <li><h3>Album</h3><p class="what">Sundown, 1974</p><p>His ninth studio album, released in January 1974, with the title track as its lead single.<span class="cite G">G1</span> It reached number one in the US and in Canada, where it stayed at the top for five weeks.<span class="cite G">G2</span></p></li>
   </ul>
   <ul class="boxes pair">
-    <li><h3>Lyrics</h3><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite M">M1</span></p><p>Paul McCartney sings it in English, with some lines in French. The French words came from Jan Vaughan, a French teacher and the wife of his school friend Ivan Vaughan.<span class="cite W">W1</span></p></li>
-    <li><h3>Follow-up</h3><p class="what">Gordon Lightfoot</p><p class="ask"><span class="who">You</span>Tell me more about his career.</p><p><span class="who">AI</span>Before his own records, he studied orchestration at Westlake College of Music in Los Angeles, then sang and danced on CBC television's <i>Country Hoedown</i>. In the mid-1960s Ian &amp; Sylvia and Peter, Paul and Mary recorded his songs, and in 1970 "If You Could Read My Mind" became his first hit in the US.</p></li>
+    <li><h3>Lyrics language</h3><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite M">M1</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="cite W">W1</span> The French words came from Jan Vaughan, a French teacher and the wife of his school friend Ivan Vaughan.<span class="cite W">W1</span></p></li>
+    <li><h3>Follow-up</h3><p class="what">Gordon Lightfoot</p><p class="ask"><span class="who">You:</span> Tell me more about his career.</p><p><span class="who">AI:</span> Before his own records, he studied orchestration at Westlake College of Music in Los Angeles, then sang and danced on CBC television's <i>Country Hoedown</i>. In the mid-1960s Ian &amp; Sylvia and Peter, Paul and Mary recorded his songs, and his 1970 single "If You Could Read My Mind" became his first US hit.</p><p class="note">Whether answers are cited and checked like insights is still to be decided.</p></li>
   </ul>
   <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search · <span class="cite M">M</span>MusicBrainz</p>
 </section>
