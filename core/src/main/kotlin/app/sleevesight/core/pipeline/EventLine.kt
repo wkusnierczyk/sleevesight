@@ -31,6 +31,7 @@ object EventLine {
             is PipelineEvent.Grounded -> grounded(e)
             is PipelineEvent.NoEvidence -> "insight    ${e.key}: no evidence"
             is PipelineEvent.Superseded -> "superseded ${e.key}"
+            is PipelineEvent.AskedAgain -> "again      ${e.key}: ${e.sources.joinToString(", ") { it.tag }} asked again"
         }
 
     private fun prepared(e: PipelineEvent.Prepared): String =

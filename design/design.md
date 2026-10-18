@@ -273,7 +273,7 @@ Prompt contracts are in the appendix.
 ### Caching and offline
 
 - Retrieval is cached per source and lookup key, as the evidence and outcome the app uses, never the raw response; synthesis per kind, entity, the exact evidence it was written from, prompt version and style, provider, model and the model-knowledge switch (`architecture.md`, *Cache and history*).
-- Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card.
+- Offline, cached tracks still work fully; uncached lookups fail with `unreachable`, never with a blank card. The home screen says the phone is offline while a source is unreachable, and once it is back online the playing track's unreachable sources are asked again, once per return ([#192](https://github.com/wkusnierczyk/sleevesight/issues/192)).
 - Each insight is a paid call on the user's key, so when one is written is a user setting, *Write insights automatically* (D5): on every track change (the default), when I skip, or never. Under *When I skip*, user-driven changes (a skip in the player, select, play) write, and tracks that change on their own get evidence and a Write button. The default went with writing the next track's insight ahead (D13); Spotify's queue gives no album or length to key it on ([#172](https://github.com/wkusnierczyk/sleevesight/issues/172)), so the card is written when the track starts, its lookups mostly done ahead (#20).
 
 ## User interface
@@ -360,7 +360,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 Enforced in CI rather than stated as policy:
 
 - A dependency allowlist check fails the build if an analytics, crash-reporting or ads SDK appears in the lockfile.
-- A manifest check fails the build on any permission beyond the expected set (internet, notification listener binding).
+- A manifest check fails the build on any permission beyond the expected set (internet, the network's state, notification listener binding).
 - Network calls go only through the adapter and provider layer; a lint rule forbids HTTP clients elsewhere.
 
 ## Diagnostics

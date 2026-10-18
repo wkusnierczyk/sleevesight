@@ -36,6 +36,9 @@ internal class CountingAdapter(
     val asked = mutableListOf<String>()
     var cancelled = 0
 
+    /** Whether the source cannot be reached (the phone offline, say): its lookups end unreachable. */
+    var unreachable = false
+
     override suspend fun lookup(
         track: NormalizedTrack,
         resolution: Deferred<Resolution>,
@@ -48,10 +51,13 @@ internal class CountingAdapter(
             throw e
         }
         resolution.await()
-        // A report with no artists (a title first) finds nothing.
-        if (track.artists.isEmpty()) return SourceResult(Outcome.None, emptyList(), byName)
         val line = EvidenceDraft(id, Scope.SONG, "A line from ${id.tag}.", null, Instant.parse("2026-10-16T12:00:00Z"))
-        return SourceResult(Outcome.SongArticle, listOf(line), byName)
+        return when {
+            unreachable -> SourceResult(Outcome.Unreachable, emptyList(), byName)
+            // A report with no artists (a title first) finds nothing.
+            track.artists.isEmpty() -> SourceResult(Outcome.None, emptyList(), byName)
+            else -> SourceResult(Outcome.SongArticle, listOf(line), byName)
+        }
     }
 }
 

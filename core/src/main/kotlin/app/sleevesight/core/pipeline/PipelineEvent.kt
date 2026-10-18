@@ -35,6 +35,15 @@ sealed interface PipelineEvent {
         override val key: String = track.lookupKey
     }
 
+    /**
+     * A run asks again [sources], unreachable in an earlier run of the track (back online, #192);
+     * the other sources keep what they found then.
+     */
+    data class AskedAgain(
+        override val key: String,
+        val sources: List<SourceId>,
+    ) : PipelineEvent
+
     /** A newer track cancelled this one's run (`collectLatest`). */
     data class Superseded(
         override val key: String,

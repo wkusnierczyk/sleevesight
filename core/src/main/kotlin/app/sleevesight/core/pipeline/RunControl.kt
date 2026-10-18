@@ -30,6 +30,7 @@ enum class RunStep {
  * CLI and [Pipeline.follow] use controls that grant at once. A run cancelled while it waits never
  * starts the step.
  */
+@Suppress("TooManyFunctions") // One for each step a run asks for or reports: the hook's whole contract.
 interface RunControl {
     /** Returns once [step] ([RunStep.LOOKUPS] or [RunStep.LABELS]) may start. */
     suspend fun await(step: RunStep)
@@ -68,10 +69,24 @@ interface RunControl {
     fun ended(step: RunStep)
 
     /**
-     * The insight was decided with no model call and nothing from the cache: nothing to write
-     * from, no AI service set up, or insights off.
+     * Every source has landed, from the cache or a lookup: what they ended with, reported once,
+     * before the evidence is assembled. The app's coordinator keeps it, so that a run started
+     * with it asks again only the sources that were unreachable (#192). By default nothing.
+     */
+    fun gathered(gathered: Gathered) = Unit
+
+    /**
+     * The insight was decided with no model call and nothing from the cache: insights off, or no
+     * AI service set up; by default also for nothing to narrate ([nothingToNarrate]).
      */
     fun decidedWithoutCall()
+
+    /**
+     * The insight was decided with no model call and nothing from the cache for lack of evidence:
+     * it has nothing to narrate under [settings], the run's (`EvidenceSet.nothingToNarrate`), which
+     * new evidence may change (back online, #192). By default as [decidedWithoutCall].
+     */
+    fun nothingToNarrate(settings: Settings) = decidedWithoutCall()
 
     /**
      * The insight was served from the synthesis cache, with no call: a reply paid for once, so

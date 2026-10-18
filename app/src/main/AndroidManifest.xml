@@ -4,8 +4,13 @@
 
     <!-- The pipeline's lookups and the AI service's calls, through `:net` alone (`:wiring`), and
          only for the sources and the service the user switched on (`checkManifest` allows this
-         one permission, besides androidx.core's own). -->
+         one and the next, besides androidx.core's own). -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Whether the phone is online, so the playing track's unreachable sources are asked again
+         once it is back (#192, `ConnectivityManager.registerDefaultNetworkCallback`). A normal
+         permission: it reads the connection's state and sends nothing. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- No backup and no transfer to another phone: either would take the session history and
          the keys off the phone, which the first-run screen says stay on it. allowBackup="false"

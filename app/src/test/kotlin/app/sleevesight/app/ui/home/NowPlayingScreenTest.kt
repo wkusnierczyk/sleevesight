@@ -373,6 +373,18 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun whileThePhoneIsOfflineTheSourcesSaySo() {
+        val unreachable =
+            track(sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.WIKIPEDIA to done(Outcome.Unreachable)))
+        show(state(PipelineView(unreachable, offline = true))) {
+            compose.onNodeWithText(text(R.string.home_sources_offline)).performScrollTo().assertIsDisplayed()
+        }
+        show(state(PipelineView(unreachable, offline = false))) {
+            compose.onNodeWithText(text(R.string.home_sources_offline)).assertDoesNotExist()
+        }
+    }
+
+    @Test
     fun thePlayerRowOpensThePlayersScreen() {
         val opened = PendingIntent.getActivity(app, 0, Intent(Intent.ACTION_VIEW), PendingIntent.FLAG_IMMUTABLE)
         show(state(PipelineView(track())), activity = { opened }) {

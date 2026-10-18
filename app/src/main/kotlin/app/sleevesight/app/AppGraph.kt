@@ -3,6 +3,7 @@ package app.sleevesight.app
 import android.content.Context
 import android.content.pm.PackageManager
 import android.database.SQLException
+import android.net.ConnectivityManager
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
@@ -18,6 +19,7 @@ import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppPipelineParts
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.pipeline.afterAcknowledged
+import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
@@ -220,6 +222,8 @@ class AppGraph(
             onAction = userActions::acted,
             // The next item in the shown player's queue, prepared ahead (D13).
             next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
+            // Back online, the playing track's unreachable sources are asked again (#192).
+            online = appContext.getSystemService(ConnectivityManager::class.java).online(),
         )
 
     /**
