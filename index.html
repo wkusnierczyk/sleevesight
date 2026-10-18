@@ -150,9 +150,9 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .legend .cite{margin:0 4px 0 0}
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
-.two ul{margin:0;padding-left:1.2em}
+.two ul{margin:1em 0;padding-left:1.2em}
 .two li{margin-bottom:8px}
-.none{font-size:19px;font-weight:600;margin:0 0 12px}
+.lead{font-size:19px;font-weight:600;margin:0 0 12px}
 .small{font-size:15px;color:var(--muted)}
 .links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 32px}
 .links span{display:block;font-size:15px;color:var(--muted)}
@@ -324,12 +324,12 @@ if (!location.hash && matchMedia('(prefers-reduced-motion: no-preference)').matc
   <h2 id="privacy-h">Privacy</h2>
   <div class="two">
     <div>
-      <p class="none">Sleevesight collects nothing.</p>
+      <p class="lead">Sleevesight collects nothing.</p>
       <p>No accounts of our own, no telemetry, no analytics, no ads. Your API keys are stored encrypted on the phone and never logged.</p>
       <p class="small">The full privacy policy will be published here before the Google Play release.</p>
     </div>
     <div>
-      <p><strong>What leaves the phone, and to whom</strong></p>
+      <p class="lead">What leaves the phone, and to whom</p>
       <ul>
         <li>To the sources you switched on: the track's title, artists and album, for the playing track and, by default, the next one in the queue.</li>
         <li>To the AI service you chose: the same names and what the sources found. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
