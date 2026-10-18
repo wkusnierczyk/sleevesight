@@ -338,6 +338,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | History | Keep history for: 7, 30 or 90 days, a year, or forever, counted back from today; the session history and the track changes together (#148) | 90 days |
 | History | Start a new session after a break of: 10, 20 or 30 minutes, 1 or 2 hours, counted from when the last track was heard | 30 minutes |
 | History | Clear history: the session history and the track changes, after a confirmation | |
+| API keys | Remove all API keys, while any key is saved, after a confirmation; each key's row also has a button that removes that key, after a confirmation (#234) | |
 | Developer | Diagnostics: the way to the diagnostics screen (*Diagnostics* below) | Off |
 
 The cache size limit covers the evidence and the written insights. A track's evidence is about 5 to 15 KB and each written card 1 to 3 KB (estimates, measured at the Phase 0.5 gate), so 50 MB holds about 2,500 tracks with their insights. Evidence expires within 30 days, so on its own it reaches the limit only for someone playing over 80 new tracks a day; written insights never expire, so they accumulate until the limit, which every listener reaches in time (some 25,000 cards). From then on the least recently used entries go first: the insights of the tracks not played for longest. It is not lower because an evicted insight costs a paid call to write again.

@@ -61,7 +61,7 @@ Google Play, which distributes the app, handles your installation under [Google'
 - *Write insights automatically* sets whether an insight is written for every track, only when you skip, or only when you tap Write.
 - *Prepare the next track* set to *Off* sends nothing about the next track.
 - *Keep history for* sets how long the history is kept, from a week to a year, or forever. *Clear history* deletes it at once.
-- A saved key can be removed in the settings, and *Reset saved keys* removes them all.
+- A saved key can be removed in the settings, with the delete button on its row, and *Remove all API keys* removes them all.
 - Android's *Clear storage* for Sleevesight, or uninstalling it, deletes everything it kept on the phone. Cached findings also expire on their own, on the lifetimes shown in the settings.
 
 What a service keeps of your requests, such as Anthropic for your account, is between you and that service.

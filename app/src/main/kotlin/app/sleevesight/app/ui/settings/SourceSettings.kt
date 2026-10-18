@@ -41,7 +41,7 @@ internal fun SourcesSection(
         ) { on ->
             update { it.copy(enabledSources = if (on) it.enabledSources + switch else it.enabledSources - switch) }
         }
-        sourceKey(switch)?.let { id -> KeyRow(id, secrets, open) }
+        sourceKey(switch)?.let { id -> KeyRow(stringResource(keyName(id)), id, secrets, indent = true, open) }
         if (switch == SourceSwitch.WEB) EngineRows(settings, secrets, update, open)
     }
 }
@@ -65,22 +65,9 @@ private fun EngineRows(
                     update { it.copy(webEngines = if (on) it.webEngines + engine else it.webEngines - engine) }
                 }.takeIf { SourceSwitch.WEB in settings.enabledSources },
         )
-        KeyRow(engineKey(engine), secrets, open)
+        val id = engineKey(engine)
+        KeyRow(stringResource(keyName(id)), id, secrets, indent = true, open)
     }
-}
-
-@Composable
-private fun KeyRow(
-    id: SecretId,
-    secrets: Map<SecretId, SecretState>,
-    open: (SettingsDialog) -> Unit,
-) {
-    ValueRow(
-        title = stringResource(keyName(id)),
-        value = keyState(secrets[id]),
-        indent = true,
-        onClick = { open(SettingsDialog.Key(id)) },
-    )
 }
 
 /**

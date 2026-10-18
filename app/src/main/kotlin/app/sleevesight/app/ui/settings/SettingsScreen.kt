@@ -29,7 +29,6 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
-import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
@@ -49,10 +48,10 @@ import kotlin.time.Duration.Companion.seconds
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
  * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
- * the end, the way to the credits, and the developer setting *Diagnostics*. Each change is saved
- * at once. The rows show the stored settings, so a change that cannot be saved (the settings file
- * cannot be read or written) leaves its row at the stored value, and the screen says so above the
- * list until a later change is saved.
+ * the end, *Remove all API keys* while any key is stored, the way to the credits, and the
+ * developer setting *Diagnostics*. Each change is saved at once. The rows show the stored
+ * settings, so a change that cannot be saved (the settings file cannot be read or written) leaves
+ * its row at the stored value, and the screen says so above the list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
@@ -104,26 +103,13 @@ fun SettingsScreen(
             ChoiceDialog(shown, onDismiss = close)
         }
 
-        is SettingsDialog.Key -> {
-            KeyDialog(
-                id = shown.id,
-                state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value -> secretStore.set(shown.id, Secret(value)).also { saveFailed = !it } },
-                onRemove = { secretStore.clear(shown.id) },
-                onDismiss = close,
-            )
+        is SettingsDialog.Keys -> {
+            KeyDialogs(shown, secrets, secretStore, onSaveFailed = { saveFailed = it }, onDismiss = close)
         }
 
         SettingsDialog.ClearHistory -> {
             ClearHistoryDialog(
                 onClear = { clearing.start(clearHistory) },
-                onDismiss = close,
-            )
-        }
-
-        SettingsDialog.ResetKeys -> {
-            ResetKeysDialog(
-                onReset = { secretStore.reset().also { if (it) saveFailed = false } },
                 onDismiss = close,
             )
         }
@@ -192,15 +178,28 @@ internal sealed interface SettingsDialog {
         val onSelect: (T) -> Unit,
     ) : SettingsDialog
 
-    class Key(
-        val id: SecretId,
-    ) : SettingsDialog
-
     class Model(
         val provider: ProviderId,
     ) : SettingsDialog
 
-    data object ResetKeys : SettingsDialog
+    /** The saved keys' dialogs ([KeyDialogs]). */
+    sealed interface Keys : SettingsDialog
+
+    /** Enters, replaces or removes the key [id]. */
+    class Key(
+        val id: SecretId,
+    ) : Keys
+
+    /** Removes the key [id], once confirmed. */
+    class RemoveKey(
+        val id: SecretId,
+    ) : Keys
+
+    /** *Reset saved keys*, offered after a failure. */
+    data object ResetKeys : Keys
+
+    /** *Remove all API keys*, offered while any key is stored; the same removal as [ResetKeys]. */
+    data object RemoveAllKeys : Keys
 
     data object ClearHistory : SettingsDialog
 }
@@ -216,7 +215,10 @@ private class Navigation(
 internal class KeysShown(
     val states: Map<SecretId, SecretState>,
     val offerReset: Boolean,
-)
+) {
+    /** Whether any key is stored, readable or not: *Remove all API keys* is offered then. */
+    val anyStored: Boolean get() = states.values.any { it != SecretState.ABSENT }
+}
 
 /**
  * The services offered in Phase 1: Anthropic, the one with a client (the plan's pending decision
@@ -305,6 +307,7 @@ private fun SettingsContent(
         InsightsSection(settings, update, open)
         LookupsSection(settings, update, open)
         HistorySection(settings, update, open)
+        SavedKeysSection(keys, open)
         SectionHeading(R.string.settings_section_about)
         ValueRow(
             title = stringResource(R.string.credits_title),
@@ -339,12 +342,11 @@ private fun AiServiceRows(
         )
     }
 
-    val keyId = settings.aiProvider?.let { SecretId.forProvider(it) }
-    ValueRow(
-        title = stringResource(R.string.settings_ai_key),
-        value = keyId?.let { keyState(secrets[it]) } ?: stringResource(R.string.settings_ai_model_none),
-        onClick = keyId?.let { { open(SettingsDialog.Key(it)) } },
-    )
+    val title = stringResource(R.string.settings_ai_key)
+    when (val keyId = settings.aiProvider?.let { SecretId.forProvider(it) }) {
+        null -> ValueRow(title = title, value = stringResource(R.string.settings_ai_model_none), onClick = null)
+        else -> KeyRow(title, keyId, secrets, indent = false, open)
+    }
 }
 
 /** The model and how much it may reason. */

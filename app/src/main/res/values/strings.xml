@@ -55,6 +55,9 @@
     <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again.</string>
     <string name="settings_key_field">Key</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store or storage failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
+    <string name="settings_key_remove">Remove the %1$s</string>
+    <string name="settings_key_remove_title">Remove the %1$s?</string>
+    <string name="settings_key_remove_explained">The key is deleted from this phone. Until you enter one again, Sleevesight does not use %1$s.</string>
     <string name="settings_key_remove_failed">The key could not be removed: the phone’s storage failed. Try again.</string>
     <string name="settings_change_failed">The last change could not be saved: the phone’s storage failed. The setting keeps its saved value; try again.</string>
     <string name="settings_save">Save</string>
@@ -63,9 +66,10 @@
     <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved</string>
     <string name="settings_reset_keys_summary">Removes every saved key, so you can enter them again.</string>
     <string name="settings_reset_keys_title">Reset saved keys?</string>
-    <string name="settings_reset_keys_explained">Every saved key, for the AI service, Last.fm and Exa, is removed, with the phone’s key that protects them. You then enter each key again.</string>
+    <string name="settings_reset_keys_explained">Keys for all API services used by Sleevesight are irrecoverably deleted.</string>
     <string name="settings_reset_keys_failed">The keys could not be reset: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_remove">Remove</string>
+    <string name="settings_remove_all">Remove all</string>
     <string name="settings_cancel">Cancel</string>
 
     <string name="settings_model_title">Model</string>
@@ -135,6 +139,12 @@
     <string name="settings_clear">Clear</string>
     <string name="settings_clear_history_failed">The history could not be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
+    <string name="settings_section_keys">API keys</string>
+    <string name="settings_keys_hint">Your API keys, stored encrypted on this phone. Each is sent only to its own service.</string>
+    <string name="settings_remove_all_keys">Remove all API keys</string>
+    <string name="settings_remove_all_keys_value">Deletes every saved key from this phone</string>
+    <string name="settings_remove_all_keys_title">Remove all API keys?</string>
+    <string name="settings_remove_all_keys_failed">The keys could not be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources and their licences</string>
     <string name="settings_section_developer">Developer</string>

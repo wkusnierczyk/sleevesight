@@ -138,13 +138,23 @@ internal fun KeyDialog(
     )
 }
 
+/** What a [ConfirmDialog] says: its [title], what the action does, its button, and its failure. */
+internal class Confirmation(
+    val title: String,
+    val explained: String,
+    val confirm: String,
+    val failed: String,
+)
+
 /**
- * Confirms *Reset saved keys*, which removes every saved key and the phone's key for them. [onReset]
- * returns whether it succeeded: the dialog closes only then, and otherwise says so.
+ * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
+ * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
+ * then, and otherwise says so.
  */
 @Composable
-internal fun ResetKeysDialog(
-    onReset: suspend () -> Boolean,
+internal fun ConfirmDialog(
+    confirmation: Confirmation,
+    onConfirm: suspend () -> Boolean,
     onDismiss: () -> Unit,
 ) {
     var busy by remember { mutableStateOf(false) }
@@ -152,16 +162,13 @@ internal fun ResetKeysDialog(
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_reset_keys_title)) },
+        title = { Text(confirmation.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.settings_reset_keys_explained),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Text(confirmation.explained, style = MaterialTheme.typography.bodyMedium)
                 if (failed) {
                     Text(
-                        stringResource(R.string.settings_reset_keys_failed),
+                        confirmation.failed,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -174,13 +181,13 @@ internal fun ResetKeysDialog(
                     busy = true
                     failed = false
                     scope.launch {
-                        val done = onReset()
+                        val done = onConfirm()
                         busy = false
                         if (done) onDismiss() else failed = true
                     }
                 },
                 enabled = !busy,
-            ) { Text(stringResource(R.string.settings_reset)) }
+            ) { Text(confirmation.confirm) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
