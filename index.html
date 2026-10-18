@@ -127,7 +127,7 @@ figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
 .card h2{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
 .card p{margin:0;font-size:14px;line-height:1.5}
 .cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
-.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)}
+.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)} .cite.MB{background:var(--src-mb)}
 .check{margin-top:8px;font-size:11.5px;color:var(--ok)}
 figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
 
@@ -140,13 +140,20 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
 .after{margin:20px 0 0;color:var(--muted)}
-.planned{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:0 0 12px}
 .intro{margin:0 0 20px;max-width:44em}
 .boxes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .boxes li{background:var(--s-c1);color:var(--s-on);border:1px solid var(--line);border-radius:20px;padding:18px}
 .boxes h3{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
 .boxes .what{margin:0 0 8px;font-size:19px;font-weight:650;font-stretch:92%}
 .boxes p{margin:0;font-size:15px;line-height:1.55}
+.boxes.pair{margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.boxes .langs{margin:0 0 8px;font-weight:600}
+.chat{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:12px;row-gap:8px;align-items:baseline;margin:0}
+.chat p{display:contents}
+.chat .who{text-align:right;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s-pri)}
+.chat .say{font-size:15px;line-height:1.55}
+.chat .ask{color:var(--s-onv)}
+.chat .by{display:block;margin-top:4px;font-size:13px;font-style:italic;color:var(--s-onv)}
 .legend{margin:14px 0 0;font-size:14px;color:var(--muted)}
 .legend .cite{margin:0 4px 0 0}
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
@@ -229,7 +236,7 @@ footer p{margin:0 0 4px}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tiles,.boxes,.two{grid-template-columns:minmax(0,1fr)}
+  .tiles,.boxes,.boxes.pair,.two{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:560px){
   body{font-size:16px}
@@ -315,23 +322,26 @@ document.documentElement.classList.add('js');
 </section>
 
 <section id="next" aria-labelledby="next-h">
-  <p class="planned">Planned</p>
-  <h2 id="next-h">Coming next: the song, the artist, the album</h2>
-  <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way.</p>
+  <h2 id="next-h">Planned: coming next</h2>
+  <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way. It also lets you ask follow-up questions about what is playing, answered by your AI service on your own key, and export the tracks you listened to, with their insights, to a file. And it shows the languages a song is sung in, or none for an instrumental.</p>
   <ul class="boxes">
     <li><h3>Song</h3><p class="what">Sundown</p><p>Written by Lightfoot and produced by Lenny Waronker, it was recorded in November 1973 at Eastern Sound in Toronto, with Red Shea on electric lead guitar.<span class="cite W">W1</span><span class="cite W">W2</span> It was certified Gold by the RIAA.<span class="cite W">W4</span></p></li>
     <li><h3>Artist</h3><p class="what">Gordon Lightfoot</p><p>A Canadian singer-songwriter, born in Orillia, Ontario, in 1938, who died in 2023.<span class="cite L">L1</span> His biographer Nicholas Jennings summed up his subjects as trains, shipwrecks, rivers, highways, lovers and loneliness.<span class="cite L">L3</span></p></li>
     <li><h3>Album</h3><p class="what">Sundown, 1974</p><p>His ninth studio album, released in January 1974, with the title track as its lead single.<span class="cite G">G1</span> It reached number one in the US and in Canada, where it stayed at the top for five weeks.<span class="cite G">G2</span></p></li>
   </ul>
-  <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search</p>
+  <ul class="boxes pair">
+    <li><h3>Lyrics language</h3><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite MB">MB1</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="cite W">W1</span> The French words came from Jan Vaughan, a French teacher and the wife of his old friend Ivan Vaughan.<span class="cite W">W2</span></p></li>
+    <li><h3>Follow-up</h3><p class="what">Gordon Lightfoot</p><div class="chat"><p><b class="who">You</b> <span class="say ask">Tell me more about his career.</span></p><p><b class="who">AI</b> <span class="say">Before his own records, he studied orchestration at Westlake College of Music in Los Angeles, then sang and danced on CBC television's <i>Country Hoedown</i>. In the mid-1960s Ian &amp; Sylvia and Peter, Paul and Mary recorded his songs, and his 1970 single "If You Could Read My Mind" became his first US hit. <span class="by">by Claude Haiku 5.5</span></span></p></div></li>
+  </ul>
+  <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search · <span class="cite MB">MB</span>MusicBrainz</p>
 </section>
 
 <section id="choose" aria-labelledby="choose-h">
   <h2 id="choose-h">You choose</h2>
   <ul class="tiles">
     <li><h3>Your sources</h3><p>MusicBrainz, Wikipedia, Last.fm and web search, each a switch. The model's own knowledge is a separate switch, off by default.</p></li>
-    <li><h3>Your AI service and key</h3><p>You bring your own API key and pick the model. Anthropic comes first; more providers, and local models, are planned.</p></li>
-    <li><h3>When it writes</h3><p>Each insight is a call on your key. Have one written for every track, only when you skip, or only when you tap Write.</p></li>
+    <li><h3>Your AI service</h3><p>You bring your own API key and pick the model. Anthropic comes first; more providers, and local models, are planned.</p></li>
+    <li><h3>Your timing</h3><p>Each insight is a call on your key. Have one written for every track, only when you skip, or only when you tap Write.</p></li>
   </ul>
 </section>
 
