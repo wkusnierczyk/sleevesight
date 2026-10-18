@@ -17,10 +17,14 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -28,6 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Preparing the next track, *Evidence* (D13, #20): from a queue item, by name, with no length;
@@ -40,10 +45,13 @@ class PreparationTest {
     private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
     private val resolved = mutableListOf<Pair<String, Duration?>>()
+
+    // The resolver's answers, in turn; once they run out, a recording found.
+    private val answers = ArrayDeque<Resolution>()
     private val resolver =
         TrackResolver { track, duration ->
             resolved += track.lookupKey to duration
-            Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec")
+            answers.removeFirstOrNull() ?: Resolution(outcome = Outcome.SongArticle, recordingMbid = "rec")
         }
 
     // MusicBrainz's lines, naming the resolved artist; it prepares ahead, as the real one does.
@@ -62,10 +70,14 @@ class PreparationTest {
     private val cache = MemoryCache()
 
     private val steps = mutableListOf<String>()
+
+    // While set, a step asked for waits for it: requests not allowed, so the grant not yet given.
+    private var held: CompletableDeferred<Unit>? = null
     private val control =
         object : RunControl {
             override suspend fun await(step: RunStep) {
                 steps += "await $step"
+                held?.await()
             }
 
             override suspend fun decide(settings: Settings): Boolean = error("a preparation never asks to write")
@@ -120,12 +132,146 @@ class PreparationTest {
         }
 
     @Test
-    fun `nothing is prepared with MusicBrainz switched off`() =
+    fun `nothing is prepared with MusicBrainz switched off, nor tried again`() =
         runTest {
             settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ)
             pipeline().prepare(nowPlaying("Next Song", "Next Artist"), control)
+            advanceUntilIdle()
             assertEquals(emptyList<Pair<String, Duration?>>(), resolved)
             assertEquals(emptyList<String>(), steps)
+        }
+
+    @Test
+    fun `an unreachable resolution is tried once more, after the wait, in a lookups step of its own`() =
+        runTest {
+            answers += Resolution.unreachable("RateLimited")
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+            backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            runCurrent()
+            assertEquals(1, resolved.size)
+
+            advanceTimeBy(Preparation.RETRY_WAIT - 1.milliseconds)
+            assertEquals(1, resolved.size, "not before the wait")
+            advanceTimeBy(1.milliseconds)
+            runCurrent()
+
+            assertEquals(List<Pair<String, Duration?>>(2) { "next artist|next song" to null }, resolved)
+            assertEquals(
+                listOf(
+                    "prepared   next artist|next song: unreachable (RateLimited) in N ms",
+                    "prepared   next artist|next song: song_article in N ms, second try",
+                ),
+                events.filterIsInstance<PipelineEvent.Prepared>().map { EventLine.of(it).replace(LATENCY, "in N ms") },
+            )
+            // What carries over follows the second try, as it would the first.
+            assertEquals(listOf("next artist|next song"), musicBrainz.inner.asked)
+            assertEquals(listOf("artist-1"), tagRequests)
+            assertEquals(
+                List(2) { listOf("await LOOKUPS", "ended LOOKUPS") }.flatten() + listOf("await LABELS", "ended LABELS"),
+                steps,
+            )
+        }
+
+    @Test
+    fun `the second try waits for its lookups step to be granted again`() =
+        runTest {
+            answers += Resolution.unreachable("RateLimited")
+            val pipeline = pipeline()
+            backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            runCurrent()
+            val grant = CompletableDeferred<Unit>()
+            held = grant
+            advanceTimeBy(Preparation.RETRY_WAIT * 4)
+            assertEquals(1, resolved.size, "not while requests are not allowed")
+            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS", "await LOOKUPS"), steps)
+
+            grant.complete(Unit)
+            runCurrent()
+            assertEquals(2, resolved.size)
+            assertEquals(listOf("ended LOOKUPS", "await LABELS", "ended LABELS"), steps.drop(3))
+        }
+
+    @Test
+    fun `a preparation cancelled while it waits for its second grant ends no step it was not granted`() =
+        runTest {
+            answers += Resolution.unreachable("Offline")
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+            val job = backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            runCurrent()
+            held = CompletableDeferred()
+            advanceTimeBy(Preparation.RETRY_WAIT * 2)
+            job.cancel()
+            runCurrent()
+
+            assertEquals(1, resolved.size)
+            assertEquals(1, events.count { it is PipelineEvent.Prepared })
+            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS", "await LOOKUPS"), steps)
+        }
+
+    @Test
+    fun `a failure that would fail again is not tried again`() =
+        runTest {
+            for (failure in listOf("status 400", "Parse", "Unauthorized")) {
+                resolved.clear()
+                answers += Resolution.unreachable(failure)
+                pipeline().prepare(nowPlaying("Next Song", "Next Artist"), control)
+                advanceUntilIdle()
+                assertEquals(1, resolved.size, failure)
+            }
+        }
+
+    @Test
+    fun `a second try that is unreachable too is the last`() =
+        runTest {
+            answers += Resolution.unreachable("Offline")
+            answers += Resolution.unreachable("Server")
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+            pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control)
+            advanceUntilIdle()
+
+            assertEquals(2, resolved.size)
+            assertEquals(
+                listOf(
+                    Prepared(Resolution.unreachable("Offline"), again = false),
+                    Prepared(Resolution.unreachable("Server"), again = true),
+                ),
+                events.filterIsInstance<PipelineEvent.Prepared>().map { Prepared(it) },
+            )
+        }
+
+    @Test
+    fun `a preparation cancelled while it waits sends nothing more and reports nothing more`() =
+        runTest {
+            answers += Resolution.unreachable("RateLimited")
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+            val job = backgroundScope.launch { pipeline.prepare(nowPlaying("Next Song", "Next Artist"), control) }
+            advanceTimeBy(Preparation.RETRY_WAIT / 2)
+            job.cancel()
+            // Past the wait; `advanceUntilIdle` would not run the background scope's work.
+            advanceTimeBy(Preparation.RETRY_WAIT)
+            runCurrent()
+
+            assertEquals(1, resolved.size)
+            assertEquals(1, events.count { it is PipelineEvent.Prepared })
+            assertEquals(emptyList<String>(), musicBrainz.inner.asked)
+            assertEquals(emptyList<String>(), tagRequests)
+            assertEquals(listOf("await LOOKUPS", "ended LOOKUPS"), steps, "the step still ends")
+        }
+
+    @Test
+    fun `an answer from MusicBrainz is not tried again, whatever it was`() =
+        runTest {
+            for (answer in listOf(Resolution.NONE, Resolution(outcome = Outcome.Rejected("another artist")))) {
+                resolved.clear()
+                answers += answer
+                pipeline().prepare(nowPlaying("Next Song", "Next Artist"), control)
+                advanceUntilIdle()
+                assertEquals(1, resolved.size, "${answer.outcome}")
+            }
         }
 
     @Test
@@ -134,6 +280,29 @@ class PreparationTest {
             pipeline().prepare(nowPlaying("Next Song", ""), control)
             assertEquals(emptyList<String>(), steps)
         }
+
+    // The events of [pipeline], as they come.
+    private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {
+        val events = mutableListOf<PipelineEvent>()
+        backgroundScope.launch { pipeline.events.toList(events) }
+        runCurrent()
+        return events
+    }
+
+    // What a Prepared event says of its resolution, without the time it took.
+    private data class Prepared(
+        val resolution: Resolution,
+        val again: Boolean,
+    ) {
+        constructor(event: PipelineEvent.Prepared) : this(
+            Resolution(outcome = event.outcome, failure = event.failure),
+            event.again,
+        )
+    }
+
+    private companion object {
+        val LATENCY = Regex("in \\d+ ms")
+    }
 
     // [inner], which prepares ahead.
     private class Ahead(

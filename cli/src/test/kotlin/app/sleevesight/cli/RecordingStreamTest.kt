@@ -1,8 +1,13 @@
 package app.sleevesight.cli
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.InsightState
@@ -14,14 +19,18 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.SourceAdapter
+import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.wiring.pipelineWiringOn
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import java.io.File
 import java.nio.file.Files
@@ -29,6 +38,9 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Recording a paid call (`record --record anthropic`) through the provider and the pipeline: the
@@ -63,6 +75,20 @@ class RecordingStreamTest {
         override fun close() = Unit
     }
 
+    // One line found, so the pipeline has something to narrate and makes the call (#193).
+    private object OneLine : SourceAdapter {
+        override val id = SourceId.WIKIPEDIA
+
+        override suspend fun lookup(
+            track: NormalizedTrack,
+            resolution: Deferred<Resolution>,
+        ) = SourceResult(
+            Outcome.SongArticle,
+            listOf(EvidenceDraft(id, Scope.SONG, "It was a single.", null, Instant.parse("2026-10-18T00:00:00Z"))),
+            Duration.ZERO,
+        )
+    }
+
     @Test
     fun `a reply streamed to the transport's end is recorded`() =
         runBlocking {
@@ -79,7 +105,7 @@ class RecordingStreamTest {
                 Pipeline(
                     PipelineParts(
                         normalizer = Normalizer(JvmAccentFolder),
-                        adapters = emptyList(),
+                        adapters = listOf(OneLine),
                         resolver = TrackResolver { _, _ -> Resolution.NONE },
                         hasher = JvmHasher,
                         ai = AiAccess(provider, Secret("sk-ant-test")),
@@ -89,7 +115,8 @@ class RecordingStreamTest {
             var insight: InsightState? = null
             val run = launch { insight = pipeline.run(playing, write = true).insight }
 
-            live.held.await()
+            // A run that makes no call fails here rather than hanging the build.
+            withTimeout(HELD_WITHIN) { live.held.await() }
             // The reply's end is in; the run reads on until the transport ends.
             repeat(SPINS) { yield() }
             assertTrue(run.isActive)
@@ -104,6 +131,7 @@ class RecordingStreamTest {
 
     private companion object {
         const val SPINS = 20
+        val HELD_WITHIN = 30.seconds
 
         val REPLY =
             """
@@ -111,7 +139,7 @@ class RecordingStreamTest {
             data: {"type":"message_start","message":{"id":"msg_live","usage":{"input_tokens":10,"output_tokens":1}}}
 
             event: content_block_delta
-            data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"It is on the release Sundown [P1]."}}
+            data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"It was a single [W1]."}}
 
             event: message_delta
             data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":9}}

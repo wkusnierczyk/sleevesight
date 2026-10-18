@@ -77,7 +77,8 @@ interface RunControl {
 
     /**
      * The insight was decided with no model call and nothing from the cache, for lack of evidence:
-     * nothing to write from, which new evidence may change (back online, #192).
+     * the evidence has nothing to narrate (`EvidenceSet.nothingToNarrate`), which new evidence may
+     * change (back online, #192).
      */
     fun decidedWithoutCall()
 

@@ -147,11 +147,15 @@ sealed interface CoordinatorEvent {
         val card: Card,
     ) : CoordinatorEvent
 
-    /** Run [run] decided its insight with no call and nothing cached (no evidence, no AI service, insights off). */
+    /**
+     * Run [run] decided its insight with no call and nothing cached (nothing to narrate, as
+     * `EvidenceSet.nothingToNarrate` decides; no AI service; insights off).
+     * [forLackOfEvidence] when it was for nothing to narrate (`RunControl.decidedWithoutCall`),
+     * which new evidence may change (back online, #192); not when insights are off or no AI
+     * service is set up (`RunControl.cannotWrite`).
+     */
     data class DecidedWithoutCall(
         val run: RunId,
-        // For lack of evidence (`RunControl.decidedWithoutCall`), which new evidence may change
-        // (#192); not when insights are off or no AI service is set up (`RunControl.cannotWrite`).
         val forLackOfEvidence: Boolean = false,
     ) : CoordinatorEvent
 

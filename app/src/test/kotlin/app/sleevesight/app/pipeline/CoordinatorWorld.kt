@@ -25,6 +25,9 @@ import kotlin.time.Duration.Companion.seconds
 
 internal const val DEBOUNCE_MS = 650L
 
+/** `Preparation.RETRY_WAIT`: the wait before a preparation's second try (#191). */
+internal const val RETRY_MS = 15_000L
+
 /** The host, the pipelines and the runs, as the coordinator's effects set them going. */
 internal class World {
     val coordinator = PipelineCoordinator()
@@ -72,6 +75,12 @@ internal class World {
 
     /** How long a preparation's lookups take (D13). */
     var prepareMs = 0L
+
+    /**
+     * The titles whose preparation's first lookups end unreachable (#191): its lookups step ends,
+     * and is asked for again [RETRY_MS] later, as `Preparation` does.
+     */
+    val retrying = mutableSetOf<String>()
 
     /** The preparations started, cancelled, and granted their lookups, by title (D13). */
     val preparations = mutableListOf<String>()
@@ -216,7 +225,8 @@ internal class World {
                 prepared += title
                 grants += "prepare $title"
                 schedule(prepareMs, CoordinatorEvent.StepEnded(prep, step), prep)
-                schedule(prepareMs, CoordinatorEvent.StepRequested(prep, RunStep.LABELS), prep)
+                val then = if (retrying.remove(title)) RunStep.LOOKUPS to RETRY_MS else RunStep.LABELS to 0L
+                schedule(prepareMs + then.second, CoordinatorEvent.StepRequested(prep, then.first), prep)
             }
             RunStep.LABELS -> {
                 grants += "prepare labels $title"

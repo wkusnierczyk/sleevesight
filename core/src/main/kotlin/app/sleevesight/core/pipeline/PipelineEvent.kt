@@ -49,21 +49,29 @@ sealed interface PipelineEvent {
         override val key: String,
     ) : PipelineEvent
 
-    /** MusicBrainz resolution finished; [outcome] is its own. */
+    /**
+     * MusicBrainz resolution finished; [outcome] is its own, and [failure] why MusicBrainz could
+     * not be asked when it is unreachable ([app.sleevesight.core.sources.Resolution.failure]).
+     */
     data class Resolved(
         override val key: String,
         val outcome: Outcome,
         val latency: Duration,
+        val failure: String? = null,
     ) : PipelineEvent
 
     /**
      * The next track in the player's queue was prepared ahead (D13): resolved by name, with no
-     * length, and [outcome] is that resolution's. Nothing of it is shown or kept as the track's own.
+     * length, and [outcome] is that resolution's, [failure] as for [Resolved]. [again]: this was
+     * the second try, after the first ended unreachable ([Preparation.RETRY_WAIT]). Nothing of it
+     * is shown or kept as the track's own.
      */
     data class Prepared(
         override val key: String,
         val outcome: Outcome,
         val latency: Duration,
+        val failure: String? = null,
+        val again: Boolean = false,
     ) : PipelineEvent
 
     /** A source landed, from the network or, when [cached], the retrieval cache. */
@@ -155,7 +163,7 @@ sealed interface PipelineEvent {
         val counts: GroundingCounts,
     ) : PipelineEvent
 
-    /** The model replied `NO_EVIDENCE`, or there was no evidence to write from. */
+    /** The model replied `NO_EVIDENCE`, or the evidence had nothing to narrate (`EvidenceSet.nothingToNarrate`). */
     data class NoEvidence(
         override val key: String,
     ) : PipelineEvent

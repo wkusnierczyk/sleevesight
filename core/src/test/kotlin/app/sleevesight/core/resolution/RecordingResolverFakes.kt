@@ -21,6 +21,8 @@ internal class FakeMusicBrainz(
     val search: Lookup<List<MbRecording>>,
     val recordings: Map<String, MbRecordingDetail> = emptyMap(),
     val works: Map<String, MbWork> = emptyMap(),
+    /** A recording lookup that fails, with this reason, for every recording. */
+    val recordingFailure: String? = null,
 ) : MusicBrainzLookup {
     override suspend fun searchRecordings(
         title: String,
@@ -28,7 +30,7 @@ internal class FakeMusicBrainz(
     ) = search
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
-        recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
+        recordingFailure?.let { Lookup.Failed(it) } ?: recordings[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
 
     override suspend fun work(mbid: String): Lookup<MbWork> = works[mbid]?.let { Lookup.Found(it) } ?: Lookup.NotFound
 

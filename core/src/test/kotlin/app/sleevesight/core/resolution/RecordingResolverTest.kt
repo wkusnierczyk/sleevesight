@@ -423,14 +423,25 @@ class RecordingResolverTest {
         }
 
     @Test
-    fun `nothing found is none, and a failed search unreachable`() =
+    fun `nothing found is none, and a failed search unreachable, naming the failure`() =
         runTest {
             assertEquals(Resolution.NONE, resolve(FakeMusicBrainz(Lookup.Found(emptyList())), track("Song", "Artist")))
             assertEquals(Resolution.NONE, resolve(FakeMusicBrainz(Lookup.NotFound), track("Song", "Artist")))
-            assertEquals(
-                Resolution.UNREACHABLE,
-                resolve(FakeMusicBrainz(Lookup.Failed("Offline")), track("Song", "Artist")),
-            )
+            val unreachable = resolve(FakeMusicBrainz(Lookup.Failed("RateLimited")), track("Song", "Artist"))
+            assertEquals(Resolution(outcome = Outcome.Unreachable, failure = "RateLimited"), unreachable)
+            assertEquals(Resolution.unreachable("RateLimited"), unreachable)
+        }
+
+    @Test
+    fun `a band's recording that cannot be fetched leaves the track unreachable, naming the failure`() =
+        runTest {
+            val search =
+                listOf(
+                    recording("solo", "Misirlou", "Dick Dale", 136, "2012-09-19"),
+                    recording("band", "Misirlou", "Dick Dale and His Del-Tones", 135, "1962-04"),
+                )
+            val failing = FakeMusicBrainz(Lookup.Found(search), recordingFailure = "Server")
+            assertEquals(Resolution.unreachable("Server"), resolve(failing, track("Misirlou", "Dick Dale"), 135))
         }
 
     @Test

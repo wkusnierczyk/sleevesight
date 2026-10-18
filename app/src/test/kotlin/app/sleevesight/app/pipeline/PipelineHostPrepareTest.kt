@@ -3,7 +3,9 @@ package app.sleevesight.app.pipeline
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.Resolution
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -87,4 +89,53 @@ internal class PipelineHostPrepareTest : PipelineHostFixture() {
             settle()
             assertEquals("artist|b" to null, resolved.last())
         }
+
+    @Test
+    fun `a preparation's second try waits until requests are allowed again`() =
+        runTest {
+            started()
+            play("A", 200.seconds)
+            settle()
+            resolutions += Resolution.unreachable("RateLimited")
+            next.value = nextTrack
+            settle()
+            assertEquals(listOf("artist|a", "artist|b"), resolved.map { it.first })
+
+            host.activityStopped(changingConfigurations = false)
+            runCurrent()
+            advanceTimeBy(PAST_RETRY_WAIT)
+            assertEquals("hidden, the second try is not granted", 2, resolved.size)
+
+            host.activityStarted()
+            runCurrent()
+            assertEquals(listOf("artist|a", "artist|b", "artist|b"), resolved.map { it.first })
+            settle()
+            assertEquals(0, host.preparationsHeld)
+        }
+
+    @Test
+    fun `a preparation waiting for its second grant is cancelled when the next track changes`() =
+        runTest {
+            started()
+            play("A", 200.seconds)
+            settle()
+            resolutions += Resolution.unreachable("Offline")
+            next.value = nextTrack
+            settle()
+            host.activityStopped(changingConfigurations = false)
+            runCurrent()
+            advanceTimeBy(PAST_RETRY_WAIT)
+            next.value = nextTrack.copy(title = "C", mediaId = "c")
+            runCurrent()
+
+            host.activityStarted()
+            settle()
+            assertEquals(listOf("artist|a", "artist|b", "artist|c"), resolved.map { it.first })
+            assertEquals(0, host.preparationsHeld)
+        }
+
+    private companion object {
+        /** Past `Preparation.RETRY_WAIT` (15 s), which `:core` keeps to itself. */
+        val PAST_RETRY_WAIT: Duration = 30.seconds
+    }
 }

@@ -1,5 +1,6 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.outcomeKey
 import kotlin.time.Duration
 
@@ -14,8 +15,8 @@ object EventLine {
         when (e) {
             is PipelineEvent.Received -> "received   \"${e.nowPlaying.title}\" by ${e.nowPlaying.artists}"
             is PipelineEvent.Normalized -> "normalized ${e.key}${notes(e.track.notes)}"
-            is PipelineEvent.Resolved -> "resolved   ${e.key}: ${outcomeKey(e.outcome)} in ${ms(e.latency)}"
-            is PipelineEvent.Prepared -> "prepared   ${e.key}: ${outcomeKey(e.outcome)} in ${ms(e.latency)}"
+            is PipelineEvent.Resolved -> "resolved   ${e.key}: ${outcome(e.outcome, e.failure)} in ${ms(e.latency)}"
+            is PipelineEvent.Prepared -> prepared(e)
             is PipelineEvent.SourceLanded -> landed(e)
             is PipelineEvent.SourceFailed -> "failed     ${e.key}: ${e.source.tag} ${e.reason}"
             is PipelineEvent.NotCached -> "not cached ${e.key}: ${e.source.tag}, ${e.reason}"
@@ -32,6 +33,16 @@ object EventLine {
             is PipelineEvent.Superseded -> "superseded ${e.key}"
             is PipelineEvent.AskedAgain -> "again      ${e.key}: ${e.sources.joinToString(", ") { it.tag }} asked again"
         }
+
+    private fun prepared(e: PipelineEvent.Prepared): String =
+        "prepared   ${e.key}: ${outcome(e.outcome, e.failure)} in ${ms(e.latency)}" +
+            if (e.again) ", second try" else ""
+
+    // The outcome, and why the source could not be asked when it names that (#191).
+    private fun outcome(
+        outcome: Outcome,
+        failure: String?,
+    ): String = outcomeKey(outcome) + (failure?.let { " ($it)" } ?: "")
 
     private fun landed(e: PipelineEvent.SourceLanded): String =
         "source     ${e.key}: ${e.source.tag} ${outcomeKey(e.outcome)}, ${e.evidence} cited, " +

@@ -57,6 +57,9 @@ internal abstract class PipelineHostFixture {
     protected val online = MutableStateFlow(true)
     protected val resolved = mutableListOf<Pair<String, Duration?>>()
 
+    /** The resolver's answers, in turn; once they run out, a recording found. */
+    protected val resolutions = ArrayDeque<Resolution>()
+
     protected val host =
         PipelineHost(
             acknowledged = acknowledged,
@@ -83,7 +86,7 @@ internal abstract class PipelineHostFixture {
                     resolver =
                         TrackResolver { track, duration ->
                             resolved += track.lookupKey to duration
-                            Resolution(Outcome.SongArticle, recordingMbid = "rec")
+                            resolutions.removeFirstOrNull() ?: Resolution(Outcome.SongArticle, recordingMbid = "rec")
                         },
                     hasher = JvmHasher,
                     ai = keys.ai?.let { AiAccess(provider, it) },

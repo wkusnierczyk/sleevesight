@@ -41,7 +41,7 @@
     <string name="home_insight_writing">Writing…</string>
     <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
     <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
-    <string name="home_insight_no_evidence">Not enough is documented here to say anything reliable. The sources below are all there is.</string>
+    <string name="home_insight_no_evidence">The sources give nothing to write an insight from.</string>
     <string name="home_insight_failed">The insight could not be written: %1$s.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
     <string name="home_rewrite_offered">Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.</string>

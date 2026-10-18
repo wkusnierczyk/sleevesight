@@ -409,21 +409,36 @@ class PipelineHost(
             }
     }
 
-    // What a run and a preparation share: they ask the coordinator for each step, and wait.
+    // What a run and a preparation share: they ask the coordinator for each step, and wait. A step
+    // can be asked for again once it has ended (a preparation's second try, #191), so each request
+    // waits for a grant of its own: the n-th request of a step for the n-th grant of it. The
+    // coordinator grants a step once for each request, after it (`asked`, cleared as it grants),
+    // so no grant is lost, or reaches another request than its own.
     private abstract inner class StepHandle(
         protected val id: RunId,
     ) : RunControl {
         var job: Job? = null
-        protected val grants = RunStep.entries.associateWith { CompletableDeferred<Unit>() }
+        private val gates = ConcurrentHashMap<Pair<RunStep, Int>, CompletableDeferred<Unit>>()
+
+        // Per step, the requests made, touched only by the run; the grants, only by the loop.
+        private val stepRequests = IntArray(RunStep.entries.size)
+        private val stepGrants = IntArray(RunStep.entries.size)
+
+        private fun gate(
+            step: RunStep,
+            number: Int,
+        ): CompletableDeferred<Unit> = gates.computeIfAbsent(step to number) { CompletableDeferred() }
 
         // A step other than the model call, which a preparation is never granted.
         open fun grant(step: RunStep) {
-            grants.getValue(step).complete(Unit)
+            gate(step, ++stepGrants[step.ordinal]).complete(Unit)
         }
 
         override suspend fun await(step: RunStep) {
+            val number = ++stepRequests[step.ordinal]
             queue.send(CoordinatorEvent.StepRequested(id, step))
-            grants.getValue(step).await()
+            gate(step, number).await()
+            gates.remove(step to number)
         }
 
         override fun ended(step: RunStep) {

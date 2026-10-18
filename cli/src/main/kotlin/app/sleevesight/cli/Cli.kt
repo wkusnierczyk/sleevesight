@@ -106,7 +106,8 @@ class Cli(
             val results = runAll(events)
             if (options.mode == Mode.RECORD) store.save()
             val misses = recorder?.misses ?: replay.misses
-            val gate = Gate.evaluate(results, insightsAsked = ai != null)
+            val allowModel = settings.isEnabled(SourceId.MODEL)
+            val gate = Gate.evaluate(results, insightsAsked = ai != null, allowModel = allowModel)
             val summary =
                 RunSummary(
                     mode = options.mode,
