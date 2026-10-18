@@ -186,6 +186,16 @@ class HomeModelTest {
     }
 
     @Test
+    fun theSourcesSayThePhoneIsOfflineOnlyWhileItIsAndASourceIsUnreachable() {
+        val unreachable =
+            track(sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.WEB to done(Outcome.Unreachable)))
+        assertTrue(offlineShown(PipelineView(offline = true), unreachable))
+        assertFalse(offlineShown(PipelineView(offline = false), unreachable))
+        assertFalse(offlineShown(PipelineView(offline = true), track()))
+        assertFalse(offlineShown(PipelineView(offline = true), null))
+    }
+
+    @Test
     fun theClockShowsMinutesAndSecondsAndHoursFromAnHour() {
         assertEquals("0:00", clock(0.seconds))
         assertEquals("3:07", clock(3.minutes + 7.seconds))

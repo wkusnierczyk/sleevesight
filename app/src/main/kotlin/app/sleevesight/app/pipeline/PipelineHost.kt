@@ -7,6 +7,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AutoWrite
+import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -78,6 +79,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *   back ([PipelineHost.write]); null while none is offered.
  * @property stopCall the model call under way that Stop is offered for, which a tap on Stop
  *   carries back ([PipelineHost.stop]); null otherwise.
+ * @property offline whether the phone is offline, as the coordinator last heard it
+ *   ([CoordinatorState.online], #192): its unreachable sources stay so until it is back online,
+ *   and the playing track's are then asked again.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -88,6 +92,7 @@ data class PipelineView(
     val retry: Boolean = false,
     val writeKey: RunKey? = null,
     val stopCall: CallId? = null,
+    val offline: Boolean = false,
 )
 
 /**
@@ -124,6 +129,10 @@ class PipelineKeys(
  * [lookupsAllowed] the D6 gate, which the session layer's `http` art waits on too. [onAction] is
  * told when the coordinator takes a user's action (a tap on Write), for the time since the last
  * one that each track change is recorded with (D15).
+ *
+ * [online] is whether the phone is online (its default network has validated internet access),
+ * collected after the acknowledgement: when it comes back, the playing track's run asks again the
+ * sources it found unreachable (#192), as the coordinator decides.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
@@ -138,6 +147,7 @@ class PipelineHost(
     private val onFailure: (Throwable) -> Unit = {},
     private val onAction: () -> Unit = {},
     private val next: Flow<NowPlaying?> = emptyFlow(),
+    private val online: Flow<Boolean> = emptyFlow(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
     private val coordinator = PipelineCoordinator()
@@ -256,6 +266,9 @@ class PipelineHost(
                     .collect { queue.send(CoordinatorEvent.NextChanged(it)) }
             }
             launch {
+                online.distinctUntilChanged().collect { queue.send(CoordinatorEvent.NetworkChanged(it)) }
+            }
+            launch {
                 changes.collect { change ->
                     change?.let {
                         val playing = it.nowPlaying
@@ -356,7 +369,7 @@ class PipelineHost(
         handle.job =
             current.scope.launch {
                 try {
-                    current.pipeline.run(effect.nowPlaying, handle)
+                    current.pipeline.run(effect.nowPlaying, handle, effect.again)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (
@@ -488,6 +501,10 @@ class PipelineHost(
             queue.trySend(CoordinatorEvent.DecidedWithoutCall(id))
         }
 
+        override fun gathered(gathered: Gathered) {
+            queue.trySend(CoordinatorEvent.SourcesGathered(id, gathered))
+        }
+
         override fun cardShown(
             card: InsightState.Written?,
             evidence: EvidenceSet,
@@ -533,6 +550,7 @@ class PipelineHost(
                 retry = owner.writeKey != null && (insight is InsightState.Failed || insight == InsightState.Stopped),
                 writeKey = owner.writeKey,
                 stopCall = owner.stopCall,
+                offline = !owner.online,
             )
         }.collect {
             view.value = it

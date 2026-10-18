@@ -68,6 +68,13 @@ interface RunControl {
     fun ended(step: RunStep)
 
     /**
+     * Every source has landed, from the cache or a lookup: what they ended with, reported once,
+     * before the evidence is assembled. The app's coordinator keeps it, so that a run started
+     * with it asks again only the sources that were unreachable (#192). By default nothing.
+     */
+    fun gathered(gathered: Gathered) = Unit
+
+    /**
      * The insight was decided with no model call and nothing from the cache: nothing to write
      * from, no AI service set up, or insights off.
      */
