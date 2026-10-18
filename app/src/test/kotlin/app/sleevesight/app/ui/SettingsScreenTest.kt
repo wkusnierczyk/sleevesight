@@ -263,6 +263,9 @@ class SettingsScreenTest {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
+            // A key that cannot be read can still be removed, alone or with the others.
+            compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_lastfm)).assertExists()
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).assertExists()
 
             compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
@@ -308,6 +311,24 @@ class SettingsScreenTest {
             // The AI service's key row offers it too, once its key is saved.
             runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
             waitForNode(hasContentDescription(removeAnthropic))
+        }
+    }
+
+    @Test
+    fun withNoServiceChosenASavedAiKeyKeepsItsRowToRemoveIt() {
+        runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
+        show {
+            val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
+            waitForNode(hasContentDescription(removeAnthropic))
+            assertEquals(null, current().aiProvider)
+            compose.onNodeWithText(text(R.string.settings_key_name_anthropic)).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithContentDescription(removeAnthropic).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove)).performClick()
+            waitFor("the Anthropic key removed") { runBlocking { secrets.get(SecretId.ANTHROPIC) } == null }
+            waitFor("its row gone") {
+                compose.onAllNodesWithText(text(R.string.settings_key_name_anthropic)).fetchSemanticsNodes().isEmpty()
+            }
         }
     }
 
@@ -367,6 +388,8 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
             waitForText(text(R.string.settings_remove_all_keys_failed))
             compose.onNodeWithText(text(R.string.settings_remove_all)).assertIsDisplayed()
+            // Only the phone's key could not be deleted: the API keys are gone, as the message allows.
+            assertTrue(runBlocking { failingSecrets.states.first() }.values.all { it == SecretState.ABSENT })
         }
     }
 

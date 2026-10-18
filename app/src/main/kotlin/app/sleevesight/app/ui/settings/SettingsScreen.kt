@@ -342,10 +342,28 @@ private fun AiServiceRows(
         )
     }
 
-    val title = stringResource(R.string.settings_ai_key)
-    when (val keyId = settings.aiProvider?.let { SecretId.forProvider(it) }) {
-        null -> ValueRow(title = title, value = stringResource(R.string.settings_ai_model_none), onClick = null)
-        else -> KeyRow(title, keyId, secrets, indent = false, open)
+    val keyId = settings.aiProvider?.let { SecretId.forProvider(it) }
+    // With no service chosen, a key saved for one stays shown under its own name, to remove or replace.
+    val stored =
+        OFFERED_PROVIDERS
+            .mapNotNull { SecretId.forProvider(it) }
+            .filter { (secrets[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
+    when {
+        keyId != null -> {
+            KeyRow(stringResource(R.string.settings_ai_key), keyId, secrets, indent = false, open)
+        }
+
+        stored.isNotEmpty() -> {
+            for (id in stored) KeyRow(stringResource(keyName(id)), id, secrets, indent = false, open)
+        }
+
+        else -> {
+            ValueRow(
+                title = stringResource(R.string.settings_ai_key),
+                value = stringResource(R.string.settings_ai_model_none),
+                onClick = null,
+            )
+        }
     }
 }
 

@@ -114,7 +114,7 @@ private fun removeKeyConfirmation(id: SecretId): Confirmation =
 
 /**
  * What removing every key says: as *Reset saved keys* after a failure ([reset]), or as *Remove all
- * saved keys*. The removal is the same, and so is what it explains.
+ * API keys*. The removal is the same, and so is what it explains.
  */
 @Composable
 private fun removeAllConfirmation(reset: Boolean): Confirmation =
