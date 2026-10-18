@@ -146,7 +146,7 @@ sealed interface PipelineEvent {
         val counts: GroundingCounts,
     ) : PipelineEvent
 
-    /** The model replied `NO_EVIDENCE`, or there was no evidence to write from. */
+    /** The model replied `NO_EVIDENCE`, or the evidence had nothing to narrate (`EvidenceSet.nothingToNarrate`). */
     data class NoEvidence(
         override val key: String,
     ) : PipelineEvent

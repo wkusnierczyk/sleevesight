@@ -26,17 +26,21 @@ import app.sleevesight.core.model.SourceId
  *
  * The simulator's "Plain conversational English. No hype, no headings, no lists, no markdown." is
  * split along that line: the tone is style, plain text without markdown is contract. Everything else
- * is the simulator's wording, but for the rule on a gap: the simulator's "If little is documented,
+ * is the simulator's wording, but for the rule on a gap. The simulator's "If little is documented,
  * say so plainly in one sentence, without a citation" let the model word the gap freely, which the
- * grounding check could not tell from an uncited claim, so the prompt fixes the sentence (version 2,
- * #46). The prompt is deterministic, so the same input gives the same prompt.
+ * grounding check could not tell from an uncited claim; version 2 (#46) fixed the sentence
+ * ([GroundingCheck.GAP_SENTENCE]), which then ended nearly every insight and told the reader nothing.
+ * Version 3 (#193) asks for no gap sentence: the model writes only the sentences the evidence
+ * supports, however few, and every sentence cited. When the evidence has nothing to narrate
+ * (`EvidenceSet.nothingToNarrate`), no prompt is sent and the app shows its own text
+ * (`InsightWriter`). The prompt is deterministic, so the same input gives the same prompt.
  */
 object InsightPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key: raised when the
      * contract or the built-in style changes, so cards written from the old prompt are not reused.
      */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With
@@ -111,9 +115,7 @@ object InsightPrompt {
             "- Evidence labelled \"artist\" is about the performer, not this specific recording.",
             "- Web evidence may describe a different song or artist with the same name; ignore anything that " +
                 "does not fit.",
-            "- If the evidence covers only part of what you would say, write the sentences it supports. To " +
-                "state the gap, end with exactly this sentence, without a citation: ${GroundingCheck.GAP_SENTENCE} " +
-                "Write no other sentence without a citation.",
+            GAP_RULE,
             if (allowModel) {
                 "- You may add at most one sentence from your own general knowledge if it adds real value. End " +
                     "it with [M]. Never contradict the evidence."
@@ -123,6 +125,15 @@ object InsightPrompt {
             "- Plain text only: no headings, no lists, no markdown.",
             "- If there is no usable evidence at all, reply with exactly: ${GroundingCheck.NO_EVIDENCE}",
         ).joinToString("\n")
+
+    /**
+     * The rule on a gap (version 3, #193): a short insight rather than a stated gap. The style's
+     * length is a preference the contract overrides, so thin evidence gives fewer sentences.
+     */
+    const val GAP_RULE: String =
+        "- If the evidence covers only part of what you would say, write only the sentences it supports, " +
+            "even fewer than the style asks for; a short insight is enough. Do not say what the evidence " +
+            "leaves out. Write no sentence without a citation."
 
     /** The card's built-in style: its length and tone. */
     const val BUILT_IN_STYLE: String =
