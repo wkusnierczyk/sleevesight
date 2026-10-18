@@ -51,11 +51,14 @@ class EvidenceSetTest {
     private fun landingIn(vararg order: SourceId) = set(order.flatMap { retrieval.getValue(it) })
 
     @Test
-    fun `nothing was found when no line comes from a source that retrieves`() {
-        assertTrue(set(emptyList()).foundNothing())
-        assertTrue(landingIn(SourceId.PLAYER).foundNothing(), "the player's own release alone")
-        assertFalse(landingIn(SourceId.WEB).foundNothing())
-        assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).foundNothing())
+    fun `nothing to narrate is no line, or the player's release alone with model knowledge off`() {
+        for (allowModel in listOf(false, true)) {
+            assertTrue(set(emptyList()).nothingToNarrate(allowModel), "no line, model knowledge $allowModel")
+            assertFalse(landingIn(SourceId.WEB).nothingToNarrate(allowModel))
+            assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).nothingToNarrate(allowModel))
+        }
+        assertTrue(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = false), "the release alone")
+        assertFalse(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = true), "the release and [M]")
     }
 
     @Test

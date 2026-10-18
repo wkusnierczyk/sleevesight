@@ -31,9 +31,9 @@ import app.sleevesight.core.model.SourceId
  * grounding check could not tell from an uncited claim; version 2 (#46) fixed the sentence
  * ([GroundingCheck.GAP_SENTENCE]), which then ended nearly every insight and told the reader nothing.
  * Version 3 (#193) asks for no gap sentence: the model writes only the sentences the evidence
- * supports, however few, and every sentence cited. When nothing was found, no prompt is sent and
- * the app shows its own text (`InsightWriter`). The prompt is deterministic, so the same input gives
- * the same prompt.
+ * supports, however few, and every sentence cited. When the evidence has nothing to narrate
+ * (`EvidenceSet.nothingToNarrate`), no prompt is sent and the app shows its own text
+ * (`InsightWriter`). The prompt is deterministic, so the same input gives the same prompt.
  */
 object InsightPrompt {
     /**

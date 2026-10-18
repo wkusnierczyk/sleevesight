@@ -87,8 +87,9 @@ sealed interface InsightState {
     ) : InsightState
 
     /**
-     * Nothing usable to write from: nothing was found (`EvidenceSet.foundNothing`), so no call was
-     * made, or the model replied `NO_EVIDENCE`. The card shows the app's own text.
+     * Nothing usable to write from: the evidence had nothing to narrate
+     * (`EvidenceSet.nothingToNarrate`), so no call was made, or the model replied `NO_EVIDENCE`. The
+     * card shows the app's own text.
      */
     data object NoEvidence : InsightState
 

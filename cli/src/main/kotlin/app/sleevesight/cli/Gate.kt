@@ -131,18 +131,22 @@ object Gate {
     /**
      * The criteria over [results]. [insightsAsked] is whether the run asked for insights: then a
      * failed insight call leaves the citation criteria incomplete rather than quietly smaller.
+     * [allowModel] is the run's *Model's own knowledge* switch, which decides whether a track with
+     * only the player's release line had anything to narrate.
      */
     fun evaluate(
         results: List<TrackResult>,
         insightsAsked: Boolean,
-    ): List<Criterion> = citations(results, insightsAsked) + collisions(results)
+        allowModel: Boolean = false,
+    ): List<Criterion> = citations(results, insightsAsked, allowModel) + collisions(results)
 
     private fun citations(
         results: List<TrackResult>,
         insightsAsked: Boolean,
+        allowModel: Boolean,
     ): List<Criterion> {
-        // The tracks something was found for: the others get no call (`EvidenceSet.foundNothing`).
-        val withEvidence = results.filter { it.state.evidence?.foundNothing() == false }
+        // The tracks with something to narrate: the others get no call (`EvidenceSet.nothingToNarrate`).
+        val withEvidence = results.filter { it.state.evidence?.nothingToNarrate(allowModel) == false }
         val written = withEvidence.mapNotNull { (it.state.insight as? InsightState.Written)?.grounded?.counts }
         val failed =
             withEvidence.mapNotNull { r ->

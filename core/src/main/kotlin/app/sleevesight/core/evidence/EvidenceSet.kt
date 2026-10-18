@@ -35,12 +35,16 @@ class EvidenceSet private constructor(
     fun isEmpty(): Boolean = lines.isEmpty()
 
     /**
-     * Whether nothing was found: no line from a source that retrieves. The player's own release
-     * line ([SourceId.PLAYER], `P`) does not count, as it repeats what the player reports, which the
-     * insight prompt gives the model in its track block anyway: a set with only that line has nothing
-     * to narrate that the card's header does not already show (#193).
+     * Whether an insight written from this set has nothing to narrate, so no model call is made
+     * (#193): the set has no line, or, with [allowModel] off, only the player's own release line
+     * ([SourceId.PLAYER], `P`). That line repeats what the player reports, which the insight prompt
+     * gives the model in its track block anyway, so from it alone the model could only restate the
+     * release the card's header shows. With [allowModel] on (the *Model's own knowledge* switch),
+     * such a set is narrated: the model may add its one unverified sentence, cited `[M]`, which the
+     * user opted into. A set with no line at all is never narrated, whatever the switch.
      */
-    fun foundNothing(): Boolean = lines.all { it.source == SourceId.PLAYER }
+    fun nothingToNarrate(allowModel: Boolean): Boolean =
+        lines.isEmpty() || (!allowModel && lines.all { it.source == SourceId.PLAYER })
 
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
 

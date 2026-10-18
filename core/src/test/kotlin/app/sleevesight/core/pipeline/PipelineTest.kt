@@ -355,19 +355,36 @@ class PipelineTest {
         }
 
     @Test
-    fun `the player's own release alone is nothing found, so no call, model knowledge on or off`() =
+    fun `the player's own release alone gets no call with model knowledge off, and a call with it on`() =
         runTest {
             for (allowModel in listOf(false, true)) {
                 val model = if (allowModel) setOf(SourceSwitch.MODEL) else emptySet()
                 settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + model)
-                val provider = FakeProvider()
+                val provider = FakeProvider { FakeProvider.done("It is on Sundown [P1]. It was a hit [M].") }
                 val empty = FakeAdapter(SourceId.WEB) { _, _ -> SourceResult(Outcome.None, emptyList(), 0.seconds) }
                 val state = pipeline(listOf(empty), provider = provider).run(sundown, write = true)
 
                 assertEquals(listOf("P1"), state.evidence?.ids)
-                assertEquals(InsightState.NoEvidence, state.insight)
-                assertEquals(0, provider.requests.size)
+                if (allowModel) {
+                    assertEquals(1, provider.requests.size)
+                    assertEquals(1, assertIs<InsightState.Written>(state.insight).grounded.counts.model)
+                } else {
+                    assertEquals(InsightState.NoEvidence, state.insight)
+                    assertEquals(0, provider.requests.size)
+                }
             }
+        }
+
+    @Test
+    fun `no line at all is no call, even with model knowledge on`() =
+        runTest {
+            settings = settings.copy(enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL)
+            val provider = FakeProvider()
+            val empty = FakeAdapter(SourceId.WEB) { _, _ -> SourceResult(Outcome.None, emptyList(), 0.seconds) }
+            val state = pipeline(listOf(empty), provider = provider).run(snowbird, write = true)
+
+            assertEquals(InsightState.NoEvidence, state.insight)
+            assertEquals(0, provider.requests.size)
         }
 
     @Test

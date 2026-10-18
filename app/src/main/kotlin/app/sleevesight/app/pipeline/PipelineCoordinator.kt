@@ -143,7 +143,10 @@ sealed interface CoordinatorEvent {
         val card: Card,
     ) : CoordinatorEvent
 
-    /** Run [run] decided its insight with no call and nothing cached (no evidence, no AI service, insights off). */
+    /**
+     * Run [run] decided its insight with no call and nothing cached (nothing to narrate, as
+     * `EvidenceSet.nothingToNarrate` decides; no AI service; insights off).
+     */
     data class DecidedWithoutCall(
         val run: RunId,
     ) : CoordinatorEvent
