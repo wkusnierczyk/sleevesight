@@ -18,9 +18,9 @@ import kotlin.time.TimeMark
  * The home insight for one track, once its [evidence] is in: from the synthesis cache when it has
  * this exact card (R2), else written by the model when asked, and always checked
  * ([GroundingCheck]) before it is shown. When the evidence has nothing to narrate
- * ([EvidenceSet.nothingToNarrate]: no line, or only the player's own release with model knowledge
- * off), no call is made and the card shows the app's own text: the call would be paid for a
- * `NO_EVIDENCE` or a restatement of the release.
+ * ([EvidenceSet.nothingToNarrate]: no line, or only the player's own release, unless model
+ * knowledge is on and the report names the artists), no call is made and the card shows the app's
+ * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release.
  */
 internal class InsightWriter(
     private val parts: PipelineParts,
@@ -50,7 +50,7 @@ internal class InsightWriter(
                 show(InsightState.Idle(canWrite = false))
             }
 
-            evidence.nothingToNarrate(allowModel) -> {
+            evidence.nothingToNarrate(allowModel, artistsKnown = track.artists.isNotEmpty()) -> {
                 control.nothingToNarrate(settings)
                 emit(PipelineEvent.NoEvidence(key))
                 show(InsightState.NoEvidence)
