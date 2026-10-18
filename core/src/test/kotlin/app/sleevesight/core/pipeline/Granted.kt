@@ -50,6 +50,13 @@ internal class Granted(
         ended += step
     }
 
+    /** What the run's sources ended with, each time it reported it. */
+    val gathered = mutableListOf<Gathered>()
+
+    override fun gathered(gathered: Gathered) {
+        this.gathered += gathered
+    }
+
     override fun decidedWithoutCall() {
         withoutCall++
     }

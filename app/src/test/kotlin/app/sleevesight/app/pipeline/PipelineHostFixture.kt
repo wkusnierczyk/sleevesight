@@ -52,6 +52,9 @@ internal abstract class PipelineHostFixture {
 
     /** The next item in the queue (D13), and each resolution asked: the lookup key and the length. */
     protected val next = MutableStateFlow<NowPlaying?>(null)
+
+    /** Whether the phone is online, as the host is told (#192). */
+    protected val online = MutableStateFlow(true)
     protected val resolved = mutableListOf<Pair<String, Duration?>>()
 
     /** The resolver's answers, in turn; once they run out, a recording found. */
@@ -72,6 +75,7 @@ internal abstract class PipelineHostFixture {
             onFailure = { failures += it },
             onAction = { actions++ },
             next = next,
+            online = online,
             normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, _ ->
                 builds++

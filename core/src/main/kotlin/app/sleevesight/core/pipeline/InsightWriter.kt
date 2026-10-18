@@ -51,7 +51,7 @@ internal class InsightWriter(
             }
 
             evidence.nothingToNarrate(allowModel, artistsKnown = track.artists.isNotEmpty()) -> {
-                control.decidedWithoutCall()
+                control.nothingToNarrate(settings)
                 emit(PipelineEvent.NoEvidence(key))
                 show(InsightState.NoEvidence)
             }

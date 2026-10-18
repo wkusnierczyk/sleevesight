@@ -154,11 +154,16 @@ class Pipeline(
      * Runs the pipeline for [nowPlaying] once, each step that sends requests or spends starting
      * only once [control] grants it, and returns its final state: the app's loop, whose
      * coordinator decides when (#51). The state is published as for [follow].
+     *
+     * With [again], what an earlier run of the same track gathered, it asks again only the
+     * sources that were unreachable then (back online, #192): the others are kept as they landed,
+     * and a resolution made then is used again, not asked for.
      */
     suspend fun run(
         nowPlaying: NowPlaying,
         control: RunControl,
-    ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control).run()
+        again: Gathered? = null,
+    ): TrackState = start(nowPlaying, parts.normalizer.normalize(nowPlaying), settings(), control, again).run()
 
     /**
      * Prepares [next], the next item in the player's queue, ahead of its play (D13, *Evidence*):
@@ -189,12 +194,13 @@ class Pipeline(
         track: NormalizedTrack,
         current: Settings,
         control: RunControl,
+        again: Gathered? = null,
     ): TrackRun {
         val token = runs.updateAndGetValue()
         return TrackRun(
             parts = parts,
             time = time,
-            input = RunInput(current, nowPlaying, track),
+            input = RunInput(current, nowPlaying, track, again),
             control = control,
             onEvent = { eventFlow.tryEmit(it) },
             publish = { state -> if (runs.value == token) stateFlow.value = state },

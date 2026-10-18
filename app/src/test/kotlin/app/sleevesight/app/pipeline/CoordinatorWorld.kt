@@ -1,19 +1,28 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AutoWrite
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.RunStep
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
+import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.GroundedText
 import org.junit.Assert.assertEquals
 import java.util.PriorityQueue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 // The simulated world `PipelineCoordinatorTest` runs its sequences in, and the steps of a sequence.
 
@@ -87,6 +96,38 @@ internal class World {
 
     /** The causes the runs' settings write on (`AutoWrite.causes`): *On every track change* unless set. */
     var writesOn: Set<ChangeCause> = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
+
+    /**
+     * Whether the phone is offline as the runs find it (#192): lookups granted then end with the
+     * web search unreachable and, unless [offlineFinds], find nothing, so the run decides without
+     * a call. The coordinator hears of it only through [network].
+     */
+    var offline = false
+
+    /** Whether lookups made offline still find something (MusicBrainz from its cache, say). */
+    var offlineFinds = false
+
+    /** Whether no AI service is set up: a run with evidence decides without a call, for no lack of it. */
+    var noAi = false
+
+    /**
+     * Whether the runs' settings allow the model's own knowledge: then the player's release alone
+     * is something to narrate (`EvidenceSet.nothingToNarrate`), and an offline run asks whether to write.
+     */
+    var allowModel = false
+
+    /** Whether a source switched on since (Last.fm) finds a line, offline or not. */
+    var newSource = false
+
+    /**
+     * Wikipedia, when looked up: null while it is not; true while it is unreachable on its own (the
+     * network back, Wikipedia not yet), false once it answers with a line. Offline, it is unreachable.
+     */
+    var wikipediaDown: Boolean? = null
+
+    /** The runs started to ask their unreachable sources again (#192), by title, and what they carried. */
+    val askedAgain = mutableListOf<String>()
+    val carried = mutableListOf<Gathered>()
 
     /** What the coordinator's effects have asked of the host other than runs: the actions taken. */
     var actions = 0
@@ -164,8 +205,13 @@ internal class World {
         titles[effect.run] = effect.nowPlaying.title
         keys[effect.run] = key(effect.nowPlaying)
         if (effect.nowPlaying.artists.isEmpty()) withoutEvidence += effect.run
-        // With the cache, a key looked up before needs no lookups.
-        if (cache && keys.getValue(effect.run) in retrieved) {
+        effect.again?.let {
+            askedAgain += effect.nowPlaying.title
+            carried += it
+        }
+        // With the cache, a key looked up before needs no lookups; a run asking again its
+        // unreachable sources, which were not kept, does.
+        if (cache && keys.getValue(effect.run) in retrieved && effect.again == null) {
             gathered(effect.run, delayMs = 0)
         } else {
             schedule(0, CoordinatorEvent.StepRequested(effect.run, RunStep.LOOKUPS), effect.run)
@@ -242,7 +288,7 @@ internal class World {
                 lookups += title
                 if (cache) retrieved += keys.getValue(run)
                 schedule(lookupMs, CoordinatorEvent.StepEnded(run, step), run)
-                gathered(run, lookupMs)
+                gathered(run, lookupMs, unreachable = offline)
             }
             RunStep.LABELS -> {
                 grants += "labels $title"
@@ -268,23 +314,58 @@ internal class World {
         }
     }
 
-    // The evidence in: a card kept under this key and service is shown; else the question.
+    // The sources landed, reported with what they ended with ([unreachable]: the web search, from
+    // lookups made offline); then the evidence in: a card kept under this key and service is
+    // shown; else the question.
     private fun gathered(
         run: RunId,
         delayMs: Long,
+        unreachable: Boolean = false,
     ) {
+        schedule(delayMs, CoordinatorEvent.SourcesGathered(run, sources(unreachable)), run)
         val insight =
             when {
                 cache && (keys.getValue(run) to service) in cards -> {
                     cardsShown += titles.getValue(run)
                     CoordinatorEvent.CardShown(run, cards[keys.getValue(run) to service]?.let(::card))
                 }
-                run in withoutEvidence -> CoordinatorEvent.DecidedWithoutCall(run)
-                else -> CoordinatorEvent.InsightAsked(run, writesOn)
+                noAi -> CoordinatorEvent.DecidedWithoutCall(run)
+                run in withoutEvidence || (unreachable && !offlineFinds && !newSource && !allowModel) -> {
+                    CoordinatorEvent.DecidedWithoutCall(run, WriteSettings(writesOn, allowModel))
+                }
+                else -> CoordinatorEvent.InsightAsked(run, writesOn, allowModel)
             }
         schedule(delayMs, insight, run)
         schedule(delayMs, CoordinatorEvent.StepRequested(run, RunStep.LABELS), run)
     }
+
+    // What the sources ended with: MusicBrainz finds nothing to cite; the web search a line, or
+    // is unreachable; Last.fm, once switched on ([newSource]), a line.
+    private fun sources(unreachable: Boolean): Gathered {
+        fun done(
+            source: SourceId,
+            outcome: Outcome,
+        ): SourceState {
+            val lines = if (outcome == Outcome.SongArticle) listOf(line(source)) else emptyList()
+            return SourceState.Done(SourceResult(outcome, lines, Duration.ZERO), cached = false)
+        }
+        val web = if (unreachable) Outcome.Unreachable else Outcome.SongArticle
+        val found =
+            mapOf(
+                SourceId.MUSICBRAINZ to done(SourceId.MUSICBRAINZ, Outcome.None),
+                SourceId.WEB to done(SourceId.WEB, web),
+            )
+        val lastFm = if (newSource) mapOf(SourceId.LASTFM to done(SourceId.LASTFM, Outcome.SongArticle)) else emptyMap()
+        val wikipedia =
+            wikipediaDown?.let { down ->
+                val outcome = if (unreachable || down) Outcome.Unreachable else Outcome.SongArticle
+                mapOf(SourceId.WIKIPEDIA to done(SourceId.WIKIPEDIA, outcome))
+            } ?: emptyMap()
+        return Gathered(found + lastFm + wikipedia, null)
+    }
+
+    private fun line(source: SourceId) =
+        EvidenceDraft(source, Scope.SONG, "A line from ${source.tag}.", null, Instant.parse("2026-10-18T12:00:00Z"))
 
     /** Lets [ms] pass, delivering what falls due; what a cancelled run would have sent is dropped. */
     fun advance(ms: Long) {
@@ -429,4 +510,11 @@ internal fun checkAll(cases: List<Case>) {
         val offered = run?.takeIf { world.coordinator.state.offersWrite(it.key) }?.nowPlaying?.title
         assertEquals(case.name, case.offered, offered)
     }
+}
+
+/** The phone's connection as the host reports it (#192); [offline] follows it. */
+internal fun World.network(online: Boolean) {
+    offline = !online
+    send(CoordinatorEvent.NetworkChanged(online))
+    advance(0)
 }

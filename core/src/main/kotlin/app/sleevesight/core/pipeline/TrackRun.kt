@@ -20,11 +20,16 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 
-/** What one run is about: the track as the player reports it and normalized, and its settings. */
+/**
+ * What one run is about: the track as the player reports it and normalized, and its settings;
+ * [again], what an earlier run of the track gathered, when it asks again the sources that were
+ * unreachable then (#192).
+ */
 internal class RunInput(
     val settings: Settings,
     val nowPlaying: NowPlaying,
     val track: NormalizedTrack,
+    val again: Gathered? = null,
 )
 
 /** Where a run reports: diagnostics events, and changes to its state. */
@@ -52,6 +57,21 @@ internal class TrackRun(
     private val track = input.track
     private val key = track.lookupKey
     private val enabled = parts.adapters.filter { settings.isEnabled(it.id) }
+
+    // What an earlier run of the track found (#192), kept as it landed: every state of a source
+    // still switched on but `Unreachable`, which is asked again. An adapter that threw (a bug, not
+    // the network) is not asked again either; a source that was off then is looked up as usual.
+    private val keptBefore: Map<SourceId, SourceState> =
+        input.again
+            ?.sources
+            .orEmpty()
+            .filter { (source, before) -> enabled.any { it.id == source } && keeps(before) }
+
+    // A resolution an earlier run of the track made, used again rather than asked for (#192).
+    private val resolvedBefore =
+        input.again?.resolution?.takeIf {
+            it.outcome != Outcome.Unreachable && settings.isEnabled(SourceId.MUSICBRAINZ)
+        }
     private val state =
         MutableStateFlow(
             TrackState(
@@ -59,8 +79,10 @@ internal class TrackRun(
                 normalized = track,
                 sources =
                     parts.adapters.associate { adapter ->
-                        adapter.id to if (adapter in enabled) SourceState.Pending else SOURCE_OFF
+                        val fresh = if (adapter in enabled) SourceState.Pending else SOURCE_OFF
+                        adapter.id to (keptBefore[adapter.id] ?: fresh)
                     },
+                resolution = resolvedBefore,
             ),
         )
 
@@ -80,6 +102,7 @@ internal class TrackRun(
             publish(state.value)
             coroutineScope {
                 gather()
+                control.gathered(Gathered(state.value.sources, state.value.resolution))
                 val evidence = assemble()
                 launch {
                     control.await(RunStep.LABELS)
@@ -105,9 +128,14 @@ internal class TrackRun(
         publish(state.value)
     }
 
-    // The cache first; then the misses by name in parallel, with resolution alongside (D4).
+    // What an earlier run kept (#192); then the cache; then the misses by name in parallel, with
+    // resolution alongside (D4).
     private suspend fun gather() {
-        val misses = enabled.filter { adapter -> !fromCache(adapter) }
+        input.again?.let { again ->
+            val asked = again.unreachable.filter { source -> enabled.any { it.id == source } }
+            if (asked.isNotEmpty()) emit(PipelineEvent.AskedAgain(key, asked.sortedBy { it.ordinal }))
+        }
+        val misses = enabled.filter { adapter -> adapter.id !in keptBefore && !fromCache(adapter) }
         if (misses.isEmpty()) return
         control.await(RunStep.LOOKUPS)
         val resolution = CompletableDeferred<Resolution>()
@@ -137,6 +165,11 @@ internal class TrackRun(
         if (!settings.isEnabled(SourceId.MUSICBRAINZ)) {
             resolution.complete(Resolution.NONE)
             made.complete(false)
+            return
+        }
+        resolvedBefore?.let {
+            resolution.complete(it)
+            made.complete(true)
             return
         }
         launch {
@@ -270,6 +303,14 @@ internal class TrackRun(
         const val PROVISIONAL: String = "a request of its verification failed, so a later lookup may verify it"
 
         fun nameOf(e: Throwable): String = e::class.simpleName ?: "Exception"
+
+        // Whether a source's state from an earlier run is kept rather than asked again (#192).
+        fun keeps(before: SourceState): Boolean =
+            when (before) {
+                is SourceState.Done -> before.result.outcome !in setOf(Outcome.Unreachable, Outcome.SourceOff)
+                is SourceState.Failed -> true
+                SourceState.Pending -> false
+            }
     }
 }
 
