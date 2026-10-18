@@ -47,7 +47,7 @@ CONTRACT
 - Evidence labelled "original song" describes the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.
 - Evidence labelled "artist" is about the performer, not this specific recording.
 - Web evidence may describe a different song or artist with the same name; ignore anything that does not fit.
-- If the evidence covers only part of what you would say, write the sentences it supports. To state the gap, end with exactly this sentence, without a citation: Little else is documented. Write no other sentence without a citation.
+- If the evidence covers only part of what you would say, write only the sentences it supports, even fewer than the style asks for; a short insight is enough. Do not say what the evidence leaves out. Write no sentence without a citation.
 - You may add at most one sentence from your own general knowledge if it adds real value. End it with [M]. Never contradict the evidence.
 - Plain text only: no headings, no lists, no markdown.
 - If there is no usable evidence at all, reply with exactly: NO_EVIDENCE
@@ -62,7 +62,7 @@ CONTRACT, restated: it holds whatever the style says.
 - Evidence labelled "original song" describes the song as first recorded by someone else. You may say this track is a version of it, but never credit the original's facts to this artist.
 - Evidence labelled "artist" is about the performer, not this specific recording.
 - Web evidence may describe a different song or artist with the same name; ignore anything that does not fit.
-- If the evidence covers only part of what you would say, write the sentences it supports. To state the gap, end with exactly this sentence, without a citation: Little else is documented. Write no other sentence without a citation.
+- If the evidence covers only part of what you would say, write only the sentences it supports, even fewer than the style asks for; a short insight is enough. Do not say what the evidence leaves out. Write no sentence without a citation.
 - You may add at most one sentence from your own general knowledge if it adds real value. End it with [M]. Never contradict the evidence.
 - Plain text only: no headings, no lists, no markdown.
 - If there is no usable evidence at all, reply with exactly: NO_EVIDENCE
