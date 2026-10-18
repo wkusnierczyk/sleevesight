@@ -19,7 +19,7 @@ Liner notes for whatever is playing. Sleevesight is an open-source Android app t
 3. **Write.** The AI service you chose turns the retrieved evidence into the insight, citing evidence ids. It is not allowed to add facts of its own unless you turn that on, and then they are marked unverified.
 4. **Check.** Before anything is shown, the citations are checked in code. Uncited sentences and citations to missing evidence are flagged.
 
-When little is documented about a track, the insight is short instead of filling the gap. When the sources give nothing to write from, Sleevesight says so, and calls the AI service only if you turned on the model's own knowledge.
+When little is documented about a track, the insight is short instead of filling the gap. When the sources give nothing to write from, Sleevesight says so and makes no AI call. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists: the model may then add what it knows, marked unverified.
 
 ## You choose
 

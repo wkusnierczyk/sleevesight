@@ -51,14 +51,21 @@ class EvidenceSetTest {
     private fun landingIn(vararg order: SourceId) = set(order.flatMap { retrieval.getValue(it) })
 
     @Test
-    fun `nothing to narrate is no line, or the player's release alone with model knowledge off`() {
+    fun `nothing to narrate is no line, or the player's release alone without model knowledge and the artists`() {
         for (allowModel in listOf(false, true)) {
-            assertTrue(set(emptyList()).nothingToNarrate(allowModel), "no line, model knowledge $allowModel")
-            assertFalse(landingIn(SourceId.WEB).nothingToNarrate(allowModel))
-            assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).nothingToNarrate(allowModel))
+            for (artistsKnown in listOf(false, true)) {
+                val case = "model knowledge $allowModel, artists known $artistsKnown"
+                assertTrue(set(emptyList()).nothingToNarrate(allowModel, artistsKnown), "no line, $case")
+                assertFalse(landingIn(SourceId.WEB).nothingToNarrate(allowModel, artistsKnown), case)
+                assertFalse(landingIn(SourceId.WEB, SourceId.PLAYER).nothingToNarrate(allowModel, artistsKnown), case)
+                // The release alone is narrated only with model knowledge on and the artists known (#204).
+                assertEquals(
+                    !(allowModel && artistsKnown),
+                    landingIn(SourceId.PLAYER).nothingToNarrate(allowModel, artistsKnown),
+                    "the release alone, $case",
+                )
+            }
         }
-        assertTrue(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = false), "the release alone")
-        assertFalse(landingIn(SourceId.PLAYER).nothingToNarrate(allowModel = true), "the release and [M]")
     }
 
     @Test

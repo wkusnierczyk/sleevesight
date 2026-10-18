@@ -4,6 +4,7 @@ import app.sleevesight.core.Secret
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WriteAutomatically
 import app.sleevesight.wiring.SourceKeys
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -176,6 +177,38 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
                     ?.insight,
             )
             report(NowPlaying(title = "Alpha", artists = "Artist", player = Settings.SPOTIFY))
+            settle()
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertTrue(
+                host.state.value.track
+                    ?.insight is InsightState.Written,
+            )
+        }
+
+    @Test
+    fun `with model knowledge on, a title and album first, then its artists, is written once, without a tap`() =
+        runTest {
+            settings.value =
+                settings.value.copy(
+                    enabledSources = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL,
+                    writeAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
+                )
+            started()
+            play("Zero")
+            settle()
+            tap()
+            settle()
+            // The release alone (`P1`), with no artists yet: nothing to narrate, so no call (#204).
+            report(NowPlaying(title = "Alpha", artists = "", album = "Album", player = Settings.SPOTIFY))
+            settle()
+            assertEquals(0, provider.requestsFor("Alpha"))
+            assertEquals(
+                InsightState.NoEvidence,
+                host.state.value.track
+                    ?.insight,
+            )
+            report(NowPlaying(title = "Alpha", artists = "Artist", album = "Album", player = Settings.SPOTIFY))
             settle()
 
             assertEquals(1, provider.requestsFor("Alpha"))

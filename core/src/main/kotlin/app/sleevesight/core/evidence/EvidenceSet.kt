@@ -36,15 +36,25 @@ class EvidenceSet private constructor(
 
     /**
      * Whether an insight written from this set has nothing to narrate, so no model call is made
-     * (#193): the set has no line, or, with [allowModel] off, only the player's own release line
-     * ([SourceId.PLAYER], `P`). That line repeats what the player reports, which the insight prompt
-     * gives the model in its track block anyway, so from it alone the model could only restate the
-     * release the card's header shows. With [allowModel] on (the *Model's own knowledge* switch),
-     * such a set is narrated: the model may add its one unverified sentence, cited `[M]`, which the
-     * user opted into. A set with no line at all is never narrated, whatever the switch.
+     * (#193): the set has no line, or only the player's own release line ([SourceId.PLAYER], `P`)
+     * unless [allowModel] and [artistsKnown] both hold. That line repeats what the player reports,
+     * which the insight prompt gives the model in its track block anyway, so from it alone the
+     * model could only restate the release the card's header shows. With [allowModel] on (the
+     * *Model's own knowledge* switch), such a set is narrated: the model may add its one unverified
+     * sentence, cited `[M]`, which the user opted into. But only once the report names the track's
+     * artists ([artistsKnown]): some players report the title and album before the artists, and a
+     * card written from that early report would stand for the track, its `[M]` sentence written
+     * without the artist, since nothing is written twice for one track without a tap (D5). Decided
+     * with no call, that early report leaves the track unwritten, so the report with the artists,
+     * under a new key, is decided afresh (#204). A set with no line at all is never narrated,
+     * whatever the switch.
      */
-    fun nothingToNarrate(allowModel: Boolean): Boolean =
-        lines.isEmpty() || (!allowModel && lines.all { it.source == SourceId.PLAYER })
+    fun nothingToNarrate(
+        allowModel: Boolean,
+        artistsKnown: Boolean,
+    ): Boolean =
+        lines.isEmpty() ||
+            (lines.all { it.source == SourceId.PLAYER } && !(allowModel && artistsKnown))
 
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
 
