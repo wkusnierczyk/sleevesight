@@ -340,15 +340,28 @@ class SettingsScreenTest {
         show {
             // The cost of automatic writing is said where it is set.
             compose.onNodeWithText(text(R.string.settings_write_automatically_summary)).performScrollTo()
+            // The summary says what the count chosen does: the default, 5, at first.
+            compose.onNodeWithText(pauseSummary(5)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             val ten = app.resources.getQuantityString(R.plurals.settings_track_changes_away, 10, 10)
             compose.onNodeWithText(ten).performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
+            compose.onNodeWithText(pauseSummary(10)).performScrollTo().assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write_off)).performClick()
             waitFor("the pause off") { current().pauseAutoWriteAfter == null }
+            // Under *Off*, nothing pauses, so no count is explained.
+            compose.onNodeWithText(pauseSummary(null)).performScrollTo().assertIsDisplayed()
         }
+
+    // The summary of *Pause automatic writing after* for [count], or for *Off*.
+    private fun pauseSummary(count: Int?): String {
+        val counted = text(R.string.settings_pause_auto_write_summary)
+        if (count == null) return counted
+        val what = app.resources.getQuantityString(R.plurals.settings_pause_auto_write_summary_count, count, count)
+        return "$counted $what"
+    }
 
     @Test
     fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
