@@ -70,10 +70,11 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
 
         repository.start()
 
-        assertEquals(
-            sundown.copy(mediaId = "spotify:track:1", duration = 223.seconds, queueItemId = 9),
-            repository.nowPlaying.value,
-        )
+        // The track at once; its queue item once the attach has settled.
+        val track = sundown.copy(mediaId = "spotify:track:1", duration = 223.seconds)
+        assertEquals(track, repository.nowPlaying.value)
+        settle()
+        assertEquals(track.copy(queueItemId = 9), repository.nowPlaying.value)
         assertEquals(PlaybackInfo(SPOTIFY, PlaybackStatus.PLAYING, 61.seconds, 500, 1f), repository.playback.value)
         assertEquals(
             SessionQueue("Play Queue", listOf(QueueEntry(10, "Carefree Highway", null, null))),

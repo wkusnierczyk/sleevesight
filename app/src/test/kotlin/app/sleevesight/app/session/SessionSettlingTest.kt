@@ -1,5 +1,6 @@
 package app.sleevesight.app.session
 
+import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
@@ -270,23 +271,101 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertTrue(scheduler.currentTime > began)
     }
 
-    @Test
-    fun aSessionAttachedBetweenTheNewStateAndItsMetadataSeesTheChange() {
-        // Attached after the new track's state (item 5) and before its metadata.
-        val youtube = youtubeMusic(item = 5)
-        val tracks = recordTracks()
+    /**
+     * A session attached at some point of a track change from "Sundown" (item 4) to "Carefree
+     * Highway" (item 5): what it holds when attached, the reports after it (each so many ms after
+     * the attach), and what the repository should make of them.
+     */
+    private data class AttachRow(
+        val name: String,
+        val title: String,
+        val item: Long,
+        val reports: List<Pair<Long, Any>>,
+        val changes: Int,
+        val track: Pair<String, Long?>,
+    )
 
-        scheduler.advanceTimeBy(SessionRepository.SETTLE / 2)
-        youtube.settled(carefree)
+    private val window = SessionRepository.SETTLE.inWholeMilliseconds
 
-        assertEquals(1, changes(tracks))
-        assertEquals(listOf("Sundown", "Carefree Highway"), tracks.map { it?.title })
-        assertEquals(
-            "Carefree Highway",
-            repository.lastChange.value
-                ?.track
-                ?.title,
+    private val attachRows =
+        listOf(
+            AttachRow(
+                "before the change: the state, then the metadata",
+                title = "Sundown",
+                item = 4,
+                reports = listOf(window + 100 to state(queueItem = 5), window + 150 to carefree),
+                changes = 1,
+                track = "Carefree Highway" to 5,
+            ),
+            AttachRow(
+                "before the change: the metadata, then the state",
+                title = "Sundown",
+                item = 4,
+                reports = listOf(window + 100 to carefree, window + 150 to state(queueItem = 5)),
+                changes = 1,
+                track = "Carefree Highway" to 5,
+            ),
+            AttachRow(
+                "between the new state and its metadata",
+                title = "Sundown",
+                item = 5,
+                reports = listOf(window / 2 to carefree),
+                changes = 1,
+                // Item 5 is taken for Sundown's, as when the metadata comes well after the state.
+                track = "Carefree Highway" to null,
+            ),
+            AttachRow(
+                "between the new metadata and its state",
+                title = "Carefree Highway",
+                item = 4,
+                reports = listOf(window / 2 to state(queueItem = 5)),
+                changes = 0,
+                track = "Carefree Highway" to 5,
+            ),
+            AttachRow(
+                "after the change",
+                title = "Carefree Highway",
+                item = 5,
+                reports = emptyList(),
+                changes = 0,
+                track = "Carefree Highway" to 5,
+            ),
+            AttachRow(
+                "a song queued twice, its second copy after the attach has settled",
+                title = "Carefree Highway",
+                item = 4,
+                reports = listOf(window + 100 to state(queueItem = 5)),
+                changes = 1,
+                track = "Carefree Highway" to 5,
+            ),
         )
+
+    @Test
+    fun aSessionAttachedAnywhereInATrackChangeSeesItOnceOrNotAtAll() {
+        followed.value = setOf(YOUTUBE_MUSIC)
+        val wrong = mutableListOf<String>()
+        for (row in attachRows) {
+            // Each row on a fresh start: stopping drops the session and the track shown.
+            repository.stop()
+            val start = scheduler.currentTime
+            val session = FakeSession(YOUTUBE_MUSIC, metadata(title = row.title), state(queueItem = row.item))
+            system.active = listOf(session)
+            repository.start()
+            val tracks = recordTracks()
+            for ((after, report) in row.reports) {
+                at(start + after)
+                when (report) {
+                    is PlaybackState -> session.send(report)
+                    is MediaMetadata -> session.send(report)
+                }
+            }
+            settle()
+
+            val shown = repository.nowPlaying.value
+            val seen = changes(tracks) to (shown?.title to shown?.queueItemId)
+            if (seen != row.changes to row.track) wrong += "${row.name}: $seen"
+        }
+        assertEquals(emptyList<String>(), wrong)
     }
 
     @Test
@@ -295,6 +374,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         // state just before the longest wait runs out, and its metadata just after.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
+        val start = scheduler.currentTime
 
         youtube.send(state(positionMs = 100_000, queueItem = 4))
         for (at in listOf(250L, 500L, 750L)) {
@@ -315,7 +395,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
             tracks,
         )
         val change = checkNotNull(repository.lastChange.value)
-        assertEquals(990L, change.changedAt)
+        assertEquals(start + 990, change.changedAt)
         assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 100_750.milliseconds, 750, 1f), change.before)
     }
 
@@ -324,6 +404,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         // *Next* pressed, reports less than 300 ms apart, and *next* again as the longest wait runs out.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
+        val began = scheduler.currentTime
 
         youtube.send(state(queueItem = 5))
         scheduler.advanceTimeBy(20.milliseconds)
@@ -340,7 +421,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
 
         assertEquals(listOf(4L, 6L), tracks.map { it?.queueItemId })
         assertEquals(listOf("Sundown", "Rainy Day People"), tracks.map { it?.title })
-        assertEquals(0L, repository.lastChange.value?.changedAt)
+        assertEquals(began, repository.lastChange.value?.changedAt)
     }
 
     @Test
@@ -556,15 +637,16 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     @Test
     fun aTitleChangingEvery250MsStillSettlesWithinTheLongestBurst() {
         val youtube = youtubeMusic()
+        val start = scheduler.currentTime
         val longest = SessionRepository.LONGEST_BURST.inWholeMilliseconds
         for (sent in 0L..longest step 250) {
-            at(sent)
+            at(start + sent)
             youtube.send(metadata(title = "Title $sent"))
         }
-        at(longest + 1)
+        at(start + longest + 1)
 
         assertEquals("Title $longest", repository.nowPlaying.value?.title)
-        assertEquals(0L, repository.lastChange.value?.changedAt)
+        assertEquals(start, repository.lastChange.value?.changedAt)
     }
 
     /** Spotify, shown and playing, ranked over YouTube Music playing [youtubeState] on "OldYT". */
