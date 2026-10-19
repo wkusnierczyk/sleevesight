@@ -12,7 +12,10 @@ import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TrackRef
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -158,6 +161,28 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
     }
 
     @Test
+    fun aResetDuringARestoreIsNotOverwrittenByIt() {
+        // The restore reads a mark from an earlier history; the user resets before it rewrites it.
+        val spotify = spotify()
+        spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
+        spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
+        mark.id = 5_000
+        val gate = CompletableDeferred<Unit>()
+        mark.readGate = gate
+
+        runBlocking {
+            // One learning, as the app has, restoring and reset.
+            val restoring = launch(start = CoroutineStart.UNDISPATCHED) { learning.restore() }
+            val resetting = async(start = CoroutineStart.UNDISPATCHED) { learning.reset() }
+            gate.complete(Unit)
+            restoring.join()
+            assertTrue(resetting.await())
+        }
+
+        assertEquals(history.lastChangeId(), mark.id)
+    }
+
+    @Test
     fun aMarkAtTheSequenceAfterAClearIsKept() {
         // Cleared after the reset: the table is empty, but its ids go on from the mark.
         val spotify = spotify()
@@ -186,7 +211,15 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         var failRead = false
         var failWrite = false
 
-        override suspend fun read(): Long = if (failRead) throw IOException("unreadable") else id
+        /** While set, a read takes the mark, then waits for it before it returns. */
+        var readGate: CompletableDeferred<Unit>? = null
+
+        override suspend fun read(): Long {
+            if (failRead) throw IOException("unreadable")
+            val read = id
+            readGate?.await()
+            return read
+        }
 
         override suspend fun write(id: Long) {
             if (failWrite) throw IOException("disk full")

@@ -14,6 +14,8 @@ import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.TrackChangeRecord
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
@@ -93,6 +95,9 @@ class DataStoreLearningMark(
  * - One above the history's sequence ([SessionHistory.changeSequence]) is from a history created
  *   anew since the reset, so every change recorded came after it: all are relearned from, and the
  *   mark goes back to 0, so it does not come to hide this history's changes once its ids pass it.
+ *
+ * A restore reads and rewrites the mark under one lock with a reset's write of it, so a reset made
+ * while a restore runs is never overwritten.
  */
 class SkipDetectorLearning(
     private val detector: SkipDetector,
@@ -105,8 +110,14 @@ class SkipDetectorLearning(
     /** Relearns from the latest [SkipDetector.RESTORED] changes recorded after the mark, read on [io]. */
     suspend fun restore() = detector.restoreFrom { recordedSinceReset() }
 
+    // Held by a restore while it reads and rewrites the mark, and by a reset while it writes it: a
+    // reset during a restore comes after it, and is not overwritten by a rewrite.
+    private val markLock = Mutex()
+
     private suspend fun recordedSinceReset(): List<TrackChangeRecord> =
-        withContext(io) { history.changes(SkipDetector.RESTORED, after = trustedMark()).changes }
+        markLock.withLock {
+            withContext(io) { history.changes(SkipDetector.RESTORED, after = trustedMark()).changes }
+        }
 
     /** The mark, unless it cannot be trusted (the class's KDoc); an unreadable one is rethrown. */
     private suspend fun trustedMark(): Long {
@@ -139,8 +150,10 @@ class SkipDetectorLearning(
 
     override suspend fun reset(): Boolean =
         try {
-            withContext(io) { mark.write(history.lastChangeId()) }
-            detector.reset()
+            markLock.withLock {
+                withContext(io) { mark.write(history.lastChangeId()) }
+                detector.reset()
+            }
             true
         } catch (e: SQLException) {
             Log.w(TAG, "Skip detection could not be reset: ${e::class.simpleName}")
