@@ -204,7 +204,7 @@ flowchart TD
 
 ### During implementation
 
-- **CI between [#30][30] and [#47][47]** has no Android module, so `checkManifest` and the APK artifact are off until [#47][47] brings them back.
+- **CI between [#30][30] and [#47][47]** had no Android module, so `checkManifest` and the APK artifact were off until [#47][47] brought them back.
 - **Every new library** is a reviewed edit to `config/dependency-allowlist.txt` with its licence, GPL-3.0 compatible; for example Ktor, OkHttp, SQLDelight, Compose, Navigation, DataStore, Robolectric, material-color-utilities.
 - **Multiplatform readiness (D2)** is checked from [#33][33] on, so each pipeline module starts within the rules rather than being brought into them.
 - **Recorded responses** in `fixtures/http/` hold third-party text: Wikipedia and Last.fm prose under CC BY-SA, MusicBrainz tags and genres under CC BY-NC-SA 3.0 (marked as such, or recorded without `inc=tags` and `inc=genres`; see [architecture, *MusicBrainz tags and genres*](architecture.md#musicbrainz-tags-and-genres-9)), and Last.fm and web search results under their API terms. Record only what the tests need, keep the attribution with them, and check the API terms on storing responses before committing them.

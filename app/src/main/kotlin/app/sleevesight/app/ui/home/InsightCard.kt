@@ -66,7 +66,7 @@ private fun InsightBody(
         is InsightState.Writing -> {
             val paragraphs = paragraphsOf(insight.partial)
             if (paragraphs.isEmpty()) Quiet(stringResource(R.string.home_insight_writing))
-            for (paragraph in paragraphs) Prose(uncheckedProse(paragraph, context, actions.onCite))
+            for (paragraph in paragraphs) UncheckedProse(paragraph, context, actions.onCite)
             if (context.offers.stop) StopButton(actions.onStop)
         }
 
@@ -128,7 +128,7 @@ private fun Written(
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
     for (paragraph in paragraphs) {
-        Prose(checkedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite))
+        CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite)
     }
     Meta(insight.grounded, insight.cached)
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
