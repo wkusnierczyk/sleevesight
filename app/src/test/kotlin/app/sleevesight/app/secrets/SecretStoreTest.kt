@@ -322,7 +322,8 @@ class SecretStoreTest {
                 }
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(unreadable, SecretCipher(keys), legacyKeystore = true)
-            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
+            // A storage failure, not the key store's: no reset is offered for it.
+            assertEquals(SaveResult.NOT_WRITTEN, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.creations)
         }
 

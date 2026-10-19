@@ -66,7 +66,8 @@ internal fun <T> ChoiceDialog(
  * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
  * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
  * only a key the key store could not seal suggests *Reset saved keys*, which cannot cure a file that
- * cannot be written.
+ * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
+ * result says.
  */
 @Composable
 internal fun KeyDialog(
@@ -94,7 +95,7 @@ internal fun KeyDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(keyName(id))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -133,7 +134,7 @@ internal fun KeyDialog(
                         enabled = !busy,
                     ) { Text(stringResource(R.string.settings_remove)) }
                 }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) }
+                TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
             }
         },
     )
@@ -159,7 +160,7 @@ internal class Confirmation(
 /**
  * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
  * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
- * then, and otherwise says so.
+ * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed.
  */
 @Composable
 internal fun ConfirmDialog(
@@ -171,7 +172,7 @@ internal fun ConfirmDialog(
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(confirmation.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -199,7 +200,9 @@ internal fun ConfirmDialog(
                 enabled = !busy,
             ) { Text(confirmation.confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+        },
     )
 }
 

@@ -71,8 +71,8 @@ internal fun SavedKeysSection(
 /**
  * The saved keys' dialog [shown], on [store]. Each save and removal runs in [saves], which outlives
  * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
- * result. [onSealFailed] hears whether the key store could not seal a key saved, and that it has
- * not once every key is removed.
+ * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
+ * key store could not seal a key saved, and that it has not once every key is removed.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -90,9 +90,10 @@ internal fun KeyDialogs(
                 id = shown.id,
                 state = secrets[shown.id] ?: SecretState.ABSENT,
                 onSave = { value ->
-                    saves.async { store.set(shown.id, Secret(value)) }.await().also {
-                        onSealFailed(it == SaveResult.NOT_SEALED)
-                    }
+                    saves
+                        .async {
+                            store.set(shown.id, Secret(value)).also { onSealFailed(it == SaveResult.NOT_SEALED) }
+                        }.await()
                 },
                 onRemove = { saves.async { store.clear(shown.id) }.await() },
                 onDismiss = onDismiss,
@@ -110,7 +111,7 @@ internal fun KeyDialogs(
         SettingsDialog.ResetKeys, SettingsDialog.RemoveAllKeys -> {
             ConfirmDialog(
                 removeAllConfirmation(reset = shown == SettingsDialog.ResetKeys),
-                onConfirm = { saves.async { store.reset() }.await().also { if (it) onSealFailed(false) } },
+                onConfirm = { saves.async { store.reset().also { if (it) onSealFailed(false) } }.await() },
                 onDismiss,
             )
         }

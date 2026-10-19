@@ -69,7 +69,10 @@ enum class SaveResult {
      */
     NOT_SEALED,
 
-    /** The file could not be written: a reset would not help; trying again may. */
+    /**
+     * The file could not be written, or, before API 31, read to tell whether a key may be made: a
+     * reset would not help; trying again may.
+     */
     NOT_WRITTEN,
 }
 
@@ -180,17 +183,20 @@ class SecretStore(
     /**
      * Saves [secret] as the key [id], replacing any before it: [SaveResult.NOT_SEALED] when it could
      * not be sealed (the key store failed, or may not make a key), [SaveResult.NOT_WRITTEN] when it
-     * could not be written (DataStore failed); what was stored before is then kept, and nothing is
-     * deleted.
+     * could not be written (DataStore failed), or, before API 31, when no key was found and the file
+     * could not be read to tell whether one may be made; what was stored before is then kept, and
+     * nothing is deleted.
      */
     suspend fun set(
         id: SecretId,
         secret: Secret,
     ): SaveResult =
         writes.withLock {
+            // Before API 31, whether any entry is stored: null when the file cannot be read.
+            val stored = if (legacyKeystore) anyStored() else false
             val sealed =
                 withContext(dispatcher) {
-                    val mayCreate = !legacyKeystore || nothingStored()
+                    val mayCreate = stored == false
                     val plain = secret.reveal().encodeToByteArray()
                     try {
                         cipher.seal(plain, associated(id), mayCreate)
@@ -199,6 +205,8 @@ class SecretStore(
                     }
                 }
             when {
+                // No key found, and none may be made because the file could not be read: storage.
+                sealed == null && stored == null -> SaveResult.NOT_WRITTEN
                 sealed == null -> SaveResult.NOT_SEALED
                 write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) } -> SaveResult.SAVED
                 else -> SaveResult.NOT_WRITTEN
@@ -234,16 +242,16 @@ class SecretStore(
         }
 
     /**
-     * Whether no key is stored, read from the file itself: a read that fails counts as keys stored,
-     * so it never allows creating a key that could cost one.
+     * Whether any key is stored, read from the file itself; null when the read fails, which never
+     * allows creating a key that could cost one.
      */
-    @Suppress("SwallowedException") // A failed read means "maybe"; that is all the caller needs.
-    private suspend fun nothingStored(): Boolean =
+    @Suppress("SwallowedException") // A failed read means "unknown"; that is all the caller needs.
+    private suspend fun anyStored(): Boolean? =
         try {
             val prefs = dataStore.data.first()
-            SecretId.entries.none { prefs[keyOf(it)] != null }
+            SecretId.entries.any { prefs[keyOf(it)] != null }
         } catch (e: IOException) {
-            false
+            null
         }
 
     @Suppress("SwallowedException") // A failed write is reported as false; its message holds no key.

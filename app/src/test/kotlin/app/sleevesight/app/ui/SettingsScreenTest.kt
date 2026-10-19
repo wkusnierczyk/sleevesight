@@ -25,6 +25,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FlakyDataStore
@@ -62,6 +64,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -72,7 +75,9 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 import java.security.ProviderException
+import java.util.concurrent.CountDownLatch
 import javax.crypto.SecretKey
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -289,6 +294,81 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
             assertEquals(null, runBlocking { flakySecrets.get(SecretId.EXA) })
             // The file could not be written, which a reset would not cure: none is offered.
+            for (absent in listOf(R.string.settings_reset_keys, R.string.settings_key_save_failed)) {
+                assertTrue(compose.onAllNodesWithText(text(absent)).fetchSemanticsNodes().isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun aSaveCannotBeCancelledWhileItRunsAndAKeyStoreFailureThenOffersReset() {
+        val release = CountDownLatch(1)
+        // The key store answers only once released, and then fails.
+        val slow =
+            object : SoftwareKeySource() {
+                override fun find(): SecretKey? {
+                    release.await()
+                    throw ProviderException("key store down")
+                }
+            }
+        val slowSecrets = SecretStore(stores.open("slow-secrets"), SecretCipher(slow), legacyKeystore = false)
+        show(secretStore = slowSecrets) {
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+
+            // While the save runs, *Cancel* is refused, so it cannot seem to cancel a save that goes on.
+            val cancel = hasText(text(R.string.settings_cancel))
+            waitForNode(cancel and isNotEnabled())
+            compose.onNode(cancel).performClick()
+            compose.onNode(hasSetTextAction()).assertExists()
+
+            release.countDown()
+            waitForText(text(R.string.settings_key_save_failed))
+            waitForText(text(R.string.settings_reset_keys))
+        }
+    }
+
+    @Test
+    fun aResetAfterAKeyStoreFailureClearsTheOffer() {
+        // The key store fails until its key is deleted, as a corrupt key blob would.
+        val keys =
+            object : SoftwareKeySource() {
+                override fun find(): SecretKey? =
+                    if (deletions == 0) throw ProviderException("invalid key blob") else super.find()
+            }
+        val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(keys), legacyKeystore = false)
+        show(secretStore = failingSecrets) {
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitForText(text(R.string.settings_key_save_failed))
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+
+            waitForText(text(R.string.settings_reset_keys))
+            compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
+            waitFor("Reset saved keys no longer offered") {
+                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
+            }
+            assertEquals(1, keys.deletions)
+        }
+    }
+
+    @Test
+    fun beforeApi31AFileThatCannotBeReadIsAStorageFailureWithNoResetOffered() {
+        val unreadable =
+            object : DataStore<Preferences> by stores.open("unreadable-secrets") {
+                override val data = flow<Preferences> { throw IOException("cannot read") }
+            }
+        val legacySecrets =
+            SecretStore(unreadable, SecretCipher(SoftwareKeySource(current = null)), legacyKeystore = true)
+        show(secretStore = legacySecrets) {
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+
+            waitForText(text(R.string.settings_key_write_failed))
             for (absent in listOf(R.string.settings_reset_keys, R.string.settings_key_save_failed)) {
                 assertTrue(compose.onAllNodesWithText(text(absent)).fetchSemanticsNodes().isEmpty())
             }

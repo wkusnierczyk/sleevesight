@@ -279,6 +279,42 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun anOverrideALaterVersionStoredAgainstAnotherDefaultSurvivesAnEditOfAnotherSwitch() {
+        // A later version with other defaults stored these; here each repeats this version's default.
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("labels.on") to setOf("MUSICBRAINZ"),
+                stringSetPreferencesKey("sources.off") to setOf("MODEL"),
+                stringSetPreferencesKey("players.on") to setOf(Settings.SPOTIFY),
+            )
+        val read = SettingsCodec.read(prefs)
+        SettingsCodec.write(
+            read.copy(
+                labelSources = read.labelSources - LabelSource.LASTFM,
+                enabledSources = read.enabledSources - SourceSwitch.LASTFM,
+                followedPlayers = read.followedPlayers + (OTHER_PLAYER to false),
+            ),
+            prefs,
+        )
+        assertEquals(
+            mutablePreferencesOf(
+                stringSetPreferencesKey("labels.on") to setOf("MUSICBRAINZ"),
+                stringSetPreferencesKey("labels.off") to setOf("LASTFM"),
+                stringSetPreferencesKey("sources.off") to setOf("MODEL", "LASTFM"),
+                stringSetPreferencesKey("players.on") to setOf(Settings.SPOTIFY),
+                stringSetPreferencesKey("players.off") to setOf(OTHER_PLAYER),
+            ),
+            prefs,
+        )
+
+        // The switch itself, moved, is rewritten against this version's default.
+        val moved = SettingsCodec.read(prefs)
+        SettingsCodec.write(moved.copy(labelSources = moved.labelSources - LabelSource.MUSICBRAINZ), prefs)
+        assertEquals(setOf("LASTFM", "MUSICBRAINZ"), prefs[stringSetPreferencesKey("labels.off")])
+        assertNull(prefs[stringSetPreferencesKey("labels.on")])
+    }
+
+    @Test
     fun evidenceAndInsightStoredReadsAsEvidence() {
         // No longer offered (D13, #20): an insight prepared from a queue item would be paid twice.
         val prefs = mutablePreferencesOf(stringPreferencesKey("insights.prepare_next_track") to "EVIDENCE_AND_INSIGHT")

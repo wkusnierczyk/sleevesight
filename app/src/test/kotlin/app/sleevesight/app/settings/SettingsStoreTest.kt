@@ -1,12 +1,19 @@
 package app.sleevesight.app.settings
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.TestStores
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -130,19 +137,35 @@ class SettingsStoreTest {
         assertEquals(SettingsStore.MAX_RETRY, SettingsStore.backoff(Int.MAX_VALUE))
     }
 
+    /** Preferences in memory, on the caller's dispatcher, so a test can run on virtual time. */
+    private class MemoryStore : DataStore<Preferences> {
+        private val state = MutableStateFlow(emptyPreferences())
+
+        override val data: Flow<Preferences> = state
+
+        override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+            transform(state.value).also { state.value = it }
+    }
+
     @Test
     fun theBackoffStartsAgainAfterAReadThatSucceeds() =
-        runBlocking {
+        runTest {
             // Each read gives the file and then fails: failure, recovery, failure, five times over.
-            val flaky = FlakyDataStore(stores.open("settings"))
+            val flaky = FlakyDataStore(MemoryStore())
             flaky.failuresAfterAValue.set(5)
             val store = SettingsStore(flaky)
             val shown = mutableListOf<Settings>()
+            // Not in `backgroundScope`, whose work `advanceUntilIdle` leaves waiting.
             val job = launch { store.settings.collect { shown += it } }
-            // From the first retry's wait each time (250 ms), about 1.3 s; doubling, it would be 7.75 s.
-            withTimeout(4.seconds) { while (flaky.reads.get() < 6) delay(10) }
+            advanceUntilIdle()
+            assertEquals(6, flaky.reads.get())
+            // Each retry waits the first wait (250 ms), 1.25 s in all; doubling, it would be 7.75 s.
+            assertEquals(5 * SettingsStore.FIRST_RETRY.inWholeMilliseconds, testScheduler.currentTime)
+
+            // And the flow goes on.
             store.update { it.copy(writeInsights = false) }
-            withTimeout(5.seconds) { while (shown.last().writeInsights) delay(10) }
+            advanceUntilIdle()
+            assertEquals(false, shown.last().writeInsights)
             job.cancel()
         }
 
