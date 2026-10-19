@@ -10,11 +10,15 @@ import app.sleevesight.core.model.NowPlaying
  * its active queue item can lag behind a new queue for a moment), else by its active queue item
  * (YouTube Music). A media id queued more than once is told apart by the active queue item; when
  * that item names another entry (it lags behind, still on the track before), the playing track is
- * the first of them after it. When there is no active item, it is not in the queue, or none of
- * them comes after it, the position is ambiguous. A track not found in the queue, found
- * ambiguously, or the last in it, has no next item: nothing is prepared rather than a guess. The
- * active queue item decides only where the playing track is in the queue, never whether it is the
- * same track (`TrackIdentity`).
+ * the first of them after it. An active item that leads instead (its state before the metadata:
+ * in a queue A, B, A, C, the metadata still on the first A and the active item already on B)
+ * picks the second A, so C is prepared for a moment. That cost is accepted: media-id players have
+ * only been seen lagging, and a preparation makes no model call (lookups only) and is replaced by
+ * the next report. When there is no active item, it is not in the queue, or none of them comes
+ * after it, the position is ambiguous. A track not found in the queue, found ambiguously, or the
+ * last in it, has no next item: nothing is prepared rather than a guess. Here the active queue
+ * item only locates the playing track in the queue; whether a report is the same track is
+ * `TrackIdentity`'s to say.
  */
 object NextInQueue {
     /**
@@ -45,7 +49,9 @@ object NextInQueue {
 
     // The playing track's index in [items]: by its media id, the active queue item choosing among
     // several of it, or, when it names another entry (lagging behind), the first of them after
-    // it; else by its active queue item; −1 if neither, or ambiguous.
+    // it; else by its active queue item; −1 if neither, or ambiguous. An active item that leads
+    // instead (already on the next entry) picks a later match: a wrong preparation for a moment,
+    // accepted (see the KDoc above).
     private fun position(
         playing: NowPlaying,
         items: List<QueueEntry>,

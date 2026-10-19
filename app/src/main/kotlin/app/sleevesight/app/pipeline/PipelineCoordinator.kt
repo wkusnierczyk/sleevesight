@@ -471,8 +471,11 @@ data class CoordinatorState(
      * (another player on the same release, or another media id or queue item with the same title,
      * artists, album and length) is a track change, as [sameInsightTrack] judges it, so once it
      * settles the run is replaced, a call under way is cut off, and the new track decides afresh
-     * (D5). The coordinator follows the session layer's identity rather than a rule of its own
-     * (#255; #297 takes the queue item out of that identity).
+     * (D5): written again where the mode and the first action allow, otherwise Write is offered.
+     * The coordinator follows the session layer's identity rather than a rule of its own (#255).
+     * #297 takes the queue slot out of identity for players that send no track id; the media id
+     * still decides when both reports send one, so another player on the same release, or another
+     * media id with the same metadata, stays a track change.
      */
     fun holds(
         run: Run,
