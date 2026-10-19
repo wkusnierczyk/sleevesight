@@ -98,9 +98,14 @@ if RECORD:
 VW, VH = X1 - X0, Y1 - Y0
 VB = '%g %g %g %g' % (X0, Y0, round(VW, 2), round(VH, 2))
 wpx = lambda hpx: '%.2fpx' % (hpx * VW / VH)
-# What the logo turns about: the dot of the i, at (0,0), or the record's centre.
-TURN = '%.3f%% %.3f%%' % (((PX if RECORD else 0) - X0) / VW * 100, ((PY if RECORD else 0) - Y0) / VH * 100)
+# What B's logo turns about on a hover: the dot of the i, at (0,0). C's spins its record alone, in the
+# header (`.disc`), about the record's own centre.
+DOT = '%.3f%% %.3f%%' % (-X0 / VW * 100, -Y0 / VH * 100)
 LP = '<use href="#lp" x="%g" y="%g" width="%g" height="%g"/>' % (RX, RY, RS, RS) if RECORD else ''
+# The disc is placed by its group, not by the <use>'s x and y: those translate it after its own
+# transform, and fall outside the box (`fill-box`) its spin is centred on.
+DISC = ('<g transform="translate(%g %g)"><use class="disc" href="#lp" width="%g" height="%g"/></g>' % (RX, RY, RS, RS)
+        if RECORD else '')
 # C's logo: the words as in B, with the record. The record's colours are the eye's, through variables,
 # since a selector cannot reach into a <use>.
 LPDEF = ('<symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>'
@@ -120,17 +125,21 @@ sub(r'<div class="splash" aria-hidden="true">.*?</div>\n',
      '<rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/>'
      '<use href="#words"/></svg>') + '</div></div></div>\n', regex=True)
 sub(r'    <svg viewBox="0 0 32 32" aria-hidden="true">.*?</svg>\n    <span class="name">Sleeve<span class="sight">sight</span></span>\n',
-    '    <svg viewBox="%s" aria-hidden="true"><use href="#words"/>%s</svg>\n' % (VB, LP), regex=True)
-# The header shows the words alone, their ink box as the view box, so they line up with the page's
-# edge, as tall as the eye was (72 px; 36 px compact; 58 px under 370 px). They turn about the dot.
+    '    <svg viewBox="%s" aria-hidden="true"><use href="#words"/>%s</svg>\n' % (VB, DISC), regex=True)
+# The header shows the mark alone (the words, or with `--record` the words and the record), its ink box
+# as the view box, so it lines up with the page's edge, as tall as the eye was (72 px; 36 px compact;
+# 58 px under 370 px). On a hover, B's words turn about the dot; C's record spins in place.
 sub('.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;font-stretch:88%;font-size:40px;line-height:1.1;letter-spacing:-.015em;color:var(--ink);text-decoration:none}',
     '.brand{display:flex;align-items:center;flex:none;text-decoration:none}')
 sub(r'/\* `top`: flex centring leaves the eye.*?\n\.brand>svg\{width:72px;height:72px;flex:none;display:block;position:relative;top:\.75px\}',
     ("/* The logo: the words and the record, with their ink box as the view box, so the S lines up with\n"
-     "   the page's edge. It turns about the record's centre (`transform-origin`). */\n" if RECORD else
+     "   the page's edge. The record (`.disc`) spins about its own centre: its box's, since the disc is\n"
+     "   round. */\n"
+     '.brand>svg{width:%s;height:72px;flex:none;display:block}\n'
+     '.brand .disc{transform-box:fill-box;transform-origin:center}' % wpx(72) if RECORD else
      "/* The logo: the words, with their ink box as the view box, so the S lines up with the page's edge.\n"
-     "   It turns about the dot (`transform-origin`). */\n") +
-    '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), TURN), regex=True)
+     "   It turns about the dot (`transform-origin`). */\n"
+     '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), DOT)), regex=True)
 sub(r'/\* The name: "Sleeve" bold in ink.*?\n\.brand \.sight\{font-weight:400;color:var\(--sight\)\}\n', '', regex=True)
 sub('@media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:58px;height:58px}}',
     '@media (max-width:370px){.brand>svg{width:%s;height:58px}}' % wpx(58))
@@ -188,7 +197,8 @@ CSS_RECORD = r'''/* The logo: the brand sheet's 8b. "Sleeve" over "sight", right
    record, the words going round with it (2 s, with the landing page's easing for the record's turn),
    and shrinks onto the header's logo; then the rest of the page fades in. Scrolling, a key or a click
    ends it at once; "Play the intro again" plays it once more. Hovering over or focusing the logo
-   (`.play`) turns it once. Nothing moves under "reduce motion". */
+   (`.play`) spins the record once, in place; the words stay still, so the logo keeps to its own
+   footprint. Nothing moves under "reduce motion". */
 .splash{display:none}
 .sl-intro .splash{display:block;position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none;animation:tl-in 700ms ease-out both,sl-gone 1ms 3950ms forwards}
 .splash .fly{width:var(--sb);height:var(--sb);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
@@ -197,7 +207,7 @@ CSS_RECORD = r'''/* The logo: the brand sheet's 8b. "Sleeve" over "sight", right
 .sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
 .sl-intro .brand>svg{animation:sl-hold 3950ms}
 .sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out 3950ms both}
-@media (prefers-reduced-motion: no-preference){.brand.play>svg{animation:sl-hover 900ms cubic-bezier(.45,0,.55,1)}}
+@media (prefers-reduced-motion: no-preference){.brand.play .disc{animation:sl-hover 900ms cubic-bezier(.45,0,.55,1)}}
 @keyframes tl-in{from{opacity:0}}
 @keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
 @keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}

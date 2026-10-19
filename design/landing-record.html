@@ -66,8 +66,10 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offse
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
 /* The logo: the words and the record, with their ink box as the view box, so the S lines up with
-   the page's edge. It turns about the record's centre (`transform-origin`). */
-.brand>svg{width:133.84px;height:72px;flex:none;display:block;overflow:visible;transform-origin:86.296% 74.522%}
+   the page's edge. The record (`.disc`) spins about its own centre: its box's, since the disc is
+   round. */
+.brand>svg{width:133.84px;height:72px;flex:none;display:block}
+.brand .disc{transform-box:fill-box;transform-origin:center}
 @media (max-width:370px){.brand>svg{width:107.82px;height:58px}}
 nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
@@ -107,7 +109,8 @@ nav.top a:hover{color:var(--ink);text-decoration:underline}
 .btn.tonal{background:var(--accent-soft);color:var(--ink)}
 
 /* The mock: one card as the home screen is designed (design.md, User interface). */
-figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
+/* At the end of its column, so the phone's right edge lines up with the header menu's. */
+figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
 .phone{background:var(--s-bg);color:var(--s-on);border:10px solid #101318;border-radius:40px;padding:18px 14px 20px;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
 .prow{display:flex;align-items:center;gap:10px;background:var(--s-c1);border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.25}
 .prow b{font-weight:600}
@@ -182,7 +185,8 @@ footer p{margin:0 0 4px}
    record, the words going round with it (2 s, with the landing page's easing for the record's turn),
    and shrinks onto the header's logo; then the rest of the page fades in. Scrolling, a key or a click
    ends it at once; "Play the intro again" plays it once more. Hovering over or focusing the logo
-   (`.play`) turns it once. Nothing moves under "reduce motion". */
+   (`.play`) spins the record once, in place; the words stay still, so the logo keeps to its own
+   footprint. Nothing moves under "reduce motion". */
 .splash{display:none}
 .sl-intro .splash{display:block;position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none;animation:tl-in 700ms ease-out both,sl-gone 1ms 3950ms forwards}
 .splash .fly{width:var(--sb);height:var(--sb);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
@@ -191,7 +195,7 @@ footer p{margin:0 0 4px}
 .sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
 .sl-intro .brand>svg{animation:sl-hold 3950ms}
 .sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out 3950ms both}
-@media (prefers-reduced-motion: no-preference){.brand.play>svg{animation:sl-hover 900ms cubic-bezier(.45,0,.55,1)}}
+@media (prefers-reduced-motion: no-preference){.brand.play .disc{animation:sl-hover 900ms cubic-bezier(.45,0,.55,1)}}
 @keyframes tl-in{from{opacity:0}}
 @keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
 @keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
@@ -201,6 +205,7 @@ footer p{margin:0 0 4px}
 @keyframes sl-hover{to{transform:rotate(360deg)}}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
+  figure.mock{justify-self:center;max-width:360px}
   .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tiles,.boxes,.boxes.pair,.two{grid-template-columns:minmax(0,1fr)}
 }
@@ -226,7 +231,7 @@ document.documentElement.classList.add('js');
 <header class="top"><div class="bar"><div class="row wrap">
   <!-- `#`: the top of this page, without a reload. -->
   <a class="brand" href="#" aria-label="Sleevesight, top of the page">
-    <svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg>
+    <svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="disc" href="#lp" width="37.5" height="37.5"/></g></svg>
   </a>
   <nav class="top" aria-label="Site">
     <ul>
