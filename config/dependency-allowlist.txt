@@ -9,6 +9,8 @@
 # were in use; the rest, `com.google.guava` and `org.jspecify` included, were sized to the
 # probe. When `:app` came (#47), it used all of them again, and the Compose groups and further
 # AndroidX groups were added, most of them pulled in by Compose UI.
+# The move to Compose 1.12 and Navigation 2.10 (#146) took some of those groups off the
+# classpath, and their lines went with them.
 #
 # group                        licence
 org.jetbrains.kotlin           Apache-2.0
@@ -38,24 +40,17 @@ androidx.concurrent            Apache-2.0
 androidx.core                  Apache-2.0
 androidx.customview            Apache-2.0
 androidx.datastore             Apache-2.0   # settings and sealed keys (#50)
-androidx.documentfile          Apache-2.0
-androidx.dynamicanimation      Apache-2.0
 androidx.emoji2                Apache-2.0
 androidx.graphics              Apache-2.0
 androidx.interpolator          Apache-2.0
-androidx.legacy                Apache-2.0
 androidx.lifecycle             Apache-2.0
-androidx.loader                Apache-2.0
-androidx.localbroadcastmanager Apache-2.0
 androidx.navigation            Apache-2.0
 androidx.navigationevent       Apache-2.0
-androidx.print                 Apache-2.0
 androidx.profileinstaller      Apache-2.0
 androidx.savedstate            Apache-2.0
 androidx.sqlite                Apache-2.0   # SQLite on Android, under SQLDelight's Android driver (#49)
 androidx.startup               Apache-2.0
 androidx.tracing               Apache-2.0
-androidx.transition            Apache-2.0
 androidx.versionedparcelable   Apache-2.0
 androidx.window                Apache-2.0
 com.google.guava               Apache-2.0   # listenablefuture, pulled in by androidx
