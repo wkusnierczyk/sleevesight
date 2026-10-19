@@ -1,7 +1,7 @@
 What's new in 0.1.2:
 - "What leaves the phone" now says what the privacy policy says, and lists everything the app reads from your player.
-- History keeps how far you heard a track when the app is stopped and restarted.
 - Settings say why web search or Last.fm cannot run.
-- Citations work with screen readers.
+- Diagnostics: an export cut short now ends as failed instead of running for ever.
+- Screen readers announce each citation and can jump to its source line.
 - Sources: the chips sit level, and lines start in one column.
 - Updated for Android 17 (still runs on Android 8 and later).
