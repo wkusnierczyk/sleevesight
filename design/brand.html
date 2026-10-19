@@ -64,6 +64,10 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .mark .vert{display:inline-flex;flex-direction:column;align-items:center;gap:.32em}
 .mark .vert svg{width:6.6em;height:auto;aspect-ratio:31/15}
 .no-tile{--tile-bg:transparent;--tile-edge:transparent}
+/* 8a and 8b: the 6c words, outlined, with the record on the side they align to. The svg is as tall
+   as both words' ink, which is the stacked text's height at .8em (37.6 units to the em). */
+.mark svg.lp-mark{width:auto;height:1.47em}
+.lp-mark .t-ink{fill:var(--ink)}
 .s-p{font-size:30px}.s-xl{font-size:56px}.s-l{font-size:40px}.s-m{font-size:24px}.s-s{font-size:14px}.s-xs{font-size:9px}
 
 /* Colours */
@@ -194,6 +198,15 @@ noscript .lead{margin-top:16px}
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="lp" viewBox="8 8 16 16">
+    <circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>
+    <circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/>
+    <circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/>
+    <circle cx="16" cy="16" r="3" fill="#cf222e"/>
+    <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
+    <path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r=".9" fill="#fff"/>
+  </symbol>
   <symbol id="eye" viewBox="0 0 32 32">
     <path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round" style="fill:var(--eye-fill);stroke:var(--eye-stroke)"/>
     <circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>
@@ -263,6 +276,10 @@ noscript .lead{margin-top:16px}
   <p class="lead">With the eye. The bold "Sleeve" carries the eye's weight; "sight" is regular, in ink or in the record label's red. The horizontal mark is for headers and narrow bands, the stacked one where there is height to spare.</p>
   <div id="primary" class="grid2"></div>
 
+  <h2>Marks with the record</h2>
+  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record of the favicon, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it.</p>
+  <div id="record" class="grid2"></div>
+
   <h2>For marketing</h2>
   <p class="lead">The eye over the address, for posters, ads and merch, where the point is to send people to the site. Regular weight throughout, "app" in red; the eye as wide as the address, the two centred on one line.</p>
   <div id="marketing" class="grid2"></div>
@@ -299,6 +316,8 @@ noscript .lead{margin-top:16px}
 const E = '<svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg>';
 const T = inner => `<span class="tile-mark"><span class="w stack right n">${inner}</span></span>`;
 const M = {
+  '8a': '<svg class="lp-mark" viewBox="-38.59 -38.26 146.62 71.00" aria-hidden="true"><use href="#words"/><use href="#lp" x="53.80" y="-29.41" width="54.94" height="54.94"/></svg>',
+  '8b': '<svg class="lp-mark" viewBox="-38.59 -38.26 130.27 71.00" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>',
   '7a': '<span class="vert"><svg viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="w n">sleevesight.<span class="red">app</span></span></span>',
   '2c': E + '<span class="w">Sleeve<span class="n red">sight</span></span>',
   '4e': '<span class="w stack right"><span>Sleeve</span><span class="n">sight</span></span>' + E,
@@ -319,6 +338,11 @@ document.getElementById('primary').innerHTML = [
   ['4e', 'Stacked · one colour'],
   ['4k', 'Stacked · sight red'],
 ].map(([k, n]) => card(k, n, duo(k, k === '2c' ? 's-p' : 's-l'))).join('');
+
+document.getElementById('record').innerHTML = [
+  ['8a', 'The record from the x-height of "Sleeve" to the baseline of "sight"'],
+  ['8b', 'The record as tall as "sight"'],
+].map(([k, n]) => card(k, n, duo(k, 's-l'))).join('');
 
 document.getElementById('marketing').innerHTML = card('7a', 'Eye over the address · regular · app red', duo('7a', 's-m'));
 
