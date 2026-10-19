@@ -334,12 +334,48 @@ internal class PipelineHostTest : PipelineHostFixture() {
             assertTrue(view.track?.insight is InsightState.Written)
             assertEquals(PipelineHost.FAILED, view.rewriteFailed)
             assertEquals(false, view.rewrite)
+            assertTrue(view.cardShown)
 
             // The next track is a track of its own: nothing failed there.
             provider.failure = null
             play("Two")
             settle()
             assertEquals(null, host.state.value.rewriteFailed)
+        }
+
+    @Test
+    fun `the card paid for, shown in place of a run with no insight, says so with or without Write beside it`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            tap()
+            settle()
+            // The run's own insight: not the card paid for in its place.
+            assertFalse(host.state.value.cardShown)
+
+            // New evidence: the card paid for stays, with Write beside it.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertTrue(host.state.value.rewrite)
+            assertTrue(host.state.value.cardShown)
+
+            // The AI service's key removed: nothing can be written, and the card paid for stays,
+            // with nothing offered beside it and nothing failed.
+            keys = PipelineKeys(ai = null, sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            val view = host.state.value
+            assertTrue(view.track?.insight is InsightState.Written)
+            assertFalse(view.rewrite)
+            assertNull(view.rewriteFailed)
+            assertTrue(view.cardShown)
+
+            // The next track has no card paid for.
+            play("Two")
+            settle()
+            assertFalse(host.state.value.cardShown)
         }
 
     @Test

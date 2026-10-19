@@ -52,8 +52,10 @@ import app.sleevesight.core.pipeline.TrackState
  * lines of matches that could not be verified, which are shown but never cited; and the matches
  * rejected, with their reasons.
  *
- * When the insight shown is the one written earlier ([cardKept]: Rewrite is offered, or a rewrite
- * failed), the lines are those it cites, found when it was written, beside the sources' states now.
+ * When the insight shown is the one written earlier ([cardKept]: the pipeline shows the card paid
+ * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
+ * a rewrite failed, or neither), the lines are those it cites, found when it was written, beside
+ * the sources' states now.
  * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
  * sources are asked again once it is back online.
  */

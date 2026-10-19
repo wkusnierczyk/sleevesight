@@ -398,7 +398,8 @@ internal class World {
 
     fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
 
-    fun card(text: String) = Card(InsightState.Written(GroundedText(text, emptyList()), cached = false), null)
+    fun card(text: String) =
+        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), null)
 
     /** The text of the card the ledger holds. */
     fun cardText(): String? =
