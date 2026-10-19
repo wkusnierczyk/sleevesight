@@ -1,11 +1,12 @@
 """design/landing-tile.html: the product page with the text tile as its logo and intro, for testers to
 compare with the eye. Built from index.html and src/tile.json (make_tile.py).
 
-The builder edits index.html in place, so it is tied to one version of it: INDEX, the SHA-256 of
-index.html as it was when the builder was last checked against it. Any other index.html stops the
-build. Nothing rebuilds the page on its own, so after index.html changes it goes stale until
-someone checks the change against every edit below (`git diff <INDEX's commit> -- index.html`),
-updates the edits it touches and INDEX, rebuilds, and checks the page in a browser. As a last net,
+The builder never writes index.html: it makes its page by exact edits to a copy of index.html's
+text, so it is tied to one version of it. INDEX is the first 16 hex digits of the SHA-256 of that
+text, as it was when the builder was last checked against it. Any other index.html stops the build.
+Nothing rebuilds the page on its own, so after index.html changes it goes stale until someone
+checks the change against every edit below (`git diff <INDEX's commit> -- index.html`), updates
+the edits it touches and INDEX, rebuilds, and checks the page in a browser. As a last net,
 the build also stops if the page still holds anything of the eye's, or a quoted `href` or `src`
 that does not resolve from design/. From the repository's root:
 
