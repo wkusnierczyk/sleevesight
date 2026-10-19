@@ -13,13 +13,16 @@ import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import app.sleevesight.store.history.HistoryDatabase
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -255,6 +258,70 @@ class DiagnosticsTest {
         assertTrue(out.size() > 0)
     }
 
+    /**
+     * Starts an export in a scope of its own on the test's thread, with [open] given the scope, and
+     * waits for the export's job to complete, however it does; then the state it ended in. The
+     * scope's handler collects what the export threw ([thrown]).
+     */
+    private fun exportEnding(
+        thrown: MutableList<Throwable> = mutableListOf(),
+        before: (CoroutineScope) -> Unit = {},
+        open: (CoroutineScope) -> OutputStream?,
+    ): ExportState =
+        runBlocking {
+            val parent = SupervisorJob(coroutineContext[Job])
+            val scope = CoroutineScope(coroutineContext + parent + CoroutineExceptionHandler { _, e -> thrown += e })
+            val exporting =
+                Diagnostics(
+                    log = DiagnosticsLog(clock = fixedClock),
+                    readChanges = history::changes,
+                    readCacheStats = { stats },
+                    io = EmptyCoroutineContext,
+                    scope = scope,
+                    version = "1.2.3",
+                )
+            before(scope)
+            exporting.export { open(scope) }
+            parent.children.toList().forEach { it.join() }
+            // A job launched in a scope already cancelled is not its child, and completes once the
+            // event loop runs it: a bounded number of turns, never a wait on the clock.
+            repeat(EVENT_LOOP_TURNS) { if (exporting.exportState.value == ExportState.Running) yield() }
+            parent.cancel()
+            exporting.exportState.value
+        }
+
+    @Test
+    fun anExportCancelledMidwayEndsAsFailedNotRunning() {
+        val out = ByteArrayOutputStream()
+        val state =
+            exportEnding { scope ->
+                // The process's scope cancelled once the file is open, before anything is read.
+                scope.cancel()
+                out
+            }
+        assertEquals(ExportState.Ended(ExportResult.FAILED), state)
+    }
+
+    @Test
+    fun anExportWhoseScopeIsCancelledBeforeItStartsEndsAsFailed() {
+        var opened = false
+        val state =
+            exportEnding(before = { it.cancel() }) {
+                opened = true
+                ByteArrayOutputStream()
+            }
+        assertEquals(ExportState.Ended(ExportResult.FAILED), state)
+        assertFalse(opened)
+    }
+
+    @Test
+    fun anExportEndedByAnErrorEndsAsFailedAndTheErrorStillReachesTheScope() {
+        val thrown = mutableListOf<Throwable>()
+        val state = exportEnding(thrown) { throw StackOverflowError("a provider's bug") }
+        assertEquals(ExportState.Ended(ExportResult.FAILED), state)
+        assertEquals(listOf(StackOverflowError::class), thrown.map { it::class })
+    }
+
     @Test
     fun aResetThatFailsIsReportedNotThrown() {
         val reported = Learned(mapOf("p" to 1.seconds)) { false }
@@ -264,5 +331,9 @@ class DiagnosticsTest {
         assertFalse(runBlocking { diagnostics(learning = reported).resetLearning() })
         assertFalse(runBlocking { diagnostics(learning = thrown).resetLearning() })
         assertFalse(runBlocking { diagnostics().resetLearning() })
+    }
+
+    private companion object {
+        const val EVENT_LOOP_TURNS = 10
     }
 }
