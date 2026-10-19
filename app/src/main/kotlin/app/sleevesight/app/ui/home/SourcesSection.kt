@@ -5,12 +5,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,9 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -33,8 +37,10 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineView
@@ -48,9 +54,11 @@ import app.sleevesight.core.pipeline.TrackState
 /**
  * The *Sources* section, quiet, at the bottom (design, *Home screen*): a chip per source with its
  * state, which shows or hides that source's lines (a display filter only: what the model may use
- * is the settings'); the evidence lines, each with its scope and a link to where it was found; the
- * lines of matches that could not be verified, which are shown but never cited; and the matches
- * rejected, with their reasons.
+ * is the settings'), the chips of a row centred on one line; the evidence lines, each with its
+ * scope and a link to where it was found; the lines of matches that could not be verified, which
+ * are shown but never cited; and the matches rejected, with their reasons. The lines are a table
+ * of two columns (#270): the tags right-aligned in the first, as wide as the widest, so every
+ * line's text starts at the same place.
  *
  * When the insight shown is the one written earlier ([cardKept]: Rewrite is offered, or a rewrite
  * failed), the lines are those it cites, found when it was written, beside the sources' states now.
@@ -70,7 +78,14 @@ internal fun SourcesSection(
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.home_sources_title), style = MaterialTheme.typography.titleSmall)
         val lines = track?.evidence?.lines.orEmpty()
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val unverified = track?.let(::unverifiedLines).orEmpty()
+        // Of every line, hidden ones too, so the column does not move when a chip hides some.
+        val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
             for (chip in chips) {
                 val filters = lines.any { it.source in chip.filters }
                 StatusChip(chip, filtering = filters, shown = chip.filters.none { it in hidden }) { focus.toggle(chip) }
@@ -82,14 +97,14 @@ internal fun SourcesSection(
             lines.isNotEmpty() -> {
                 for (line in lines) {
                     if (line.source !in hidden) {
-                        EvidenceRow(line, focus.flash?.id == line.id, focus.requesters[line.id])
+                        EvidenceRow(line, tagWidth, focus.flash?.id == line.id, focus.requesters[line.id])
                     }
                 }
             }
             track?.gathered == true -> Small(stringResource(R.string.home_evidence_empty))
             else -> Small(stringResource(R.string.home_evidence_looking))
         }
-        track?.let { Unverified(unverifiedLines(it)) }
+        Unverified(unverified, tagWidth)
         track?.let { Rejected(rejectedMatches(it)) }
     }
 }
@@ -159,6 +174,7 @@ private fun StatusChip(
 @Composable
 private fun EvidenceRow(
     line: EvidenceLine,
+    tagWidth: Dp,
     flashed: Boolean,
     requester: BringIntoViewRequester?,
 ) {
@@ -175,7 +191,7 @@ private fun EvidenceRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Tag(line.id)
+        Tag(line.id, tagWidth)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(line.text, style = MaterialTheme.typography.bodySmall)
             Where(line.scope, line.url)
@@ -183,17 +199,42 @@ private fun EvidenceRow(
     }
 }
 
+/**
+ * The tags' column: as wide as the widest of [tags] as [Tag] draws them. Summed in pixels, as the
+ * padding is laid out (each side rounded on its own): at 420 dpi, 4 dp is 10.5 px, so 8 dp rounded
+ * once is a pixel short of the padding's 22 (review of #271).
+ */
 @Composable
-private fun Tag(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
-        modifier =
-            Modifier
-                .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
-                .padding(horizontal = 4.dp, vertical = 1.dp),
-    )
+private fun tagColumnWidth(tags: List<String>): Dp {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelSmall
+    val density = LocalDensity.current
+    return remember(tags, style, density) {
+        val widest = tags.maxOfOrNull { measurer.measure(it, style).size.width } ?: 0
+        with(density) { (widest + 2 * TAG_PADDING.roundToPx()).toDp() }
+    }
+}
+
+/** A line's tag, right-aligned in the tags' column, [width] wide. */
+@Composable
+private fun Tag(
+    text: String,
+    width: Dp,
+) {
+    Box(modifier = Modifier.width(width), contentAlignment = Alignment.TopEnd) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            // Never wrapped, should the column still come out short: a pixel of alignment at worst.
+            softWrap = false,
+            maxLines = 1,
+            modifier =
+                Modifier
+                    .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
+                    .padding(horizontal = TAG_PADDING, vertical = 1.dp),
+        )
+    }
 }
 
 /** A line's scope, and the host it was found on, linked; the link opens in the browser. */
@@ -216,12 +257,15 @@ private fun Where(
 }
 
 @Composable
-private fun Unverified(lines: List<EvidenceDraft>) {
+private fun Unverified(
+    lines: List<EvidenceDraft>,
+    tagWidth: Dp,
+) {
     if (lines.isEmpty()) return
     Small(stringResource(R.string.home_unverified))
     for (line in lines) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(4.dp)) {
-            Tag(line.source.tag)
+            Tag(line.source.tag, tagWidth)
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(line.text, style = MaterialTheme.typography.bodySmall)
                 Where(line.scope, line.url)
@@ -247,6 +291,8 @@ private fun Rejected(matches: List<RejectedMatch>) {
 private fun Small(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+private val TAG_PADDING = 4.dp
 
 /** The test tag of a source's chip, before its tag (`MB`, `W`). */
 const val CHIP_PREFIX: String = "chip:"
