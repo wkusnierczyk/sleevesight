@@ -7,7 +7,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.IOException
 
 /** Skip detection's reset mark on a file, through the store the app opens it with ([DataStoreLearningMark.open]). */
 class DataStoreLearningMarkTest {
@@ -34,9 +33,9 @@ class DataStoreLearningMarkTest {
         file().writeText("not a preferences file")
         val mark = DataStoreLearningMark.open(::file)
 
-        assertThrows(IOException::class.java) { runBlocking { mark.read() } }
+        assertThrows(CorruptMarkException::class.java) { runBlocking { mark.read() } }
         // Still refused on a second read, rather than read as no reset.
-        assertThrows(IOException::class.java) { runBlocking { mark.read() } }
+        assertThrows(CorruptMarkException::class.java) { runBlocking { mark.read() } }
 
         runBlocking { mark.write(7) }
         assertEquals(7L, runBlocking { mark.read() })

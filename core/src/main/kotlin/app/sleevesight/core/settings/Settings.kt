@@ -126,8 +126,9 @@ data class Settings(
          * MusicBrainz's tags no track gets labels until one is saved, with them 29 of the test
          * playlist's 78 did (design, *D12*). Last.fm is looked up only with its key, so its labels
          * come once the key is saved. The MusicBrainz tags are CC BY-NC-SA 3.0, used for labels
-         * only and credited (`LabelSource.MUSICBRAINZ`); if the MetaBrainz inquiry (#100) is not
-         * answered by the Play release, the release has them off by default, with the reason.
+         * only and credited (`LabelSource.MUSICBRAINZ`); in the Play release they are off by
+         * default unless the MetaBrainz inquiry (#100) is answered and its terms met, with the reason
+         * recorded.
          */
         val DEFAULT_LABEL_SOURCES: Set<LabelSource> = LabelSource.entries.toSet()
 

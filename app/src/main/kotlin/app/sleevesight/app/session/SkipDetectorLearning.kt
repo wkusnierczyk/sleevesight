@@ -25,7 +25,7 @@ import kotlin.time.Duration
 /**
  * Where the mark of skip detection's last reset is kept: the id of the newest track change recorded
  * then (`SessionHistory.lastChangeId`), 0 before any reset. Both throw [IOException] on failure, and
- * [read] also when the mark cannot be trusted (its file was found corrupt).
+ * [read] throws [CorruptMarkException] when the mark cannot be trusted (its file was found corrupt).
  */
 interface LearningMark {
     suspend fun read(): Long
@@ -33,13 +33,18 @@ interface LearningMark {
     suspend fun write(id: Long)
 }
 
+/** The mark's file was found corrupt, so the mark cannot be trusted ([LearningMark.read]). */
+class CorruptMarkException(
+    message: String,
+) : IOException(message)
+
 /**
  * [LearningMark] in a Preferences DataStore of its own: app state, not a user setting, so not in the
  * settings' file or `Settings`. In the app's own files, which the backup and transfer rules exclude,
  * as they do the session history the mark names a change of.
  *
- * Its store ([open]) replaces a file it cannot parse with a mark that [read] refuses, with an
- * [IOException], until one is written over it; not with empty preferences, as the settings' store
+ * Its store ([open]) replaces a file it cannot parse with a mark that [read] refuses, with a
+ * [CorruptMarkException], until one is written over it; not with empty preferences, as the settings' store
  * does, which would read as no reset and relearn from the changes before one.
  */
 class DataStoreLearningMark(
@@ -47,7 +52,7 @@ class DataStoreLearningMark(
 ) : LearningMark {
     override suspend fun read(): Long {
         val id = store.data.first()[KEY] ?: return 0
-        if (id == UNREADABLE) throw IOException("The mark's file was corrupt")
+        if (id == UNREADABLE) throw CorruptMarkException("The mark's file was corrupt")
         return id
     }
 
@@ -89,9 +94,12 @@ class DataStoreLearningMark(
  *
  * A mark that cannot be trusted never makes a start learn from changes before a reset, nor hides
  * the changes after one for good:
- * - One that cannot be read at start (its file corrupt, say) relearns nothing, logged by its type,
+ * - One whose file was found corrupt ([CorruptMarkException]) relearns nothing, logged by its type,
  *   and is written anew as the newest change's id, as a reset then: nothing that start relearned,
  *   so later starts relearn only what is recorded from then on, as this process learns it.
+ * - One that cannot be read for another reason (an I/O error that may pass) relearns nothing at
+ *   that start, and is left as it is for the next start to read: written anew, it would hide the
+ *   changes recorded since the real reset from every later start.
  * - One above the history's sequence ([SessionHistory.changeSequence]) is from a history created
  *   anew since the reset, so every change recorded came after it: all are relearned from, and the
  *   mark goes back to 0, so it does not come to hide this history's changes once its ids pass it.
@@ -119,12 +127,15 @@ class SkipDetectorLearning(
             withContext(io) { history.changes(SkipDetector.RESTORED, after = trustedMark()).changes }
         }
 
-    /** The mark, unless it cannot be trusted (the class's KDoc); an unreadable one is rethrown. */
+    /**
+     * The mark, unless it cannot be trusted (the class's KDoc). A read that fails is rethrown, and a
+     * corrupt mark is first written anew.
+     */
     private suspend fun trustedMark(): Long {
         val after =
             try {
                 mark.read()
-            } catch (e: IOException) {
+            } catch (e: CorruptMarkException) {
                 rewrite("as of now") { history.lastChangeId() }
                 throw e
             }

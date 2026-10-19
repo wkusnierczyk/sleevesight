@@ -347,9 +347,6 @@ class LastFmAdapterTest {
                     // More matches than the page holds: the bio only, though no namesake was seen.
                     Triple(listOf(GORDON) + longer.take(99), 101, LastFmMatch.BioVerified),
                     Triple(listOf(GORDON) + longer, 2150, LastFmMatch.BioVerified),
-                    // A count below the artists on the page is wrong, and proves nothing.
-                    Triple(listOf(GORDON) + longer.take(99), 50, LastFmMatch.BioVerified),
-                    Triple(listOf(GORDON), 0, LastFmMatch.BioVerified),
                     // A namesake on the page decides, complete or not ("Them", "Fred").
                     Triple(
                         longer.take(30) + MbArtist(OTHER, "Gordon Lightfoot") + GORDON,
@@ -363,6 +360,27 @@ class LastFmAdapterTest {
                 assertEquals(expected, lookup.artists.single().match, "$total, ${found.size}")
                 assertEquals(listOf("Gordon Lightfoot"), artists.searches, "$total, ${found.size}")
                 assertFalse(lookup.result.provisional, "$total, ${found.size}")
+            }
+        }
+
+    @Test
+    fun `a count below the artists listed fails the search - unverified and provisional`() =
+        runTest {
+            // `MusicBrainzClient.searchArtists` already fails such an answer; this is the backstop.
+            val longer = (1..LONGER).map { MbArtist("other-$it", "Gordon Lightfoot Cover Band $it") }
+            val cases =
+                listOf(
+                    listOf(GORDON) + longer.take(99) to 50,
+                    listOf(GORDON) to 0,
+                    // A namesake on the page does not decide an answer that is wrong.
+                    listOf(MbArtist(OTHER, "Gordon Lightfoot"), GORDON) to 1,
+                )
+            for ((found, total) in cases) {
+                val artists = ArtistSearchStub(mapOf("Gordon Lightfoot" to found), totals = mapOfNotNull(total))
+                val lookup = adapter(artists = artists).lookupArtists(fixtureTrack(1), gordonResolved())
+                assertEquals(LastFmMatch.Unverified, lookup.artists.single().match, "$total, ${found.size}")
+                assertTrue(lookup.artists.single().provisional, "$total, ${found.size}")
+                assertTrue(lookup.result.provisional, "$total, ${found.size}")
             }
         }
 
@@ -649,10 +667,11 @@ class LastFmAdapterTest {
 
     /**
      * MusicBrainz's artist search, answered from [artists] by the name asked, its first 100; the
-     * total is the list's size unless [totals] gives a larger one (a search the page does not hold
-     * whole). [failure], when given, answers every search, and [failing] those for its names. Every
-     * name asked is kept in [searches]. By default each stubbed Last.fm artist is the only one of its
-     * name, except Reem, whose name two artists have. Resolution's calls are not expected.
+     * total is the list's size unless [totals] gives another: a larger one, a search the page does
+     * not hold whole, or a smaller one, a wrong count. [failure], when given, answers every search,
+     * and [failing] those for its names. Every name asked is kept in [searches]. By default each
+     * stubbed Last.fm artist is the only one of its name, except Reem, whose name two artists have.
+     * Resolution's calls are not expected.
      */
     private class ArtistSearchStub(
         private val artists: Map<String, List<MbArtist>> = DEFAULT_ARTISTS,

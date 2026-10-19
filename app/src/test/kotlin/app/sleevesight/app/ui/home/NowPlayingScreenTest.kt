@@ -372,7 +372,7 @@ class NowPlayingScreenTest {
                         "It topped the charts (${text(R.string.home_cite, "W1")}). " +
                             "It is loved (${text(R.string.home_cite_model)}). " +
                             "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
-                            "It is great. (${text(R.string.home_cite_none)})",
+                            "It is great (${text(R.string.home_cite_none)}).",
                     ),
                 ),
             )
@@ -420,6 +420,8 @@ class NowPlayingScreenTest {
                     action.label?.toString()?.startsWith(text(R.string.home_cite, "")) == true
                 }
             assertEquals(evidence.ids.take(16).map { text(R.string.home_cite, it) }, custom.map { it.label.toString() })
+            // A line past them is reached under *Sources*, which lists every line.
+            compose.onNodeWithTag(LINE_PREFIX + evidence.ids.last()).performScrollTo().assertIsDisplayed()
         }
     }
 

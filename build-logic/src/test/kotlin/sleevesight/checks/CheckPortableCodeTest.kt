@@ -110,6 +110,52 @@ class CheckPortableCodeTest {
     }
 
     @Test
+    fun `a removeEldestEntry override in a LinkedHashMap subclass is found, and elsewhere it is not`() {
+        fun lru(
+            superName: String,
+            name: String = "Lru",
+        ): ByteArray {
+            val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+            writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, name, null, superName, null)
+            val access = Opcodes.ACC_PROTECTED
+            writer.visitMethod(access, "removeEldestEntry", "(Ljava/util/Map\$Entry;)Z", null, null).apply {
+                visitCode()
+                visitInsn(Opcodes.ICONST_0)
+                visitInsn(Opcodes.IRETURN)
+                visitMaxs(0, 0)
+                visitEnd()
+            }
+            writer.visitEnd()
+            return writer.toByteArray()
+        }
+        assertEquals(
+            listOf("removeEldestEntry(Ljava/util/Map\$Entry;)Z: java/util/LinkedHashMap.removeEldestEntry override"),
+            CheckPortableCode.jvmOnlyUsesIn(lru("java/util/LinkedHashMap")),
+        )
+        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("java/lang/Object")))
+        // Two levels down, through a class read with it; not when the ancestry leaves the classes read.
+        val supers = mapOf("Base" to "java/util/LinkedHashMap")
+        assertEquals(
+            listOf("removeEldestEntry(Ljava/util/Map\$Entry;)Z: java/util/LinkedHashMap.removeEldestEntry override"),
+            CheckPortableCode.jvmOnlyUsesIn(lru("Base", "Bounded"), supers),
+        )
+        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("Base", "Bounded")))
+        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("Other", "Bounded"), supers))
+        // A cycle in what is read ends the walk.
+        val cycle = mapOf("A" to "B", "B" to "A")
+        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("A", "Bounded"), cycle))
+    }
+
+    @Test
+    fun `a class file's superclass is read`() {
+        val bytes = ClassWriter(0).apply {
+            visit(Opcodes.V17, Opcodes.ACC_PUBLIC, "p/Bounded", null, "p/Base", null)
+            visitEnd()
+        }.toByteArray()
+        assertEquals("p/Bounded" to "p/Base", CheckPortableCode.superclassOf(bytes))
+    }
+
+    @Test
     fun `a class without them passes`() {
         val bytes =
             probe(body = { method ->

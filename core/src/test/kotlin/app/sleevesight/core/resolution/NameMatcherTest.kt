@@ -80,9 +80,20 @@ class NameMatcherTest {
         assertTrue(names.honorificVariant("Mr. Jane Smith", "The Jane Smith"))
         assertTrue(names.honorificVariant("Mrs. The Jane Smith", "Jane Smith"))
         assertFalse(names.honorificVariant("Mr. The", "the"))
+        // A leading article counts as a word, `the` as `a` does, as `The Bear` is `Bear` by name.
+        assertTrue(names.honorificVariant("Mr. The Bear", "Bear"))
         // `Doctor` written out, as `Mister` is.
         assertTrue(names.honorificVariant("Doctor Jane Smith", "Jane Smith"))
         assertFalse(names.honorificVariant("Doctor John", "John"))
+        // One honorific spelled two ways on both names is a variant, at any length.
+        assertTrue(names.honorificVariant("Dr. Hook & the Medicine Show", "Doctor Hook & the Medicine Show"))
+        assertTrue(names.honorificVariant("Doctor John", "Dr. John"))
+        assertTrue(names.honorificVariant("Mister Big", "Mr Big"))
+        assertTrue(names.honorificVariant("Dr. The Band", "Doctor Band"))
+        assertFalse(names.honorificVariant("Dr. John", "Mr. John"))
+        assertFalse(names.honorificVariant("Doctor John", "Doctor John"))
+        assertFalse(names.honorificVariant("Dr. Hook", "Doctor Hooks"))
+        assertFalse(names.honorificVariant("Dr.", "Doctor"))
         // Words are split at any whitespace.
         assertTrue(names.honorificVariant("Mr.\tA  Balladeer", "a balladeer"))
     }
