@@ -57,7 +57,6 @@ fun FirstRunScreen(
             Heading(R.string.first_run_leaves_title)
             Bullet(R.string.first_run_to_sources)
             Bullet(R.string.first_run_to_ai)
-            Bullet(R.string.first_run_to_spotify)
             Bullet(R.string.first_run_to_art_host)
             Body(R.string.first_run_ip_address)
 

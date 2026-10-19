@@ -6,18 +6,17 @@
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
-    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing: the title, artists, album, length and cover. It ignores the notifications themselves, and it never touches the audio.</string>
+    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. From the players you follow (Spotify by default) it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists, cleaned of tags such as “2006 Remaster”, and the album name. This is for the playing track; while “Prepare the next track” is on, the title and artists of the next one in the player’s queue also go to MusicBrainz, if switched on.</string>
-    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, what the sources found, and your style setting, including any text you write there. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
-    <string name="first_run_to_spotify">To Spotify, only if you connect a Spotify account: requests for the playlist or album being played, made with your own token.</string>
-    <string name="first_run_to_art_host">To the server named in that web address, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia: the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Last.fm gets the artists’ names only, Wikidata only identifiers, and the album name goes to none of them. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next one in the player’s queue also go to MusicBrainz, if switched on.</string>
+    <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
+    <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
 
     <string name="first_run_stays_title">What stays on the phone</string>
     <string name="first_run_stays">Nothing else leaves the phone. The length and cover of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
-    <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting, no analytics, no ads.</string>
+    <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
 
     <string name="access_off">Notification access is off.</string>
     <string name="access_off_hint">In the settings that open, turn on Sleevesight, then come back here.</string>
