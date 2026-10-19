@@ -161,7 +161,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .shirts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px}
 /* Each card spans two of the grid's rows, its header and its stage, and shares them with the cards
    beside it (subgrid), so a caption that wraps makes every header in its row taller and the shirts
-   still line up. The space between rows of cards is the cards' own margin. */
+   still line up. The space between rows of cards is the cards' own margin, and the last row's
+   margin is the space above the Stickers card. */
 .shirts .card{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:0;margin-bottom:16px}
 @media (max-width:900px){.shirts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.shirts{grid-template-columns:minmax(0,1fr)}}
@@ -285,7 +286,7 @@ noscript .lead{margin-top:16px}
   <p class="lead">Mock-ups, not print-ready art. On black, the type is pure white and the red is the lighter <code>#f0443a</code>; the eye is white with a grey rim, as on the site in dark mode.</p>
   <div class="shirt-bar" hidden><span id="tee-all">All shirts</span><span class="seg" role="group" aria-labelledby="tee-all"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span></div>
   <div class="shirts" id="merch"></div>
-  <div class="card" style="margin-top:16px"><div class="cap"><b>Stickers</b><span>Die-cut with a white edge</span></div>
+  <div class="card"><div class="cap"><b>Stickers</b><span>Die-cut with a white edge</span></div>
     <div class="merch stage" style="display:block;padding:28px 16px"><div class="sticker-row" id="stickers"></div></div></div>
   <footer class="foot"><a href="https://sleevesight.app/">Sleevesight</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/design/brand.html">This page's source</a> · Roboto Flex under the <a href="../assets/fonts/OFL.txt">SIL Open Font License</a></footer>
 </div>
