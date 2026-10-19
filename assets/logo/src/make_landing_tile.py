@@ -21,10 +21,10 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'
 t = json.load(open(os.path.join(ROOT, 'assets', 'logo', 'src', 'tile.json')))
 h = open(os.path.join(ROOT, 'index.html')).read()
 
-INDEX = 'b38fef9ec1a9f1f6'   # index.html at #260
+INDEX = '23d95e448c19e198'   # index.html at #241
 got = hashlib.sha256(h.encode()).hexdigest()[:16]
 if got != INDEX:
-    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at #260):\n'
+    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at #241):\n'
              'check the change against the builder\'s edits, update them and INDEX, then rebuild' % (got, INDEX))
 
 def sub(old, new, regex=False):
