@@ -389,6 +389,7 @@ merch.innerHTML = [
   ['6c', 'The words alone, chest', 's-m', 'no-tile'],
   ['6c', 'The words alone, small, upper left', 's-s', 'no-tile ul'],
   ['7a', 'The eye over the address, chest', 's-s', ''],
+  ['8b', 'With the record, chest', 's-m', ''],
 ].map(([k, note, size, extra]) => `<div class="card"><div class="cap"><span><b>${k}</b><small>${note}</small></span>${seg(`${k}, ${note}: shirt colour`, 'small')}</div>
   <div class="stage"><div class="layers">${tee('white', '#fafafa', '#e2e2e2', `lt on-white ${extra}`, k, size)}${tee('black', '#111', '#262626', `dk on-black ${extra}`, k, size)}</div></div></div>`).join('');
 const setTee = (card, which) => {
