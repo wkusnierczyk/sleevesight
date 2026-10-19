@@ -6,10 +6,10 @@
        tab bar, and a black disc (the core) inside it leaves the grey as a thin outer ring, thinner
        than the black band, so it reads as a record rather than a target; the groove stays, drawn on
        the black. The ring is 1.2 units where the SVG is drawn at 32 px or less, and 0.9 where it is
-       drawn larger. A tab icon is drawn small (Chrome draws it at 32 px whatever the tab icon's size),
-       so it gets the 1.2 ring, about a pixel wide in a 16 px tab icon on a 1x screen, where 0.9 blurs; a browser that ignores
-       the query shows 0.9. The core is drawn only on dark: on light, its edge would darken the rim's
-       antialiased edge. -->
+       drawn larger. A tab icon is drawn small (Chrome draws it at 32 px whatever the tab icon's
+       size), so it gets the 1.2 ring, about a pixel wide in a 16 px tab icon on a 1x screen, where
+       0.9 blurs; a browser that ignores the query shows 0.9. The core is drawn only on dark: on
+       light, its edge would darken the rim's antialiased edge. -->
   <style>
     .core { display: none }
     @media (prefers-color-scheme: dark) { .rim { fill: #8b949e } .core.wide { display: inline } }
