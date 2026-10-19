@@ -110,6 +110,29 @@ class CheckPortableCodeTest {
     }
 
     @Test
+    fun `a removeEldestEntry override in a LinkedHashMap subclass is found, and elsewhere it is not`() {
+        fun lru(superName: String): ByteArray {
+            val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+            writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, "Lru", null, superName, null)
+            val access = Opcodes.ACC_PROTECTED
+            writer.visitMethod(access, "removeEldestEntry", "(Ljava/util/Map\$Entry;)Z", null, null).apply {
+                visitCode()
+                visitInsn(Opcodes.ICONST_0)
+                visitInsn(Opcodes.IRETURN)
+                visitMaxs(0, 0)
+                visitEnd()
+            }
+            writer.visitEnd()
+            return writer.toByteArray()
+        }
+        assertEquals(
+            listOf("removeEldestEntry(Ljava/util/Map\$Entry;)Z: java/util/LinkedHashMap.removeEldestEntry override"),
+            CheckPortableCode.jvmOnlyUsesIn(lru("java/util/LinkedHashMap")),
+        )
+        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("java/lang/Object")))
+    }
+
+    @Test
     fun `a class without them passes`() {
         val bytes =
             probe(body = { method ->

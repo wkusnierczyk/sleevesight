@@ -15,15 +15,18 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
 /**
- * Fails when a compiled class of the portable code, a pipeline module's `main`, uses a JVM-only
- * construct that needs no import, so Detekt's `ForbiddenImport` cannot see it and its
+ * Fails when a compiled class of the portable code, a pipeline module's `main`, its tests and its
+ * test fixtures (which become `commonMain` and `commonTest` at the Multiplatform switch), uses a
+ * JVM-only construct that needs no import, so Detekt's `ForbiddenImport` cannot see it and its
  * `ForbiddenMethodCall` misses it as Kotlin usually writes it (`config/detekt/pipeline.yml`):
  *
  * - `synchronized(…)`, a `monitorenter` or `monitorexit` instruction, and `@Synchronized`, a method
  *   flagged `ACC_SYNCHRONIZED`;
  * - the access-order constructor `LinkedHashMap(capacity, loadFactor, true)`,
  *   `java/util/LinkedHashMap.<init>(IFZ)V`, also when a subclass calls it;
- * - `String.format` and `"…".format(…)`, a call to `java/lang/String.format`, either overload.
+ * - `String.format` and `"…".format(…)`, a call to `java/lang/String.format`, either overload;
+ * - an override of `removeEldestEntry` in a subclass of `java/util/LinkedHashMap`, the usual way
+ *   to bound an LRU, a JVM-only member (`kotlin.collections.LinkedHashMap` has none to override).
  *
  * It reads the class files, so it sees each one however the source spelled it (an alias, a full
  * name, an inline function's body). Detekt stays the early signal, in the source. `jvmMain`, where
@@ -65,6 +68,19 @@ abstract class CheckPortableCode : DefaultTask() {
             val found = mutableListOf<String>()
             val visitor =
                 object : ClassVisitor(Opcodes.ASM9) {
+                    private var superName: String? = null
+
+                    override fun visit(
+                        version: Int,
+                        access: Int,
+                        name: String,
+                        signature: String?,
+                        superName: String?,
+                        interfaces: Array<out String>?,
+                    ) {
+                        this.superName = superName
+                    }
+
                     override fun visitMethod(
                         access: Int,
                         name: String,
@@ -74,6 +90,9 @@ abstract class CheckPortableCode : DefaultTask() {
                     ): MethodVisitor {
                         val method = "$name$descriptor"
                         if (access and Opcodes.ACC_SYNCHRONIZED != 0) found += "$method: @Synchronized"
+                        if (superName == "java/util/LinkedHashMap" && method == REMOVE_ELDEST_ENTRY) {
+                            found += "$method: java/util/LinkedHashMap.removeEldestEntry override"
+                        }
                         return object : MethodVisitor(Opcodes.ASM9) {
                             override fun visitInsn(opcode: Int) {
                                 when (opcode) {
@@ -103,5 +122,7 @@ abstract class CheckPortableCode : DefaultTask() {
             // A `synchronized` block exits its monitor on each path out, so once per method is enough.
             return found.distinct()
         }
+
+        private const val REMOVE_ELDEST_ENTRY = "removeEldestEntry(Ljava/util/Map\$Entry;)Z"
     }
 }
