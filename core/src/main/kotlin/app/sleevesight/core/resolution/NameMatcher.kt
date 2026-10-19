@@ -44,29 +44,32 @@ class NameMatcher(
 
     /**
      * Whether [a] and [b] are one name written with and without a leading honorific (`Mr.`, `Mrs.`,
-     * `Ms.`, `Miss`, `Mister`, `Dr.`, `Sir`, `Dame`) on one of them only: `Mr. A Balladeer` and `a
-     * balladeer` (#79). Narrow on purpose, since a variant may be another artist: the rest must be
-     * the other name whole and at least two words as written, split at spaces only, because an
-     * honorific before a single word is usually a stage name of its own (`Dr. John` is not `John`,
-     * nor `Mr. Big` `Big`, nor `Mr. T-Bone` `T-Bone`: a hyphenated word is one word). A leading
-     * article counts as a word: `A Balladeer` is two. Two different honorifics (`Mr. X Y`, `Mrs. X
-     * Y`) are two people. Not [sameName]: a variant is weaker evidence, which the resolver weighs
-     * only when nothing matches by name.
+     * `Ms.`, `Miss`, `Mister`, `Dr.`, `Doctor`, `Sir`, `Dame`) on one of them only: `Mr. A
+     * Balladeer` and `a balladeer` (#79). Narrow on purpose, since a variant may be another artist:
+     * the rest must be the other name whole, a leading `the` aside as in [sameName], and at least two
+     * words as written, split at whitespace only, because an honorific before a single word is
+     * usually a stage name of its own (`Dr. John` is not `John`, nor `Mr. Big` `Big`, nor `Mr.
+     * T-Bone` `T-Bone`: a hyphenated word is one word). A word with no letters or digits, such as a
+     * lone `-`, is not counted. A leading article counts as a word: `A Balladeer` is two. Two
+     * different honorifics (`Mr. X Y`, `Mrs. X Y`) are two people. Not [sameName]: a variant is
+     * weaker evidence, which the resolver weighs only when nothing matches by name.
      */
     fun honorificVariant(
         a: String,
         b: String,
     ): Boolean = sameRest(a, b) || sameRest(b, a)
 
-    // Whether [variant] is an honorific, then at least two words whose key is [plain]'s.
+    // Whether [variant] is an honorific, then at least two words whose key is [plain]'s, a leading
+    // `the` aside.
     private fun sameRest(
         variant: String,
         plain: String,
     ): Boolean {
         val words = variant.trim().split(WHITESPACE)
-        if (key(words.first()) !in HONORIFICS || words.size - 1 < VARIANT_MIN_WORDS) return false
-        val rest = key(words.drop(1).joinToString(" "))
-        return rest.isNotEmpty() && rest == key(plain)
+        val after = words.drop(1)
+        if (key(words.first()) !in HONORIFICS || after.count { key(it).isNotEmpty() } < VARIANT_MIN_WORDS) return false
+        val rest = key(after.joinToString(" ")).removePrefix(THE)
+        return rest.isNotEmpty() && rest == key(plain).removePrefix(THE)
     }
 
     /**
@@ -108,7 +111,7 @@ class NameMatcher(
         val WHITESPACE = Regex("\\s+")
 
         // As keys: `Mr.` is `mr`.
-        val HONORIFICS = setOf("mr", "mrs", "ms", "miss", "mister", "dr", "sir", "dame")
+        val HONORIFICS = setOf("mr", "mrs", "ms", "miss", "mister", "dr", "doctor", "sir", "dame")
 
         // The fewest words a name keeps after an honorific for [honorificVariant] to match.
         const val VARIANT_MIN_WORDS = 2

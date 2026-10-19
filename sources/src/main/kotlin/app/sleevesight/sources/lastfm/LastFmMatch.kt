@@ -175,9 +175,12 @@ internal class ArtistCheck(
     /**
      * Whether [name] is the artist [mbid]'s alone, by name key, from one page of MusicBrainz's
      * artist search: another artist of the name on it shares the name; the artist owns it only when
-     * the page holds every match (no more than [MbArtistSearch.total] exist) and the artist under the
-     * name, alone. Anything else proves neither, as does a name with no letters or digits, which
-     * every name key would match. The answer is kept by the query as sent and the id.
+     * the page holds every match the search counted ([MbArtistSearch.total] equal to the artists on
+     * the page) and the artist under the name, alone. The count is the search index's, not a promise
+     * that no other artist has the name, so the verdict is no stronger than the search; a count
+     * below the artists listed is wrong, and proves nothing. Anything else proves neither, as does a
+     * name with no letters or digits, which every name key would match. The answer is kept by the
+     * query as sent and the id.
      */
     private suspend fun ownership(
         mbid: String,
@@ -202,7 +205,7 @@ internal class ArtistCheck(
         val named = page.artists.filter { key(it.name) == nameKey }
         return when {
             named.any { !it.mbid.equals(mbid, ignoreCase = true) } -> Ownership.SHARED
-            page.total <= page.artists.size && named.isNotEmpty() -> Ownership.OWNED
+            page.total == page.artists.size && named.isNotEmpty() -> Ownership.OWNED
             else -> Ownership.UNKNOWN
         }
     }

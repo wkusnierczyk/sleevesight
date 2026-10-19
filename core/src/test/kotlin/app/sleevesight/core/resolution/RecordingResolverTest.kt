@@ -558,6 +558,59 @@ class RecordingResolverTest {
             )
         }
 
+    @Test
+    fun `a variant is not weighed beside a fitting band the artist may lead, unconfirmed`() =
+        runTest {
+            // The variant's recording would be chosen if it counted; the band's, credited to a Jane
+            // Smith no recording confirms, keeps it out, and is itself not hers: a near miss.
+            val musicBrainz =
+                searching(
+                    listOf(
+                        recording("variant", "Song", "Mr. Jane Smith", 200, "1970")
+                            .copy(credits = listOf(credit("Mr. Jane Smith", "mr-jane-smith"))),
+                    ),
+                    banded(recording("band", "Song", "Jane Smith and Her Orchestra", 200, "1960")),
+                )
+            val resolution = resolve(musicBrainz, track("Song", "Jane Smith"), 200)
+            assertEquals(
+                Outcome.Rejected("MusicBrainz has “Song” by Mr. Jane Smith, not by Jane Smith"),
+                resolution.outcome,
+            )
+            assertNull(resolution.recordingMbid)
+        }
+
+    @Test
+    fun `without the player's length, a variant is weighed as with it, and a credit by name still comes first`() =
+        runTest {
+            // Every recording fits the length: the 2011 recording by "A Balladeer" by name is chosen.
+            val musicBrainz = FakeMusicBrainz(Lookup.Found(balladeer))
+            val named = resolve(musicBrainz, track("When a Law's Been Broken", "a balladeer"), null)
+            assertEquals("2011", named.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("a balladeer", "a-balladeer")), named.artists)
+
+            val variant =
+                listOf(
+                    recording("variant", "Song", "Mr. Jane Smith", null, "1970")
+                        .copy(credits = listOf(credit("Mr. Jane Smith", "mr-jane-smith"))),
+                    recording("later", "Song", "Mr. Jane Smith", 200, "1990")
+                        .copy(credits = listOf(credit("Mr. Jane Smith", "mr-jane-smith"))),
+                )
+            val accepted = resolve(FakeMusicBrainz(Lookup.Found(variant)), track("Song", "Jane Smith"), null)
+            assertEquals(Outcome.SongArticle, accepted.outcome)
+            assertEquals("variant", accepted.recordingMbid)
+            assertEquals(listOf(ResolvedArtist("Jane Smith", "mr-jane-smith")), accepted.artists)
+
+            val two =
+                listOf(
+                    recording("mr", "Song", "Mr. Jane Smith", 200, "1970"),
+                    recording("mrs", "Song", "Mrs. Jane Smith", 240, "1971"),
+                )
+            assertEquals(
+                Outcome.Rejected("several MusicBrainz artists named Jane Smith have a matching recording"),
+                resolve(FakeMusicBrainz(Lookup.Found(two)), track("Song", "Jane Smith"), null).outcome,
+            )
+        }
+
     private fun reems(
         lengthA: Int?,
         lengthB: Int?,
