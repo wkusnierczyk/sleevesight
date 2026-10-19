@@ -457,11 +457,14 @@ class PipelineCoordinatorTest {
         world.settle()
         assertEquals(emptyMap<String, Int>(), world.calls)
         assertEquals(offered, world.coordinator.state.writeKey)
+        assertEquals("a tap rejected is no action", 0, world.actions)
+        assertEquals(false, world.coordinator.state.acted)
 
         // The tap for the run offered writes it.
         world.tap(offered)
         world.settle()
         assertEquals(mapOf("A" to 1), world.calls)
+        assertEquals(1, world.actions)
     }
 
     @Test

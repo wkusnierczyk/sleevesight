@@ -307,6 +307,7 @@ internal class PipelineHostTest : PipelineHostFixture() {
             settle()
             assertEquals(0, provider.requestsFor("Sundown"))
             assertEquals(0, provider.requests)
+            assertEquals("a tap dropped is no action", 0, actions)
         }
 
     @Test

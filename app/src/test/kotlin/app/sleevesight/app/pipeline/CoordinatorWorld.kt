@@ -172,7 +172,14 @@ internal class World {
     private val keys = HashMap<RunId, RunKey>()
     private val pendingCards = HashMap<RunId, Pair<Pair<RunKey, Int>, String>>()
 
-    fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
+    /** Every effect the coordinator has answered with, in order. */
+    val effects = mutableListOf<CoordinatorEffect>()
+
+    fun send(event: CoordinatorEvent) =
+        coordinator.on(event).forEach {
+            effects += it
+            perform(it)
+        }
 
     private fun schedule(
         delayMs: Long,
