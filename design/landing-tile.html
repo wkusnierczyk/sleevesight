@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleevesight: liner notes for whatever you're playing</title>
+<meta name="description" content="An open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song you are playing, with its genre labels.">
+<link rel="canonical" href="https://sleevesight.app/">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sleevesight">
+<meta property="og:title" content="Sleevesight: liner notes for whatever you're playing">
+<meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key.">
+<meta property="og:url" content="https://sleevesight.app/">
+<meta name="twitter:card" content="summary">
+<!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo
+     and intro in place of the eye. Built by `assets/logo/src/make_landing_tile.py`; not edited by hand.
+     Unlike the landing page, it plays the intro on every load and keeps nothing in the browser.
+     Otherwise as the landing page: no theme, no web fonts, no analytics, and short scripts.
+     The palette is the simulator's (`design/simulator.html`), so the page and the app share one look. -->
+<style>
+:root{
+  --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
+  --accent:#3346c9; --accent-soft:#e2e6fb; --on-accent:#ffffff;
+  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
+  --f-ui:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"Roboto Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --h:28;
+  --s-c1:hsl(var(--h) 28% 95%); --s-c2:hsl(var(--h) 24% 91%); --s-c3:hsl(var(--h) 22% 87%);
+  --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
+  --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
+  --cite-ink:#ffffff;
+  --sight:#cc212d;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d1015; --surface:#151920; --sunken:#10141a; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
+  --accent:#8e9cff; --accent-soft:#232a4d; --on-accent:#0e1116;
+  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6; --ok:#5fc48a;
+  --s-c1:hsl(var(--h) 14% 12%); --s-c2:hsl(var(--h) 14% 16%); --s-c3:hsl(var(--h) 13% 21%);
+  --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%); --s-onv:hsl(var(--h) 10% 70%);
+  --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
+  --cite-ink:#0e1116;
+  --sight:#f0443a;
+  color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:17px;line-height:1.55}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:20}
+.skip:focus{top:12px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+/* The header. At the top of the page it is large. Scrolled down, it stays at the top of the window,
+   small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
+   logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
+   hidden until the top. Without the script, the header is large and scrolls away with the page, and
+   the menu stacks below 720 px. */
+header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
+.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;font-stretch:88%;font-size:40px;line-height:1.1;letter-spacing:-.015em;color:var(--ink);text-decoration:none}
+/* `top`: flex centring leaves the eye about 0.75 px above the middle of the capital S, at both sizes
+   and any pixel density (measured on screen); this centres it. */
+.brand>svg{width:86.72px;height:72px;flex:none;display:block;overflow:visible;transform-origin:45.229% 54.000%}
+/* The name: "Sleeve" bold in ink, "sight" regular in the record label's red (`--sight`). On light, a
+   shade darker than the label's `#cf222e` (4.48:1), for 4.5:1 at the compact header's 20 px; on dark,
+   a lighter red, since the label's is 3.6:1 there. */
+.brand .sight{font-weight:400;color:var(--sight)}
+@media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:69.86px;height:58px}}
+nav.top{flex:none}
+.sl-stack header.top .row{flex-direction:column;align-items:flex-start}
+.sl-stack nav.top ul{flex-direction:column;gap:0}
+.sl-stack nav.top a{display:block;padding:3px 0}
+@media (max-width:720px){
+  html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
+  html:not(.js) nav.top ul{flex-direction:column;gap:0}
+  html:not(.js) nav.top a{display:block;padding:3px 0}
+}
+.js{scroll-padding-top:80px}
+.js header.top .bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg);border-bottom:1px solid transparent}
+.sl-compact header.top .bar{border-bottom-color:var(--line);box-shadow:0 8px 18px -14px rgba(0,0,0,.45)}
+.sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
+.sl-compact .brand{font-size:20px;gap:10px}
+.sl-compact .brand>svg{width:43.36px;height:36px}
+.sl-compact nav.top ul{font-size:15px;gap:4px 18px}
+.sl-compact.sl-stack header.top .row{flex-direction:row}
+.sl-compact.sl-stack nav.top{display:none}
+@media (prefers-reduced-motion: no-preference){
+  header.top .bar{transition:border-color .25s,box-shadow .25s}
+  header.top .row{transition:padding .25s ease}
+  .brand{transition:font-size .25s ease,gap .25s ease}
+  .brand>svg{transition:width .25s ease,height .25s ease}
+  nav.top ul{transition:font-size .25s ease}
+}
+.sl-still *{transition:none!important}
+:is(.brand,.splash) .eye{fill:none;stroke:#1f2328}
+/* On dark, the record's rim takes the outline's grey, merging with it as the black rim does on light,
+   and the groove gives way to a wider black disc, so the grey meets the black directly. The disc is
+   drawn only on dark: on light, its edge would darken the rim's antialiased edge where the lids clip it. */
+:is(.brand,.splash) .core{display:none}
+@media (prefers-color-scheme: dark){:is(.brand,.splash) .eye{fill:#fff;stroke:#8b949e}:is(.brand,.splash) .rim{fill:#8b949e}:is(.brand,.splash) .groove{display:none}:is(.brand,.splash) .core{display:inline}}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
+nav.top a{color:var(--muted);text-decoration:none}
+nav.top a:hover{color:var(--ink);text-decoration:underline}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center;padding:32px 0 56px}
+.hero h1{margin:0 0 16px;font-size:clamp(36px,6vw,58px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em;text-wrap:balance}
+.lede{font-size:19px;color:var(--ink);margin:0 0 14px;max-width:34em}
+.status{display:inline-block;font-size:14px;color:var(--muted);background:var(--sunken);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:0 0 24px}
+.ctas{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:999px;font-size:16px;font-weight:550;text-decoration:none}
+.btn.filled{background:var(--accent);color:var(--on-accent)}
+.btn.tonal{background:var(--accent-soft);color:var(--ink)}
+
+/* The mock: one card as the home screen is designed (design.md, User interface). */
+figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
+.phone{background:var(--s-bg);color:var(--s-on);border:10px solid #101318;border-radius:40px;padding:18px 14px 20px;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
+.prow{display:flex;align-items:center;gap:10px;background:var(--s-c1);border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.25}
+.prow b{font-weight:600}
+.prow span{color:var(--s-onv)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--s-pri);flex:none}
+.cover{margin-top:12px;border-radius:16px;overflow:hidden;aspect-ratio:1}
+.cover svg{display:block;width:100%;height:100%}
+.np-title{margin:12px 0 0;font-size:24px;line-height:1.1;font-weight:650;font-stretch:90%}
+.np-meta{font-size:14px;color:var(--s-onv);margin:2px 0 0;line-height:1.35}
+.np-meta strong{color:var(--s-on);font-weight:500;font-size:15px}
+.genres{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.genres li{border-radius:8px;padding:4px 10px;font-size:12.5px;font-weight:550;background:hsl(var(--gh) 72% 90%);color:hsl(var(--gh) 62% 22%)}
+@media (prefers-color-scheme: dark){.genres li{background:hsl(var(--gh) 34% 25%);color:hsl(var(--gh) 75% 86%)}}
+.card{margin-top:12px;background:var(--s-c1);border-radius:16px;padding:12px 14px}
+.card h2{margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.card p{margin:0;font-size:14px;line-height:1.5}
+.cite{display:inline-grid;place-items:center;min-width:20px;height:16px;padding:0 4px;margin-left:2px;border-radius:999px;font-family:var(--f-mono);font-size:9.5px;font-weight:500;color:var(--cite-ink);vertical-align:2px}
+.cite.W{background:var(--src-w)} .cite.L{background:var(--src-l)} .cite.G{background:var(--src-g)} .cite.MB{background:var(--src-mb)}
+.check{margin-top:8px;font-size:11.5px;color:var(--ok)}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+
+section{padding:48px 0;border-top:1px solid var(--line)}
+section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;counter-reset:step}
+.steps li,.tiles li{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px}
+.steps li{counter-increment:step}
+.steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700;margin-bottom:10px}
+.steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
+.steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
+.after{margin:20px 0 0;color:var(--muted)}
+.intro{margin:0 0 20px;max-width:44em}
+.boxes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.boxes li{background:var(--s-c1);color:var(--s-on);border:1px solid var(--line);border-radius:20px;padding:18px}
+.boxes h3{margin:0 0 2px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--s-onv)}
+.boxes .what{margin:0 0 8px;font-size:19px;font-weight:650;font-stretch:92%}
+.boxes p{margin:0;font-size:15px;line-height:1.55}
+.boxes.pair{margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.boxes .langs{margin:0 0 8px;font-weight:600}
+.chat{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:12px;row-gap:8px;align-items:baseline;margin:0}
+.chat p{display:contents}
+.chat .who{text-align:right;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--s-pri)}
+.chat .say{font-size:15px;line-height:1.55}
+.chat .ask{color:var(--s-onv)}
+.chat .by{display:block;margin-top:4px;font-size:13px;font-style:italic;color:var(--s-onv)}
+.legend{margin:14px 0 0;font-size:14px;color:var(--muted)}
+.legend .cite{margin:0 4px 0 0}
+.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
+.two ul{margin:1em 0;padding-left:1.2em}
+.two li{margin-bottom:8px}
+.lead{font-size:19px;font-weight:600;margin:0 0 12px}
+.small{font-size:15px;color:var(--muted)}
+.links{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 32px}
+.links span{display:block;font-size:15px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:14px;color:var(--muted)}
+footer p{margin:0 0 4px}
+.replay button{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.replay button:hover{text-decoration-thickness:2px}
+.replay button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 88% width, outlined
+   (`assets/logo/src/make_tile.py`), so it needs no font. The dot of the i is at (0,0), the tile's
+   centre, so it turns about the dot. The tile is the intro's alone; the header shows the words on the
+   page. "sight" is `--sight`, 4.5:1 on the page as well as on the tile. */
+:root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22}
+@media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#fff}}
+.t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
+.t-ink{fill:var(--tile-ink)}
+.t-red{fill:var(--sight)}
+
+/* The intro (`.sl-intro`), set by the scripts when motion is allowed and the address names no
+   section. The tile fades in large in the middle of the window, turns twice about the dot as the
+   record does in the eye (2 s, `sp-spin`'s easing on the landing page), and shrinks onto the header's
+   logo, fading as it goes, so the words land on the page; then the rest of the page fades in.
+   Scrolling, a key or a click ends it at once; "Play the intro again" plays it once more. Hovering
+   over or focusing the logo (`.play`) turns it once. Nothing moves under "reduce motion". */
+.splash{display:none}
+.sl-intro .splash{display:block;position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none;animation:tl-in 700ms ease-out both,sl-gone 1ms 3950ms forwards}
+.splash .fly{width:var(--sb);height:var(--sb);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
+.splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+.splash svg{display:block;width:100%;height:100%;overflow:visible}
+.splash .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
+.sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
+.sl-intro .brand>svg{animation:sl-hold 3950ms}
+.sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out 3950ms both}
+@media (prefers-reduced-motion: no-preference){.brand.play>svg{animation:sl-hover 900ms cubic-bezier(.45,0,.55,1)}}
+@keyframes tl-in{from{opacity:0}}
+@keyframes tl-bare{to{opacity:0}}
+@keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
+@keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
+@keyframes sl-gone{from,to{visibility:hidden;opacity:0}}
+@keyframes sl-hold{from,to{opacity:0}}
+@keyframes sl-arrive{from{opacity:0}}
+@keyframes sl-hover{to{transform:rotate(360deg)}}
+@media (max-width:880px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tiles,.boxes,.boxes.pair,.two{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  .steps,.links{grid-template-columns:minmax(0,1fr)}
+  section{padding:36px 0}
+}
+</style>
+<script>
+document.documentElement.classList.add('js');
+// Set before the first paint, so that a later visit, which skips the intro, never shows the page hidden.
+(function () {
+  if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  document.documentElement.classList.add('sl-wait');
+})();
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><path class="t-ink" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59ZM-18.87 -10.02H-16.44V-37.26H-18.87ZM-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67ZM1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67ZM16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69ZM31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/><path class="t-red" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44ZM-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01ZM4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82ZM22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1ZM36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></defs></svg>
+<a class="skip" href="#main">Skip to content</a>
+<div class="splash" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
+<header class="top"><div class="bar"><div class="row wrap">
+  <!-- `#`: the top of this page, without a reload. -->
+  <a class="brand" href="#" aria-label="Sleevesight, top of the page">
+    <svg viewBox="-37.59 -37.26 83.11 69" aria-hidden="true"><use href="#words"/></svg>
+  </a>
+  <nav class="top" aria-label="Site">
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#get">Get it</a></li>
+      <li><a href="https://github.com/wkusnierczyk/sleevesight">GitHub</a></li>
+    </ul>
+  </nav>
+</div></div></header>
+<div class="wrap">
+
+<main id="main">
+<div class="hero">
+  <div>
+    <h1>Liner notes for whatever you're playing</h1>
+    <p class="lede">Sleevesight is an open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song, with its genre labels. Every fact links to where it came from.</p>
+    <p class="status">In development: not yet on Google Play</p>
+    <div class="ctas">
+      <a class="btn filled" href="simulator.html">Try the simulator</a>
+      <a class="btn tonal" href="https://github.com/wkusnierczyk/sleevesight">Source on GitHub</a>
+    </div>
+  </div>
+
+  <!-- Until the app's home screen can be captured (#52), a mock in the simulator's style, with the
+       simulator's generated cover (`coverFor("Rubber Soul|The Beatles")`), not the real art. The
+       genre labels and the insight, with its citations, are the pipeline's own output from live runs
+       of `:cli` on the track (2026-10-18: Claude Haiku 5.5; MusicBrainz, Wikipedia and Last.fm; web
+       search off), coloured by the app's genre families. -->
+  <figure class="mock">
+    <div class="phone" role="img" aria-labelledby="mock-desc">
+      <div class="prow" aria-hidden="true"><span class="dot"></span><div><b>Spotify</b> <span>· Playing</span></div></div>
+      <div class="cover" aria-hidden="true">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="g918409749" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(69 55% 32%)"/><stop offset="1" stop-color="hsl(104 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#g918409749)"/><path d="M0 69 Q 30 54 55 64 T 100 49 V100 H0z" fill="hsl(198 60% 55%)" opacity=".85"/><path d="M0 84 Q 40 64 70 70 T 100 65 V100 H0z" fill="hsl(228 55% 35%)"/></svg>
+      </div>
+      <div aria-hidden="true">
+        <p class="np-title">Michelle</p>
+        <p class="np-meta"><strong>The Beatles</strong><br>Rubber Soul<br>Released 1965</p>
+        <ul class="genres"><li style="--gh:8">Classic Rock</li><li style="--gh:8">Rock</li><li style="--gh:328">Pop</li></ul>
+        <div class="card">
+          <h2>Why it's interesting</h2>
+          <p>Michelle is a Beatles song from the 1965 album <i>Rubber Soul</i>.<span class="cite MB">MB1</span><span class="cite W">W1</span> It was written by John Lennon and Paul McCartney,<span class="cite MB">MB2</span> and it won the Grammy Award for Song of the Year in 1967.<span class="cite W">W2</span> On this recording, Paul McCartney sings lead vocals and plays acoustic guitar and electric bass, with George Harrison, John Lennon and Ringo Starr also performing.<span class="cite MB">MB4</span><span class="cite MB">MB5</span><span class="cite MB">MB6</span><span class="cite MB">MB7</span></p>
+          <p class="check">✓ Every sentence cited</p>
+        </div>
+      </div>
+    </div>
+    <p id="mock-desc" hidden>A phone showing Sleevesight while Spotify plays Michelle by The Beatles: the cover, the title, artist, album and year, the genre labels Classic Rock, Rock and Pop, and a short insight of three sentences, each cited, to MusicBrainz and Wikipedia.</p>
+    <figcaption>Mock home screen design</figcaption>
+  </figure>
+</div>
+
+<section id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How it works</h2>
+  <ol class="steps">
+    <li><h3>Read</h3><p>Android tells the app what your player is playing: title, artists, album and cover. Sleevesight never touches the audio.</p></li>
+    <li><h3>Look up</h3><p>The track is cleaned of tags like "2006 Remaster" and matched in the sources you switched on. Matches that fail an identity check are shown as rejected, not used quietly.</p></li>
+    <li><h3>Write</h3><p>The AI service you chose turns what was found into a few sentences, citing the evidence. It may not add facts of its own unless you allow it, and then they are marked.</p></li>
+    <li><h3>Check</h3><p>Before anything is shown, the citations are checked in code. Uncited sentences are flagged, and the evidence is listed underneath.</p></li>
+  </ol>
+  <p class="after">When little is documented about a track, Sleevesight says so instead of filling the gap.</p>
+</section>
+
+<section id="next" aria-labelledby="next-h">
+  <h2 id="next-h">Planned: coming next</h2>
+  <p class="intro">A later version adds detail for the song, each artist and the album, opened by tapping them, each with an insight written and checked the same way. It also lets you ask follow-up questions about what is playing, answered by your AI service on your own key, and export the tracks you listened to, with their insights, to a file. And it shows the languages a song is sung in, or none for an instrumental.</p>
+  <ul class="boxes">
+    <li><h3>Song</h3><p class="what">Michelle</p><p>George Martin recalled composing the melody of the guitar solo, and showed Harrison the notes during the session.<span class="cite W">W1</span> It topped the charts in Italy for eight weeks, and in France for five, as the lead track of an EP.<span class="cite W">W2</span></p></li>
+    <li><h3>Artist</h3><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="cite L">L1</span><span class="cite L">L2</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="cite L">L3</span></p></li>
+    <li><h3>Album</h3><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="cite G">G1</span> It spent nine weeks at number one in the UK, and six in the US from early January 1966.<span class="cite G">G2</span></p></li>
+  </ul>
+  <ul class="boxes pair">
+    <li><h3>Lyrics language</h3><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite MB">MB1</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="cite W">W1</span> The French words came from Jan Vaughan, a French teacher and the wife of his old friend Ivan Vaughan.<span class="cite W">W2</span></p></li>
+    <li><h3>Follow-up</h3><p class="what">Paul McCartney</p><div class="chat"><p><b class="who">You</b> <span class="say ask">Tell me more about his career.</span></p><p><b class="who">AI</b> <span class="say">He joined Lennon's skiffle group, the Quarrymen, in 1957, which became the Beatles in 1960. After the band split, he released his first solo album, <i>McCartney</i>, in 1970, and formed Wings with his wife Linda and Denny Laine. His songwriting partnership with Lennon remains the most successful in music history. <span class="by">by Claude Haiku 5.5</span></span></p></div></li>
+  </ul>
+  <p class="legend"><span class="cite W">W</span>Wikipedia · <span class="cite L">L</span>Last.fm · <span class="cite G">G</span>web search · <span class="cite MB">MB</span>MusicBrainz</p>
+</section>
+
+<section id="choose" aria-labelledby="choose-h">
+  <h2 id="choose-h">You choose</h2>
+  <ul class="tiles">
+    <li><h3>Your sources</h3><p>MusicBrainz, Wikipedia, Last.fm and web search, each a switch. The model's own knowledge is a separate switch, off by default.</p></li>
+    <li><h3>Your AI service</h3><p>You bring your own API key and pick the model. Anthropic comes first; more providers, and local models, are planned.</p></li>
+    <li><h3>Your timing</h3><p>Each insight is a call on your key. Have one written for every track, only when you skip, or only when you tap Write.</p></li>
+  </ul>
+</section>
+
+<section id="privacy" aria-labelledby="privacy-h">
+  <h2 id="privacy-h">Privacy</h2>
+  <div class="two">
+    <div>
+      <p class="lead">Nothing you play reaches the developer</p>
+      <p>No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads. Your API keys are stored encrypted on the phone and never logged.</p>
+      <p class="small">The <a href="../privacy.html">privacy policy</a> says what each service receives, and what you can switch off.</p>
+    </div>
+    <div>
+      <p class="lead">What leaves the phone, and to whom</p>
+      <ul>
+        <li>To the sources you switched on: the playing track's title and artists, and, by default, the next track's title and artists to MusicBrainz, if it is on.</li>
+        <li>To the AI service you chose: the title, artists and album, and what the sources found. Each insight is one request of its own, with no conversation kept between them; it is made with your key, so the service handles it under its terms for your account.</li>
+        <li>When a player gives the cover only as a web address: a request for that image to the server it names.</li>
+      </ul>
+      <p class="small">Nothing else leaves the phone, unless you export the diagnostics to a file yourself. Your listening history stays on it. The app's first screen says all this before it starts.</p>
+    </div>
+  </div>
+</section>
+
+<section id="get" aria-labelledby="get-h">
+  <h2 id="get-h">Get it</h2>
+  <!-- The Google Play badge goes here once the app is listed (Phase 1.5). -->
+  <p>Sleevesight is for Android only: iOS does not let one app read what another is playing. It is in development and will be released through Google Play. Until then, the source code is on <a href="https://github.com/wkusnierczyk/sleevesight">GitHub</a> under the GPL-3.0, with instructions for building it.</p>
+  <p>The app is now in internal testing. Instructions will be available to approved testers soon.</p>
+</section>
+
+<section id="more" aria-labelledby="more-h">
+  <h2 id="more-h">More</h2>
+  <ul class="links">
+    <li><a href="simulator.html">Simulator</a><span>The whole flow over a real 80-track playlist, with frozen lookups</span></li>
+    <li><a href="../README.html">README</a><span>What it does, the settings, building it</span></li>
+    <li><a href="design.html">Design</a><span>The decisions and the reasoning behind them</span></li>
+    <li><a href="architecture.html">Architecture</a><span>Modules, the pipeline, privacy and security</span></li>
+    <li><a href="plan.html">Plan</a><span>The work to the first release</span></li>
+    <li><a href="../privacy.html">Privacy policy</a><span>What leaves the phone, and to whom</span></li>
+    <li><a href="mailto:support@sleevesight.app">support@sleevesight.app</a><span>Questions and support</span></li>
+  </ul>
+</section>
+</main>
+
+<footer>
+  <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
+  <p>This site sets no cookies and loads nothing from anywhere else. This page keeps nothing in your browser.</p>
+  <p>An alternative logo and intro, for testers to compare with the <a href="../">product page</a>.</p>
+  <p class="replay" hidden><button type="button">Play the intro again</button></p>
+</footer>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, header = document.querySelector('header.top'), bar = header.querySelector('.bar'),
+      row = bar.querySelector('.row'), brand = row.querySelector('.brand'), nav = row.querySelector('nav');
+  // Lays out the large header, as it is at the top of the page, without animating it: whether the menu
+  // fits on one line beside the logo, and the height the header keeps in the page while it is small.
+  function measure() {
+    var compact = root.classList.contains('sl-compact');
+    root.classList.add('sl-still');
+    root.classList.remove('sl-compact', 'sl-stack');
+    var room = row.clientWidth - parseFloat(getComputedStyle(row).paddingLeft) * 2;
+    root.classList.toggle('sl-stack', brand.offsetWidth + 24 + nav.offsetWidth > room);
+    header.style.height = bar.offsetHeight + 'px';
+    root.classList.toggle('sl-compact', compact);
+    void bar.offsetHeight;
+    root.classList.remove('sl-still');
+  }
+  function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
+  measure();
+  onScroll();
+  addEventListener('resize', measure);
+  addEventListener('scroll', onScroll, {passive: true});
+
+  // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
+  // key (a screen reader's cursor), so either ends the intro too.
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'], back = false;
+  // A replay started from the keyboard leaves focus on its button at the foot of the page, out of view
+  // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`), unless it
+  // has already moved elsewhere (a screen reader's cursor). The focus comes before the class goes, so
+  // it does not blink the logo again.
+  function end() {
+    stops.forEach(function (e) { removeEventListener(e, end); });
+    if (back) { back = false; if (document.activeElement === again) brand.focus({preventScroll: true}); }
+    root.classList.remove('sl-intro');
+  }
+  function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
+  document.querySelector('main').addEventListener('animationend', function (e) { if (e.animationName === 'sl-arrive') end(); });
+  function intro() {
+    // The splash starts in the middle of the window, as large as fits with room for its corners as it
+    // turns, and shrinks onto the header's logo.
+    var big = Math.min(300, innerWidth * .62, innerHeight * .45),
+        logo = brand.querySelector('svg').getBoundingClientRect(), x = (innerWidth - big) / 2, y = (innerHeight - big) / 2;
+    root.style.setProperty('--sb', big + 'px');
+    root.style.setProperty('--sx', x + 'px');
+    root.style.setProperty('--sy', y + 'px');
+    // The header's logo is the words' ink box (from X0, Y0, VH tall, in tile units), the splash the
+    // whole tile (-72 to 72), so the tile lands where the header's words sit in it.
+    var X0 = -37.59, Y0 = -37.26, VH = 69, u = logo.height / VH;
+    root.style.setProperty('--fx', logo.left + (-72 - X0) * u - x + 'px');
+    root.style.setProperty('--fy', logo.top + (-72 - Y0) * u - y + 'px');
+    root.style.setProperty('--fs', 144 * u / big);
+    root.classList.remove('sl-wait');
+    root.classList.add('sl-intro');
+  }
+  if (root.classList.contains('sl-wait')) {
+    intro();
+    listen();
+  }
+
+  // The replay: back to the top, with the header large, at once, so the splash flies to where the
+  // logo will be; then the intro as on a first visit. Taking the class off and reading the layout
+  // before putting it back restarts the animations. The stops listen from the next frame on, after
+  // the scroll event of the jump to the top, which would otherwise end the intro at once. It is offered
+  // on the same condition as the first visit's intro (`no-preference`, not "not `reduce`"), so a browser
+  // that knows neither value offers neither.
+  var replay = document.querySelector('.replay'), again = replay.querySelector('button'),
+      moving = matchMedia('(prefers-reduced-motion: no-preference)');
+  function offer() { replay.hidden = !moving.matches; }
+  offer();
+  if (moving.addEventListener) moving.addEventListener('change', offer);
+  again.addEventListener('click', function (e) {
+    if (!moving.matches) return;
+    end();
+    back = e.detail === 0;
+    scrollTo(0, 0);
+    root.classList.add('sl-still');
+    root.classList.remove('sl-compact');
+    void bar.offsetHeight;
+    root.classList.remove('sl-still');
+    intro();
+    requestAnimationFrame(listen);
+  });
+
+  function play() {
+    if (!moving.matches || root.classList.contains('sl-intro')) return;
+    brand.classList.add('play');
+  }
+  brand.addEventListener('pointerenter', play);
+  brand.addEventListener('focus', play);
+  brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-hover') brand.classList.remove('play'); });
+})();
+</script>
+</body>
+</html>
