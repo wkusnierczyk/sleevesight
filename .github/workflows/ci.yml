@@ -36,6 +36,14 @@ jobs:
           # dependencies run ahead of `main`'s.
           cache-read-only: ${{ github.event_name == 'pull_request' }}
 
+      # Robolectric downloads its Android runtime (about 150 MB) from Maven Central into `~/.m2`, which
+      # `setup-gradle` does not cache. Keyed on the Robolectric version and the SDK it runs: a new key
+      # downloads afresh, so old runtimes do not pile up in the cache.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/src/test/resources/robolectric.properties') }}
+
       - name: Build, test and lint
         run: ./gradlew build --console=plain
 
