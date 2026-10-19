@@ -16,7 +16,8 @@ import org.objectweb.asm.Opcodes
 
 /**
  * Fails when a compiled class of the portable code, a pipeline module's `main`, its tests and its
- * test fixtures (which become `commonMain` and `commonTest` at the Multiplatform switch), uses a
+ * test fixtures (which become `commonMain` and mostly `commonTest` at the Multiplatform switch;
+ * tests of `jvmMain` code, which would become `jvmTest`, are held to the same rules), uses a
  * JVM-only construct that needs no import, so Detekt's `ForbiddenImport` cannot see it and its
  * `ForbiddenMethodCall` misses it as Kotlin usually writes it (`config/detekt/pipeline.yml`):
  *

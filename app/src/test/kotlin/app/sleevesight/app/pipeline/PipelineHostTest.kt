@@ -455,7 +455,10 @@ internal class PipelineHostTest : PipelineHostFixture() {
             assertTrue("views while the rebuild waits", held > 0)
             assertTrue("the card shown after it", views.drop(held).any { it.track?.insight == card })
             // Until the new pipeline shows the track playing (whose own insight reads as the card's).
-            views.takeWhile { it.track?.nowPlaying?.title == "One" }.forEachIndexed { i, view ->
+            val shownBefore = views.takeWhile { it.track?.nowPlaying?.title == "One" }
+            // Not an empty window: the views of the track shown before, which carry the card.
+            assertTrue("views of the track shown before, with the card", shownBefore.any { it.cardShown })
+            shownBefore.forEachIndexed { i, view ->
                 assertEquals("view $i", view.track?.insight == card, view.cardShown)
             }
             val last = views.last()

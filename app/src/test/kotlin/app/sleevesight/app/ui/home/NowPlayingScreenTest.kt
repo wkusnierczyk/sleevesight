@@ -390,6 +390,27 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun aScreenReaderHearsAnUncitedQuotationMarkedOutsideTheQuote() {
+        val reply = "It topped the charts [W1]. They called it \"great.\""
+        show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
+            compose
+                .onNode(
+                    hasText("They called it", substring = true) and
+                        SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                ).performScrollTo()
+                .assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.ContentDescription,
+                        listOf(
+                            "It topped the charts (${text(R.string.home_cite, "W1")}). " +
+                                "They called it \"great.\" (${text(R.string.home_cite_none)})",
+                        ),
+                    ),
+                )
+        }
+    }
+
+    @Test
     fun aParagraphCitingManyLinesOffersABoundedSetOfActionsToTheAccessibilityService() {
         // More distinct lines than Compose allows custom actions on one node (it throws at 32).
         val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
