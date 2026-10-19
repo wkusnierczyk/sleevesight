@@ -40,14 +40,15 @@ class AppPipelinePartsTest {
 
     private val stores by lazy { TestStores(tmp.root) }
     private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val parts =
-        AppPipelineParts(
-            appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader),
-            Normalizer(JvmAccentFolder),
-        ) { PipelineCache.None }
+    private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader)
+    private val parts = AppPipelineParts(wiring, Normalizer(JvmAccentFolder)) { PipelineCache.None }
 
+    // The wiring made its own client, which each test closes, as `WiringTest` does.
     @After
-    fun close() = stores.close()
+    fun close() {
+        stores.close()
+        wiring.close()
+    }
 
     @Test
     fun theKeysAreReadForTheServiceChosenAndTheKeyedSources() =
