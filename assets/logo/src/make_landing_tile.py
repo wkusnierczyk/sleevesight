@@ -7,8 +7,9 @@ text, as it was when the builder was last checked against it. Any other index.ht
 Nothing rebuilds the page on its own, so after index.html changes it goes stale until someone
 checks the change against every edit below (`git diff <INDEX's commit> -- index.html`), updates
 the edits it touches and INDEX, rebuilds, and checks the page in a browser. As a last net,
-the build also stops if the page still holds anything of the eye's, or a quoted `href` or `src`
-that does not resolve from design/. From the repository's root:
+the build also stops if the page still holds anything of the eye's, a quoted `href` or `src`
+that does not resolve from design/, or a style-sheet URL other than the plain forms it checks.
+From the repository's root:
 
     python3 assets/logo/src/make_landing_tile.py
 
@@ -182,7 +183,7 @@ if '--seek' in sys.argv[1:]:
 </body>""")
 
 LEFT = [r'\{[{%]', 'localStorage', 'sl-intro-played', r'\bsl-blink\b', r'\bsl-name\b', r'\bsp-', '--sw', r'class="eye',
-        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'url\((?![\'"]?(?:#|https?:|data:|\.\./))']
+        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'@import']
 for pat in LEFT:
     hit = re.search(pat, h)
     if hit:
@@ -199,14 +200,20 @@ for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
     if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
         sys.exit('the link %r would not resolve from design/' % url)
 # The style sheet's relative URLs, rebased by hand above (the font's), resolve as well. Rather than
-# parse CSS, the builder admits only plain forms: every `url(` must be a fragment, an absolute or
-# `data:` URL, or a quoted or bare `../` path of letters, digits and `._/-`, which must name a file.
-# Anything else (escapes, spaces, stray quotes) stops the build.
-PLAIN = re.compile(r'url\((["\']?)(#[^)"\']*|https?:[^)"\'\s\\]*|data:[^)"\'\\]*|\.\./[A-Za-z0-9._/-]+)\1\)')
-for m in re.finditer(r'url\(', h):
+# parse CSS, the builder admits only plain forms (and no `@import`, in `LEFT`): every `url(`, in any
+# case, must be a fragment, an absolute or `data:` URL, or a file path, quoted or bare: one `../`
+# (from design/ to the root), then names of letters, digits and `._-` that do not start with a dot,
+# so no `.`, `..` or empty part, ending in a file name with an extension, and naming a file in the
+# repository. Anything else (escapes, spaces, stray quotes, a trailing slash) stops the build.
+NAME = r'[A-Za-z0-9_-][A-Za-z0-9._-]*'
+PLAIN = re.compile(r'url\((["\']?)(#[^)"\']*|https?:[^)"\'\s\\]*|data:[^)"\'\\]*|\.\./(?:%s/)*%s\.[A-Za-z0-9]+)\1\)'
+                   % (NAME, NAME), re.I)
+for m in re.finditer(r'url\(', h, re.I):
     p = PLAIN.match(h, m.start())
     if not p:
         sys.exit('the style sheet holds a URL the builder does not check: %s' % h[m.start():m.start() + 80])
-    if p.group(2).startswith('../') and not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', p.group(2)))):
-        sys.exit('the style sheet\'s URL %r would not resolve from design/' % p.group(2))
+    if p.group(2).startswith('../'):
+        path = os.path.normpath(os.path.join(ROOT, 'design', p.group(2)))
+        if not (path.startswith(os.path.normpath(ROOT) + os.sep) and os.path.isfile(path)):
+            sys.exit('the style sheet\'s URL %r would not resolve from design/' % p.group(2))
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
