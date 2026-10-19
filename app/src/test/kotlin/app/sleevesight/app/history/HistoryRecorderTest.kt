@@ -1,6 +1,7 @@
 package app.sleevesight.app.history
 
 import android.media.session.PlaybackState
+import app.sleevesight.app.session.CorruptMarkException
 import app.sleevesight.app.session.FakeSession
 import app.sleevesight.app.session.LearningMark
 import app.sleevesight.app.session.SessionRepository
@@ -130,21 +131,40 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
     }
 
     @Test
-    fun aMarkThatCannotBeReadRelearnsNothingAndIsTakenAsAResetThen() {
+    fun aCorruptMarkRelearnsNothingAndIsTakenAsAResetThen() {
         val spotify = spotify()
         spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
         spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
 
-        mark.failRead = true
+        mark.corrupt = true
         val restarted = restarted()
         assertTrue(restarted.restored.value)
         assertEquals(emptyMap<String, Any>(), restarted.learned.value)
         // Written anew as of then: the next start relearns only what is recorded after it.
         assertEquals(history.lastChangeId(), mark.id)
-        mark.failRead = false
+        mark.corrupt = false
         assertEquals(emptyMap<String, Any>(), restarted().learned.value)
         spotify.endsAt(30_000, LENGTH_MS, cluster = true, next = "Four", leftMs = 5_000)
         spotify.endsAt(40_000, LENGTH_MS, cluster = true, next = "Five", leftMs = 5_000)
+        assertEquals(mapOf(SPOTIFY to 5.seconds), restarted().learned.value)
+    }
+
+    @Test
+    fun aMarkThatCannotBeReadForAMomentRelearnsNothingThenAndIsKept() {
+        val spotify = spotify()
+        spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
+        spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
+        assertTrue(runBlocking { learning.reset() })
+        val resetAt = mark.id
+        spotify.endsAt(30_000, LENGTH_MS, cluster = true, next = "Four", leftMs = 5_000)
+        spotify.endsAt(40_000, LENGTH_MS, cluster = true, next = "Five", leftMs = 5_000)
+
+        // An I/O error, not a corrupt file: nothing relearned at that start, and the mark kept.
+        mark.failRead = true
+        assertEquals(emptyMap<String, Any>(), restarted().learned.value)
+        assertEquals(resetAt, mark.id)
+        // The next start relearns the changes since the real reset.
+        mark.failRead = false
         assertEquals(mapOf(SPOTIFY to 5.seconds), restarted().learned.value)
     }
 
@@ -209,6 +229,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
     private class MemoryMark : LearningMark {
         var id = 0L
         var failRead = false
+        var corrupt = false
         var failWrite = false
 
         /** While set, a read takes the mark, then waits for it before it returns. */
@@ -216,6 +237,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
 
         override suspend fun read(): Long {
             if (failRead) throw IOException("unreadable")
+            if (corrupt) throw CorruptMarkException("corrupt")
             val read = id
             readGate?.await()
             return read
