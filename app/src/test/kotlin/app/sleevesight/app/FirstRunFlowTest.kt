@@ -1,12 +1,16 @@
 package app.sleevesight.app
 
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.ResolveInfo
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
+import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
@@ -24,6 +28,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.CreditsPage
 import app.sleevesight.app.ui.FirstRun
@@ -49,18 +54,44 @@ class FirstRunFlowTest {
     val compose = createEmptyComposeRule()
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
-    private val listener = ComponentName(app, SleevesightListenerService::class.java).flattenToString()
+    private val component = ComponentName(app, SleevesightListenerService::class.java)
+    private val listener = component.flattenToString()
 
     private fun text(id: Int) = app.getString(id)
 
-    /** What Android records when the user turns the listener on or off in Settings. */
+    /**
+     * What Android records when the user turns the listener on or off in Settings: the setting the
+     * package list reads (Android 8.0), and the listener's own grant (8.1 on), which Robolectric
+     * keeps apart.
+     */
     private fun setAccess(granted: Boolean) {
         Settings.Secure.putString(app.contentResolver, "enabled_notification_listeners", if (granted) listener else "")
+        val manager = app.getSystemService(NotificationManager::class.java)
+        shadowOf(manager).setNotificationListenerAccessGranted(component, granted)
+    }
+
+    /** As on a phone whose settings app has only [actions] of the notification-access screens. */
+    private fun settingsScreens(vararg actions: String) {
+        shadowOf(app).checkActivities(true)
+        for (action in actions) {
+            val screen =
+                ResolveInfo().apply {
+                    activityInfo =
+                        ActivityInfo().apply {
+                            packageName = "com.android.settings"
+                            name = "com.android.settings.Settings"
+                        }
+                }
+            shadowOf(app.packageManager).addResolveInfoForIntent(Intent(action), screen)
+        }
     }
 
     private fun launch(): ActivityScenario<MainActivity> = ActivityScenario.launch(MainActivity::class.java)
 
-    /** A launch with Navigation's explicit deep link to [Home], as another app could send it. */
+    /**
+     * A launch with Navigation's explicit deep link to [Home], as another app could send it, with
+     * all four of its extras as `NavDeepLinkBuilder` writes them.
+     */
     private fun launchDeepLinkedToHome(): ActivityScenario<MainActivity> {
         // The graph `NavHost` builds has no route, so id 0; a typed destination's id is the hash of
         // its serial name.
@@ -73,6 +104,9 @@ class FirstRunFlowTest {
         val intent =
             Intent(app, MainActivity::class.java)
                 .putExtra(NavController.KEY_DEEP_LINK_IDS, intArrayOf(graphId, homeId))
+                .putParcelableArrayListExtra(NavController.KEY_DEEP_LINK_ARGS, arrayListOf(Bundle(), Bundle()))
+                .putExtra(NavController.KEY_DEEP_LINK_EXTRAS, Bundle())
+                .putExtra(NavController.KEY_DEEP_LINK_INTENT, Intent(app, MainActivity::class.java))
         return ActivityScenario.launch(intent)
     }
 
@@ -100,6 +134,47 @@ class FirstRunFlowTest {
             scenario.onActivity { started = shadowOf(it).nextStartedActivity }
             assertEquals(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS, started?.action)
             assertEquals(listener, started?.getStringExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME))
+        }
+    }
+
+    @Test
+    fun withoutTheAppsOwnSwitchTheButtonOpensTheListOfApps() {
+        setAccess(granted = false)
+        settingsScreens(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+        launch().use { scenario ->
+            compose.onNodeWithText(text(R.string.open_access_settings)).performScrollTo().performClick()
+
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, started?.action)
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.no_access_settings)).fetchSemanticsNodes().size)
+        }
+    }
+
+    @Test
+    fun withNoSettingsScreenForAccessTheFirstRunScreenSaysSo() {
+        setAccess(granted = false)
+        settingsScreens()
+        launch().use { scenario ->
+            compose.onNodeWithText(text(R.string.open_access_settings)).performScrollTo().performClick()
+
+            compose.onNodeWithText(text(R.string.no_access_settings)).performScrollTo().assertIsDisplayed()
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertNull(started)
+        }
+    }
+
+    @Test
+    @Config(sdk = [29])
+    fun beforeAndroid11TheButtonOpensTheListOfApps() {
+        setAccess(granted = false)
+        launch().use { scenario ->
+            compose.onNodeWithText(text(R.string.open_access_settings)).performScrollTo().performClick()
+
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, started?.action)
         }
     }
 
@@ -182,6 +257,9 @@ class FirstRunFlowTest {
                 }
             }
             compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+            // FirstRun drawn first, so the redirect checked below is the one Home makes now, not
+            // one left over from the start.
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
 
             // Home reached with the first run not acknowledged, over a stack of Home and FirstRun,
             // as a deep link or a restored back stack could leave it, with no deep-link extras.
@@ -206,6 +284,31 @@ class FirstRunFlowTest {
     }
 
     @Test
+    fun homeReachedThroughTheControllerBeforeTheFirstRunIsAcknowledgedSendsTheUserBack() {
+        setAccess(granted = true)
+        launch().use { scenario ->
+            lateinit var nav: NavHostController
+            scenario.onActivity { activity ->
+                val graph = (activity.application as SleevesightApplication).graph
+                activity.setContent {
+                    nav = rememberNavController()
+                    SleevesightNavHost(graph.notificationAccess, graph.firstRun, { true }, nav)
+                }
+            }
+            compose.waitForIdle()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+
+            scenario.onActivity { nav.navigate(Home) }
+
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.home_placeholder)).fetchSemanticsNodes().size)
+            var routes = emptyList<String?>()
+            scenario.onActivity { routes = nav.currentBackStack.value.map { it.destination.route } }
+            assertEquals(listOf(null, FirstRun.serializer().descriptor.serialName), routes)
+        }
+    }
+
+    @Test
     fun deepLinkExtrasDoNoHarmAfterTheFirstRun() {
         acknowledgeFirstRun()
         setAccess(granted = true)
@@ -225,6 +328,19 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun inTouchModeHomeOpensTheFirstRunScreenAtTheTop() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
+        launch().use {
+            compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+            // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
+            compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
         }
     }
 
@@ -382,8 +498,13 @@ class FirstRunFlowTest {
     }
 
     private companion object {
-        /** `NavController`'s `KEY_DEEP_LINK_*` extras, which `MainActivity` drops. */
+        /** `NavController`'s explicit deep-link extras, which `MainActivity` drops. */
         val DEEP_LINK_EXTRAS =
-            listOf("Ids", "Args", "Extras", "Intent").map { "android-support-nav:controller:deepLink$it" }
+            listOf(
+                NavController.KEY_DEEP_LINK_IDS,
+                NavController.KEY_DEEP_LINK_ARGS,
+                NavController.KEY_DEEP_LINK_EXTRAS,
+                NavController.KEY_DEEP_LINK_INTENT,
+            )
     }
 }
