@@ -105,7 +105,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
    borders inside it, heights came out 2px short of the widths' scale, and a landing a fraction off. */
 .stage2{position:relative;box-sizing:content-box;aspect-ratio:16/10;background:var(--bg);overflow:hidden;border-top:1px solid var(--card-line);border-bottom:1px solid var(--card-line)}
 .stage2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-/* The previews (A's, B's and C's stages) and A's header panes show the product pages, whose "sight"
+/* The *Leading designs* stages and A's header panes show the product pages, whose "sight"
    on light is `--sight`, #cc212d, a shade darker than the label red the other marks use. */
 .stage2.lt,.lead2 .card:first-child .pane.lt{--red:#cc212d}
 .stage2 .tl{position:absolute;left:35.417%;top:26.667%;width:29.167%;aspect-ratio:1;transform-origin:0 0;animation:b-fly 7s infinite}
@@ -138,7 +138,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 /* D and E: B's and C's intros, each ending on the other's header, so a phone and a desktop end on one
    mark. D flies B's tile into a header that is C's (the words land where B's do, since both headers
    start at the words' ink), and the record then joins: it turns in once, growing as it fades in
-   (60-70%, after the page). E flies C's mark into C's header, and the record then turns out once,
+   (60-70%, as the page arrives). E flies C's mark into C's header, and the record then turns out once,
    shrinking as it fades, leaving B's words. The record turns about its own centre: it is placed by its
    group, since a <use>'s x and y fall outside `fill-box`. At rest (reduced motion) each shows its end. */
 .stage2 .rec{transform-box:fill-box;transform-origin:center}
