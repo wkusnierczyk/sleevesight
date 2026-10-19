@@ -62,6 +62,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowToast
 
 /** The home screen's content in each state it shows, from published state only. */
@@ -371,6 +372,24 @@ class NowPlayingScreenTest {
                         .size.height
                 }
             assertEquals("tag heights $heights", 1, heights.distinct().size)
+        }
+
+    // Native graphics, on the phone's width and density: with Robolectric's default graphics every
+    // chip lays out at one height, so a row could not be misaligned. A chip that filters reserves
+    // 48 dp for touch and draws centred in it; one that does not (L, no key) reserves nothing, and
+    // drew at the top of the row, above the others.
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w411dp-h891dp-420dpi")
+    fun theChipsOfARowShareACentre() =
+        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)))) {
+            val chips =
+                listOf("MB", "W", "L").map {
+                    val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
+                    // Unclipped: a chip scrolled out of view has empty bounds in the root.
+                    node.positionInRoot.y + node.size.height / 2f
+                }
+            assertTrue("one centre: $chips", chips.maxOf { it } - chips.minOf { it } < 1f)
         }
 
     @Test
