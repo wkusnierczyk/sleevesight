@@ -32,7 +32,7 @@ layout: null
   --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
   --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
   --cite-ink:#ffffff;
-  --sight:#cf222e;
+  --sight:#cc212d;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
@@ -64,8 +64,9 @@ header.top .row{display:flex;align-items:center;justify-content:space-between;ga
 /* `top`: flex centring leaves the eye about 0.75 px above the middle of the capital S, at both sizes
    and any pixel density (measured on screen); this centres it. */
 .brand>svg{width:72px;height:72px;flex:none;display:block;position:relative;top:.75px}
-/* The name: "Sleeve" bold in ink, "sight" regular in the record label's red (`--sight`; on dark a
-   lighter red, since the label's is 3.6:1 there). */
+/* The name: "Sleeve" bold in ink, "sight" regular in the record label's red (`--sight`). On light, a
+   shade darker than the label's `#cf222e` (4.48:1), for 4.5:1 at the compact header's 20 px; on dark,
+   a lighter red, since the label's is 3.6:1 there. */
 .brand .sight{font-weight:400;color:var(--sight)}
 @media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:58px;height:58px}}
 nav.top{flex:none}
