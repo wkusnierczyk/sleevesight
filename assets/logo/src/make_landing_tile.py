@@ -198,10 +198,15 @@ for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
         path = os.path.join(path, 'index.html')
     if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
         sys.exit('the link %r would not resolve from design/' % url)
-# The style sheet's relative URLs, rebased by hand above (the font's), resolve as well.
-# Each URL is taken whole, quotes matched, so a stray character after a known path is not overlooked.
-for m in re.finditer(r'url\(\s*(?:"([^"]*)"|\'([^\']*)\'|([^)\s\'"]*))\s*\)', h):
-    url = next(g for g in m.groups() if g is not None)
-    if url.startswith('../') and not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', url))):
-        sys.exit('the style sheet\'s URL %r would not resolve from design/' % url)
+# The style sheet's relative URLs, rebased by hand above (the font's), resolve as well. Rather than
+# parse CSS, the builder admits only plain forms: every `url(` must be a fragment, an absolute or
+# `data:` URL, or a quoted or bare `../` path of letters, digits and `._/-`, which must name a file.
+# Anything else (escapes, spaces, stray quotes) stops the build.
+PLAIN = re.compile(r'url\((["\']?)(#[^)"\']*|https?:[^)"\'\s\\]*|data:[^)"\'\\]*|\.\./[A-Za-z0-9._/-]+)\1\)')
+for m in re.finditer(r'url\(', h):
+    p = PLAIN.match(h, m.start())
+    if not p:
+        sys.exit('the style sheet holds a URL the builder does not check: %s' % h[m.start():m.start() + 80])
+    if p.group(2).startswith('../') and not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', p.group(2)))):
+        sys.exit('the style sheet\'s URL %r would not resolve from design/' % p.group(2))
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
