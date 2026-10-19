@@ -118,12 +118,18 @@ class HistoryRecorder(
             }
             launch {
                 var before: NowPlaying? = null
+                // The last of this play reported with artists: a report without them matches any.
+                var withArtists: NowPlaying? = null
                 sessions.playing.collect { track ->
                     val at = wall.now()
                     val playedBefore = before
-                    val same = { row: NowPlaying -> track != null && sameAsLast(row, track) }
+                    val known = withArtists
+                    val same = { row: NowPlaying ->
+                        track != null && sameAsLast(TrackIdentity.reference(row, known), track)
+                    }
                     // A track that plays on is updated; any other ends the one before and starts.
                     val continues = playedBefore != null && same(playedBefore)
+                    withArtists = TrackIdentity.withArtists(known, track, continues)
                     if (playedBefore != null && !continues) {
                         writes.trySend(Write.record("a track stopping") { history.stopped(at) })
                     }

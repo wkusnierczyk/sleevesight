@@ -39,6 +39,34 @@ class TrackIdentityTest {
     }
 
     @Test
+    fun twoAlbumsKnownAndDifferentAreTwoRecordings() {
+        val studio = sundown.copy(player = YOUTUBE_MUSIC, album = "Sundown", queueItemId = 4)
+        val rows =
+            listOf(
+                Triple("a live recording", studio.copy(album = "Gord's Gold (Live)", queueItemId = 5), false),
+                Triple("the album filled in", studio.copy(album = null), true),
+                Triple("a new length", studio.copy(duration = 279.seconds), true),
+            )
+        for ((name, b, same) in rows) assertEquals(name, same, TrackIdentity.same(studio, b))
+        // The media id decides first: one id, whatever album it is filed under.
+        val spotify = sundown.copy(mediaId = "spotify:track:1", album = "Sundown")
+        assertTrue(TrackIdentity.same(spotify, spotify.copy(album = "Sundown (Deluxe)")))
+    }
+
+    @Test
+    fun aReportWithoutArtistsIsComparedThroughTheLastWithArtists() {
+        val x = sundown.copy(title = "Intro", artists = "X")
+        val bare = x.copy(artists = "")
+        val y = x.copy(artists = "Y")
+        assertTrue(TrackIdentity.same(TrackIdentity.reference(bare, x), x))
+        assertFalse(TrackIdentity.same(TrackIdentity.reference(bare, x), y))
+        // Kept across a report without artists of the same play, dropped at another.
+        assertEquals(x, TrackIdentity.withArtists(x, bare, continues = true))
+        assertEquals(null, TrackIdentity.withArtists(x, bare.copy(title = "Outro"), continues = false))
+        assertEquals(y, TrackIdentity.withArtists(x, y, continues = false))
+    }
+
+    @Test
     fun withoutMediaIdsTitleAndArtistsDecide() {
         assertFalse(TrackIdentity.same(sundown, sundown.copy(artists = "Gordon Lightfoot, Someone Else")))
         assertTrue(TrackIdentity.same(sundown, sundown.copy(album = "Sundown", duration = 223.seconds)))

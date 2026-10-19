@@ -162,6 +162,26 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `a live recording right after a written studio one is a new run, not the studio card`() =
+        runTest {
+            started()
+            report(NowPlaying(title = "Alpha", artists = "Artist", album = "Studio", player = Settings.SPOTIFY))
+            settle()
+            tap()
+            settle()
+            assertEquals(1, provider.requestsFor("Alpha"))
+            // No media id: the same title and artists, on another album.
+            report(NowPlaying(title = "Alpha", artists = "Artist", album = "Live", player = Settings.SPOTIFY))
+            settle()
+
+            val shown = host.state.value.track
+            assertEquals("Live", shown?.nowPlaying?.album)
+            // Written for the live recording, after the first action, in place of the studio card.
+            assertEquals(2, provider.requestsFor("Alpha"))
+            assertTrue(shown?.insight is InsightState.Written)
+        }
+
+    @Test
     fun `a title first, with nothing found, then its artists is written without a tap`() =
         runTest {
             started()

@@ -78,6 +78,50 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun aNewTracksStateWellBeforeItsMetadataIsWhereTheChangeBegan() {
+        // The state names item 5 under the old title and settles alone; the title comes 500 ms
+        // later. The change began at the state, after Sundown's last state, not at the title.
+        val youtube = youtubeMusic()
+        youtube.settled(state(positionMs = 200_000, updatedAt = 7, queueItem = 4))
+        val began = scheduler.currentTime
+        youtube.send(state(positionMs = 0, updatedAt = began, queueItem = 5))
+        scheduler.advanceTimeBy(500.milliseconds)
+        youtube.send(carefree)
+        settle()
+
+        val change = checkNotNull(repository.lastChange.value)
+        assertEquals("Carefree Highway", change.track.title)
+        assertEquals(began, change.changedAt)
+        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 7, 1f), change.before)
+    }
+
+    @Test
+    fun aLiveRecordingAfterTheStudioOneIsAChange() {
+        // The same title and artists, on another album: another recording.
+        val youtube = youtubeMusic(metadata = metadata(album = "Sundown"))
+        val changes = recordChanges()
+
+        youtube.send(state(queueItem = 5))
+        youtube.settled(metadata(album = "Gord's Gold (Live)"))
+
+        assertEquals(listOf("Gord's Gold (Live)"), changes.map { it.track.album })
+    }
+
+    @Test
+    fun aTitleWithNoArtistsBetweenTwoArtistsIsOneChange() {
+        // Intro by X; Intro with no artists, settled alone; then Intro by Y.
+        val youtube = youtubeMusic(metadata = metadata(title = "Intro", artist = "X"))
+        val changes = recordChanges()
+
+        youtube.settled(metadata(title = "Intro", artist = null))
+        youtube.settled(metadata(title = "Intro", artist = "Y"))
+        youtube.settled(metadata(title = "Intro", artist = null))
+        youtube.settled(metadata(title = "Intro", artist = "Y"))
+
+        assertEquals(listOf("Y"), changes.map { it.track.artists })
+    }
+
+    @Test
     fun aStopAndResumeChangesNoTrack() {
         val youtube = youtubeMusic()
         val tracks = recordTracks()
