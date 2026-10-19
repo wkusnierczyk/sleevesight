@@ -14,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,6 +41,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.time.Duration.Companion.days
@@ -56,7 +59,10 @@ import kotlin.time.Duration.Companion.seconds
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
  * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
- * above the list that the history was cleared, or could not be. [onOpenCredits] opens the credits
+ * above the list that the history was cleared, or could not be. The saves (a setting, a key, a
+ * removal of keys) run in [saves], which outlives the screen, as the clear does, so leaving the
+ * screen, or a rotation, does not cut one short; the screen and its dialogs only wait for the
+ * result, and a screen gone by then shows nothing of it. [onOpenCredits] opens the credits
  * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
  * [playerLabel] names a player by its package.
  */
@@ -67,6 +73,7 @@ fun SettingsScreen(
     secretStore: SecretStore,
     aiProviders: Map<ProviderId, AiProvider>,
     clearHistory: () -> Deferred<Boolean>,
+    saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
     playerLabel: (String) -> String,
@@ -75,18 +82,22 @@ fun SettingsScreen(
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
-    // Whether the last save of a key failed: with an unreadable key, it offers *Reset saved keys*.
-    var saveFailed by remember { mutableStateOf(false) }
-    // Whether the last change could not be saved.
-    var changeFailed by remember { mutableStateOf(false) }
+    // Whether the key store could not seal the last key saved: as with an unreadable key, it offers
+    // *Reset saved keys*. Not a file that could not be written, which a reset would not cure.
+    var sealFailed by remember { mutableStateOf(false) }
+    // The changes in a row that could not be saved, 0 once one is: each one is announced.
+    var changeFailures by remember { mutableIntStateOf(0) }
     val clearing = remember(scope) { Clearing(scope) }
-    val update = scope.updater(settingsStore) { changeFailed = it }
-    val keys = KeysShown(secrets, offerReset = saveFailed || SecretState.UNREADABLE in secrets.values)
+    val update =
+        scope.updater(settingsStore, saves) { failed ->
+            changeFailures = if (failed) changeFailures + 1 else 0
+        }
+    val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding()) {
             // Above the list, so it shows wherever the list is scrolled to.
-            Notices(changeFailed, clearing.ended)
+            Notices(changeFailures, clearing.ended)
             settings?.let { current ->
                 SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits, onOpenDiagnostics), update) {
                     dialog = it
@@ -104,7 +115,7 @@ fun SettingsScreen(
         }
 
         is SettingsDialog.Keys -> {
-            KeyDialogs(shown, secrets, secretStore, onSaveFailed = { saveFailed = it }, onDismiss = close)
+            KeyDialogs(shown, secrets, secretStore, saves, onSealFailed = { sealFailed = it }, onDismiss = close)
         }
 
         SettingsDialog.ClearHistory -> {
@@ -129,23 +140,27 @@ fun SettingsScreen(
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
 
-/** Saves each change to [store] in this scope, telling [failed] whether it could not be saved. */
+/**
+ * Saves each change to [store] in [saves], which outlives the screen, and waits for it in this
+ * scope, the screen's, telling [failed] whether it could not be saved.
+ */
 private fun CoroutineScope.updater(
     store: SettingsStore,
+    saves: CoroutineScope,
     failed: (Boolean) -> Unit,
 ): Update =
     { transform ->
-        launch {
-            failed(
+        val saved =
+            saves.async {
                 try {
                     store.update(transform)
-                    false
+                    true
                 } catch (_: IOException) {
                     // Only an I/O error: cancellation and any other failure propagate.
-                    true
-                },
-            )
-        }
+                    false
+                }
+            }
+        launch { failed(!saved.await()) }
     }
 
 /**
@@ -245,22 +260,21 @@ private val MAX_CROSSFADE_SECONDS =
         .toInt()
 
 /**
- * Says above the list that the last change could not be saved, and how the last *Clear history*
- * ended ([cleared]; null for none). Never an error's text, which may name a path.
+ * Says above the list that the last change could not be saved ([changeFailures], the failures in a
+ * row), and how the last *Clear history* ended ([cleared]; null for none). Never an error's text,
+ * which may name a path.
  */
 @Composable
 private fun Notices(
-    changeFailed: Boolean,
+    changeFailures: Int,
     cleared: Boolean?,
 ) {
-    val messages =
-        listOfNotNull(
-            R.string.settings_change_failed.takeIf { changeFailed },
-            R.string.settings_clear_history_failed.takeIf { cleared == false },
-            R.string.settings_clear_history_done.takeIf { cleared == true },
-        )
-    for (message in messages) {
-        val failure = message != R.string.settings_clear_history_done
+    // Each notice is announced by a screen reader when it shows.
+    @Composable
+    fun Notice(
+        @StringRes message: Int,
+        failure: Boolean,
+    ) {
         Text(
             stringResource(message),
             style = MaterialTheme.typography.bodyMedium,
@@ -270,6 +284,14 @@ private fun Notices(
                     .padding(start = 24.dp, end = 24.dp, top = 16.dp)
                     .semantics { liveRegion = LiveRegionMode.Polite },
         )
+    }
+
+    // Drawn afresh for each failure in a row, so a screen reader announces each, not only the first.
+    if (changeFailures > 0) key(changeFailures) { Notice(R.string.settings_change_failed, failure = true) }
+    when (cleared) {
+        null -> {}
+        false -> Notice(R.string.settings_clear_history_failed, failure = true)
+        true -> Notice(R.string.settings_clear_history_done, failure = false)
     }
 }
 

@@ -39,10 +39,11 @@ import kotlin.time.Duration.Companion.seconds
  * notification access allows: access can be granted in Settings before the app is first opened,
  * which binds the listener service at once. It attaches when the acknowledgement arrives.
  *
- * **Players to follow** come from [followed], package names; the settings (#50) supply them, and
- * until then the default is `Settings`' (Spotify). Sessions of other players are dropped, and each
- * newly seen one is logged as ignored; no callback is registered on them. A player with several
- * sessions is followed through the first, the one the system ranks highest.
+ * **Players to follow** come from [followed], package names: in the app, the settings'
+ * `SettingsStore.followedPlayers`, which `AppGraph` hands it (#126); with none given, `Settings`'
+ * default (Spotify). Sessions of other players are dropped, and each newly seen one is logged as
+ * ignored; no callback is registered on them. A player with several sessions is followed through
+ * the first, the one the system ranks highest.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
  * else the first followed session: the system lists the most recently active first.
