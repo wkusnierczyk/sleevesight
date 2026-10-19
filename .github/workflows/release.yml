@@ -58,7 +58,9 @@ jobs:
             echo "::error::No release notes: add $notes (design/release.md)"
             exit 1
           fi
-          length=$(python3 -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read().rstrip()))' "$notes")
+          # Counted as the upload script sends them: characters, not bytes, with trailing white
+          # space removed and line endings kept as written.
+          length=$(jq -Rs 'sub("\\s+$"; "") | length' "$notes")
           if [ "$length" -eq 0 ] || [ "$length" -gt 500 ]; then
             echo "::error::$notes has $length characters; Play takes 1 to 500"
             exit 1
@@ -166,13 +168,15 @@ jobs:
           export_environment_variables: false
 
       # The track is the environment's variable `PLAY_TRACK`, `internal` when unset, so the closed
-      # test (#58) can take its bundles from the same job.
+      # test (#58) can take its bundles from the same job. `PLAY_RELEASE_STATUS`, `completed` when
+      # unset, can be `draft` while Play treats the app as a draft (`design/release.md`).
       - name: Upload to Google Play
         env:
           PLAY_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
           TRACK: ${{ vars.PLAY_TRACK || 'internal' }}
+          STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           VERSION: ${{ steps.version.outputs.name }}
         run: |
           .github/scripts/play-upload.sh app.sleevesight \
             app/build/outputs/bundle/release/app-release.aab \
-            "$VERSION" "$TRACK" "release-notes/$VERSION.txt"
+            "$VERSION" "$TRACK" "release-notes/$VERSION.txt" "$STATUS"

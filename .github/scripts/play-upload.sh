@@ -4,16 +4,17 @@
 # with its notes, and commit. The release workflow runs it (`design/release.md`); it calls the API
 # with curl rather than a third-party action, since the job holds the release credentials.
 #
-# Usage: play-upload.sh <package> <bundle> <version> <track> <notes file>
+# Usage: play-upload.sh <package> <bundle> <version> <track> <notes file> <status>
+# <status> is the release's: `completed`, or `draft` to finish the rollout in Play Console.
 # The access token, scoped to androidpublisher, is in PLAY_ACCESS_TOKEN. PLAY_API overrides the
 # API's address, for a test against a local server.
 set -euo pipefail
 
-if [ "$#" -ne 5 ]; then
-  echo "usage: $0 <package> <bundle> <version> <track> <notes file>" >&2
+if [ "$#" -ne 6 ]; then
+  echo "usage: $0 <package> <bundle> <version> <track> <notes file> <status>" >&2
   exit 2
 fi
-package=$1 bundle=$2 version=$3 track=$4 notes=$5
+package=$1 bundle=$2 version=$3 track=$4 notes=$5 status=$6
 : "${PLAY_ACCESS_TOKEN:?PLAY_ACCESS_TOKEN is not set}"
 
 # Play's listing language, which the notes are written in.
@@ -27,11 +28,12 @@ expected_code=$((10#$major * 1000000 + 10#$minor * 1000 + 10#$patch))
 api=${PLAY_API:-https://androidpublisher.googleapis.com}
 app="$api/androidpublisher/v3/applications/$package"
 
-# A failed call prints Play's error body, which says what it refused, to the log.
+# A failed call prints Play's error body, which says what it refused, to the log. The token goes to
+# curl through a file descriptor, not its command line, which other processes could read.
 call() {
   local body
   if ! body=$(curl --silent --show-error --fail-with-body \
-    -H "Authorization: Bearer $PLAY_ACCESS_TOKEN" "$@"); then
+    -H @<(printf 'Authorization: Bearer %s' "$PLAY_ACCESS_TOKEN") "$@"); then
     printf '%s\n' "$body" >&2
     return 1
   fi
@@ -61,14 +63,14 @@ if [ "$code" != "$expected_code" ]; then
 fi
 
 # The release is named for the version, not Play's default `<code> (<version>)`. `completed` rolls it
-# out to the whole track at once.
+# out to the whole track at once; `draft` leaves it for Play Console.
 jq -n --arg track "$track" --arg name "$version" --arg code "$code" \
-  --arg language "$language" --rawfile notes "$notes" '{
+  --arg language "$language" --arg status "$status" --rawfile notes "$notes" '{
     track: $track,
     releases: [{
       name: $name,
       versionCodes: [$code],
-      status: "completed",
+      status: $status,
       releaseNotes: [{language: $language, text: ($notes | sub("\\s+$"; ""))}]
     }]
   }' |
@@ -77,4 +79,4 @@ echo "Set the $track track to release $version"
 
 call -X POST "$app/edits/$edit:commit" >/dev/null
 committed=true
-echo "Committed edit $edit: $version is on the $track track"
+echo "Committed edit $edit: $version is a $status release on the $track track"
