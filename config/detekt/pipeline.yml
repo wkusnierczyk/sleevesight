@@ -3,9 +3,10 @@
 # source set, jvmMain, which main cannot see, is checked with detekt.yml alone, so JVM APIs are
 # allowed there; the `checkNetworkReferences` task checks the compiled classes of both for network
 # APIs, and `checkPortableCode` those of main, the tests and the test fixtures for `synchronized`,
-# the access-order LinkedHashMap constructor, String.format and a LinkedHashMap subclass
-# overriding removeEldestEntry (a JVM-only member, which no rule here sees), which the rules below
-# miss as Kotlin usually writes them (sleevesight.pipeline.gradle.kts). None of these is a complete check: only compiling a
+# the access-order LinkedHashMap constructor and String.format, which the rules below miss as
+# Kotlin usually writes them, and an override of removeEldestEntry in a class descended from
+# LinkedHashMap through the classes it reads (a JVM-only member, which no rule here sees)
+# (sleevesight.pipeline.gradle.kts). None of these is a complete check: only compiling a
 # non-JVM target is. ForbiddenMethodCall needs type resolution (the detektMain and detektTest
 # tasks). The imports list replaces the one in detekt.yml, so it repeats the network rules.
 style:

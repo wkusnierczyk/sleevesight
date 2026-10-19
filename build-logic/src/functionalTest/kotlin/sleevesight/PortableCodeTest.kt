@@ -108,6 +108,33 @@ class PortableCodeTest {
     }
 
     @Test
+    fun `a removeEldestEntry override two levels below LinkedHashMap in main fails`() {
+        assertFailsNaming(
+            "open class Base : LinkedHashMap<String, Int>()\n\n" +
+                "class Deeper : Base() {\n" +
+                "    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>?): Boolean =\n" +
+                "        size > 2\n" +
+                "}\n",
+            "java/util/LinkedHashMap.removeEldestEntry override",
+            classFile = "Deeper.class",
+        )
+    }
+
+    @Test
+    fun `a removeEldestEntry override in a test, below a LinkedHashMap subclass in main, fails`() {
+        assertFailsNaming(
+            "open class Base : LinkedHashMap<String, Int>()\n",
+            "java/util/LinkedHashMap.removeEldestEntry override",
+            classFile = "DeeperInTest.class",
+            test =
+                "class DeeperInTest : Base() {\n" +
+                    "    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>?): Boolean =\n" +
+                    "        size > 2\n" +
+                    "}\n",
+        )
+    }
+
+    @Test
     fun `synchronized in a test fails`() {
         assertFailsNaming(
             "fun portable(): Int = 1\n",

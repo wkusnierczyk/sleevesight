@@ -13,8 +13,8 @@
 //   network API, however the source spelled it.
 // - `checkPortableCode` reads the compiled classes of `main`, the tests and the test fixtures, and
 //   fails on the JVM-only constructs Detekt misses as Kotlin usually writes them: `synchronized`,
-//   the access-order `LinkedHashMap` constructor, `String.format` and a `LinkedHashMap` subclass
-//   overriding `removeEldestEntry`.
+//   the access-order `LinkedHashMap` constructor, `String.format`, and an override of
+//   `removeEldestEntry` in a class descended from `LinkedHashMap` through the classes it reads.
 import io.gitlab.arturbosch.detekt.Detekt
 import sleevesight.checks.CheckNetworkReferences
 import sleevesight.checks.CheckPortableCode
