@@ -1,4 +1,4 @@
 What's new in 0.1.1:
-- The first-run screen says more exactly what leaves your phone, as the privacy policy does.
-- Sources: the chips in a row line up, and each source's lines read in one column.
-- Built for Android 17.
+- "What leaves the phone" (on the home screen) now matches the privacy policy: the sources never get the album, and it lists everything the app reads from your player.
+- Sources: the filter chips sit level in their row, and the source lines' text starts in one column.
+- Updated for Android 17 (still runs on Android 8 and later).
