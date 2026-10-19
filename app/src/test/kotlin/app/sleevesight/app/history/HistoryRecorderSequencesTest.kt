@@ -70,7 +70,8 @@ internal class HistoryRecorderSequencesTest(
         /** The session gap, in milliseconds. */
         private val GAP = Settings.DEFAULT_SESSION_GAP.inWholeMilliseconds
 
-        private const val FORTY_MINUTES = 40 * 60_000L
+        private const val MINUTE = 60_000L
+        private const val FORTY_MINUTES = 40 * MINUTE
         private const val SUNDOWN = "Sundown"
         private const val CAREFREE = "Carefree Highway"
 
@@ -186,6 +187,20 @@ internal class HistoryRecorderSequencesTest(
                 ) {
                     val spotify = spotify(metadata = metadata(mediaId = "stream:1"))
                     at(FORTY_MINUTES)
+                    spotify.report(metadata(mediaId = "stream:1", album = "Live"))
+                },
+                sequence(
+                    "a stream with no length, paused and resumed within the gap, gets an album",
+                    Row(SUNDOWN, 1, 0, null, album = "Live"),
+                ) {
+                    // Its row is heard until its start (no length), so the album must continue the
+                    // resumed row rather than start one, which would be past the gap.
+                    val spotify = spotify(metadata = metadata(mediaId = "stream:1"))
+                    at(20 * MINUTE)
+                    spotify.report(paused())
+                    at(45 * MINUTE)
+                    spotify.report(state())
+                    at(50 * MINUTE)
                     spotify.report(metadata(mediaId = "stream:1", album = "Live"))
                 },
                 sequence("a track plays on past its length and the gap and gets new art", Row(SUNDOWN, 1, 0, null)) {

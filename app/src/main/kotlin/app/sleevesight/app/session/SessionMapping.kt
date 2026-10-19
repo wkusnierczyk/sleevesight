@@ -54,6 +54,16 @@ object SessionMapping {
      * (Castbox reports `PLAYING` at 0 while it stalls), nor a fall from a position reported only at
      * the start, however long it has played since: its extrapolation cannot tell it from a stall.
      * Unknown positions never fall back.
+     *
+     * Known costs, each rare and off the measured paths:
+     * - A podcast player that resumes the next episode at a saved position (Castbox: `PAUSED` at
+     *   31m 18s, item 0; `PAUSED` at 10m, item 0; the new title 90 ms later) does not fall back
+     *   to the start, so the change is timed at the title, with the new episode's state as the
+     *   one before it.
+     * - A restart then *previous* within [SessionRepository.SETTLE] on a player that sends the
+     *   title first (Spotify: 230 s, item 1; 0, item 1, at 10 000; the new title at 10 200; then
+     *   item 2) falls back at the restart, so the change is timed there, with the state before
+     *   the restart as the one before it.
      */
     fun movedBack(
         previous: PlaybackState?,

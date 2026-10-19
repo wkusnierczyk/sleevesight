@@ -1,5 +1,6 @@
 package app.sleevesight.store
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.history.HistoryDatabase
@@ -35,8 +36,9 @@ import kotlin.time.Instant
  *      the next one.
  * 2. [continued]: the track of the last row plays on without a break, as the player updated it
  *    (artists sent after the title, an album, a new length): the row takes the update, however
- *    long it has played. No session is decided. If the last row is not that track (its write
- *    failed), this is a start.
+ *    long it has played. No session is decided. If the last row does not hold that track (its
+ *    start was never written, or its row has gone), this is a start, at the time the playback
+ *    started, so the update is not lost.
  * 3. [stopped]: the last row stopped playing (paused, stopped, or another track began); the first
  *    stop is kept until it plays again.
  *
@@ -48,7 +50,7 @@ import kotlin.time.Instant
  */
 @Suppress("TooManyFunctions") // One for each way the history is written, read or deleted.
 class SessionHistory(
-    driver: SqlDriver,
+    private val driver: SqlDriver,
 ) {
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
 
@@ -181,6 +183,23 @@ class SessionHistory(
      * not depend on the clock.
      */
     fun lastChangeId(): Long = queries.trackChangeLastId().executeAsOne()
+
+    /**
+     * The highest id ever given to a change in this database, 0 with none: `AUTOINCREMENT`'s
+     * sequence, which [clear] and [deleteOlderThan] leave as it is, so no mark taken from
+     * [lastChangeId] is above it while the database lasts. A mark above it is from an earlier
+     * database, replaced since (Android deletes a corrupt database file and the app creates it
+     * anew), whose ids started again from 1. Read from `sqlite_sequence` in SQL of its own, since
+     * SQLDelight does not know that table's columns.
+     */
+    fun changeSequence(): Long =
+        driver
+            .executeQuery(
+                identifier = null,
+                sql = "SELECT seq FROM sqlite_sequence WHERE name = 'track_change'",
+                mapper = { cursor -> QueryResult.Value(if (cursor.next().value) cursor.getLong(0) ?: 0 else 0) },
+                parameters = 0,
+            ).value
 
     /**
      * Deletes what is older than [lifetime], the user's *Keep history for*, in one transaction: the

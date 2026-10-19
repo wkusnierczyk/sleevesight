@@ -212,6 +212,47 @@ class SessionHistoryTest {
     }
 
     @Test
+    fun `changes after a mark come in pages, and none at or before it`() {
+        val changes = (0 until 5).map { change(start + it.minutes, "Track $it") }
+        changes.forEach(history::changed)
+        // The mark a reset takes after the second change.
+        val mark = 2L
+
+        val first = history.changes(limit = 2, after = mark)
+        assertEquals(listOf(changes[4], changes[3]), first.changes)
+        // The page before the mark holds the one change left after it, and none follows.
+        assertEquals(
+            TrackChangePage(listOf(changes[2]), next = null),
+            history.changes(limit = 2, before = first.next, after = mark),
+        )
+        assertEquals(TrackChangePage(emptyList(), next = null), history.changes(limit = 2, after = 5))
+    }
+
+    @Test
+    fun `the last change's id and the sequence are 0 when empty, and only grow`() {
+        assertEquals(0L, history.lastChangeId())
+        assertEquals(0L, history.changeSequence())
+
+        history.changed(change(start - 91.days, "Old"))
+        history.changed(change(start, "New"))
+        assertEquals(2L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+
+        // A deletion leaves the newest change, and the sequence.
+        history.deleteOlderThan(90.days, now = start)
+        assertEquals(2L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+
+        // A clear empties the table, but the sequence goes on: the next id is 3.
+        history.clear()
+        assertEquals(0L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+        history.changed(change(start, "Next"))
+        assertEquals(3L, history.lastChangeId())
+        assertEquals(3L, history.changeSequence())
+    }
+
+    @Test
     fun `old tracks and changes go with their states, and newer ones stay`() {
         val old = start - 91.days
         play(sundown, old)
