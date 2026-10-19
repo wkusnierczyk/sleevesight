@@ -418,6 +418,52 @@ internal class PipelineHostTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `a track change that empties the ledger before the new pipeline publishes leaves the card said to be it`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            tap()
+            settle()
+            val card =
+                host.state.value.track
+                    ?.insight as InsightState.Written
+
+            // New evidence: the card paid for is shown in place of the run's insight.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertTrue(host.state.value.cardShown)
+
+            // Another rebuild, held before its keys are read, and another track played meanwhile.
+            // Its debounce ends after the swap and before the new pipeline publishes, so the ledger
+            // lets go of the card while the view still holds the track shown before, and the card
+            // with it. Every view from the hold on is recorded.
+            val views = mutableListOf<PipelineView>()
+            host.published = { views += it }
+            keysReady = CompletableDeferred()
+            keys = PipelineKeys(ai = Secret("ai 2"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            runCurrent()
+            play("Two")
+            advanceTimeBy(DEBOUNCE / 2)
+            val held = views.size
+            keysReady!!.complete(Unit)
+            runCurrent()
+            settle()
+
+            assertTrue("views while the rebuild waits", held > 0)
+            assertTrue("the card shown after it", views.drop(held).any { it.track?.insight == card })
+            // Until the new pipeline shows the track playing (whose own insight reads as the card's).
+            views.takeWhile { it.track?.nowPlaying?.title == "One" }.forEachIndexed { i, view ->
+                assertEquals("view $i", view.track?.insight == card, view.cardShown)
+            }
+            val last = views.last()
+            assertEquals("Two", last.track?.nowPlaying?.title)
+            assertFalse(last.cardShown)
+        }
+
+    @Test
     fun `a rebuild that changes nothing in the card's key serves the card kept, with no call`() =
         runTest {
             started()
