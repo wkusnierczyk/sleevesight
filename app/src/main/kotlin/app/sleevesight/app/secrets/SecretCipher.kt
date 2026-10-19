@@ -19,7 +19,9 @@ import javax.crypto.spec.GCMParameterSpec
 interface SecretKeySource {
     /**
      * The key, or null when the key store has none under the alias. Never creates one. Throws a
-     * [GeneralSecurityException], [ProviderException] or [IOException] when the key store fails.
+     * [GeneralSecurityException], [ProviderException] or [IOException] when the key store fails;
+     * but on API 26 to 30 the Android Keystore reports a failed lookup as null too, so there null
+     * does not prove the key is gone ([AndroidKeystoreKey], [SecretStore]'s `legacyKeystore`).
      */
     fun find(): SecretKey?
 

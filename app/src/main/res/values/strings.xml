@@ -53,7 +53,8 @@
     <string name="settings_key_recipient_exa">Exa</string>
     <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again.</string>
     <string name="settings_key_field">Key</string>
-    <string name="settings_key_save_failed">The key could not be saved: the phone’s key store or storage failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
+    <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
+    <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>
     <string name="settings_key_remove">Remove the %1$s</string>
     <string name="settings_key_remove_title">Remove the %1$s?</string>
     <string name="settings_key_remove_explained">The key is deleted from this phone. Until you enter one again, Sleevesight does not use %1$s.</string>

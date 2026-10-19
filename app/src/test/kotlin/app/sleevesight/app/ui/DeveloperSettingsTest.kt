@@ -17,6 +17,10 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -42,9 +46,13 @@ class DeveloperSettingsTest {
     private val stores by lazy { TestStores(tmp.root) }
     private val settings by lazy { SettingsStore(stores.open("settings")) }
     private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @After
-    fun close() = stores.close()
+    fun close() {
+        saves.cancel()
+        stores.close()
+    }
 
     private fun text(id: Int) = app.getString(id)
 
@@ -61,6 +69,7 @@ class DeveloperSettingsTest {
                         secrets,
                         emptyMap(),
                         { CompletableDeferred(true) },
+                        saves,
                         onOpenDiagnostics = { opened++ },
                     ) { it }
                 }

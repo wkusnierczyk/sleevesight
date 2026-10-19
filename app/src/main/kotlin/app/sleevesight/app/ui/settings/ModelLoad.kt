@@ -28,29 +28,19 @@ internal sealed interface ModelLoad {
 
 /**
  * The models of [provider] as its service lists them for the saved key ([AiProvider.models]), or
- * why there are none. The key goes only to the service's own client.
+ * why there are none. The key goes only to the service's own client, and is read only when there
+ * is one, so *Unavailable* does not wait for the key store.
  */
 internal suspend fun loadModels(
     provider: ProviderId,
     secrets: SecretStore,
     providers: Map<ProviderId, AiProvider>,
 ): ModelLoad {
-    val client = providers[provider]
+    val client = providers[provider] ?: return ModelLoad.Unavailable
     val key = SecretId.forProvider(provider)?.let { secrets.get(it) }
-    return when {
-        client == null -> {
-            ModelLoad.Unavailable
-        }
-
-        key == null -> {
-            ModelLoad.NoKey
-        }
-
-        else -> {
-            when (val list = client.models(key)) {
-                is ModelList.Listed -> ModelLoad.Listed(list.models)
-                is ModelList.Failed -> ModelLoad.Failed(list.kind)
-            }
-        }
+    return when (val list = key?.let { client.models(it) }) {
+        null -> ModelLoad.NoKey
+        is ModelList.Listed -> ModelLoad.Listed(list.models)
+        is ModelList.Failed -> ModelLoad.Failed(list.kind)
     }
 }
