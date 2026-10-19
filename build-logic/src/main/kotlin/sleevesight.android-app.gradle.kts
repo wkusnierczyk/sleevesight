@@ -27,8 +27,8 @@ extensions.configure<ApplicationExtension> {
     compileSdk = 37
     defaultConfig {
         minSdk = 26
-        // 36 until Android 17's behaviour changes are checked (#147).
-        targetSdk = 36
+        // Android 17's behaviour changes for apps targeting 37 are checked in #147.
+        targetSdk = 37
     }
     buildFeatures {
         compose = true
