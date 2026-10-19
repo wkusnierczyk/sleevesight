@@ -81,9 +81,21 @@ class NextInQueueTest {
     }
 
     @Test
-    fun `a media id queued twice with no active item among them is ambiguous`() {
+    fun `a media id queued twice with no active item, or one not in the queue, is ambiguous`() {
         assertNull(NextInQueue.of(playing(mediaId = "a"), repeated))
-        assertNull(NextInQueue.of(playing(mediaId = "a", item = 2), repeated))
+        assertNull(NextInQueue.of(playing(mediaId = "a", item = 9), repeated))
+    }
+
+    @Test
+    fun `a media id queued twice, the active item lagging on the track before, is the first after it`() {
+        // The active item still names B, at 2: the playing A is the one at 3, so C is next.
+        assertEquals("C", NextInQueue.of(playing(mediaId = "a", item = 2), repeated)?.title)
+    }
+
+    @Test
+    fun `a media id queued twice, none of it after the active item, is ambiguous`() {
+        // The active item names C, the last: no A comes after it.
+        assertNull(NextInQueue.of(playing(mediaId = "a", item = 4), repeated))
     }
 
     @Test
