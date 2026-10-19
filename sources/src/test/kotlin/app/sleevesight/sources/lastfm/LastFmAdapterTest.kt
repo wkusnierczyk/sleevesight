@@ -347,6 +347,9 @@ class LastFmAdapterTest {
                     // More matches than the page holds: the bio only, though no namesake was seen.
                     Triple(listOf(GORDON) + longer.take(99), 101, LastFmMatch.BioVerified),
                     Triple(listOf(GORDON) + longer, 2150, LastFmMatch.BioVerified),
+                    // A count below the artists on the page is wrong, and proves nothing.
+                    Triple(listOf(GORDON) + longer.take(99), 50, LastFmMatch.BioVerified),
+                    Triple(listOf(GORDON), 0, LastFmMatch.BioVerified),
                     // A namesake on the page decides, complete or not ("Them", "Fred").
                     Triple(
                         longer.take(30) + MbArtist(OTHER, "Gordon Lightfoot") + GORDON,
@@ -361,6 +364,26 @@ class LastFmAdapterTest {
                 assertEquals(listOf("Gordon Lightfoot"), artists.searches, "$total, ${found.size}")
                 assertFalse(lookup.result.provisional, "$total, ${found.size}")
             }
+        }
+
+    @Test
+    fun `MusicBrainz ids match whatever their case`() =
+        runTest {
+            val track = fixtureTrack(1)
+            val upper = GORDON_LIGHTFOOT.uppercase()
+            // The resolved id in upper case: Last.fm's lower-case id and the search's are the same artist.
+            val upperResolved = adapter().lookupArtists(track, resolved("Gordon Lightfoot" to upper))
+            assertEquals(LastFmMatch.Verified, upperResolved.artists.single().match)
+            // The search's id in upper case is no namesake.
+            val upperSearch = ArtistSearchStub(mapOf("Gordon Lightfoot" to listOf(MbArtist(upper, "Gordon Lightfoot"))))
+            assertEquals(
+                LastFmMatch.Verified,
+                adapter(artists = upperSearch)
+                    .lookupArtists(track, gordonResolved())
+                    .artists
+                    .single()
+                    .match,
+            )
         }
 
     @Test
