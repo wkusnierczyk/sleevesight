@@ -2,13 +2,14 @@
 
 **Date:** 2026-10-16  
 **Builds on:** [architecture.md](architecture.md), *CI*; D7 (distribution through Google Play)  
-**Tracking:** [#56](https://github.com/wkusnierczyk/sleevesight/issues/56)
+**Tracking:** [#56](https://github.com/wkusnierczyk/sleevesight/issues/56), [#249](https://github.com/wkusnierczyk/sleevesight/issues/249) (the upload to Play)
 
-How a release is built and signed for Google Play, and the one-time setup it needs outside the repository. Play's review, the testing tracks and the store listing are [#58](https://github.com/wkusnierczyk/sleevesight/issues/58) and [#57](https://github.com/wkusnierczyk/sleevesight/issues/57).
+How a release is built, signed and uploaded to Google Play, and the one-time setup it needs outside the repository. Play's review, the testing tracks and the store listing are [#58](https://github.com/wkusnierczyk/sleevesight/issues/58) and [#57](https://github.com/wkusnierczyk/sleevesight/issues/57).
 
 ## Contents
 
 - [The release workflow](#the-release-workflow)
+- [Release notes](#release-notes)
 - [Versioning](#versioning)
 - [R8](#r8)
 - [Signing](#signing)
@@ -20,12 +21,22 @@ How a release is built and signed for Google Play, and the one-time setup it nee
 `.github/workflows/release.yml` runs on a pushed tag `v<major>.<minor>.<patch>`, for example `v0.1.0`. Its one job runs in the GitHub environment `release`, which holds the upload key, so it waits for a reviewer's approval before it starts. It then:
 
 1. checks that the tagged commit is on `main`, and stops if it is not;
-2. decodes the upload key from the environment's secrets into the runner's temporary directory;
-3. builds `./gradlew :app:bundleRelease -Psleevesight.version=<the tag without its v>`, shrunk by R8 and signed with the upload key, from a clean state: no Gradle cache is restored, and the build cache is off;
-4. removes the key file, checks that the bundle is signed, and checks the signer: its certificate's SHA-256 fingerprint must equal the environment variable `UPLOAD_CERT_SHA256` once that is set (step 5 of [Play App Signing](#5-play-app-signing)); until then the run prints the fingerprint;
-5. uploads the bundle and the R8 mapping as the workflow artifact `sleevesight-<version>`, kept 90 days.
+2. checks that the version has its [release notes](#release-notes), and stops if it has none;
+3. decodes the upload key from the environment's secrets into the runner's temporary directory;
+4. builds `./gradlew :app:bundleRelease -Psleevesight.version=<the tag without its v>`, shrunk by R8 and signed with the upload key, from a clean state: no Gradle cache is restored, and the build cache is off;
+5. removes the key file, checks that the bundle is signed, and checks the signer: its certificate's SHA-256 fingerprint must equal the environment variable `UPLOAD_CERT_SHA256` once that is set (step 5 of [Play App Signing](#5-play-app-signing)); until then the run prints the fingerprint;
+6. uploads the bundle and the R8 mapping as the workflow artifact `sleevesight-<version>`, kept 90 days;
+7. uploads the bundle to Google Play through the Play Developer API (`androidpublisher` v3), with `.github/scripts/play-upload.sh`, in one edit: it opens the edit, uploads the bundle, checks that Play read the `versionCode` the tag gives, sets the track to a release named for the version (`0.1.1`, not Play's default `1001 (0.1.1)`) with its notes and status `completed`, and commits the edit. A failure discards the edit, so nothing reaches the track.
 
-It does not run the tests: the tagged commit has passed `build` on its pull request and on `main`. Its actions are pinned to commits, not tags, since the job holds the upload key. The bundle is uploaded to Play Console by hand; uploading through the Play Developer API can come later.
+The track is the environment variable `PLAY_TRACK`, `internal` when it is unset; the closed test ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)) can use the same job by setting it. A `completed` release on a track replaces the one before it there, for all of the track's testers at once.
+
+It does not run the tests: the tagged commit has passed `build` on its pull request and on `main`. Its actions are pinned to commits, not tags, since the job holds the upload key. The API is called with `curl` from the repository's own script rather than through an action, so no third-party code sees the access token; the token comes from Google's own `google-github-actions/auth`, pinned like the others. Since the bundle is kept as an artifact before step 7, a failed upload can still be finished by hand in Play Console (step 3 of [Play App Signing](#5-play-app-signing)), with the release's name and notes typed in.
+
+The first bundle of a new app goes through Play Console, since the API cannot create an app; for Sleevesight that was `v0.1.0`. The API also cannot manage testers given by email address (its testers resource takes Google Groups only), so the internal testers' list stays in Play Console.
+
+## Release notes
+
+Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, committed with the change that ships, so they are reviewed with it. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. A tag whose version has no notes file, or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
 
 ## Versioning
 
@@ -152,6 +163,44 @@ In Play Console, once the developer account exists:
    ```
 
 A bundle Play Console takes there closes [#56](https://github.com/wkusnierczyk/sleevesight/issues/56); rolling it out to testers is [#58](https://github.com/wkusnierczyk/sleevesight/issues/58).
+
+### 6. Google Play Developer API
+
+Every bundle after the first is uploaded by the workflow, which acts as a Google service account. GitHub and Google trust each other through Workload Identity Federation: the job's OIDC token, which names the repository and the environment, is exchanged for an access token valid for 15 minutes, so no Google key is stored anywhere. Only a job in the `release` environment of this repository, identified by its numeric id (`1415440615`), which a deleted and recreated repository of the same name would not have, can act as the account.
+
+In a Google Cloud project (any, or a new one; it costs nothing), with `gcloud` signed in:
+
+```sh
+PROJECT=<the project id>
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format 'value(projectNumber)')
+ACCOUNT=sleevesight-release@$PROJECT.iam.gserviceaccount.com
+
+gcloud services enable androidpublisher.googleapis.com iamcredentials.googleapis.com sts.googleapis.com --project "$PROJECT"
+gcloud iam service-accounts create sleevesight-release --project "$PROJECT" --display-name "Sleevesight release"
+
+gcloud iam workload-identity-pools create github --project "$PROJECT" --location global --display-name GitHub
+gcloud iam workload-identity-pools providers create-oidc sleevesight --project "$PROJECT" --location global \
+  --workload-identity-pool github --display-name Sleevesight \
+  --issuer-uri https://token.actions.githubusercontent.com \
+  --attribute-mapping 'google.subject=assertion.sub,attribute.repository_id=assertion.repository_id' \
+  --attribute-condition "assertion.repository_id == '1415440615' && assertion.sub == 'repo:wkusnierczyk/sleevesight:environment:release'"
+
+gcloud iam service-accounts add-iam-policy-binding "$ACCOUNT" --project "$PROJECT" \
+  --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/1415440615"
+```
+
+The service account needs no role in the Cloud project; its rights are in Play Console. There, *Users and permissions*, *Invite new users*: the account's address, `$ACCOUNT`, with no account permissions, and under *App permissions* Sleevesight only, with *Release apps to testing tracks*. The production release ([#58](https://github.com/wkusnierczyk/sleevesight/issues/58)) adds *Release to production* when it comes to that.
+
+Then the two variables of the environment (both public: neither grants anything outside the conditions above):
+
+```sh
+gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --env release --repo wkusnierczyk/sleevesight \
+  --body "projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/sleevesight"
+gh variable set PLAY_SERVICE_ACCOUNT --env release --repo wkusnierczyk/sleevesight --body "$ACCOUNT"
+```
+
+Until both are set, a run stops after the artifact with an error naming them. A service account's JSON key, kept as a secret of the environment, was the alternative: simpler to set up, but a key that does not expire, and Google's organization policy may forbid creating one.
 
 ## A lost or leaked upload key
 
