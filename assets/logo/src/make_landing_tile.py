@@ -20,10 +20,10 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'
 t = json.load(open(os.path.join(ROOT, 'assets', 'logo', 'src', 'tile.json')))
 h = open(os.path.join(ROOT, 'index.html')).read()
 
-INDEX = 'ecf805e53268d339'   # index.html at db55deb
+INDEX = 'b279b6ffa9f1d1d0'   # index.html at #260
 got = hashlib.sha256(h.encode()).hexdigest()[:16]
 if got != INDEX:
-    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at db55deb):\n'
+    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at #260):\n'
              'check the change against the builder\'s edits, update them and INDEX, then rebuild' % (got, INDEX))
 
 def sub(old, new, regex=False):
@@ -56,12 +56,16 @@ if re.search(r'\bsrcset\s*=', h):
     sys.exit('index.html has a srcset; teach the builder to rebase it')
 h = re.sub(r'\b(href|src)=(["\'])(.*?)\2', rebase, h)
 sub('<meta name="color-scheme" content="light dark">\n', '<meta name="color-scheme" content="light dark">\n<meta name="robots" content="noindex">\n')
-sub('<!-- The landing page: no theme, no web fonts, no analytics, and short scripts, for the header and the\n'
-    '     intro. The one thing it keeps in the browser is a note that the intro has played (`localStorage`).\n',
+sub('<!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its one\n'
+    '     font, Roboto Flex, is a cut-down copy served from this site (`assets/fonts/make_page_font.py`),\n'
+    '     so text added here in new characters needs that copy remade. The one thing it keeps in the\n'
+    '     browser is a note that the intro has played (`localStorage`).\n',
     '<!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo\n'
     '     and intro in place of the eye. Built by `assets/logo/src/make_landing_tile.py`; not edited by hand.\n'
     '     Unlike the landing page, it plays the intro on every load and keeps nothing in the browser.\n'
-    '     Otherwise as the landing page: no theme, no web fonts, no analytics, and short scripts.\n')
+    '     Otherwise as the landing page: no theme, no analytics, short scripts, and the same font.\n')
+# The font's URL is in the style sheet, which the attribute rebase above does not reach.
+sub('src:url(assets/fonts/RobotoFlex-page.woff2)', 'src:url(../assets/fonts/RobotoFlex-page.woff2)')
 sub(' The one thing it keeps in your browser is a note that the intro has played.</p>', ' This page keeps nothing in your browser.</p>')
 sub('  <p class="replay" hidden>', '  <p>An alternative logo and intro, for testers to compare with the <a href="../">product page</a>.</p>\n'
     '  <p class="replay" hidden>')
@@ -178,7 +182,7 @@ if '--seek' in sys.argv[1:]:
 </body>""")
 
 LEFT = [r'\{[{%]', 'localStorage', 'sl-intro-played', r'\bsl-blink\b', r'\bsl-name\b', r'\bsp-', '--sw', r'class="eye',
-        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'url\((?![\'"]?(?:#|https?:|data:))']
+        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'url\((?![\'"]?(?:#|https?:|data:|\.\./))']
 for pat in LEFT:
     hit = re.search(pat, h)
     if hit:
@@ -194,4 +198,8 @@ for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
         path = os.path.join(path, 'index.html')
     if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
         sys.exit('the link %r would not resolve from design/' % url)
+# The style sheet's relative URLs, rebased by hand above (the font's), resolve as well.
+for m in re.finditer(r'url\([\'"]?(\.\./[^)\'"]+)', h):
+    if not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', m.group(1)))):
+        sys.exit('the style sheet\'s URL %r would not resolve from design/' % m.group(1))
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
