@@ -636,7 +636,7 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 | Static analysis | Detekt, ktlint, Android lint | | Detekt carries the forbidden-API rules |
 | Tests | `kotlin.test` on the JUnit 5 runner in the JVM modules, with hand-written fakes rather than a mocking library; JUnit 4 in `:app`, where Robolectric needs it; kotlinx-coroutines-test, Ktor `MockEngine` | MockK | JVM-first, fast in CI, and portable to Multiplatform (D2) |
 | Dates and times | `kotlin.time` for instants and clocks; kotlinx-datetime for calendar dates, if needed | `java.time` | Multiplatform-ready (D2) |
-| Android SDK | `minSdk` 26; `targetSdk` the latest stable once its behaviour changes are checked (36 until #147); `compileSdk` what the dependencies need (37) | `minSdk` 29 | See D10 |
+| Android SDK | `minSdk` 26; `targetSdk` the latest stable once its behaviour changes are checked (37 since #147); `compileSdk` what the dependencies need (37) | `minSdk` 29 | See D10 |
 
 ## Testing
 
