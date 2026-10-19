@@ -49,8 +49,13 @@ class MusicBrainzArtistSearchTest {
         runTest {
             val empty = MusicBrainzClient(ReplayNetClient.ok("""{"count":0,"offset":0,"artists":[]}"""))
             assertEquals(Lookup.Found(MbArtistSearch(0, emptyList())), empty.searchArtists("Nobody Here"))
-            // Without a total, or without the artists, the answer cannot show what matches.
+            // Without a total, or without the artists, the answer cannot show what matches; nor with
+            // a total below the artists it lists.
             assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok("""{"artists":[]}""")).searchArtists("Reem"))
+            val two = """[{"id":"a","name":"A"},{"id":"b","name":"B"}]"""
+            for (body in listOf("""{"count":1,"artists":$two}""", """{"count":-1,"artists":[]}""")) {
+                assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok(body)).searchArtists("Reem"), body)
+            }
             assertIs<Lookup.Failed>(MusicBrainzClient(ReplayNetClient.ok("""{"count":5}""")).searchArtists("Reem"))
             assertIs<Lookup.Failed>(
                 MusicBrainzClient(ReplayNetClient.ok("""{"count":5,"artists":{}}""")).searchArtists("Reem"),
