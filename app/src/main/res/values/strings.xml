@@ -89,7 +89,9 @@
     <string name="settings_source_wikipedia">Wikipedia and Wikidata</string>
     <string name="settings_source_lastfm">Last.fm</string>
     <string name="settings_source_web">Web search</string>
+    <string name="settings_source_web_no_engine">No engine is on, so nothing is searched</string>
     <string name="settings_engine_exa">Exa</string>
+    <string name="settings_engine_web_off">Off while “Web search” is off</string>
     <string name="settings_source_model">The model’s own knowledge</string>
     <string name="settings_source_model_summary">At most one claim from what the model knows, marked unverified</string>
 
@@ -97,6 +99,7 @@
     <string name="settings_labels_hint">Where the colored genre labels come from: the artists’ tags at each source, kept only when they name a genre. With both on, Last.fm’s come first. Web search gives no tags.</string>
     <string name="settings_labels_source_off">Off under “Where to look”</string>
     <string name="settings_labels_needs_key">Needs your Last.fm API key, under “Where to look”</string>
+    <string name="settings_labels_key_unreadable">Your Last.fm API key can no longer be read; see it under “Where to look”</string>
     <string name="settings_labels_musicbrainz_summary">Tags by MusicBrainz contributors, CC BY-NC-SA 3.0. Used for labels only, never sent to the AI service.</string>
 
     <string name="settings_section_insights">Insights</string>
