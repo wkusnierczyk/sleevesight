@@ -216,7 +216,8 @@ footer p{margin:0 0 4px}
 /* The intro (`.sl-intro`), on a first visit: set by the scripts when motion is allowed, the address
    names no section, and the browser holds no note that the intro has played (`sl-intro-played` in
    `localStorage`). The note is written as the intro starts, so a reload part way through skips it;
-   where storage is blocked, the intro plays on every visit, as it did before the note. The footer's
+   where storage is blocked, the intro plays on every visit, as it did before the note. An address
+   that asks for a logo (`?logo=`) plays its intro whatever the note says. The footer's
    "Play the intro again" (`.replay`, shown by the script whenever motion is allowed) plays it once
    more in place.
    First the logo alone plays large in the middle of the window (`.splash`): a record slides out of
@@ -266,12 +267,12 @@ footer p{margin:0 0 4px}
 .splash .sp-disc{animation:sp-spin 10s both}
 .sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
 .sl-intro .brand>svg{animation:sl-hold var(--land)}
-.sl-intro .brand .name{animation:sl-name 400ms ease-out 10550ms both}
+.sl-intro .brand .name{animation:sl-name 400ms ease-out calc(var(--land) + 500ms) both}
 .sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out var(--land) both}
-.sl-intro .brand .sleeve{animation:sl-out 600ms cubic-bezier(.4,0,.6,1) 10050ms both}
-.sl-intro .brand .eyes{animation:sl-eyes 400ms ease-out 10550ms both}
-.sl-intro .brand .lid-i,.sl-intro .brand .clip-i{animation:sl-blink 1580ms 10050ms both}
-.sl-intro .brand .shut-i{animation:sl-blink-shut 1580ms steps(1,end) 10050ms both}
+.sl-intro .brand .sleeve{animation:sl-out 600ms cubic-bezier(.4,0,.6,1) var(--land) both}
+.sl-intro .brand .eyes{animation:sl-eyes 400ms ease-out calc(var(--land) + 500ms) both}
+.sl-intro .brand .lid-i,.sl-intro .brand .clip-i{animation:sl-blink 1580ms var(--land) both}
+.sl-intro .brand .shut-i{animation:sl-blink-shut 1580ms steps(1,end) var(--land) both}
 @media (prefers-reduced-motion: no-preference){
   .brand.play .lid-h,.brand.play .clip-h{animation:sl-hover 280ms both}
   .brand.play .shut-h{animation:sl-hover-shut 280ms steps(1,end) both}
@@ -471,7 +472,7 @@ document.documentElement.classList.add('js');
   <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
   <p>This site sets no cookies and loads nothing from anywhere else. The one thing it keeps in your browser is a note that the intro has played.</p>
   <p class="replay" hidden><button type="button">Play the intro again</button></p>
-  <p class="pick" hidden><span id="pick-label">Logo:</span> <span role="group" aria-labelledby="pick-label"><button type="button" value="a" aria-pressed="false">A</button> <button type="button" value="b" aria-pressed="false">B</button> <button type="button" value="c" aria-pressed="false">C</button></span></p>
+  <p class="pick" hidden><span id="pick-label">Logo:</span> <span role="group" aria-labelledby="pick-label"><button type="button" value="a" aria-pressed="false" aria-label="A, the eye">A</button> <button type="button" value="b" aria-pressed="false" aria-label="B, the words">B</button> <button type="button" value="c" aria-pressed="false" aria-label="C, the words and the record">C</button></span></p>
 </footer>
 </div>
 <script>
@@ -606,7 +607,9 @@ document.documentElement.classList.add('js');
     if (!b) return;
     end();
     root.setAttribute('data-logo', b.value);
-    history.replaceState(null, '', location.pathname + '?logo=' + b.value + location.hash);
+    var q = new URLSearchParams(location.search);
+    q.set('logo', b.value);
+    history.replaceState(null, '', location.pathname + '?' + q + location.hash);
     pressed();
     measure();
     rerun(e, b);
