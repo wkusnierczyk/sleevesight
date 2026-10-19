@@ -154,6 +154,19 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun aPlayerInBothKeysIsOff() {
+        // No write stores it; read, it fails closed, as a switch in both of a set's keys does.
+        val read =
+            SettingsCodec.read(
+                mutablePreferencesOf(
+                    stringSetPreferencesKey("players.on") to setOf(Settings.SPOTIFY, OTHER_PLAYER),
+                    stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY, OTHER_PLAYER),
+                ),
+            )
+        assertEquals(mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to false), read.followedPlayers)
+    }
+
+    @Test
     fun aSourceSwitchIsStoredOnlyAsTheUsersOverride() {
         val prefs = mutablePreferencesOf()
         val chosen = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL - SourceSwitch.LASTFM
@@ -233,6 +246,36 @@ class SettingsCodecTest {
             Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.LASTFM, lookUpInBackground = true),
             read,
         )
+    }
+
+    @Test
+    fun aChangeKeepsWhatALaterVersionStored() {
+        // As after a downgrade: values and switches this version does not know, and a key of its own.
+        val later =
+            arrayOf(
+                stringPreferencesKey("layout") to "CAROUSEL",
+                stringPreferencesKey("ai.effort") to "EXTREME",
+                longPreferencesKey("insights.crossfade_ms") to 60_000L,
+                stringSetPreferencesKey("sources.on") to setOf("TELEPATHY"),
+                stringSetPreferencesKey("sources.off") to setOf("LASTFM", "OUIJA"),
+                booleanPreferencesKey("future.setting") to true,
+            )
+        val prefs = mutablePreferencesOf(*later)
+
+        // A change to another setting leaves them as they were.
+        SettingsCodec.write(SettingsCodec.read(prefs).copy(lookUpInBackground = true), prefs)
+        assertEquals(mutablePreferencesOf(*later, booleanPreferencesKey("lookups.background") to true), prefs)
+
+        // A change to a set of switches keeps the names it does not know.
+        val read = SettingsCodec.read(prefs)
+        SettingsCodec.write(read.copy(enabledSources = read.enabledSources + SourceSwitch.MODEL), prefs)
+        assertEquals(setOf("TELEPATHY", "MODEL"), prefs[stringSetPreferencesKey("sources.on")])
+        assertEquals(setOf("LASTFM", "OUIJA"), prefs[stringSetPreferencesKey("sources.off")])
+
+        // A change to the setting itself replaces what this version cannot read.
+        SettingsCodec.write(SettingsCodec.read(prefs).copy(layout = Layout.EXPANDABLE_BOXES), prefs)
+        assertEquals(Layout.EXPANDABLE_BOXES.name, prefs[stringPreferencesKey("layout")])
+        assertEquals("EXTREME", prefs[stringPreferencesKey("ai.effort")])
     }
 
     @Test

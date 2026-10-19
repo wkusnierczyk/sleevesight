@@ -23,10 +23,14 @@ import kotlin.time.Duration.Companion.milliseconds
  * MusicBrainz labels may be off by default in the release). A set of switches (*Where to look*,
  * the web search engines, the genre label sources) is stored as the switches moved on or off
  * against their defaults, so one the user has not moved, or one a later version adds, follows its
- * default.
+ * default; *Players to follow* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
  * later one), or out of range reads as that setting's default, and the others are unaffected.
+ *
+ * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
+ * settings that changed, so a value this version cannot read stays until the user changes that
+ * setting, and a set of switches keeps the names it does not know.
  */
 internal object SettingsCodec {
     private val defaults = Settings()
@@ -92,62 +96,99 @@ internal object SettingsCodec {
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
         )
 
+    /**
+     * Stores [settings] in [prefs], rewriting only the settings that differ from what [prefs] reads
+     * as, so a value a later version stored, which this one reads as the default, stays until the
+     * user changes that setting.
+     */
+    @Suppress("CyclomaticComplexMethod", "LongMethod") // One line per setting, each its own key.
     fun write(
         settings: Settings,
         prefs: MutablePreferences,
     ) {
-        prefs.put(LAYOUT, settings.layout.name, defaults.layout.name)
-        prefs.put(AI_PROVIDER, settings.aiProvider?.name, null)
-        prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
-        prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
-        writePlayers(settings.followedPlayers, prefs)
-        writeSwitches(settings.enabledSources, defaults.enabledSources, prefs, SOURCES_ON, SOURCES_OFF)
-        writeSwitches(settings.webEngines, defaults.webEngines, prefs, ENGINES_ON, ENGINES_OFF)
-        writeSwitches(settings.labelSources, defaults.labelSources, prefs, LABELS_ON, LABELS_OFF)
-        prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
-        prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
-        prefs.put(
-            PAUSE_AUTO_WRITE,
-            settings.pauseAutoWriteAfter ?: NEVER_PAUSE,
-            defaults.pauseAutoWriteAfter ?: NEVER_PAUSE,
-        )
-        prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
-        prefs.put(PREPARE_NEXT, settings.prepareNextTrack.name, defaults.prepareNextTrack.name)
-        prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
+        val stored = read(prefs)
+
+        fun moved(of: (Settings) -> Any?) = of(settings) != of(stored)
+        if (moved { it.layout }) prefs.put(LAYOUT, settings.layout.name, defaults.layout.name)
+        if (moved { it.aiProvider }) prefs.put(AI_PROVIDER, settings.aiProvider?.name, null)
+        if (moved { it.aiModel }) prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
+        if (moved { it.aiEffort }) {
+            prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
+        }
+        if (moved { it.followedPlayers }) writePlayers(settings.followedPlayers, prefs)
+        if (moved { it.enabledSources }) {
+            writeSwitches(settings.enabledSources, defaults.enabledSources, prefs, SOURCES_ON, SOURCES_OFF)
+        }
+        if (moved { it.webEngines }) {
+            writeSwitches(settings.webEngines, defaults.webEngines, prefs, ENGINES_ON, ENGINES_OFF)
+        }
+        if (moved { it.labelSources }) {
+            writeSwitches(settings.labelSources, defaults.labelSources, prefs, LABELS_ON, LABELS_OFF)
+        }
+        if (moved { it.writeInsights }) prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
+        if (moved { it.writeAutomatically }) {
+            prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
+        }
+        if (moved { it.pauseAutoWriteAfter }) {
+            prefs.put(
+                PAUSE_AUTO_WRITE,
+                settings.pauseAutoWriteAfter ?: NEVER_PAUSE,
+                defaults.pauseAutoWriteAfter ?: NEVER_PAUSE,
+            )
+        }
+        if (moved { it.crossfade }) {
+            prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
+        }
+        if (moved { it.prepareNextTrack }) {
+            prefs.put(PREPARE_NEXT, settings.prepareNextTrack.name, defaults.prepareNextTrack.name)
+        }
+        if (moved { it.lookUpInBackground }) {
+            prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
+        }
         for (source in Settings.DEFAULT_CACHE_LIFETIMES.keys) {
+            if (!moved { it.cacheLifetimes[source] }) continue
             prefs.put(
                 lifetimeKey(source),
                 settings.cacheLifetimes[source]?.inWholeMilliseconds,
                 Settings.DEFAULT_CACHE_LIFETIMES[source]?.inWholeMilliseconds,
             )
         }
-        prefs.put(
-            ARTIST_LIFETIME_MS,
-            settings.artistCacheLifetime.inWholeMilliseconds,
-            defaults.artistCacheLifetime.inWholeMilliseconds,
-        )
-        prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
-        prefs.put(
-            HISTORY_LIFETIME_MS,
-            settings.historyLifetime?.inWholeMilliseconds ?: FOREVER,
-            defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
-        )
-        prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
-        prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        if (moved { it.artistCacheLifetime }) {
+            prefs.put(
+                ARTIST_LIFETIME_MS,
+                settings.artistCacheLifetime.inWholeMilliseconds,
+                defaults.artistCacheLifetime.inWholeMilliseconds,
+            )
+        }
+        if (moved { it.cacheSizeLimit }) prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
+        if (moved { it.historyLifetime }) {
+            prefs.put(
+                HISTORY_LIFETIME_MS,
+                settings.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+                defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+            )
+        }
+        if (moved { it.sessionGap }) {
+            prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        }
+        if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
     }
 
     /**
      * *Players to follow* as overrides of the defaults, with `on` and `off` keys as the switch sets
-     * have ([readSwitches]): a player listed by default whose switch the user has not moved follows
-     * its default, including one a later version adds or whose default it revises. A player seen
-     * but not listed by default is stored with its switch, off as first listed. Not through
-     * [readSwitches]: the players are package names, not an enum, and a player listed but switched
-     * off is a state a set of switches turned on cannot hold.
+     * have ([readSwitches]): a player listed by default that this phone has not already listed off
+     * follows its default, including one a later version adds or whose default it revises. A player
+     * seen but not listed by default is stored with its switch, off as first listed (`players.off`,
+     * by [SettingsStore.playerSeen]), so a later version that lists it by default does not switch it
+     * on. A player in both keys, which no write stores, is off, as a switch in both of a set's keys
+     * is: a player is followed only on the user's choice. Not through [readSwitches]: the players
+     * are package names, not an enum, and a player listed but switched off is a state a set of
+     * switches turned on cannot hold.
      */
     private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
         defaults.followedPlayers +
-            prefs[PLAYERS_OFF].orEmpty().associateWith { false } +
-            prefs[PLAYERS_ON].orEmpty().associateWith { true }
+            prefs[PLAYERS_ON].orEmpty().associateWith { true } +
+            prefs[PLAYERS_OFF].orEmpty().associateWith { false }
 
     /**
      * Stores the switches that differ from the defaults: on, where the default is not on; off, where
@@ -180,15 +221,21 @@ internal object SettingsCodec {
         return default + moved(on) - moved(off).toSet()
     }
 
-    private fun <E : Enum<E>> writeSwitches(
+    /**
+     * Stores the switches of [enabled] that differ from their [default], with each name stored
+     * before that this version does not know (a later version's switch), so a downgrade does not
+     * lose it.
+     */
+    private inline fun <reified E : Enum<E>> writeSwitches(
         enabled: Set<E>,
         default: Set<E>,
         prefs: MutablePreferences,
         onKey: Preferences.Key<Set<String>>,
         offKey: Preferences.Key<Set<String>>,
     ) {
-        val on = (enabled - default).map { it.name }.toSet()
-        val off = (default - enabled).map { it.name }.toSet()
+        val unknown = { key: Preferences.Key<Set<String>> -> prefs[key].orEmpty().filter { enumOf<E>(it) == null } }
+        val on = (enabled - default).map { it.name }.toSet() + unknown(onKey)
+        val off = (default - enabled).map { it.name }.toSet() + unknown(offKey)
         prefs.put(onKey, on.ifEmpty { null }, null)
         prefs.put(offKey, off.ifEmpty { null }, null)
     }

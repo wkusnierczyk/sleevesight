@@ -10,10 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.core.Secret
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 
 // The API keys (#234): each key's row, with its button that removes it, *Remove all API keys*,
 // and their dialogs.
@@ -66,15 +69,19 @@ internal fun SavedKeysSection(
 }
 
 /**
- * The saved keys' dialog [shown], on [store]. [onSaveFailed] hears whether a key's save failed, and
- * that none has once every key is removed.
+ * The saved keys' dialog [shown], on [store]. Each save and removal runs in [saves], which outlives
+ * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
+ * result. [onSealFailed] hears whether the key store could not seal a key saved, and that it has
+ * not once every key is removed.
  */
+@Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
 internal fun KeyDialogs(
     shown: SettingsDialog.Keys,
     secrets: Map<SecretId, SecretState>,
     store: SecretStore,
-    onSaveFailed: (Boolean) -> Unit,
+    saves: CoroutineScope,
+    onSealFailed: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
@@ -82,20 +89,28 @@ internal fun KeyDialogs(
             KeyDialog(
                 id = shown.id,
                 state = secrets[shown.id] ?: SecretState.ABSENT,
-                onSave = { value -> store.set(shown.id, Secret(value)).also { onSaveFailed(!it) } },
-                onRemove = { store.clear(shown.id) },
+                onSave = { value ->
+                    saves.async { store.set(shown.id, Secret(value)) }.await().also {
+                        onSealFailed(it == SaveResult.NOT_SEALED)
+                    }
+                },
+                onRemove = { saves.async { store.clear(shown.id) }.await() },
                 onDismiss = onDismiss,
             )
         }
 
         is SettingsDialog.RemoveKey -> {
-            ConfirmDialog(removeKeyConfirmation(shown.id), onConfirm = { store.clear(shown.id) }, onDismiss)
+            ConfirmDialog(
+                removeKeyConfirmation(shown.id),
+                onConfirm = { saves.async { store.clear(shown.id) }.await() },
+                onDismiss,
+            )
         }
 
         SettingsDialog.ResetKeys, SettingsDialog.RemoveAllKeys -> {
             ConfirmDialog(
                 removeAllConfirmation(reset = shown == SettingsDialog.ResetKeys),
-                onConfirm = { store.reset().also { if (it) onSaveFailed(false) } },
+                onConfirm = { saves.async { store.reset() }.await().also { if (it) onSealFailed(false) } },
                 onDismiss,
             )
         }

@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class SettingsStoreTest {
@@ -105,13 +106,44 @@ class SettingsStoreTest {
             assertEquals(listOf(setOf(Settings.SPOTIFY)), followed)
             first.cancel()
 
-            // A failure after a read names no player until the retry succeeds.
+            // A second collection's first read fails too: it waits as well, though the first
+            // collection had a value (that belongs to the collection). Then a failure after a read
+            // names no player until the retry succeeds.
             followed.clear()
+            flaky.failures.set(1)
             flaky.failuresAfterAValue.set(1)
             val second = launch { store.followedPlayers.collect { followed += it } }
             withTimeout(5.seconds) { while (followed.size < 3) delay(10) }
             assertEquals(listOf(setOf(Settings.SPOTIFY), emptySet(), setOf(Settings.SPOTIFY)), followed)
             second.cancel()
+        }
+
+    @Test
+    fun theBackoffDoublesFromItsFirstRetryUpToItsLongest() {
+        val waits = (0..9).map { SettingsStore.backoff(it) }
+        assertEquals(
+            listOf(250, 500, 1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000, 30_000).map { it.milliseconds },
+            waits,
+        )
+        assertEquals(SettingsStore.FIRST_RETRY, waits.first())
+        assertEquals(SettingsStore.MAX_RETRY, waits.last())
+        assertEquals(SettingsStore.MAX_RETRY, SettingsStore.backoff(Int.MAX_VALUE))
+    }
+
+    @Test
+    fun theBackoffStartsAgainAfterAReadThatSucceeds() =
+        runBlocking {
+            // Each read gives the file and then fails: failure, recovery, failure, five times over.
+            val flaky = FlakyDataStore(stores.open("settings"))
+            flaky.failuresAfterAValue.set(5)
+            val store = SettingsStore(flaky)
+            val shown = mutableListOf<Settings>()
+            val job = launch { store.settings.collect { shown += it } }
+            // From the first retry's wait each time (250 ms), about 1.3 s; doubling, it would be 7.75 s.
+            withTimeout(4.seconds) { while (flaky.reads.get() < 6) delay(10) }
+            store.update { it.copy(writeInsights = false) }
+            withTimeout(5.seconds) { while (shown.last().writeInsights) delay(10) }
+            job.cancel()
         }
 
     @Test

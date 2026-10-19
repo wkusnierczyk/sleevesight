@@ -59,6 +59,20 @@ enum class SecretId(
     }
 }
 
+/** How a save ([SecretStore.set]) ended. */
+enum class SaveResult {
+    SAVED,
+
+    /**
+     * The key store could not seal the key, or may not make a key ([SecretStore]'s class KDoc):
+     * if that keeps happening, *Reset saved keys* is the way out.
+     */
+    NOT_SEALED,
+
+    /** The file could not be written: a reset would not help; trying again may. */
+    NOT_WRITTEN,
+}
+
 /** What the settings screen may know of a stored key: never its value. */
 enum class SecretState {
     ABSENT,
@@ -68,8 +82,8 @@ enum class SecretState {
      * A value is stored but cannot be opened: the Keystore key that sealed it is gone (a restore
      * onto another phone, a reset Keystore), the value is damaged, or the key store fails. It reads
      * as no key. Saving it again works when the Keystore key is gone from API 31 (a new one is made);
-     * before API 31 with other keys stored, or when the key store keeps failing, the user's *Reset
-     * saved keys* ([SecretStore.reset]) is the way out.
+     * before API 31 with any key stored, this one included, or when the key store keeps failing, the
+     * user's *Reset saved keys* ([SecretStore.reset]) is the way out.
      */
     UNREADABLE,
 }
@@ -92,7 +106,7 @@ enum class SecretState {
  *
  * The cipher's work, which goes to the Keystore over binder calls, runs on [dispatcher], never on
  * the caller's (the screen's main thread). Saves, removals and resets run one at a time. One that
- * fails, in the key store or in DataStore, returns false rather than throwing.
+ * fails, in the key store or in DataStore, says so in what it returns rather than throwing.
  */
 class SecretStore(
     private val dataStore: DataStore<Preferences>,
@@ -164,14 +178,15 @@ class SecretStore(
     }
 
     /**
-     * Saves [secret] as the key [id], replacing any before it. False when it could not be sealed
-     * (the key store failed) or written (DataStore failed); what was stored before is then kept, and
-     * nothing is deleted.
+     * Saves [secret] as the key [id], replacing any before it: [SaveResult.NOT_SEALED] when it could
+     * not be sealed (the key store failed, or may not make a key), [SaveResult.NOT_WRITTEN] when it
+     * could not be written (DataStore failed); what was stored before is then kept, and nothing is
+     * deleted.
      */
     suspend fun set(
         id: SecretId,
         secret: Secret,
-    ): Boolean =
+    ): SaveResult =
         writes.withLock {
             val sealed =
                 withContext(dispatcher) {
@@ -183,16 +198,29 @@ class SecretStore(
                         plain.fill(0)
                     }
                 }
-            sealed != null && write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) }
+            when {
+                sealed == null -> SaveResult.NOT_SEALED
+                write { it[keyOf(id)] = Base64.getEncoder().encodeToString(sealed) } -> SaveResult.SAVED
+                else -> SaveResult.NOT_WRITTEN
+            }
         }
 
     /** Removes the key [id]. False when DataStore could not write. */
     suspend fun clear(id: SecretId): Boolean = writes.withLock { write { it.remove(keyOf(id)) } }
 
     /**
-     * *Reset saved keys*: removes every saved key and deletes the Keystore key, so the next save makes
-     * a new one. The way out when the key store cannot read the saved keys or seal new ones. False
-     * when either step failed; the other is still done.
+     * *Reset saved keys*, and *Remove all API keys*: removes every saved key and deletes the Keystore
+     * key, so the next save makes a new one. The way out when the key store cannot read the saved
+     * keys or seal new ones. False when either step failed; the other is still done.
+     *
+     * The Keystore key is deleted even when removing the entries failed (the file could not be
+     * written). The user asked for every key to go, and without the Keystore key the entries left
+     * can never be opened again, so no key the user removed is used, or can be read, after the
+     * reset: that matters more than the entries, which read as [SecretState.UNREADABLE] and go with
+     * the next reset that can write the file. Keeping the Keystore key would leave every key
+     * working after a removal the user was told had not finished. Until a reset removes them, a save
+     * makes a new Keystore key from API 31 (the entries left stay unreadable); before it, with
+     * entries stored, a save fails ([SaveResult.NOT_SEALED]) and *Reset saved keys* is offered again.
      */
     suspend fun reset(): Boolean =
         writes.withLock {

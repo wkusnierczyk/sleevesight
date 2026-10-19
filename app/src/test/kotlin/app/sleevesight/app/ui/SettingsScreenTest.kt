@@ -1,7 +1,10 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -51,7 +54,11 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -84,8 +91,14 @@ class SettingsScreenTest {
     private val settings by lazy { SettingsStore(stores.open("settings")) }
     private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
 
+    /** Where the screen saves, as the process's scope in the app: it outlives the screen. */
+    private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @After
-    fun close() = stores.close()
+    fun close() {
+        saves.cancel()
+        stores.close()
+    }
 
     private fun text(id: Int) = app.getString(id)
 
@@ -118,21 +131,19 @@ class SettingsScreenTest {
         settingsStore: SettingsStore = settings,
         clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
         secretStore: SecretStore = secrets,
-        block: () -> Unit,
+        block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settingsStore, secretStore, providers, clearHistory, onOpenCredits) {
+                    SettingsScreen(settingsStore, secretStore, providers, clearHistory, saves, onOpenCredits) {
                         "Label of $it"
                     }
                 }
             }
             // The screen draws once the settings are read.
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(text(R.string.settings_title)).fetchSemanticsNodes().isNotEmpty()
-            }
-            block()
+            waitForText(text(R.string.settings_title))
+            scenario.block()
         }
     }
 
@@ -182,6 +193,21 @@ class SettingsScreenTest {
             assertEquals(false, current(store).lookUpInBackground)
             // The error's own text is not shown.
             assertEquals(0, compose.onAllNodesWithSubstring("cannot write").size)
+            // A screen reader announces it.
+            val message = compose.onNodeWithText(text(R.string.settings_change_failed))
+            message.assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+
+            // A second failure in a row draws the message afresh, so it is announced again.
+            val first = message.fetchSemanticsNode().id
+            flaky.writeFailures.set(1)
+            row.performClick()
+            waitFor("the failure message drawn afresh") {
+                compose
+                    .onAllNodesWithText(text(R.string.settings_change_failed))
+                    .fetchSemanticsNodes()
+                    .any { it.id != first }
+            }
+            assertEquals(false, current(store).lookUpInBackground)
 
             // The next change is saved, and the message goes.
             row.performClick()
@@ -232,20 +258,78 @@ class SettingsScreenTest {
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, failingSecrets, emptyMap(), ::clearedAtOnce) { it } }
+                activity.setContent {
+                    SettingsScreen(settings, failingSecrets, emptyMap(), ::clearedAtOnce, saves) { it }
+                }
             }
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(text(R.string.settings_title)).fetchSemanticsNodes().isNotEmpty()
-            }
+            waitForText(text(R.string.settings_title))
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(text(R.string.settings_key_save_failed)).fetchSemanticsNodes().isNotEmpty()
-            }
+            waitForText(text(R.string.settings_key_save_failed))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
             assertEquals(null, runBlocking { failingSecrets.get(SecretId.EXA) })
+            // A key store that failed: *Reset saved keys* is offered.
+            waitForText(text(R.string.settings_reset_keys))
+        }
+    }
+
+    @Test
+    fun aKeyThatCannotBeWrittenSaysSoAndOffersNoReset() {
+        val flaky = FlakyDataStore(stores.open("flaky-secrets"))
+        val flakySecrets = SecretStore(flaky, testCipher())
+        show(secretStore = flakySecrets) {
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+
+            waitForText(text(R.string.settings_key_write_failed))
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
+            assertEquals(null, runBlocking { flakySecrets.get(SecretId.EXA) })
+            // The file could not be written, which a reset would not cure: none is offered.
+            for (absent in listOf(R.string.settings_reset_keys, R.string.settings_key_save_failed)) {
+                assertTrue(compose.onAllNodesWithText(text(absent)).fetchSemanticsNodes().isEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun aChangeIsSavedThoughTheScreenGoesFirst() {
+        val flaky = FlakyDataStore(stores.open("gated-settings"))
+        val store = SettingsStore(flaky)
+        val gate = CompletableDeferred<Unit>()
+        show(settingsStore = store) {
+            flaky.writeGate = gate
+            compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
+            waitFor("the change's write started") { flaky.writes.get() == 1 }
+
+            // The screen goes while the write waits, as when the user leaves it.
+            onActivity { activity -> activity.setContent {} }
+            compose.waitForIdle()
+            gate.complete(Unit)
+            waitFor("look-up in the background stored on") { current(store).lookUpInBackground }
+        }
+    }
+
+    @Test
+    fun aKeyIsSavedThoughTheScreenGoesFirst() {
+        val flaky = FlakyDataStore(stores.open("gated-secrets"))
+        val gatedSecrets = SecretStore(flaky, testCipher())
+        val gate = CompletableDeferred<Unit>()
+        show(secretStore = gatedSecrets) {
+            flaky.writeGate = gate
+            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitFor("the key's write started") { flaky.writes.get() == 1 }
+
+            // The dialog and the screen go while the write waits.
+            onActivity { activity -> activity.setContent {} }
+            compose.waitForIdle()
+            gate.complete(Unit)
+            waitFor("the Exa key stored") { runBlocking { gatedSecrets.get(SecretId.EXA) }?.reveal() == "exa-key" }
         }
     }
 
@@ -257,11 +341,9 @@ class SettingsScreenTest {
         val resetting = SecretStore(dataStore, testCipher())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, resetting, emptyMap(), ::clearedAtOnce) { it } }
+                activity.setContent { SettingsScreen(settings, resetting, emptyMap(), ::clearedAtOnce, saves) { it } }
             }
-            compose.waitUntil(5_000) {
-                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
-            }
+            waitForText(text(R.string.settings_reset_keys))
             compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
             // A key that cannot be read can still be removed, alone or with the others.
             compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_lastfm)).assertExists()
@@ -271,7 +353,7 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_reset)).performClick()
 
-            compose.waitUntil(5_000) {
+            waitFor("Reset saved keys gone") {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
             }
             assertEquals(SecretState.ABSENT, runBlocking { resetting.states.first() }.getValue(SecretId.LASTFM))
@@ -413,7 +495,7 @@ class SettingsScreenTest {
 
             runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
             compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
-            compose.waitUntil(5_000) { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
+            waitFor("the listed models") { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
             compose.onNodeWithText("Claude Opus 5.5 (claude-opus-5-5)").performClick()
 
             waitFor("the model stored") { current().aiModel == "claude-opus-5-5" }
