@@ -9,12 +9,16 @@
 -- track that starts, or resumes, more than the session gap after the track before was last heard
 -- begins the next. A track was last heard at `stopped_at`, when it was last seen to stop playing
 -- (paused, stopped, or followed by another), null while it plays; failing that (the process ended
--- while it played), at `played_at` plus `duration_ms`. `played_at` and `stopped_at` are when the
--- app saw the track start and stop playing, once the player's reports had settled: up to the
--- settle window after the reports, longer while a track buffers before it plays. A change's precise
--- time is in `track_change`, when the session layer recorded one: a new title under one media id
--- (a stream) is a new row with no change. The artists are the player's string, as sent.
--- `queue_item` is the active queue item, kept so the track is known again after a restart.
+-- while it played), at most a length after it last began to play: `resumed_at`, or `played_at`
+-- when null, plus `duration_ms`. `resumed_at` is when the row last began to play again (resumed
+-- after a pause or a stop, or found playing again after a restart), null if it has not: with no
+-- position, the most of a track that can be heard after it began again is its whole length.
+-- `played_at`, `stopped_at` and `resumed_at` are when the app saw the track start, stop and start
+-- again, once the player's reports had settled: up to the settle window after the reports, longer
+-- while a track buffers before it plays. A change's precise time is in `track_change`, when the
+-- session layer recorded one: a new title under one media id (a stream) is a new row with no
+-- change. The artists are the player's string, as sent. `queue_item` is the active queue item,
+-- kept so the track is known again after a restart.
 CREATE TABLE played (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     session INTEGER NOT NULL,
@@ -26,7 +30,9 @@ CREATE TABLE played (
     duration_ms INTEGER,
     media_id TEXT,
     queue_item INTEGER,
-    stopped_at INTEGER
+    stopped_at INTEGER,
+    -- Added in version 2 (`1.sqm`), so null in rows from before.
+    resumed_at INTEGER
 );
 
 CREATE INDEX played_session ON played (session, id);
@@ -78,12 +84,20 @@ playedInsert:
 INSERT INTO played (session, played_at, player, title, artists, album, duration_ms, media_id, queue_item)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
--- The same track, as the player filled it in later (artists sent after the title, a new length),
--- or playing again after a pause: no longer stopped.
+-- The same track, as the player filled it in later (artists sent after the title, a new length):
+-- no longer stopped.
 playedUpdate:
 UPDATE played
 SET title = :title, artists = :artists, album = :album, duration_ms = :duration_ms, media_id = :media_id,
     queue_item = :queue_item, stopped_at = NULL
+WHERE id = :id;
+
+-- The same track began to play again at `resumed_at` (a resume, or found playing after a restart),
+-- as the player now reports it: no longer stopped.
+playedResumed:
+UPDATE played
+SET title = :title, artists = :artists, album = :album, duration_ms = :duration_ms, media_id = :media_id,
+    queue_item = :queue_item, stopped_at = NULL, resumed_at = :resumed_at
 WHERE id = :id;
 
 -- The track added last stopped playing.
