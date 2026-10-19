@@ -19,7 +19,7 @@ Sleevesight has no server, no accounts, no telemetry, no crash reporting of its 
 
 ## What the app reads on the phone
 
-Sleevesight needs notification access, which is how Android lets an app read what a music player is playing. It follows only the players you switch on in its settings (Spotify by default), and from them it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.
+Sleevesight needs notification access, which is how Android lets an app read what a music player is playing. It notes which players have a media session, to list them in its settings, and follows only the players you switch on there (Spotify by default); from them it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.
 
 ## What leaves the phone, and to whom
 
