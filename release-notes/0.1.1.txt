@@ -1,0 +1,4 @@
+What's new in 0.1.1:
+- The first-run screen says more exactly what leaves your phone, as the privacy policy does.
+- Sources: the chips in a row line up, and each source's lines read in one column.
+- Built for Android 17.
