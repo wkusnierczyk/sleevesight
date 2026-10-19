@@ -11,8 +11,12 @@
 //   and network imports are not.
 // - `checkNetworkReferences` reads the compiled classes of both and fails on any reference to a
 //   network API, however the source spelled it.
+// - `checkPortableCode` reads `main`'s compiled classes and fails on the JVM-only constructs Detekt
+//   misses as Kotlin usually writes them: `synchronized`, the access-order `LinkedHashMap`
+//   constructor and `String.format`.
 import io.gitlab.arturbosch.detekt.Detekt
 import sleevesight.checks.CheckNetworkReferences
+import sleevesight.checks.CheckPortableCode
 
 plugins {
     id("sleevesight.kotlin-jvm")
@@ -45,9 +49,16 @@ val checkNetworkReferences =
         forbiddenPrefixes.convention(listOf("java/net/", "javax/net/", "okhttp3/", "io/ktor/client/"))
     }
 
+val checkPortableCode =
+    tasks.register<CheckPortableCode>("checkPortableCode") {
+        group = "verification"
+        description = "Fails when a compiled class of main uses synchronized, an access-order LinkedHashMap or String.format."
+        classes.from(sourceSets.named("main").map { it.output.classesDirs })
+    }
+
 // The readiness rules need type resolution, which the plain `detekt` task in `check` does not do.
 tasks.named("check") {
-    dependsOn("detektMain", "detektJvmMain", "detektTest", checkNetworkReferences)
+    dependsOn("detektMain", "detektJvmMain", "detektTest", checkNetworkReferences, checkPortableCode)
 }
 
 // A module with shared test fixtures (`java-test-fixtures`) checks them the same way.
