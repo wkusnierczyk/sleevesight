@@ -67,7 +67,10 @@ internal fun CheckedProse(
     val said =
         paragraph.joinToString(" ") { sentence ->
             val words = spoken(sentence.text, policy, resources)
-            if (sentence.status == SentenceStatus.UNCITED) "$words ($uncited)" else words
+            // An uncited sentence is said to be so before its final punctuation, where a citation
+            // would be: "It is great (not cited)."
+            val end = FINAL_PUNCTUATION.find(words)?.value.orEmpty()
+            if (sentence.status == SentenceStatus.UNCITED) "${words.removeSuffix(end)} ($uncited)$end" else words
         }
     val text =
         buildAnnotatedString {
@@ -241,8 +244,12 @@ private val BLANK_LINE = Regex("\\n\\s*\\n")
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 
-// The accessibility actions a paragraph offers for its lines. Compose (1.11.4) throws when one
+// A sentence's closing punctuation, with any closing quotes or brackets after it.
+private val FINAL_PUNCTUATION = Regex("[.!?…]+[\"'”’)\\]]*$")
+
+// The accessibility actions a paragraph offers for its lines. Compose (1.12.1) throws when one
 // node has 32 or more custom actions ("Can't have more than 32 custom actions for one widget",
 // `AndroidComposeViewAccessibilityDelegateCompat`), and a menu that long is hard to use anyway.
-// Lines past these are still reached by their chips' links, and listed under *Sources*.
+// Lines past these are reached under *Sources*, which lists every line: their chips' links may not
+// reach a screen reader, which reads the paragraph's content description in place of its text.
 private const val MAX_LINE_ACTIONS = 16
