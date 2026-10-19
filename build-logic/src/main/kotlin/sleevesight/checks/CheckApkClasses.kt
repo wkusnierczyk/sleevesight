@@ -11,6 +11,8 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.io.File
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.ZipFile
@@ -55,19 +57,7 @@ abstract class CheckApkClasses : DefaultTask() {
         if (apks.isEmpty()) throw GradleException("No APK in ${apkDirectory.get().asFile}")
         val problems =
             apks.flatMap { apk ->
-                val dexes =
-                    ZipFile(apk).use { zip ->
-                        zip.entries().toList().filter { DEX_ENTRY.matches(it.name) }.map { entry ->
-                            val bytes = zip.getInputStream(entry).readBytes()
-                            try {
-                                readDex(bytes)
-                            } catch (e: GradleException) {
-                                throw GradleException("Unreadable dex ${entry.name} in $apk: ${e.message}", e)
-                            }
-                        }
-                    }
-                if (dexes.isEmpty()) throw GradleException("No dex file in $apk")
-                undefinedTypes(dexes, prefix.get()).map { "${apk.name}: ${it.removePrefix("L").removeSuffix(";")}" }
+                undefinedTypes(dexesIn(apk), prefix.get()).map { "${apk.name}: ${it.removePrefix("L").removeSuffix(";")}" }
             }
         if (problems.isNotEmpty()) {
             throw GradleException(
@@ -86,6 +76,33 @@ abstract class CheckApkClasses : DefaultTask() {
 
     companion object {
         private val DEX_ENTRY = Regex("classes\\d*\\.dex")
+
+        /**
+         * The dex files of [apk], read with [readDex]. An APK that cannot be opened, or an entry
+         * that cannot be inflated or read as a dex file, fails naming the APK and the entry.
+         */
+        fun dexesIn(apk: File): List<Dex> {
+            val opened =
+                try {
+                    ZipFile(apk)
+                } catch (e: IOException) {
+                    throw GradleException("Unreadable APK $apk: $e", e)
+                }
+            val dexes =
+                opened.use { zip ->
+                    zip.entries().toList().filter { DEX_ENTRY.matches(it.name) }.map { entry ->
+                        try {
+                            readDex(zip.getInputStream(entry).use { it.readBytes() })
+                        } catch (e: IOException) {
+                            throw GradleException("Unreadable dex ${entry.name} in $apk: $e", e)
+                        } catch (e: GradleException) {
+                            throw GradleException("Unreadable dex ${entry.name} in $apk: ${e.message}", e)
+                        }
+                    }
+                }
+            if (dexes.isEmpty()) throw GradleException("No dex file in $apk")
+            return dexes
+        }
 
         /** The types under [prefix] that some dex file refers to and none defines, sorted; arrays count as their element type. */
         fun undefinedTypes(
@@ -113,8 +130,13 @@ abstract class CheckApkClasses : DefaultTask() {
                 throw GradleException("Not a dex file")
             }
             val version = String(bytes, 4, 3, Charsets.ISO_8859_1)
-            if (version.toIntOrNull()?.takeIf { it <= MAX_VERSION && bytes[7].toInt() == 0 } == null) {
+            if (!version.all { it in '0'..'9' } || version.toInt() > MAX_VERSION || bytes[7].toInt() != 0) {
                 throw GradleException("Unsupported dex version \"$version\" (read up to 0$MAX_VERSION)")
+            }
+            // Every dex file D8 writes is little-endian; a byte-swapped one would be read as nonsense.
+            val endian = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt(ENDIAN_TAG)
+            if (endian != ENDIAN_CONSTANT) {
+                throw GradleException("Unsupported dex byte order: endian tag 0x${endian.toUInt().toString(16)}, not 0x12345678")
             }
             return try {
                 readTables(bytes)
@@ -155,6 +177,8 @@ abstract class CheckApkClasses : DefaultTask() {
         const val MAX_VERSION = 40
 
         private const val HEADER_SIZE = 0x70
+        private const val ENDIAN_TAG = 0x28
+        private const val ENDIAN_CONSTANT = 0x12345678
         private const val STRING_IDS_OFF = 0x3C
         private const val TYPE_IDS_SIZE = 0x40
         private const val TYPE_IDS_OFF = 0x44
