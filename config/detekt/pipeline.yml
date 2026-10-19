@@ -2,7 +2,9 @@
 # the fast first line, in the source, for the portable code (main) and the tests. The platform
 # source set, jvmMain, which main cannot see, is checked with detekt.yml alone, so JVM APIs are
 # allowed there; the `checkNetworkReferences` task checks the compiled classes of both for network
-# APIs (sleevesight.pipeline.gradle.kts). None of these is a complete check: only compiling a
+# APIs, and `checkPortableCode` those of main for `synchronized`, the access-order LinkedHashMap
+# constructor and String.format, which the rules below miss as Kotlin usually writes them
+# (sleevesight.pipeline.gradle.kts). None of these is a complete check: only compiling a
 # non-JVM target is. ForbiddenMethodCall needs type resolution (the detektMain and detektTest
 # tasks). The imports list replaces the one in detekt.yml, so it repeats the network rules.
 style:
@@ -23,7 +25,8 @@ style:
       - value: 'java.lang.String.format'
         reason: 'JVM-only; build the string or use a common formatter.'
       # The extension form ("%d".format(n)) is not matched by Detekt 1.23.8 on Kotlin 2.4; kept for a
-      # later Detekt that resolves it. The non-JVM compile at the Multiplatform switch is the complete check.
+      # later Detekt that resolves it. `checkPortableCode` catches it in the compiled classes; the
+      # non-JVM compile at the Multiplatform switch is the complete check.
       - value: 'kotlin.text.format'
         reason: 'JVM-only; build the string or use a common formatter.'
       - value: 'java.lang.System.currentTimeMillis'
@@ -47,7 +50,8 @@ style:
       # The access-order LinkedHashMap constructor (the others are common) and `synchronized`. Detekt
       # 1.23.8 on Kotlin 2.4 matches the constructor written as `java.util.LinkedHashMap(…)` only: like
       # `kotlin.text.format`, the `kotlin.collections.LinkedHashMap` alias and `kotlin.synchronized`
-      # are not matched (checked by adding each to the code). Kept for a later Detekt that resolves them.
+      # are not matched (checked by adding each to the code). Kept for a later Detekt that resolves them;
+      # `checkPortableCode` catches all three in the compiled classes.
       - value: 'java.util.LinkedHashMap.<init>(kotlin.Int, kotlin.Float, kotlin.Boolean)'
         reason: 'JVM-only; keep insertion order and move an entry to the end when it is used.'
       - value: 'kotlin.collections.LinkedHashMap.<init>(kotlin.Int, kotlin.Float, kotlin.Boolean)'

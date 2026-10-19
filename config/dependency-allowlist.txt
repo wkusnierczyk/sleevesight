@@ -16,7 +16,7 @@ org.jetbrains.kotlinx          Apache-2.0
 org.jetbrains                  Apache-2.0   # annotations
 io.ktor                        Apache-2.0   # HTTP client, in :net only (#35)
 com.squareup.okhttp3           Apache-2.0   # Ktor's engine, in :net only (#35)
-com.squareup.okio              Apache-2.0   # I/O, pulled in by OkHttp
+com.squareup.okio              Apache-2.0   # I/O, pulled in by OkHttp, and by DataStore (datastore-core-okio) in :app
 app.cash.sqldelight            Apache-2.0   # database runtime, in :store (#41); the Android driver, in :app (#49)
 org.xerial:sqlite-jdbc         Apache-2.0   # SQLite JDBC driver (its SQLite is public domain), for :cli (#44);
                                             # :store's tests use it too
