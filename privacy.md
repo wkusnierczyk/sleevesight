@@ -9,7 +9,7 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 18 October 2026.
+Last updated: 19 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight).
 
@@ -19,7 +19,7 @@ Sleevesight has no server, no accounts, no telemetry, no crash reporting of its 
 
 ## What the app reads on the phone
 
-Sleevesight needs notification access, which is how Android lets an app read what a music player is playing: the title, artists, album, length and cover. It ignores the notifications themselves, and it never touches the audio. It follows only the players you switch on in its settings (Spotify by default).
+Sleevesight needs notification access, which is how Android lets an app read what a music player is playing. It notes which players have a media session, to list them in its settings, and follows only the players you switch on there (Spotify by default); from them it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.
 
 ## What leaves the phone, and to whom
 
@@ -29,7 +29,7 @@ Requests go straight from your phone to each service. None passes through a serv
 - **To the AI service you choose** (Anthropic): the title, artists and album, and what the sources found. This is for the playing track only. Each insight is a request of its own, with no conversation kept between them. It is made with your API key, so the service handles it under its terms for your account.
 - **Your API keys** go only to the service each belongs to, with each request to it.
 - **To Spotify**, only if you connect a Spotify account, once the app offers that: requests for the playlist or album being played, made with your own token.
-- **To the server named in a web address**, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.
+- **To the server a cover's web address names**, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.
 - **To a file you choose**, only if you export the diagnostics: with the *Diagnostics* developer setting on, *Export* writes what the app did and every track change it recorded to a file where you choose, which may be a cloud folder. That copy is yours, outside the app.
 
 Every request is made over HTTPS; Android refuses the app any unencrypted connection, so a cover given as an `http://` address is not fetched.
