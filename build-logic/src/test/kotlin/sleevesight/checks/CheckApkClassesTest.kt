@@ -7,6 +7,7 @@ import java.nio.ByteOrder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CheckApkClassesTest {
     private val prefix = "Lapp/sleevesight/"
@@ -16,6 +17,7 @@ class CheckApkClassesTest {
     private fun dex(
         types: List<String>,
         defined: List<String>,
+        version: String = "035",
     ): ByteArray {
         val header = 0x70
         val stringIds = header
@@ -37,7 +39,7 @@ class CheckApkClassesTest {
                 offset
             }
         val buffer = ByteBuffer.allocate(data + strings.size()).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.put("dex\n035\u0000".toByteArray(Charsets.ISO_8859_1))
+        buffer.put("dex\n$version\u0000".toByteArray(Charsets.ISO_8859_1))
         buffer.putInt(0x38, types.size).putInt(0x3C, stringIds)
         buffer.putInt(0x40, types.size).putInt(0x44, typeIds)
         buffer.putInt(0x60, defined.size).putInt(0x64, classDefs)
@@ -89,5 +91,34 @@ class CheckApkClassesTest {
     @Test
     fun `a file that is not a dex file fails`() {
         assertFailsWith<GradleException> { CheckApkClasses.readDex(ByteArray(0x70)) }
+    }
+
+    @Test
+    fun `versions up to 040 are read, and 041, which may hold several dex files, fails`() {
+        for (version in listOf("035", "037", "038", "039", "040")) {
+            val read = CheckApkClasses.readDex(dex(listOf("Lapp/sleevesight/A;"), emptyList(), version))
+            assertEquals(setOf("Lapp/sleevesight/A;"), read.types)
+        }
+        val container = dex(listOf("Lapp/sleevesight/A;"), emptyList(), "041")
+        val failed = assertFailsWith<GradleException> { CheckApkClasses.readDex(container) }
+        assertEquals("Unsupported dex version \"041\" (read up to 040)", failed.message)
+    }
+
+    @Test
+    fun `a truncated dex file fails as corrupt`() {
+        val whole = dex(listOf("Lapp/sleevesight/A;", "Lapp/sleevesight/B;"), listOf("Lapp/sleevesight/A;"))
+        // Cut inside the type list, and inside the last string.
+        for (length in listOf(0x70 + 6, whole.size - 2)) {
+            val failed = assertFailsWith<GradleException> { CheckApkClasses.readDex(whole.copyOf(length)) }
+            assertTrue(failed.message!!.startsWith("Corrupt dex file: "), failed.message)
+        }
+    }
+
+    @Test
+    fun `a size larger than the file fails as corrupt`() {
+        val bytes = dex(listOf("Lapp/sleevesight/A;"), emptyList())
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putInt(0x40, Int.MAX_VALUE)
+        val failed = assertFailsWith<GradleException> { CheckApkClasses.readDex(bytes) }
+        assertTrue(failed.message!!.startsWith("Corrupt dex file: "), failed.message)
     }
 }
