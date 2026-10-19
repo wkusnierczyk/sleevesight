@@ -77,11 +77,20 @@ class Diagnostics(
      * [open] gives (a file the user chose; null if it could not be opened), in the process's scope;
      * [exportState] follows it. Nothing starts while an export is under way. [open] is kept until the
      * export ends, so it must not hold an activity.
+     *
+     * The state ends however the export does, from the job's completion, not from its body: an
+     * export cancelled (the scope with it, even before it started) or ended by an [Error] that
+     * [write] does not catch is [ExportResult.FAILED], so the screen never shows it running for ever
+     * and a next export can start. The [Error] itself still goes to the scope.
      */
     fun export(open: () -> OutputStream?) {
         val before = exporting.getAndUpdate { if (it == ExportState.Running) it else ExportState.Running }
         if (before == ExportState.Running) return
-        scope.launch { exporting.value = ExportState.Ended(write(open)) }
+        var result: ExportResult? = null
+        scope.launch { result = write(open) }.invokeOnCompletion { cause ->
+            if (cause != null) Log.w(TAG, "The diagnostics export ended early: ${cause::class.simpleName}")
+            exporting.value = ExportState.Ended(result ?: ExportResult.FAILED)
+        }
     }
 
     /**
