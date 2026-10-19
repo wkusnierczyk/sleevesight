@@ -3,8 +3,9 @@
 Roboto Flex at regular weight, 88% width and the optical size for 52.64 px (the size the tile was
 chosen at, 56 px on the brand sheet), outlined, so the logo needs no font. Placed so that the dot of
 the i in "sight" is at (0, 0), the centre of the tile (-72 to 72), which the intro turns it about.
-Writes tile-light.svg, tile-dark.svg and src/tile.json (the paths and the words' ink box, for
-make_landing_tile.py). From assets/logo, with fontTools and uharfbuzz installed (pip):
+Writes tile-light.svg, tile-dark.svg and src/tile.json (the paths and the words' ink box). The paths
+are copied by hand into the `#words` of the product page (`index.html`) and of the brand sheet. From
+assets/logo, with fontTools and uharfbuzz installed (pip):
 
     python3 src/make_tile.py RobotoFlex.ttf
 
