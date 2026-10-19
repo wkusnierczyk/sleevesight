@@ -1,6 +1,9 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -38,6 +41,8 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.settings.KeyDialogs
+import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
@@ -306,20 +311,25 @@ class SettingsScreenTest {
                 }
             }
         val slowSecrets = SecretStore(stores.open("slow-secrets"), SecretCipher(slow), legacyKeystore = false)
-        show(secretStore = slowSecrets) {
-            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+        try {
+            show(secretStore = slowSecrets) {
+                compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
+                compose.onNode(hasSetTextAction()).performTextInput("exa-key")
+                compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
-            // While the save runs, *Cancel* is refused, so it cannot seem to cancel a save that goes on.
-            val cancel = hasText(text(R.string.settings_cancel))
-            waitForNode(cancel and isNotEnabled())
-            compose.onNode(cancel).performClick()
-            compose.onNode(hasSetTextAction()).assertExists()
+                // While the save runs, *Cancel* is refused, so it cannot seem to cancel a save that goes on.
+                val cancel = hasText(text(R.string.settings_cancel))
+                waitForNode(cancel and isNotEnabled())
+                compose.onNode(cancel).performClick()
+                compose.onNode(hasSetTextAction()).assertExists()
 
+                release.countDown()
+                waitForText(text(R.string.settings_key_save_failed))
+                waitForText(text(R.string.settings_reset_keys))
+            }
+        } finally {
+            // Also when a step above fails, so no I/O thread stays blocked for the rest of the run.
             release.countDown()
-            waitForText(text(R.string.settings_key_save_failed))
-            waitForText(text(R.string.settings_reset_keys))
         }
     }
 
@@ -346,6 +356,36 @@ class SettingsScreenTest {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
             }
             assertEquals(1, keys.deletions)
+        }
+    }
+
+    @Test
+    fun aResetThatEndsAfterItsDialogHasGoneStillClearsTheOffer() {
+        val flaky = FlakyDataStore(stores.open("gated-reset-secrets"))
+        val gatedSecrets = SecretStore(flaky, testCipher())
+        val gate = CompletableDeferred<Unit>()
+        // The screen's state, which outlives the dialog: *Reset saved keys* offered after a key
+        // store failure.
+        var sealFailed by mutableStateOf(true)
+        var dialogShown by mutableStateOf(true)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    if (dialogShown) {
+                        KeyDialogs(SettingsDialog.ResetKeys, emptyMap(), gatedSecrets, saves, { sealFailed = it }, {})
+                    }
+                }
+            }
+            flaky.writeGate = gate
+            waitForText(text(R.string.settings_reset))
+            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
+            waitFor("the reset's write started") { flaky.writes.get() == 1 }
+
+            // The dialog goes while the reset waits; the state that observes it stays.
+            dialogShown = false
+            compose.waitForIdle()
+            gate.complete(Unit)
+            waitFor("Reset saved keys no longer offered") { !sealFailed }
         }
     }
 

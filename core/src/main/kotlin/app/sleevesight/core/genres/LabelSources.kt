@@ -47,11 +47,12 @@ data class TrackLabel(
     val credits: List<LabelCredit>,
 ) {
     /**
-     * Whether it may open AI-written genre card content: only a label Last.fm gives (D12). A label
-     * only MusicBrainz gives is display-only, opening its MusicBrainz link and credit, so its tags
-     * never reach a prompt (`design/design.md`, *Genre labels*), unless #101 decides otherwise.
+     * Whether it may open AI-written genre card content: not for a label only MusicBrainz gives
+     * (D12). Such a label is display-only, opening its MusicBrainz link and credit, so its tags
+     * never reach a prompt (`design/design.md`, *Genre labels*), unless #101 decides otherwise; a
+     * label another source also gives opens it.
      */
-    val opensCard: Boolean get() = credits.any { it.source == LabelSource.LASTFM }
+    val opensCard: Boolean get() = credits.any { it.source != LabelSource.MUSICBRAINZ }
 }
 
 /**
@@ -61,8 +62,8 @@ data class TrackLabel(
  * no room for a new one.
  *
  * Last.fm's come first because its top tags are weighed over many listeners' tagging, where an
- * artist's MusicBrainz tags are usually a few editors' votes, and because only a label Last.fm
- * gives opens a genre card ([TrackLabel.opensCard]), so the cap keeps those. MusicBrainz's then
+ * artist's MusicBrainz tags are usually a few editors' votes, and because a label only MusicBrainz
+ * gives opens no genre card ([TrackLabel.opensCard]), so the cap keeps Last.fm's. MusicBrainz's then
  * fill the room left: at the Phase 0.5 gate they gave labels to 3 of the 30 tracks Last.fm left
  * without, and to 29 of 78 alone (design, *D12*). [bySource] holds the labels of the sources switched on; the
  * order it is given in does not matter.

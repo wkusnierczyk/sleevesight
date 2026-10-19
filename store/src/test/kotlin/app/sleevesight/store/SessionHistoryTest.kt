@@ -163,6 +163,9 @@ class SessionHistoryTest {
         val resume = start + 221.seconds + 5.minutes
         play(sundown, resume)
 
+        // Heard until a whole length after the resume: the session check below pins only the upper
+        // bound, which a length counted from the first start also meets.
+        assertEquals(resume + 225.seconds, history.latestSession().single().heardUntil)
         assertEquals(2L, play(carefree, resume + 225.seconds + GAP + 1.milliseconds).session)
     }
 

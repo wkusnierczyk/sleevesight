@@ -150,11 +150,23 @@ class CheckApkClassesTest {
                 "classes.dex" to dex(listOf("Lapp/sleevesight/A;"), listOf("Lapp/sleevesight/A;")),
                 "classes2.dex" to dex(listOf("Lapp/sleevesight/B;"), listOf("Lapp/sleevesight/B;")),
                 "assets/notes.dex.txt" to byteArrayOf(1, 2, 3),
+                // Only the exact match on the whole name leaves these out, not a looser filter
+                // (`endsWith(".dex")`, or a match anywhere in the name).
+                "assets/classes.dex" to byteArrayOf(1, 2, 3),
+                "classes2.dex.bak" to byteArrayOf(1, 2, 3),
             )
         assertEquals(
             setOf("Lapp/sleevesight/A;", "Lapp/sleevesight/B;"),
             CheckApkClasses.dexesIn(file).flatMap { it.classes }.toSet(),
         )
+    }
+
+    @Test
+    fun `a file that is not a zip fails as an unreadable APK`() {
+        val file = File.createTempFile("probe", ".apk", tmp).apply { writeBytes("not a zip".toByteArray()) }
+        val failed = assertFailsWith<GradleException> { CheckApkClasses.dexesIn(file) }
+        assertTrue(failed.message!!.startsWith("Unreadable APK $file: java.util.zip.ZipException"), failed.message)
+        assertTrue(failed.cause is ZipException, "${failed.cause}")
     }
 
     @Test

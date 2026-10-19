@@ -106,6 +106,13 @@ class AppGraph(
      */
     private val wiring = appPipelineWiring(BuildConfig.VERSION_NAME, JvmAccentFolder, JvmResourceReader)
 
+    /**
+     * Closes the pipeline's network client, for an emulated process's end only
+     * ([SleevesightApplication.onTerminate], which Robolectric calls after each test): on a phone the
+     * client lives as long as the process.
+     */
+    internal fun close() = wiring.close()
+
     /** The AI services' clients, for the settings screen's model list and the pipeline. */
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
 

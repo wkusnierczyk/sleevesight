@@ -168,7 +168,10 @@ internal class ArtistCheck(
         /** The search answered, but proves neither: its page holds only part of the matches, or not the artist. */
         UNKNOWN,
 
-        /** A request failed; a later search may answer. Never kept. */
+        /**
+         * A request failed, or answered with a count below the artists it listed; a later search may
+         * answer. Never kept.
+         */
         FAILED,
     }
 
@@ -178,7 +181,8 @@ internal class ArtistCheck(
      * the page holds every match the search counted ([MbArtistSearch.total] equal to the artists on
      * the page) and the artist under the name, alone. The count is the search index's, not a promise
      * that no other artist has the name, so the verdict is no stronger than the search; a count
-     * below the artists listed is wrong, and proves nothing. Anything else proves neither, as does a
+     * below the artists listed is wrong, and fails the search, as `MusicBrainzClient.searchArtists`
+     * already fails such an answer (a backstop here). Anything else proves neither, as does a
      * name with no letters or digits, which every name key would match. The answer is kept by the
      * query as sent and the id.
      */
@@ -204,6 +208,7 @@ internal class ArtistCheck(
         val page = (musicBrainz.searchArtists(name) as? Lookup.Found)?.value ?: return Ownership.FAILED
         val named = page.artists.filter { key(it.name) == nameKey }
         return when {
+            page.total < page.artists.size -> Ownership.FAILED
             named.any { !it.mbid.equals(mbid, ignoreCase = true) } -> Ownership.SHARED
             page.total == page.artists.size && named.isNotEmpty() -> Ownership.OWNED
             else -> Ownership.UNKNOWN

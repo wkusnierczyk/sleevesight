@@ -95,8 +95,9 @@ class NextInQueueTest {
     @Test
     fun `a media id queued twice, the active item leading onto the entry after, picks the later match`() {
         // The accepted cost, not the desired answer: the metadata is still on the first A while
-        // the active item is already on B, at 2, so the A at 3 is taken and C prepared for a
-        // moment, where B is next. The report is the lagging case's, read the other way:
+        // the active item is already on B, at 2, so B is playing, and the A at 3 is taken and C
+        // prepared for a moment, where nothing (or the second A) should be. The report is the
+        // lagging case's, read the other way:
         // `NextInQueue` cannot tell them apart, and takes the lag, the only one seen in media-id
         // players. The next report replaces the preparation, which makes no model call.
         assertEquals("C", NextInQueue.of(playing(mediaId = "a", item = 2), repeated)?.title)

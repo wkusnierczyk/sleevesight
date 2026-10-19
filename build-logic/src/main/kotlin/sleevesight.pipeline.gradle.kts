@@ -3,17 +3,18 @@
 // compiler plugin is applied here.
 //
 // The readiness checks, in layers:
-// - Detekt (`config/detekt/pipeline.yml`) forbids JVM-only APIs in the portable code, `main`:
-//   the fast first line, in the source.
+// - Detekt (`config/detekt/pipeline.yml`) forbids JVM-only APIs in the portable code, `main`, and
+//   in the tests and test fixtures: the fast first line, in the source.
 // - Platform implementations sit in their own source set, `jvmMain` (`sleevesight.jvm-main`),
 //   which `main` cannot see: portable code that uses one does not compile. Detekt checks
 //   `jvmMain` with the base rules only (`config/detekt/detekt.yml`), so JVM APIs are allowed there
 //   and network imports are not.
 // - `checkNetworkReferences` reads the compiled classes of both and fails on any reference to a
 //   network API, however the source spelled it.
-// - `checkPortableCode` reads `main`'s compiled classes and fails on the JVM-only constructs Detekt
-//   misses as Kotlin usually writes them: `synchronized`, the access-order `LinkedHashMap`
-//   constructor and `String.format`.
+// - `checkPortableCode` reads the compiled classes of `main`, the tests and the test fixtures, and
+//   fails on the JVM-only constructs Detekt misses as Kotlin usually writes them: `synchronized`,
+//   the access-order `LinkedHashMap` constructor, `String.format`, and an override of
+//   `removeEldestEntry` in a class descended from `LinkedHashMap` through the classes it reads.
 import io.gitlab.arturbosch.detekt.Detekt
 import sleevesight.checks.CheckNetworkReferences
 import sleevesight.checks.CheckPortableCode
@@ -52,8 +53,11 @@ val checkNetworkReferences =
 val checkPortableCode =
     tasks.register<CheckPortableCode>("checkPortableCode") {
         group = "verification"
-        description = "Fails when a compiled class of main uses synchronized, an access-order LinkedHashMap or String.format."
+        description =
+            "Fails when a compiled class of main, test or testFixtures uses synchronized, an access-order " +
+                "LinkedHashMap, String.format or a LinkedHashMap.removeEldestEntry override."
         classes.from(sourceSets.named("main").map { it.output.classesDirs })
+        classes.from(sourceSets.named("test").map { it.output.classesDirs })
     }
 
 // The readiness rules need type resolution, which the plain `detekt` task in `check` does not do.
@@ -65,5 +69,8 @@ tasks.named("check") {
 pluginManager.withPlugin("java-test-fixtures") {
     tasks.named("check") {
         dependsOn("detektTestFixtures")
+    }
+    checkPortableCode.configure {
+        classes.from(sourceSets.named("testFixtures").map { it.output.classesDirs })
     }
 }

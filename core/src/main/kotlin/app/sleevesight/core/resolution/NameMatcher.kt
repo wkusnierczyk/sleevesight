@@ -50,14 +50,18 @@ class NameMatcher(
      * words as written, split at whitespace only, because an honorific before a single word is
      * usually a stage name of its own (`Dr. John` is not `John`, nor `Mr. Big` `Big`, nor `Mr.
      * T-Bone` `T-Bone`: a hyphenated word is one word). A word with no letters or digits, such as a
-     * lone `-`, is not counted. A leading article counts as a word: `A Balladeer` is two. Two
-     * different honorifics (`Mr. X Y`, `Mrs. X Y`) are two people. Not [sameName]: a variant is
-     * weaker evidence, which the resolver weighs only when nothing matches by name.
+     * lone `-`, is not counted. A leading article counts as a word: `A Balladeer` is two, and so is
+     * `The Bear`, so `Mr. The Bear` is a variant of `Bear`, as `The Bear` is the same name as `Bear`
+     * in [sameName]. Two different honorifics (`Mr. X Y`, `Mrs. X Y`) are two people, but one
+     * honorific spelled two ways (`Dr.` and `Doctor`, `Mr.` and `Mister`) on both names, the rest
+     * one name, is a variant at any length, since neither drops it: `Dr. Hook & the Medicine Show`
+     * and `Doctor Hook & the Medicine Show`, `Dr. John` and `Doctor John`. Not [sameName]: a variant
+     * is weaker evidence, which the resolver weighs only when nothing matches by name.
      */
     fun honorificVariant(
         a: String,
         b: String,
-    ): Boolean = sameRest(a, b) || sameRest(b, a)
+    ): Boolean = sameRest(a, b) || sameRest(b, a) || respelled(a, b)
 
     // Whether [variant] is an honorific, then at least two words whose key is [plain]'s, a leading
     // `the` aside.
@@ -70,6 +74,22 @@ class NameMatcher(
         if (key(words.first()) !in HONORIFICS || after.count { key(it).isNotEmpty() } < VARIANT_MIN_WORDS) return false
         val rest = key(after.joinToString(" ")).removePrefix(THE)
         return rest.isNotEmpty() && rest == key(plain).removePrefix(THE)
+    }
+
+    // Whether [a] and [b] lead with one honorific spelled two ways (`Dr.`, `Doctor`), then one name,
+    // a leading `the` aside.
+    private fun respelled(
+        a: String,
+        b: String,
+    ): Boolean {
+        val wordsA = a.trim().split(WHITESPACE)
+        val wordsB = b.trim().split(WHITESPACE)
+        val honorificA = key(wordsA.first())
+        val honorificB = key(wordsB.first())
+        // Spelled the same, the names are the same or two; spelled two ways, one is in [SPELLINGS].
+        if (honorificA == honorificB || spelling(honorificA) != spelling(honorificB)) return false
+        val restA = key(wordsA.drop(1).joinToString(" ")).removePrefix(THE)
+        return restA.isNotEmpty() && restA == key(wordsB.drop(1).joinToString(" ")).removePrefix(THE)
     }
 
     /**
@@ -104,6 +124,8 @@ class NameMatcher(
     }
 
     private companion object {
+        fun spelling(honorific: String): String = SPELLINGS[honorific] ?: honorific
+
         val COMBINING_MARKS = Regex("[\\u0300-\\u036F]")
         val APOSTROPHES = setOf('\'', '’', '‘', 'ʼ')
         const val THE = "the "
@@ -112,6 +134,9 @@ class NameMatcher(
 
         // As keys: `Mr.` is `mr`.
         val HONORIFICS = setOf("mr", "mrs", "ms", "miss", "mister", "dr", "doctor", "sir", "dame")
+
+        // The honorifics written two ways, each to the one spelling [respelled] compares.
+        val SPELLINGS = mapOf("doctor" to "dr", "mister" to "mr")
 
         // The fewest words a name keeps after an honorific for [honorificVariant] to match.
         const val VARIANT_MIN_WORDS = 2
