@@ -50,6 +50,6 @@ internal class TrackLabels(
                 sink.emit(PipelineEvent.SourceFailed(key, SourceId.MUSICBRAINZ, "labels: ${TrackRun.nameOf(e)}"))
                 null
             }
-        if (found != null) sink.update { it.copy(genres = of(it, found.labels)) }
+        if (found != null) sink.update { it.copy(genres = of(it, found)) }
     }
 }

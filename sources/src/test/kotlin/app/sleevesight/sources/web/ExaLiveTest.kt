@@ -23,6 +23,7 @@ class ExaLiveTest {
     fun `live search finds Sundown`() {
         val key = System.getenv(KEY_VARIABLE)
         assumeTrue(!key.isNullOrBlank(), "$KEY_VARIABLE is not set")
+        // `:wiring`'s `HostPolicies` holds the same list, but `:sources` cannot see `:wiring`.
         val config =
             NetConfig(
                 appVersion = "0.0.0-test",

@@ -204,7 +204,7 @@ flowchart TD
 
 ### During implementation
 
-- **CI between [#30][30] and [#47][47]** has no Android module, so `checkManifest` and the APK artifact are off until [#47][47] brings them back.
+- **CI between [#30][30] and [#47][47]** had no Android module, so `checkManifest` and the APK artifact were off until [#47][47] brought them back.
 - **Every new library** is a reviewed edit to `config/dependency-allowlist.txt` with its licence, GPL-3.0 compatible; for example Ktor, OkHttp, SQLDelight, Compose, Navigation, DataStore, Robolectric, material-color-utilities.
 - **Multiplatform readiness (D2)** is checked from [#33][33] on, so each pipeline module starts within the rules rather than being brought into them.
 - **Recorded responses** in `fixtures/http/` hold third-party text: Wikipedia and Last.fm prose under CC BY-SA, MusicBrainz tags and genres under CC BY-NC-SA 3.0 (marked as such, or recorded without `inc=tags` and `inc=genres`; see [architecture, *MusicBrainz tags and genres*](architecture.md#musicbrainz-tags-and-genres-9)), and Last.fm and web search results under their API terms. Record only what the tests need, keep the attribution with them, and check the API terms on storing responses before committing them.
@@ -217,7 +217,7 @@ flowchart TD
 ### After implementation
 
 - **Phase 2 is already waiting:** [#21][21] (prompt style, D14) and [#22][22] (learned skip detection, D15), which needs the records [#49][49] starts collecting; and [#101][101] (D12), once [#100][100] is settled.
-- **Installs outside Play.** Checked with [#29][29] (`design.md`, *Notification access and installation*): on the phone measured, restricted settings marked a file install but did not block notification access; Google's developer verification is enforced since 2026-09-30 only for installs from participating stores in four countries, and is planned globally for 2027, when registering the package becomes the condition for a build handed out as a file (or `adb` and the *advanced flow*).
+- **Installs outside Play.** Checked with [#29][29] (`design.md`, *Notification access and installation*): on the phone measured, restricted settings marked a file install but did not block notification access; Google's developer verification is enforced since 2026-09-30 only for installs from participating stores in four countries, and is planned globally for 2027, when registering the package becomes the condition for a build handed out as a file (without it, `adb` or the *advanced flow*; a free *limited distribution* account registers it for up to 20 invited devices).
 - **Play's testing requirement** for a new developer account can add weeks before production; check it when the account is set up, so [#58][58] is scheduled with it.
 
 [9]: https://github.com/wkusnierczyk/sleevesight/issues/9

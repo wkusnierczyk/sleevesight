@@ -32,11 +32,10 @@ internal fun SourcesSection(
 ) {
     SectionHeading(R.string.settings_section_sources)
     Hint(R.string.settings_sources_hint)
-    val modelSummary = stringResource(R.string.settings_source_model_summary)
     for ((switch, name) in SHOWN_SWITCHES) {
         SwitchRow(
             title = stringResource(name),
-            summary = modelSummary.takeIf { switch == SourceSwitch.MODEL },
+            summary = sourceSummary(switch, settings)?.let { stringResource(it) },
             checked = switch in settings.enabledSources,
         ) { on ->
             update { it.copy(enabledSources = if (on) it.enabledSources + switch else it.enabledSources - switch) }
@@ -46,7 +45,27 @@ internal fun SourcesSection(
     }
 }
 
-/** The web search engines under *Web search* (D11), each a switch with its key. */
+/**
+ * What a *Where to look* switch says under its name: for *Web search* on with no engine on, that
+ * nothing is searched until one is ([Settings.isEnabled] needs one).
+ */
+@StringRes
+private fun sourceSummary(
+    switch: SourceSwitch,
+    settings: Settings,
+): Int? =
+    when {
+        switch == SourceSwitch.MODEL -> R.string.settings_source_model_summary
+        switch == SourceSwitch.WEB && switch in settings.enabledSources && settings.webEngines.isEmpty() ->
+            R.string.settings_source_web_no_engine
+        else -> null
+    }
+
+/**
+ * The web search engines under *Web search* (D11), each a switch with its key. While *Web search*
+ * is off, no engine searches, so each shows off, cannot be moved, and says why, as *Genre labels*
+ * does; the choice itself is kept for when *Web search* is back on.
+ */
 @Composable
 private fun EngineRows(
     settings: Settings,
@@ -54,16 +73,17 @@ private fun EngineRows(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
+    val searching = SourceSwitch.WEB in settings.enabledSources
     for (engine in WebEngine.entries) {
         SwitchRow(
             title = stringResource(engineName(engine)),
-            summary = null,
-            checked = engine in settings.webEngines,
+            summary = if (searching) null else stringResource(R.string.settings_engine_web_off),
+            checked = searching && engine in settings.webEngines,
             indent = true,
             onChange =
                 { on: Boolean ->
                     update { it.copy(webEngines = if (on) it.webEngines + engine else it.webEngines - engine) }
-                }.takeIf { SourceSwitch.WEB in settings.enabledSources },
+                }.takeIf { searching },
         )
         val id = engineKey(engine)
         KeyRow(stringResource(keyName(id)), id, secrets, indent = true, open)
@@ -72,8 +92,9 @@ private fun EngineRows(
 
 /**
  * *Genre labels* (D12, #84): which sources' tags give labels. A source gives labels only while it
- * is on under *Where to look*, and Last.fm only with its key saved, so until then its switch shows
- * off and cannot be moved, and says why.
+ * is on under *Where to look*, and Last.fm only with its key saved and readable, so until then its
+ * switch shows off and cannot be moved, and says why: a key saved but no longer readable
+ * ([SecretState.UNREADABLE]) is told apart from no key.
  */
 @Composable
 internal fun LabelsSection(
@@ -84,13 +105,13 @@ internal fun LabelsSection(
     SectionHeading(R.string.settings_section_labels)
     Hint(R.string.settings_labels_hint)
     for (source in LabelSource.entries) {
-        val looked = settings.isEnabled(source.source)
-        val keyed = source != LabelSource.LASTFM || secrets[SecretId.LASTFM] == SecretState.SAVED
+        val key = secrets[SecretId.LASTFM]
         val why =
             when {
-                !looked -> R.string.settings_labels_source_off
-                !keyed -> R.string.settings_labels_needs_key
-                else -> null
+                !settings.isEnabled(source.source) -> R.string.settings_labels_source_off
+                source != LabelSource.LASTFM || key == SecretState.SAVED -> null
+                key == SecretState.UNREADABLE -> R.string.settings_labels_key_unreadable
+                else -> R.string.settings_labels_needs_key
             }
         SwitchRow(
             title = stringResource(labelSourceName(source)),

@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                             graph.secrets,
                             graph.aiProviders,
                             graph.historyRetention::clear,
+                            graph.settingsSaves,
                             links.openCredits,
                             links.openDiagnostics,
                             graph::playerLabel,

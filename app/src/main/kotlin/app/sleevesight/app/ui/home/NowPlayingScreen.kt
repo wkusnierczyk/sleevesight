@@ -154,7 +154,7 @@ internal fun NowPlayingContent(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
                     focus = focus,
-                    cardKept = insight.offers.rewrite || insight.rewriteFailed != null,
+                    cardKept = view.cardShown && track != null,
                     offline = offlineShown(view, track),
                 )
             }

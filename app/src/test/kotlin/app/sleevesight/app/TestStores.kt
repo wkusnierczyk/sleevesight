@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretKeySource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -86,7 +87,8 @@ fun testCipher(key: SecretKey = softwareKey()): SecretCipher = SecretCipher(Soft
  * failing read taking one, as a file that cannot be read for a while would. While
  * [failuresAfterAValue] is above zero, a read instead emits the stored value and then fails. While
  * [writeFailures] is above zero, a write (`edit`, `updateData`) fails with an I/O error and stores
- * nothing, each failing write taking one, as a file that cannot be written would.
+ * nothing, each failing write taking one, as a file that cannot be written would. While [writeGate]
+ * is set, a write waits for it before it starts; [writes] counts the writes asked for.
  */
 class FlakyDataStore<T>(
     private val store: DataStore<T>,
@@ -95,6 +97,9 @@ class FlakyDataStore<T>(
     val failuresAfterAValue = AtomicInteger()
     val reads = AtomicInteger()
     val writeFailures = AtomicInteger()
+    val writes = AtomicInteger()
+
+    @Volatile var writeGate: Deferred<Unit>? = null
 
     override val data: Flow<T> =
         flow {
@@ -108,6 +113,8 @@ class FlakyDataStore<T>(
         }
 
     override suspend fun updateData(transform: suspend (t: T) -> T): T {
+        writes.incrementAndGet()
+        writeGate?.await()
         if (writeFailures.getAndUpdate { maxOf(it - 1, 0) } > 0) throw IOException("cannot write")
         return store.updateData(transform)
     }

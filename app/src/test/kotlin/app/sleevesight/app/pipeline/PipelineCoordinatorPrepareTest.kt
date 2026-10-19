@@ -1,8 +1,10 @@
 package app.sleevesight.app.pipeline
 
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.RunStep
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -261,6 +263,119 @@ class PipelineCoordinatorPrepareTest {
             tap()
             settle()
             assertEquals(mapOf("A" to 1), calls)
+        }
+    }
+
+    @Test
+    fun `an old preparation's step requests and end change nothing, beside the preparation in progress`() {
+        val world = started()
+        with(world) {
+            prepareMs = 5_000
+            play("A")
+            next("B")
+            advance(DEBOUNCE_MS + 100)
+            val old = checkNotNull(coordinator.state.preparation).id
+            next("C")
+            val current = checkNotNull(coordinator.state.preparation)
+            assertNotEquals(old, current.id)
+            assertEquals(listOf("prepare B", "prepare C"), preparationGrants())
+
+            // What the cancelled preparation of B may still send, its job winding down.
+            val events =
+                listOf(
+                    CoordinatorEvent.StepRequested(old, RunStep.LOOKUPS),
+                    CoordinatorEvent.StepRequested(old, RunStep.LABELS),
+                    CoordinatorEvent.StepRequested(old, RunStep.MODEL_CALL),
+                    CoordinatorEvent.PreparationEnded(old),
+                )
+            for (event in events) {
+                val before = coordinator.state
+                assertEquals("$event", emptyList<CoordinatorEffect>(), coordinator.on(event))
+                assertEquals("$event", before, coordinator.state)
+            }
+            assertEquals("C is still in progress, and B not prepared", current, coordinator.state.preparation)
+            assertEquals(null, coordinator.state.prepared)
+        }
+    }
+
+    @Test
+    fun `a preparation's step ends, current or old, change nothing`() {
+        val world = started()
+        with(world) {
+            prepareMs = 5_000
+            play("A")
+            next("B")
+            advance(DEBOUNCE_MS + 100)
+            val old = checkNotNull(coordinator.state.preparation).id
+            next("C")
+            val current = checkNotNull(coordinator.state.preparation).id
+            for (prep in listOf(old, current)) {
+                for (step in RunStep.entries) {
+                    val event = CoordinatorEvent.StepEnded(prep, step)
+                    val before = coordinator.state
+                    assertEquals("$event", emptyList<CoordinatorEffect>(), coordinator.on(event))
+                    assertEquals("$event", before, coordinator.state)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a preparation beside a failed call's Write again and Stop gets none of them`() {
+        val world = started()
+        with(world) {
+            acted()
+            failing = true
+            streamMs = 1_000
+            prepareMs = 60_000
+            play("A")
+            next("B")
+            // A's labels end at once, so B's preparation starts while A's call streams; the call
+            // fails, and A offers Write again, B's lookups still under way.
+            advance(DEBOUNCE_MS + streamMs)
+            val run = checkNotNull(coordinator.state.run).id
+            val prep = checkNotNull(coordinator.state.preparation).id
+            assertEquals(listOf("prepare B"), preparationGrants())
+            assertTrue(offersWriteFor("A"))
+
+            // A retry asked, or a call's end, under the preparation's id change nothing.
+            val events = listOf(CoordinatorEvent.RetryAsked(prep), CoordinatorEvent.StepEnded(prep, RunStep.MODEL_CALL))
+
+            fun changeNothing(moment: String) {
+                for (event in events) {
+                    val before = coordinator.state
+                    assertEquals("$moment: $event", emptyList<CoordinatorEffect>(), coordinator.on(event))
+                    assertEquals("$moment: $event", before, coordinator.state)
+                }
+            }
+            changeNothing("Write offered again")
+
+            // The tap grants the run its second call, which the preparation's events leave alone,
+            // and Stop shown for it stops that call.
+            failing = false
+            streamMs = 10_000
+            tap()
+            assertEquals(
+                listOf(CoordinatorEffect.Grant(run, RunStep.MODEL_CALL)),
+                effects.filter { it is CoordinatorEffect.Grant && it.run == run && it.step == RunStep.MODEL_CALL },
+            )
+            assertEquals(CallId(run, 2), coordinator.state.stopCall)
+            changeNothing("the second call under way")
+            stopTap()
+            assertEquals(
+                listOf(CoordinatorEffect.StopCall(CallId(run, 2))),
+                effects.filterIsInstance<CoordinatorEffect.StopCall>(),
+            )
+            changeNothing("the second call stopped")
+
+            // A model call the preparation asks for is never granted.
+            send(CoordinatorEvent.StepRequested(prep, RunStep.MODEL_CALL))
+            assertEquals(
+                emptyList<CoordinatorEffect>(),
+                effects.filter { it is CoordinatorEffect.Grant && it.run == prep && it.step == RunStep.MODEL_CALL },
+            )
+            assertEquals(prep, coordinator.state.preparation?.id)
+            assertEquals(mapOf("Zero" to 1, "A" to 2), calls)
         }
     }
 
