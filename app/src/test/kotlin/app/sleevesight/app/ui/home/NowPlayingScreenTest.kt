@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -25,6 +26,7 @@ import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -347,6 +349,32 @@ class NowPlayingScreenTest {
                 ),
             )
             chip.assertTouchHeightIsEqualTo(48.dp)
+        }
+
+    @Test
+    fun theLinesTextsStartInOneColumnAndAChipRowSharesItsCentre() =
+        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)))) {
+            // The tags differ in width (MB1, W1, WD1); the texts beside them start at one x.
+            val starts =
+                listOf(HomeFixtures.musicBrainzLine, HomeFixtures.wikipediaLine, HomeFixtures.wikidataLine).map {
+                    compose
+                        .onNodeWithText(it.text)
+                        .fetchSemanticsNode()
+                        .positionInRoot.x
+                }
+            assertEquals(1, starts.distinct().size)
+            // A chip that filters is at least 48 dp tall, one that does not (L, no key) may be less; a row
+            // has one centre. (Robolectric's text lays them out at one height, so on the phone it shows.)
+            val chips =
+                SourceId.entries
+                    .flatMap { compose.onAllNodesWithTag(CHIP_PREFIX + it.tag).fetchSemanticsNodes() }
+                    // Unclipped: a chip scrolled out of view has empty bounds in the root.
+                    .map { Rect(it.positionInRoot, it.size.toSize()) }
+            val rows = chips.groupBy { chip -> chips.first { it.top < chip.bottom && chip.top < it.bottom }.top }
+            for (row in rows.values) {
+                val centres = row.map { it.center.y }
+                assertTrue("centres $centres", centres.maxOf { it } - centres.minOf { it } < 0.5f)
+            }
         }
 
     @Test
