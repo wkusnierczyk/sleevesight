@@ -1,0 +1,4 @@
+What's new in 0.1.1:
+- "What leaves the phone" (on the home screen) now says exactly what the privacy policy says: the album goes to the AI service only, never to the sources, and it lists everything the app reads from your player.
+- Sources: the source chips sit level in their row, and the source lines' text starts in one column.
+- Updated for Android 17 (still runs on Android 8 and later).
