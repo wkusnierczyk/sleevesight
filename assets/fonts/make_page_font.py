@@ -1,5 +1,5 @@
-"""Cut Roboto Flex down to what the product page (`index.html`) and its alternative
-(`design/landing-tile.html`) use, as `RobotoFlex-page.woff2`.
+"""Cut Roboto Flex down to what the product page (`index.html`) and its alternatives
+(`design/landing-tile.html`, `design/landing-record.html`) use, as `RobotoFlex-page.woff2`.
 
 The pages set their text in Roboto Flex and load nothing from another site, so they carry their own
 copy of the font, as the brand sheet does (`make_sheet_font.py`). Without it, the page took whatever
@@ -8,7 +8,7 @@ The full variable font is about 1.7 MB; this copy keeps
   - the axes the pages vary: weight 400-700, width 88-100% (the headings are at 88-92%), and optical
     size over its whole range, which the browser sets from the font size; every other axis is fixed
     at its default, slant included (italic text, `<i>` and `.chat .by`, is slanted by the browser);
-  - the characters in both pages (every one in the files, markup and script included, so text the
+  - the characters in the pages (every one in the files, markup and script included, so text the
     scripts write is covered), plus printable ASCII, Latin-1 and the common punctuation (dashes,
     curly quotes, the ellipsis), so ordinary edits need no rebuild.
 Text added to the pages in a character outside that set falls back to the next font in the stack,
@@ -29,7 +29,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
-PAGES = ['index.html', 'design/landing-tile.html']
+PAGES = ['index.html', 'design/landing-tile.html', 'design/landing-record.html']
 OUT = 'assets/fonts/RobotoFlex-page.woff2'
 AXES = {'wght': (400, 700), 'wdth': (88, 100), 'opsz': (8, 144)}
 EXTRA = set(range(0x20, 0x7f)) | set(range(0xa0, 0x100)) | set(range(0x2010, 0x2027))
