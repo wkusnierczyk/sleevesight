@@ -127,7 +127,7 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
     }
 
     @Test
-    fun aMarkThatCannotBeReadRelearnsNothing() {
+    fun aMarkThatCannotBeReadRelearnsNothingAndIsTakenAsAResetThen() {
         val spotify = spotify()
         spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
         spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
@@ -136,6 +136,38 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         val restarted = restarted()
         assertTrue(restarted.restored.value)
         assertEquals(emptyMap<String, Any>(), restarted.learned.value)
+        // Written anew as of then: the next start relearns only what is recorded after it.
+        assertEquals(history.lastChangeId(), mark.id)
+        mark.failRead = false
+        assertEquals(emptyMap<String, Any>(), restarted().learned.value)
+        spotify.endsAt(30_000, LENGTH_MS, cluster = true, next = "Four", leftMs = 5_000)
+        spotify.endsAt(40_000, LENGTH_MS, cluster = true, next = "Five", leftMs = 5_000)
+        assertEquals(mapOf(SPOTIFY to 5.seconds), restarted().learned.value)
+    }
+
+    @Test
+    fun aMarkFromAnEarlierHistoryHidesNoChangeOfThisOne() {
+        // The history was created anew since the reset (a corrupt file is deleted): ids from 1 again.
+        val spotify = spotify()
+        spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
+        spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
+        mark.id = 5_000
+
+        assertEquals(mapOf(SPOTIFY to 12.seconds), restarted().learned.value)
+        assertEquals(0L, mark.id)
+    }
+
+    @Test
+    fun aMarkAtTheSequenceAfterAClearIsKept() {
+        // Cleared after the reset: the table is empty, but its ids go on from the mark.
+        val spotify = spotify()
+        spotify.endsAt(10_000, LENGTH_MS, cluster = true, next = "Two")
+        spotify.endsAt(20_000, LENGTH_MS, cluster = true, next = "Three")
+        assertTrue(runBlocking { learning.reset() })
+        assertTrue(scope.async { recorder.clear() }.getCompleted())
+
+        assertEquals(emptyMap<String, Any>(), restarted().learned.value)
+        assertEquals(2L, mark.id)
     }
 
     private val mark = MemoryMark()
