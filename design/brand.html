@@ -158,7 +158,11 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 /* The shirts: one card per design, showing the white tee or the black one. The switch above them sets
    every card; each card's own switch then flips that card alone. Both tees are drawn, one over the
    other, and the hidden one fades out. */
-.shirts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.shirts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px}
+/* Each card spans two of the grid's rows, its header and its stage, and shares them with the cards
+   beside it (subgrid), so a caption that wraps makes every header in its row taller and the shirts
+   still line up. The space between rows of cards is the cards' own margin. */
+.shirts .card{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:0;margin-bottom:16px}
 @media (max-width:900px){.shirts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.shirts{grid-template-columns:minmax(0,1fr)}}
 .shirts .cap{justify-content:space-between;align-items:center}
