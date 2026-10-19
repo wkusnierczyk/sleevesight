@@ -11,6 +11,8 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import java.io.File
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.ZipFile
@@ -25,6 +27,10 @@ import java.util.zip.ZipFile
  * It reads the dex files themselves: every type a dex file refers to is in its type list, and every
  * class it defines is in its class definitions. Only types under [prefix] count, since a library
  * may refer to optional classes it looks up before use.
+ *
+ * It reads code only. `jvmMain` resources, which no module has yet, reach the APK by the same
+ * outgoing variants as `jvmMain` classes (`sleevesight.jvm-main`); `JvmMainSourceSetTest` guards
+ * those variants, and nothing checks the APK's resource entries.
  */
 abstract class CheckApkClasses : DefaultTask() {
     /** The variant's APK directory (`SingleArtifact.APK`); every `.apk` in it is read. */
@@ -51,12 +57,7 @@ abstract class CheckApkClasses : DefaultTask() {
         if (apks.isEmpty()) throw GradleException("No APK in ${apkDirectory.get().asFile}")
         val problems =
             apks.flatMap { apk ->
-                val dexes =
-                    ZipFile(apk).use { zip ->
-                        zip.entries().toList().filter { DEX_ENTRY.matches(it.name) }.map { zip.getInputStream(it).readBytes() }
-                    }
-                if (dexes.isEmpty()) throw GradleException("No dex file in $apk")
-                undefinedTypes(dexes.map(::readDex), prefix.get()).map { "${apk.name}: ${it.removePrefix("L").removeSuffix(";")}" }
+                undefinedTypes(dexesIn(apk), prefix.get()).map { "${apk.name}: ${it.removePrefix("L").removeSuffix(";")}" }
             }
         if (problems.isNotEmpty()) {
             throw GradleException(
@@ -76,6 +77,33 @@ abstract class CheckApkClasses : DefaultTask() {
     companion object {
         private val DEX_ENTRY = Regex("classes\\d*\\.dex")
 
+        /**
+         * The dex files of [apk], read with [readDex]. An APK that cannot be opened, or an entry
+         * that cannot be inflated or read as a dex file, fails naming the APK and the entry.
+         */
+        fun dexesIn(apk: File): List<Dex> {
+            val opened =
+                try {
+                    ZipFile(apk)
+                } catch (e: IOException) {
+                    throw GradleException("Unreadable APK $apk: $e", e)
+                }
+            val dexes =
+                opened.use { zip ->
+                    zip.entries().toList().filter { DEX_ENTRY.matches(it.name) }.map { entry ->
+                        try {
+                            readDex(zip.getInputStream(entry).use { it.readBytes() })
+                        } catch (e: IOException) {
+                            throw GradleException("Unreadable dex ${entry.name} in $apk: $e", e)
+                        } catch (e: GradleException) {
+                            throw GradleException("Unreadable dex ${entry.name} in $apk: ${e.message}", e)
+                        }
+                    }
+                }
+            if (dexes.isEmpty()) throw GradleException("No dex file in $apk")
+            return dexes
+        }
+
         /** The types under [prefix] that some dex file refers to and none defines, sorted; arrays count as their element type. */
         fun undefinedTypes(
             dexes: List<Dex>,
@@ -90,17 +118,45 @@ abstract class CheckApkClasses : DefaultTask() {
                 .sorted()
         }
 
-        /** Reads the type list and the class definitions of a dex file (`dex` format, any version). */
+        /**
+         * Reads the type list and the class definitions of a dex file, of a version up to
+         * [MAX_VERSION]. Those hold one dex each; from 041, a file can be a container of several,
+         * which this would read only the first of, so it fails on them rather than miss classes.
+         * D8 does not write 041 for the app's `minSdk`, 26 (#179). A file it cannot read, such as
+         * a truncated one, fails with a [GradleException].
+         */
         fun readDex(bytes: ByteArray): Dex {
             if (bytes.size < HEADER_SIZE || String(bytes, 0, 4, Charsets.ISO_8859_1) != "dex\n") {
                 throw GradleException("Not a dex file")
             }
+            val version = String(bytes, 4, 3, Charsets.ISO_8859_1)
+            if (!version.all { it in '0'..'9' } || version.toInt() > MAX_VERSION || bytes[7].toInt() != 0) {
+                throw GradleException("Unsupported dex version \"$version\" (read up to 0$MAX_VERSION)")
+            }
+            // Every dex file D8 writes is little-endian; a byte-swapped one would be read as nonsense.
+            val endian = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt(ENDIAN_TAG)
+            if (endian != ENDIAN_CONSTANT) {
+                throw GradleException("Unsupported dex byte order: endian tag 0x${endian.toUInt().toString(16)}, not 0x12345678")
+            }
+            return try {
+                readTables(bytes)
+            } catch (e: IndexOutOfBoundsException) {
+                throw GradleException("Corrupt dex file: $e", e)
+            } catch (e: IllegalArgumentException) {
+                throw GradleException("Corrupt dex file: $e", e)
+            }
+        }
+
+        private fun readTables(bytes: ByteArray): Dex {
             val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
             val stringIdsOff = buffer.getInt(STRING_IDS_OFF)
             val typeIdsSize = buffer.getInt(TYPE_IDS_SIZE)
             val typeIdsOff = buffer.getInt(TYPE_IDS_OFF)
             val classDefsSize = buffer.getInt(CLASS_DEFS_SIZE)
             val classDefsOff = buffer.getInt(CLASS_DEFS_OFF)
+            // Sizes no file this long could hold fail here rather than allocate a list for them.
+            require(typeIdsSize in 0..bytes.size / 4) { "type_ids_size $typeIdsSize" }
+            require(classDefsSize in 0..bytes.size / CLASS_DEF_SIZE) { "class_defs_size $classDefsSize" }
 
             fun string(index: Int): String {
                 var at = buffer.getInt(stringIdsOff + 4 * index)
@@ -117,7 +173,12 @@ abstract class CheckApkClasses : DefaultTask() {
             return Dex(types.toSet(), classes.toSet())
         }
 
+        /** The last dex version whose file holds a single dex. */
+        const val MAX_VERSION = 40
+
         private const val HEADER_SIZE = 0x70
+        private const val ENDIAN_TAG = 0x28
+        private const val ENDIAN_CONSTANT = 0x12345678
         private const val STRING_IDS_OFF = 0x3C
         private const val TYPE_IDS_SIZE = 0x40
         private const val TYPE_IDS_OFF = 0x44

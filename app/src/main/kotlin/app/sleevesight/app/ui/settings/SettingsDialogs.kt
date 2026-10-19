@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.core.ai.AiErrorKind
@@ -62,14 +63,17 @@ internal fun <T> ChoiceDialog(
 /**
  * Enters, replaces or removes the key [id]. The saved key is never shown, and what is typed lives
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
- * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] return
- * whether they succeeded: the dialog closes only then, and otherwise says so and keeps what was typed.
+ * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
+ * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
+ * only a key the key store could not seal suggests *Reset saved keys*, which cannot cure a file that
+ * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
+ * result says.
  */
 @Composable
 internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
-    onSave: suspend (String) -> Boolean,
+    onSave: suspend (String) -> SaveResult,
     onRemove: suspend () -> Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -79,21 +83,19 @@ internal fun KeyDialog(
     val scope = rememberCoroutineScope()
     val value = typed.trim()
 
-    fun run(
-        @StringRes failure: Int,
-        action: suspend () -> Boolean,
-    ) {
+    // Runs [action], which returns what to say of its failure, or null when it succeeded.
+    fun run(action: suspend () -> Int?) {
         busy = true
         failed = null
         scope.launch {
-            val done = action()
+            val failure = action()
             busy = false
-            if (done) onDismiss() else failed = failure
+            if (failure == null) onDismiss() else failed = failure
         }
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(keyName(id))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -120,7 +122,7 @@ internal fun KeyDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { run(R.string.settings_key_save_failed) { onSave(value) } },
+                onClick = { run { saveFailure(onSave(value)) } },
                 enabled = value.isNotEmpty() && !busy,
             ) { Text(stringResource(R.string.settings_save)) }
         },
@@ -128,15 +130,24 @@ internal fun KeyDialog(
             Row {
                 if (state != SecretState.ABSENT) {
                     TextButton(
-                        onClick = { run(R.string.settings_key_remove_failed, onRemove) },
+                        onClick = { run { R.string.settings_key_remove_failed.takeUnless { onRemove() } } },
                         enabled = !busy,
                     ) { Text(stringResource(R.string.settings_remove)) }
                 }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) }
+                TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
             }
         },
     )
 }
+
+/** What the key dialog says of a save that ended as [result]; null for none. */
+@StringRes
+private fun saveFailure(result: SaveResult): Int? =
+    when (result) {
+        SaveResult.SAVED -> null
+        SaveResult.NOT_SEALED -> R.string.settings_key_save_failed
+        SaveResult.NOT_WRITTEN -> R.string.settings_key_write_failed
+    }
 
 /** What a [ConfirmDialog] says: its [title], what the action does, its button, and its failure. */
 internal class Confirmation(
@@ -149,7 +160,7 @@ internal class Confirmation(
 /**
  * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
  * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
- * then, and otherwise says so.
+ * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed.
  */
 @Composable
 internal fun ConfirmDialog(
@@ -161,7 +172,7 @@ internal fun ConfirmDialog(
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(confirmation.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,7 +200,9 @@ internal fun ConfirmDialog(
                 enabled = !busy,
             ) { Text(confirmation.confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+        },
     )
 }
 

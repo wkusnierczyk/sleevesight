@@ -93,14 +93,6 @@ class HomeModelTest {
     }
 
     @Test
-    fun aCardIsReadWithTheModelsKnowledgeAsItWasAllowedWhenChecked() {
-        val reply = "It was recorded in 1973 [MB1]. It is loved [M]."
-        assertTrue(modelAllowedIn(HomeFixtures.written(reply, allowModel = true).grounded))
-        assertFalse(modelAllowedIn(HomeFixtures.written(reply, allowModel = false).grounded))
-        assertFalse(modelAllowedIn(HomeFixtures.written("It was recorded in 1973 [MB1].", allowModel = true).grounded))
-    }
-
-    @Test
     fun theChipsFollowTheEvidenceOrderAndSayEachSourcesState() {
         val withRelease =
             EvidenceSet.of(

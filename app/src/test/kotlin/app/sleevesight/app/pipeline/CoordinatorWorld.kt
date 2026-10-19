@@ -172,7 +172,14 @@ internal class World {
     private val keys = HashMap<RunId, RunKey>()
     private val pendingCards = HashMap<RunId, Pair<Pair<RunKey, Int>, String>>()
 
-    fun send(event: CoordinatorEvent) = coordinator.on(event).forEach(::perform)
+    /** Every effect the coordinator has answered with, in order. */
+    val effects = mutableListOf<CoordinatorEffect>()
+
+    fun send(event: CoordinatorEvent) =
+        coordinator.on(event).forEach {
+            effects += it
+            perform(it)
+        }
 
     private fun schedule(
         delayMs: Long,
@@ -398,7 +405,8 @@ internal class World {
 
     fun offersWriteFor(title: String) = coordinator.state.offersWrite(key(title))
 
-    fun card(text: String) = Card(InsightState.Written(GroundedText(text, emptyList()), cached = false), null)
+    fun card(text: String) =
+        Card(InsightState.Written(GroundedText(text, emptyList(), allowModel = false), cached = false), null)
 
     /** The text of the card the ledger holds. */
     fun cardText(): String? =

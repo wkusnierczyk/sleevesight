@@ -26,14 +26,14 @@ import kotlin.time.Duration.Companion.seconds
  *
  * **A file that cannot be read** (an I/O error) never reads as the defaults, which would follow a
  * player the user switched off, or use a source they turned off: the read is retried, after
- * [FIRST_RETRY] and then twice as long each time up to [MAX_RETRY], until one succeeds, and the
- * flows go on with each change after it. Meanwhile [settings] emits nothing new, so the screen
- * keeps what it showed, or shows nothing yet. [followedPlayers] emits nothing before its first
- * read succeeds, so the session layer waits, as for any first read; a failure after a read names
- * no player, so the session layer follows none until the retry succeeds. A file DataStore
- * cannot parse is replaced by an empty one (the corruption handler where the store is created):
- * the settings return to their defaults. Losing the settings costs the user their choices, never
- * a key or the cache.
+ * [FIRST_RETRY] and then twice as long each time up to [MAX_RETRY] ([backoff]), counted from the
+ * last read that succeeded, until one succeeds, and the flows go on with each change after it.
+ * Meanwhile [settings] emits nothing new, so the screen keeps what it showed, or shows nothing
+ * yet. [followedPlayers] emits nothing before its first read succeeds, so the session layer
+ * waits, as for any first read; a failure after a read names no player, so the session layer
+ * follows none until the retry succeeds. A file DataStore cannot parse is replaced by an empty
+ * one (the corruption handler where the store is created): the settings return to their defaults.
+ * Losing the settings costs the user their choices, never a key or the cache.
  */
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
@@ -62,7 +62,10 @@ class SettingsStore(
             )
         }.distinctUntilChanged()
 
-    /** Applies [transform] to the stored settings, atomically. */
+    /**
+     * Applies [transform] to the stored settings, atomically. Only the settings it changes are
+     * written ([SettingsCodec.write]), so what a later version stored survives a downgrade.
+     */
     suspend fun update(transform: (Settings) -> Settings) {
         dataStore.edit { prefs -> SettingsCodec.write(transform(SettingsCodec.read(prefs)), prefs) }
     }
@@ -87,20 +90,37 @@ class SettingsStore(
         val MAX_RETRY: Duration = 30.seconds
 
         /** Doublings of [FIRST_RETRY] past [MAX_RETRY]; more would only grow the number. */
-        private const val DOUBLINGS = 7L
+        private const val DOUBLINGS = 7
 
         /**
-         * Retries this flow after each I/O error, with a backoff from [FIRST_RETRY] to [MAX_RETRY],
-         * calling [onFailure] first; any other error ends it.
+         * The wait before retrying a read after [failures] failed reads since the last that
+         * succeeded (0 for the first): [FIRST_RETRY], doubled for each, up to [MAX_RETRY].
          */
-        private fun <T> Flow<T>.retryReads(onFailure: suspend FlowCollector<T>.() -> Unit): Flow<T> =
-            retryWhen { cause, attempt ->
-                (cause is IOException).also { io ->
-                    if (io) {
-                        onFailure()
-                        delay(minOf(FIRST_RETRY * 2.0.pow(attempt.coerceAtMost(DOUBLINGS).toInt()), MAX_RETRY))
-                    }
-                }
+        internal fun backoff(failures: Int): Duration =
+            minOf(FIRST_RETRY * 2.0.pow(failures.coerceIn(0, DOUBLINGS)), MAX_RETRY)
+
+        /**
+         * Retries this flow after each I/O error, after [backoff], calling [onFailure] first; any
+         * other error ends it. The failures are counted per collection, and from the last value:
+         * after a read that succeeds, the next failure is retried after [FIRST_RETRY] again.
+         */
+        private fun <T> Flow<T>.retryReads(onFailure: suspend FlowCollector<T>.() -> Unit): Flow<T> {
+            val reads = this
+            return flow {
+                var failures = 0
+                emitAll(
+                    reads
+                        .onEach { failures = 0 }
+                        .retryWhen { cause, _ ->
+                            (cause is IOException).also { io ->
+                                if (io) {
+                                    onFailure()
+                                    delay(backoff(failures++))
+                                }
+                            }
+                        },
+                )
             }
+        }
     }
 }

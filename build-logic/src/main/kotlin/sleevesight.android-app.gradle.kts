@@ -79,16 +79,18 @@ androidComponents {
         val suffix = variant.name.replaceFirstChar { it.uppercase() }
         val runtimeRoot = variant.runtimeConfiguration.incoming.resolutionResult.rootComponent
         val compileRoot = variant.compileConfiguration.incoming.resolutionResult.rootComponent
-        // The variant's compile classpath and its tests': the tests are the module's code too, so a
-        // module kept off one is kept off the others.
+        // The variant's tests, unit and instrumented: they are the module's code too, so a module kept
+        // off the variant's compile classpath (`compile-forbidden`) is kept off theirs, and a direct
+        // dependency they declare, at compile or at run time, is held to the module's list. The
+        // HTTP-client rule (`modulesOutsideNetwork`) reads the variant's own classpaths only.
+        val tests =
+            listOfNotNull((variant as? HasUnitTest)?.unitTest, (variant as? HasAndroidTest)?.androidTest)
         val compileRoots =
-            (
-                listOf(variant.compileConfiguration) +
-                    listOfNotNull(
-                        (variant as? HasUnitTest)?.unitTest?.compileConfiguration,
-                        (variant as? HasAndroidTest)?.androidTest?.compileConfiguration,
-                    )
-            ).map { it.incoming.resolutionResult.rootComponent }.toTypedArray()
+            (listOf(variant.compileConfiguration) + tests.map { it.compileConfiguration })
+                .map { it.incoming.resolutionResult.rootComponent }
+                .toTypedArray()
+        val testRuntimeRoots =
+            tests.map { it.runtimeConfiguration.incoming.resolutionResult.rootComponent }.toTypedArray()
 
         val manifest =
             tasks.register<CheckManifest>("checkManifest$suffix") {
@@ -115,7 +117,7 @@ androidComponents {
                 description = "Fails on dependencies the module graph does not allow."
                 rules = graphRules
                 modulePath = project.path
-                projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, *compileRoots)
+                projectDependencies = CheckModuleGraph.projectDependenciesOf(runtimeRoot, *compileRoots, *testRuntimeRoots)
                 // The compile classpaths only: `:net` is on the runtime classpath, since the APK ships it.
                 compileClasspathProjects = CheckModuleGraph.projectsReachableFrom(*compileRoots)
                 modulesOutsideNetwork =

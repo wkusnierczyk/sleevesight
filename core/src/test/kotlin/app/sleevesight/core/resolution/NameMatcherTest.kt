@@ -72,6 +72,22 @@ class NameMatcherTest {
     }
 
     @Test
+    fun `a variant counts only words with letters or digits, sets a leading the aside, and knows Doctor`() {
+        // A lone dash is no word: one word is left, a stage name of its own.
+        assertFalse(names.honorificVariant("Mr. - Big", "Big"))
+        assertFalse(names.honorificVariant("Dr. . John", "John"))
+        // A leading `the` aside, as for a credit by name.
+        assertTrue(names.honorificVariant("Mr. Jane Smith", "The Jane Smith"))
+        assertTrue(names.honorificVariant("Mrs. The Jane Smith", "Jane Smith"))
+        assertFalse(names.honorificVariant("Mr. The", "the"))
+        // `Doctor` written out, as `Mister` is.
+        assertTrue(names.honorificVariant("Doctor Jane Smith", "Jane Smith"))
+        assertFalse(names.honorificVariant("Doctor John", "John"))
+        // Words are split at any whitespace.
+        assertTrue(names.honorificVariant("Mr.\tA  Balladeer", "a balladeer"))
+    }
+
+    @Test
     fun `title similarity is one for equal keys and falls with each edit`() {
         assertEquals(1.0, names.titleSimilarity("Here Comes The Sun", "Here Comes the Sun"))
         assertTrue(names.titleSimilarity("Sundown", "Sundown (Live)") < ResolutionThresholds.TITLE_SIMILARITY)

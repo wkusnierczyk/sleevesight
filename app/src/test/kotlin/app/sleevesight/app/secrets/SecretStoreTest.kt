@@ -46,9 +46,23 @@ class SecretStoreTest {
     @After
     fun close() = stores.close()
 
-    private fun store(cipherKey: SecretKey = key) = SecretStore(stores.open("secrets"), testCipher(cipherKey))
+    /** A store over the file `secrets`; on the JVM `SDK_INT` is 0, so [legacy] is always given. */
+    private fun store(
+        cipherKey: SecretKey = key,
+        legacy: Boolean = false,
+    ) = SecretStore(stores.open("secrets"), testCipher(cipherKey), legacyKeystore = legacy)
 
     private fun SecretStore.state(id: SecretId) = runBlocking { states.first().getValue(id) }
+
+    /** Saves [value] as [id] in [dataStore] with the test's key, as an earlier run of the app would. */
+    private suspend fun saveEarlier(
+        dataStore: DataStore<Preferences>,
+        id: SecretId,
+        value: String,
+    ) {
+        val earlier = SecretStore(dataStore, testCipher(key), legacyKeystore = false)
+        assertEquals(SaveResult.SAVED, earlier.set(id, Secret(value)))
+    }
 
     @Test
     fun aKeyRoundTripsAcrossARestart() =
@@ -118,7 +132,7 @@ class SecretStoreTest {
     fun aDamagedEntryIsUnreadable() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            val store = SecretStore(dataStore, testCipher(key))
+            val store = SecretStore(dataStore, testCipher(key), legacyKeystore = false)
             store.set(SecretId.LASTFM, Secret(LASTFM_KEY))
             dataStore.edit { prefs ->
                 val name = stringPreferencesKey("secret.source.lastfm")
@@ -136,7 +150,7 @@ class SecretStoreTest {
     fun aSealedValueMovedToAnotherEntryDoesNotOpenThere() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            val store = SecretStore(dataStore, testCipher(key))
+            val store = SecretStore(dataStore, testCipher(key), legacyKeystore = false)
             store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY))
             dataStore.edit { prefs ->
                 prefs[stringPreferencesKey("secret.source.exa")] =
@@ -179,12 +193,12 @@ class SecretStoreTest {
     private fun aFailedSaveDeletesNothing(failure: Exception) =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
 
             // The key store fails for both of the save's attempts, then recovers.
             val keys = failing(failure, times = 2)
-            val store = SecretStore(dataStore, SecretCipher(keys))
-            assertFalse(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
+            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
             assertEquals(0, keys.deletions)
             assertEquals(SecretState.SAVED, store.state(SecretId.LASTFM))
             assertEquals(LASTFM_KEY, store.get(SecretId.LASTFM)?.reveal())
@@ -209,8 +223,8 @@ class SecretStoreTest {
     fun aSaveSucceedsWhenTheRetryWorks() =
         runBlocking {
             val keys = failing(InvalidKeyException("stale key object"), times = 1)
-            val store = SecretStore(stores.open("secrets"), SecretCipher(keys))
-            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            val store = SecretStore(stores.open("secrets"), SecretCipher(keys), legacyKeystore = false)
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.deletions)
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
         }
@@ -219,7 +233,7 @@ class SecretStoreTest {
     fun aKeyStoreThatKeepsFailingIsResetByTheUser() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
 
             // The stored key fails every time until it is deleted, as a corrupt key blob would.
             val keys =
@@ -227,8 +241,8 @@ class SecretStoreTest {
                     override fun find(): SecretKey? =
                         if (deletions == 0) throw InvalidKeyException("invalid key blob") else super.find()
                 }
-            val store = SecretStore(dataStore, SecretCipher(keys))
-            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
+            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
             assertEquals(0, keys.deletions)
 
@@ -236,7 +250,7 @@ class SecretStoreTest {
             assertEquals(1, keys.deletions)
             assertEquals(SecretId.entries.associateWith { SecretState.ABSENT }, store.states.first())
 
-            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
         }
 
@@ -244,12 +258,12 @@ class SecretStoreTest {
     fun aResetKeystoreGetsANewKeyAndTheOldKeysReadUnreadable() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
 
             // From API 31, the Keystore has no key under the alias any more: a save makes one.
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
-            assertTrue(store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            assertEquals(SaveResult.SAVED, store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
             assertEquals(1, keys.creations)
             assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
@@ -260,7 +274,7 @@ class SecretStoreTest {
     fun aReadWithNoKeyCreatesNone() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
 
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
@@ -273,18 +287,19 @@ class SecretStoreTest {
     fun beforeApi31ASaveWithKeysStoredAndNoKeyFoundCreatesNothing() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
 
             // Before API 31 a failed lookup reads as no key, and creating one would delete the
             // existing key: with a key stored, the save fails instead.
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = true)
-            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.creations)
             assertEquals(0, keys.deletions)
             assertEquals(SecretState.ABSENT, store.state(SecretId.EXA))
             // The stored key is untouched and opens once the key store finds its key again.
-            assertEquals(LASTFM_KEY, SecretStore(dataStore, testCipher(key)).get(SecretId.LASTFM)?.reveal())
+            val found = SecretStore(dataStore, testCipher(key), legacyKeystore = false)
+            assertEquals(LASTFM_KEY, found.get(SecretId.LASTFM)?.reveal())
         }
 
     @Test
@@ -292,7 +307,7 @@ class SecretStoreTest {
         runBlocking {
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(stores.open("secrets"), SecretCipher(keys), legacyKeystore = true)
-            assertTrue(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(1, keys.creations)
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
         }
@@ -307,7 +322,8 @@ class SecretStoreTest {
                 }
             val keys = SoftwareKeySource(current = null)
             val store = SecretStore(unreadable, SecretCipher(keys), legacyKeystore = true)
-            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            // A storage failure, not the key store's: no reset is offered for it.
+            assertEquals(SaveResult.NOT_WRITTEN, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.creations)
         }
 
@@ -319,7 +335,7 @@ class SecretStoreTest {
                 SecretId.entries.map { id ->
                     async(Dispatchers.IO) { store.set(id, Secret("value of $id")) }
                 }
-            assertTrue(saves.awaitAll().all { it })
+            assertTrue(saves.awaitAll().all { it == SaveResult.SAVED })
             for (id in SecretId.entries) assertEquals("value of $id", store.get(id)?.reveal())
         }
 
@@ -327,20 +343,20 @@ class SecretStoreTest {
     fun aFailedSaveLeavesTheOtherKeysShownSaved() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.LASTFM, Secret(LASTFM_KEY))
+            saveEarlier(dataStore, SecretId.LASTFM, LASTFM_KEY)
             val keys =
                 object : SoftwareKeySource(key) {
                     @Volatile var down = false
 
                     override fun find(): SecretKey? = if (down) throw InvalidKeyException("busy") else super.find()
                 }
-            val store = SecretStore(dataStore, SecretCipher(keys))
+            val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = false)
             val seen = mutableListOf<SecretState>()
             val watcher = launch(Dispatchers.IO) { store.states.collect { seen += it.getValue(SecretId.LASTFM) } }
             withTimeout(5_000) { while (seen.isEmpty()) delay(10) }
 
             keys.down = true
-            assertFalse(store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
             keys.down = false
             delay(200)
             watcher.cancel()
@@ -351,12 +367,12 @@ class SecretStoreTest {
     fun aKeyStoreThatCannotLoadReadsAsUnreadable() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.EXA, Secret("exa"))
+            saveEarlier(dataStore, SecretId.EXA, "exa")
             val unloadable =
                 object : SoftwareKeySource(key) {
                     override fun find(): SecretKey? = throw IOException("cannot load")
                 }
-            val store = SecretStore(dataStore, SecretCipher(unloadable))
+            val store = SecretStore(dataStore, SecretCipher(unloadable), legacyKeystore = false)
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.EXA))
             assertNull(store.get(SecretId.EXA))
         }
@@ -365,14 +381,14 @@ class SecretStoreTest {
     fun aStoreThatCannotWriteReportsTheFailure() =
         runBlocking {
             val dataStore = stores.open("secrets")
-            SecretStore(dataStore, testCipher(key)).set(SecretId.EXA, Secret("exa"))
+            saveEarlier(dataStore, SecretId.EXA, "exa")
             val failing =
                 object : DataStore<Preferences> by dataStore {
                     override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
                         throw IOException("disk full")
                 }
-            val store = SecretStore(failing, testCipher(key))
-            assertFalse(store.set(SecretId.EXA, Secret("other")))
+            val store = SecretStore(failing, testCipher(key), legacyKeystore = false)
+            assertEquals(SaveResult.NOT_WRITTEN, store.set(SecretId.EXA, Secret("other")))
             assertFalse(store.clear(SecretId.EXA))
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
         }
@@ -421,7 +437,7 @@ class SecretStoreTest {
         runBlocking {
             val flaky = FlakyDataStore(stores.open("secrets"))
             flaky.failures.set(1)
-            val store = SecretStore(flaky, testCipher(key))
+            val store = SecretStore(flaky, testCipher(key), legacyKeystore = false)
             val changes = Changes(store, this)
             // The failed read emits nothing (no rebuild without keys); the retry reads the file.
             changes.reach(1)
@@ -437,7 +453,7 @@ class SecretStoreTest {
             // Each read gives the file and then fails: failure, recovery, failure, five times over.
             val flaky = FlakyDataStore(stores.open("secrets"))
             flaky.failuresAfterAValue.set(5)
-            val store = SecretStore(flaky, testCipher(key))
+            val store = SecretStore(flaky, testCipher(key), legacyKeystore = false)
             val changes = Changes(store, this)
             // From the first retry's wait each time (250 ms), about 1.3 s; doubling, it would be 7.75 s.
             withTimeout(4_000) { while (flaky.reads.get() < 6) delay(10) }
@@ -447,7 +463,110 @@ class SecretStoreTest {
             changes.stop()
         }
 
+    @Test
+    fun beforeApi31AResetThenASaveCreatesOneKey() =
+        runBlocking {
+            val keys = SoftwareKeySource(key)
+            val store = SecretStore(stores.open("secrets"), SecretCipher(keys), legacyKeystore = true)
+            assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
+            assertEquals(0, keys.creations)
+
+            assertTrue(store.reset())
+            assertEquals(1, keys.deletions)
+            // Nothing is stored after the reset, so the save may make the key, once.
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(SaveResult.SAVED, store.set(SecretId.ANTHROPIC, Secret(ANTHROPIC_KEY)))
+            assertEquals(1, keys.creations)
+            assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+            assertEquals(ANTHROPIC_KEY, store.get(SecretId.ANTHROPIC)?.reveal())
+        }
+
+    private fun aResetRacingASaveLeavesNoUnreadableKey(legacy: Boolean) =
+        runBlocking {
+            repeat(RACES) { race ->
+                val dataStore = stores.open("race-$legacy-$race")
+                val keys = SoftwareKeySource(key)
+                val store = SecretStore(dataStore, SecretCipher(keys), legacyKeystore = legacy)
+                assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
+
+                val save = async(Dispatchers.IO) { store.set(SecretId.EXA, Secret("exa")) }
+                val reset = async(Dispatchers.IO) { store.reset() }
+                // One runs after the other, in either order: both succeed.
+                assertEquals(SaveResult.SAVED, save.await())
+                assertTrue(reset.await())
+
+                // Saved before the reset, the key is gone; saved after it, under a new Keystore
+                // key, it opens. Never a key left that cannot be opened.
+                val states = store.states.first()
+                assertEquals(SecretState.ABSENT, states.getValue(SecretId.LASTFM))
+                when (states.getValue(SecretId.EXA)) {
+                    SecretState.ABSENT -> assertEquals(0, keys.creations)
+                    SecretState.SAVED -> assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+                    SecretState.UNREADABLE -> throw AssertionError("An unreadable key after race $race")
+                }
+            }
+        }
+
+    @Test
+    fun aResetRacingASaveLeavesNoUnreadableKey() = aResetRacingASaveLeavesNoUnreadableKey(legacy = false)
+
+    @Test
+    fun beforeApi31AResetRacingASaveLeavesNoUnreadableKey() = aResetRacingASaveLeavesNoUnreadableKey(legacy = true)
+
+    @Test
+    fun aResetThatCannotWriteStillDeletesTheKeystoreKeyAndARetryRemovesTheRest() =
+        runBlocking {
+            val flaky = FlakyDataStore(stores.open("secrets"))
+            val keys = SoftwareKeySource(key)
+            val store = SecretStore(flaky, SecretCipher(keys), legacyKeystore = false)
+            assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
+
+            flaky.writeFailures.set(1)
+            assertFalse(store.reset())
+            // The key removed is no longer usable: its Keystore key is gone, and the entry left
+            // cannot be opened.
+            assertEquals(1, keys.deletions)
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
+            assertNull(store.get(SecretId.LASTFM))
+
+            // From API 31 a save makes a new Keystore key meanwhile; the entry left stays unreadable.
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.creations)
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
+
+            // A reset that can write removes everything.
+            assertTrue(store.reset())
+            assertEquals(SecretId.entries.associateWith { SecretState.ABSENT }, store.states.first())
+        }
+
+    @Test
+    fun beforeApi31AResetThatCannotWriteLeavesSavesFailingUntilARetry() =
+        runBlocking {
+            val flaky = FlakyDataStore(stores.open("secrets"))
+            val keys = SoftwareKeySource(key)
+            val store = SecretStore(flaky, SecretCipher(keys), legacyKeystore = true)
+            assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
+
+            flaky.writeFailures.set(1)
+            assertFalse(store.reset())
+            assertEquals(1, keys.deletions)
+            assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
+
+            // An entry is still stored, so no Keystore key may be made: the save fails in the key
+            // store, which offers *Reset saved keys* again.
+            assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(0, keys.creations)
+
+            assertTrue(store.reset())
+            assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
+            assertEquals(1, keys.creations)
+            assertEquals("exa", store.get(SecretId.EXA)?.reveal())
+        }
+
     private companion object {
+        /** Races of a reset and a save, each on a file of its own. */
+        const val RACES = 20
+
         // Not real keys.
         const val ANTHROPIC_KEY = "sk-ant-test-0123456789abcdefghijklmnop"
         const val LASTFM_KEY = "0123456789abcdef0123456789abcdef"

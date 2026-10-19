@@ -43,13 +43,18 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * MusicBrainz through one [RememberedMusicBrainz], which keeps its answers for a short time: what
  * preparing the next track looks up ahead (D13) is then not asked again when the track plays. The
  * CLI asks afresh for each track, so its reports time every request.
+ *
+ * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
+ * nothing otherwise: the CLI closes its own. The app never closes it, since its client lives as
+ * long as the process; its tests do, so each test's client goes with it.
  */
 class PipelineWiring internal constructor(
     private val net: NetClient,
     private val accentFolder: AccentFolder,
     resources: ResourceReader,
     rememberMusicBrainz: Boolean = false,
-) {
+    private val ownsNet: Boolean = false,
+) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
     // MusicBrainz's core data, for the resolver and Last.fm's check; the tags are asked apart.
@@ -82,8 +87,9 @@ class PipelineWiring internal constructor(
      *
      * The keys and the web engines, unlike those switches, are read here, when the list is built: a
      * key saved or removed, or an engine switched, takes a new list, and so a new pipeline. Each call
-     * builds new adapters, so whatever state one holds (`WikipediaSource`'s `IdentityCheck`
-     * included) starts again.
+     * builds new adapters, so whatever state one holds starts again: Last.fm's check of an artist's
+     * name (`ArtistCheck` in `LastFmMatch.kt`) loses the verdicts it keeps for up to 1024 names, so
+     * each name is checked again.
      */
     fun adapters(
         keys: SourceKeys,
@@ -118,6 +124,10 @@ class PipelineWiring internal constructor(
      * (`ArtFetcher`): what `AppGraph` adapts into its `HttpArt`.
      */
     suspend fun art(uri: String): ByteArray? = (artFetcher.fetch(uri) as? ArtResult.Image)?.bytes
+
+    override fun close() {
+        if (ownsNet) net.close()
+    }
 }
 
 /** The user's keys for the keyed sources: Last.fm's, and each web search engine's (D11). */

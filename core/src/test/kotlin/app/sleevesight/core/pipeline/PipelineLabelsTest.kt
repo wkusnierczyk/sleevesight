@@ -18,9 +18,13 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -73,6 +77,7 @@ class PipelineLabelsTest {
         provider: FakeProvider,
         cache: PipelineCache = PipelineCache.None,
         adapters: List<SourceAdapter> = listOf(musicBrainz(), lastFm()),
+        labels: MusicBrainzLabels = musicBrainzLabels,
     ) = Pipeline(
         PipelineParts(
             normalizer = Normalizer(JvmAccentFolder),
@@ -81,7 +86,7 @@ class PipelineLabelsTest {
             hasher = JvmHasher,
             ai = AiAccess(provider, Secret("sk-test")),
             cache = cache,
-            musicBrainzLabels = musicBrainzLabels,
+            musicBrainzLabels = labels,
         ),
         PipelineTime(timeSource = testTimeSource),
     ) { settings }
@@ -199,6 +204,66 @@ class PipelineLabelsTest {
             tagRequests.clear()
             settings = Settings(enabledSources = Settings.DEFAULT_SOURCES - SourceSwitch.MUSICBRAINZ)
             assertEquals(listOf("Folk", "Singer-Songwriter"), track().genres.map { it.genre.label })
+            assertEquals(emptyList(), tagRequests)
+        }
+
+    @Test
+    fun `a superseded track's tag request is cancelled with its run, and asked again for the next`() =
+        runTest {
+            var cancelled = 0
+            val slow =
+                MusicBrainzLabels(
+                    { mbid ->
+                        tagRequests += mbid
+                        try {
+                            delay(10.seconds)
+                        } catch (e: CancellationException) {
+                            cancelled++
+                            throw e
+                        }
+                        Lookup.Found(listOf("country"))
+                    },
+                    vocabulary,
+                )
+            val pipeline = pipeline(FakeProvider(), labels = slow)
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            assertEquals(listOf(MB_ARTIST), tagRequests)
+
+            changes.value = TrackChange(carefree)
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            assertEquals(1, cancelled)
+            // A cancelled request is not kept, so the next track by the artist asks again.
+            assertEquals(listOf(MB_ARTIST, MB_ARTIST), tagRequests)
+
+            // The follow loop runs in the background, which `advanceUntilIdle` does not wait for.
+            advanceTimeBy(10.seconds)
+            val state = pipeline.state.value!!
+            assertEquals("Carefree Highway", state.normalized.title)
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), state.genres.map { it.genre.label })
+            assertEquals(1, cancelled)
+        }
+
+    @Test
+    fun `labels switched off give none from a filled cache, and ask for no tags`() =
+        runTest {
+            val cache = MemoryCache()
+            val filled = track(cache = cache)
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), filled.genres.map { it.genre.label })
+            tagRequests.clear()
+
+            // Both caches hold labels now: Last.fm's result, with its labels and MusicBrainz's
+            // artists, in the retrieval cache, and the artist's tags in memory.
+            settings = settings.copy(labelSources = emptySet())
+            val off = track(cache = cache)
+            assertTrue(off.sources.values.all { (it as SourceState.Done).cached })
+            assertEquals(emptyList(), off.genres)
+
+            settings = settings.copy(labelSources = setOf(LabelSource.MUSICBRAINZ))
+            assertEquals(listOf("Country", "Folk"), track(cache = cache).genres.map { it.genre.label })
+            settings = settings.copy(labelSources = setOf(LabelSource.LASTFM))
+            assertEquals(listOf("Folk", "Singer-Songwriter"), track(cache = cache).genres.map { it.genre.label })
             assertEquals(emptyList(), tagRequests)
         }
 

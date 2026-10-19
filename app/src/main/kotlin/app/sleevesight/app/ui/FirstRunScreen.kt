@@ -30,6 +30,9 @@ import app.sleevesight.app.ui.theme.SleevesightTheme
  * What Sleevesight reads, what leaves the phone and to whom (design, *Privacy and security*), and
  * the way to notification access. [openAccessSettings] returns false when no settings screen for
  * it could be opened.
+ *
+ * It opens at the top in touch mode. Out of touch mode (a keyboard or a D-pad), its one button
+ * takes focus as it opens and is scrolled into view, so the focus shows.
  */
 @Composable
 fun FirstRunScreen(

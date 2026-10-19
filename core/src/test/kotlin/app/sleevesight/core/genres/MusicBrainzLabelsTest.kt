@@ -5,8 +5,6 @@ import app.sleevesight.core.resolution.Lookup
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -44,26 +42,23 @@ class MusicBrainzLabelsTest {
     fun `each artist's tags, in credit order, each genre once, linking its artist's page`() =
         runTest {
             val found = labels().labels(listOf("mb-a", "mb-b", "mb-a"))
-            assertEquals(listOf("Folk", "Country", "Rock"), found.labels.map { it.label })
+            assertEquals(listOf("Folk", "Country", "Rock"), found.map { it.label })
             assertEquals(
                 listOf("mb-a", "mb-a", "mb-b").map(MusicBrainzLabels::artistPage),
-                found.labels.map { it.url },
+                found.map { it.url },
             )
-            assertTrue(found.complete)
             assertEquals(listOf("mb-a", "mb-b"), asked)
         }
 
     @Test
-    fun `an artist MusicBrainz does not know gives none, and a failed request leaves the labels incomplete`() =
+    fun `an artist MusicBrainz does not know, or whose request failed, gives none`() =
         runTest {
             val labels = labels()
             val gone = labels.labels(listOf("mb-a", "mb-gone"))
-            assertEquals(listOf("Folk", "Country"), gone.labels.map { it.label })
-            assertTrue(gone.complete)
+            assertEquals(listOf("Folk", "Country"), gone.map { it.label })
 
             val down = labels.labels(listOf("mb-down", "mb-b"))
-            assertEquals(listOf("Country", "Rock"), down.labels.map { it.label })
-            assertFalse(down.complete)
+            assertEquals(listOf("Country", "Rock"), down.map { it.label })
         }
 
     @Test
@@ -75,7 +70,7 @@ class MusicBrainzLabelsTest {
             assertEquals(listOf("mb-a", "mb-gone", "mb-down", "mb-down"), asked)
 
             tags["mb-down"] = Lookup.Found(listOf("jazz"))
-            assertEquals(listOf("Jazz"), labels.labels(listOf("mb-down")).labels.map { it.label })
+            assertEquals(listOf("Jazz"), labels.labels(listOf("mb-down")).map { it.label })
         }
 
     @Test
@@ -99,7 +94,7 @@ class MusicBrainzLabelsTest {
     @Test
     fun `no artists, nothing asked`() =
         runTest {
-            assertEquals(MusicBrainzLabels.Found(emptyList(), complete = true), labels().labels(emptyList()))
+            assertEquals(emptyList(), labels().labels(emptyList()))
             assertEquals(emptyList(), asked)
         }
 

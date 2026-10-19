@@ -19,10 +19,12 @@ import kotlin.time.Duration.Companion.seconds
 
 /**
  * Preparing the next track ahead, *Evidence* (D13; `design/architecture.md`, *Preparing the next
- * track*), from the player's queue item: a title and artists, with no album and no length. What
- * it looks up is not kept under the track's own keys, which hold the length the playing track
- * will report; it fills what the playing track's run then finds by name or id, so that run sends
- * few requests or none to MusicBrainz, the slow part (R3):
+ * track*), from the player's queue item as the app reads it (`QueueEntry`: the title, the artists
+ * and the media id), with no album and no length: Spotify's items carry neither, and Castbox's
+ * carry both in their extras, which `QueueEntry` does not read (#172). What it looks up is not
+ * kept under the track's own keys, which hold the length the playing track will report; it fills
+ * what the playing track's run then finds by name or id, so that run sends few requests or none
+ * to MusicBrainz, the slow part (R3):
  *
  * - the resolution, by name only, whose MusicBrainz answers the resolver's lookup keeps for a while
  *   (`RememberedMusicBrainz`, in the app); the playing track's run resolves again, with its length;

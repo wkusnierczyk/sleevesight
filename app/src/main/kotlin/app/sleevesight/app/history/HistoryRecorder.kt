@@ -65,6 +65,8 @@ import kotlin.time.Instant
  * restarts with the phone, so they are kept as wall-clock times from [wall] and as offsets from the
  * change. Writes go through one queue, in the order they were seen, each on [io]; a write that fails
  * (the disk full, say) is reported to [warn] and dropped, never thrown, so it does not end the run.
+ * After a failed start, the track's next update starts it again, at its original time, rather than
+ * updating the last row, which may be an earlier playback of the same track.
  *
  * *Clear history* ([clear]) and the deletion of old rows ([deleteOlderThan]) go through the same
  * queue, so each runs after every write queued before it and before any queued after: a clear is
@@ -73,10 +75,13 @@ import kotlin.time.Instant
  * [onCleared] (skip detection forgets what it learned from the changes deleted).
  *
  * **A clock that jumps.** Old rows are deleted by the [wall] clock, so a clock set ahead would
- * delete history early. The recorder notes how far the wall clock is from the [elapsed] clock, which
- * nothing sets, when it is made, at the process's start; a deletion that finds them moved apart by
- * more than [CLOCK_MARGIN] since is skipped, and so is every one after it until the next start. A
- * jump made while the process was not running, or across a restart of the phone, is not caught.
+ * delete history early. The recorder notes how far the wall clock is from the [elapsed] clock,
+ * which nothing sets, when it is made, at the process's start; each deletion checks them again as
+ * it runs, and is skipped while they have moved apart by more than [CLOCK_MARGIN], ahead or back.
+ * Once the clock is set right, the next deletion runs: no deletion ever runs by a moved clock, and
+ * a check that stayed tripped until the next start would only keep entries past the user's *Keep
+ * history for* for as long as the process lives. A start takes the clock as it finds it, so a jump
+ * made while the process was not running, or across a restart of the phone, is not caught.
  */
 @Suppress("LongParameterList") // What it records from and to, the user's gap and actions; the rest are test seams.
 class HistoryRecorder(
@@ -99,9 +104,6 @@ class HistoryRecorder(
 
     /** The wall clock less the [elapsed] one when the recorder was made: what a jump moves. */
     private val clockOffset = wall.now() - elapsed().milliseconds
-
-    // Set by the writes alone, once the clock is found to have jumped.
-    private var clockJumped = false
 
     /** Records until the calling coroutine is cancelled. Called once, for the process. */
     suspend fun run(): Unit =
@@ -162,19 +164,20 @@ class HistoryRecorder(
     /**
      * Deletes what is older than the [lifetime] it returns when the deletion runs, in its place in
      * the queue ([SessionHistory.deleteOlderThan]), by the [wall] clock then: so a lifetime made
-     * longer, or *Forever* (null), while it waits is never undercut. Skipped once the wall clock
-     * has jumped (the class's KDoc). Returns whether it succeeded or was skipped; a failure is
-     * reported to [warn] without its text, never thrown.
+     * longer, or *Forever* (null), while it waits is never undercut. With *Forever* nothing is
+     * deleted and the clock is not checked; otherwise skipped while the wall clock has moved (the
+     * class's KDoc), which is reported to [warn]. Returns whether it succeeded or was skipped; a
+     * failure is reported to [warn] without its text, never thrown.
      */
     suspend fun deleteOlderThan(lifetime: () -> Duration?): Boolean =
         queued("Could not delete old entries from the session history") {
-            val kept = lifetime()
+            val kept = lifetime() ?: return@queued
             val now = wall.now()
-            if (!clockJumped && (now - elapsed().milliseconds - clockOffset).absoluteValue > CLOCK_MARGIN) {
-                clockJumped = true
-                warn("The clock moved: old entries in the session history are kept until the app restarts")
+            if ((now - elapsed().milliseconds - clockOffset).absoluteValue > CLOCK_MARGIN) {
+                warn("The clock moved: old entries in the session history are kept until it is set right")
+            } else {
+                history.deleteOlderThan(kept, now)
             }
-            if (kept != null && !clockJumped) history.deleteOlderThan(kept, now)
         }
 
     private suspend fun queued(
