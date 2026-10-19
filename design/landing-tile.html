@@ -16,15 +16,20 @@
 <!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo
      and intro in place of the eye. Built by `assets/logo/src/make_landing_tile.py`; not edited by hand.
      Unlike the landing page, it plays the intro on every load and keeps nothing in the browser.
-     Otherwise as the landing page: no theme, no web fonts, no analytics, and short scripts.
+     Otherwise as the landing page: no theme, no analytics, short scripts, and the same font.
      The palette is the simulator's (`design/simulator.html`), so the page and the app share one look. -->
+<!-- Fetched at once rather than when the style sheet asks for it, so the text swaps to it sooner. -->
+<link rel="preload" href="../assets/fonts/RobotoFlex-page.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* A name of its own, so an installed Roboto never stands in for it. */
+@font-face{font-family:"Sleevesight Flex";src:url(../assets/fonts/RobotoFlex-page.woff2) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
 :root{
   --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
   --accent:#3346c9; --accent-soft:#e2e6fb; --on-accent:#ffffff;
   --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
-  --f-ui:"Roboto Flex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"Roboto Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:ui-monospace,"SFMono-Regular",Menlo,monospace;
   --h:28;
   --s-c1:hsl(var(--h) 28% 95%); --s-c2:hsl(var(--h) 24% 91%); --s-c3:hsl(var(--h) 22% 87%);
   --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
@@ -379,6 +384,8 @@ document.documentElement.classList.add('js');
   measure();
   onScroll();
   addEventListener('resize', measure);
+  // The menu's width changes when the page's font arrives (`font-display: swap`), after the first layout.
+  if (document.fonts) document.fonts.ready.then(measure);
   addEventListener('scroll', onScroll, {passive: true});
 
   // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a

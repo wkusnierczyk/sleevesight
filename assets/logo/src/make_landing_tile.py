@@ -7,8 +7,9 @@ text, as it was when the builder was last checked against it. Any other index.ht
 Nothing rebuilds the page on its own, so after index.html changes it goes stale until someone
 checks the change against every edit below (`git diff <INDEX's commit> -- index.html`), updates
 the edits it touches and INDEX, rebuilds, and checks the page in a browser. As a last net,
-the build also stops if the page still holds anything of the eye's, or a quoted `href` or `src`
-that does not resolve from design/. From the repository's root:
+the build also stops if the page still holds anything of the eye's, a quoted `href` or `src`
+that does not resolve from design/, or a style-sheet URL other than the plain forms it checks.
+From the repository's root:
 
     python3 assets/logo/src/make_landing_tile.py
 
@@ -20,10 +21,10 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'
 t = json.load(open(os.path.join(ROOT, 'assets', 'logo', 'src', 'tile.json')))
 h = open(os.path.join(ROOT, 'index.html')).read()
 
-INDEX = 'ecf805e53268d339'   # index.html at db55deb
+INDEX = 'b38fef9ec1a9f1f6'   # index.html at #260
 got = hashlib.sha256(h.encode()).hexdigest()[:16]
 if got != INDEX:
-    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at db55deb):\n'
+    sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at #260):\n'
              'check the change against the builder\'s edits, update them and INDEX, then rebuild' % (got, INDEX))
 
 def sub(old, new, regex=False):
@@ -56,12 +57,16 @@ if re.search(r'\bsrcset\s*=', h):
     sys.exit('index.html has a srcset; teach the builder to rebase it')
 h = re.sub(r'\b(href|src)=(["\'])(.*?)\2', rebase, h)
 sub('<meta name="color-scheme" content="light dark">\n', '<meta name="color-scheme" content="light dark">\n<meta name="robots" content="noindex">\n')
-sub('<!-- The landing page: no theme, no web fonts, no analytics, and short scripts, for the header and the\n'
-    '     intro. The one thing it keeps in the browser is a note that the intro has played (`localStorage`).\n',
+sub('<!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its one\n'
+    '     font, Roboto Flex, is a cut-down copy served from this site (`assets/fonts/make_page_font.py`),\n'
+    '     so text added here in new characters needs that copy remade. The one thing it keeps in the\n'
+    '     browser is a note that the intro has played (`localStorage`).\n',
     '<!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo\n'
     '     and intro in place of the eye. Built by `assets/logo/src/make_landing_tile.py`; not edited by hand.\n'
     '     Unlike the landing page, it plays the intro on every load and keeps nothing in the browser.\n'
-    '     Otherwise as the landing page: no theme, no web fonts, no analytics, and short scripts.\n')
+    '     Otherwise as the landing page: no theme, no analytics, short scripts, and the same font.\n')
+# The font's URL is in the style sheet, which the attribute rebase above does not reach.
+sub('src:url(assets/fonts/RobotoFlex-page.woff2)', 'src:url(../assets/fonts/RobotoFlex-page.woff2)')
 sub(' The one thing it keeps in your browser is a note that the intro has played.</p>', ' This page keeps nothing in your browser.</p>')
 sub('  <p class="replay" hidden>', '  <p>An alternative logo and intro, for testers to compare with the <a href="../">product page</a>.</p>\n'
     '  <p class="replay" hidden>')
@@ -178,7 +183,7 @@ if '--seek' in sys.argv[1:]:
 </body>""")
 
 LEFT = [r'\{[{%]', 'localStorage', 'sl-intro-played', r'\bsl-blink\b', r'\bsl-name\b', r'\bsp-', '--sw', r'class="eye',
-        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'url\((?![\'"]?(?:#|https?:|data:))']
+        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'@import']
 for pat in LEFT:
     hit = re.search(pat, h)
     if hit:
@@ -194,4 +199,21 @@ for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
         path = os.path.join(path, 'index.html')
     if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
         sys.exit('the link %r would not resolve from design/' % url)
+# The style sheet's relative URLs, rebased by hand above (the font's), resolve as well. Rather than
+# parse CSS, the builder admits only plain forms (and no `@import`, in `LEFT`): every `url(`, in any
+# case, must be a fragment, an absolute or `data:` URL, or a file path, quoted or bare: one `../`
+# (from design/ to the root), then names of letters, digits and `._-` that do not start with a dot,
+# so no `.`, `..` or empty part, ending in a file name with an extension, and naming a file in the
+# repository. Anything else (escapes, spaces, stray quotes, a trailing slash) stops the build.
+NAME = r'[A-Za-z0-9_-][A-Za-z0-9._-]*'
+PLAIN = re.compile(r'url\((["\']?)(#[^)"\']*|https?:[^)"\'\s\\]*|data:[^)"\'\\]*|\.\./(?:%s/)*%s\.[A-Za-z0-9]+)\1\)'
+                   % (NAME, NAME), re.I)
+for m in re.finditer(r'url\(', h, re.I):
+    p = PLAIN.match(h, m.start())
+    if not p:
+        sys.exit('the style sheet holds a URL the builder does not check: %s' % h[m.start():m.start() + 80])
+    if p.group(2).startswith('../'):
+        path = os.path.normpath(os.path.join(ROOT, 'design', p.group(2)))
+        if not (path.startswith(os.path.normpath(ROOT) + os.sep) and os.path.isfile(path)):
+            sys.exit('the style sheet\'s URL %r would not resolve from design/' % p.group(2))
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
