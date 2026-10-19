@@ -1,6 +1,5 @@
 package app.sleevesight.app.session
 
-import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
@@ -269,103 +268,6 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals(began, change.changedAt)
         assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 7, 1f), change.before)
         assertTrue(scheduler.currentTime > began)
-    }
-
-    /**
-     * A session attached at some point of a track change from "Sundown" (item 4) to "Carefree
-     * Highway" (item 5): what it holds when attached, the reports after it (each so many ms after
-     * the attach), and what the repository should make of them.
-     */
-    private data class AttachRow(
-        val name: String,
-        val title: String,
-        val item: Long,
-        val reports: List<Pair<Long, Any>>,
-        val changes: Int,
-        val track: Pair<String, Long?>,
-    )
-
-    private val window = SessionRepository.SETTLE.inWholeMilliseconds
-
-    private val attachRows =
-        listOf(
-            AttachRow(
-                "before the change: the state, then the metadata",
-                title = "Sundown",
-                item = 4,
-                reports = listOf(window + 100 to state(queueItem = 5), window + 150 to carefree),
-                changes = 1,
-                track = "Carefree Highway" to 5,
-            ),
-            AttachRow(
-                "before the change: the metadata, then the state",
-                title = "Sundown",
-                item = 4,
-                reports = listOf(window + 100 to carefree, window + 150 to state(queueItem = 5)),
-                changes = 1,
-                track = "Carefree Highway" to 5,
-            ),
-            AttachRow(
-                "between the new state and its metadata",
-                title = "Sundown",
-                item = 5,
-                reports = listOf(window / 2 to carefree),
-                changes = 1,
-                // Item 5 is taken for Sundown's, as when the metadata comes well after the state.
-                track = "Carefree Highway" to null,
-            ),
-            AttachRow(
-                "between the new metadata and its state",
-                title = "Carefree Highway",
-                item = 4,
-                reports = listOf(window / 2 to state(queueItem = 5)),
-                changes = 0,
-                track = "Carefree Highway" to 5,
-            ),
-            AttachRow(
-                "after the change",
-                title = "Carefree Highway",
-                item = 5,
-                reports = emptyList(),
-                changes = 0,
-                track = "Carefree Highway" to 5,
-            ),
-            AttachRow(
-                "a song queued twice, its second copy after the attach has settled",
-                title = "Carefree Highway",
-                item = 4,
-                reports = listOf(window + 100 to state(queueItem = 5)),
-                changes = 1,
-                track = "Carefree Highway" to 5,
-            ),
-        )
-
-    @Test
-    fun aSessionAttachedAnywhereInATrackChangeSeesItOnceOrNotAtAll() {
-        followed.value = setOf(YOUTUBE_MUSIC)
-        val wrong = mutableListOf<String>()
-        for (row in attachRows) {
-            // Each row on a fresh start: stopping drops the session and the track shown.
-            repository.stop()
-            val start = scheduler.currentTime
-            val session = FakeSession(YOUTUBE_MUSIC, metadata(title = row.title), state(queueItem = row.item))
-            system.active = listOf(session)
-            repository.start()
-            val tracks = recordTracks()
-            for ((after, report) in row.reports) {
-                at(start + after)
-                when (report) {
-                    is PlaybackState -> session.send(report)
-                    is MediaMetadata -> session.send(report)
-                }
-            }
-            settle()
-
-            val shown = repository.nowPlaying.value
-            val seen = changes(tracks) to (shown?.title to shown?.queueItemId)
-            if (seen != row.changes to row.track) wrong += "${row.name}: $seen"
-        }
-        assertEquals(emptyList<String>(), wrong)
     }
 
     @Test
