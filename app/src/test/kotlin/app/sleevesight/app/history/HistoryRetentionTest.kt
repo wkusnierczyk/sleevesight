@@ -5,6 +5,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
@@ -136,12 +137,13 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
 
     @Test
     fun foreverDoesNotCheckTheClock() {
-        lifetime.value = null
+        // Through the recorder itself: the retention asks it nothing with *Forever*.
+        played("Ancient", base - 3_650.days)
         clockSet = 200.days
-        scope.launch { retention.run() }
-        atPeriod()
 
+        assertTrue(scope.async { recorder.deleteOlderThan { null } }.getCompleted())
         assertTrue(warnings.isEmpty())
+        assertEquals(listOf("Ancient"), rows())
     }
 
     @Test
