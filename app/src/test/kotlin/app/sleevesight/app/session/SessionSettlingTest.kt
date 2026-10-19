@@ -78,50 +78,6 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aNewTracksStateWellBeforeItsMetadataIsWhereTheChangeBegan() {
-        // The state names item 5 under the old title and settles alone; the title comes 500 ms
-        // later. The change began at the state, after Sundown's last state, not at the title.
-        val youtube = youtubeMusic()
-        youtube.settled(state(positionMs = 200_000, updatedAt = 7, queueItem = 4))
-        val began = scheduler.currentTime
-        youtube.send(state(positionMs = 0, updatedAt = began, queueItem = 5))
-        scheduler.advanceTimeBy(500.milliseconds)
-        youtube.send(carefree)
-        settle()
-
-        val change = checkNotNull(repository.lastChange.value)
-        assertEquals("Carefree Highway", change.track.title)
-        assertEquals(began, change.changedAt)
-        assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 200.seconds, 7, 1f), change.before)
-    }
-
-    @Test
-    fun aLiveRecordingAfterTheStudioOneIsAChange() {
-        // The same title and artists, on another album: another recording.
-        val youtube = youtubeMusic(metadata = metadata(album = "Sundown"))
-        val changes = recordChanges()
-
-        youtube.send(state(queueItem = 5))
-        youtube.settled(metadata(album = "Gord's Gold (Live)"))
-
-        assertEquals(listOf("Gord's Gold (Live)"), changes.map { it.track.album })
-    }
-
-    @Test
-    fun aTitleWithNoArtistsBetweenTwoArtistsIsOneChange() {
-        // Intro by X; Intro with no artists, settled alone; then Intro by Y.
-        val youtube = youtubeMusic(metadata = metadata(title = "Intro", artist = "X"))
-        val changes = recordChanges()
-
-        youtube.settled(metadata(title = "Intro", artist = null))
-        youtube.settled(metadata(title = "Intro", artist = "Y"))
-        youtube.settled(metadata(title = "Intro", artist = null))
-        youtube.settled(metadata(title = "Intro", artist = "Y"))
-
-        assertEquals(listOf("Y"), changes.map { it.track.artists })
-    }
-
-    @Test
     fun aStopAndResumeChangesNoTrack() {
         val youtube = youtubeMusic()
         val tracks = recordTracks()
@@ -136,37 +92,20 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSongQueuedTwiceAndPlayedBackToBackIsOnePlay() {
-        // The queue item is carried, not read for identity: one play, its item moved on.
+    fun aSongQueuedTwiceIsOneChange() {
         val youtube = youtubeMusic()
         val tracks = recordTracks()
 
         youtube.settled(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(0, changes(tracks))
+        assertEquals(1, changes(tracks))
         assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
     }
 
     @Test
-    fun aSongQueuedTwiceWithAnotherTrackBetweenIsTwoPlays() {
-        val youtube = youtubeMusic()
-        val tracks = recordTracks()
-
-        youtube.send(state(queueItem = 5))
-        youtube.settled(carefree)
-        youtube.send(state(queueItem = 6))
-        youtube.settled(metadata())
-
-        assertEquals(2, changes(tracks))
-        assertEquals(listOf("Sundown", "Carefree Highway", "Sundown"), tracks.map { it?.title })
-        assertEquals(listOf(4L, 5L, 6L), tracks.map { it?.queueItemId })
-    }
-
-    @Test
-    fun decoratedQueueTitlesAreNotCompared() {
-        // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown": the
-        // change into the first is seen, and the second, played after it, is the same play.
+    fun decoratedQueueTitlesStillTellCopiesApart() {
+        // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown".
         val youtube = youtubeMusic(metadata = carefree, item = 3)
         youtube.queue =
             listOf(
@@ -181,7 +120,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         youtube.send(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(1, changes(tracks))
+        assertEquals(2, changes(tracks))
         assertEquals(listOf(3L, 4L, 5L), tracks.map { it?.queueItemId })
     }
 
@@ -294,9 +233,8 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
         youtube.settled(state(queueItem = 5))
 
-        // The previous track's item is carried until the state names the new one.
         assertEquals(1, changes(tracks))
-        assertEquals(listOf(4L, 4L, 5L), tracks.map { it?.queueItemId })
+        assertEquals(listOf(4L, null, 5L), tracks.map { it?.queueItemId })
         assertEquals(listOf("Sundown", "Carefree Highway", "Carefree Highway"), tracks.map { it?.title })
     }
 
@@ -333,12 +271,30 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun aSessionAttachedBetweenTheNewStateAndItsMetadataSeesTheChange() {
+        // Attached after the new track's state (item 5) and before its metadata.
+        val youtube = youtubeMusic(item = 5)
+        val tracks = recordTracks()
+
+        scheduler.advanceTimeBy(SessionRepository.SETTLE / 2)
+        youtube.settled(carefree)
+
+        assertEquals(1, changes(tracks))
+        assertEquals(listOf("Sundown", "Carefree Highway"), tracks.map { it?.title })
+        assertEquals(
+            "Carefree Highway",
+            repository.lastChange.value
+                ?.track
+                ?.title,
+        )
+    }
+
+    @Test
     fun theLongestWaitDoesNotCutANewTracksStateFromItsMetadata() {
         // Reports less than 300 ms apart for a second (a seek bar scrubbed), then the new track's
         // state just before the longest wait runs out, and its metadata just after.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
-        val start = scheduler.currentTime
 
         youtube.send(state(positionMs = 100_000, queueItem = 4))
         for (at in listOf(250L, 500L, 750L)) {
@@ -359,7 +315,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
             tracks,
         )
         val change = checkNotNull(repository.lastChange.value)
-        assertEquals(start + 990, change.changedAt)
+        assertEquals(990L, change.changedAt)
         assertEquals(PlaybackInfo(YOUTUBE_MUSIC, PlaybackStatus.PLAYING, 100_750.milliseconds, 750, 1f), change.before)
     }
 
@@ -368,7 +324,6 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         // *Next* pressed, reports less than 300 ms apart, and *next* again as the longest wait runs out.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
-        val began = scheduler.currentTime
 
         youtube.send(state(queueItem = 5))
         scheduler.advanceTimeBy(20.milliseconds)
@@ -385,7 +340,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
 
         assertEquals(listOf(4L, 6L), tracks.map { it?.queueItemId })
         assertEquals(listOf("Sundown", "Rainy Day People"), tracks.map { it?.title })
-        assertEquals(began, repository.lastChange.value?.changedAt)
+        assertEquals(0L, repository.lastChange.value?.changedAt)
     }
 
     @Test
@@ -601,16 +556,15 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     @Test
     fun aTitleChangingEvery250MsStillSettlesWithinTheLongestBurst() {
         val youtube = youtubeMusic()
-        val start = scheduler.currentTime
         val longest = SessionRepository.LONGEST_BURST.inWholeMilliseconds
         for (sent in 0L..longest step 250) {
-            at(start + sent)
+            at(sent)
             youtube.send(metadata(title = "Title $sent"))
         }
-        at(start + longest + 1)
+        at(longest + 1)
 
         assertEquals("Title $longest", repository.nowPlaying.value?.title)
-        assertEquals(start, repository.lastChange.value?.changedAt)
+        assertEquals(0L, repository.lastChange.value?.changedAt)
     }
 
     /** Spotify, shown and playing, ranked over YouTube Music playing [youtubeState] on "OldYT". */

@@ -118,18 +118,12 @@ class HistoryRecorder(
             }
             launch {
                 var before: NowPlaying? = null
-                // The last of this play reported with artists: a report without them matches any.
-                var withArtists: NowPlaying? = null
                 sessions.playing.collect { track ->
                     val at = wall.now()
                     val playedBefore = before
-                    val known = withArtists
-                    val same = { row: NowPlaying ->
-                        track != null && sameAsLast(TrackIdentity.reference(row, known), track)
-                    }
+                    val same = { row: NowPlaying -> track != null && sameAsLast(row, track) }
                     // A track that plays on is updated; any other ends the one before and starts.
                     val continues = playedBefore != null && same(playedBefore)
-                    withArtists = TrackIdentity.withArtists(known, track, continues)
                     if (playedBefore != null && !continues) {
                         writes.trySend(Write.record("a track stopping") { history.stopped(at) })
                     }
@@ -294,9 +288,9 @@ class HistoryRecorder(
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session
-         * layer decides ([TrackIdentity]), with the same title. Stricter by the title where the
-         * media id decides: a title changing under one media id (a stream) is a new row. The queue
-         * item plays no part, so a song played again at once continues its row, one play.
+         * layer decides ([TrackIdentity]), with the same title. Stricter by the title, since after a
+         * restart a queue item id may name another track, and a duplicate entry costs less than a
+         * lost one; a title changing under one queue item (a stream) is a new track anyway.
          */
         fun sameAsLast(
             last: NowPlaying,

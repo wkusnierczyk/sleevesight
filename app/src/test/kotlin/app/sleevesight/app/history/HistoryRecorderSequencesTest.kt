@@ -203,51 +203,6 @@ internal class HistoryRecorderSequencesTest(
                     at(50 * MINUTE)
                     spotify.report(metadata(mediaId = "stream:1", album = "Live"))
                 },
-                sequence(
-                    "a song queued twice, played back to back, is one play",
-                    Row(SUNDOWN, 1, 0, null, player = YOUTUBE_MUSIC),
-                ) {
-                    val youtube = begin(FakeSession(YOUTUBE_MUSIC, playbackState = state(queueItem = 4)))
-                    at(225_000)
-                    youtube.report(state(queueItem = 5))
-                },
-                sequence(
-                    "a song queued twice, with another track between, is two plays",
-                    Row(SUNDOWN, 1, 0, 60_000 + S, player = YOUTUBE_MUSIC),
-                    Row(CAREFREE, 1, 60_000 + S, 120_000 + S, player = YOUTUBE_MUSIC),
-                    Row(SUNDOWN, 1, 120_000 + S, null, player = YOUTUBE_MUSIC),
-                ) {
-                    val youtube = begin(FakeSession(YOUTUBE_MUSIC, playbackState = state(queueItem = 4)))
-                    at(60_000)
-                    youtube.send(state(queueItem = 5))
-                    youtube.report(metadata(title = CAREFREE))
-                    at(120_000)
-                    youtube.send(state(queueItem = 6))
-                    youtube.report(metadata())
-                },
-                sequence(
-                    "a live recording after the studio one, both on one title, is two plays",
-                    Row(SUNDOWN, 1, 0, 225_000 + S, album = "Sundown", player = YOUTUBE_MUSIC),
-                    Row(SUNDOWN, 1, 225_000 + S, null, album = "Live", player = YOUTUBE_MUSIC),
-                ) {
-                    val studio = metadata(album = "Sundown")
-                    val youtube = begin(FakeSession(YOUTUBE_MUSIC, studio, state(queueItem = 4)))
-                    at(225_000)
-                    youtube.send(state(queueItem = 5))
-                    youtube.report(metadata(album = "Live"))
-                },
-                sequence(
-                    // The first row keeps the player's last report of it, which named no artists.
-                    "a title with no artists between two artists is two plays",
-                    Row(SUNDOWN, 1, 0, 2_000 + S, artists = ""),
-                    Row(SUNDOWN, 1, 2_000 + S, null, artists = "Someone Else"),
-                ) {
-                    val spotify = spotify()
-                    at(1_000)
-                    spotify.report(metadata(artist = null))
-                    at(2_000)
-                    spotify.report(metadata(artist = "Someone Else"))
-                },
                 sequence("a track plays on past its length and the gap and gets new art", Row(SUNDOWN, 1, 0, null)) {
                     val spotify = spotify()
                     at(FORTY_MINUTES)

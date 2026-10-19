@@ -163,7 +163,6 @@ class SessionRepository(
     private var artSources: List<ArtSource> = emptyList()
     private var artJob: Job? = null
     private var lastShown: Attached? = null
-    private var shownWithArtists: NowPlaying? = null
 
     /** Starts following, once [acknowledged] is true; calling it again while started does nothing. */
     fun start() {
@@ -238,8 +237,7 @@ class SessionRepository(
         var judgedCause: ChangeCause? = null
         val track = shown?.track
         nowPlayingState.value = track
-        val changed = changedTo(previous, track)
-        if (previous != null && track != null && changed) {
+        if (previous != null && track != null && !TrackIdentity.same(previous, track)) {
             val change = changeTo(previous, track, shown.change.takeIf { settled === shown }, switched)
             val last = changeState.value
             // Whatever order the sessions settle in, the times never go back: a change that began
@@ -260,21 +258,6 @@ class SessionRepository(
         // After the change, so a collector that sees a new track playing finds its change.
         publishPlaying(shown)
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
-    }
-
-    /**
-     * Whether [track], shown now, is another track than [previous], shown before: compared, if
-     * [previous] has no artists, with the last track shown with them in its play, since a report
-     * without artists matches any ([TrackIdentity.reference]). Follows that play.
-     */
-    private fun changedTo(
-        previous: NowPlaying?,
-        track: NowPlaying?,
-    ): Boolean {
-        val reference = previous?.let { TrackIdentity.reference(it, shownWithArtists) }
-        val changed = reference != null && track != null && !TrackIdentity.same(reference, track)
-        shownWithArtists = TrackIdentity.withArtists(shownWithArtists, track, continues = previous != null && !changed)
-        return changed
     }
 
     /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */
@@ -426,6 +409,9 @@ class SessionRepository(
         private var knownItem: Long? = null
         private var knownItemTitle: String? = null
 
+        /** An item the state still names after the title moved on: the previous track's. */
+        private var staleItem: Long? = null
+
         /** The last queue item a playback state named; a state with no item (−1) leaves it. */
         private var stateItem: Long? = SessionMapping.activeItem(state)
 
@@ -461,22 +447,6 @@ class SessionRepository(
         private var beforeMovedBack: PlaybackInfo? = null
         private var statesBeforeMovedBack: List<StateReport> = emptyList()
 
-        /** Whether a report of the burst now settling named a new queue item. */
-        private var burstNewItem = false
-
-        /**
-         * The start of the last burst that named a new queue item under an unchanged title, which
-         * changes no track, and the state and states before it: a new track's state may come more
-         * than [SETTLE] before its metadata (YouTube Music), so the change began there if a new
-         * title follows within [LONGEST_BURST]. Used once at most.
-         */
-        private var itemMovedAt: Long? = null
-        private var beforeItemMoved: PlaybackInfo? = null
-        private var statesBeforeItemMoved: List<StateReport> = emptyList()
-
-        /** The last track settled with artists in the play now settled (see [TrackIdentity.reference]). */
-        private var withArtists: NowPlaying? = null
-
         private var settling: Job? = null
 
         init {
@@ -507,49 +477,25 @@ class SessionRepository(
                 pending = true
                 burstFirst = now
                 changeAt = null
-                burstNewItem = false
                 burstStart = now
                 beforeBurst = before
                 statesBeforeBurst = statesBefore(now)
             }
-            if (changesTrack && changeAt == null) beginChange(newTitle, now, before)
+            if (changesTrack && changeAt == null) {
+                // The change began here: at a new item, which marks it; or, at a new title, at a
+                // state just before that fell back to the start naming no new item.
+                val back = movedBackAt?.takeIf { newTitle && now - it <= SETTLE.inWholeMilliseconds }
+                burstStart = back ?: now
+                beforeBurst = if (back != null) beforeMovedBack else before
+                statesBeforeBurst = if (back != null) statesBeforeMovedBack else statesBefore(now)
+                movedBackAt = null
+            }
             if (changesTrack) changeAt = now
-            if (newItem) burstNewItem = true
             if (movesBack && !newItem) {
                 movedBackAt = now
                 beforeMovedBack = before
                 statesBeforeMovedBack = statesBefore(now)
             }
-        }
-
-        /**
-         * The change began here, at [now]: at a new item, which marks it; or, at a new title, at
-         * the earlier marker of the same change, if one is recent enough: a new item under the
-         * title before ([itemMovedAt], within [LONGEST_BURST]), else a state that fell back to
-         * the start naming no new item ([movedBackAt], within [SETTLE]).
-         */
-        private fun beginChange(
-            newTitle: Boolean,
-            now: Long,
-            before: PlaybackInfo,
-        ) {
-            val moved = itemMovedAt?.takeIf { newTitle && now - it <= LONGEST_BURST.inWholeMilliseconds }
-            val back = movedBackAt?.takeIf { moved == null && newTitle && now - it <= SETTLE.inWholeMilliseconds }
-            burstStart = moved ?: back ?: now
-            beforeBurst =
-                when {
-                    moved != null -> beforeItemMoved
-                    back != null -> beforeMovedBack
-                    else -> before
-                }
-            statesBeforeBurst =
-                when {
-                    moved != null -> statesBeforeItemMoved
-                    back != null -> statesBeforeMovedBack
-                    else -> statesBefore(now)
-                }
-            movedBackAt = null
-            itemMovedAt = null
         }
 
         /** Keeps [state], reported now, among the [recentStates]. */
@@ -591,45 +537,44 @@ class SessionRepository(
         }
 
         /**
-         * Maps the latest metadata and state. The queue item is carried, not read for identity
-         * ([TrackIdentity]): the item the state names, else, for a state with no item (−1, as
-         * YouTube Music reports while stopped in the background), the last item the state named
-         * while the title is unchanged. A player that sends a new track's metadata before its
-         * state so carries the previous track's item until the state names the new one, which
-         * changes no track; at worst the next track in the queue (`NextInQueue`) is the wrong one
-         * for that moment.
+         * Maps the latest metadata and state. A state with no item (−1, as YouTube Music reports
+         * while stopped in the background) keeps the last item the state named, while the title
+         * is unchanged.
          */
         private fun settle() {
             val previous = track
-            val now = SessionMapping.nowPlaying(session.player, metadata, item())
+            val now = SessionMapping.nowPlaying(session.player, metadata, item(previous))
             track = now
             trackMetadata = metadata
-            val reference = previous?.let { TrackIdentity.reference(it, withArtists) }
-            val changed = reference != null && now != null && !TrackIdentity.same(reference, now)
-            withArtists = TrackIdentity.withArtists(withArtists, now, continues = previous != null && !changed)
+            val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
             change =
                 if (pending && changed) {
                     SessionChange(checkNotNull(now), burstStart, beforeBurst, states = statesBeforeBurst)
                 } else {
                     null
                 }
-            if (pending && !changed && burstNewItem) {
-                itemMovedAt = burstStart
-                beforeItemMoved = beforeBurst
-                statesBeforeItemMoved = statesBeforeBurst
-            }
             pending = false
         }
 
-        /** The queue item to carry with the latest pair (see [settle]). */
-        private fun item(): Long? {
+        /** The queue item to map the latest pair with, after the [previous] track settled. */
+        private fun item(previous: NowPlaying?): Long? {
             val title = SessionMapping.title(metadata)
             val item = SessionMapping.activeItem(state)
-            if (item != null) {
+            // New metadata while the state still names the previous track's item: a player that
+            // sends its metadata well before its state, or a stream that keeps one item. That item
+            // is not this track's until the state names another; identity then reads the title.
+            val previousItem = previous?.queueItemId?.takeIf { previous.title != title }
+            // A state with no item (−1) leaves it: the item named after it may be the stale one again.
+            if (item != null) staleItem = item.takeIf { it == previousItem || it == staleItem }
+            if (item != null && item != staleItem) {
                 knownItem = item
                 knownItemTitle = title
             }
-            return item ?: knownItem.takeIf { title != null && title == knownItemTitle }
+            return when {
+                item == null -> knownItem.takeIf { title != null && title == knownItemTitle }
+                item == staleItem -> null
+                else -> item
+            }
         }
 
         /** Applies [change] and republishes, unless this session was dropped meanwhile (a late callback). */
