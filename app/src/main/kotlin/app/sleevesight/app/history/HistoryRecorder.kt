@@ -65,6 +65,8 @@ import kotlin.time.Instant
  * restarts with the phone, so they are kept as wall-clock times from [wall] and as offsets from the
  * change. Writes go through one queue, in the order they were seen, each on [io]; a write that fails
  * (the disk full, say) is reported to [warn] and dropped, never thrown, so it does not end the run.
+ * After a failed start, the track's next update starts it again, at its original time, rather than
+ * updating the last row, which may be an earlier playback of the same track.
  *
  * *Clear history* ([clear]) and the deletion of old rows ([deleteOlderThan]) go through the same
  * queue, so each runs after every write queued before it and before any queued after: a clear is

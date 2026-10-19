@@ -35,8 +35,9 @@ import kotlin.time.Instant
  *      the next one.
  * 2. [continued]: the track of the last row plays on without a break, as the player updated it
  *    (artists sent after the title, an album, a new length): the row takes the update, however
- *    long it has played. No session is decided. If the last row is not that track (its write
- *    failed), this is a start.
+ *    long it has played. No session is decided. If the last row does not hold that track (its
+ *    start was never written, or its row has gone), this is a start, at the time the playback
+ *    started, so the update is not lost.
  * 3. [stopped]: the last row stopped playing (paused, stopped, or another track began); the first
  *    stop is kept until it plays again.
  *
