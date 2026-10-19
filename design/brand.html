@@ -44,6 +44,10 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .pane{background:var(--bg);padding:28px 20px;display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap;min-width:0}
 @media (max-width:700px){.duo{grid-template-columns:1fr}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:16px}
+/* A card in a row stretches to the tallest card beside it; its panels grow with it, so the panels in a
+   row end together (the marks stay centred in them). */
+.grid2>.card{display:flex;flex-direction:column}
+.grid2>.card>.duo{flex:1}
 
 /* The marks, as in the variants page. */
 .mark{display:inline-flex;align-items:center;gap:.45em;font-size:40px;line-height:1.1;font-weight:700;font-stretch:88%;letter-spacing:-.015em;color:var(--ink);white-space:nowrap}
