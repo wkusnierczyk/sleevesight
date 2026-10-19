@@ -1,15 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- A record as the iris of an eye: the eye, the disc, a groove, and the label. On dark, the eye
-       is filled white and outlined in grey, to stand apart from the background, and the record's rim
-       takes the outline's grey, so it merges with the outline as the black rim does on light; the
-       groove gives way to a wider black disc, so the grey meets the black directly. The disc is drawn
-       only on dark: on light, its edge would darken the rim's antialiased edge. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 16 16">
+  <!-- The record from the logo, without the eye around it: at tab size the eye's corners took most of
+       the width, so the record alone, filling the square, reads better. The disc, a groove, and the
+       label, in the logo's coordinates (the disc's centre at 16,16, radius 7.5). On dark, the rim
+       turns the logo's outline grey, to stand apart from a dark tab bar, and the groove gives way to
+       a wider black disc, so the grey meets the black directly. The disc is drawn only on dark: on
+       light, its edge would darken the rim's antialiased edge. -->
   <style>
-    .eye { fill: none; stroke: #1f2328 }
     .core { display: none }
-    @media (prefers-color-scheme: dark) { .eye { fill: #ffffff; stroke: #8b949e } .rim { fill: #8b949e } .groove { display: none } .core { display: inline } }
+    @media (prefers-color-scheme: dark) { .rim { fill: #8b949e } .groove { display: none } .core { display: inline } }
   </style>
-  <path class="eye" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/>
   <circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/>
   <circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/>
   <circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>
