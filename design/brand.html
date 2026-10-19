@@ -104,9 +104,9 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 @keyframes r2-bg{0%,38%{opacity:1}54%,100%{opacity:0}}
 @keyframes r2-shrink{0%,36%{transform:translate(-126.12px,-51.55px) scale(3.6405);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
 @media (prefers-reduced-motion: reduce){.rv-pane *{animation:none!important}}
-/* The turning shirts: the mark held mid-turn, 40° clockwise, with a trail of the words behind it at
-   lesser angles, fading. The svgs size themselves; the print's font size does not apply. */
-.mark svg.smear{height:auto}
+/* The tilted shirts: the mark turned 40° clockwise, as if caught mid-turn. The svgs size themselves;
+   the print's font size does not apply. */
+.mark svg.tilt{height:auto;--tile-ink:var(--ink)}
 .s-p{font-size:30px}.s-xl{font-size:56px}.s-l{font-size:40px}.s-m{font-size:24px}.s-s{font-size:14px}.s-xs{font-size:9px}
 
 /* Colours */
@@ -514,17 +514,12 @@ document.getElementById('swatches').innerHTML = [
 
 // The shirts: one card per design, with both tees drawn and one shown. Each print is in px for a
 // 260px-wide shirt, so the shirts keep that width.
-// The turning marks: the mark at 40°, and behind it copies of the words reaching 28° back, fading. The
-// steps are about a unit apart where the words are furthest from the centre, so the trail reads as a
-// smear rather than as copies: 1° for the tile, which turns about the dot, (0, 0); 0.5° for 8b, which
-// turns about the record's centre. More copies, each fainter, so both trails carry the same ink.
-const trail = (cx, cy, step) => { const n = Math.round(28 / step);
-  return Array.from({length: n}, (_, i) =>
-    `<use href="#words" transform="rotate(${-step * (i + 1)} ${cx} ${cy})" opacity="${(2.8 / n * (1 - (i + 1) / (n + 1))).toFixed(4)}"/>`).join(''); };
-M['6c-turn'] = `<svg class="smear" viewBox="-102 -102 204 204" style="width:122px" aria-hidden="true"><g transform="rotate(40)">
-  <rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke" style="fill:var(--tile-bg);stroke:var(--tile-edge)"/>${trail(0, 0, 1)}<use href="#words"/></g></svg>`;
-M['8b-turn'] = `<svg class="smear" viewBox="-36 -100 132 136" style="width:132px;--tile-ink:var(--ink)" aria-hidden="true"><g transform="rotate(40 73.1 14.16)">
-  ${trail(73.1, 14.16, .5)}<use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></g></svg>`;
+// The tilted marks: the words alone (no tile), turned 40° about the dot, (0, 0), as intro B turns; 8b
+// turned about the record's centre, as intro C turns. Each viewBox is the turned ink, measured on a
+// render, with a unit to spare, and each is drawn at 1px a unit.
+M['6c-tilt'] = `<svg class="tilt" viewBox="-27.5 -50.75 78.5 99.25" style="width:78.5px" aria-hidden="true"><use href="#words" transform="rotate(40)"/></svg>`;
+M['8b-tilt'] = `<svg class="tilt" viewBox="-1.25 -94.5 93 127.25" style="width:93px" aria-hidden="true"><g transform="rotate(40 73.1 14.16)">
+  <use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></g></svg>`;
 const tee = (which, colour, seam, cls, k, size) => `<div class="shirt on-${which}-tee" style="--shirt:${colour};--seam:${seam}">
      <svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg>
      <div class="print ${cls}">${mark(k, size)}</div></div>`;
@@ -537,13 +532,12 @@ merch.innerHTML = [
   ['6c', 'The words alone, small, upper left', 's-s', 'no-tile ul'],
   ['7a', 'The eye over the address, chest', 's-s', ''],
   ['8b', 'With the record, chest', 's-m', ''],
-  ['6c-turn', 'The tile, turning, chest: black on white, white on black', 's-m', '', true],
-  ['8b-turn', 'With the record, turning, chest', 's-m', ''],
-].map(([k, note, size, extra, inverse]) => {
-  // A tile takes the other colourway from its shirt, so it shows: a black tile on the white shirt.
-  const [w, b] = inverse ? ['dk', 'lt'] : ['lt', 'dk'], tag = k.replace('-turn', '');
+  ['6c-tilt', 'The words alone, tilted, chest', 's-m', ''],
+  ['8b-tilt', 'With the record, tilted, chest', 's-m', ''],
+].map(([k, note, size, extra]) => {
+  const tag = k.replace('-tilt', '');
   return `<div class="card"><div class="cap"><span><b>${tag}</b><small>${note}</small></span>${seg(`${tag}, ${note}: shirt colour`, 'small')}</div>
-  <div class="stage"><div class="layers">${tee('white', '#fafafa', '#e2e2e2', `${w} on-white ${extra}`, k, size)}${tee('black', '#111', '#262626', `${b} on-black ${extra}`, k, size)}</div></div></div>`;
+  <div class="stage"><div class="layers">${tee('white', '#fafafa', '#e2e2e2', `lt on-white ${extra}`, k, size)}${tee('black', '#111', '#262626', `dk on-black ${extra}`, k, size)}</div></div></div>`;
 }).join('');
 const setTee = (card, which) => {
   card.classList.toggle('black', which === 'black');
