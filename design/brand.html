@@ -64,10 +64,11 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .mark .vert{display:inline-flex;flex-direction:column;align-items:center;gap:.32em}
 .mark .vert svg{width:6.6em;height:auto;aspect-ratio:31/15}
 .no-tile{--tile-bg:transparent;--tile-edge:transparent}
-/* 8a and 8b: the 6c words, outlined, with the record on the side they align to. The svg is as tall
-   as both words' ink, which is the stacked text's height at .8em (37.6 units to the em). */
-.mark svg.lp-mark{width:auto;height:1.47em}
-.lp-mark .t-ink{fill:var(--ink)}
+/* 8a and 8b: the 6c words, outlined, with the record on the side they align to. The svg's viewBox is
+   the words' 69-unit ink with a unit to spare above and below; at 1.47em, the stacked text's height
+   at .8em (37.6 units to the em), the words come out at 69/71 of that. The words are off the tile, so
+   they take the page's ink: through the variable, since a selector cannot reach into a <use>. */
+.mark svg.lp-mark{width:auto;height:1.47em;--tile-ink:var(--ink)}
 .s-p{font-size:30px}.s-xl{font-size:56px}.s-l{font-size:40px}.s-m{font-size:24px}.s-s{font-size:14px}.s-xs{font-size:9px}
 
 /* Colours */
@@ -277,7 +278,7 @@ noscript .lead{margin-top:16px}
   <div id="primary" class="grid2"></div>
 
   <h2>Marks with the record</h2>
-  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record of the favicon, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it.</p>
+  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record from the eye logo, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it.</p>
   <div id="record" class="grid2"></div>
 
   <h2>For marketing</h2>
