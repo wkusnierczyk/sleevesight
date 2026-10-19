@@ -22,7 +22,7 @@ import kotlin.time.Duration.Companion.hours
  * is written only while the process runs, and each start trims it. A deletion reads the lifetime
  * when it runs, not when it was queued, so one waiting behind other writes when the lifetime is made
  * longer, or *Forever*, deletes by the new one. One that fails is reported by the recorder and
- * tried again at the next; the recorder skips them once the clock has jumped.
+ * tried again at the next; the recorder skips them while the clock has moved.
  */
 class HistoryRetention(
     private val recorder: HistoryRecorder,

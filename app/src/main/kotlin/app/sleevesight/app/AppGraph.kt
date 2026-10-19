@@ -195,7 +195,7 @@ class AppGraph(
         SkipDetectorLearning(
             skipDetector,
             history,
-            DataStoreLearningMark(preferences(appContext, SKIP_DETECTION_FILE)),
+            DataStoreLearningMark.open { appContext.preferencesDataStoreFile(SKIP_DETECTION_FILE) },
             Dispatchers.IO,
         )
 
