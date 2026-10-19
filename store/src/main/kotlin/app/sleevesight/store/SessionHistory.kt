@@ -15,9 +15,10 @@ import kotlin.time.Instant
 /**
  * The session history and the record of track changes (`design/architecture.md`, *Cache and
  * history* and *Learning skip detection*, D15), over a database of their own, apart from the
- * caches: [driver] is the Android driver in `:app`, with [HistoryDatabase.Schema] created on it.
- * Both stay on the phone, are never evicted by the caches' size limit, and are cleared together
- * ([clear]); what is older than the user's *Keep history for* is deleted ([deleteOlderThan]).
+ * caches: [driver] is the Android driver in `:app`, with [HistoryDatabase.Schema] created on it,
+ * or migrated to from an older version. Both stay on the phone, are never evicted by the caches'
+ * size limit, and are cleared together ([clear]); what is older than the user's *Keep history for*
+ * is deleted ([deleteOlderThan]).
  *
  * - The session history: each track the session layer saw play, in order, grouped in listening
  *   sessions: the default track list, "Played this session".
