@@ -1,13 +1,18 @@
 package app.sleevesight.app.ui.home
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.PendingIntent
 import android.content.Intent
+import android.view.View
+import android.view.ViewGroup
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -15,6 +20,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -25,6 +31,7 @@ import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
+import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -42,6 +49,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
@@ -52,7 +60,10 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.InsightReply
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -312,18 +323,127 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun theCardPaidForSaysItsLinesAreThoseItCitesWithNothingOffered() {
+        val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
+        // Shown in place of a run with no insight (no AI service now): no Rewrite, nothing failed.
+        show(state(PipelineView(kept, cardShown = true))) {
+            compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
+        }
+        // The run's own insight, served from the cache: its lines are the sources' now.
+        show(state(PipelineView(kept, aiReady = true))) {
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.home_evidence_cited)).fetchSemanticsNodes().size)
+        }
+    }
+
+    @Test
+    fun aCardCheckedWithTheModelsKnowledgeAllowedShowsItsModelCitationAsSoBesideAMissingLine() {
+        // No sentence comes out `MODEL`: the only `[M]` sits beside a line that does not exist.
+        val kept = track(insight = written("It is loved [M][L1].", cached = true, allowModel = true))
+        show(state(PipelineView(kept, aiReady = true))) {
+            val prose =
+                compose
+                    .onNodeWithText("It is loved", substring = true)
+                    .fetchSemanticsNode()
+                    .config[SemanticsProperties.Text]
+                    .first { "It is loved" in it.text }
+            val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "M" }
+            assertEquals(lightColorScheme().tertiaryContainer, chip.item.background)
+        }
+    }
+
+    @Test
+    fun aScreenReaderHearsEachCitationByWhatItPointsAtAndCanFollowALine() {
+        val reply = "It topped the charts [W1]. It is loved [M]. It charted [L1]. It is great."
+        show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
+            // The paragraph, not the evidence line that reads the same.
+            val prose =
+                compose
+                    .onNode(
+                        hasText("It topped the charts", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+            prose.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(
+                        "It topped the charts (${text(R.string.home_cite, "W1")}). " +
+                            "It is loved (${text(R.string.home_cite_model)}). " +
+                            "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
+                            "It is great. (${text(R.string.home_cite_none)})",
+                    ),
+                ),
+            )
+            // The line a chip scrolls to is an action too, in case the description hides the link.
+            val actions = prose.fetchSemanticsNode().config[SemanticsActions.CustomActions]
+            assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
+
+            // Wikipedia's lines hidden (a display filter only); the action shows its line.
+            compose.onNodeWithTag(CHIP_PREFIX + "W").performScrollTo().performClick()
+            assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
+            compose.runOnUiThread { assertTrue(actions.single().action()) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun aParagraphCitingManyLinesOffersABoundedSetOfActionsToTheAccessibilityService() {
+        // More distinct lines than Compose allows custom actions on one node (it throws at 32).
+        val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val evidence = EvidenceSet.of(drafts, JvmHasher)
+        val reply = "It is documented " + evidence.ids.joinToString("") { "[$it]" } + "."
+        val checked = (GroundingCheck.check(reply, evidence, allowModel = false) as InsightReply.Written).grounded
+        val track = track(insight = InsightState.Written(checked, cached = false), evidence = evidence)
+        val accessibility = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        // A screen reader running: Compose builds nodes only for an enabled service.
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show(state(PipelineView(track, aiReady = true))) { activity ->
+            val paragraph =
+                compose
+                    .onNode(
+                        hasText("It is documented", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+                    .fetchSemanticsNode()
+            // The node an accessibility service is given, built as Android builds it (on screen:
+            // Compose gives none for a node scrolled out of view).
+            val view = composeView(activity.window.decorView)
+            val provider = checkNotNull(view.accessibilityNodeProvider) { "no node provider" }
+            val info = checkNotNull(provider.createAccessibilityNodeInfo(paragraph.id)) { "no node" }
+            val custom =
+                info.actionList.filter { action ->
+                    action.label?.toString()?.startsWith(text(R.string.home_cite, "")) == true
+                }
+            assertEquals(evidence.ids.take(16).map { text(R.string.home_cite, it) }, custom.map { it.label.toString() })
+        }
+    }
+
+    // The view Compose draws into, under [root].
+    private fun composeView(root: View): View =
+        if (root.javaClass.simpleName == "AndroidComposeView") {
+            root
+        } else {
+            (root as ViewGroup).children.firstNotNullOf { child ->
+                runCatching { composeView(child) }.getOrNull()
+            }
+        }
+
+    @Test
     fun theKeptCardOffersRewriteAndSaysWhenARewriteFailed() {
         writes = 0
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
-        show(state(PipelineView(kept, aiReady = true, rewrite = true, writeKey = sundownKey))) {
+        show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
             compose.onNodeWithText(text(R.string.home_rewrite_offered)).assertExists()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
             assertEquals(1, writes)
         }
-        show(state(PipelineView(kept, aiReady = true, rewriteFailed = "offline"))) {
+        show(state(PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = "offline"))) {
             val reason = text(R.string.home_failure_offline)
             compose.onNodeWithText(text(R.string.home_rewrite_failed, reason)).assertExists()
+            compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
         }
     }

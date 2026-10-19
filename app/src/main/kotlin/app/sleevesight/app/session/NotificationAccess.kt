@@ -1,5 +1,6 @@
 package app.sleevesight.app.session
 
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -43,6 +44,16 @@ class NotificationAccess(
             add(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
+    /**
+     * Whether [SleevesightListenerService] itself has access: from Android 8.1 (API 27) on, the
+     * system asks for that exact listener; on 8.0 only the package list exists, which says whether
+     * any listener of the app has it (the app declares one).
+     */
     private fun isGranted(): Boolean =
-        context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager?.isNotificationListenerAccessGranted(listener) == true
+        } else {
+            context.packageName in NotificationManagerCompat.getEnabledListenerPackages(context)
+        }
 }

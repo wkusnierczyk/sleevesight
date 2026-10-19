@@ -14,7 +14,8 @@
 
     <!-- No backup and no transfer to another phone: either would take the session history and
          the keys off the phone, which the first-run screen says stay on it. allowBackup="false"
-         turns both off before Android 12, so there is no fullBackupContent; from 12 on,
+         turns both off before Android 12, so there is no fullBackupContent (which lint's
+         DataExtractionRules check asks for, hence its tools:ignore); from 12 on,
          dataExtractionRules does, since allowBackup="false" leaves device transfer on. -->
     <application
         android:name=".SleevesightApplication"

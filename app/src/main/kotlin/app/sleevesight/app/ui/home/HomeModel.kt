@@ -9,8 +9,6 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.synthesis.GroundedText
-import app.sleevesight.core.synthesis.SentenceStatus
 
 // What the home screen shows, worked out from what the session layer and the pipeline publish, as
 // plain functions so the tests need no screen. Nothing here decides anything for the pipeline.
@@ -103,15 +101,6 @@ internal fun segments(sentence: String): List<Segment> {
     if (at < sentence.length) out += Segment.Text(sentence.substring(at))
     return out
 }
-
-/**
- * Whether the model's own knowledge was allowed when [grounded] was checked: then a sentence citing
- * `[M]` with nothing else wrong is `MODEL`; when it was not, every sentence citing `[M]` is
- * `UNKNOWN`, so no sentence is `MODEL`. A card kept from before is read by this, not by the
- * settings now.
- */
-internal fun modelAllowedIn(grounded: GroundedText): Boolean =
-    grounded.paragraphs.any { paragraph -> paragraph.any { it.status == SentenceStatus.MODEL } }
 
 /** How a citation chip shows: a line it can scroll to, the model's own knowledge, or a line that does not exist. */
 internal enum class CiteKind { LINE, MODEL, UNKNOWN }

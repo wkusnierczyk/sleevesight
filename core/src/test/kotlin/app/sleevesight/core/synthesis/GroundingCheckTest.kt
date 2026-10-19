@@ -180,6 +180,18 @@ class GroundingCheckTest {
     }
 
     @Test
+    fun `a written reply says whether the model's own knowledge was allowed, whatever its sentences came out as`() {
+        val evidence = FixtureEvidence.of(1)
+        // `[M]` beside a line that does not exist: no sentence comes out `MODEL` either way.
+        val reply = "Sundown topped the US chart. [W3] He was Canadian. [M][W99]"
+        for (allowModel in listOf(true, false)) {
+            val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, evidence, allowModel))
+            assertEquals(0, written.grounded.counts.model)
+            assertEquals(allowModel, written.grounded.allowModel)
+        }
+    }
+
+    @Test
     fun `no evidence is a reply of its own`() {
         val empty = EvidenceSet.of(emptyList(), JvmHasher)
         assertEquals(InsightReply.NoEvidence, GroundingCheck.check(" NO_EVIDENCE ", empty, allowModel = false))
