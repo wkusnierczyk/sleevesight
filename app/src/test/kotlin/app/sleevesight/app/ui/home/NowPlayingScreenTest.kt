@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -24,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -64,6 +66,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowToast
+import kotlin.math.ceil
 
 /** The home screen's content in each state it shows, from published state only. */
 @RunWith(RobolectricTestRunner::class)
@@ -363,15 +366,30 @@ class NowPlayingScreenTest {
                         .positionInRoot.x
                 }
             assertEquals(1, starts.distinct().size)
-            // And no tag wraps: each is one line, so all are one height.
-            val heights =
-                listOf("MB1", "W1", "WD1").map {
-                    compose
-                        .onNodeWithText(it)
-                        .fetchSemanticsNode()
-                        .size.height
-                }
-            assertEquals("tag heights $heights", 1, heights.distinct().size)
+        }
+
+    // Native graphics at 420 dpi, where 4 dp is 10.5 px: the tags' padding rounds per side, so a
+    // column summed in dp and rounded once was a pixel short of the widest tag (#270).
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w411dp-h891dp-420dpi")
+    fun noTagOverflowsItsColumn() =
+        show(state(PipelineView(track()))) {
+            for (tag in listOf("MB1", "W1", "WD1")) {
+                val layouts = mutableListOf<TextLayoutResult>()
+                compose
+                    .onNodeWithText(tag)
+                    .fetchSemanticsNode()
+                    .config[SemanticsActions.GetTextLayoutResult]
+                    .action
+                    ?.invoke(layouts)
+                val layout = layouts.single()
+                // Not `didOverflowWidth`: with `softWrap = false` the paragraph takes the whole
+                // width offered, so it reads true for every tag narrower than the column.
+                val needed = ceil(layout.multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
+                assertTrue("$tag is ${layout.size.width} px of $needed", layout.size.width >= needed)
+                assertEquals("$tag lines", 1, layout.lineCount)
+            }
         }
 
     // Native graphics, on the phone's width and density: with Robolectric's default graphics every
