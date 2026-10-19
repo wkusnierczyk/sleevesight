@@ -274,9 +274,10 @@ enum class WriteAutomatically {
 /**
  * *Prepare the next track* (D13): what runs ahead for the next item in the player's queue.
  * *Evidence and insight*, first proposed as the default, is not offered: the queue item the app
- * reads has no album or length, so an insight written from it would be kept under a key the playing track never
- * reads, and paid for again when it plays (#172 measured Spotify's: they carry neither). A value
- * stored under that name reads as the default, *Evidence*, as any name this version does not know.
+ * reads has no album or length, so an insight written from it would be kept under a key the
+ * playing track never reads, and paid for again when it plays (#172 measured Spotify's: they
+ * carry neither). A value stored under that name reads as the default, *Evidence*, as any name
+ * this version does not know.
  */
 enum class PrepareNextTrack {
     OFF,
