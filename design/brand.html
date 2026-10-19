@@ -69,6 +69,14 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
    at .8em (37.6 units to the em), the words come out at 69/71 of that. The words are off the tile, so
    they take the page's ink: through the variable, since a selector cannot reach into a <use>. */
 .mark svg.lp-mark{width:auto;height:1.47em;--tile-ink:var(--ink)}
+/* 8b, turning: the whole mark turns as one about the record's centre, (73.10, 14.16) in the words'
+   units. The svg is a square centred there, 256 units a side, with room for the words' sweep (122
+   units from the centre to the far corner of "Sleeve"), and the svg itself turns, about its own
+   centre. The turn is intro B's: twice, in 2 s, with the same easing. */
+.turn-pane{background:var(--bg);display:grid;place-items:center;padding:12px;overflow:hidden;min-width:0}
+.turn-pane svg{display:block;width:min(100%,300px);height:auto;aspect-ratio:1;--tile-ink:var(--ink);animation:lp-turn 5s infinite}
+@keyframes lp-turn{0%,20%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}60%,100%{transform:rotate(720deg)}}
+@media (prefers-reduced-motion: reduce){.turn-pane svg{animation:none}}
 .s-p{font-size:30px}.s-xl{font-size:56px}.s-l{font-size:40px}.s-m{font-size:24px}.s-s{font-size:14px}.s-xs{font-size:9px}
 
 /* Colours */
@@ -278,7 +286,7 @@ noscript .lead{margin-top:16px}
   <div id="primary" class="grid2"></div>
 
   <h2>Marks with the record</h2>
-  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record from the eye logo, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it.</p>
+  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record from the eye logo, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it. Turning, 8b goes round as one piece about the record's centre, as the record turns in the eye.</p>
   <div id="record" class="grid2"></div>
 
   <h2>For marketing</h2>
@@ -343,7 +351,10 @@ document.getElementById('primary').innerHTML = [
 document.getElementById('record').innerHTML = [
   ['8a', 'The record from the x-height of "Sleeve" to the baseline of "sight"'],
   ['8b', 'The record as tall as "sight"'],
-].map(([k, n]) => card(k, n, duo(k, 's-l'))).join('');
+].map(([k, n]) => card(k, n, duo(k, 's-l'))).join('') +
+  card('8b', 'Turning about the record: the words go round with it',
+    `<div class="duo" role="img" aria-label="The 8b mark turning twice about the centre of the record, the words going round with it">${['lt', 'dk'].map(c =>
+      `<div class="turn-pane ${c}"><svg viewBox="-54.90 -113.84 256 256" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg></div>`).join('')}</div>`);
 
 document.getElementById('marketing').innerHTML = card('7a', 'Eye over the address · regular · app red', duo('7a', 's-m'));
 
