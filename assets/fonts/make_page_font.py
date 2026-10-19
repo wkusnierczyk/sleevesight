@@ -7,12 +7,13 @@ Roboto the visitor had installed: on a machine with only Roboto Bold, every weig
 The full variable font is about 1.7 MB; this copy keeps
   - the axes the pages vary: weight 400-700, width 88-100% (the headings are at 88-92%), and optical
     size over its whole range, which the browser sets from the font size; every other axis is fixed
-    at its default, slant included (the one italic line is slanted by the browser);
+    at its default, slant included (italic text, `<i>` and `.chat .by`, is slanted by the browser);
   - the characters in both pages (every one in the files, markup and script included, so text the
     scripts write is covered), plus printable ASCII, Latin-1 and the common punctuation (dashes,
     curly quotes, the ellipsis), so ordinary edits need no rebuild.
 Text added to the pages in a character outside that set falls back to the next font in the stack,
-so after such an edit, run this again.
+so after such an edit, run this again. A character Roboto Flex itself lacks, such as the check mark
+✓, falls back all the same; the script names any the pages use.
 
 Usage, from the repository root, with fontTools and Brotli installed (`pip install fonttools brotli`):
     python3 assets/fonts/make_page_font.py RobotoFlex.ttf
@@ -44,7 +45,8 @@ with tempfile.TemporaryDirectory() as tmp:
     font.save(path)
     font = TTFont(path)
     text = ''.join(html.unescape(open(p, encoding='utf-8').read()) for p in PAGES)
-    chars = {ord(c) for c in text if ord(c) >= 0x20} | EXTRA
+    used = {ord(c) for c in text if ord(c) >= 0x20}
+    chars = used | EXTRA
     opts = subset.Options()
     opts.layout_features = ['*']
     opts.name_IDs = ['*']
@@ -52,6 +54,9 @@ with tempfile.TemporaryDirectory() as tmp:
     opts.flavor = 'woff2'
     sub = subset.Subsetter(opts)
     sub.populate(unicodes=sorted(chars))
+    missing = sorted(used - set(font.getBestCmap()))
     sub.subset(font)
     subset.save_font(font, OUT, opts)
 print(f'{OUT}: {os.path.getsize(OUT)} bytes, {len(chars)} characters')
+if missing:
+    print('not in Roboto Flex, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in missing))

@@ -20,7 +20,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'
 t = json.load(open(os.path.join(ROOT, 'assets', 'logo', 'src', 'tile.json')))
 h = open(os.path.join(ROOT, 'index.html')).read()
 
-INDEX = 'b279b6ffa9f1d1d0'   # index.html at #260
+INDEX = 'b38fef9ec1a9f1f6'   # index.html at #260
 got = hashlib.sha256(h.encode()).hexdigest()[:16]
 if got != INDEX:
     sys.exit('index.html has changed since the builder was checked against it (sha256 %s, expected %s, at #260):\n'
@@ -199,7 +199,9 @@ for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
     if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
         sys.exit('the link %r would not resolve from design/' % url)
 # The style sheet's relative URLs, rebased by hand above (the font's), resolve as well.
-for m in re.finditer(r'url\([\'"]?(\.\./[^)\'"]+)', h):
-    if not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', m.group(1)))):
-        sys.exit('the style sheet\'s URL %r would not resolve from design/' % m.group(1))
+# Each URL is taken whole, quotes matched, so a stray character after a known path is not overlooked.
+for m in re.finditer(r'url\(\s*(?:"([^"]*)"|\'([^\']*)\'|([^)\s\'"]*))\s*\)', h):
+    url = next(g for g in m.groups() if g is not None)
+    if url.startswith('../') and not os.path.isfile(os.path.normpath(os.path.join(ROOT, 'design', url))):
+        sys.exit('the style sheet\'s URL %r would not resolve from design/' % url)
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
