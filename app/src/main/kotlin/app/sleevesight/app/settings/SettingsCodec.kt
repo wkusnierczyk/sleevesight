@@ -23,10 +23,15 @@ import kotlin.time.Duration.Companion.milliseconds
  * MusicBrainz labels may be off by default in the release). A set of switches (*Where to look*,
  * the web search engines, the genre label sources) is stored as the switches moved on or off
  * against their defaults, so one the user has not moved, or one a later version adds, follows its
- * default.
+ * default; *Players to follow* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
  * later one), or out of range reads as that setting's default, and the others are unaffected.
+ *
+ * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
+ * settings that changed, so a value this version cannot read stays until the user changes that
+ * setting, and in a set of switches only the switches that changed, so the others stay as stored:
+ * names this version does not know, and overrides a later version stored against other defaults.
  */
 internal object SettingsCodec {
     private val defaults = Settings()
@@ -92,79 +97,114 @@ internal object SettingsCodec {
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
         )
 
+    /**
+     * Stores [settings] in [prefs], rewriting only the settings that differ from what [prefs] reads
+     * as, so a value a later version stored, which this one reads as the default, stays until the
+     * user changes that setting.
+     */
+    @Suppress("CyclomaticComplexMethod", "LongMethod") // One line per setting, each its own key.
     fun write(
         settings: Settings,
         prefs: MutablePreferences,
     ) {
-        prefs.put(LAYOUT, settings.layout.name, defaults.layout.name)
-        prefs.put(AI_PROVIDER, settings.aiProvider?.name, null)
-        prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
-        prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
-        writePlayers(settings.followedPlayers, prefs)
-        writeSwitches(settings.enabledSources, defaults.enabledSources, prefs, SOURCES_ON, SOURCES_OFF)
-        writeSwitches(settings.webEngines, defaults.webEngines, prefs, ENGINES_ON, ENGINES_OFF)
-        writeSwitches(settings.labelSources, defaults.labelSources, prefs, LABELS_ON, LABELS_OFF)
-        prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
-        prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
-        prefs.put(
-            PAUSE_AUTO_WRITE,
-            settings.pauseAutoWriteAfter ?: NEVER_PAUSE,
-            defaults.pauseAutoWriteAfter ?: NEVER_PAUSE,
-        )
-        prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
-        prefs.put(PREPARE_NEXT, settings.prepareNextTrack.name, defaults.prepareNextTrack.name)
-        prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
+        val stored = read(prefs)
+
+        fun moved(of: (Settings) -> Any?) = of(settings) != of(stored)
+
+        // The names whose value differs from `before` to `after`, each with its value after (null:
+        // no longer listed, or a switch turned off).
+        fun <T> changes(
+            before: Map<String, T>,
+            after: Map<String, T>,
+        ) = (before.keys + after.keys).filter { before[it] != after[it] }.associateWith { after[it] }
+
+        // A set of switches: the names of those on, each overriding its default only if it changed.
+        fun <E : Enum<E>> switches(
+            onKey: Preferences.Key<Set<String>>,
+            offKey: Preferences.Key<Set<String>>,
+            of: (Settings) -> Set<E>,
+        ) {
+            val names = { s: Settings -> of(s).associate { it.name to true } }
+            val onByDefault = of(defaults).map { it.name }.toSet()
+            writeOverrides(changes(names(stored), names(settings)), { it in onByDefault }, prefs, onKey, offKey)
+        }
+
+        if (moved { it.layout }) prefs.put(LAYOUT, settings.layout.name, defaults.layout.name)
+        if (moved { it.aiProvider }) prefs.put(AI_PROVIDER, settings.aiProvider?.name, null)
+        if (moved { it.aiModel }) prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
+        if (moved { it.aiEffort }) {
+            prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
+        }
+        // A default player missing from the players is not followed, so it is stored as off.
+        val players = changes(stored.followedPlayers, settings.followedPlayers)
+        writeOverrides(players, { defaults.followedPlayers[it] }, prefs, PLAYERS_ON, PLAYERS_OFF)
+        switches(SOURCES_ON, SOURCES_OFF) { it.enabledSources }
+        switches(ENGINES_ON, ENGINES_OFF) { it.webEngines }
+        switches(LABELS_ON, LABELS_OFF) { it.labelSources }
+        if (moved { it.writeInsights }) prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
+        if (moved { it.writeAutomatically }) {
+            prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
+        }
+        if (moved { it.pauseAutoWriteAfter }) {
+            prefs.put(
+                PAUSE_AUTO_WRITE,
+                settings.pauseAutoWriteAfter ?: NEVER_PAUSE,
+                defaults.pauseAutoWriteAfter ?: NEVER_PAUSE,
+            )
+        }
+        if (moved { it.crossfade }) {
+            prefs.put(CROSSFADE_MS, (settings.crossfade as? Crossfade.Fixed)?.value?.inWholeMilliseconds, null)
+        }
+        if (moved { it.prepareNextTrack }) {
+            prefs.put(PREPARE_NEXT, settings.prepareNextTrack.name, defaults.prepareNextTrack.name)
+        }
+        if (moved { it.lookUpInBackground }) {
+            prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
+        }
         for (source in Settings.DEFAULT_CACHE_LIFETIMES.keys) {
+            if (!moved { it.cacheLifetimes[source] }) continue
             prefs.put(
                 lifetimeKey(source),
                 settings.cacheLifetimes[source]?.inWholeMilliseconds,
                 Settings.DEFAULT_CACHE_LIFETIMES[source]?.inWholeMilliseconds,
             )
         }
-        prefs.put(
-            ARTIST_LIFETIME_MS,
-            settings.artistCacheLifetime.inWholeMilliseconds,
-            defaults.artistCacheLifetime.inWholeMilliseconds,
-        )
-        prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
-        prefs.put(
-            HISTORY_LIFETIME_MS,
-            settings.historyLifetime?.inWholeMilliseconds ?: FOREVER,
-            defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
-        )
-        prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
-        prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        if (moved { it.artistCacheLifetime }) {
+            prefs.put(
+                ARTIST_LIFETIME_MS,
+                settings.artistCacheLifetime.inWholeMilliseconds,
+                defaults.artistCacheLifetime.inWholeMilliseconds,
+            )
+        }
+        if (moved { it.cacheSizeLimit }) prefs.put(CACHE_SIZE_LIMIT, settings.cacheSizeLimit, defaults.cacheSizeLimit)
+        if (moved { it.historyLifetime }) {
+            prefs.put(
+                HISTORY_LIFETIME_MS,
+                settings.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+                defaults.historyLifetime?.inWholeMilliseconds ?: FOREVER,
+            )
+        }
+        if (moved { it.sessionGap }) {
+            prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        }
+        if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
     }
 
     /**
      * *Players to follow* as overrides of the defaults, with `on` and `off` keys as the switch sets
-     * have ([readSwitches]): a player listed by default whose switch the user has not moved follows
-     * its default, including one a later version adds or whose default it revises. A player seen
-     * but not listed by default is stored with its switch, off as first listed. Not through
-     * [readSwitches]: the players are package names, not an enum, and a player listed but switched
-     * off is a state a set of switches turned on cannot hold.
+     * have ([readSwitches]): a player listed by default that this phone has not already listed off
+     * follows its default, including one a later version adds or whose default it revises. A player
+     * seen but not listed by default is stored with its switch, off as first listed (`players.off`,
+     * by [SettingsStore.playerSeen]), so a later version that lists it by default does not switch it
+     * on. A player in both keys, which no write stores, is off, as a switch in both of a set's keys
+     * is: a player is followed only on the user's choice. Not through [readSwitches]: the players
+     * are package names, not an enum, and a player listed but switched off is a state a set of
+     * switches turned on cannot hold.
      */
     private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
         defaults.followedPlayers +
-            prefs[PLAYERS_OFF].orEmpty().associateWith { false } +
-            prefs[PLAYERS_ON].orEmpty().associateWith { true }
-
-    /**
-     * Stores the switches that differ from the defaults: on, where the default is not on; off, where
-     * it is not off, newly seen players included. A default player missing from [players] is not
-     * followed, so it is stored as off.
-     */
-    private fun writePlayers(
-        players: Map<String, Boolean>,
-        prefs: MutablePreferences,
-    ) {
-        val on = players.filter { (player, follow) -> follow && defaults.followedPlayers[player] != true }.keys
-        val off =
-            players.filter { (player, follow) -> !follow && defaults.followedPlayers[player] != false }.keys +
-                defaults.followedPlayers.filter { (player, follow) -> follow && player !in players }.keys
-        prefs.put(PLAYERS_ON, on.ifEmpty { null }, null)
-        prefs.put(PLAYERS_OFF, off.ifEmpty { null }, null)
-    }
+            prefs[PLAYERS_ON].orEmpty().associateWith { true } +
+            prefs[PLAYERS_OFF].orEmpty().associateWith { false }
 
     /**
      * A set of switches as overrides of each switch's [default]: a switch the user has not moved
@@ -180,17 +220,30 @@ internal object SettingsCodec {
         return default + moved(on) - moved(off).toSet()
     }
 
-    private fun <E : Enum<E>> writeSwitches(
-        enabled: Set<E>,
-        default: Set<E>,
+    /**
+     * Rewrites only the [changed] names of an `on` and `off` pair, each to its new value (null for
+     * one no longer listed) against its [default] (null for one not listed by default): on where
+     * the default is not on, off where it is not off, a default player no longer listed off, and
+     * otherwise neither. Every other name stays as stored, one this version does not know or one a
+     * later version stored against another default alike, so a downgrade does not lose it.
+     */
+    private fun writeOverrides(
+        changed: Map<String, Boolean?>,
+        default: (String) -> Boolean?,
         prefs: MutablePreferences,
         onKey: Preferences.Key<Set<String>>,
         offKey: Preferences.Key<Set<String>>,
     ) {
-        val on = (enabled - default).map { it.name }.toSet()
-        val off = (default - enabled).map { it.name }.toSet()
-        prefs.put(onKey, on.ifEmpty { null }, null)
-        prefs.put(offKey, off.ifEmpty { null }, null)
+        if (changed.isEmpty()) return
+        val on = prefs[onKey].orEmpty() - changed.keys
+        val off = prefs[offKey].orEmpty() - changed.keys
+        val turnedOn = changed.filter { (name, value) -> value == true && default(name) != true }.keys
+        val offNow = { name: String, value: Boolean? ->
+            (value == false && default(name) != false) || (value == null && default(name) == true)
+        }
+        val turnedOff = changed.filter { (name, value) -> offNow(name, value) }.keys
+        prefs.put(onKey, (on + turnedOn).ifEmpty { null }, null)
+        prefs.put(offKey, (off + turnedOff).ifEmpty { null }, null)
     }
 
     private fun readCrossfade(prefs: Preferences): Crossfade {
