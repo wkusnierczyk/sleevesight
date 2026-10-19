@@ -106,7 +106,8 @@ nav.top a:hover{color:var(--ink);text-decoration:underline}
 .btn.tonal{background:var(--accent-soft);color:var(--ink)}
 
 /* The mock: one card as the home screen is designed (design.md, User interface). */
-figure.mock{margin:0;justify-self:center;width:100%;max-width:360px}
+/* At the end of its column, so the phone's right edge lines up with the header menu's. */
+figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
 .phone{background:var(--s-bg);color:var(--s-on);border:10px solid #101318;border-radius:40px;padding:18px 14px 20px;box-shadow:0 24px 60px -24px rgba(0,0,0,.45)}
 .prow{display:flex;align-items:center;gap:10px;background:var(--s-c1);border-radius:14px;padding:8px 12px;font-size:13px;line-height:1.25}
 .prow b{font-weight:600}
@@ -203,6 +204,7 @@ footer p{margin:0 0 4px}
 @keyframes sl-hover{to{transform:rotate(360deg)}}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
+  figure.mock{justify-self:center;max-width:360px}
   .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tiles,.boxes,.boxes.pair,.two{grid-template-columns:minmax(0,1fr)}
 }
