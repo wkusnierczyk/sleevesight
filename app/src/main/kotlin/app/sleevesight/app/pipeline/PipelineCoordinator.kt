@@ -466,7 +466,16 @@ data class CoordinatorState(
     /**
      * Whether [run] holds [report]: it is of the report's key, or the report is of the insight
      * track the ledger has written, and so is the run: a new length, album or artists of a
-     * written track starts no run, so the insight paid for stays.
+     * written track starts no run, so the insight paid for stays. An orphaned run holds nothing,
+     * not even a report of its own key: a report of the run's key but another insight track
+     * (another player on the same release, or another media id or queue item with the same title,
+     * artists, album and length) is a track change, as [sameInsightTrack] judges it, so once it
+     * settles the run is replaced, a call under way is cut off, and the new track decides afresh
+     * (D5): written again where the mode and the first action allow, otherwise Write is offered.
+     * The coordinator follows the session layer's identity rather than a rule of its own (#255).
+     * #297 takes the queue slot out of identity for players that send no track id; the media id
+     * still decides when both reports send one, so another player on the same release, or another
+     * media id with the same metadata, stays a track change.
      */
     fun holds(
         run: Run,
