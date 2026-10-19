@@ -1,6 +1,8 @@
 """design/landing-tile.html: the product page with the text tile as its logo and intro, for testers to
-compare with the eye. Built from index.html and src/tile.json (make_tile.py), so it follows the page;
-it fails if a part of index.html it replaces has changed. From the repository's root:
+compare with the eye. Built from index.html and src/tile.json (make_tile.py); rerun it after any
+change to index.html, since nothing rebuilds it. It fails if a part of index.html it replaces has
+changed, or if the page it makes still holds anything of the eye's or anything that would not
+resolve from design/. From the repository's root:
 
     python3 assets/logo/src/make_landing_tile.py
 
@@ -22,12 +24,15 @@ def sub(old, new, count=1, regex=False):
 
 # ---- the page, moved to design/ ----
 sub('---\nlayout: null\n---\n', '')
+sub('<link rel="canonical" href="https://sleevesight.app/">\n', '')
+sub('<meta property="og:url" content="https://sleevesight.app/">\n', '')
 sub("""href="{{ '/assets/favicon.svg' | relative_url }}\"""", 'href="../assets/favicon.svg"')
+if re.search(r'\{[{%]', h.replace("{{ '/assets/favicon.svg' | relative_url }}", '', 1)):
+    sys.exit('index.html holds Liquid other than the favicon\'s URL; teach the builder to resolve it')
 sub(r'href="(?!https?:|mailto:|#|\.\./)([^"]+)"',
     lambda m: 'href="%s"' % (m.group(1)[len('design/'):] if m.group(1).startswith('design/') else '../' + m.group(1)),
     count=len(re.findall(r'href="(?!https?:|mailto:|#|\.\./)[^"]+"', h)), regex=True)
-sub('<link rel="canonical" href="https://sleevesight.app/">\n',
-    '<link rel="canonical" href="https://sleevesight.app/">\n<meta name="robots" content="noindex">\n')
+sub('<meta name="color-scheme" content="light dark">\n', '<meta name="color-scheme" content="light dark">\n<meta name="robots" content="noindex">\n')
 sub('<!-- The landing page: no theme, no web fonts, no analytics, and short scripts, for the header and the\n'
     '     intro. The one thing it keeps in the browser is a note that the intro has played (`localStorage`).\n',
     '<!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo\n'
@@ -39,6 +44,8 @@ sub('  <p class="replay" hidden>', '  <p>An alternative logo and intro, for test
     '  <p class="replay" hidden>')
 # Every load plays the intro, and the landing page's note that it has played is neither read nor written.
 sub("  try { if (localStorage.getItem('sl-intro-played')) return; } catch (e) {}\n", '')
+sub('// Set before the first paint, so that a later visit, which skips the intro, never shows the page hidden.',
+    '// Set before the first paint, so the page stays hidden until the intro starts.')
 sub("    try { localStorage.setItem('sl-intro-played', '1'); } catch (e) {}\n", '')
 
 # ---- the logo ----
@@ -58,10 +65,19 @@ sub(r'    <svg viewBox="0 0 32 32" aria-hidden="true">.*?</svg>\n    <span class
     '    <svg viewBox="%s" aria-hidden="true"><use href="#words"/></svg>\n' % VB, regex=True)
 # The header shows the words alone, their ink box as the view box, so they line up with the page's
 # edge, as tall as the eye was (72 px; 36 px compact; 58 px under 370 px). They turn about the dot.
-sub('.brand>svg{width:72px;height:72px;flex:none;display:block;position:relative;top:.75px}',
-    '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), DOT))
+sub('.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;font-stretch:88%;font-size:40px;line-height:1.1;letter-spacing:-.015em;color:var(--ink);text-decoration:none}',
+    '.brand{display:flex;align-items:center;flex:none;text-decoration:none}')
+sub(r'/\* `top`: flex centring leaves the eye.*?\n\.brand>svg\{width:72px;height:72px;flex:none;display:block;position:relative;top:\.75px\}',
+    "/* The logo: the words, with their ink box as the view box, so the S lines up with the page's edge.\n"
+    "   It turns about the dot (`transform-origin`). */\n"
+    '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), DOT), regex=True)
+sub(r'/\* The name: "Sleeve" bold in ink.*?\n\.brand \.sight\{font-weight:400;color:var\(--sight\)\}\n', '', regex=True)
+sub('@media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:58px;height:58px}}',
+    '@media (max-width:370px){.brand>svg{width:%s;height:58px}}' % wpx(58))
+sub('.sl-compact .brand{font-size:20px;gap:10px}\n', '')
 sub('.sl-compact .brand>svg{width:36px;height:36px}', '.sl-compact .brand>svg{width:%s;height:36px}' % wpx(36))
-sub('.brand>svg{width:58px;height:58px}', '.brand>svg{width:%s;height:58px}' % wpx(58))
+sub('  .brand{transition:font-size .25s ease,gap .25s ease}\n', '')
+sub(r':is\(\.brand,\.splash\) \.eye\{fill:none;stroke:#1f2328\}\n.*?:is\(\.brand,\.splash\) \.core\{display:inline\}\}\n', '', regex=True)
 
 CSS = r'''/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 88% width, outlined
    (`assets/logo/src/make_tile.py`), so it needs no font. The dot of the i is at (0,0), the tile's
@@ -75,7 +91,7 @@ CSS = r'''/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 
 
 /* The intro (`.sl-intro`), set by the scripts when motion is allowed and the address names no
    section. The tile fades in large in the middle of the window, turns twice about the dot as the
-   record does in the eye (2 s, `sp-spin`'s easing on the landing page), and shrinks onto the header's
+   record does in the eye (2 s, with the landing page's easing for it), and shrinks onto the header's
    logo, fading as it goes, so the words land on the page; then the rest of the page fades in.
    Scrolling, a key or a click ends it at once; "Play the intro again" plays it once more. Hovering
    over or focusing the logo (`.play`) turns it once. Nothing moves under "reduce motion". */
@@ -98,7 +114,14 @@ CSS = r'''/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 
 @keyframes sl-arrive{from{opacity:0}}
 @keyframes sl-hover{to{transform:rotate(360deg)}}
 '''
-sub(r'/\* The intro \(`\.sl-intro`\).*?@keyframes sl-hover-shut\{[^\n]*\n', lambda m: CSS, regex=True)
+INTRO = r'/\* The intro \(`\.sl-intro`\).*?@keyframes sl-hover-shut\{[^\n]*\n'
+EYE_KEYFRAMES = {'sl-fly', 'sl-gone', 'sl-hold', 'sl-arrive', 'sl-name', 'sp-sleeve', 'sp-eye', 'sp-blink', 'sp-shut',
+                 'sp-spin', 'sl-out', 'sl-eyes', 'sl-blink', 'sl-blink-shut', 'sl-hover', 'sl-hover-shut'}
+m = re.search(INTRO, h, re.S)
+found = set(re.findall(r'@keyframes ([\w-]+)', m.group(0))) if m else set()
+if found != EYE_KEYFRAMES:
+    sys.exit('the intro\'s CSS in index.html has changed: keyframes %s' % sorted(found ^ EYE_KEYFRAMES))
+sub(INTRO, lambda m: CSS, regex=True)
 
 # ---- the script ----
 # The intro ends once the page has arrived, not on the eye's blink.
@@ -109,6 +132,10 @@ sub(r"    // The splash starts in the middle of the window and shrinks onto the 
     "    // turns, and shrinks onto the header's logo.\n"
     "    var big = Math.min(300, innerWidth * .62, innerHeight * .45),\n        logo = brand", regex=True)
 sub("    root.style.setProperty('--sw', -wait + 'px');\n", '')
+sub('  // it does not blink the logo again.\n', '  // it does not turn the logo again.\n')
+# A hover's turn still running would turn the box the flight is measured from, and win over `sl-hold`.
+sub('  function intro() {\n', "  function intro() {\n    // A hover's turn still running would turn the logo's box, which the flight is measured from.\n"
+    "    brand.classList.remove('play');\n")
 sub("""    root.style.setProperty('--fx', logo.left - x + 'px');
     root.style.setProperty('--fy', logo.top - y + 'px');
     root.style.setProperty('--fs', logo.width / big);""",
@@ -133,4 +160,11 @@ if '--seek' in sys.argv[1:]:
 </script>
 </body>""")
 
+LEFT = [r'\{[{%]', 'localStorage', 'sl-intro-played', r'\bsl-blink\b', r'\bsl-name\b', r'\bsp-', '--sw', r'class="eye',
+        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'\b(?:src|srcset)="(?!https?:|data:|#|\.\./)',
+        r'url\((?![\'"]?(?:#|https?:|data:))', r'href="(?!https?:|mailto:|#|\.\./|[\w-]+\.html")']
+for pat in LEFT:
+    hit = re.search(pat, h)
+    if hit:
+        sys.exit('the page would still hold %r: ...%s...' % (pat, h[max(0, hit.start() - 60):hit.end() + 60]))
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)

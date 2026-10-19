@@ -5,15 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight: liner notes for whatever you're playing</title>
 <meta name="description" content="An open-source Android app that reads what your music player is playing and shows a short, sourced insight about the song you are playing, with its genre labels.">
-<link rel="canonical" href="https://sleevesight.app/">
-<meta name="robots" content="noindex">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sleevesight">
 <meta property="og:title" content="Sleevesight: liner notes for whatever you're playing">
 <meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key.">
-<meta property="og:url" content="https://sleevesight.app/">
 <meta name="twitter:card" content="summary">
 <!-- An alternative to the landing page (`index.html`), for testers to compare: the text tile as its logo
      and intro in place of the eye. Built by `assets/logo/src/make_landing_tile.py`; not edited by hand.
@@ -60,15 +58,11 @@ a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offse
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
    the menu stacks below 720 px. */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
-.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;font-stretch:88%;font-size:40px;line-height:1.1;letter-spacing:-.015em;color:var(--ink);text-decoration:none}
-/* `top`: flex centring leaves the eye about 0.75 px above the middle of the capital S, at both sizes
-   and any pixel density (measured on screen); this centres it. */
+.brand{display:flex;align-items:center;flex:none;text-decoration:none}
+/* The logo: the words, with their ink box as the view box, so the S lines up with the page's edge.
+   It turns about the dot (`transform-origin`). */
 .brand>svg{width:86.72px;height:72px;flex:none;display:block;overflow:visible;transform-origin:45.229% 54.000%}
-/* The name: "Sleeve" bold in ink, "sight" regular in the record label's red (`--sight`). On light, a
-   shade darker than the label's `#cf222e` (4.48:1), for 4.5:1 at the compact header's 20 px; on dark,
-   a lighter red, since the label's is 3.6:1 there. */
-.brand .sight{font-weight:400;color:var(--sight)}
-@media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:69.86px;height:58px}}
+@media (max-width:370px){.brand>svg{width:69.86px;height:58px}}
 nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
@@ -82,7 +76,6 @@ nav.top{flex:none}
 .js header.top .bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg);border-bottom:1px solid transparent}
 .sl-compact header.top .bar{border-bottom-color:var(--line);box-shadow:0 8px 18px -14px rgba(0,0,0,.45)}
 .sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
-.sl-compact .brand{font-size:20px;gap:10px}
 .sl-compact .brand>svg{width:43.36px;height:36px}
 .sl-compact nav.top ul{font-size:15px;gap:4px 18px}
 .sl-compact.sl-stack header.top .row{flex-direction:row}
@@ -90,17 +83,10 @@ nav.top{flex:none}
 @media (prefers-reduced-motion: no-preference){
   header.top .bar{transition:border-color .25s,box-shadow .25s}
   header.top .row{transition:padding .25s ease}
-  .brand{transition:font-size .25s ease,gap .25s ease}
   .brand>svg{transition:width .25s ease,height .25s ease}
   nav.top ul{transition:font-size .25s ease}
 }
 .sl-still *{transition:none!important}
-:is(.brand,.splash) .eye{fill:none;stroke:#1f2328}
-/* On dark, the record's rim takes the outline's grey, merging with it as the black rim does on light,
-   and the groove gives way to a wider black disc, so the grey meets the black directly. The disc is
-   drawn only on dark: on light, its edge would darken the rim's antialiased edge where the lids clip it. */
-:is(.brand,.splash) .core{display:none}
-@media (prefers-color-scheme: dark){:is(.brand,.splash) .eye{fill:#fff;stroke:#8b949e}:is(.brand,.splash) .rim{fill:#8b949e}:is(.brand,.splash) .groove{display:none}:is(.brand,.splash) .core{display:inline}}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
 nav.top a{color:var(--muted);text-decoration:none}
 nav.top a:hover{color:var(--ink);text-decoration:underline}
@@ -188,7 +174,7 @@ footer p{margin:0 0 4px}
 
 /* The intro (`.sl-intro`), set by the scripts when motion is allowed and the address names no
    section. The tile fades in large in the middle of the window, turns twice about the dot as the
-   record does in the eye (2 s, `sp-spin`'s easing on the landing page), and shrinks onto the header's
+   record does in the eye (2 s, with the landing page's easing for it), and shrinks onto the header's
    logo, fading as it goes, so the words land on the page; then the rest of the page fades in.
    Scrolling, a key or a click ends it at once; "Play the intro again" plays it once more. Hovering
    over or focusing the logo (`.play`) turns it once. Nothing moves under "reduce motion". */
@@ -223,7 +209,7 @@ footer p{margin:0 0 4px}
 </style>
 <script>
 document.documentElement.classList.add('js');
-// Set before the first paint, so that a later visit, which skips the intro, never shows the page hidden.
+// Set before the first paint, so the page stays hidden until the intro starts.
 (function () {
   if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
   document.documentElement.classList.add('sl-wait');
@@ -401,7 +387,7 @@ document.documentElement.classList.add('js');
   // A replay started from the keyboard leaves focus on its button at the foot of the page, out of view
   // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`), unless it
   // has already moved elsewhere (a screen reader's cursor). The focus comes before the class goes, so
-  // it does not blink the logo again.
+  // it does not turn the logo again.
   function end() {
     stops.forEach(function (e) { removeEventListener(e, end); });
     if (back) { back = false; if (document.activeElement === again) brand.focus({preventScroll: true}); }
@@ -410,6 +396,8 @@ document.documentElement.classList.add('js');
   function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
   document.querySelector('main').addEventListener('animationend', function (e) { if (e.animationName === 'sl-arrive') end(); });
   function intro() {
+    // A hover's turn still running would turn the logo's box, which the flight is measured from.
+    brand.classList.remove('play');
     // The splash starts in the middle of the window, as large as fits with room for its corners as it
     // turns, and shrinks onto the header's logo.
     var big = Math.min(300, innerWidth * .62, innerHeight * .45),
