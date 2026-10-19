@@ -340,6 +340,7 @@ class PipelineCoordinatorPrepareTest {
 
             // A retry asked, or a call's end, under the preparation's id change nothing.
             val events = listOf(CoordinatorEvent.RetryAsked(prep), CoordinatorEvent.StepEnded(prep, RunStep.MODEL_CALL))
+
             fun changeNothing(moment: String) {
                 for (event in events) {
                     val before = coordinator.state

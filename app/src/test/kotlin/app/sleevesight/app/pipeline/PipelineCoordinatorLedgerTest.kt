@@ -248,7 +248,12 @@ class PipelineCoordinatorLedgerTest {
                 )
                 advance(DEBOUNCE_MS + 100)
                 assertEquals(listOf("A"), cut)
-                assertEquals("m2", coordinator.state.run?.nowPlaying?.mediaId)
+                assertEquals(
+                    "m2",
+                    coordinator.state.run
+                        ?.nowPlaying
+                        ?.mediaId,
+                )
                 settle()
             },
             Case(
