@@ -335,12 +335,18 @@ class FirstRunFlowTest {
     fun inTouchModeHomeOpensTheFirstRunScreenAtTheTop() {
         acknowledgeFirstRun()
         setAccess(granted = true)
-        InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
-        launch().use {
-            compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
-            // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
-            compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.setInTouchMode(true)
+        try {
+            launch().use {
+                compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+                // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
+                compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            }
+        } finally {
+            // Robolectric's default, which the other tests here expect.
+            instrumentation.setInTouchMode(false)
         }
     }
 

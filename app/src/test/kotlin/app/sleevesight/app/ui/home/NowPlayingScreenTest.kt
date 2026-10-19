@@ -1,7 +1,11 @@
 package app.sleevesight.app.ui.home
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.PendingIntent
 import android.content.Intent
+import android.view.View
+import android.view.ViewGroup
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +31,7 @@ import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
+import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -44,6 +49,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
@@ -54,7 +60,10 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.InsightReply
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -344,7 +353,7 @@ class NowPlayingScreenTest {
 
     @Test
     fun aScreenReaderHearsEachCitationByWhatItPointsAtAndCanFollowALine() {
-        val reply = "It topped the charts [W1]. It is loved [M]. It charted [L1]."
+        val reply = "It topped the charts [W1]. It is loved [M]. It charted [L1]. It is great."
         show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
             // The paragraph, not the evidence line that reads the same.
             val prose =
@@ -359,7 +368,8 @@ class NowPlayingScreenTest {
                     listOf(
                         "It topped the charts (${text(R.string.home_cite, "W1")}). " +
                             "It is loved (${text(R.string.home_cite_model)}). " +
-                            "It charted (${text(R.string.home_cite_unknown, "L1")}).",
+                            "It charted (${text(R.string.home_cite_unknown, "L1")}). " +
+                            "It is great. (${text(R.string.home_cite_none)})",
                     ),
                 ),
             )
@@ -375,6 +385,50 @@ class NowPlayingScreenTest {
             compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
         }
     }
+
+    @Test
+    fun aParagraphCitingManyLinesOffersABoundedSetOfActionsToTheAccessibilityService() {
+        // More distinct lines than Compose allows custom actions on one node (it throws at 32).
+        val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val evidence = EvidenceSet.of(drafts, JvmHasher)
+        val reply = "It is documented " + evidence.ids.joinToString("") { "[$it]" } + "."
+        val checked = (GroundingCheck.check(reply, evidence, allowModel = false) as InsightReply.Written).grounded
+        val track = track(insight = InsightState.Written(checked, cached = false), evidence = evidence)
+        val accessibility = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        accessibility.setEnabled(true)
+        accessibility.setTouchExplorationEnabled(true)
+        // A screen reader running: Compose builds nodes only for an enabled service.
+        accessibility.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+        show(state(PipelineView(track, aiReady = true))) { activity ->
+            val paragraph =
+                compose
+                    .onNode(
+                        hasText("It is documented", substring = true) and
+                            SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                    ).performScrollTo()
+                    .fetchSemanticsNode()
+            // The node an accessibility service is given, built as Android builds it (on screen:
+            // Compose gives none for a node scrolled out of view).
+            val view = composeView(activity.window.decorView)
+            val provider = checkNotNull(view.accessibilityNodeProvider) { "no node provider" }
+            val info = checkNotNull(provider.createAccessibilityNodeInfo(paragraph.id)) { "no node" }
+            val custom =
+                info.actionList.filter { action ->
+                    action.label?.toString()?.startsWith(text(R.string.home_cite, "")) == true
+                }
+            assertEquals(evidence.ids.take(16).map { text(R.string.home_cite, it) }, custom.map { it.label.toString() })
+        }
+    }
+
+    // The view Compose draws into, under [root].
+    private fun composeView(root: View): View =
+        if (root.javaClass.simpleName == "AndroidComposeView") {
+            root
+        } else {
+            (root as ViewGroup).children.firstNotNullOf { child ->
+                runCatching { composeView(child) }.getOrNull()
+            }
+        }
 
     @Test
     fun theKeptCardOffersRewriteAndSaysWhenARewriteFailed() {

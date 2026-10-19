@@ -379,6 +379,44 @@ internal class PipelineHostTest : PipelineHostFixture() {
         }
 
     @Test
+    fun `from a rebuild to the new pipeline's first view, the card shown is said to be the card`() =
+        runTest {
+            started()
+            play("One")
+            settle()
+            tap()
+            settle()
+            val card =
+                host.state.value.track
+                    ?.insight as InsightState.Written
+
+            // New evidence: the card paid for is shown in place of the run's insight.
+            keys = PipelineKeys(ai = Secret("ai"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            settle()
+            assertTrue(host.state.value.cardShown)
+
+            // Another rebuild, held before its keys are read: every view from it on is recorded.
+            val views = mutableListOf<PipelineView>()
+            host.published = { views += it }
+            keysReady = CompletableDeferred()
+            keys = PipelineKeys(ai = Secret("ai 2"), sources = SourceKeys(lastFm = Secret("lastfm")))
+            keyChanges.value++
+            runCurrent()
+            val beforePublishing = views.size
+            keysReady!!.complete(Unit)
+            settle()
+
+            assertTrue("views while the rebuild waits", beforePublishing > 0)
+            assertTrue("views after it", views.size > beforePublishing)
+            // Every Written insight shown here is the ledger's card: the run writes none of its own.
+            views.forEachIndexed { i, view ->
+                assertEquals("view $i", view.track?.insight == card, view.cardShown)
+            }
+            assertTrue(views.last().cardShown)
+        }
+
+    @Test
     fun `a rebuild that changes nothing in the card's key serves the card kept, with no call`() =
         runTest {
             started()

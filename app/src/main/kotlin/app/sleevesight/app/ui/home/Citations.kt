@@ -33,7 +33,8 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 // A paragraph of the insight as shown (its citations as chips) and as a screen reader reads it
 // (each chip by what it points at, `home_cite`, `home_cite_model` or `home_cite_unknown`, rather
-// than its bare id), with the lines its chips scroll to, in order, each once.
+// than its bare id, and an uncited sentence said to be so, as the underline shows it), with the
+// lines its chips scroll to, in order, each once, at most [MAX_LINE_ACTIONS].
 private class ProseText(
     val text: AnnotatedString,
     val spoken: String,
@@ -62,6 +63,12 @@ internal fun CheckedProse(
     val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
     val policy = CitePolicy(evidence, grounded.allowModel)
     val sentences = paragraph.map { it.text }
+    val uncited = resources.getString(R.string.home_cite_none)
+    val said =
+        paragraph.joinToString(" ") { sentence ->
+            val words = spoken(sentence.text, policy, resources)
+            if (sentence.status == SentenceStatus.UNCITED) "$words ($uncited)" else words
+        }
     val text =
         buildAnnotatedString {
             paragraph.forEachIndexed { i, sentence ->
@@ -70,7 +77,7 @@ internal fun CheckedProse(
                 appendSentence(sentence.text, policy, styles, onCite, if (doubtful) flagged else null)
             }
         }
-    Prose(ProseText(text, spoken(sentences.joinToString(" "), policy, resources), lines(sentences, policy)), onCite)
+    Prose(ProseText(text, said, lines(sentences, policy)), onCite)
 }
 
 /**
@@ -141,7 +148,8 @@ private fun spoken(
         .replace(SPACE_BEFORE_STOP, "$1")
         .trim()
 
-// The lines [sentences] cite that a chip scrolls to, in order, each once.
+// The lines [sentences] cite that a chip scrolls to, in order, each once, at most
+// [MAX_LINE_ACTIONS]: each becomes an accessibility action of the paragraph.
 private fun lines(
     sentences: List<String>,
     policy: CitePolicy,
@@ -152,6 +160,7 @@ private fun lines(
         .map { it.id }
         .filter { citeKind(it, policy.evidence, policy.modelAllowed) == CiteKind.LINE }
         .distinct()
+        .take(MAX_LINE_ACTIONS)
 
 // What a citation is read against: the evidence, and whether the model's own knowledge may be cited.
 private class CitePolicy(
@@ -231,3 +240,9 @@ private val CITE_SIZE = 0.8.em
 private val BLANK_LINE = Regex("\\n\\s*\\n")
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
+
+// The accessibility actions a paragraph offers for its lines. Compose (1.11.4) throws when one
+// node has 32 or more custom actions ("Can't have more than 32 custom actions for one widget",
+// `AndroidComposeViewAccessibilityDelegateCompat`), and a menu that long is hard to use anyway.
+// Lines past these are still reached by their chips' links, and listed under *Sources*.
+private const val MAX_LINE_ACTIONS = 16

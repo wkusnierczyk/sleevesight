@@ -71,7 +71,8 @@ import kotlin.coroutines.cancellation.CancellationException
  *   in place of an insight the track's run lacks: then [track]'s evidence is the evidence that card
  *   cites, found when it was written, not what the sources found now. Worked out with the card
  *   lookup itself, so it holds whether Write is offered beside the card ([rewrite]) or not (insights
- *   off, no AI service), and whether a rewrite failed ([rewriteFailed]).
+ *   off, no AI service), and whether a rewrite failed ([rewriteFailed]); kept with [track] while a
+ *   rebuilt pipeline has not published.
  * @property rewriteFailed why the run's own insight failed, when the card paid for is shown in its
  *   place: the rewrite of that card failed (its call failed, or the run failed while writing) or
  *   was stopped ([PipelineHost.STOPPED]), and the card written before is shown again, with
@@ -567,17 +568,16 @@ class PipelineHost(
         val tracks = live.flatMapLatest { it?.pipeline?.state ?: flowOf(null) }
         combine(tracks, live, snapshot, latest, failed) { track, current, owner, now, failedKey ->
             // Until the live pipeline publishes, the track shown before, with what it said of a
-            // rewrite that failed, and the card paid for while the ledger still holds it for that
-            // track: the track shown before already carries the card, so the lookup finds no room.
+            // rewrite that failed and of the card paid for: the track shown before already carries
+            // that card's insight and evidence (the lookup finds no room for it again, and nothing
+            // here replaces a written insight), so whether it is the card goes with it, and the
+            // note and the card stay in step.
             val before = view.value
             val shown =
                 track?.let { shownTrack(it, owner, failedKey) }
                     ?: before.track
                         ?.let { shownTrack(it, owner, failedKey) }
-                        ?.let { again ->
-                            val held = again.track?.let { cardFor(owner, it)?.insight == it.insight } == true
-                            Shown(again.track, before.rewriteFailed, cardShown = before.cardShown && held)
-                        }
+                        ?.let { Shown(it.track, before.rewriteFailed, before.cardShown) }
                     ?: Shown(null, null)
             val insight = shown.track?.insight
             PipelineView(
