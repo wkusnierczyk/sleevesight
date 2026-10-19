@@ -118,10 +118,13 @@ class MusicBrainzClient(
         val query = mapOf("query" to "artist:${phrase(name)}", "limit" to "$ARTIST_SEARCH_LIMIT", "fmt" to "json")
         return net.lookup(NetRequest("$BASE/artist", query = query)) { response ->
             val json = parseObject(response.body)
-            // Both are required: an answer without them cannot show what matches.
+            // Both are required: an answer without them cannot show what matches. A count below the
+            // artists listed is as good as none.
             val artists = json["artists"] as? JsonArray ?: error("no artists")
+            val count = json.int("count") ?: error("no count")
+            check(count >= artists.size) { "a count below the artists listed" }
             MbArtistSearch(
-                total = json.int("count") ?: error("no count"),
+                total = count,
                 artists = artists.map { MbArtist(it.required("id"), it.required("name")) },
             )
         }

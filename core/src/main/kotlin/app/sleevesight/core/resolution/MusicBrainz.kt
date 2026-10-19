@@ -96,7 +96,7 @@ data class MbArtist(
 
 /**
  * The first page of an artist search: [artists], and [total], how many artists match in all. The
- * page holds every match when [total] is no more than its size.
+ * page holds every match the search counted when [total] equals its size; a [total] below it is wrong.
  */
 data class MbArtistSearch(
     val total: Int,
