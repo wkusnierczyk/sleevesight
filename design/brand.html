@@ -86,6 +86,9 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .lead2 .muted{color:var(--page-muted);font-size:13.5px}
 .stage2{position:relative;aspect-ratio:16/10;background:var(--bg);overflow:hidden;border-top:1px solid var(--card-line);border-bottom:1px solid var(--card-line)}
 .stage2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+/* The previews and A's header panes show the product pages, whose "sight" on light is `--sight`,
+   #cc212d, a shade darker than the label red the other marks use. */
+.stage2.lt,.lead2 .card:first-child .pane.lt{--red:#cc212d}
 .stage2 .tl{position:absolute;left:35.417%;top:26.667%;width:29.167%;aspect-ratio:1;transform-origin:0 0;animation:b-fly 7s infinite}
 .stage2 .tl .spin{width:100%;height:100%;animation:b-spin 7s infinite}
 .stage2 .tl svg{display:block;width:100%;height:100%;overflow:visible}
@@ -135,7 +138,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 @keyframes a-shut{0%{opacity:0}32%{opacity:1}32.629%{opacity:0}51.286%{opacity:1}51.914%{opacity:0}}
 @keyframes a-spin{0%,35%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}49.286%,100%{transform:rotate(720deg)}}
 @keyframes a-land{0%,71.779%{opacity:0}71.786%,92%{opacity:1}100%{opacity:0}}
-@keyframes a-out{0%,71.786%{opacity:1;transform:translateX(0);animation-timing-function:cubic-bezier(.4,0,.6,1)}73.5%{opacity:1}76.071%,100%{opacity:0;transform:translateX(-50px)}}
+@keyframes a-out{0%,71.786%{opacity:1;transform:translateX(0);animation-timing-function:cubic-bezier(.4,0,.6,1)}73.5%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.6,1)}76.071%,100%{opacity:0;transform:translateX(-50px)}}
 @keyframes a-in{0%,75.357%{opacity:0;animation-timing-function:ease-out}78.214%,100%{opacity:1}}
 @keyframes a-hblink{0%,81.071%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}81.786%,82.071%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}83.071%,100%{transform:scaleY(1)}}
 @keyframes a-hshut{0%{opacity:0}81.643%{opacity:1}82.271%{opacity:0}}
@@ -199,6 +202,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 </svg>
 
 <div class="page">
+  <noscript><p class="lead">The marks, swatches and mock-ups on this page are drawn by its script, which is off.</p></noscript>
   <header class="sheet">
     <h1>Sleevesight brand sheet</h1>
     <p>Draft · 2026-10-19</p>
@@ -215,7 +219,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
         <h3>The eye and the record</h3>
         <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
         <p class="muted" style="margin:0 0 6px">Header: the eye, with "Sleeve" bold in ink and "sight" regular in red beside it.</p>
-        <b>Intro</b> (about 10.5 s)
+        <b>Intro</b> (about 11.6 s; the page is in at 10.5 s)
         <ol>
           <li>Large in the middle of the window: a record slides out of its sleeve and the eye forms around it.</li>
           <li>The eye blinks, the record turns twice, and the eye blinks again.</li>
@@ -225,7 +229,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
         <p class="muted" style="margin:8px 0 0">Hover: the eye blinks. See it at <a href="https://sleevesight.app/">sleevesight.app</a> (footer: "Play the intro again"). Video: <code>assets/logo/sleeve-to-eye-light.mp4</code>.</p>
       </div></div>
     <div class="card"><div class="cap"><b>B</b><span>The text tile · 6c · the alternative (<a href="https://github.com/wkusnierczyk/sleevesight/issues/263">#263</a>)</span></div>
-      <div class="stage2 lt"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
+      <div class="stage2 lt" role="img" aria-label="Intro B: the tile fades in, turns twice about the dot, and shrinks into the header, leaving the words on the page"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
         <svg class="hdr" viewBox="-37.59 -37.26 83.11 69" aria-hidden="true"><use href="#words"/></svg>
         <div class="tl"><div class="spin"><svg viewBox="-72 -72 144 144" aria-hidden="true"><rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
       <div class="body">
@@ -273,7 +277,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 
   <h2>Printed</h2>
   <p class="lead">Mock-ups, not print-ready art. On black, the type is pure white and the red is the lighter <code>#f0443a</code>; the eye is white with a grey rim, as on the site in dark mode.</p>
-  <div class="shirt-bar"><span id="tee-all">All shirts</span><span class="seg" role="group" aria-labelledby="tee-all"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span></div>
+  <div class="shirt-bar" hidden><span id="tee-all">All shirts</span><span class="seg" role="group" aria-labelledby="tee-all"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span></div>
   <div class="shirts" id="merch"></div>
   <div class="card" style="margin-top:16px"><div class="cap"><b>Stickers</b><span>Die-cut with a white edge</span></div>
     <div class="merch stage" style="display:block;padding:28px 16px"><div class="sticker-row" id="stickers"></div></div></div>
@@ -339,7 +343,7 @@ document.getElementById('swatches').innerHTML = [
 // The shirts: one card per design, with both tees drawn and one shown. Each print is in px for a
 // 260px-wide shirt, so the shirts keep that width.
 const tee = (which, colour, seam, cls, k, size) => `<div class="shirt on-${which}-tee" style="--shirt:${colour};--seam:${seam}">
-     <svg class="tee" viewBox="0 0 300 320"><use href="#tee"/></svg>
+     <svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg>
      <div class="print ${cls}">${mark(k, size)}</div></div>`;
 const seg = (label, cls = '') => `<span class="seg ${cls}" role="group" aria-label="${label}"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span>`;
 const merch = document.getElementById('merch');
@@ -355,14 +359,22 @@ const setTee = (card, which) => {
   card.classList.toggle('black', which === 'black');
   card.querySelectorAll('.cap .seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.tee === which));
 };
+// The switch above the shirts shows the colour they all share, or neither when they differ.
+const bar = document.querySelector('.shirt-bar');
+const syncAll = () => {
+  const cards = [...merch.querySelectorAll('.card')], black = cards.filter(c => c.classList.contains('black')).length;
+  const all = black === 0 ? 'white' : black === cards.length ? 'black' : null;
+  bar.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.tee === all));
+};
 merch.addEventListener('click', e => {
-  const b = e.target.closest('.seg button'); if (b) setTee(b.closest('.card'), b.dataset.tee);
+  const b = e.target.closest('.seg button'); if (b) { setTee(b.closest('.card'), b.dataset.tee); syncAll(); }
 });
-document.querySelector('.shirt-bar').addEventListener('click', e => {
+bar.addEventListener('click', e => {
   const b = e.target.closest('.seg button'); if (!b) return;
-  b.parentNode.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
   merch.querySelectorAll('.card').forEach(c => setTee(c, b.dataset.tee));
+  syncAll();
 });
+bar.hidden = false;
 
 document.getElementById('stickers').innerHTML =
   `<span class="sticker lt">${mark('6d', 's-l')}</span>
@@ -373,7 +385,7 @@ document.getElementById('stickers').innerHTML =
 // 7a: the eye as wide as the address's ink. A text box includes the side bearings of its first and
 // last letters, so they are measured on a canvas in the same font and taken off; the address then
 // moves by half their difference, so its ink is centred under the eye. Lengths are read against the
-// eye's own box at its CSS width of 6.6em and set in em, so a zoomed shirt (on a phone) fits too.
+// eye's own box at its CSS width of 6.6em and set in em, so they hold at every size the mark is shown.
 function fitVert() {
   const c = document.createElement('canvas').getContext('2d');
   c.font = '400 100px "Roboto Flex"'; c.fontStretch = 'semi-condensed';

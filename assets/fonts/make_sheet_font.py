@@ -12,9 +12,9 @@ so after such an edit, run this again.
 
 Usage, from the repository root, with fontTools installed (`pip install fonttools`):
     python3 assets/fonts/make_sheet_font.py RobotoFlex.ttf
-where RobotoFlex.ttf is the variable font from https://github.com/googlefonts/roboto-flex
-(SIL Open Font License 1.1, `assets/fonts/OFL.txt`, which declares no Reserved Font Name, so the
-cut-down copy keeps the name).
+where RobotoFlex.ttf is the variable font from github.com/google/fonts (ofl/robotoflex), as for
+`assets/logo/src/make_tile.py`. Its licence, the SIL Open Font License 1.1, is `assets/fonts/OFL.txt`
+(from the same place); it declares no Reserved Font Name, so the cut-down copy keeps the name.
 """
 import html
 import os
