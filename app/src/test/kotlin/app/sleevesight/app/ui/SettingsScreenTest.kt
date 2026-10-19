@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -109,17 +111,21 @@ class SettingsScreenTest {
         ): Flow<CompletionEvent> = emptyFlow()
     }
 
+    @Suppress("LongParameterList") // Each test sets what it needs, and leaves the rest.
     private fun show(
         providers: Map<ProviderId, AiProvider> = emptyMap(),
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
         clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
+        secretStore: SecretStore = secrets,
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settingsStore, secrets, providers, clearHistory, onOpenCredits) { "Label of $it" }
+                    SettingsScreen(settingsStore, secretStore, providers, clearHistory, onOpenCredits) {
+                        "Label of $it"
+                    }
                 }
             }
             // The screen draws once the settings are read.
@@ -257,6 +263,9 @@ class SettingsScreenTest {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
+            // A key that cannot be read can still be removed, alone or with the others.
+            compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_lastfm)).assertExists()
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).assertExists()
 
             compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
@@ -266,6 +275,121 @@ class SettingsScreenTest {
                 compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
             }
             assertEquals(SecretState.ABSENT, runBlocking { resetting.states.first() }.getValue(SecretId.LASTFM))
+        }
+    }
+
+    @Test
+    fun aStoredKeysRowRemovesThatKeyOnceConfirmed() {
+        runBlocking {
+            settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) }
+            secrets.set(SecretId.LASTFM, Secret("lastfm-key"))
+            secrets.set(SecretId.EXA, Secret("exa-key"))
+        }
+        show {
+            val removeLastFm = removeKey(R.string.settings_key_name_lastfm)
+            waitForNode(hasContentDescription(removeLastFm))
+            // Only a row with a key stored offers it: not the Anthropic key's, with none saved.
+            compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_exa)).assertExists()
+            val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
+            assertTrue(compose.onAllNodesWithContentDescription(removeAnthropic).isEmpty())
+
+            compose.onNodeWithContentDescription(removeLastFm).performScrollTo().performClick()
+            val explained = app.getString(R.string.settings_key_remove_explained, text(R.string.settings_source_lastfm))
+            compose.onNodeWithText(explained).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+            compose.waitForIdle()
+            assertEquals(SecretState.SAVED, runBlocking { secrets.states.first() }.getValue(SecretId.LASTFM))
+
+            compose.onNodeWithContentDescription(removeLastFm).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove)).performClick()
+            waitFor("the Last.fm key removed") { runBlocking { secrets.get(SecretId.LASTFM) } == null }
+            waitFor("the Last.fm key's button gone") {
+                compose.onAllNodesWithContentDescription(removeLastFm).isEmpty()
+            }
+            assertEquals("exa-key", runBlocking { secrets.get(SecretId.EXA) }?.reveal())
+
+            // The AI service's key row offers it too, once its key is saved.
+            runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
+            waitForNode(hasContentDescription(removeAnthropic))
+        }
+    }
+
+    @Test
+    fun withNoServiceChosenASavedAiKeyKeepsItsRowToRemoveIt() {
+        runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
+        show {
+            val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
+            waitForNode(hasContentDescription(removeAnthropic))
+            assertEquals(null, current().aiProvider)
+            compose.onNodeWithText(text(R.string.settings_key_name_anthropic)).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithContentDescription(removeAnthropic).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove)).performClick()
+            waitFor("the Anthropic key removed") { runBlocking { secrets.get(SecretId.ANTHROPIC) } == null }
+            waitFor("its row gone") {
+                compose.onAllNodesWithText(text(R.string.settings_key_name_anthropic)).fetchSemanticsNodes().isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun aKeyThatCannotBeRemovedKeepsTheConfirmationOpenAndSaysSo() {
+        val flaky = FlakyDataStore(stores.open("flaky-secrets"))
+        val flakySecrets = SecretStore(flaky, testCipher())
+        runBlocking { flakySecrets.set(SecretId.EXA, Secret("exa-key")) }
+        show(secretStore = flakySecrets) {
+            val removeExa = removeKey(R.string.settings_key_name_exa)
+            waitForNode(hasContentDescription(removeExa))
+            flaky.writeFailures.set(1)
+            compose.onNodeWithContentDescription(removeExa).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove)).performClick()
+
+            waitForText(text(R.string.settings_key_remove_failed))
+            compose.onNodeWithText(text(R.string.settings_remove)).assertIsDisplayed()
+            assertEquals("exa-key", runBlocking { flakySecrets.get(SecretId.EXA) }?.reveal())
+        }
+    }
+
+    @Test
+    fun removeAllApiKeysShowsWhileAnyKeyIsStored() =
+        show {
+            val row = text(R.string.settings_remove_all_keys)
+            compose.onNodeWithText(text(R.string.credits_title)).performScrollTo()
+            assertTrue(compose.onAllNodesWithText(row).fetchSemanticsNodes().isEmpty())
+
+            runBlocking { secrets.set(SecretId.EXA, Secret("exa-key")) }
+            waitForText(row)
+            // Not the row above the list, which a failure brings.
+            assertTrue(compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty())
+
+            compose.onNodeWithText(row).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
+            compose.waitForIdle()
+            assertEquals("exa-key", runBlocking { secrets.get(SecretId.EXA) }?.reveal())
+
+            compose.onNodeWithText(row).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
+            waitFor("the row gone") { compose.onAllNodesWithText(row).fetchSemanticsNodes().isEmpty() }
+            assertTrue(runBlocking { secrets.states.first() }.values.all { it == SecretState.ABSENT })
+        }
+
+    @Test
+    fun removeAllApiKeysThatFailsSaysSo() {
+        val failing =
+            object : SoftwareKeySource() {
+                override fun delete(): Unit = throw ProviderException("key store down")
+            }
+        val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
+        runBlocking { failingSecrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
+        show(secretStore = failingSecrets) {
+            waitForText(text(R.string.settings_remove_all_keys))
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
+            waitForText(text(R.string.settings_remove_all_keys_failed))
+            compose.onNodeWithText(text(R.string.settings_remove_all)).assertIsDisplayed()
+            // Only the phone's key could not be deleted: the API keys are gone, as the message allows.
+            assertTrue(runBlocking { failingSecrets.states.first() }.values.all { it == SecretState.ABSENT })
         }
     }
 
@@ -536,6 +660,12 @@ class SettingsScreenTest {
             for (credit in CREDITS) compose.onNodeWithText(text(credit.name)).performScrollTo().assertIsDisplayed()
         }
     }
+
+    /** The delete button's description on the key [name]'s row. */
+    private fun removeKey(name: Int) = app.getString(R.string.settings_key_remove, text(name))
+
+    private fun ComposeTestRule.onAllNodesWithContentDescription(description: String) =
+        onAllNodes(hasContentDescription(description)).fetchSemanticsNodes()
 
     /** *Clear history* done at once. */
     private fun clearedAtOnce(): Deferred<Boolean> = CompletableDeferred(true)
