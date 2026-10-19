@@ -1,37 +1,55 @@
 """design/landing-tile.html: the product page with the text tile as its logo and intro, for testers to
 compare with the eye. Built from index.html and src/tile.json (make_tile.py); rerun it after any
-change to index.html, since nothing rebuilds it. It fails if a part of index.html it replaces has
-changed, or if the page it makes still holds anything of the eye's or anything that would not
-resolve from design/. From the repository's root:
+change to index.html, since nothing rebuilds it. Every part of index.html it replaces is matched
+exactly: a fixed string, or a span pinned to the hash of its text, so any change inside one stops
+the build, naming the span, and the builder must be updated by hand. It also stops if the page
+still holds anything of the eye's, or a link that does not resolve to a file in the repository
+from design/. From the repository's root:
 
     python3 assets/logo/src/make_landing_tile.py
 
 `--seek` adds a hook for checking frames: `?t=<ms>` freezes the intro at that moment.
 """
-import json, os, re, sys
+import hashlib, json, os, re, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')
 t = json.load(open(os.path.join(ROOT, 'assets', 'logo', 'src', 'tile.json')))
 h = open(os.path.join(ROOT, 'index.html')).read()
 
-def sub(old, new, count=1, regex=False):
-    """Replaces `old` in the page, which must occur `count` times."""
+def sub(old, new, regex=False, pin=None):
+    """Replaces `old` in the page, which must occur once. A regex span must match text whose SHA-256
+    starts with `pin`, so nothing inside it can change unnoticed."""
     global h
-    n = len(re.findall(old, h, re.S)) if regex else h.count(old)
-    if n != count:
-        sys.exit('expected %d of %r in index.html, found %d' % (count, old[:70], n))
-    h = re.sub(old, new, h, flags=re.S) if regex else h.replace(old, new)
+    found = list(re.finditer(old, h, re.S)) if regex else [None] * h.count(old)
+    if len(found) != 1:
+        sys.exit('expected one %r in index.html, found %d' % (old[:70], len(found)))
+    if regex:
+        got = hashlib.sha256(found[0].group(0).encode()).hexdigest()[:16]
+        if got != pin:
+            sys.exit('the span %r in index.html has changed (sha256 %s, expected %s): update the builder for it'
+                     % (old[:70], got, pin))
+        h = h[:found[0].start()] + (new(found[0]) if callable(new) else new) + h[found[0].end():]
+    else:
+        h = h.replace(old, new)
+
+def rebase(m):
+    """A link moved from the root to design/: design/x stays as x, other relative ones gain ../."""
+    attr, q, url = m.groups()
+    if re.match(r'[a-z][a-z0-9+.-]*:|/|#|\.\./', url):
+        return m.group(0)
+    return '%s=%s%s%s' % (attr, q, url[len('design/'):] if url.startswith('design/') else '../' + url, q)
 
 # ---- the page, moved to design/ ----
 sub('---\nlayout: null\n---\n', '')
 sub('<link rel="canonical" href="https://sleevesight.app/">\n', '')
 sub('<meta property="og:url" content="https://sleevesight.app/">\n', '')
 sub("""href="{{ '/assets/favicon.svg' | relative_url }}\"""", 'href="../assets/favicon.svg"')
-if re.search(r'\{[{%]', h.replace("{{ '/assets/favicon.svg' | relative_url }}", '', 1)):
+# Before the links move, so that a Liquid URL is never rebased as a path.
+if re.search(r'\{[{%]', h):
     sys.exit('index.html holds Liquid other than the favicon\'s URL; teach the builder to resolve it')
-sub(r'href="(?!https?:|mailto:|#|\.\./)([^"]+)"',
-    lambda m: 'href="%s"' % (m.group(1)[len('design/'):] if m.group(1).startswith('design/') else '../' + m.group(1)),
-    count=len(re.findall(r'href="(?!https?:|mailto:|#|\.\./)[^"]+"', h)), regex=True)
+if re.search(r'\bsrcset\s*=', h):
+    sys.exit('index.html has a srcset; teach the builder to rebase it')
+h = re.sub(r'\b(href|src)=(["\'])(.*?)\2', rebase, h)
 sub('<meta name="color-scheme" content="light dark">\n', '<meta name="color-scheme" content="light dark">\n<meta name="robots" content="noindex">\n')
 sub('<!-- The landing page: no theme, no web fonts, no analytics, and short scripts, for the header and the\n'
     '     intro. The one thing it keeps in the browser is a note that the intro has played (`localStorage`).\n',
@@ -60,9 +78,9 @@ sub('<body>\n', '<body>\n<svg width="0" height="0" style="position:absolute" ari
 sub(r'<div class="splash" aria-hidden="true">.*?</div>\n',
     '<div class="splash" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144">'
     '<rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/>'
-    '<use href="#words"/></svg></div></div></div>\n', regex=True)
+    '<use href="#words"/></svg></div></div></div>\n', regex=True, pin='993df32a9138eb8d')
 sub(r'    <svg viewBox="0 0 32 32" aria-hidden="true">.*?</svg>\n    <span class="name">Sleeve<span class="sight">sight</span></span>\n',
-    '    <svg viewBox="%s" aria-hidden="true"><use href="#words"/></svg>\n' % VB, regex=True)
+    '    <svg viewBox="%s" aria-hidden="true"><use href="#words"/></svg>\n' % VB, regex=True, pin='255249ab01962c51')
 # The header shows the words alone, their ink box as the view box, so they line up with the page's
 # edge, as tall as the eye was (72 px; 36 px compact; 58 px under 370 px). They turn about the dot.
 sub('.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;font-stretch:88%;font-size:40px;line-height:1.1;letter-spacing:-.015em;color:var(--ink);text-decoration:none}',
@@ -70,14 +88,14 @@ sub('.brand{display:flex;align-items:center;gap:18px;flex:none;font-weight:700;f
 sub(r'/\* `top`: flex centring leaves the eye.*?\n\.brand>svg\{width:72px;height:72px;flex:none;display:block;position:relative;top:\.75px\}',
     "/* The logo: the words, with their ink box as the view box, so the S lines up with the page's edge.\n"
     "   It turns about the dot (`transform-origin`). */\n"
-    '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), DOT), regex=True)
-sub(r'/\* The name: "Sleeve" bold in ink.*?\n\.brand \.sight\{font-weight:400;color:var\(--sight\)\}\n', '', regex=True)
+    '.brand>svg{width:%s;height:72px;flex:none;display:block;overflow:visible;transform-origin:%s}' % (wpx(72), DOT), regex=True, pin='11e368aebda9a6d5')
+sub(r'/\* The name: "Sleeve" bold in ink.*?\n\.brand \.sight\{font-weight:400;color:var\(--sight\)\}\n', '', regex=True, pin='6764a27bdaa79b41')
 sub('@media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:58px;height:58px}}',
     '@media (max-width:370px){.brand>svg{width:%s;height:58px}}' % wpx(58))
 sub('.sl-compact .brand{font-size:20px;gap:10px}\n', '')
 sub('.sl-compact .brand>svg{width:36px;height:36px}', '.sl-compact .brand>svg{width:%s;height:36px}' % wpx(36))
 sub('  .brand{transition:font-size .25s ease,gap .25s ease}\n', '')
-sub(r':is\(\.brand,\.splash\) \.eye\{fill:none;stroke:#1f2328\}\n.*?:is\(\.brand,\.splash\) \.core\{display:inline\}\}\n', '', regex=True)
+sub(r':is\(\.brand,\.splash\) \.eye\{fill:none;stroke:#1f2328\}\n.*?:is\(\.brand,\.splash\) \.core\{display:inline\}\}\n', '', regex=True, pin='7d0068c5ee16200a')
 
 CSS = r'''/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 88% width, outlined
    (`assets/logo/src/make_tile.py`), so it needs no font. The dot of the i is at (0,0), the tile's
@@ -115,13 +133,7 @@ CSS = r'''/* The logo: "Sleeve" over "sight", right-aligned, Roboto Flex 400 at 
 @keyframes sl-hover{to{transform:rotate(360deg)}}
 '''
 INTRO = r'/\* The intro \(`\.sl-intro`\).*?@keyframes sl-hover-shut\{[^\n]*\n'
-EYE_KEYFRAMES = {'sl-fly', 'sl-gone', 'sl-hold', 'sl-arrive', 'sl-name', 'sp-sleeve', 'sp-eye', 'sp-blink', 'sp-shut',
-                 'sp-spin', 'sl-out', 'sl-eyes', 'sl-blink', 'sl-blink-shut', 'sl-hover', 'sl-hover-shut'}
-m = re.search(INTRO, h, re.S)
-found = set(re.findall(r'@keyframes ([\w-]+)', m.group(0))) if m else set()
-if found != EYE_KEYFRAMES:
-    sys.exit('the intro\'s CSS in index.html has changed: keyframes %s' % sorted(found ^ EYE_KEYFRAMES))
-sub(INTRO, lambda m: CSS, regex=True)
+sub(INTRO, lambda m: CSS, regex=True, pin='18ac5e838e14028d')
 
 # ---- the script ----
 # The intro ends once the page has arrived, not on the eye's blink.
@@ -130,7 +142,7 @@ sub("""  brand.addEventListener('animationend', function (e) { if (e.animationNa
 sub(r"    // The splash starts in the middle of the window and shrinks onto the header's logo\..*?logo = brand",
     "    // The splash starts in the middle of the window, as large as fits with room for its corners as it\n"
     "    // turns, and shrinks onto the header's logo.\n"
-    "    var big = Math.min(300, innerWidth * .62, innerHeight * .45),\n        logo = brand", regex=True)
+    "    var big = Math.min(300, innerWidth * .62, innerHeight * .45),\n        logo = brand", regex=True, pin='d54c103eaedead15')
 sub("    root.style.setProperty('--sw', -wait + 'px');\n", '')
 sub('  // it does not blink the logo again.\n', '  // it does not turn the logo again.\n')
 # A hover's turn still running would turn the box the flight is measured from, and win over `sl-hold`.
@@ -161,10 +173,20 @@ if '--seek' in sys.argv[1:]:
 </body>""")
 
 LEFT = [r'\{[{%]', 'localStorage', 'sl-intro-played', r'\bsl-blink\b', r'\bsl-name\b', r'\bsp-', '--sw', r'class="eye',
-        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'\b(?:src|srcset)="(?!https?:|data:|#|\.\./)',
-        r'url\((?![\'"]?(?:#|https?:|data:))', r'href="(?!https?:|mailto:|#|\.\./|[\w-]+\.html")']
+        r'\.eyes?\b', r'\.sleeve\b', r'\.name\b', r'\.sight\b', r'url\((?![\'"]?(?:#|https?:|data:))']
 for pat in LEFT:
     hit = re.search(pat, h)
     if hit:
         sys.exit('the page would still hold %r: ...%s...' % (pat, h[max(0, hit.start() - 60):hit.end() + 60]))
+# Jekyll serves x.md as x.html, and a directory as its index.html.
+for m in re.finditer(r'\b(?:href|src)=(["\'])(.*?)\1', h):
+    url = m.group(2)
+    if re.match(r'[a-z][a-z0-9+.-]*:|//|#', url):
+        continue
+    path = os.path.normpath(os.path.join(ROOT, url.lstrip('/')) if url.startswith('/') else os.path.join(ROOT, 'design', url))
+    path = path.split('#')[0]
+    if os.path.isdir(path):
+        path = os.path.join(path, 'index.html')
+    if not (os.path.isfile(path) or path.endswith('.html') and os.path.isfile(path[:-5] + '.md')):
+        sys.exit('the link %r would not resolve from design/' % url)
 open(os.path.join(ROOT, 'design', 'landing-tile.html'), 'w').write(h)
