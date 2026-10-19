@@ -199,7 +199,11 @@ private fun EvidenceRow(
     }
 }
 
-/** The tags' column: as wide as the widest of [tags] as [Tag] draws them. */
+/**
+ * The tags' column: as wide as the widest of [tags] as [Tag] draws them. Summed in pixels, as the
+ * padding is laid out (each side rounded on its own): at 420 dpi, 4 dp is 10.5 px, so 8 dp rounded
+ * once is a pixel short of the padding's 22 (review of #271).
+ */
 @Composable
 private fun tagColumnWidth(tags: List<String>): Dp {
     val measurer = rememberTextMeasurer()
@@ -207,7 +211,7 @@ private fun tagColumnWidth(tags: List<String>): Dp {
     val density = LocalDensity.current
     return remember(tags, style, density) {
         val widest = tags.maxOfOrNull { measurer.measure(it, style).size.width } ?: 0
-        with(density) { widest.toDp() } + TAG_PADDING * 2
+        with(density) { (widest + 2 * TAG_PADDING.roundToPx()).toDp() }
     }
 }
 
@@ -222,6 +226,9 @@ private fun Tag(
             text,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
+            // Never wrapped, should the column still come out short: a pixel of alignment at worst.
+            softWrap = false,
+            maxLines = 1,
             modifier =
                 Modifier
                     .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
