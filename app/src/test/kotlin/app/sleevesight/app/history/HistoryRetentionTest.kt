@@ -5,6 +5,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
@@ -42,11 +43,13 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
         history.changed(TrackChangeRecord(SPOTIFY, at, null, TrackRef(title, null), null, emptyList(), null, null))
     }
 
-    /** Moves virtual time on to the end of the first period, and runs what is due then. */
-    private fun atPeriod() {
-        at(HistoryRetention.PERIOD.inWholeMilliseconds)
+    /** Moves virtual time on to the end of period [n], and runs what is due then. */
+    private fun atPeriod(n: Int = 1) {
+        at((HistoryRetention.PERIOD * n).inWholeMilliseconds)
         scheduler.runCurrent()
     }
+
+    private val clockMoved = "The clock moved: old entries in the session history are kept until it is set right"
 
     private fun changes(): List<String> = history.changes(limit = 100).changes.map { it.to.title }
 
@@ -83,7 +86,7 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
     }
 
     @Test
-    fun aClockSetAheadWhileTheAppRunsDeletesNothingUntilItRestarts() {
+    fun aClockSetAheadWhileTheAppRunsDeletesNothingUntilItIsSetRight() {
         played("Old", base - 80.days)
         played("New", base - 1.days)
         scope.launch { retention.run() }
@@ -96,10 +99,66 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
         lifetime.value = 30.days
 
         assertEquals(listOf("Old", "New", "Sundown"), rows())
-        assertEquals(
-            listOf("The clock moved: old entries in the session history are kept until the app restarts"),
-            warnings,
-        )
+        assertEquals(listOf(clockMoved, clockMoved), warnings)
+
+        // Set right: the next deletion runs, by the right clock.
+        clockSet = Duration.ZERO
+        atPeriod(2)
+        assertEquals(listOf("New", "Sundown"), rows())
+        assertEquals(2, warnings.size)
+    }
+
+    @Test
+    fun aClockSetBackWhileTheAppRunsDeletesNothingUntilItIsSetRight() {
+        played("Old", base - 91.days)
+        played("New", base)
+        clockSet = -2.hours
+        scope.launch { retention.run() }
+
+        assertEquals(listOf("Old", "New"), rows())
+        assertEquals(listOf(clockMoved), warnings)
+
+        clockSet = Duration.ZERO
+        atPeriod()
+        assertEquals(listOf("New"), rows())
+    }
+
+    @Test
+    fun aClockMovedWithinTheMarginStillDeletes() {
+        // Half an hour: more than a network time correction, within the hour allowed.
+        played("Old", base - 91.days)
+        played("New", base)
+        clockSet = 30.minutes
+        scope.launch { retention.run() }
+
+        assertEquals(listOf("New"), rows())
+        assertTrue(warnings.isEmpty())
+    }
+
+    @Test
+    fun foreverDoesNotCheckTheClock() {
+        // Through the recorder itself: the retention asks it nothing with *Forever*.
+        played("Ancient", base - 3_650.days)
+        clockSet = 200.days
+
+        assertTrue(scope.async { recorder.deleteOlderThan { null } }.getCompleted())
+        assertTrue(warnings.isEmpty())
+        assertEquals(listOf("Ancient"), rows())
+    }
+
+    @Test
+    fun whileTheClockIsMovedAClearAndTheRecordingStillWork() {
+        played("Old", base - 91.days)
+        clockSet = 200.days
+        scope.launch { retention.run() }
+        assertEquals(listOf(clockMoved), warnings)
+
+        assertTrue(retention.clear().getCompleted())
+        assertEquals(emptyList<String>(), rows())
+        assertEquals(emptyList<String>(), changes())
+
+        spotify()
+        assertEquals(listOf("Sundown"), rows())
     }
 
     @Test

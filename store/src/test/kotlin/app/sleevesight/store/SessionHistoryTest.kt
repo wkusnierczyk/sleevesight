@@ -55,10 +55,11 @@ class SessionHistoryTest {
     @Test
     fun `the same track again in the same session is not added`() {
         val first = play(sundown, start)
+        // Found playing again after a restart: the same entry, begun again then.
         val again = play(sundown, start + 1.minutes)
 
-        assertEquals(first, again)
-        assertEquals(listOf(first), history.latestSession())
+        assertEquals(first.copy(resumedAt = start + 1.minutes), again)
+        assertEquals(listOf(again), history.latestSession())
     }
 
     @Test
@@ -70,7 +71,11 @@ class SessionHistoryTest {
         val updated = play(filled, start + 2.seconds)
 
         assertEquals(first.id, updated.id)
-        assertEquals(listOf(PlayedTrack(first.id, 1, start, sundown)), history.latestSession())
+        // A start, so begun again then.
+        assertEquals(
+            listOf(PlayedTrack(first.id, 1, start, sundown, resumedAt = start + 2.seconds)),
+            history.latestSession(),
+        )
     }
 
     @Test
@@ -123,12 +128,53 @@ class SessionHistoryTest {
 
         // Within the gap: the same entry, playing again.
         val resumed = play(sundown, start + 10.seconds + GAP)
-        assertEquals(PlayedTrack(resumed.id, 1, start, sundown), history.latestSession().single())
+        assertEquals(
+            PlayedTrack(resumed.id, 1, start, sundown, resumedAt = start + 10.seconds + GAP),
+            history.latestSession().single(),
+        )
 
         history.stopped(start + 1.minutes)
         val later = play(sundown, start + 1.minutes + GAP + 1.milliseconds)
         assertEquals(2L, later.session)
         assertEquals(listOf(sundown), history.latestSession().map { it.track })
+    }
+
+    @Test
+    fun `a track resumed and left playing when the process ended is heard until a length after the resume`() {
+        // Paused 10 s in, resumed 20 minutes later, and the process killed while it played: no stop.
+        play(sundown, start)
+        history.stopped(start + 10.seconds)
+        val resume = start + 10.seconds + 20.minutes
+        play(sundown, resume)
+
+        val heard = history.latestSession().single().heardUntil
+        assertEquals(resume + 225.seconds, heard)
+        // Not a length after it first began, which is before the resume.
+        assertTrue(heard > start + 225.seconds)
+        // The break counts from there: a gap after it, still the same session.
+        assertEquals(1L, play(carefree, resume + 225.seconds + GAP).session)
+    }
+
+    @Test
+    fun `a track resumed and left playing begins a new session a gap past a length after the resume`() {
+        // Paused 4 s before its end, resumed within the gap, then killed while it played.
+        play(sundown, start)
+        history.stopped(start + 221.seconds)
+        val resume = start + 221.seconds + 5.minutes
+        play(sundown, resume)
+
+        assertEquals(2L, play(carefree, resume + 225.seconds + GAP + 1.milliseconds).session)
+    }
+
+    @Test
+    fun `a stream resumed and left playing is heard at least until the resume`() {
+        play(carefree, start)
+        history.stopped(start + 1.minutes)
+        val resume = start + 25.minutes
+        play(carefree, resume)
+
+        assertEquals(resume, history.latestSession().single().heardUntil)
+        assertEquals(1L, play(sundown, resume + GAP).session)
     }
 
     @Test
@@ -209,6 +255,47 @@ class SessionHistoryTest {
         assertEquals(listOf(changes[2], changes[1]), second.changes)
         // Exactly a page left: no page after it.
         assertEquals(TrackChangePage(listOf(changes[0]), next = null), history.changes(limit = 1, before = second.next))
+    }
+
+    @Test
+    fun `changes after a mark come in pages, and none at or before it`() {
+        val changes = (0 until 5).map { change(start + it.minutes, "Track $it") }
+        changes.forEach(history::changed)
+        // The mark a reset takes after the second change.
+        val mark = 2L
+
+        val first = history.changes(limit = 2, after = mark)
+        assertEquals(listOf(changes[4], changes[3]), first.changes)
+        // The page before the mark holds the one change left after it, and none follows.
+        assertEquals(
+            TrackChangePage(listOf(changes[2]), next = null),
+            history.changes(limit = 2, before = first.next, after = mark),
+        )
+        assertEquals(TrackChangePage(emptyList(), next = null), history.changes(limit = 2, after = 5))
+    }
+
+    @Test
+    fun `the last change's id and the sequence are 0 when empty, and only grow`() {
+        assertEquals(0L, history.lastChangeId())
+        assertEquals(0L, history.changeSequence())
+
+        history.changed(change(start - 91.days, "Old"))
+        history.changed(change(start, "New"))
+        assertEquals(2L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+
+        // A deletion leaves the newest change, and the sequence.
+        history.deleteOlderThan(90.days, now = start)
+        assertEquals(2L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+
+        // A clear empties the table, but the sequence goes on: the next id is 3.
+        history.clear()
+        assertEquals(0L, history.lastChangeId())
+        assertEquals(2L, history.changeSequence())
+        history.changed(change(start, "Next"))
+        assertEquals(3L, history.lastChangeId())
+        assertEquals(3L, history.changeSequence())
     }
 
     @Test

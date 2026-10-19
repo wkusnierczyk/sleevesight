@@ -1,5 +1,6 @@
 package app.sleevesight.store
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.store.history.HistoryDatabase
@@ -30,13 +31,15 @@ import kotlin.time.Instant
  *    caller passes (the user's *Start a new session after a break of*), so a new gap applies from
  *    the next start. The break is the time since the last row was last heard
  *    ([PlayedTrack.heardUntil]).
- *    - The same track as the last row, and a break of at most the gap: that row again, playing.
+ *    - The same track as the last row, and a break of at most the gap: that row again, playing,
+ *      begun again at the start's time ([PlayedTrack.resumedAt]).
  *    - Otherwise a new row: in the last row's session if the break is at most the gap, else in
  *      the next one.
  * 2. [continued]: the track of the last row plays on without a break, as the player updated it
  *    (artists sent after the title, an album, a new length): the row takes the update, however
- *    long it has played. No session is decided. If the last row is not that track (its write
- *    failed), this is a start.
+ *    long it has played. No session is decided. If the last row does not hold that track (its
+ *    start was never written, or its row has gone), this is a start, at the time the playback
+ *    started, so the update is not lost.
  * 3. [stopped]: the last row stopped playing (paused, stopped, or another track began); the first
  *    stop is kept until it plays again.
  *
@@ -48,7 +51,7 @@ import kotlin.time.Instant
  */
 @Suppress("TooManyFunctions") // One for each way the history is written, read or deleted.
 class SessionHistory(
-    driver: SqlDriver,
+    private val driver: SqlDriver,
 ) {
     private val queries: HistoryQueries = HistoryDatabase(driver).historyQueries
 
@@ -93,7 +96,7 @@ class SessionHistory(
         val last = queries.last() ?: return queries.insert(kept, at, session = 1)
         val withinGap = at - last.heardUntil <= sessionGap
         return when {
-            withinGap && sameTrack(last.track) -> queries.playing(last, kept)
+            withinGap && sameTrack(last.track) -> queries.resumed(last, kept, at)
             withinGap -> queries.insert(kept, at, last.session)
             else -> queries.insert(kept, at, last.session + 1)
         }
@@ -183,6 +186,23 @@ class SessionHistory(
     fun lastChangeId(): Long = queries.trackChangeLastId().executeAsOne()
 
     /**
+     * The highest id ever given to a change in this database, 0 with none: `AUTOINCREMENT`'s
+     * sequence, which [clear] and [deleteOlderThan] leave as it is, so no mark taken from
+     * [lastChangeId] is above it while the database lasts. A mark above it is from an earlier
+     * database, replaced since (Android deletes a corrupt database file and the app creates it
+     * anew), whose ids started again from 1. Read from `sqlite_sequence` in SQL of its own, since
+     * SQLDelight does not know that table's columns.
+     */
+    fun changeSequence(): Long =
+        driver
+            .executeQuery(
+                identifier = null,
+                sql = "SELECT seq FROM sqlite_sequence WHERE name = 'track_change'",
+                mapper = { cursor -> QueryResult.Value(if (cursor.next().value) cursor.getLong(0) ?: 0 else 0) },
+                parameters = 0,
+            ).value
+
+    /**
      * Deletes what is older than [lifetime], the user's *Keep history for*, in one transaction: the
      * tracks that began to play, and the track changes that began, more than [lifetime] before
      * [now]. The track added last is kept while it may still be playing, so a stream that plays
@@ -227,7 +247,26 @@ private fun HistoryQueries.insert(
     return PlayedTrack(lastInsertedId().executeAsOne(), session, at, kept)
 }
 
-/** [last], holding [track] and playing. */
+/** [last], holding [track] and playing again from [at]. */
+private fun HistoryQueries.resumed(
+    last: PlayedTrack,
+    track: NowPlaying,
+    at: Instant,
+): PlayedTrack {
+    playedResumed(
+        title = track.title,
+        artists = track.artists,
+        album = track.album,
+        duration_ms = track.duration?.inWholeMilliseconds,
+        media_id = track.mediaId,
+        queue_item = track.queueItemId,
+        resumed_at = at.toEpochMilliseconds(),
+        id = last.id,
+    )
+    return last.copy(track = track, stoppedAt = null, resumedAt = at)
+}
+
+/** [last], holding [track] and playing on. */
 private fun HistoryQueries.playing(
     last: PlayedTrack,
     track: NowPlaying,
@@ -267,6 +306,7 @@ private fun playedTrack(row: Played): PlayedTrack =
                 queueItemId = row.queue_item,
             ),
         stoppedAt = row.stopped_at?.let(Instant::fromEpochMilliseconds),
+        resumedAt = row.resumed_at?.let(Instant::fromEpochMilliseconds),
     )
 
 private fun trackChange(
@@ -303,6 +343,9 @@ private fun trackChange(
  * @property track the track as the player last reported it, without its art.
  * @property stoppedAt when the app first saw it stop playing, with the same lag as [playedAt]; null
  *   while it plays, or if the process ended while it played.
+ * @property resumedAt when the app last saw it begin to play again in this row, with the same lag:
+ *   resumed after a pause or a stop, or found playing again after a restart; null if it has not, or
+ *   if the row was written before the history kept it (version 1 of its schema).
  */
 data class PlayedTrack(
     val id: Long,
@@ -310,12 +353,21 @@ data class PlayedTrack(
     val playedAt: Instant,
     val track: NowPlaying,
     val stoppedAt: Instant? = null,
+    val resumedAt: Instant? = null,
 ) {
     /**
-     * When it was last heard: when it stopped; failing that, when it should have ended (its start
-     * plus its length, or its start when the player sent none).
+     * When it was last heard: when it stopped; failing that (it plays, or the process ended while it
+     * played), when it would have ended had it played once through from when it last began to play
+     * ([resumedAt], else [playedAt]): that time plus its length, or that time alone when the player
+     * sent none.
+     *
+     * A whole length from the resume, not the part left after what was heard before the pause: no
+     * position reaches the history, and the position at a resume may be anywhere (a seek while
+     * paused, a restart from the top), so a whole length is the most the time since the resume
+     * allows. The cost is a break that may be counted short, so a later start may stay in a
+     * session it would otherwise have begun anew.
      */
-    val heardUntil: Instant get() = stoppedAt ?: (playedAt + (track.duration ?: Duration.ZERO))
+    val heardUntil: Instant get() = stoppedAt ?: ((resumedAt ?: playedAt) + (track.duration ?: Duration.ZERO))
 }
 
 /**

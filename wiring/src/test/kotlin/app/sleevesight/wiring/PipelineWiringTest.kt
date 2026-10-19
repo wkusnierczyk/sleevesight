@@ -18,18 +18,21 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class PipelineWiringTest {
-    /** Answers every request with [response], and keeps the URLs asked. */
+    /** Answers every request with [response], and keeps the URLs asked and the times it was closed. */
     private class Answering(
         private val response: NetResponse,
     ) : NetClient {
         val asked = mutableListOf<String>()
+        var closed = 0
 
         override suspend fun send(request: NetRequest): NetResult<NetResponse> {
             asked += request.url
             return NetResult.Success(response)
         }
 
-        override fun close() = Unit
+        override fun close() {
+            closed++
+        }
     }
 
     private val image = NetResponse(200, mapOf("Content-Type" to listOf("image/jpeg")), byteArrayOf(1, 2, 3))
@@ -71,8 +74,23 @@ class PipelineWiringTest {
 
     @Test
     fun `a source switched off still gets its adapter, since the pipeline reads the switch`() {
+        // Every source has its key, so each one switched off would otherwise get an adapter.
+        val keyed = SourceKeys(lastFm = lastFm, web = mapOf(WebEngine.EXA to exa))
         val off = Settings(enabledSources = emptySet())
-        assertEquals(listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA), ids(SourceKeys(), off))
+        assertEquals(
+            listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM, SourceId.WEB),
+            ids(keyed, off),
+        )
+    }
+
+    @Test
+    fun `closing the wiring closes the client only when the wiring made it`() {
+        val borrowed = Answering(image)
+        pipelineWiringOn(borrowed, JvmAccentFolder, JvmResourceReader).close()
+        assertEquals(0, borrowed.closed)
+        val owned = Answering(image)
+        PipelineWiring(owned, JvmAccentFolder, JvmResourceReader, ownsNet = true).close()
+        assertEquals(1, owned.closed)
     }
 
     @Test

@@ -29,8 +29,9 @@ fun interface ArtistTags {
  * [capacity] artists, the least recently used dropped first: a second track by the same artist
  * asks nothing. They are kept in memory, for the process: a table of their own in `:store` would
  * need its own schema, size accounting, eviction and lifetime, for what is one request per artist
- * off the evidence path. A failed request is not kept, so the next track asks again; an artist
- * MusicBrainz does not know is kept as having no tags.
+ * off the evidence path. A failed request is not kept, so the next track by the artist asks again,
+ * and gives that artist no labels meanwhile; nothing else follows from it, since the labels are no
+ * evidence. An artist MusicBrainz does not know is kept as having no tags.
  */
 class MusicBrainzLabels(
     private val tags: ArtistTags,
@@ -39,12 +40,6 @@ class MusicBrainzLabels(
     private val lifetime: Duration = DEFAULT_LIFETIME,
     private val capacity: Int = DEFAULT_CAPACITY,
 ) {
-    /** The labels, and whether every artist's tags were obtained ([complete]): false when a request failed. */
-    data class Found(
-        val labels: List<GenreLabel>,
-        val complete: Boolean,
-    )
-
     private class Kept(
         val tags: List<String>,
         val at: Instant,
@@ -55,17 +50,13 @@ class MusicBrainzLabels(
     // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
     private val kept = LinkedHashMap<String, Kept>()
 
-    /** The labels from the tags of [artists], MusicBrainz ids in credit order. */
-    suspend fun labels(artists: List<String>): Found {
-        var complete = true
-        val labels =
-            artists.distinct().flatMap { mbid ->
-                val found = tagsOf(mbid)
-                if (found == null) complete = false
-                vocabulary.labelsFor(found.orEmpty(), artistPage(mbid))
-            }
-        return Found(labels.distinctBy { it.identity }.take(GenreVocabulary.MAX_LABELS), complete)
-    }
+    /** The labels from the tags of [artists], MusicBrainz ids in credit order; none for one whose request failed. */
+    suspend fun labels(artists: List<String>): List<GenreLabel> =
+        artists
+            .distinct()
+            .flatMap { mbid -> vocabulary.labelsFor(tagsOf(mbid).orEmpty(), artistPage(mbid)) }
+            .distinctBy { it.identity }
+            .take(GenreVocabulary.MAX_LABELS)
 
     // The artist's tags, kept or asked for; null when the request failed.
     private suspend fun tagsOf(mbid: String): List<String>? =

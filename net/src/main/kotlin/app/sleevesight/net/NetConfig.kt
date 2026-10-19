@@ -8,7 +8,10 @@ import kotlin.time.Duration.Companion.seconds
  * How the one client behaves: the User-Agent, the per-host rate limits, timeouts and retries.
  *
  * [appVersion] is the version of the app or tool making the requests, for the User-Agent. [hosts]
- * keys are domains, matched case-insensitively and without a trailing dot.
+ * keys are domains, matched case-insensitively and without a trailing dot. The app and the CLI pass
+ * every adapter's and provider's policy, from `:wiring`'s `HostPolicies`; the default,
+ * [DEFAULT_HOSTS], is `:net`'s own list, for this module's tests and the live tests of a module that
+ * cannot see `:wiring`.
  */
 class NetConfig(
     val appVersion: String,
@@ -39,8 +42,9 @@ class NetConfig(
          * MusicBrainz allows one request per second per client, and answers 503 beyond it, so its
          * policy reports a 503 to a GET as [NetError.RateLimited]. Last.fm's API terms
          * (checked 2026-10-13) say limits are set and enforced at its discretion, with no figure, and
-         * Wikimedia asks for serial requests without a rate; their adapters add an entry when a
-         * stated limit applies, as Discogs' will (60 a minute, Phase 3).
+         * Wikimedia asks for serial requests without a rate, so neither has an entry. Another
+         * host's stated limit, such as Exa's or Discogs' (60 a minute, Phase 3), is added to
+         * `:wiring`'s `HostPolicies`, beside these, not here.
          */
         val DEFAULT_HOSTS: Map<String, HostPolicy> =
             mapOf(MUSICBRAINZ to HostPolicy(minInterval = 1.seconds, rateLimitedOn503 = true))

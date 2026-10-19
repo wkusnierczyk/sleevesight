@@ -15,6 +15,7 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.wiring.SourceKeys
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -28,6 +29,11 @@ import org.junit.Test
  */
 class WiringTest {
     private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader)
+
+    // The wiring made its own client; each test closes it, as the app, whose client lives as long as
+    // the process, never does.
+    @After
+    fun closeTheClient() = wiring.close()
 
     @Test
     fun theAppGetsTheAdaptersResolverLabelsAndProvidersAsCoreTypes() {

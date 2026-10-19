@@ -41,10 +41,17 @@ data class GroundingCounts(
     val total: Int get() = ok + model + hedge + uncited + unknown
 }
 
-/** A written reply, checked: its paragraphs, each a list of sentences, none empty. */
+/**
+ * A written reply, checked: its paragraphs, each a list of sentences, none empty, and whether the
+ * model's own knowledge (`[M]`) was allowed when it was checked ([allowModel]). The card reads its
+ * `[M]` citations by that, not by the setting now, and not by whether any sentence came out
+ * [SentenceStatus.MODEL]: a sentence citing `[M]` beside a line that does not exist is
+ * [SentenceStatus.UNKNOWN] either way.
+ */
 data class GroundedText(
     val text: String,
     val paragraphs: List<List<CheckedSentence>>,
+    val allowModel: Boolean,
 ) {
     val counts: GroundingCounts by lazy {
         val all = paragraphs.flatten().groupingBy { it.status }.eachCount()
@@ -117,7 +124,7 @@ object GroundingCheck {
                 .split(PARAGRAPH_BREAK)
                 .map { paragraph -> splitSentences(paragraph).map { classify(it, ids, allowModel) } }
                 .filter { it.isNotEmpty() }
-        return InsightReply.Written(GroundedText(text, paragraphs))
+        return InsightReply.Written(GroundedText(text, paragraphs, allowModel))
     }
 
     /**

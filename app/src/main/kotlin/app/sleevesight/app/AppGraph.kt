@@ -94,6 +94,12 @@ class AppGraph(
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))
 
     /**
+     * Where the settings screen saves a setting or a key, or removes keys: the process's scope, so
+     * leaving the screen, or a rotation, does not cut a save short.
+     */
+    val settingsSaves: CoroutineScope get() = mainScope
+
+    /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
@@ -189,7 +195,7 @@ class AppGraph(
         SkipDetectorLearning(
             skipDetector,
             history,
-            DataStoreLearningMark(preferences(appContext, SKIP_DETECTION_FILE)),
+            DataStoreLearningMark.open { appContext.preferencesDataStoreFile(SKIP_DETECTION_FILE) },
             Dispatchers.IO,
         )
 

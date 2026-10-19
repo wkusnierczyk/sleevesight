@@ -21,7 +21,9 @@ import app.sleevesight.core.synthesis.GroundedText
  *   was served from the cache, so nothing needed it).
  * @property evidence the cited evidence, with ids and fingerprint, once every source has landed.
  * @property genres the artists' genre labels, from the label sources switched on, combined
- *   ([app.sleevesight.core.genres.combineLabels]), once every source has landed.
+ *   ([app.sleevesight.core.genres.combineLabels]): Last.fm's with the evidence, once every source
+ *   has landed; MusicBrainz's join later, when the tags of the artists it resolved arrive, which
+ *   the insight does not wait for (`design/architecture.md`, *Evidence*).
  */
 data class TrackState(
     val nowPlaying: NowPlaying,

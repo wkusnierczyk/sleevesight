@@ -1,19 +1,18 @@
-"""Cut Roboto Flex down to what the product page (`index.html`) and its alternatives
-(`design/landing-tile.html`, `design/landing-record.html`) use, as `RobotoFlex-page.woff2`.
+"""Cut Roboto Flex down to what the product page (`index.html`) uses, as `RobotoFlex-page.woff2`.
 
-The pages set their text in Roboto Flex and load nothing from another site, so they carry their own
+The page sets its text in Roboto Flex and loads nothing from another site, so it carries its own
 copy of the font, as the brand sheet does (`make_sheet_font.py`). Without it, the page took whatever
 Roboto the visitor had installed: on a machine with only Roboto Bold, every weight rendered bold.
 The full variable font is about 1.7 MB; this copy keeps
-  - the axes the pages vary: weight 400-700, width 88-100% (the headings are at 88-92%), and optical
+  - the axes the page varies: weight 400-700, width 88-100% (the headings are at 88-92%), and optical
     size over its whole range, which the browser sets from the font size; every other axis is fixed
     at its default, slant included (italic text, `<i>` and `.chat .by`, is slanted by the browser);
-  - the characters in the pages (every one in the files, markup and script included, so text the
+  - the characters in the page (every one in the file, markup and script included, so text the
     scripts write is covered), plus printable ASCII, Latin-1 and the common punctuation (dashes,
     curly quotes, the ellipsis), so ordinary edits need no rebuild.
-Text added to the pages in a character outside that set falls back to the next font in the stack,
+Text added to the page in a character outside that set falls back to the next font in the stack,
 so after such an edit, run this again. A character Roboto Flex itself lacks, such as the check mark
-✓, falls back all the same; the script names any the pages use.
+✓, falls back all the same; the script names any the page uses.
 
 Usage, from the repository root, with fontTools and Brotli installed (`pip install fonttools brotli`):
     python3 assets/fonts/make_page_font.py RobotoFlex.ttf
@@ -29,7 +28,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
-PAGES = ['index.html', 'design/landing-tile.html', 'design/landing-record.html']
+PAGES = ['index.html']
 OUT = 'assets/fonts/RobotoFlex-page.woff2'
 AXES = {'wght': (400, 700), 'wdth': (88, 100), 'opsz': (8, 144)}
 EXTRA = set(range(0x20, 0x7f)) | set(range(0xa0, 0x100)) | set(range(0x2010, 0x2027))

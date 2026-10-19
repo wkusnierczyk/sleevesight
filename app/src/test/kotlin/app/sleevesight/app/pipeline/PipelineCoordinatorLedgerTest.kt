@@ -227,6 +227,36 @@ class PipelineCoordinatorLedgerTest {
                 )
             },
             Case(
+                "the run's key, another insight track: a track change, the run orphaned and replaced",
+                mapOf("Zero" to 1, "A" to 2),
+                listOf("Zero", "A", "A"),
+            ) {
+                // Another media id with the same title, artists, album and length: the same
+                // `RunKey`, but another track as `TrackIdentity` judges it. Once it settles, the
+                // run holds nothing, its call is cut off, and the new track decides afresh.
+                acted()
+                streamMs = 10_000
+                report(nowPlaying("A", mediaId = "m1"))
+                advance(DEBOUNCE_MS + 100)
+                val first = checkNotNull(coordinator.state.run)
+                assertTrue(first.calling)
+                report(nowPlaying("A", mediaId = "m2"))
+                assertEquals(
+                    "current until it settles: it holds the report by key",
+                    first.id,
+                    coordinator.state.current?.id,
+                )
+                advance(DEBOUNCE_MS + 100)
+                assertEquals(listOf("A"), cut)
+                assertEquals(
+                    "m2",
+                    coordinator.state.run
+                        ?.nowPlaying
+                        ?.mediaId,
+                )
+                settle()
+            },
+            Case(
                 "an old run's call ending before its track's return settles brings nothing back",
                 mapOf("A" to 2),
                 listOf("A", "A"),

@@ -607,7 +607,10 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
             tap()
             advanceTimeBy(1.seconds)
             // A rebuild waits for the call; Bravo settles, then Alpha returns, at another length,
-            // and settles.
+            // and settles. The sources' results are not kept here (`cache.keepsResults` off), and
+            // the card kept is under the old length: the return finds no card, and pays again.
+            // The same return at its own length, with the results kept, pays nothing: the test
+            // below.
             keyChanges.value++
             play("Bravo")
             advanceTimeBy(DEBOUNCE + 100.milliseconds)
@@ -625,5 +628,30 @@ internal class PipelineHostReviewSequencesTest : PipelineHostFixture() {
                     ?.nowPlaying
                     ?.duration,
             )
+        }
+
+    @Test
+    fun `a track back at its own length while its old call ran is not paid twice`() =
+        runTest {
+            provider.reply = { n -> "It is a song, take $n [MB1]." }
+            provider.streaming = 10.seconds
+            cache.keepsResults = true
+            started()
+            play("Alpha", 106.seconds)
+            settle()
+            tap()
+            advanceTimeBy(1.seconds)
+            // A rebuild waits for the call; Bravo settles, then Alpha returns at the same length
+            // and settles, all while the call streams.
+            keyChanges.value++
+            play("Bravo")
+            advanceTimeBy(DEBOUNCE + 100.milliseconds)
+            play("Alpha", 106.seconds)
+            advanceTimeBy(DEBOUNCE + 100.milliseconds)
+            // The call ends and its card is kept; the return's run, on the new pipeline, finds it.
+            advanceTimeBy(30.seconds)
+
+            assertEquals(1, provider.requestsFor("Alpha"))
+            assertEquals("It is a song, take 1 [MB1].", shownText())
         }
 }

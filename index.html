@@ -17,7 +17,8 @@ layout: null
 <meta property="og:description" content="An open-source Android app that shows short, sourced insights about the song you are playing. Your sources, your AI service, your key.">
 <meta property="og:url" content="https://sleevesight.app/">
 <meta name="twitter:card" content="summary">
-<!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its one
+<!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. It has
+     three logos, each with its own intro (`data-logo`, below), so testers can compare them. Its one
      font, Roboto Flex, is a cut-down copy served from this site (`assets/fonts/make_page_font.py`),
      so text added here in new characters needs that copy remade. The one thing it keeps in the
      browser is a note that the intro has played (`localStorage`).
@@ -76,6 +77,21 @@ header.top .row{display:flex;align-items:center;justify-content:space-between;ga
    a lighter red, since the label's is 3.6:1 there. */
 .brand .sight{font-weight:400;color:var(--sight)}
 @media (max-width:370px){.brand{font-size:32px;gap:14px}.brand>svg{width:58px;height:58px}}
+/* Three logos, each with its own intro: A, the eye with the name; B, the text tile's words, "Sleeve"
+   over "sight"; C, those words with the record beside them, as tall as "sight" (the brand sheet's
+   8b). The script in the head picks one (`data-logo` on the root): the one the address asks for
+   (`?logo=a`, `b` or `c`), else C, or B where the window is 600 px or narrower, since B's intro turns
+   within its own square and C's sweeps the words round the record. Without the script, the same by
+   width. B and C are as tall as the eye and as wide as their ink; the eye's nudge (`top`) is A's. */
+.brand>.logo-b,.brand>.logo-c{display:none}
+:is([data-logo="b"],[data-logo="c"]) .brand>:is(.logo-a,.name){display:none}
+[data-logo="b"] .brand>.logo-b,[data-logo="c"] .brand>.logo-c{display:block}
+html:not([data-logo]) .brand>:is(.logo-a,.name){display:none}
+html:not([data-logo]) .brand>.logo-c{display:block}
+@media (max-width:600px){html:not([data-logo]) .brand>.logo-c{display:none}html:not([data-logo]) .brand>.logo-b{display:block}}
+.brand>svg.logo-b{width:86.72px;top:0}
+.brand>svg.logo-c{width:133.84px;top:0}
+@media (max-width:370px){.brand>svg.logo-b{width:69.86px}.brand>svg.logo-c{width:107.82px}}
 nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
@@ -91,6 +107,8 @@ nav.top{flex:none}
 .sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
 .sl-compact .brand{font-size:20px;gap:10px}
 .sl-compact .brand>svg{width:36px;height:36px}
+.sl-compact .brand>svg.logo-b{width:43.36px}
+.sl-compact .brand>svg.logo-c{width:66.92px}
 .sl-compact nav.top ul{font-size:15px;gap:4px 18px}
 .sl-compact.sl-stack header.top .row{flex-direction:row}
 .sl-compact.sl-stack nav.top{display:none}
@@ -108,6 +126,16 @@ nav.top{flex:none}
    drawn only on dark: on light, its edge would darken the rim's antialiased edge where the lids clip it. */
 :is(.brand,.splash) .core{display:none}
 @media (prefers-color-scheme: dark){:is(.brand,.splash) .eye{fill:#fff;stroke:#8b949e}:is(.brand,.splash) .rim{fill:#8b949e}:is(.brand,.splash) .groove{display:none}:is(.brand,.splash) .core{display:inline}}
+/* B's and C's words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
+   so they need no font; "Sleeve" in ink, white on dark as on B's black tile, and "sight" in `--sight`.
+   B's tile, in its intro only: white on light, black with a faint edge on dark. C's record (`#lp`) is
+   the eye's disc in the eye's colours, set through variables, since a selector cannot reach into a
+   <use>. */
+:root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
+@media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#fff;--rim:#8b949e;--core:inline;--groove:none}}
+.t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
+.t-ink{fill:var(--tile-ink)}
+.t-red{fill:var(--sight)}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
 nav.top a{color:var(--muted);text-decoration:none}
 nav.top a:hover{color:var(--ink);text-decoration:underline}
@@ -180,9 +208,10 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .links span{display:block;font-size:15px;color:var(--muted)}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:14px;color:var(--muted)}
 footer p{margin:0 0 4px}
-.replay button{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
-.replay button:hover{text-decoration-thickness:2px}
-.replay button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+:is(.replay,.pick) button{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+:is(.replay,.pick) button:hover{text-decoration-thickness:2px}
+.pick button[aria-pressed="true"]{color:var(--ink);font-weight:700;text-decoration:none}
+:is(.replay,.pick) button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
 
 /* The intro (`.sl-intro`), on a first visit: set by the scripts when motion is allowed, the address
    names no section, and the browser holds no note that the intro has played (`sl-intro-played` in
@@ -199,14 +228,34 @@ footer p{margin:0 0 4px}
    together, and the eye blinks once. The rest of the page fades in as the logo lands. Scrolling, a
    key or a click ends the intro at once. Hovering over or focusing the logo (`.play`) blinks it once;
    the intro and the hover use separate lids, so neither restarts the other.
+   That is A's intro (`.sp-a`, about 11.6 s). B's and C's (`.sp-b`, `.sp-c`) take 4.4 s and share
+   their timings: the logo fades in large in the middle of the window (0-0.7 s), turns twice (0.9-2.9 s,
+   with the easing of the record's turn in A), and shrinks onto the header's logo (3.3-3.95 s), where
+   the header's own takes over; then the page fades in. B's tile turns about the dot of the i, its
+   centre, and fades as it flies, so the words land on the page. C turns about the record's centre,
+   the words going round with it. On a hover, B's words turn once about the dot; C's record spins
+   once in place, so the logo keeps to its own footprint. `--land` is when the logo lands.
    Nothing moves under "reduce motion". */
+:root{--land:10050ms}
+[data-logo="b"],[data-logo="c"]{--land:3950ms}
 .brand>svg{overflow:visible}
 .brand .lid-i,.brand .lid-h,.brand .clip-i,.brand .clip-h{transform-box:view-box;transform-origin:16px 16px}
+/* B's words turn about the dot, at (0,0) in their units; C's record spins about the centre of its own
+   box, since it is round. It is placed by its group, not by the <use>'s x and y: those translate it
+   after its own transform, and fall outside that box. */
+.brand>.logo-b{transform-origin:45.229% 54%}
+.brand .lp-disc{transform-box:fill-box;transform-origin:center}
 .brand .shut,.splash .shut{opacity:0;stroke:#1f2328}
 .brand .sleeve{opacity:0}
 @media (prefers-color-scheme: dark){.brand .shut,.splash .shut{stroke:#8b949e}}
 .splash{display:none}
-.sl-intro .splash{display:block;position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none;animation:sl-gone 1ms 10050ms forwards}
+.sl-intro .splash{position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none}
+.sl-intro[data-logo="a"] .sp-a{display:block;animation:sl-gone 1ms var(--land) forwards}
+.sl-intro[data-logo="b"] .sp-b,.sl-intro[data-logo="c"] .sp-c{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
+.splash .fly{width:var(--sb);height:var(--sb);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
+.splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+.splash .spin>svg{display:block;width:100%;height:100%;overflow:visible}
+.splash .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
 .splash>svg{display:block;width:var(--sb);height:var(--sb);overflow:visible;transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) 9400ms both}
 .splash .sp-lid,.splash .sp-disc{transform-box:view-box;transform-origin:16px 16px}
 .splash .sp-bg{fill:var(--bg)}
@@ -216,9 +265,9 @@ footer p{margin:0 0 4px}
 .splash .sp-shut{animation:sp-shut 10s steps(1,end) both}
 .splash .sp-disc{animation:sp-spin 10s both}
 .sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
-.sl-intro .brand>svg{animation:sl-hold 10050ms}
+.sl-intro .brand>svg{animation:sl-hold var(--land)}
 .sl-intro .brand .name{animation:sl-name 400ms ease-out 10550ms both}
-.sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out 10050ms both}
+.sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out var(--land) both}
 .sl-intro .brand .sleeve{animation:sl-out 600ms cubic-bezier(.4,0,.6,1) 10050ms both}
 .sl-intro .brand .eyes{animation:sl-eyes 400ms ease-out 10550ms both}
 .sl-intro .brand .lid-i,.sl-intro .brand .clip-i{animation:sl-blink 1580ms 10050ms both}
@@ -226,12 +275,17 @@ footer p{margin:0 0 4px}
 @media (prefers-reduced-motion: no-preference){
   .brand.play .lid-h,.brand.play .clip-h{animation:sl-hover 280ms both}
   .brand.play .shut-h{animation:sl-hover-shut 280ms steps(1,end) both}
+  .brand.play>.logo-b,.brand.play .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
 }
 @keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
 @keyframes sl-gone{from,to{visibility:hidden;opacity:0}}
 @keyframes sl-hold{from,to{opacity:0}}
 @keyframes sl-arrive{from{opacity:0}}
 @keyframes sl-name{from{opacity:0}}
+@keyframes tl-in{from{opacity:0}}
+@keyframes tl-bare{to{opacity:0}}
+@keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
+@keyframes lg-turn{to{transform:rotate(360deg)}}
 /* The splash: the animated logo's timeline (`assets/logo/src/make_svg.py`), played once. Where the
    animated logo's sleeve goes out of its frame, this one waits at `--sw`, inside the window. */
 @keyframes sp-sleeve{0%,8.00%{transform:translateX(0);animation-timing-function:cubic-bezier(.45,0,.2,1)}17.00%,28.00%{transform:translateX(-8.2px);animation-timing-function:cubic-bezier(.55,0,1,.45)}38.00%,84.00%{transform:translateX(var(--sw,-42.2px));animation-timing-function:cubic-bezier(0,.55,.45,1)}94.00%,100%{transform:translateX(0)}}
@@ -261,22 +315,31 @@ footer p{margin:0 0 4px}
 </style>
 <script>
 document.documentElement.classList.add('js');
-// Set before the first paint, so that a later visit, which skips the intro, never shows the page hidden.
+// Set before the first paint: the logo (`data-logo`), so the page never shows another first, and the
+// intro's wait, so that a later visit, which skips the intro, never shows the page hidden. An address
+// that asks for a logo plays its intro, played before or not.
 (function () {
+  var root = document.documentElement, asked = /[?&]logo=([abc])(&|$)/.exec(location.search);
+  root.setAttribute('data-logo', asked ? asked[1] : matchMedia('(max-width: 600px)').matches ? 'b' : 'c');
   if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
-  try { if (localStorage.getItem('sl-intro-played')) return; } catch (e) {}
-  document.documentElement.classList.add('sl-wait');
+  if (!asked) try { if (localStorage.getItem('sl-intro-played')) return; } catch (e) {}
+  root.classList.add('sl-wait');
 })();
 </script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="splash" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><clipPath id="sp-clip"><path class="sp-lid" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="sp-eye"><path class="eye sp-lid" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g><g clip-path="url(#sp-clip)"><g class="sp-disc"><circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/><circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g><path class="shut sp-shut" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/><g class="sp-sleeve"><rect class="sp-bg" x="-192.2" y="-2" width="200" height="36"/><rect x="8.05" y="8.20" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.80" y="7.80" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="splash-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#splash-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><path class="t-ink" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59ZM-18.87 -10.02H-16.44V-37.26H-18.87ZM-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67ZM1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67ZM16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69ZM31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/><path class="t-red" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44ZM-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01ZM4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82ZM22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1ZM36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
+<div class="splash sp-a" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><clipPath id="sp-clip"><path class="sp-lid" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="sp-eye"><path class="eye sp-lid" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g><g clip-path="url(#sp-clip)"><g class="sp-disc"><circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/><circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g><path class="shut sp-shut" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/><g class="sp-sleeve"><rect class="sp-bg" x="-192.2" y="-2" width="200" height="36"/><rect x="8.05" y="8.20" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.80" y="7.80" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="splash-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#splash-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg></div>
+<div class="splash sp-b" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
+<div class="splash sp-c" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-54.9 -113.84 256 256"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div>
 <header class="top"><div class="bar"><div class="row wrap">
   <!-- `#`: the top of this page, without a reload. -->
   <a class="brand" href="#" aria-label="Sleevesight, top of the page">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="lid-intro"><path class="clip-i" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath><clipPath id="lid-hover"><path class="clip-h" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="eyes"><g class="lid-h"><path class="eye lid-i" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g></g><g clip-path="url(#lid-intro)"><g clip-path="url(#lid-hover)"><g class="disc"><circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/><circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g></g><g class="eyes"><path class="shut shut-i" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/><path class="shut shut-h" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="sleeve"><rect x="8.05" y="8.20" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.80" y="7.80" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="sleeve-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#sleeve-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg>
+    <svg class="logo-a" viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="lid-intro"><path class="clip-i" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath><clipPath id="lid-hover"><path class="clip-h" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="eyes"><g class="lid-h"><path class="eye lid-i" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g></g><g clip-path="url(#lid-intro)"><g clip-path="url(#lid-hover)"><g class="disc"><circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/><circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g></g><g class="eyes"><path class="shut shut-i" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/><path class="shut shut-h" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="sleeve"><rect x="8.05" y="8.20" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.80" y="7.80" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="sleeve-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#sleeve-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg>
     <span class="name">Sleeve<span class="sight">sight</span></span>
+    <svg class="logo-b" viewBox="-37.59 -37.26 83.11 69" aria-hidden="true"><use href="#words"/></svg>
+    <svg class="logo-c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg>
   </a>
   <nav class="top" aria-label="Site">
     <ul>
@@ -408,6 +471,7 @@ document.documentElement.classList.add('js');
   <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
   <p>This site sets no cookies and loads nothing from anywhere else. The one thing it keeps in your browser is a note that the intro has played.</p>
   <p class="replay" hidden><button type="button">Play the intro again</button></p>
+  <p class="pick" hidden><span id="pick-label">Logo:</span> <span role="group" aria-labelledby="pick-label"><button type="button" value="a" aria-pressed="false">A</button> <button type="button" value="b" aria-pressed="false">B</button> <button type="button" value="c" aria-pressed="false">C</button></span></p>
 </footer>
 </div>
 <script>
@@ -437,35 +501,62 @@ document.documentElement.classList.add('js');
 
   // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
   // key (a screen reader's cursor), so either ends the intro too.
-  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'], back = false;
-  // A replay started from the keyboard leaves focus on its button at the foot of the page, out of view
-  // once the intro has scrolled to the top, so at the end focus goes to the logo (`back`), unless it
-  // has already moved elsewhere (a screen reader's cursor). The focus comes before the class goes, so
-  // it does not blink the logo again.
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'], back = null;
+  // A replay started from the keyboard ("Play the intro again", or the logo switch) leaves focus on its
+  // button at the foot of the page, out of view once the intro has scrolled to the top, so at the end
+  // focus goes to the logo (`back`, that button), unless it has already moved elsewhere (a screen
+  // reader's cursor). The focus comes before the class goes, so it does not play the logo's hover.
   function end() {
     stops.forEach(function (e) { removeEventListener(e, end); });
-    if (back) { back = false; if (document.activeElement === again) brand.focus({preventScroll: true}); }
+    if (back) { if (document.activeElement === back) brand.focus({preventScroll: true}); back = null; }
     root.classList.remove('sl-intro');
   }
   function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
-  brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-blink') end(); });
+  function logo() { return root.getAttribute('data-logo'); }
+  // The intro ends with its last move: A's blink in the header, B's and C's page arriving.
+  function last(e) { if (e.animationName === (logo() === 'a' ? 'sl-blink' : 'sl-arrive')) end(); }
+  brand.addEventListener('animationend', last);
+  document.querySelector('main').addEventListener('animationend', last);
   function intro() {
-    // The splash starts in the middle of the window and shrinks onto the header's logo. In logo units
-    // (32 across, the eye's centre at 16), the sleeve waits to the left of the eye, `wait` units from
-    // where it started: 42.2 as in the animated logo, less if that would take it out of the window, but
-    // never so little that it covers the eye's corner. Where the window is too narrow for that, the
-    // splash is smaller.
-    var half = innerWidth / 2 - 8,
-        big = Math.min(440, innerWidth * .7, innerHeight * .55, 32 * half / 32.9),
-        unit = big / 32, wait = Math.min(42.2, half / unit - 8.2),
-        logo = brand.querySelector('svg').getBoundingClientRect(), x = (innerWidth - big) / 2, y = (innerHeight - big) / 2;
+    // A hover still running would turn B's logo, whose box the flight is measured from.
+    brand.classList.remove('play');
+    var v = logo(), mark = brand.querySelector('.logo-' + v).getBoundingClientRect(), big, x, y, fx, fy, fs;
+    if (v === 'a') {
+      // The splash starts in the middle of the window and shrinks onto the header's logo. In logo units
+      // (32 across, the eye's centre at 16), the sleeve waits to the left of the eye, `wait` units from
+      // where it started: 42.2 as in the animated logo, less if that would take it out of the window, but
+      // never so little that it covers the eye's corner. Where the window is too narrow for that, the
+      // splash is smaller.
+      var half = innerWidth / 2 - 8;
+      big = Math.min(440, innerWidth * .7, innerHeight * .55, 32 * half / 32.9);
+      var unit = big / 32, wait = Math.min(42.2, half / unit - 8.2);
+      x = (innerWidth - big) / 2;
+      y = (innerHeight - big) / 2;
+      root.style.setProperty('--sw', -wait + 'px');
+      fx = mark.left - x;
+      fy = mark.top - y;
+      fs = mark.width / big;
+    } else {
+      // In the words' units: B's splash is the tile, 144 across (from -72, -72), as large as fits with
+      // room for its corners as it turns. C's is a square of 256 centred on the record (from -54.9,
+      // -113.84), with room for the words' sweep (119.5 from the record's centre at the farthest), at
+      // B's scale where that fits. The header's logo is its ink box, from -37.59, -37.26 and 69 tall,
+      // so the splash lands where the header's logo sits in it.
+      var b = v === 'b', side = b ? 144 : 256, sx = b ? -72 : -54.9, sy = b ? -72 : -113.84,
+          u = mark.height / 69;
+      big = b ? Math.min(300, innerWidth * .62, innerHeight * .45) : Math.min(300 * 256 / 144, innerWidth * .95, innerHeight * .9);
+      x = (innerWidth - big) / 2;
+      y = (innerHeight - big) / 2;
+      fx = mark.left + (sx + 37.59) * u - x;
+      fy = mark.top + (sy + 37.26) * u - y;
+      fs = side * u / big;
+    }
     root.style.setProperty('--sb', big + 'px');
-    root.style.setProperty('--sw', -wait + 'px');
     root.style.setProperty('--sx', x + 'px');
     root.style.setProperty('--sy', y + 'px');
-    root.style.setProperty('--fx', logo.left - x + 'px');
-    root.style.setProperty('--fy', logo.top - y + 'px');
-    root.style.setProperty('--fs', logo.width / big);
+    root.style.setProperty('--fx', fx + 'px');
+    root.style.setProperty('--fy', fy + 'px');
+    root.style.setProperty('--fs', fs);
     root.classList.remove('sl-wait');
     root.classList.add('sl-intro');
     try { localStorage.setItem('sl-intro-played', '1'); } catch (e) {}
@@ -486,10 +577,10 @@ document.documentElement.classList.add('js');
   function offer() { replay.hidden = !moving.matches; }
   offer();
   if (moving.addEventListener) moving.addEventListener('change', offer);
-  again.addEventListener('click', function (e) {
+  function rerun(e, button) {
     if (!moving.matches) return;
     end();
-    back = e.detail === 0;
+    back = e.detail === 0 ? button : null;
     scrollTo(0, 0);
     root.classList.add('sl-still');
     root.classList.remove('sl-compact');
@@ -497,6 +588,28 @@ document.documentElement.classList.add('js');
     root.classList.remove('sl-still');
     intro();
     requestAnimationFrame(listen);
+  }
+  again.addEventListener('click', function (e) { rerun(e, again); });
+
+  // The logo switch, offered where the address asks for a logo (`?logo=`): another logo takes the
+  // header, the address follows, and its intro plays, where motion is allowed.
+  var pick = document.querySelector('.pick');
+  function pressed() {
+    pick.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.value === logo()); });
+  }
+  if (/[?&]logo=[abc](&|$)/.test(location.search)) {
+    pick.hidden = false;
+    pressed();
+  }
+  pick.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    end();
+    root.setAttribute('data-logo', b.value);
+    history.replaceState(null, '', location.pathname + '?logo=' + b.value + location.hash);
+    pressed();
+    measure();
+    rerun(e, b);
   });
 
   function play() {
@@ -505,7 +618,9 @@ document.documentElement.classList.add('js');
   }
   brand.addEventListener('pointerenter', play);
   brand.addEventListener('focus', play);
-  brand.addEventListener('animationend', function (e) { if (e.animationName === 'sl-hover') brand.classList.remove('play'); });
+  brand.addEventListener('animationend', function (e) {
+    if (e.animationName === 'sl-hover' || e.animationName === 'lg-turn') brand.classList.remove('play');
+  });
 })();
 </script>
 </body>

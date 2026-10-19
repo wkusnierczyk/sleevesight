@@ -207,7 +207,7 @@ class PipelineRetryStopTest {
 
     // Runs [provider]'s reply under a control that grants everything; once the reply's end is in
     // and the transport still open, stops the call when [stop], else releases the transport. In
-    // neither case is the call stopped.
+    // neither case does the call end as stopped (no `ModelStopped`).
     private fun TestScope.heldOpen(
         provider: HeldOpen,
         cache: MemoryCache,

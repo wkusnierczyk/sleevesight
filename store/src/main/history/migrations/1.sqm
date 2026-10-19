@@ -1,0 +1,4 @@
+-- Version 1 to 2 (#257): when a track last began to play again, so that a track resumed and then
+-- left playing when the process ended is not taken as heard only until its first start plus its
+-- length. Null in the rows kept from version 1, which then count from `played_at` as before.
+ALTER TABLE played ADD COLUMN resumed_at INTEGER;
