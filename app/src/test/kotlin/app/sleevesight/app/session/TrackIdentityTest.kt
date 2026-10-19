@@ -3,6 +3,7 @@ package app.sleevesight.app.session
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.core.model.NowPlaying
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,19 +22,24 @@ class TrackIdentityTest {
     }
 
     @Test
-    fun withoutMediaIdsTheActiveQueueItemDecides() {
-        // YouTube Music re-sends the playing track with a new length; the queue item is its identity.
+    fun theQueueItemDecidesNothing() {
         val a = sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4, duration = 106.seconds)
-        assertTrue(TrackIdentity.same(a, a.copy(duration = 278.8.seconds)))
-        // The same song queued twice, as separate items, is a new track.
-        assertFalse(TrackIdentity.same(a, a.copy(queueItemId = 5)))
+        val rows =
+            listOf(
+                // The same song queued twice, as separate items: the same track.
+                Triple("another item", a.copy(queueItemId = 5), true),
+                Triple("no item", a.copy(queueItemId = null), true),
+                // YouTube Music re-sends the playing track with a new length.
+                Triple("a new length", a.copy(duration = 278.8.seconds), true),
+                Triple("another title, the same item", a.copy(title = "Carefree Highway"), false),
+                Triple("another title and item", a.copy(title = "Carefree Highway", queueItemId = 5), false),
+                Triple("other artists, the same item", a.copy(artists = "Someone Else"), false),
+            )
+        for ((name, b, same) in rows) assertEquals(name, same, TrackIdentity.same(a, b))
     }
 
     @Test
-    fun whenEitherSideHasNoQueueItemTitleAndArtistsDecide() {
-        val a = sundown.copy(player = YOUTUBE_MUSIC, queueItemId = 4)
-        assertTrue(TrackIdentity.same(a, a.copy(queueItemId = null)))
-        assertFalse(TrackIdentity.same(a, a.copy(queueItemId = null, title = "Carefree Highway")))
+    fun withoutMediaIdsTitleAndArtistsDecide() {
         assertFalse(TrackIdentity.same(sundown, sundown.copy(artists = "Gordon Lightfoot, Someone Else")))
         assertTrue(TrackIdentity.same(sundown, sundown.copy(album = "Sundown", duration = 223.seconds)))
     }
@@ -41,12 +47,13 @@ class TrackIdentityTest {
     @Test
     fun aMediaIdOnOneSideOnlyFallsThrough() {
         assertTrue(TrackIdentity.same(sundown.copy(mediaId = "spotify:track:1"), sundown))
-        assertFalse(
+        assertTrue(
             TrackIdentity.same(
                 sundown.copy(mediaId = "spotify:track:1", queueItemId = 1),
                 sundown.copy(queueItemId = 2),
             ),
         )
+        assertFalse(TrackIdentity.same(sundown.copy(mediaId = "spotify:track:1"), sundown.copy(title = "Other")))
     }
 
     @Test
@@ -55,12 +62,6 @@ class TrackIdentityTest {
         assertTrue(TrackIdentity.same(sundown.copy(artists = ""), sundown))
         assertTrue(TrackIdentity.same(sundown, sundown.copy(artists = "")))
         assertFalse(TrackIdentity.same(sundown.copy(artists = ""), sundown.copy(title = "Carefree Highway")))
-    }
-
-    @Test
-    fun equalQueueItemsAreOneTrackWhateverElseIsFilledIn() {
-        val a = sundown.copy(player = YOUTUBE_MUSIC, artists = "", queueItemId = 1)
-        assertTrue(TrackIdentity.same(a, a.copy(artists = "Gordon Lightfoot", album = "Sundown")))
     }
 
     @Test

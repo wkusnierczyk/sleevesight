@@ -91,11 +91,7 @@ internal abstract class SessionRepositoryFixture {
 
     protected fun fetchesFor(uri: String) = fetches.filter { it.first == uri }.map { it.second }
 
-    /**
-     * A YouTube Music session playing [metadata] as [item], with its "Up next" published or not,
-     * attached and settled: past the [SessionRepository.SETTLE] after the attach, which withholds
-     * the item.
-     */
+    /** A YouTube Music session playing [metadata] as [item], with its "Up next" published or not. */
     protected fun youtubeMusic(
         queue: Boolean = false,
         metadata: android.media.MediaMetadata? = metadata(),
@@ -111,7 +107,6 @@ internal abstract class SessionRepositoryFixture {
             )
         system.active = listOf(session)
         repository.start()
-        settle()
         return session
     }
 

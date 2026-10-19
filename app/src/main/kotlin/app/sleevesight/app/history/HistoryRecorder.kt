@@ -288,9 +288,9 @@ class HistoryRecorder(
 
         /**
          * Whether [last], the track added last, is [track] again: the same track as the session
-         * layer decides ([TrackIdentity]), with the same title. Stricter by the title, since after a
-         * restart a queue item id may name another track, and a duplicate entry costs less than a
-         * lost one; a title changing under one queue item (a stream) is a new track anyway.
+         * layer decides ([TrackIdentity]), with the same title. Stricter by the title where the
+         * media id decides: a title changing under one media id (a stream) is a new row. The queue
+         * item plays no part, so a song played again at once continues its row, one play.
          */
         fun sameAsLast(
             last: NowPlaying,

@@ -14,7 +14,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * A session attached in the middle of a track change, at each point of it (`design/architecture.md`,
- * *Settling*): the item its state names then is withheld until the reports resolve it.
+ * *Settling*): the queue item its state names then may be the track before's, and decides nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -37,16 +37,13 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
         val track: Pair<String, Long?>,
     )
 
-    /** How long an item seen at the attach may wait for what resolves it, in ms. */
-    private val window = SessionRepository.LONGEST_BURST.inWholeMilliseconds
-
     private val attachRows =
         listOf(
             AttachRow(
                 "before the change: the state, then the metadata",
                 title = "Sundown",
                 item = 4,
-                reports = listOf(window + 100 to state(queueItem = 5), window + 150 to carefree),
+                reports = listOf(5_000L to state(queueItem = 5), 5_050L to carefree),
                 changes = 1,
                 track = "Carefree Highway" to 5,
             ),
@@ -54,7 +51,7 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 "before the change: the metadata, then the state",
                 title = "Sundown",
                 item = 4,
-                reports = listOf(window + 100 to carefree, window + 150 to state(queueItem = 5)),
+                reports = listOf(5_000L to carefree, 5_050L to state(queueItem = 5)),
                 changes = 1,
                 track = "Carefree Highway" to 5,
             ),
@@ -64,8 +61,7 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 item = 5,
                 reports = listOf(150L to carefree),
                 changes = 1,
-                // Item 5 is taken for Sundown's, as when the metadata comes well after the state.
-                track = "Carefree Highway" to null,
+                track = "Carefree Highway" to 5,
             ),
             AttachRow(
                 "between the new metadata and its state, the state soon after",
@@ -76,7 +72,7 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
-                "between the new metadata and its state, the state over the settle window after",
+                "between the new metadata and its state, the state 800 ms after",
                 title = "Carefree Highway",
                 item = 4,
                 reports = listOf(800L to state(queueItem = 5)),
@@ -84,12 +80,11 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
-                // The cost of the window: taken for a second copy of the song.
-                "between the new metadata and its state, the state past the window",
+                "between the new metadata and its state, the state 5 s after",
                 title = "Carefree Highway",
                 item = 4,
-                reports = listOf(window + 500 to state(queueItem = 5)),
-                changes = 1,
+                reports = listOf(5_000L to state(queueItem = 5)),
+                changes = 0,
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
@@ -101,15 +96,15 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
-                "no metadata yet, then the metadata soon after, and a second copy minutes later",
+                "no metadata yet, then the metadata soon after",
                 title = null,
                 item = 5,
-                reports = listOf(150L to carefree, 300_000L to state(queueItem = 6)),
-                changes = 1,
-                track = "Carefree Highway" to 6,
+                reports = listOf(150L to carefree),
+                changes = 0,
+                track = "Carefree Highway" to 5,
             ),
             AttachRow(
-                "no metadata yet, then the metadata later",
+                "no metadata yet, then the metadata 800 ms after",
                 title = null,
                 item = 5,
                 reports = listOf(800L to carefree),
@@ -117,21 +112,21 @@ internal class SessionAttachTest : SessionRepositoryFixture() {
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
+                // Played back to back: one play, its item moved on.
                 "a song queued twice, its second copy minutes later",
                 title = "Carefree Highway",
                 item = 4,
                 reports = listOf(300_000L to state(queueItem = 5)),
-                changes = 1,
+                changes = 0,
                 track = "Carefree Highway" to 5,
             ),
             AttachRow(
-                // The cost of the window: taken for the new track's state, filling in its item.
-                "a song queued twice, its second copy soon after the attach",
+                "a title that changes and changes back",
                 title = "Carefree Highway",
                 item = 4,
-                reports = listOf(1_000L to state(queueItem = 5)),
-                changes = 0,
-                track = "Carefree Highway" to 5,
+                reports = listOf(500L to metadata(), 1_000L to carefree),
+                changes = 2,
+                track = "Carefree Highway" to 4,
             ),
         )
 

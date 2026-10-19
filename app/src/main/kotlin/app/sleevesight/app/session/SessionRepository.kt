@@ -53,12 +53,10 @@ import kotlin.time.Duration.Companion.seconds
  * changed the title or the queue item, unless the title or the item changes again in the last
  * [SETTLE] of that; and in any case within [LONGEST_BURST] of the first (see `Attached`). So the
  * two halves of a track change arrive as one. A player that becomes the one shown while its
- * reports are settling is shown once they have. A session is settled at once when attached, its
- * track without a queue item until the reports or [LONGEST_BURST] resolve it (see
- * `Attached.settle`). [playback] and
- * [queue] are published at once: skip detection counts the `PLAYING` states before a change and
- * reads the position they report (D5), which coalescing would lose; [lastChange] keeps when each
- * change began, and its times never go back.
+ * reports are settling is shown once they have. [playback] and [queue] are published at once:
+ * skip detection counts the `PLAYING` states before a change and reads the position they report
+ * (D5), which coalescing would lose; [lastChange] keeps when each change began, and its times
+ * never go back.
  *
  * **Skip detection.** Each change is judged once, as it is published, by [classify] (the app's
  * [SkipDetector]; without one, every change is a natural end): a skip in the player or a natural
@@ -411,18 +409,6 @@ class SessionRepository(
         private var knownItem: Long? = null
         private var knownItemTitle: String? = null
 
-        /** An item the state still names after the title moved on: the previous track's. */
-        private var staleItem: Long? = null
-
-        /**
-         * The item the state named when the session was attached, and the track settled then was
-         * published without, until the reports resolve it or [withheldUntil] passes (see [settle]);
-         * null once resolved, and when the attach settled no track.
-         */
-        private var withheldItem: Long? = null
-        private var withheldUntil = 0L
-        private var confirming: Job? = null
-
         /** The last queue item a playback state named; a state with no item (−1) leaves it. */
         private var stateItem: Long? = SessionMapping.activeItem(state)
 
@@ -462,22 +448,12 @@ class SessionRepository(
 
         init {
             // The first track is settled at once: after process death the playing track is shown
-            // without waiting. Its queue item may wait (see [settle]): at the latest, a settle
-            // [LONGEST_BURST] from now gives it, unless a burst is settling then, whose own settle
-            // comes later and does.
-            settle(attaching = true)
-            if (withheldItem != null) {
-                confirming =
-                    scope.launch {
-                        delay(LONGEST_BURST)
-                        if (withheldItem != null && !pending) settleNow()
-                    }
-            }
+            // without waiting.
+            settle()
         }
 
         fun release() {
             settling?.cancel()
-            confirming?.cancel()
             session.unregister(callback)
         }
 
@@ -558,32 +534,17 @@ class SessionRepository(
         }
 
         /**
-         * Maps the latest metadata and state. A state with no item (−1, as YouTube Music reports
-         * while stopped in the background) keeps the last item the state named, while the title
-         * is unchanged.
-         *
-         * **Attaching** with a track and an item, the item cannot be trusted: the session may be
-         * attached between a new track's metadata and its state, which still names the track
-         * before's item, and with no track settled before there is nothing to tell (see [item]).
-         * So the track is published without it ([withheldItem]), and identity reads its title
-         * ([TrackIdentity]), until the first of these settles:
-         * 1. a new title: the withheld item is the track before's, as for any track ([item]);
-         * 2. a state naming another item, the title unchanged: the new track's state, which fills
-         *    the item in rather than changing the track;
-         * 3. [LONGEST_BURST] after the attach, with neither: the item is the track's.
-         *
-         * A state naming the withheld item again, or none, resolves nothing. With no track at the
-         * attach (no metadata yet), nothing is withheld: the state came first, and its item is the
-         * track's whose metadata follows. The two ambiguous orders cost: a song queued twice whose
-         * second copy is reported within [LONGEST_BURST] of the attach is taken for one (rule 2),
-         * and a new track's state that comes more than [LONGEST_BURST] after its metadata, with
-         * the session attached between them, makes a second change (rule 3).
+         * Maps the latest metadata and state. The queue item is carried, not read for identity
+         * ([TrackIdentity]): the item the state names, else, for a state with no item (−1, as
+         * YouTube Music reports while stopped in the background), the last item the state named
+         * while the title is unchanged. A player that sends a new track's metadata before its
+         * state so carries the previous track's item until the state names the new one, which
+         * changes no track; at worst the next track in the queue (`NextInQueue`) is the wrong one
+         * for that moment.
          */
-        private fun settle(attaching: Boolean = false) {
+        private fun settle() {
             val previous = track
-            val item = item(previous, withheldItem)
-            val published = if (attaching) withhold(item) else resolve(previous, item)
-            val now = SessionMapping.nowPlaying(session.player, metadata, published)
+            val now = SessionMapping.nowPlaying(session.player, metadata, item())
             track = now
             trackMetadata = metadata
             val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
@@ -596,56 +557,15 @@ class SessionRepository(
             pending = false
         }
 
-        /** At the attach: withholds [item] if a track is settled with it, and publishes none. */
-        private fun withhold(item: Long?): Long? {
-            withheldItem = item.takeIf { SessionMapping.title(metadata) != null }
-            withheldUntil = clock() + LONGEST_BURST.inWholeMilliseconds
-            return null
-        }
-
-        /** The item to publish with [item] mapped after [previous], while an item may be withheld (see [settle]). */
-        private fun resolve(
-            previous: NowPlaying?,
-            item: Long?,
-        ): Long? {
-            val withheld = withheldItem
-            val resolved =
-                withheld == null ||
-                    SessionMapping.title(metadata) != previous?.title ||
-                    (item != null && item != withheld) ||
-                    clock() >= withheldUntil
-            if (resolved && withheld != null) {
-                withheldItem = null
-                confirming?.cancel()
-            }
-            return item.takeIf { resolved }
-        }
-
-        /**
-         * The queue item to map the latest pair with, after the [previous] track settled, which
-         * was published without its item [withheld] if it was settled at the attach.
-         */
-        private fun item(
-            previous: NowPlaying?,
-            withheld: Long?,
-        ): Long? {
+        /** The queue item to carry with the latest pair (see [settle]). */
+        private fun item(): Long? {
             val title = SessionMapping.title(metadata)
             val item = SessionMapping.activeItem(state)
-            // New metadata while the state still names the previous track's item: a player that
-            // sends its metadata well before its state, or a stream that keeps one item. That item
-            // is not this track's until the state names another; identity then reads the title.
-            val previousItem = previous?.let { it.queueItemId ?: withheld }?.takeIf { previous.title != title }
-            // A state with no item (−1) leaves it: the item named after it may be the stale one again.
-            if (item != null) staleItem = item.takeIf { it == previousItem || it == staleItem }
-            if (item != null && item != staleItem) {
+            if (item != null) {
                 knownItem = item
                 knownItemTitle = title
             }
-            return when {
-                item == null -> knownItem.takeIf { title != null && title == knownItemTitle }
-                item == staleItem -> null
-                else -> item
-            }
+            return item ?: knownItem.takeIf { title != null && title == knownItemTitle }
         }
 
         /** Applies [change] and republishes, unless this session was dropped meanwhile (a late callback). */

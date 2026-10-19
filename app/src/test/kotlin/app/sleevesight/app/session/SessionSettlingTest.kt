@@ -92,20 +92,37 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSongQueuedTwiceIsOneChange() {
+    fun aSongQueuedTwiceAndPlayedBackToBackIsOnePlay() {
+        // The queue item is carried, not read for identity: one play, its item moved on.
         val youtube = youtubeMusic()
         val tracks = recordTracks()
 
         youtube.settled(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(1, changes(tracks))
+        assertEquals(0, changes(tracks))
         assertEquals(listOf(4L, 5L), tracks.map { it?.queueItemId })
     }
 
     @Test
-    fun decoratedQueueTitlesStillTellCopiesApart() {
-        // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown".
+    fun aSongQueuedTwiceWithAnotherTrackBetweenIsTwoPlays() {
+        val youtube = youtubeMusic()
+        val tracks = recordTracks()
+
+        youtube.send(state(queueItem = 5))
+        youtube.settled(carefree)
+        youtube.send(state(queueItem = 6))
+        youtube.settled(metadata())
+
+        assertEquals(2, changes(tracks))
+        assertEquals(listOf("Sundown", "Carefree Highway", "Sundown"), tracks.map { it?.title })
+        assertEquals(listOf(4L, 5L, 6L), tracks.map { it?.queueItemId })
+    }
+
+    @Test
+    fun decoratedQueueTitlesAreNotCompared() {
+        // The queue names the copies "Sundown (Remastered)"; the metadata says "Sundown": the
+        // change into the first is seen, and the second, played after it, is the same play.
         val youtube = youtubeMusic(metadata = carefree, item = 3)
         youtube.queue =
             listOf(
@@ -120,7 +137,7 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         youtube.send(state(queueItem = 5))
         youtube.settled(metadata())
 
-        assertEquals(2, changes(tracks))
+        assertEquals(1, changes(tracks))
         assertEquals(listOf(3L, 4L, 5L), tracks.map { it?.queueItemId })
     }
 
@@ -233,8 +250,9 @@ internal class SessionSettlingTest : SessionRepositoryFixture() {
         assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
         youtube.settled(state(queueItem = 5))
 
+        // The previous track's item is carried until the state names the new one.
         assertEquals(1, changes(tracks))
-        assertEquals(listOf(4L, null, 5L), tracks.map { it?.queueItemId })
+        assertEquals(listOf(4L, 4L, 5L), tracks.map { it?.queueItemId })
         assertEquals(listOf("Sundown", "Carefree Highway", "Carefree Highway"), tracks.map { it?.title })
     }
 

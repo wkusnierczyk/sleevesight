@@ -5,6 +5,7 @@ import app.sleevesight.app.session.FakeSession
 import app.sleevesight.app.session.LearningMark
 import app.sleevesight.app.session.SessionRepository
 import app.sleevesight.app.session.Sessions.SPOTIFY
+import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import app.sleevesight.app.session.SkipDetector
@@ -301,6 +302,18 @@ internal class HistoryRecorderTest : HistoryRecorderFixture() {
         val second = history.session(2).single()
         assertEquals(base + resume.milliseconds + settle, second.playedAt)
         assertEquals("Live", second.track.album)
+    }
+
+    @Test
+    fun aRowContinuesAcrossANewQueueItemWithTheSameTitleAndTakesIt() {
+        val youtube = begin(FakeSession(YOUTUBE_MUSIC, playbackState = state(queueItem = 4)))
+        at(225_000)
+        youtube.report(state(queueItem = 5))
+
+        val row = allRows().single()
+        assertEquals(base, row.playedAt)
+        assertNull(row.stoppedAt)
+        assertEquals(5L, row.track.queueItemId)
     }
 
     @Test
