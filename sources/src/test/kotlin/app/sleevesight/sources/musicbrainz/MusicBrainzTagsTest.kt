@@ -79,9 +79,8 @@ class MusicBrainzTagsTest {
         runTest {
             val labels = MusicBrainzLabels(MusicBrainzClient(ReplayNetClient.ok(ARTIST)), vocabulary)
             val found = labels.labels(listOf("mb-a"))
-            assertEquals(listOf("Folk", "Country"), found.labels.map { it.label })
-            assertEquals(listOf(MusicBrainzLabels.artistPage("mb-a")), found.labels.map { it.url }.distinct())
-            assertTrue(found.complete)
+            assertEquals(listOf("Folk", "Country"), found.map { it.label })
+            assertEquals(listOf(MusicBrainzLabels.artistPage("mb-a")), found.map { it.url }.distinct())
         }
 
     private companion object {
