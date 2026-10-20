@@ -153,8 +153,9 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
    (`--sight`, close to Last.fm's chip in light), Trace an earth ochre (browner than web search's
    amber, in its hue), Tell the accent blue. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
-.steps h3,.tiles h3{margin:0 0 12px;font-size:18px}
+.steps h3,.tiles h3{margin:0 0 12px}
 .steps h3{font-size:19px;font-weight:600}
+.tiles h3{font-size:18px}
 .steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
 .steps li{display:flex;flex-direction:column}
@@ -263,7 +264,8 @@ footer p{margin:0 0 4px}
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   figure.mock{justify-self:center;max-width:360px}
   .tiles,.two,.ex,.steps{grid-template-columns:minmax(0,1fr)}
-  .two>div{display:block}
+  .two{row-gap:32px}
+  .two>div{grid-row:auto;display:block}
   .about{padding-top:0}
   .examples{gap:36px}
 }
@@ -401,20 +403,20 @@ document.documentElement.classList.add('js');
   <div class="two">
     <div>
       <div>
-      <p class="lead">Nothing you play reaches the developer</p>
-      <p>Sleevesight does not require you to create a user account. It does not include any of your data in telemetry, crash reports, or analytics. It does not show ads, and does not send any usage data for personalized marketing.</p>
-      <p>Your API keys are stored encrypted on the phone and never logged.</p>
+        <p class="lead">Nothing you play reaches the developer</p>
+        <p>Sleevesight does not require you to create a user account. It does not include any of your data in telemetry, crash reports, or analytics. It does not show ads, and does not send any usage data for personalized marketing.</p>
+        <p>Your API keys are stored encrypted on the phone and never logged.</p>
       </div>
       <p class="small">The <a href="privacy.html">privacy policy</a> says what each service receives, and what you can switch off.</p>
     </div>
     <div>
       <div>
-      <p class="lead">What leaves the phone, and to whom</p>
-      <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
-      <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
-      <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
-           (`targetSdk` 37, no cleartext exception in the manifest). -->
-      <p>All of it travels encrypted (HTTPS), your API keys included.</p>
+        <p class="lead">What leaves the phone, and to whom</p>
+        <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
+        <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
+        <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
+             (`targetSdk` 37, no cleartext exception in the manifest). -->
+        <p>All of it travels encrypted (HTTPS), your API keys included.</p>
       </div>
       <p class="small">Nothing else leaves the phone, unless you export your diagnostics, or your playlist history with its insights, to a file yourself. Your listening history stays on the device.</p>
     </div>
@@ -424,7 +426,7 @@ document.documentElement.classList.add('js');
 <section id="install" aria-labelledby="install-h">
   <h2 id="install-h">Install</h2>
   <!-- The Google Play badge goes here once the app is listed (Phase 1.5). -->
-  <p>Initial release of Sleevesight supports Android only. An iOS version may be released at a later time. Sleevesight is distributed on Google Play. Its implementation is available as an open source project on <a href="https://github.com/wkusnierczyk/sleevesight">GitHub</a> under the GPL-3.0 licence.</p>
+  <p>Initial release of Sleevesight supports Android only. An iOS version may be released at a later time. Sleevesight is distributed on Google Play.</p>
   <p>Sleevesight undergoes internal testing. Refer to the <a href="mailto:support@sleevesight.app">developer</a> for further details.</p>
 </section>
 
