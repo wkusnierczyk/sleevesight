@@ -43,6 +43,7 @@ layout: null
   --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
   --cite-ink:#ffffff;
   --sight:#cc212d;
+  --trace:#7d5a2c;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
@@ -54,6 +55,7 @@ layout: null
   --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
   --cite-ink:#0e1116;
   --sight:#f0443a;
+  --trace:#d1a66a;
   color-scheme:dark}}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -148,11 +150,13 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 /* How it works: each step a row, its verb on the left, a third of the width (as wide as Coming
    soon's boxes), and its text on the right: what it does, then a short statement. The verb and the
    text share their first baseline. The verbs stay smaller than the section heading (26px on a
-   phone). */
+   phone). Each verb has a colour: Track the logo's record red, Trace an earth ochre (browner than web
+   search's amber), Tell the accent blue. */
 .steps{list-style:none;margin:0;padding:0;display:grid;gap:24px}
 .steps li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:6px 32px;align-items:baseline}
 .tiles h3{margin:0;font-size:18px}
 .steps h3{margin:0;font-size:clamp(22px,3vw,28px);line-height:1.1;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
+.steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
 .steps li>div p+p{margin-top:8px}
 .intro{margin:0 0 8px;max-width:44em}
@@ -339,9 +343,9 @@ document.documentElement.classList.add('js');
 <section id="how" aria-labelledby="how-h">
   <h2 id="how-h">How it works</h2>
   <ol class="steps">
-    <li><h3>Track</h3><div><p>Sleevesight is notified when your music player starts a track, and knows its title, artists, album and cover.</p><p>Audio never touched.</p></div></li>
-    <li><h3>Trace</h3><div><p>Sleevesight finds the track's traces across the sources you choose.</p><p>Nothing made up.</p></div></li>
-    <li><h3>Tell</h3><div><p>Sleevesight shares what makes the artist, song and album worth knowing, in a few lines written by the AI service you choose.</p><p>Every fact cited.</p></div></li>
+    <li class="track"><h3>Track</h3><div><p>Sleevesight is notified when your music player starts a track, and knows its title, artists, album and cover.</p><p>Audio never touched.</p></div></li>
+    <li class="trace"><h3>Trace</h3><div><p>Sleevesight finds the track's traces across the sources you choose.</p><p>Nothing made up.</p></div></li>
+    <li class="tell"><h3>Tell</h3><div><p>Sleevesight shares what makes the artist, song and album worth knowing, in a few lines written by the AI service you choose.</p><p>Every fact cited.</p></div></li>
   </ol>
 </section>
 
