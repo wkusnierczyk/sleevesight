@@ -9,8 +9,9 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
 <!-- The brand sheet: the three leading logo designs and their intros, the other marks they come from,
-     two reveals of the record mark, the colours and type, and mock-ups of shirts and stickers. A design reference, not linked from the
-     product page. Hand-written; nothing generates it. Like the product page, it loads nothing from
+     two reveals of the record mark, the colours and type, and mock-ups of shirts and stickers. A design
+     reference, not linked from the product page. Hand-written; nothing generates it. Like the product
+     page, it loads nothing from
      another site: the one web font, Roboto Flex, is a copy cut down to what this page uses
      (`assets/fonts/make_sheet_font.py`), so text added here in new characters needs that copy remade. -->
 <style>
@@ -79,33 +80,39 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 @media (prefers-reduced-motion: reduce){.turn-pane svg{animation:none}}
 /* The reveals, looped every 7 s, each ending on the 8b mark. Each svg is in the words' units. At rest
    (reduced motion) each shows its end: the animations give the start, the elements' own values the end.
-   R1: the record rolls from left of "sight" to its place in 8b, one turn over its own circumference
-   (2π × 17.58 = 110.46 units), so it rolls without slipping. "sight" is clipped at the record's centre,
-   so it shows from behind the record as it passes. The roll, its turn and the clip share one easing, so
-   they stay in step. The viewBox is centred on 8b's ink, wide enough for the record's start. */
+   R1: the record rolls in from beyond the pane's left edge to its place in 8b, two turns over its own
+   circumference (2 × 2π × 17.58 = 220.92 units), so it rolls without slipping. "sight" is clipped at the
+   record's centre, so it shows from behind the record as it passes. The roll, its turn and the clip share
+   one easing, so they stay in step. The viewBox is centred on 8b's ink. R1 has no tile, so its words
+   take the page's ink. */
 .rv-pane{background:var(--bg);display:grid;place-items:center;padding:20px 12px;overflow:hidden;min-width:0}
-.rv-pane svg{display:block;width:min(100%,340px);height:auto;--tile-ink:var(--ink)}
+.rv-pane svg{display:block;width:min(100%,340px);height:auto}
+.rv-pane svg.r1{--tile-ink:var(--ink)}
 .rv-all{animation:rv-all 7s infinite}
 .r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s infinite}
 .r1-roll,.r1-wipe{animation:r1-roll 7s infinite}
-.r1-show{animation:r1-show 7s infinite}
 @keyframes rv-all{0%{opacity:0}5%,88%{opacity:1}96%,100%{opacity:0}}
-@keyframes r1-roll{0%,10%{transform:translateX(-110.46px);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
-@keyframes r1-turn{0%,10%{transform:rotate(-360deg);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
-@keyframes r1-show{0%,10%{opacity:0}16%,100%{opacity:1}}
+@keyframes r1-roll{0%,10%{transform:translateX(-220.92px);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
+@keyframes r1-turn{0%,10%{transform:rotate(-720deg);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
 /* R2: the tile is the sleeve. It slides left by 140 units, revealing the record behind it, 64 units in
    radius (the tile's half side is 71.5) and centred where the tile was; the record then shrinks into its
    place in 8b (scale 64/17.58 about the origin, the centre (73.10, 14.16) mapped to (140, 0)), and the
-   tile's background fades, leaving the words where they were on it. */
-.r2-tile{animation:r2-slide 7s infinite}
+   tile's background fades, leaving the words where they were on it. The words start in the tile's ink
+   and end in the page's (on dark, #fff and #e5e8ee), changing as the background fades; `--r2-ink` is
+   registered so that it changes smoothly rather than in one step. */
+@property --r2-ink{syntax:"<color>";inherits:true;initial-value:transparent}
+.r2-tile{--r2-ink:var(--ink);animation:r2-slide 7s infinite,r2-ink 7s infinite}
+.r2-tile use{--tile-ink:var(--r2-ink)}
 .r2-bg{opacity:0;animation:r2-bg 7s infinite}
 .r2-rec{animation:r2-shrink 7s infinite}
 /* Both end on 8b centred in the pane, as R1 does: the scene (the tile and the record side by side, -72
-   to 204) starts centred, 39.5 units right of 8b's centre (26.55), and pans left as the record shrinks. */
+   to 204) is centred once the tile has slid in, offset 39.5 units left of where it ends (8b's centre is
+   26.55), and moves right as the record shrinks. */
 .r2-pan{animation:r2-pan 7s infinite}
 @keyframes r2-pan{0%,36%{transform:translateX(-39.5px);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
 @keyframes r2-slide{0%,8%{transform:translateX(140px);animation-timing-function:cubic-bezier(.45,0,.2,1)}30%,100%{transform:none}}
 @keyframes r2-bg{0%,38%{opacity:1}54%,100%{opacity:0}}
+@keyframes r2-ink{0%,38%{--r2-ink:var(--tile-ink)}54%,100%{--r2-ink:var(--ink)}}
 @keyframes r2-shrink{0%,36%{transform:translate(-126.12px,-51.55px) scale(3.6405);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
 @media (prefers-reduced-motion: reduce){.rv-pane *{animation:none!important}}
 /* The tilted shirts: the mark turned 40° clockwise, as if caught mid-turn. The svgs size themselves;
@@ -223,8 +230,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 .shirt{position:relative;aspect-ratio:300/320;width:100%}
 .shirt svg.tee{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 10px 18px #0003)}
 .shirt .print{position:absolute;left:50%;top:31%;transform:translateX(-50%)}
-/* The tilted marks are two to three times as tall as the other chest prints: placed higher, so they
-   sit on the chest rather than below it. */
+/* The tilted marks are taller than the other chest prints: placed higher, so they sit on the chest
+   rather than below it. */
 .shirt .print.high{top:22%}
 /* Small, high on the chest, on the left as seen. */
 .shirt .print.ul{left:34%;top:23%}
@@ -481,8 +488,8 @@ const reveal = (tag, note, label, svg) => card(tag, note,
 document.getElementById('reveals').innerHTML =
   reveal('R1', 'The record rolls in under "Sleeve", uncovering "sight"',
     'Reveal R1: "Sleeve" alone; the record rolls in under it from the left, uncovering "sight" as it passes, and stops beside it',
-    c => `<svg viewBox="-56.4 -45.76 166 86" aria-hidden="true"><defs><clipPath id="r1-clip-${c}"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs>
-      <g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip-${c})"/><g class="r1-show"><g class="r1-roll">${rec8b('r1-rec')}</g></g></g></svg>`) +
+    c => `<svg class="r1" viewBox="-56.4 -45.76 166 86" aria-hidden="true"><defs><clipPath id="r1-clip-${c}"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs>
+      <g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip-${c})"/><g class="r1-roll">${rec8b('r1-rec')}</g></g></svg>`) +
   reveal('R2', 'The tile slides off the record, as a sleeve',
     'Reveal R2: the tile slides left, revealing the record behind it; the record shrinks beside "sight" and the tile fades, leaving the 8b mark',
     () => `<svg viewBox="-119.5 -82.76 292 160" aria-hidden="true"><g class="rv-all"><g class="r2-pan"><g class="r2-rec">${rec8b('')}</g>
