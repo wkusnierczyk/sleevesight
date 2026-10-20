@@ -68,7 +68,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
    small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
    logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
-   the menu stacks below 520 px, a little above where the script's own test stacks it (about 500 px
+   the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
    with the page font). */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
@@ -81,7 +81,7 @@ nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
 .sl-stack nav.top a{display:block;padding:3px 0}
-@media (max-width:520px){
+@media (max-width:506px){
   html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
   html:not(.js) nav.top ul{flex-direction:column;gap:0}
   html:not(.js) nav.top a{display:block;padding:3px 0}
@@ -147,11 +147,12 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works: three columns of text, without boxes, each numbered to the left of its title. */
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px;counter-reset:step}
-.steps li{counter-increment:step;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:center;align-content:start}
+.steps li{counter-increment:step;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:start;align-content:start}
 .steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700}
-.steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
+.steps h3,.tiles h3{margin:0;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
-.steps h3{margin:0}
+/* A title of one line is centred on its number; one that wraps starts level with it. */
+.steps h3{display:flex;align-items:center;min-height:32px}
 .steps p{grid-column:1/-1;margin-top:10px}
 .intro{margin:0 0 8px;max-width:44em}
 .note{margin:0 0 24px;font-size:15px;color:var(--muted)}
@@ -177,6 +178,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .chat .by{display:block;margin-top:4px;font-size:13px;font-style:italic;color:var(--s-onv)}
 /* You choose: three columns of text, without boxes, spaced as How it works. */
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
+.tiles h3{margin-bottom:12px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 .two ul{margin:1em 0;padding-left:1.2em}
 .two li{margin-bottom:8px}
@@ -297,7 +299,7 @@ document.documentElement.classList.add('js');
       <li><a href="#how">How it works</a></li>
       <li><a href="#privacy">Privacy</a></li>
       <li><a href="#install">Install</a></li>
-      <li><a href="https://github.com/wkusnierczyk/sleevesight">More</a></li>
+      <li><a href="#more">More</a></li>
     </ul>
   </nav>
 </div></div></header>
