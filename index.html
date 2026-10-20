@@ -145,16 +145,14 @@ figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
-/* How it works: each step a row, its verb on the left, numbered, a third of the width (as wide as
-   Coming soon's boxes), and its text on the right: what it does, then a short statement. The text's
-   first line is centred on the number (4px: half of the 32px circle less a 24px line). */
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:20px;counter-reset:step}
-.steps li{counter-increment:step;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px 32px;align-items:start}
-.steps h3{display:flex;align-items:center;gap:12px;min-height:32px}
-.steps h3::before{content:counter(step);flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700}
-.steps h3,.tiles h3{margin:0;font-size:18px}
+/* How it works: each step a row, its verb on the left, a third of the width (as wide as Coming
+   soon's boxes), and its text on the right: what it does, then a short statement. The verb and the
+   text share their first baseline. */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:24px}
+.steps li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:6px 32px;align-items:baseline}
+.tiles h3{margin:0;font-size:18px}
+.steps h3{margin:0;font-size:28px;line-height:1.1;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
-.steps li>div{padding-top:4px}
 .steps li>div p+p{margin-top:8px}
 .intro{margin:0 0 8px;max-width:44em}
 .note{margin:0 0 24px;font-size:15px;color:var(--muted)}
@@ -183,8 +181,6 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 /* As far below the title's line as in How it works, where the title is centred on its 32 px number. */
 .tiles h3{margin-bottom:12px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
-.two ul{margin:1em 0;padding-left:1.2em}
-.two li{margin-bottom:8px}
 .lead{font-size:19px;font-weight:600;margin:0 0 12px}
 .small{font-size:15px;color:var(--muted)}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:14px;color:var(--muted)}
@@ -259,7 +255,7 @@ footer p{margin:0 0 4px}
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   figure.mock{justify-self:center;max-width:360px}
   .tiles,.two,.ex,.steps li{grid-template-columns:minmax(0,1fr)}
-  .about,.steps li>div{padding-top:0}
+  .about{padding-top:0}
   .examples{gap:36px}
 }
 @media (max-width:560px){
@@ -397,10 +393,8 @@ document.documentElement.classList.add('js');
     </div>
     <div>
       <p class="lead">What leaves the phone, and to whom</p>
-      <ul>
-        <li>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</li>
-        <li>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</li>
-      </ul>
+      <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
+      <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
       <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
            (`targetSdk` 37, no cleartext exception in the manifest). -->
       <p>All of it travels encrypted (HTTPS), your API keys included.</p>
