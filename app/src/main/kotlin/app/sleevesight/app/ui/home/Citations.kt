@@ -68,9 +68,11 @@ internal fun CheckedProse(
         paragraph.joinToString(" ") { sentence ->
             val words = spoken(sentence.text, policy, resources)
             // An uncited sentence is said to be so before its final punctuation, where a citation
-            // would be: "It is great (not cited)."
-            val end = FINAL_PUNCTUATION.find(words)?.value.orEmpty()
-            if (sentence.status == SentenceStatus.UNCITED) "${words.removeSuffix(end)} ($uncited)$end" else words
+            // would be: "It is great (not cited)." A closing quote keeps the note out of the
+            // quotation: 'They called it "great." (not cited)'.
+            val end = FINAL_PUNCTUATION.find(words)
+            val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
+            if (sentence.status == SentenceStatus.UNCITED) "${words.take(at)} ($uncited)${words.drop(at)}" else words
         }
     val text =
         buildAnnotatedString {
@@ -244,8 +246,11 @@ private val BLANK_LINE = Regex("\\n\\s*\\n")
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 
-// A sentence's closing punctuation, with any closing quotes or brackets after it.
-private val FINAL_PUNCTUATION = Regex("[.!?…]+[\"'”’)\\]]*$")
+// A sentence's closing punctuation, with any closing quotes or brackets after it (the group).
+private val FINAL_PUNCTUATION = Regex("[.!?…]+([\"'”’)\\]]*)$")
+
+// The closing quotes FINAL_PUNCTUATION allows.
+private const val QUOTES = "\"'”’"
 
 // The accessibility actions a paragraph offers for its lines. Compose (1.12.1) throws when one
 // node has 32 or more custom actions ("Can't have more than 32 custom actions for one widget",

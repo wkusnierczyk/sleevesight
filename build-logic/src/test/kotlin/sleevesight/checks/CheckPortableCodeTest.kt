@@ -1,8 +1,10 @@
 package sleevesight.checks
 
+import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import java.time.Duration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -141,9 +143,13 @@ class CheckPortableCodeTest {
         )
         assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("Base", "Bounded")))
         assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("Other", "Bounded"), supers))
-        // A cycle in what is read ends the walk.
+        // A cycle in what is read, or a class its own superclass, ends the walk: within a bound, so a
+        // walk that lost its guard fails here rather than hanging the task.
         val cycle = mapOf("A" to "B", "B" to "A")
-        assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("A", "Bounded"), cycle))
+        assertTimeoutPreemptively(Duration.ofSeconds(5)) {
+            assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("A", "Bounded"), cycle))
+            assertEquals(emptyList(), CheckPortableCode.jvmOnlyUsesIn(lru("A", "Bounded"), mapOf("A" to "A")))
+        }
     }
 
     @Test

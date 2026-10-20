@@ -54,6 +54,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
@@ -107,11 +108,16 @@ class AppGraph(
     private val wiring = appPipelineWiring(BuildConfig.VERSION_NAME, JvmAccentFolder, JvmResourceReader)
 
     /**
-     * Closes the pipeline's network client, for an emulated process's end only
-     * ([SleevesightApplication.onTerminate], which Robolectric calls after each test): on a phone the
-     * client lives as long as the process.
+     * Ends the graph for an emulated process's end only ([SleevesightApplication.onTerminate], which
+     * Robolectric calls after each test): cancels the process's scopes, so nothing of this graph
+     * runs on into the next test, then closes the pipeline's network client. On a phone the graph
+     * lives as long as the process.
      */
-    internal fun close() = wiring.close()
+    internal fun close() {
+        pipelineScope.cancel()
+        mainScope.cancel()
+        wiring.close()
+    }
 
     /** The AI services' clients, for the settings screen's model list and the pipeline. */
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders

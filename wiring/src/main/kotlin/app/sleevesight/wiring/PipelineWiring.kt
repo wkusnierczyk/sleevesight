@@ -45,8 +45,9 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * CLI asks afresh for each track, so its reports time every request.
  *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
- * nothing otherwise: the CLI closes its own. The app never closes it, since its client lives as
- * long as the process; its tests do, so each test's client goes with it.
+ * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
+ * which a phone never calls (the client lives as long as the process) and Robolectric calls after
+ * each test, so each test's client goes with it.
  */
 class PipelineWiring internal constructor(
     private val net: NetClient,
