@@ -112,8 +112,8 @@ class AppGraph(
      * Robolectric calls after each test): cancels the process's scopes, so this graph's coroutines
      * stop at their next cancellable suspension rather than run on into the next test (blocking
      * work in flight runs to its end, and may end with an error from the closed client), then
-     * closes the pipeline's network client without waiting for them to stop. On a phone the graph
-     * lives as long as the process.
+     * closes the pipeline's network client without waiting for the coroutines to stop. On a phone
+     * the graph lives as long as the process.
      */
     internal fun close() {
         pipelineScope.cancel()
