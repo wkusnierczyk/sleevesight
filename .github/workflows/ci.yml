@@ -58,6 +58,11 @@ jobs:
           [ "$build" = true ] || echo "No change the build reads: build skipped." >> "$GITHUB_STEP_SUMMARY"
           echo "build=$build" >> "$GITHUB_OUTPUT"
 
+      # Every pull request, including those that skip the build, so notes that Play would refuse
+      # fail the pull request that adds them rather than the release (`release.yml`).
+      - name: Release notes
+        run: .github/scripts/check-release-notes.sh release-notes/*.txt
+
       - uses: actions/setup-java@v6
         if: steps.changes.outputs.build == 'true'
         with:

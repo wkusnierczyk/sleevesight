@@ -58,13 +58,7 @@ jobs:
             echo "::error::No release notes: add $notes (design/release.md)"
             exit 1
           fi
-          # Counted as the upload script sends them: characters, not bytes, with trailing white
-          # space removed and line endings kept as written.
-          length=$(jq -Rs 'sub("\\s+$"; "") | length' "$notes")
-          if [ "$length" -eq 0 ] || [ "$length" -gt 500 ]; then
-            echo "::error::$notes has $length characters; Play takes 1 to 500"
-            exit 1
-          fi
+          .github/scripts/check-release-notes.sh "$notes"
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:

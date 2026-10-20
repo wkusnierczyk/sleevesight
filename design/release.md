@@ -41,7 +41,7 @@ The first bundle of a new app goes through Play Console, since the API cannot cr
 
 ## Release notes
 
-Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, committed with the change that ships, so they are reviewed with it. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. A tag whose version has no notes file, or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
+Each release's notes are in `release-notes/<version>.txt`, for example `release-notes/0.1.1.txt`, committed with the change that ships, so they are reviewed with it. They are in the listing's language, `en-US`, plain text, at most 500 characters (Play's limit per language); trailing white space is dropped. CI checks the length of every notes file on every pull request (`.github/scripts/check-release-notes.sh`). A tag whose version has no notes file, or an empty or longer one, stops the run before the build, so its version is spent: add the notes before tagging.
 
 ## Versioning
 
