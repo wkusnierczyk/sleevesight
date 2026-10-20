@@ -147,13 +147,15 @@ figcaption{font-size:14px;color:var(--muted);text-align:center;margin-top:12px}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
-/* How it works: each step a row, its verb on the left, a third of the width (as wide as Coming
-   soon's boxes) and set against the text, and its text on the right: what it does, then a short
-   statement. The verb is the text's size, bold, and shares its first baseline. Each verb has a
-   colour: Track the wordmark's red (`--sight`, close to Last.fm's chip in light), Trace an earth
-   ochre (browner than web search's amber, in its hue), Tell the accent blue. */
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:24px}
-.steps li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:6px 32px;align-items:baseline}
+/* How it works: each step a row, its verb on the left, in a column as wide as the longest verb
+   (one column for all rows, through `subgrid`) and set against the text, and its text on the right,
+   up to 40em: what it does, then a short statement. The verb is the text's size, bold, and shares
+   its first baseline. Each verb has a colour: Track the wordmark's red (`--sight`, close to
+   Last.fm's chip in light), Trace an earth ochre (browner than web search's amber, in its hue), Tell
+   the accent blue. */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:24px 32px}
+.steps li{grid-column:1/-1;display:grid;grid-template-columns:subgrid;row-gap:6px;align-items:baseline}
+.steps li>div{max-width:40em}
 .steps h3{margin:0;font-size:17px;font-weight:700;text-align:right}
 .steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
@@ -259,7 +261,7 @@ footer p{margin:0 0 4px}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   figure.mock{justify-self:center;max-width:360px}
-  .tiles,.two,.ex,.steps li{grid-template-columns:minmax(0,1fr)}
+  .tiles,.two,.ex,.steps{grid-template-columns:minmax(0,1fr)}
   .about{padding-top:0}
   .steps h3{text-align:left}
   .examples{gap:36px}
