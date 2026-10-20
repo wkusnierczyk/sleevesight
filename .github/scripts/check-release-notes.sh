@@ -56,7 +56,9 @@ for notes in "$@"; do
   elif [ ! -f "$notes" ] || [ ! -r "$notes" ]; then
     error "$notes" "$notes is not a readable file"
     status=1
-  elif ! length=$(jq -Rs 'sub("\\s+$"; "") | length' "$notes"); then
+  # Read with `--rawfile`, as `play-upload.sh` reads it: `-Rs` decodes the file in chunks and can
+  # split a character at a chunk's end, which changes the count.
+  elif ! length=$(jq -n --rawfile notes "$notes" '$notes | sub("\\s+$"; "") | length'); then
     error "$notes" "$notes could not be read"
     status=1
   elif [ "$length" -eq 0 ] || [ "$length" -gt 500 ]; then
