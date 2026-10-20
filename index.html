@@ -147,15 +147,13 @@ figcaption{font-size:14px;color:var(--muted);text-align:center;margin-top:12px}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
-/* How it works and You choose: three columns of text, without boxes. In How it works: the verb,
-   as Privacy's leads (19px, semibold), in its colour; what the step does; then a short statement,
-   bold, at the foot of the column, so the three line up. The colours: Track the wordmark's red
+/* How it works and You choose: three columns of text, without boxes, each headed as Privacy's
+   leads (19px, semibold). In How it works: the verb, in its colour; what the step does; then a
+   short statement, bold, at the foot of the column, so the three line up. The colours: Track the wordmark's red
    (`--sight`, close to Last.fm's chip in light), Trace an earth ochre (browner than web search's
    amber, in its hue), Tell the accent blue. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
-.steps h3,.tiles h3{margin:0 0 12px}
-.steps h3{font-size:19px;font-weight:600}
-.tiles h3{font-size:18px}
+.steps h3,.tiles h3{margin:0 0 12px;font-size:19px;font-weight:600}
 .steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
 .steps li{display:flex;flex-direction:column}
@@ -383,7 +381,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <h3 class="vh">Dive</h3>
-      <div class="about"><p><b>Questions of your own</b> about what is playing, about anyone on the track or anything in its story.</p><p>An AI service you enable answers them, on your own API key, and each answer names the model that wrote it. This one was written from Wikipedia's article on Paul McCartney.</p></div>
+      <div class="about"><p><b>Questions of your own</b> about what is playing, about anyone on the track or anything in its story.</p><p>An AI service you enable answers them, on your own API key, and each answer names the model that wrote it.</p><p>Here, the answer was written from Wikipedia's article on Paul McCartney.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Dive</p><p class="what">Paul McCartney</p><div class="chat"><p><b class="who">You</b> <span class="say ask">Tell me more about his career.</span></p><p><b class="who">AI</b> <span class="say">He joined Lennon's skiffle group, the Quarrymen, in 1957, which became the Beatles in 1960. After the band split, he released his first solo album, <i>McCartney</i>, in 1970, and formed Wings with his wife Linda and Denny Laine. His songwriting partnership with Lennon remains the most successful in music history. <span class="by">by Claude Haiku 5.5</span></span></p></div></div>
     </li>
   </ul>
