@@ -60,10 +60,10 @@ jobs:
 
       # Every run, including those that skip the build, so notes that the release would not find or
       # Play would refuse fail the pull request that adds them rather than the release
-      # (`release.yml`). Every file in the folder is checked, whatever its name.
+      # (`release.yml`). Every entry in the folder is checked, whatever its name, hidden ones too.
       - name: Release notes
         run: |
-          shopt -s nullglob
+          shopt -s nullglob dotglob
           files=(release-notes/*)
           if [ "${#files[@]}" -gt 0 ]; then
             .github/scripts/check-release-notes.sh "${files[@]}"
