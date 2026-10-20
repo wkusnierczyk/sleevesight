@@ -9,7 +9,7 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 19 October 2026.
+Last updated: 20 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight).
 
@@ -68,7 +68,7 @@ What a service keeps of your requests, such as Anthropic for your account, is be
 
 ## This website
 
-The site is served by GitHub Pages, so GitHub receives your IP address and the pages you ask for, under [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). The site sets no cookies and has no analytics. The front page keeps one note in your browser, that its intro has played. Design pages with diagrams load the diagram script from jsDelivr, which receives your IP address ([jsDelivr's privacy policy](https://www.jsdelivr.com/terms/privacy-policy-jsdelivr-net)).
+The site is served by GitHub Pages, so GitHub receives your IP address and the pages you ask for, under [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). The site sets no cookies and has no analytics. The front page keeps nothing in your browser; its copy from before its redesign, under `design/`, keeps one note there, that its intro has played. Design pages with diagrams load the diagram script from jsDelivr, which receives your IP address ([jsDelivr's privacy policy](https://www.jsdelivr.com/terms/privacy-policy-jsdelivr-net)).
 
 ## Children
 
