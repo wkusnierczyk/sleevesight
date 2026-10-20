@@ -42,8 +42,13 @@ release_name() {
 
 status=0
 for notes in "$@"; do
-  if ! release_name "$(basename "$notes")"; then
-    error "$notes" "$notes is not named for a release version (<major>.<minor>.<patch>.txt, such as 0.1.2.txt), so no release would find it"
+  # Not `basename`: its command substitution would drop a trailing newline from the name.
+  name=${notes##*/}
+  if [[ $name != *.txt ]]; then
+    error "$notes" "$notes is not named <version>.txt, such as 0.1.2.txt"
+    status=1
+  elif ! release_name "$name"; then
+    error "$notes" "${name%.txt} is not a release version: <major>.<minor>.<patch> without leading zeros, minor and patch below 1000, at most 2100.0.0 ($notes)"
     status=1
   elif [ ! -e "$notes" ]; then
     error "$notes" "No release notes: add $notes (design/release.md)"

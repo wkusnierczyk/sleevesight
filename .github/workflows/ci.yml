@@ -58,17 +58,6 @@ jobs:
           [ "$build" = true ] || echo "No change the build reads: build skipped." >> "$GITHUB_STEP_SUMMARY"
           echo "build=$build" >> "$GITHUB_OUTPUT"
 
-      # Every run, including those that skip the build, so notes that the release would not find or
-      # Play would refuse fail the pull request that adds them rather than the release
-      # (`release.yml`). Every entry in the folder is checked, whatever its name, hidden ones too.
-      - name: Release notes
-        run: |
-          shopt -s nullglob dotglob
-          files=(release-notes/*)
-          if [ "${#files[@]}" -gt 0 ]; then
-            .github/scripts/check-release-notes.sh "${files[@]}"
-          fi
-
       - uses: actions/setup-java@v6
         if: steps.changes.outputs.build == 'true'
         with:
@@ -120,3 +109,17 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      # Every run, including those that skip the build, so notes that the release would not find or
+      # Play would refuse fail the pull request that adds them rather than the release
+      # (`release.yml`). Every entry in the folder is checked, whatever its name, hidden ones too.
+      # Last, and after a failed step as well, so that bad notes and a failed build are both
+      # reported in one run.
+      - name: Release notes
+        if: ${{ !cancelled() }}
+        run: |
+          shopt -s nullglob dotglob
+          files=(release-notes/*)
+          if [ "${#files[@]}" -gt 0 ]; then
+            .github/scripts/check-release-notes.sh "${files[@]}"
+          fi
