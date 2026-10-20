@@ -148,12 +148,13 @@ figcaption{font-size:14px;color:var(--muted);text-align:center;margin-top:12px}
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works and You choose: three columns of text, without boxes. In How it works: the verb,
-   bold, in its colour, a pixel larger than the text; what the step does; then a short statement,
+   as Privacy's leads (19px, semibold), in its colour; what the step does; then a short statement,
    bold, at the foot of the column, so the three line up. The colours: Track the wordmark's red
    (`--sight`, close to Last.fm's chip in light), Trace an earth ochre (browner than web search's
    amber, in its hue), Tell the accent blue. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
 .steps h3,.tiles h3{margin:0 0 12px;font-size:18px}
+.steps h3{font-size:19px;font-weight:600}
 .steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
 .steps li{display:flex;flex-direction:column}
@@ -183,7 +184,11 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .chat .say{font-size:16.5px;line-height:1.55}
 .chat .ask{color:var(--s-onv)}
 .chat .by{display:block;margin-top:4px;font-size:14px;font-style:italic;color:var(--s-onv)}
-.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
+/* Privacy: two columns sharing two rows (`subgrid`): the text, then the muted line, so the two muted
+   lines start level whatever the length of the text above them. */
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 32px}
+.two>div{grid-row:span 2;display:grid;grid-template-rows:subgrid}
+.two .small{margin-top:0}
 .lead{font-size:19px;font-weight:600;margin:0 0 12px}
 .small{font-size:16.5px;color:var(--muted)}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
@@ -258,6 +263,7 @@ footer p{margin:0 0 4px}
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   figure.mock{justify-self:center;max-width:360px}
   .tiles,.two,.ex,.steps{grid-template-columns:minmax(0,1fr)}
+  .two>div{display:block}
   .about{padding-top:0}
   .examples{gap:36px}
 }
@@ -365,7 +371,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <h3 class="vh">Album</h3>
-      <div class="about"><p><b>The album's release</b>, and how it fared.</p><p>Web search finds pages like the band's own page on the album.</p><p>Here, <span class="cite G">G1</span> and <span class="cite G">G2</span> are two passages of it.</p></div>
+      <div class="about"><p><b>The album's release</b>, and how it fared.</p><p>Here, <span class="cite G">G1</span> and <span class="cite G">G2</span> are two passages of the band's own page on the album, found by web search.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Album</p><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="cite G">G1</span> It spent nine weeks at number one in the UK, and six in the US from early January 1966.<span class="cite G">G2</span></p></div>
     </li>
     <li class="ex">
@@ -394,18 +400,22 @@ document.documentElement.classList.add('js');
   <h2 id="privacy-h">Privacy</h2>
   <div class="two">
     <div>
+      <div>
       <p class="lead">Nothing you play reaches the developer</p>
       <p>Sleevesight does not require you to create a user account. It does not include any of your data in telemetry, crash reports, or analytics. It does not show ads, and does not send any usage data for personalized marketing.</p>
       <p>Your API keys are stored encrypted on the phone and never logged.</p>
+      </div>
       <p class="small">The <a href="privacy.html">privacy policy</a> says what each service receives, and what you can switch off.</p>
     </div>
     <div>
+      <div>
       <p class="lead">What leaves the phone, and to whom</p>
       <p>The sources you chose: the playing track's information; by default, the next track's title and artists to MusicBrainz, if enabled.</p>
       <p>The AI service you chose: the track's title, artists and album, and what the sources found about those. Each insight is one request of its own, with no sustained conversation. Requests use your API key, and are handled under the terms for your AI service account.</p>
       <!-- Every address the app calls is `https`, and Android blocks unencrypted connections for it
            (`targetSdk` 37, no cleartext exception in the manifest). -->
       <p>All of it travels encrypted (HTTPS), your API keys included.</p>
+      </div>
       <p class="small">Nothing else leaves the phone, unless you export your diagnostics, or your playlist history with its insights, to a file yourself. Your listening history stays on the device.</p>
     </div>
   </div>
