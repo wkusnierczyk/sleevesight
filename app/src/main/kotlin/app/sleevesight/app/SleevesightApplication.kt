@@ -10,7 +10,7 @@ class SleevesightApplication : Application() {
 
     /**
      * Never called on a phone, whose process ends without it; Robolectric calls it after each test,
-     * which then closes the graph's network client ([AppGraph.close]) rather than leave it open.
+     * which then ends the graph ([AppGraph.close]): its scopes cancelled, its network client closed.
      */
     override fun onTerminate() {
         if (made.isInitialized()) graph.close()
