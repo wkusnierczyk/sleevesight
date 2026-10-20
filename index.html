@@ -187,7 +187,8 @@ footer p{margin:0 0 4px}
 .pick button:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
 
 /* The intro (`.sl-intro`), on every visit: set by the scripts when motion is allowed and the address
-   names no section. One of four, picked at random (`data-logo`), or the one the address asks for
+   has no `#`. As it starts, the address gains a bare `#` (the top of the page), so a reload skips it;
+   so does a link copied from the address bar after it. One of four, picked at random (`data-logo`), or the one the address asks for
    (`?logo=c`, `d`, `r1` or `r2`, which also shows a switch in the footer). Each plays large in the
    middle of the window (`.splash`) and ends on the 8b mark, which then shrinks onto the header's
    (`--fx`, `--fy`, `--fs`, measured by the script), where the header's own logo takes over at
@@ -273,7 +274,8 @@ document.documentElement.classList.add('js');
   var root = document.documentElement, asked = /[?&]logo=(c|d|r1|r2)(&|$)/.exec(location.search),
       all = ['c', 'd', 'r1', 'r2'];
   root.setAttribute('data-logo', asked ? asked[1] : all[Math.floor(Math.random() * all.length)]);
-  if (location.hash || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  // `location.hash` is empty for a bare `#`, so the address is read whole.
+  if (location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
   root.classList.add('sl-wait');
 })();
 </script>
@@ -495,6 +497,7 @@ document.documentElement.classList.add('js');
     root.style.setProperty('--fs', u / k);
     root.classList.remove('sl-wait');
     root.classList.add('sl-intro');
+    if (location.href.indexOf('#') === -1) history.replaceState(null, '', location.href + '#');
   }
   if (root.classList.contains('sl-wait')) {
     intro();
