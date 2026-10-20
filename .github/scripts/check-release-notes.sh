@@ -48,7 +48,7 @@ for notes in "$@"; do
     error "$notes" "$notes is not named <version>.txt, such as 0.1.2.txt"
     status=1
   elif ! release_name "$name"; then
-    error "$notes" "${name%.txt} is not a release version: <major>.<minor>.<patch> without leading zeros, minor and patch below 1000, at most 2100.0.0 ($notes)"
+    error "$notes" "${name%.txt} is not a release version: <major>.<minor>.<patch> without leading zeros, minor and patch below 1000, from 0.0.1 to 2100.0.0 ($notes)"
     status=1
   elif [ ! -e "$notes" ]; then
     error "$notes" "No release notes: add $notes (design/release.md)"
