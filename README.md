@@ -92,6 +92,8 @@ Requires JDK 21 or later (Robolectric's Android 16 runtime, used by the app's te
 
 The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run as a workflow artifact, `sleevesight-debug-apk`.
 
+A CI run takes about 11 minutes (October 2026, on GitHub's standard 4-core Linux runner). `./gradlew build` takes about 8½ of them and the functional tests of the build logic about 1¾; restoring the caches, the structural checks and the APK upload take under a minute together. Within `build`, the longest stretches are the pipeline modules' compilation, checks and tests (about 3 minutes, in parallel) and the app's Robolectric tests (about 2½ minutes).
+
 ## Pipeline CLI
 
 `:cli` runs the pipeline over the test playlist (`fixtures/below-soundtrack/`) and prints a coverage report: per source the count of each outcome, per track the evidence lines and genre labels, the insights with their grounding-check counts, the Phase 0.5 gate's criteria, and the diagnostics log. The exit status is 1 when a gate criterion fails, 2 for a usage error or a source request with no recording, and 3 when a criterion the run should have checked could not be (a source unreachable or failed, an insight call failed).
