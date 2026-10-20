@@ -68,7 +68,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
    small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
    logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
-   the menu stacks below 720 px. */
+   the menu stacks below 520 px, where the script's own test stacks it too. */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
 /* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
@@ -80,7 +80,7 @@ nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
 .sl-stack nav.top a{display:block;padding:3px 0}
-@media (max-width:720px){
+@media (max-width:520px){
   html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
   html:not(.js) nav.top ul{flex-direction:column;gap:0}
   html:not(.js) nav.top a{display:block;padding:3px 0}
@@ -150,7 +150,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700;margin-bottom:10px}
 .steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
-.intro{margin:0 0 24px;max-width:44em}
+.intro{margin:0 0 8px;max-width:44em}
+.note{margin:0 0 24px;font-size:15px;color:var(--muted)}
 /* Coming soon: each example a row, the box on the left, a third of the width (as wide as the three
    boxes that stood in a row before), and what it shows on the right. The boxes are as tall as their
    text. */
@@ -193,7 +194,7 @@ footer p{margin:0 0 4px}
    `--land` and the rest of the page fades in. Scrolling, a key or a click ends the intro at once.
    - C (`.sp-c`): the mark fades in (0-0.7 s), turns twice about the record's centre (0.9-2.9 s), and
      shrinks onto the header (3.3-3.95 s).
-   - D (`.sp-b`): the tile, on C's timings, turning about the dot of the i; the tile fades as it flies,
+   - D (`.sp-d`): the tile, on C's timings, turning about the dot of the i; the tile fades as it flies,
      so the words land on the page, and the record then turns in beside "sight", growing as it fades
      in (4.2-4.9 s).
    - R1 (`.sp-r1`): "Sleeve" fades in, and the record rolls in under it from the left, two and a
@@ -211,12 +212,12 @@ footer p{margin:0 0 4px}
 .brand .lp-disc{transform-box:fill-box;transform-origin:center}
 .splash{display:none}
 .sl-intro .splash{position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none}
-.sl-intro[data-logo="c"] .sp-c,.sl-intro[data-logo="d"] .sp-b{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
+.sl-intro[data-logo="c"] .sp-c,.sl-intro[data-logo="d"] .sp-d{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
 .sl-intro[data-logo="r1"] .sp-r1,.sl-intro[data-logo="r2"] .sp-r2{display:block;animation:sl-gone 1ms var(--land) forwards}
 .splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
 .splash svg{display:block;width:100%;height:100%;overflow:visible}
-.sp-b .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
+.sp-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .splash .rv-all{animation:rv-all 7s both}
 .r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s both}
 .r1-roll{animation:r1-roll 7s both,r1-show 7s both}
@@ -254,6 +255,7 @@ footer p{margin:0 0 4px}
   figure.mock{justify-self:center;max-width:360px}
   .tiles,.two,.ex{grid-template-columns:minmax(0,1fr)}
   .about{padding-top:0}
+  .examples{gap:36px}
 }
 @media (max-width:720px){
   .steps{grid-template-columns:minmax(0,1fr)}
@@ -279,7 +281,7 @@ document.documentElement.classList.add('js');
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><path id="w-sleeve" class="t-ink" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59ZM-18.87 -10.02H-16.44V-37.26H-18.87ZM-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67ZM1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67ZM16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69ZM31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/><path id="w-sight" class="t-red" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44ZM-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01ZM4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82ZM22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1ZM36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
-<div class="splash sp-b" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
+<div class="splash sp-d" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
 <div class="splash sp-c" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-54.9 -113.84 256 256"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div>
 <!-- R1's "sight" is clipped at the record's centre, so it shows from behind the record as it passes. -->
 <div class="splash sp-r1" aria-hidden="true"><div class="fly"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div>
@@ -346,7 +348,8 @@ document.documentElement.classList.add('js');
 <section id="next" aria-labelledby="next-h">
   <h2 id="next-h">Coming soon: beyond the basics</h2>
   <p class="intro">Read further details for the song, artists, and the album, each with an evidence-based insight. Ask follow-up questions about what is playing, answered by an AI service you enable with your own API key. Export the playlist history, with insights.</p>
-  <!-- The boxes are illustrations, written for the page (#230) from the passages their labels cite. -->
+  <!-- The boxes were written for the page in #230. -->
+  <p class="note">The examples are illustrations, written for this page from the passages their labels cite.</p>
   <ul class="examples">
     <li class="ex">
       <div class="box"><h3>Song</h3><p class="what">Michelle</p><p>George Martin recalled composing the melody of the guitar solo, and showed Harrison the notes during the session.<span class="cite W">W1</span> It topped the charts in Italy for eight weeks, and in France for five, as the lead track of an EP.<span class="cite W">W2</span></p></div>
@@ -358,7 +361,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <div class="box"><h3>Album</h3><p class="what">Rubber Soul, 1965</p><p>Released on 3 December 1965, just two weeks after its final mixing.<span class="cite G">G1</span> It spent nine weeks at number one in the UK, and six in the US from early January 1966.<span class="cite G">G2</span></p></div>
-      <div class="about"><p>The album's release, and how it fared.</p><p>Here the evidence came from web search, which found the band's own page on the album: <span class="cite G">G1</span> and <span class="cite G">G2</span> are two passages of it.</p></div>
+      <div class="about"><p>The album's release, and how it fared.</p><p>Web search finds pages like the band's own page on the album: here, <span class="cite G">G1</span> and <span class="cite G">G2</span> are two passages of it.</p></div>
     </li>
     <li class="ex">
       <div class="box"><h3>Language</h3><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite MB">MB1</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="cite W">W1</span> The French words came from Jan Vaughan, a French teacher and the wife of his old friend Ivan Vaughan.<span class="cite W">W2</span></p></div>
@@ -366,7 +369,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <div class="box"><h3>Dive</h3><p class="what">Paul McCartney</p><div class="chat"><p><b class="who">You</b> <span class="say ask">Tell me more about his career.</span></p><p><b class="who">AI</b> <span class="say">He joined Lennon's skiffle group, the Quarrymen, in 1957, which became the Beatles in 1960. After the band split, he released his first solo album, <i>McCartney</i>, in 1970, and formed Wings with his wife Linda and Denny Laine. His songwriting partnership with Lennon remains the most successful in music history. <span class="by">by Claude Haiku 5.5</span></span></p></div></div>
-      <div class="about"><p>Questions of your own about what is playing, about anyone on the track or anything in its story.</p><p>An AI service you enable answers them, on your own API key, and each answer names the model that wrote it.</p></div>
+      <div class="about"><p>Questions of your own about what is playing, about anyone on the track or anything in its story.</p><p>An AI service you enable answers them, on your own API key, and each answer names the model that wrote it. This one was written from Wikipedia's article on Paul McCartney.</p></div>
     </li>
   </ul>
 </section>
@@ -454,13 +457,15 @@ document.documentElement.classList.add('js');
   // A replay started from the keyboard (the intro switch) leaves focus on its button at the foot of the
   // page, out of view once the intro has scrolled to the top, so at the end focus goes to the logo
   // (`back`, that button), unless it has already moved elsewhere (a screen reader's cursor). The focus
-  // comes before the class goes, so it does not play the logo's hover.
-  function end() {
+  // comes before the class goes, so it does not play the logo's hover. Space, which would scroll the page
+  // once focus is off the button, is cancelled then (its listener is not passive, for that).
+  function end(e) {
+    if (back && e && e.type === 'keydown' && e.key === ' ') e.preventDefault();
     stops.forEach(function (e) { removeEventListener(e, end); });
     if (back) { if (document.activeElement === back) brand.focus({preventScroll: true}); back = null; }
     root.classList.remove('sl-intro');
   }
-  function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
+  function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: e !== 'keydown'}); }); }
   function logo() { return root.getAttribute('data-logo'); }
   // The intro ends with its last move: D's record turning in, the others' page arriving.
   function last(e) { if (e.animationName === (logo() === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
