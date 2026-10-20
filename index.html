@@ -149,9 +149,9 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works and You choose: three columns of text, without boxes. In How it works: the verb,
    bold, in its colour, a pixel larger than the text; what the step does; then a short statement,
-   bold, at the foot of the column, so the three line up. The colours: Track the wordmark's red (`--sight`, close to Last.fm's
-   chip in light), Trace an earth ochre (browner than web search's amber, in its hue), Tell the
-   accent blue. */
+   bold, at the foot of the column, so the three line up. The colours: Track the wordmark's red
+   (`--sight`, close to Last.fm's chip in light), Trace an earth ochre (browner than web search's
+   amber, in its hue), Tell the accent blue. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
 .steps h3,.tiles h3{margin:0 0 12px;font-size:18px}
 .steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
@@ -360,7 +360,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <h3 class="vh">Artist</h3>
-      <div class="about"><p><b>Who the artist is</b>, and why they matter, for each artist on the track.</p><p>The evidence is Last.fm's biography of the band.</p><p>Here, <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span> are three of its lines.</p></div>
+      <div class="about"><p><b>Who the artist is</b>, and why they matter, for each artist on the track.</p><p>Here, <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span> are three lines of Last.fm's biography of the band.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Artist</p><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="cite L">L1</span><span class="cite L">L2</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="cite L">L3</span></p></div>
     </li>
     <li class="ex">
@@ -370,7 +370,7 @@ document.documentElement.classList.add('js');
     </li>
     <li class="ex">
       <h3 class="vh">Language</h3>
-      <div class="about"><p><b>The languages a song is sung in</b>, or none for an instrumental, and the story behind them.</p><p>The languages come from MusicBrainz's entry for the song, and the story from Wikipedia's article on it.</p><p>Here, <span class="cite MB">MB1</span> is the entry, and <span class="cite W">W1</span> and <span class="cite W">W2</span> are two passages of the article.</p></div>
+      <div class="about"><p><b>The languages a song is sung in</b>, or none for an instrumental, and the story behind them.</p><p>Here, <span class="cite MB">MB1</span> is MusicBrainz's entry for the song, and <span class="cite W">W1</span> and <span class="cite W">W2</span> are two passages of Wikipedia's article on it.</p></div>
       <div class="box"><p class="label" aria-hidden="true">Language</p><p class="what">Michelle, The Beatles</p><p class="langs">English, French<span class="cite MB">MB1</span></p><p>Paul McCartney sings it in English, with some lines in French.<span class="cite W">W1</span> The French words came from Jan Vaughan, a French teacher and the wife of his old friend Ivan Vaughan.<span class="cite W">W2</span></p></div>
     </li>
     <li class="ex">
