@@ -47,24 +47,13 @@ jobs:
         id: version
         run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      # Every release ships with its notes, reviewed with the change that ships: a missing file stops
-      # the run before the build. Play takes at most 500 characters per language.
+      # Every release ships with its notes, reviewed with the change that ships: notes that are
+      # missing, or that `check-release-notes.sh` refuses, stop the run before the build. A tag that
+      # is no release version is named as such, since the notes' name is checked first.
       - name: Release notes
         env:
           VERSION: ${{ steps.version.outputs.name }}
-        run: |
-          notes="release-notes/$VERSION.txt"
-          if [ ! -f "$notes" ]; then
-            echo "::error::No release notes: add $notes (design/release.md)"
-            exit 1
-          fi
-          # Counted as the upload script sends them: characters, not bytes, with trailing white
-          # space removed and line endings kept as written.
-          length=$(jq -Rs 'sub("\\s+$"; "") | length' "$notes")
-          if [ "$length" -eq 0 ] || [ "$length" -gt 500 ]; then
-            echo "::error::$notes has $length characters; Play takes 1 to 500"
-            exit 1
-          fi
+        run: .github/scripts/check-release-notes.sh "release-notes/$VERSION.txt"
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
