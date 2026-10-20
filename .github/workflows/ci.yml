@@ -32,7 +32,8 @@ jobs:
       # still passes, so the required check reports. The list names those files one by one, so a new
       # file builds until it is added here. `fixtures/` stays out even for its READMEs, since the tests
       # read it as resources, and so does `design/simulator.html`, which a `:core` test reads.
-      # Pushes to `main` and `dev-*` always build.
+      # Pushes to `main` and `dev-*` always build, unless they change only Markdown (`paths-ignore`
+      # above), which a pull request has already built where it had to.
       - name: Changes that need a build
         id: changes
         run: |
