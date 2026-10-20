@@ -87,12 +87,13 @@ Requires JDK 21 or later (Robolectric's Android 16 runtime, used by the app's te
 ```sh
 ./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint
 ./gradlew checkDependencies checkManifest checkModuleGraph   # the structural checks
+./gradlew :build-logic:functionalTest                        # the build logic's functional tests (needs Maven Central)
 ./gradlew :app:assembleDebug                                 # the debug APK, in app/build/outputs/apk/debug/
 ```
 
 The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run that builds as a workflow artifact, `sleevesight-debug-apk`. A pull request that changes only documents the build never reads, such as this README or the release notes, skips the build; the list is in `.github/workflows/ci.yml`.
 
-In October 2026, a CI run took about 11 minutes on GitHub's standard 4-core Linux runner, with most tasks missing the build cache. `./gradlew build` took about 8¾ of them and the functional tests of the build logic about 1¾; restoring the caches, the structural checks and the APK upload took under a minute together. Within `build`, the longest stretches were the pipeline modules' compilation, checks and tests (about 3 minutes, in parallel) and the app's Robolectric tests (about 2½ minutes).
+In October 2026, on GitHub's standard 4-core Linux runner, a CI run that builds took about a minute when no code had changed, since most tasks came from the build cache, and 4 to 11 minutes when code had changed, depending on how much of the module graph the change reached. In an 11-minute run, `./gradlew build` took about 8¾ minutes and the build logic's functional tests about 1¾; setting up and restoring the caches, the structural checks, the debug APK and its upload took under a minute together. Within that `build`, the longest stretches were the pipeline modules' compilation, checks and tests (about 3 minutes, in parallel) and compiling and running the app's Robolectric tests (about 2¾ minutes).
 
 ## Pipeline CLI
 
