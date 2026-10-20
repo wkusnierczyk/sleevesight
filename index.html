@@ -145,12 +145,14 @@ figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
-/* How it works: three columns of text, numbered, without boxes. */
+/* How it works: three columns of text, without boxes, each numbered to the left of its title. */
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px;counter-reset:step}
-.steps li{counter-increment:step}
-.steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700;margin-bottom:10px}
+.steps li{counter-increment:step;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:center;align-content:start}
+.steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700}
 .steps h3,.tiles h3{margin:0 0 6px;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
+.steps h3{margin:0}
+.steps p{grid-column:1/-1;margin-top:10px}
 .intro{margin:0 0 8px;max-width:44em}
 .note{margin:0 0 24px;font-size:15px;color:var(--muted)}
 /* Coming soon: each example a row, the box on the left, a third of the width (as wide as the three
@@ -173,8 +175,8 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .chat .say{font-size:15px;line-height:1.55}
 .chat .ask{color:var(--s-onv)}
 .chat .by{display:block;margin-top:4px;font-size:13px;font-style:italic;color:var(--s-onv)}
-.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.tiles li{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px}
+/* You choose: three columns of text, without boxes, spaced as How it works. */
+.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 .two ul{margin:1em 0;padding-left:1.2em}
 .two li{margin-bottom:8px}
