@@ -109,9 +109,9 @@ class AppGraph(
 
     /**
      * Ends the graph for an emulated process's end only ([SleevesightApplication.onTerminate], which
-     * Robolectric calls after each test): cancels the process's scopes, so nothing of this graph
-     * runs on into the next test, then closes the pipeline's network client. On a phone the graph
-     * lives as long as the process.
+     * Robolectric calls after each test): cancels the process's scopes, so this graph's coroutines
+     * stop at their next suspension rather than run on into the next test, then closes the
+     * pipeline's network client. On a phone the graph lives as long as the process.
      */
     internal fun close() {
         pipelineScope.cancel()

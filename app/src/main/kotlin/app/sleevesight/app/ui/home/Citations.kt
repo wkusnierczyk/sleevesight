@@ -69,7 +69,8 @@ internal fun CheckedProse(
             val words = spoken(sentence.text, policy, resources)
             // An uncited sentence is said to be so before its final punctuation, where a citation
             // would be: "It is great (not cited)." A closing quote keeps the note out of the
-            // quotation: 'They called it "great." (not cited)'.
+            // quotation: 'They called it "great." (not cited)'. A closing bracket keeps it inside,
+            // as a citation would be: "(See the sleeve (not cited).)".
             val end = FINAL_PUNCTUATION.find(words)
             val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
             if (sentence.status == SentenceStatus.UNCITED) "${words.take(at)} ($uncited)${words.drop(at)}" else words
@@ -246,11 +247,11 @@ private val BLANK_LINE = Regex("\\n\\s*\\n")
 private val SPACES = Regex("\\s+")
 private val SPACE_BEFORE_STOP = Regex(" ([.,;:!?])")
 
-// A sentence's closing punctuation, with any closing quotes or brackets after it (the group).
-private val FINAL_PUNCTUATION = Regex("[.!?…]+([\"'”’)\\]]*)$")
-
-// The closing quotes FINAL_PUNCTUATION allows.
+// The closing quotes a sentence's final punctuation may carry after it.
 private const val QUOTES = "\"'”’"
+
+// A sentence's closing punctuation, with any closing quotes or brackets after it (the group).
+private val FINAL_PUNCTUATION = Regex("[.!?…]+([$QUOTES)\\]]*)$")
 
 // The accessibility actions a paragraph offers for its lines. Compose (1.12.1) throws when one
 // node has 32 or more custom actions ("Can't have more than 32 custom actions for one widget",

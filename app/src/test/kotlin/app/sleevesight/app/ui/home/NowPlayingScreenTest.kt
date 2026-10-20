@@ -411,6 +411,28 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun aScreenReaderHearsAnUncitedBracketedSentenceMarkedInsideTheBracket() {
+        // Unlike a closing quote, a closing bracket keeps the note before the final punctuation.
+        val reply = "It topped the charts [W1]. (See the sleeve.)"
+        show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
+            compose
+                .onNode(
+                    hasText("See the sleeve", substring = true) and
+                        SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                ).performScrollTo()
+                .assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.ContentDescription,
+                        listOf(
+                            "It topped the charts (${text(R.string.home_cite, "W1")}). " +
+                                "(See the sleeve (${text(R.string.home_cite_none)}).)",
+                        ),
+                    ),
+                )
+        }
+    }
+
+    @Test
     fun aParagraphCitingManyLinesOffersABoundedSetOfActionsToTheAccessibilityService() {
         // More distinct lines than Compose allows custom actions on one node (it throws at 32).
         val drafts = (1..40).map { HomeFixtures.draft(SourceId.MUSICBRAINZ, "Fact $it.") }
