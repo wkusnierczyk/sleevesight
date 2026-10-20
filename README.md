@@ -90,7 +90,7 @@ Requires JDK 21 or later (Robolectric's Android 16 runtime, used by the app's te
 ./gradlew :app:assembleDebug                                 # the debug APK, in app/build/outputs/apk/debug/
 ```
 
-The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run as a workflow artifact, `sleevesight-debug-apk`.
+The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run that builds as a workflow artifact, `sleevesight-debug-apk`. A pull request that changes only documents the build never reads, such as this README or the release notes, skips the build; the list is in `.github/workflows/ci.yml`.
 
 In October 2026, a CI run took about 11 minutes on GitHub's standard 4-core Linux runner, with most tasks missing the build cache. `./gradlew build` took about 8¾ of them and the functional tests of the build logic about 1¾; restoring the caches, the structural checks and the APK upload took under a minute together. Within `build`, the longest stretches were the pipeline modules' compilation, checks and tests (about 3 minutes, in parallel) and the app's Robolectric tests (about 2½ minutes).
 

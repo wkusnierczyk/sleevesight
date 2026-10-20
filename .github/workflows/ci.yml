@@ -24,13 +24,48 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+        with:
+          # A pull request checks out its merge commit; the first parent is the base branch.
+          fetch-depth: 2
+
+      # A pull request that changes only files the build never reads skips the build, and the job
+      # still passes, so the required check reports. The list names those files one by one, so a new
+      # file builds until it is added here. `fixtures/` stays out even for its READMEs, since the tests
+      # read it as resources, and so does `design/simulator.html`, which a `:core` test reads.
+      # Pushes to `main` and `dev-*` always build, unless they change only Markdown (`paths-ignore`
+      # above), which a pull request has already built where it had to.
+      - name: Changes that need a build
+        id: changes
+        run: |
+          build=false
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            build=true
+          else
+            # Read before the loop, so a failed `git diff` fails the step rather than skip the build.
+            files=$(git diff --name-only --no-renames HEAD^1 HEAD)
+            while IFS= read -r file; do
+              case "$file" in
+                README.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
+                _includes/* | assets/* | release-notes/* | .github/ISSUE_TEMPLATE/*) ;;
+                design/*.md | design/brand.html) ;;
+                *)
+                  echo "Builds for \`$file\`." >> "$GITHUB_STEP_SUMMARY"
+                  build=true
+                  ;;
+              esac
+            done <<< "$files"
+          fi
+          [ "$build" = true ] || echo "No change the build reads: build skipped." >> "$GITHUB_STEP_SUMMARY"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v6
+        if: steps.changes.outputs.build == 'true'
         with:
           distribution: temurin
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v6
+        if: steps.changes.outputs.build == 'true'
         with:
           # Pushes to `main` and `dev-*` write the cache, since an integration branch's
           # dependencies run ahead of `main`'s.
@@ -42,27 +77,33 @@ jobs:
       # cache. The SDK it runs is set by each test's `@Config(sdk = …)`, outside the key: a new SDK
       # alone is downloaded on each run until the key next changes, slower but never wrong.
       - uses: actions/cache@v6
+        if: steps.changes.outputs.build == 'true'
         with:
           path: ~/.m2/repository/org/robolectric
           key: robolectric-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/src/test/resources/robolectric.properties') }}
 
       - name: Build, test and lint
+        if: steps.changes.outputs.build == 'true'
         run: ./gradlew build --console=plain
 
       # Nested TestKit builds of the convention plugins; they need Maven Central, so they are not
       # part of `build`.
       - name: Functional tests of the build logic
+        if: steps.changes.outputs.build == 'true'
         run: ./gradlew :build-logic:functionalTest --console=plain
 
       - name: Structural checks
+        if: steps.changes.outputs.build == 'true'
         run: ./gradlew checkDependencies checkManifest checkModuleGraph --console=plain
 
       # `build` has assembled it already; this names the step that makes it.
       - name: Debug APK
+        if: steps.changes.outputs.build == 'true'
         run: ./gradlew :app:assembleDebug --console=plain
 
       # For installing on a phone or an emulator, such as the restricted-settings test (#29).
       - uses: actions/upload-artifact@v7
+        if: steps.changes.outputs.build == 'true'
         with:
           name: sleevesight-debug-apk
           path: app/build/outputs/apk/debug/*.apk
