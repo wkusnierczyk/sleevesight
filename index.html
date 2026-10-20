@@ -189,8 +189,7 @@ footer p{margin:0 0 4px}
    one. Each plays large in the middle of the window (`.splash`) and ends on the 8b mark, which then
    shrinks onto the header's (`--fx`, `--fy`, `--fs`, measured by the script), where the header's own
    logo takes over at `--land` and the rest of the page fades in. Scrolling, a key or a click ends the
-   intro at once. The `i` key, or a click on the logo, plays one again where the page is
-   (`replay()`).
+   intro at once. A click on the logo plays one again where the page is (`replay()`).
    - C (`.sp-c`): the mark fades in (0-0.7 s), turns twice about the record's centre (0.9-2.9 s), and
      shrinks onto the header (3.3-3.95 s).
    - D (`.sp-d`): the tile, on C's timings, turning about the dot of the i; the tile fades as it flies,
@@ -287,8 +286,8 @@ document.documentElement.classList.add('js');
 <div class="splash sp-r2" aria-hidden="true"><div class="fly"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div>
 <header class="top"><div class="bar"><div class="row wrap">
   <!-- `#`: the top of this page, without a reload, where motion is reduced or the script is off;
-       otherwise a click plays the intro again (`replay()`). -->
-  <a class="brand" href="#" aria-label="Sleevesight">
+       otherwise the script makes it a button that plays the intro again (`replay()`). -->
+  <a class="brand" href="#" aria-label="Sleevesight, top of the page">
     <svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg>
   </a>
   <nav class="top" aria-label="Site">
@@ -455,10 +454,12 @@ document.documentElement.classList.add('js');
   var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'],
       moving = matchMedia('(prefers-reduced-motion: no-preference)'), v;
   function end() {
-    stops.forEach(function (e) { removeEventListener(e, end); });
+    stops.forEach(function (e) { removeEventListener(e, stop); });
     root.classList.remove('sl-intro');
   }
-  function listen() { stops.forEach(function (e) { addEventListener(e, end, {passive: true}); }); }
+  // A held key's repeats (Enter or Space on the logo) do not end the intro it started.
+  function stop(e) { if (!(e.type === 'keydown' && e.repeat)) end(); }
+  function listen() { stops.forEach(function (e) { addEventListener(e, stop, {passive: true}); }); }
   // The intro ends with its last move: D's record turning in, the others' page arriving.
   function last(e) { if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
   brand.addEventListener('animationend', last);
@@ -493,28 +494,48 @@ document.documentElement.classList.add('js');
     listen();
   }
 
-  // The replay, unannounced: the `i` key, or a click on the logo (a step up from the hover's spin). It
-  // plays an intro picked afresh, as on a new visit, where the page is: the splash flies to the header's
-  // logo as it is, small when scrolled down, and the page fades back in at the same place. Reading the
+  // The replay: a click on the logo, a step up from the hover's spin. It plays an intro picked afresh,
+  // as on a new visit, where the page is: the splash flies to the header's logo as it is, small when
+  // scrolled down, and the page fades back in at the same place. The header's transitions are settled
+  // first (`.sl-still`), so a click just after a scroll measures the logo where it ends up. Reading the
   // layout between taking the class off and putting it back restarts the animations. The stops listen
-  // from the next frame on, after the key or click itself, which would otherwise end the intro at once.
-  // Not under "reduce motion", where the logo goes to the top of the page, as it does without the script.
+  // from the next frame on, so that nothing of the click or key that started the replay can end it.
   function replay() {
     end();
     brand.classList.remove('play');
     var all = Object.keys(boxes);
     root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
+    root.classList.add('sl-still');
     void bar.offsetHeight;
     start();
+    root.classList.remove('sl-still');
     requestAnimationFrame(listen);
   }
-  addEventListener('keydown', function (e) {
-    if ((e.key === 'i' || e.key === 'I') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && moving.matches) replay();
-  });
+  // Where motion is allowed, the logo is a button that plays the intro, named so, and Space presses it
+  // as well as Enter. Under "reduce motion" it is the link to the top of the page, as without the
+  // script; it follows the setting if that changes. A click with a modifier, or another button, keeps
+  // the link's own behaviour (a new tab, say).
+  function role() {
+    if (moving.matches) {
+      brand.setAttribute('role', 'button');
+      brand.setAttribute('aria-label', 'Sleevesight, play the intro');
+    } else {
+      brand.removeAttribute('role');
+      brand.setAttribute('aria-label', 'Sleevesight, top of the page');
+    }
+  }
+  role();
+  if (moving.addEventListener) moving.addEventListener('change', role);
   brand.addEventListener('click', function (e) {
-    if (!moving.matches) return;
+    if (!moving.matches || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     replay();
+  });
+  // Space's repeats are cancelled too, or a held Space would scroll the page.
+  brand.addEventListener('keydown', function (e) {
+    if (!moving.matches || e.key !== ' ') return;
+    e.preventDefault();
+    if (!e.repeat) replay();
   });
 
   function play() {
