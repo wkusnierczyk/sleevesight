@@ -147,12 +147,10 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works: three columns of text, without boxes, each numbered to the left of its title. */
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px;counter-reset:step}
-.steps li{counter-increment:step;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:start;align-content:start}
+.steps li{counter-increment:step;display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;align-items:center;align-content:start}
 .steps li::before{content:counter(step);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--ink);font-weight:700}
 .steps h3,.tiles h3{margin:0;font-size:18px}
 .steps p,.tiles p{margin:0;font-size:15.5px;color:var(--ink)}
-/* The title is padded so that its first line is centred on the 32 px number, wrapped or not. */
-.steps h3{padding-block:calc((32px - 1lh) / 2)}
 .steps p{grid-column:1/-1;margin-top:10px}
 .intro{margin:0 0 8px;max-width:44em}
 .note{margin:0 0 24px;font-size:15px;color:var(--muted)}
@@ -178,7 +176,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .chat .by{display:block;margin-top:4px;font-size:13px;font-style:italic;color:var(--s-onv)}
 /* You choose: three columns of text, without boxes, spaced as How it works. */
 .tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
-/* 12 px: the steps' 10 px, plus the 2 px their title's padding leaves under its line. */
+/* As far below the title's line as in How it works, where the title is centred on its 32 px number. */
 .tiles h3{margin-bottom:12px}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 .two ul{margin:1em 0;padding-left:1.2em}
