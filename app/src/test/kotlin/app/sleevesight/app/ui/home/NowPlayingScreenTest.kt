@@ -434,7 +434,7 @@ class NowPlayingScreenTest {
 
     @Test
     fun aScreenReaderHearsAnUncitedBracketedQuotationMarkedOutsideTheBracket() {
-        // A quote inside the closing bracket keeps the note out of both, as a closing quote alone does.
+        // A closing quote among the closers keeps the note out of both, as a closing quote alone does.
         val reply = "It topped the charts [W1]. (They called it \"great.\")"
         show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {
             compose

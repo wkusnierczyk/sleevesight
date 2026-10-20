@@ -70,8 +70,8 @@ internal fun CheckedProse(
             // An uncited sentence is said to be so before its final punctuation, where a citation
             // would be: "It is great (not cited)." A closing quote keeps the note out of the
             // quotation: 'They called it "great." (not cited)'. A closing bracket alone keeps it
-            // inside, as a citation would be: "(See the sleeve (not cited).)"; a quote inside the
-            // bracket still keeps it out: '(They called it "great.") (not cited)'.
+            // inside, as a citation would be: "(See the sleeve (not cited).)"; a closing quote among
+            // the closers still keeps it out: '(They called it "great.") (not cited)'.
             val end = FINAL_PUNCTUATION.find(words)
             val at = if (end == null || end.groupValues[1].any { it in QUOTES }) words.length else end.range.first
             if (sentence.status == SentenceStatus.UNCITED) "${words.take(at)} ($uncited)${words.drop(at)}" else words
