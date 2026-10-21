@@ -48,7 +48,7 @@ class DiagnosticsTest {
     private val jdbc = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { HistoryDatabase.Schema.create(it) }
     private val history = SessionHistory(jdbc)
     private val start = Instant.parse("2026-10-17T08:00:00Z")
-    private val stats = CacheStats(TableStats(3, 300), TableStats(2, 20), TableStats(1, 1_000))
+    private val stats = CacheStats(TableStats(3, 300), TableStats(2, 20), TableStats(1, 1_000), TableStats(4, 400))
     private val fixedClock =
         object : Clock {
             override fun now(): Instant = Instant.parse("2026-10-17T12:00:00Z")
@@ -166,6 +166,7 @@ class DiagnosticsTest {
         assertTrue(text, text.startsWith("Sleevesight diagnostics, version 1.2.3, exported 2026-10-17T12:00:00Z\n"))
         assertTrue(text, "com.spotify.music: learned crossfade 2000 ms" in text)
         assertTrue(text, "retrieval: 3 entries, 300 bytes" in text)
+        assertTrue(text, "artist results: 4 entries, 400 bytes" in text)
         assertTrue(text, "2026-10-17T12:00:00Z source     song: MB song_article, 3 cited" in text)
         val changes = text.lines().filter { it.startsWith("2026-10-17T08:") }
         assertEquals(Diagnostics.PAGE_SIZE + 1, changes.size)

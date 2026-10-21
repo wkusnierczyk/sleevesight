@@ -11,6 +11,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.wiring.SourceKeys
 import app.sleevesight.wiring.appPipelineWiring
@@ -28,7 +29,7 @@ import org.junit.Test
  * (`compile-forbidden.app`), not this test's.
  */
 class WiringTest {
-    private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader)
+    private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader, ArtistResults.None)
 
     // The wiring made its own client; each test closes it, as the app, whose client lives as long as
     // the process, never does.

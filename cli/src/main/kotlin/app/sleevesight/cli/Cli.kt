@@ -18,10 +18,12 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.net.NetClient
 import app.sleevesight.store.Caches
+import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.wiring.HostPolicies
@@ -81,7 +83,6 @@ class Cli(
         private val recorder =
             if (options.mode == Mode.RECORD) live?.let { RecordingNetClient(it, store, options.record) } else null
         private val net: NetClient = recorder ?: live ?: replay
-        private val wiring = pipelineWiringOn(net, JvmAccentFolder, JvmResourceReader)
         private val cacheFile: File? =
             when (val choice = options.cache) {
                 CacheChoice.None -> null
@@ -91,6 +92,14 @@ class Cli(
         private val driver =
             cacheFile?.let { JdbcSqliteDriver("jdbc:sqlite:${it.path}", Properties(), CacheDatabase.Schema) }
         private val normalizer = Normalizer(JvmAccentFolder)
+
+        // The settings are read at each call, after they are made below.
+        private val caches = driver?.let { Caches(it, { settings }, normalizer) }
+
+        // The artist cache (#238) in the run's cache, counted for the report; none without one.
+        private val artists =
+            CountedArtistResults(caches?.let { StoreArtistResults({ it }, Dispatchers.IO) } ?: ArtistResults.None)
+        private val wiring = pipelineWiringOn(net, JvmAccentFolder, JvmResourceReader, artists)
         private val ai: AiAccess? = aiAccess()
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
         private val settings =
@@ -103,7 +112,6 @@ class Cli(
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
                 labelSources = setOf(LabelSource.LASTFM),
             )
-        private val caches = driver?.let { Caches(it, { settings }, normalizer) }
 
         fun run(): Int {
             caches?.purgeExpired()
@@ -121,7 +129,14 @@ class Cli(
                     insights = aiNote(),
                     results = results,
                     gate = gate,
-                    diagnostics = Diagnostics(events.toList(), caches?.stats(), misses, started.elapsedNow()),
+                    diagnostics =
+                        Diagnostics(
+                            events.toList(),
+                            caches?.stats(),
+                            misses,
+                            started.elapsedNow(),
+                            artistCache = artists.counts().takeIf { caches != null },
+                        ),
                 )
             val report = Report(summary).render()
             out.print(report)
