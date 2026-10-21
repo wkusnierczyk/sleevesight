@@ -68,6 +68,19 @@ class OptionsTest {
     }
 
     @Test
+    fun `the AI service is Anthropic unless given, and OpenAI only for live`() {
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).provider)
+        assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--provider", "openai")).provider)
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("record", "--provider", "anthropic")).provider)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("replay", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "openai")) }
+        // Google's replies are recorded and replayed, as Anthropic's are.
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("replay", "--provider", "google")).provider)
+    }
+
+    @Test
     fun `the cache is temporary for replay and kept for live, unless given`() {
         assertEquals(CacheChoice.Temporary, Options.parse(listOf("replay")).cache)
         assertEquals(CacheChoice.At(File(".dev/cli/cache.db")), Options.parse(listOf("live")).cache)

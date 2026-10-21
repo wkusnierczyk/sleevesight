@@ -33,6 +33,7 @@
 
     <string name="settings_section_ai">AI service</string>
     <string name="settings_ai_provider_anthropic">Anthropic</string>
+    <string name="settings_ai_provider_openai">OpenAI</string>
     <string name="settings_ai_provider_google">Google</string>
     <string name="settings_ai_providers_hint">The service switched on writes the insights, one service at a time. A service switched off keeps its key, model and effort.</string>
     <string name="settings_ai_provider_needs_key">Insights wait until its API key is saved.</string>
@@ -50,6 +51,7 @@
     <string name="settings_key_saved">Saved</string>
     <string name="settings_key_unreadable">Saved, but it can no longer be read</string>
     <string name="settings_key_name_anthropic">Anthropic API key</string>
+    <string name="settings_key_name_openai">OpenAI API key</string>
     <string name="settings_key_name_google">Google Gemini API key</string>
     <string name="settings_key_name_lastfm">Last.fm API key</string>
     <string name="settings_key_name_exa">Exa API key</string>

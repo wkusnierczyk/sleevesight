@@ -281,6 +281,32 @@ class AiSettingsTest {
     }
 
     @Test
+    fun openAiIsOfferedWithItsOwnKeyModelAndEffortAndTheSwitchesAreExclusive() {
+        runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+        show {
+            val openAi = text(R.string.settings_ai_provider_openai)
+            compose.onNodeWithText(text(R.string.settings_key_name_openai)).performScrollTo().assertIsDisplayed()
+            val default =
+                app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.OPENAI))
+            compose.onNodeWithText(default).performScrollTo().assertIsDisplayed()
+            val effort = app.getString(R.string.settings_ai_effort_of, openAi)
+            compose.onNodeWithText(effort).performScrollTo().assertIsDisplayed()
+
+            val openAiSwitch = compose.onNodeWithText(openAi).performScrollTo()
+            openAiSwitch.assertIsOff()
+            openAiSwitch.performClick()
+            waitFor("OpenAI switched on") { current().aiProvider == ProviderId.OPENAI }
+            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOff()
+            assertEquals(Settings.DEFAULT_MODELS.getValue(ProviderId.OPENAI), current().model)
+            assertEquals(ReasoningEffort.LOW, current().effort)
+            // Its key, not Anthropic's, is the one insights wait for.
+            waitForText(text(R.string.settings_ai_provider_needs_key))
+            runBlocking { secrets.set(SecretId.OPENAI, Secret("openai-key")) }
+            waitFor("the key notice gone") { absent(R.string.settings_ai_provider_needs_key) }
+        }
+    }
+
+    @Test
     fun theModelAndEffortRowsAndDialogsNameTheirProvider() =
         show {
             compose.onNodeWithText(anthropic(R.string.settings_ai_model_of)).performScrollTo().performClick()

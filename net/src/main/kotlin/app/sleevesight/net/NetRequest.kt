@@ -1,6 +1,7 @@
 package app.sleevesight.net
 
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /** The HTTP methods the sources and providers use. */
 enum class NetMethod {
@@ -103,6 +104,13 @@ class NetResponse(
     fun header(name: String): String? = headers[name.lowercase()]?.firstOrNull()
 
     val isSuccess: Boolean get() = status in SUCCESS
+
+    /**
+     * The wait this response's `Retry-After` asks for, from [now], read as `:net` reads it for its own
+     * retries: delay-seconds or an HTTP-date; null without one, or for one in neither form. For a
+     * caller that reads a 429 itself ([HostPolicy.passOn429]).
+     */
+    fun retryAfter(now: Instant): Duration? = parseRetryAfter(header("retry-after"), now)
 
     /** This response with an empty body, for a stream whose body went to the caller line by line. */
     internal fun withoutBody(): NetResponse = NetResponse(status, headers, ByteArray(0))

@@ -160,18 +160,27 @@ data class Settings(
         const val SPOTIFY: String = "com.spotify.music"
 
         /**
-         * Each provider's default model. Anthropic: Claude Haiku 5.5, the cheapest current model in
-         * the Anthropic models API on 2026-10-14. Google: Gemini 3.5 Flash-Lite, the cheapest stable
-         * text model in the Gemini API's models and pricing pages on 2026-10-21 that is not
-         * deprecated (Gemini 3.1 Flash-Lite costs less, but is deprecated, to shut down on
-         * 2027-05-07, with 3.5 Flash-Lite its replacement; the cheaper 2.5 models are open only to
-         * projects that used them before). The key and its bill are the user's (driver 5), and an
-         * insight narrates a few evidence lines, which needs no larger model; the user can choose
-         * another from the provider's list. The other providers get theirs with their clients.
+         * Each provider's default model: its cheapest current text model. The key and its bill are
+         * the user's (driver 5), and an insight narrates a few evidence lines, which needs no larger
+         * model; the user can choose another from the provider's list. The other providers get
+         * theirs with their clients.
+         *
+         * - Anthropic: Claude Haiku 5.5, the cheapest current model in the Anthropic models API on
+         *   2026-10-14.
+         * - OpenAI: GPT-6 Luna (`gpt-6-luna`, $0.10 and $0.50 per million input and output tokens),
+         *   the cheapest of OpenAI's current models on its models and pricing pages on 2026-10-21.
+         *   GPT-5 nano is cheaper but shuts down on 2026-12-11, as do the older nano models before
+         *   it; GPT-6 Luna is named as their successor.
+         * - Google: Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`, $0.30 and $2.50 per million input
+         *   and output tokens), the cheapest stable text model in the Gemini API's models and pricing
+         *   pages on 2026-10-21 that is not deprecated. Gemini 3.1 Flash-Lite costs less, but is
+         *   deprecated, to shut down on 2027-05-07, with 3.5 Flash-Lite its replacement; the cheaper
+         *   2.5 models are open only to projects that used them before.
          */
         val DEFAULT_MODELS: Map<ProviderId, String> =
             mapOf(
                 ProviderId.ANTHROPIC to "claude-haiku-5-5",
+                ProviderId.OPENAI to "gpt-6-luna",
                 ProviderId.GOOGLE to "gemini-3.5-flash-lite",
             )
 
@@ -188,16 +197,27 @@ data class Settings(
          * it (Claude Opus 5.5 refuses), while every current one takes an effort. A user who prefers
          * more deliberate cards raises it, or chooses the provider's default.
          *
+         * OpenAI: low, medium and high (`reasoning.effort`), low by default, for the same reasons
+         * (GPT-6 Luna reasons at medium by default). Its models also name `none`, `minimal`,
+         * `xhigh` and `max`, but not all of them take each: GPT-6 Astra and 6.1 Sol refuse `none`,
+         * only GPT-5 takes `minimal`, and `xhigh` and `max` buy depth a card of a few sentences
+         * does not use. Low, medium and high are the levels every current reasoning model takes.
+         *
          * Google: minimal, low, medium and high (`thinkingConfig.thinkingLevel`), low by default, for
          * the same reasons. Low rather than minimal (Gemini 3.5 Flash-Lite's own default): low is the
          * least level every current Gemini text model takes (Gemini 3.8 Flash and Gemini 4 Argon
          * refuse minimal), so the default means the same whichever model is chosen, and it matches
-         * Anthropic's, so cards from the two services are compared at one effort. A user who wants
-         * the fastest cards chooses minimal.
+         * Anthropic's and OpenAI's, so cards from the services are compared at one effort. A user
+         * who wants the fastest cards chooses minimal.
          */
         val EFFORT_SCALES: Map<ProviderId, EffortScale> =
             mapOf(
                 ProviderId.ANTHROPIC to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.OPENAI to
                     EffortScale(
                         levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
                         default = ReasoningEffort.LOW,

@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
@@ -229,7 +230,7 @@ class Cli(
             val effort = settings.effort(provider)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
             return if (ai != null) {
-                "${providerName.replaceFirstChar { it.uppercase() }} $model, effort $effort$replayed"
+                "${AI_NAMES.getValue(provider)} $model, effort $effort$replayed"
             } else {
                 insightsOff(options)
             }
@@ -253,6 +254,10 @@ class Cli(
 
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
+
+        /** The AI services' names, for the report. */
+        private val AI_NAMES =
+            mapOf(ProviderId.ANTHROPIC to "Anthropic", ProviderId.OPENAI to "OpenAI", ProviderId.GOOGLE to "Google")
         private const val SECONDS_PER_MINUTE = 60
 
         /**

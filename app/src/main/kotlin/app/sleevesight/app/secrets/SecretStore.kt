@@ -42,6 +42,9 @@ enum class SecretId(
     /** Anthropic's API key, for the AI service. */
     ANTHROPIC("ai.anthropic"),
 
+    /** OpenAI's API key, for the AI service. */
+    OPENAI("ai.openai"),
+
     /** Google's Gemini API key, for the AI service. */
     GOOGLE("ai.google"),
 
@@ -57,8 +60,9 @@ enum class SecretId(
         fun forProvider(provider: ProviderId): SecretId? =
             when (provider) {
                 ProviderId.ANTHROPIC -> ANTHROPIC
+                ProviderId.OPENAI -> OPENAI
                 ProviderId.GOOGLE -> GOOGLE
-                ProviderId.OPENAI, ProviderId.OLLAMA -> null
+                ProviderId.OLLAMA -> null
             }
     }
 }

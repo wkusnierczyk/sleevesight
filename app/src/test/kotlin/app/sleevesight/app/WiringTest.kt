@@ -48,7 +48,7 @@ class WiringTest {
             listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM, SourceId.WEB),
             adapters.map { it.id },
         )
-        assertEquals(setOf(ProviderId.ANTHROPIC, ProviderId.GOOGLE), providers.keys)
+        assertEquals(setOf(ProviderId.ANTHROPIC, ProviderId.OPENAI, ProviderId.GOOGLE), providers.keys)
         assertNotNull(resolver)
         assertNotNull(labels)
     }

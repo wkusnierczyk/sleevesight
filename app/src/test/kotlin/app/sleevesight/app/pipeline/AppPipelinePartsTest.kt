@@ -113,6 +113,10 @@ class AppPipelinePartsTest {
         assertEquals(ProviderId.ANTHROPIC, parts(PipelineKeys(ai = Secret("ai")), anthropic).ai?.provider?.id)
         assertNull("no key", parts(PipelineKeys(), anthropic).ai)
         assertNull("no service chosen", parts(PipelineKeys(ai = Secret("ai")), Settings()).ai)
-        assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OPENAI)).ai)
+        val openAi = Settings(aiProvider = ProviderId.OPENAI)
+        assertEquals(ProviderId.OPENAI, parts(PipelineKeys(ai = Secret("ai")), openAi).ai?.provider?.id)
+        val google = Settings(aiProvider = ProviderId.GOOGLE)
+        assertEquals(ProviderId.GOOGLE, parts(PipelineKeys(ai = Secret("ai")), google).ai?.provider?.id)
+        assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OLLAMA)).ai)
     }
 }
