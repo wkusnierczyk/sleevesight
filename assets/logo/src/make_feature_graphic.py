@@ -1,34 +1,42 @@
-"""Google Play's feature graphic: `listing/graphics/feature-graphic.svg` and `feature-graphic.png`.
+"""Google Play's feature graphic, and the other designs tried for it.
 
-1024 x 500, on the label's red: "Sleeve" over "sight", right-aligned, as the tile draws them, "Sleeve"
-white and "sight" in the logo's ink (the red "sight" would vanish on red), the tagline "Insights on
-what's playing" under them, right-aligned with them, and the record large beside them, its centre at
-the height of the centre of "sight" (where the 8b mark centres it), bleeding off the right and bottom
-edges. The words are the tile's outlines (`tile.json`, written by `make_tile.py`); the record is the
-brand sheet's drawing (`<symbol id="lp">` in `design/brand.html`, in its light colourway, `.lt`);
-the tagline is outlined here from Roboto Flex, so the SVG needs no font to render.
+All 1024 x 500, built from the logo's sources: the words are the tile's outlines (`tile.json`,
+written by `make_tile.py`); the record is the brand sheet's drawing (`<symbol id="lp">` in
+`design/brand.html`); the colours, other than white, are the sheet's light and dark colourways
+(`.lt` and `.dk`, and its `--page-muted` for a tagline in grey); the tagline "Insights on what's
+playing" is outlined here from Roboto Flex. So every SVG renders without a font.
 
-The PNG is what Play takes: 24-bit, no alpha (Play refuses alpha in a feature graphic). It is
-rendered from the SVG and written without a time or date chunk, so a rerun with the same tools
-reproduces it byte for byte.
+  d2              The one on Google Play: on the label's red (`.lt`'s `--red`), "Sleeve" white over
+                  "sight" in the logo's ink (a red "sight" would vanish on red), right-aligned, the
+                  tagline right-aligned under them, and the record large beside them, its centre at
+                  the height of the centre of "sight" (as the 8b mark places it), running off the
+                  right and bottom edges. Written to `listing/graphics/feature-graphic.svg` and, for
+                  Play, `feature-graphic.png`: 24-bit, no alpha (Play refuses alpha in a feature
+                  graphic), without a time or date chunk, so a rerun reproduces it byte for byte.
+  a2-mark-light   The 8b mark, centred, on the light ground; the tagline in grey under it, its left
+  b2-mark-dark    edge at the left edge of "sight". And the same on the dark ground.
+  c-sleeve-light  The text tile as a sleeve, the record halfway out of it (as in reveal R2), the
+  c-sleeve-dark   tagline centred under them; light and dark.
+
+The other designs are kept for the brand sheet, as `assets/logo/feature-graphic/<name>.svg`, SVG only.
 
 Usage, from the repository root:
 
-    python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf
+    python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf               # d2, for Play
+    python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf --design all  # every design
+    python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf --design c-sleeve-dark
 
 Needs fontTools and uharfbuzz (`pip install fonttools uharfbuzz`; written with fontTools 4.67.0 and
-uharfbuzz 0.56.3), `rsvg-convert` (librsvg; 2.61.4) and ImageMagick 7 (`magick`; 7.1.2), both from
-Homebrew on a Mac. The font is the variable Roboto Flex from github.com/google/fonts, `ofl/robotoflex/
-RobotoFlex[GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght].ttf`, version 3.200
-(SHA-256 9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281; SIL Open Font License
-1.1, `assets/fonts/OFL.txt`); it is not kept here, since only the tagline's outlines are. The script
-stops if the font's SHA-256 differs, since another version may outline the tagline differently; to
-move to a new version on purpose, update `FONT_SHA256` and the version here. Another version of the
-renderer may give a slightly different PNG.
-
-The colours, other than white, come from the brand sheet's light colourway (`.lt` in
-`design/brand.html`): the ground is its `--red`, the label's red, and "sight" its `--ink`.
+uharfbuzz 0.56.3), and for d2's PNG `rsvg-convert` (librsvg; 2.61.4) and ImageMagick 7 (`magick`;
+7.1.2), both from Homebrew on a Mac. The font is the variable Roboto Flex from github.com/google/fonts,
+`ofl/robotoflex/RobotoFlex[GRAD,XOPQ,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght].ttf`,
+version 3.200 (SHA-256 9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281; SIL Open
+Font License 1.1, `assets/fonts/OFL.txt`); it is not kept here, since only the tagline's outlines
+are. The script stops if the font's SHA-256 differs, since another version may outline the tagline
+differently; to move to a new version on purpose, update `FONT_SHA256` and the version here.
+Another version of the renderer may give a slightly different PNG.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -46,47 +54,52 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 
 W, H = 1024, 500
-SLEEVE = '#ffffff'            # the ground and "sight" are the brand sheet's (`colourway`)
-TAGLINE, TAGLINE_OPACITY = '#ffffff', .9
+WHITE = '#ffffff'
 TAG_TEXT = 'Insights on what’s playing'
-TAG_SIZE, TAG_GAP = 40, 40    # px; the gap is from the words' ink to the tagline's cap height
 TAG_AXES = {'wght': 400, 'wdth': 88, 'opsz': 36}
 TAG_TRACK = -.01              # em, after each letter
-WORDS_H = 270                 # the words' ink height, px
-RECORD_R = 250                # the record's radius, px
-RECORD_X = W - 150            # its centre's x
-RECORD_GAP = 48               # from the words' right ink edge to the record's left edge
 RECORD_ELEMENTS = 7           # the elements of <symbol id="lp">, the core included
 FONT_SHA256 = '9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281'  # Roboto Flex 3.200
+DESIGNS = ('d2', 'a2-mark-light', 'b2-mark-dark', 'c-sleeve-light', 'c-sleeve-dark')
 
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.normpath(os.path.join(here, '..', '..', '..'))
-out_dir = os.path.join(root, 'listing', 'graphics')
+play_dir = os.path.join(root, 'listing', 'graphics')
+designs_dir = os.path.join(root, 'assets', 'logo', 'feature-graphic')
 num = lambda v: ('%.2f' % v).rstrip('0').rstrip('.')
 
 
+def css_vars(text):
+    return {k: v.strip() for k, v in re.findall(r'--([\w-]+):([^;}]+)', text)}
+
+
 def brand_sheet():
-    """From `design/brand.html`: the body of <symbol id="lp">, and the light colourway's variables
-    (the `.lt` rule), name to value."""
+    """From `design/brand.html`: the body of <symbol id="lp">, and each colourway's variables, name to
+    value: `lt` and `dk`, each with the page's `--page-muted` of its scheme added as `muted`."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
     sym = re.search(r'<symbol id="lp" viewBox="8 8 16 16">(.*?)</symbol>', page, re.S)
-    lt = re.search(r'^\.lt\{(.*?)\}', page, re.S | re.M)
-    if not sym or not lt:
-        sys.exit('design/brand.html: no <symbol id="lp"> or no .lt rule')
-    return sym.group(1), {k: v.strip() for k, v in re.findall(r'--([\w-]+):([^;}]+)', lt.group(1))}
+    rules = {name: re.search(pattern, page, re.S | re.M) for name, pattern in (
+        ('lt', r'^\.lt\{(.*?)\}'), ('dk', r'^\.dk\{(.*?)\}'), ('page', r'^:root\{(.*?)\}'),
+        ('page-dark', r'^@media \(prefers-color-scheme: dark\)\{:root\{(.*?)\}'))}
+    if not sym or not all(rules.values()):
+        sys.exit('design/brand.html: no <symbol id="lp">, or no rule for '
+                 + ', '.join(name for name, m in rules.items() if not m))
+    schemes = {'lt': css_vars(rules['lt'].group(1)), 'dk': css_vars(rules['dk'].group(1))}
+    schemes['lt']['muted'] = css_vars(rules['page'].group(1)).get('page-muted')
+    schemes['dk']['muted'] = css_vars(rules['page-dark'].group(1)).get('page-muted')
+    return sym.group(1), schemes
 
 
-def colourway(var):
-    """The ground (`--red`) and the ink of "sight" (`--ink`)."""
-    missing = [name for name in ('red', 'ink') if name not in var]
+def need(var, scheme, *names):
+    missing = [name for name in names if not var.get(name)]
     if missing:
-        sys.exit('design/brand.html: .lt sets no ' + ', '.join('--' + name for name in missing))
-    return var['red'], var['ink']
+        sys.exit(f'design/brand.html: .{scheme} sets no ' + ', '.join('--' + name for name in missing))
+    return [var[name] for name in names]
 
 
-def record(body, var):
-    """The brand sheet's record, its 16-unit box at 8..24, with the light colourway's variables
-    filled in: `--rim` as the fill, `--core` and `--groove` as each element's display."""
+def record(body, var, scheme):
+    """The brand sheet's record, its 16-unit box at 8..24, with a colourway's variables filled in:
+    `--rim` as the fill, `--core` and `--groove` as each element's display."""
     elements = re.findall(r'<[^>]+/>', body)
     other = re.sub(r'<[^>]+/>', '', body).strip()
     if len(elements) != RECORD_ELEMENTS or other:
@@ -98,81 +111,172 @@ def record(body, var):
         style = re.search(r' style="(\w+):var\(--([\w-]+)\)"', el)
         if style:
             prop, name = style.groups()
-            if name not in var:
-                sys.exit(f'design/brand.html: .lt sets no --{name}')
-            if prop == 'display' and var[name] == 'none':
+            value, = need(var, scheme, name)
+            if prop == 'display' and value == 'none':
                 continue
-            el = el.replace(style.group(0), f' fill="{var[name]}"' if prop == 'fill' else '')
+            el = el.replace(style.group(0), f' fill="{value}"' if prop == 'fill' else '')
         out.append(el)
     return ''.join(out)
 
 
-def tagline(font_path):
-    """The tagline outlined, its pen start at 0 and baseline at 0: (path, ink box, cap height in px)."""
-    with open(font_path, 'rb') as f:
-        digest = hashlib.sha256(f.read()).hexdigest()
-    if digest != FONT_SHA256:
-        sys.exit(f'{font_path}: SHA-256 {digest}, not that of Roboto Flex 3.200 ({FONT_SHA256}); '
-                 'see the header for the font, or for moving to another version')
-    hbfont = hb.Font(hb.Face(hb.Blob.from_file_path(font_path)))
-    hbfont.set_variations(TAG_AXES)
-    font = instantiateVariableFont(TTFont(font_path), TAG_AXES)
-    glyphs, order, upm = font.getGlyphSet(), font.getGlyphOrder(), font['head'].unitsPerEm
-    buf = hb.Buffer()
-    buf.add_str(TAG_TEXT)
-    buf.guess_segment_properties()
-    hb.shape(hbfont, buf, {'kern': True, 'liga': True})
-    k = TAG_SIZE / upm
-    pen, box, x = SVGPathPen(glyphs, ntos=num), BoundsPen(glyphs), 0
-    for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
-        t = (k, 0, 0, -k, (x + pos.x_offset) * k, -pos.y_offset * k)
-        glyphs[order[info.codepoint]].draw(TransformPen(pen, t))
-        glyphs[order[info.codepoint]].draw(TransformPen(box, t))
-        x += pos.x_advance + TAG_TRACK * upm
-    return pen.getCommands(), box.bounds, TAG_SIZE * font['OS/2'].sCapHeight / upm
+class Tagline:
+    """The tagline, outlined from Roboto Flex at any size."""
+
+    def __init__(self, font_path):
+        with open(font_path, 'rb') as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        if digest != FONT_SHA256:
+            sys.exit(f'{font_path}: SHA-256 {digest}, not that of Roboto Flex 3.200 ({FONT_SHA256}); '
+                     'see the header for the font, or for moving to another version')
+        self.hbfont = hb.Font(hb.Face(hb.Blob.from_file_path(font_path)))
+        self.hbfont.set_variations(TAG_AXES)
+        font = instantiateVariableFont(TTFont(font_path), TAG_AXES)
+        self.glyphs, self.order, self.upm = font.getGlyphSet(), font.getGlyphOrder(), font['head'].unitsPerEm
+        self.cap = font['OS/2'].sCapHeight / self.upm
+
+    def outline(self, size):
+        """At `size` px, pen start at 0, baseline at 0: (path, ink box, cap height in px)."""
+        buf = hb.Buffer()
+        buf.add_str(TAG_TEXT)
+        buf.guess_segment_properties()
+        hb.shape(self.hbfont, buf, {'kern': True, 'liga': True})
+        k = size / self.upm
+        pen, box, x = SVGPathPen(self.glyphs, ntos=num), BoundsPen(self.glyphs), 0
+        for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+            t = (k, 0, 0, -k, (x + pos.x_offset) * k, -pos.y_offset * k)
+            self.glyphs[self.order[info.codepoint]].draw(TransformPen(pen, t))
+            self.glyphs[self.order[info.codepoint]].draw(TransformPen(box, t))
+            x += pos.x_advance + TAG_TRACK * self.upm
+        return pen.getCommands(), box.bounds, size * self.cap
 
 
-def main(font_path):
-    tile = json.load(open(os.path.join(here, 'tile.json')))
-    x0, y0, x1, y1 = tile['ink']
-    s = WORDS_H / (y1 - y0)
-    body, var = brand_sheet()
-    ground, sight_ink = colourway(var)
-    d, (_, _, tx1, _), cap = tagline(font_path)
-    top = (H - (WORDS_H + TAG_GAP + cap)) / 2      # the words and the tagline, centred vertically
-    right = RECORD_X - RECORD_R - RECORD_GAP        # the words' and the tagline's right ink edge
-    tx, ty = right - s * x1, top - s * y0
-    # The centre of "sight": the middle of its letters' ink, top to bottom.
+def svg(ground, body):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
+            f'<rect width="{W}" height="{H}" fill="{ground}"/>{body}</svg>\n')
+
+
+def place_record(drawing, cx, cy, radius):
+    k = radius / 7.5                                # the record's rim has radius 7.5 in its box
+    return f'<g transform="translate({num(cx)} {num(cy)}) scale({k:.5f}) translate(-16 -16)">{drawing}</g>'
+
+
+def sight_centre(tile):
+    """The middle of the ink of "sight", top to bottom, in the words' units."""
     sight = [letter['ink'] for letter in tile['letters']['sight']]
-    record_y = ty + s * (min(b[1] for b in sight) + max(b[3] for b in sight)) / 2
-    k = RECORD_R / 7.5                              # the record's rim has radius 7.5 in its box
-    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}">'
-           f'<rect width="{W}" height="{H}" fill="{ground}"/>'
-           f'<g transform="translate({num(RECORD_X)} {num(record_y)}) scale({k:.5f}) translate(-16 -16)">'
-           f'{record(body, var)}</g>'
-           f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
-           f'<path fill="{SLEEVE}" d="{tile["sleeve"]}"/><path fill="{sight_ink}" d="{tile["sight"]}"/></g>'
-           f'<path fill="{TAGLINE}" fill-opacity="{TAGLINE_OPACITY}" '
-           f'transform="translate({num(right - tx1)} {num(top + WORDS_H + TAG_GAP + cap)})" d="{d}"/>'
-           '</svg>\n')
-    # Both are made in a temporary directory and moved into place only once both exist, so a failed
-    # render leaves the pair in `listing/graphics/` as it was.
-    os.makedirs(out_dir, exist_ok=True)
-    names = ('feature-graphic.svg', 'feature-graphic.png')
+    return (min(b[1] for b in sight) + max(b[3] for b in sight)) / 2
+
+
+def design_d2(tile, body, schemes, tag):
+    """On Play: the words and the tagline right-aligned, the record large beside "sight"."""
+    words_h, tag_size, tag_gap = 270, 40, 40          # px; the gap from the words' ink to the tagline's caps
+    radius, record_x, record_gap = 250, W - 150, 48   # the record; the gap from the words' right edge to it
+    lt = schemes['lt']
+    ground, sight_ink = need(lt, 'lt', 'red', 'ink')
+    _, y0, x1, y1 = tile['ink']
+    s = words_h / (y1 - y0)
+    d, (_, _, tx1, _), cap = tag.outline(tag_size)
+    top = (H - (words_h + tag_gap + cap)) / 2         # the words and the tagline, centred vertically
+    right = record_x - radius - record_gap            # the words' and the tagline's right ink edge
+    tx, ty = right - s * x1, top - s * y0
+    return ground, svg(ground,
+        place_record(record(body, lt, 'lt'), record_x, ty + s * sight_centre(tile), radius)
+        + f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
+        f'<path fill="{WHITE}" d="{tile["sleeve"]}"/><path fill="{sight_ink}" d="{tile["sight"]}"/></g>'
+        f'<path fill="{WHITE}" fill-opacity="0.9" '
+        f'transform="translate({num(right - tx1)} {num(top + words_h + tag_gap + cap)})" d="{d}"/>')
+
+
+def design_mark(tile, body, schemes, tag, scheme):
+    """A2 and B2: the 8b mark (the words, the record beside "sight", as tall as it), centred; the
+    tagline under it, its left ink edge at that of the s of "sight"."""
+    width, tag_size, tag_gap = 540, 46, 44
+    var = schemes[scheme]
+    bg, ink, red, muted = need(var, scheme, 'bg', 'ink', 'red', 'muted')
+    # 8b in the words' units: the record 37.5 units a side at (54.35, -4.59), so the mark's ink runs
+    # from the words' left edge to the record's right edge, 90.68 to two places, as the sheet's
+    # viewBox for 8b has it.
+    rec_right = round(54.35 + 37.5 / 2 + 7.5 * 37.5 / 16, 2)
+    x0, y0, _, y1 = tile['ink']
+    s = width / (rec_right - x0)
+    d, (dx0, _, _, _), cap = tag.outline(tag_size)
+    height = s * (y1 - y0)
+    top = (H - (height + tag_gap + cap)) / 2
+    tx, ty = W / 2 - s * (x0 + rec_right) / 2, top - s * y0
+    sight_left = tx + s * tile['letters']['sight'][0]['ink'][0]
+    return bg, svg(bg,
+        f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
+        f'<path fill="{ink}" d="{tile["sleeve"]}"/><path fill="{red}" d="{tile["sight"]}"/>'
+        f'<g transform="translate(54.35 -4.59) scale(2.34375) translate(-8 -8)">{record(body, var, scheme)}</g></g>'
+        f'<path fill="{muted}" transform="translate({num(sight_left - dx0)} {num(top + height + tag_gap + cap)})" '
+        f'd="{d}"/>')
+
+
+def design_sleeve(tile, body, schemes, tag, scheme):
+    """C: the text tile (the sleeve) with the record halfway out of it to the right, as in reveal R2
+    (the record 64 units in radius against the tile's 71.5 half side), its label clear of the tile;
+    the tagline centred under them."""
+    side, tag_size, tag_gap = 300, 44, 40
+    var = schemes[scheme]
+    bg, ink, red, muted, tile_bg, tile_edge = need(var, scheme, 'bg', 'ink', 'red', 'muted', 'tile-bg', 'tile-edge')
+    s = side / 143
+    radius = 64 * s
+    out_by = 1.6 * radius                             # the record's centre from the tile's
+    d, (dx0, _, dx1, _), cap = tag.outline(tag_size)
+    top = (H - (side + tag_gap + cap)) / 2
+    tile_cx = W / 2 - (side / 2 + out_by + radius) / 2 + side / 2
+    cy = top + side / 2
+    return bg, svg(bg,
+        place_record(record(body, var, scheme), tile_cx + out_by, cy, radius)
+        + f'<g transform="translate({num(tile_cx)} {num(cy)}) scale({s:.5f})">'
+        f'<rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" fill="{tile_bg}" stroke="{tile_edge}"/>'
+        f'<path fill="{ink}" d="{tile["sleeve"]}"/><path fill="{red}" d="{tile["sight"]}"/></g>'
+        f'<path fill="{muted}" transform="translate({num(W / 2 - (dx0 + dx1) / 2)} {num(top + side + tag_gap + cap)})" '
+        f'd="{d}"/>')
+
+
+def build(name, tile, body, schemes, tag):
+    if name == 'd2':
+        return design_d2(tile, body, schemes, tag)
+    scheme = 'lt' if name.endswith('-light') else 'dk'
+    if name.startswith(('a2-', 'b2-')):
+        return design_mark(tile, body, schemes, tag, scheme)
+    return design_sleeve(tile, body, schemes, tag, scheme)
+
+
+def write(name, ground, text):
+    """Made in a temporary directory and moved into place only once complete, so a failed render
+    leaves the files there as they were. d2 goes to `listing/graphics/`, with its PNG."""
     with tempfile.TemporaryDirectory() as tmp:
-        svg_tmp, png_tmp = (os.path.join(tmp, name) for name in names)
-        rgba = os.path.join(tmp, 'rgba.png')
+        svg_tmp = os.path.join(tmp, 'out.svg')
         with open(svg_tmp, 'w') as f:
-            f.write(svg)
-        subprocess.run(['rsvg-convert', '-w', str(W), '-h', str(H), '-o', rgba, svg_tmp], check=True)
-        subprocess.run(['magick', rgba, '-background', ground, '-alpha', 'remove', '-alpha', 'off', '-strip',
-                        '-define', 'png:exclude-chunk=date,time', 'PNG24:' + png_tmp], check=True)
-        for name in names:
-            shutil.move(os.path.join(tmp, name), os.path.join(out_dir, name))
-            print(os.path.relpath(os.path.join(out_dir, name), root))
+            f.write(text)
+        if name == 'd2':
+            png_tmp, rgba = os.path.join(tmp, 'out.png'), os.path.join(tmp, 'rgba.png')
+            subprocess.run(['rsvg-convert', '-w', str(W), '-h', str(H), '-o', rgba, svg_tmp], check=True)
+            subprocess.run(['magick', rgba, '-background', ground, '-alpha', 'remove', '-alpha', 'off', '-strip',
+                            '-define', 'png:exclude-chunk=date,time', 'PNG24:' + png_tmp], check=True)
+            moves = [(svg_tmp, os.path.join(play_dir, 'feature-graphic.svg')),
+                     (png_tmp, os.path.join(play_dir, 'feature-graphic.png'))]
+        else:
+            moves = [(svg_tmp, os.path.join(designs_dir, name + '.svg'))]
+        for src, dst in moves:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.move(src, dst)
+            print(os.path.relpath(dst, root))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    parser.add_argument('font', help='Roboto Flex 3.200, the variable font (see the header)')
+    parser.add_argument('--design', choices=DESIGNS + ('all',), default='d2',
+                        help='the design to build: d2 (the default) for Play, another, or all of them')
+    args = parser.parse_args()
+    tile = json.load(open(os.path.join(here, 'tile.json')))
+    body, schemes = brand_sheet()
+    tag = Tagline(args.font)
+    for name in DESIGNS if args.design == 'all' else (args.design,):
+        write(name, *build(name, tile, body, schemes, tag))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
-    main(sys.argv[1])
+    main()
