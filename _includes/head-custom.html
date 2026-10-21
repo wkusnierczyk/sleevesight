@@ -1,7 +1,8 @@
 <!-- The site's own head snippets, included by the default Pages theme. -->
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <!-- Mermaid diagrams: GitHub renders them, Jekyll leaves them as code blocks. Pinned version,
-     loaded only on pages that have one. -->
+     loaded only on pages that have one, from jsDelivr: the one script the site does not serve
+     itself, since Mermaid's build is some 3.5 MB (the privacy policy names jsDelivr). -->
 <script type="module">
   const blocks = document.querySelectorAll("pre > code.language-mermaid");
   if (blocks.length > 0) {
