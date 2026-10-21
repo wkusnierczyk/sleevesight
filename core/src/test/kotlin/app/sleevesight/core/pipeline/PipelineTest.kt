@@ -295,11 +295,30 @@ class PipelineTest {
             val pipeline = pipeline(listOf(mb()), provider = provider, cache = cache)
 
             pipeline.run(sundown, write = true)
-            settings = settings.copy(aiEffort = ReasoningEffort.HIGH)
+            settings = settings.withEffort(ProviderId.ANTHROPIC, ReasoningEffort.HIGH)
             pipeline.run(sundown, write = true)
             pipeline.run(sundown, write = true)
 
             assertEquals(listOf(ReasoningEffort.LOW, ReasoningEffort.HIGH), provider.requests.map { it.effort })
+        }
+
+    @Test
+    fun `the call uses the switched-on provider's model and effort, not another provider's`() =
+        runTest {
+            val provider = FakeProvider()
+            val pipeline = pipeline(listOf(mb()), provider = provider)
+            settings =
+                settings.copy(
+                    aiModels = mapOf(ProviderId.OPENAI to "gpt-other", ProviderId.ANTHROPIC to "claude-opus-5-5"),
+                    aiEfforts =
+                        mapOf(ProviderId.OPENAI to ReasoningEffort.LOW, ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
+                )
+
+            pipeline.run(sundown, write = true)
+
+            val request = provider.requests.single()
+            assertEquals("claude-opus-5-5", request.model)
+            assertEquals(ReasoningEffort.HIGH, request.effort)
         }
 
     @Test

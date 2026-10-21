@@ -7,8 +7,6 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import app.sleevesight.core.ai.ReasoningEffort
-import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
@@ -32,14 +30,13 @@ import kotlin.time.Duration.Companion.milliseconds
  * settings that changed, so a value this version cannot read stays until the user changes that
  * setting, and in a set of switches only the switches that changed, so the others stay as stored:
  * names this version does not know, and overrides a later version stored against other defaults.
+ *
+ * The AI service's settings are stored per provider by [AiSettingsCodec].
  */
 internal object SettingsCodec {
     private val defaults = Settings()
 
     private val LAYOUT = stringPreferencesKey("layout")
-    private val AI_PROVIDER = stringPreferencesKey("ai.provider")
-    private val AI_MODEL = stringPreferencesKey("ai.model")
-    private val AI_EFFORT = stringPreferencesKey("ai.effort")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
     private val SOURCES_ON = stringSetPreferencesKey("sources.on")
@@ -60,9 +57,6 @@ internal object SettingsCodec {
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
 
-    /** `aiEffort` null is the provider's default, which needs a name of its own to be stored. */
-    private const val PROVIDER_DEFAULT_EFFORT = "PROVIDER_DEFAULT"
-
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
     private const val FOREVER = -1L
 
@@ -71,8 +65,9 @@ internal object SettingsCodec {
     fun read(prefs: Preferences): Settings =
         Settings(
             layout = enumOf(prefs[LAYOUT]) ?: defaults.layout,
-            aiProvider = enumOf<ProviderId>(prefs[AI_PROVIDER]),
-            aiModel = prefs[AI_MODEL]?.takeIf { it.isNotBlank() },
+            aiProvider = AiSettingsCodec.readProvider(prefs),
+            aiModels = AiSettingsCodec.readModels(prefs),
+            aiEfforts = AiSettingsCodec.readEfforts(prefs),
             followedPlayers = readPlayers(prefs),
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
@@ -87,7 +82,6 @@ internal object SettingsCodec {
             artistCacheLifetime =
                 prefs[ARTIST_LIFETIME_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.artistCacheLifetime,
             cacheSizeLimit = prefs[CACHE_SIZE_LIMIT]?.takeIf { it >= 0 } ?: defaults.cacheSizeLimit,
-            aiEffort = readEffort(prefs),
             historyLifetime =
                 when (val stored = prefs[HISTORY_LIFETIME_MS]) {
                     FOREVER -> null
@@ -130,11 +124,7 @@ internal object SettingsCodec {
         }
 
         if (moved { it.layout }) prefs.put(LAYOUT, settings.layout.name, defaults.layout.name)
-        if (moved { it.aiProvider }) prefs.put(AI_PROVIDER, settings.aiProvider?.name, null)
-        if (moved { it.aiModel }) prefs.put(AI_MODEL, settings.aiModel?.takeIf { it.isNotBlank() }, null)
-        if (moved { it.aiEffort }) {
-            prefs.put(AI_EFFORT, settings.aiEffort?.name ?: PROVIDER_DEFAULT_EFFORT, defaults.aiEffort?.name)
-        }
+        AiSettingsCodec.write(settings, stored, prefs)
         // A default player missing from the players is not followed, so it is stored as off.
         val players = changes(stored.followedPlayers, settings.followedPlayers)
         writeOverrides(players, { defaults.followedPlayers[it] }, prefs, PLAYERS_ON, PLAYERS_OFF)
@@ -251,12 +241,6 @@ internal object SettingsCodec {
         return if (value in Duration.ZERO..Crossfade.Fixed.MAX) Crossfade.Fixed(value) else Crossfade.Autodetect
     }
 
-    private fun readEffort(prefs: Preferences): ReasoningEffort? =
-        when (val stored = prefs[AI_EFFORT]) {
-            PROVIDER_DEFAULT_EFFORT -> null
-            else -> enumOf<ReasoningEffort>(stored) ?: defaults.aiEffort
-        }
-
     /**
      * The defaults, with each source's lifetime the user changed. A source without a default
      * lifetime is never cached, so it has no setting.
@@ -267,7 +251,7 @@ internal object SettingsCodec {
         }
 }
 
-private inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }
+internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }
 
 /** `pauseAutoWriteAfter` null is *Off*, which needs a value of its own to be stored. */
 private const val NEVER_PAUSE = 0
@@ -283,7 +267,7 @@ private fun pauseOf(
     }
 
 /** Stores [value], or removes the key when it is the default or null. */
-private fun <T : Any> MutablePreferences.put(
+internal fun <T : Any> MutablePreferences.put(
     key: Preferences.Key<T>,
     value: T?,
     default: T?,

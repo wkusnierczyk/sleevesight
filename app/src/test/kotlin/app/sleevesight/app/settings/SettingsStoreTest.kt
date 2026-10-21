@@ -2,9 +2,13 @@ package app.sleevesight.app.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.TestStores
+import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -38,12 +42,36 @@ class SettingsStoreTest {
     @Test
     fun aChangeIsKeptAcrossARestart() =
         runBlocking {
-            store().update { it.copy(lookUpInBackground = true, aiModel = "claude-opus-5-5") }
+            store().update { it.copy(lookUpInBackground = true).withModel(ProviderId.ANTHROPIC, "claude-opus-5-5") }
             stores.close()
 
             val read = store().settings.first()
             assertTrue(read.lookUpInBackground)
-            assertEquals("claude-opus-5-5", read.aiModel)
+            assertEquals("claude-opus-5-5", read.model(ProviderId.ANTHROPIC))
+        }
+
+    @Test
+    fun anInstallFromBeforeEachProviderHadItsOwnModelKeepsItsChoicesAfterTheUpdate() =
+        runBlocking {
+            // The settings file as the version before #227 left it: one service, model and effort.
+            stores.open("settings").edit { prefs ->
+                prefs[stringPreferencesKey("ai.provider")] = "ANTHROPIC"
+                prefs[stringPreferencesKey("ai.model")] = "claude-opus-5-5"
+                prefs[stringPreferencesKey("ai.effort")] = "HIGH"
+            }
+            stores.close()
+
+            val store = store()
+            val read = store.settings.first()
+            assertEquals(ProviderId.ANTHROPIC, read.aiProvider)
+            assertEquals("claude-opus-5-5", read.model)
+            assertEquals(ReasoningEffort.HIGH, read.effort)
+
+            // A change to anything else keeps them, now under Anthropic's own keys, across a restart.
+            store.update { it.copy(lookUpInBackground = true) }
+            stores.close()
+            val after = store().settings.first()
+            assertEquals(read.copy(lookUpInBackground = true), after)
         }
 
     @Test
