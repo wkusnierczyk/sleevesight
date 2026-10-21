@@ -94,9 +94,9 @@ class PipelineWiringTest {
     }
 
     @Test
-    fun `the AI providers include Anthropic`() {
-        assertEquals(setOf(ProviderId.ANTHROPIC), wiring.aiProviders.keys)
-        assertEquals(ProviderId.ANTHROPIC, wiring.aiProviders.getValue(ProviderId.ANTHROPIC).id)
+    fun `the AI providers are Anthropic and OpenAI, each under its own id`() {
+        assertEquals(setOf(ProviderId.ANTHROPIC, ProviderId.OPENAI), wiring.aiProviders.keys)
+        for ((id, provider) in wiring.aiProviders) assertEquals(id, provider.id)
     }
 
     @Test

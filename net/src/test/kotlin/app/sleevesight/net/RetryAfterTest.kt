@@ -24,6 +24,15 @@ class RetryAfterTest {
     }
 
     @Test
+    fun `a response's Retry-After is read the same way, whatever the header's case`() {
+        fun response(vararg headers: Pair<String, String>) =
+            NetResponse(429, headers.associate { (name, value) -> name to listOf(value) }, ByteArray(0))
+        assertEquals(5.seconds, response("Retry-After" to "Sun, 06 Nov 1994 08:49:37 GMT").retryAfter(justBefore))
+        assertEquals(20.seconds, response("retry-after" to "20").retryAfter(justBefore))
+        assertNull(response().retryAfter(justBefore))
+    }
+
+    @Test
     fun `the three HTTP-date forms are read`() {
         for (date in listOf(
             "Sun, 06 Nov 1994 08:49:37 GMT",
