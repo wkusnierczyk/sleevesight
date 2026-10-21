@@ -48,6 +48,8 @@ Each release's notes are in `release-notes/<version>.txt`, for example `release-
 
 The Play listing's text is in `listing/en-US/`, one plain-text file per field, in the listing's language, so it is reviewed like the code it describes: `title.txt` (at most 30 characters), `short-description.txt` (80) and `full-description.txt` (4,000), Play's limits. It is entered in Play Console by hand (*Store presence → Main store listing*; the console moves its menus, so look there first), which refuses text over a limit. A change to what the app does, or to what leaves the phone, changes the listing with the README and the [privacy policy](../privacy.md). The listing describes the build on Play, not the roadmap.
 
+The listing's app icon is `listing/graphics/icon-512.png`: 512 × 512, a 32-bit PNG, a full-bleed square, since Play rounds its corners and adds the shadow itself. It is uploaded on the same page, by hand. It and the launcher icon's layers are generated from one drawing, the record, by `assets/logo/src/make_icon.py`, so a change to the icon is made there and both are written again.
+
 ## Versioning
 
 The tag gives both versions, so a release needs no commit to bump them:
