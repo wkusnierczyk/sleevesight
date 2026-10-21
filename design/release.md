@@ -63,7 +63,7 @@ python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf
 
 With `--design all`, it also rebuilds the other designs tried for the graphic, which the [brand sheet](brand.html) shows beside it, in `assets/logo/feature-graphic/`.
 
-Play Console asks for alt text with the graphic, at most 140 characters, without "image of" or "photo of" (Play advises against starting with them: screen readers already say it is an image). It is: *The Sleevesight logo on red: the words Sleeve and sight beside a large vinyl record, and the tagline Insights on what's playing*.
+Play Console asks for alt text with the graphic, at most 140 characters, not starting with "photo of" or "image of", since, in Play's words, "screen readers already provide this information". It is: *The Sleevesight logo on red: the words Sleeve and sight beside a large vinyl record, and the tagline Insights on what's playing*.
 
 ## Versioning
 

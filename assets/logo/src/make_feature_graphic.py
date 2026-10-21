@@ -59,8 +59,9 @@ TAG_TEXT = 'Insights on what’s playing'
 TAG_AXES = {'wght': 400, 'wdth': 88, 'opsz': 36}
 TAG_TRACK = -.01              # em, after each letter
 RECORD_ELEMENTS = 7           # the elements of <symbol id="lp">, the core included
-REC_X, REC_Y, REC_SIDE = 54.35, -4.59, 37.5  # the record in the 8b mark, in the words' units: as the
-                              # sheet's `<use href="#lp">` places it, its 16-unit box this side
+# The record in the 8b mark, in the words' units, as the sheet's `<use href="#lp" x y width height>`
+# places it: (REC_X, REC_Y) is the top-left corner of the record's 16-unit box, REC_SIDE its side.
+REC_X, REC_Y, REC_SIDE = 54.35, -4.59, 37.5
 FONT_SHA256 = '9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281'  # Roboto Flex 3.200
 DESIGNS = ('d2', 'a2-mark-light', 'b2-mark-dark', 'c-sleeve-light', 'c-sleeve-dark')
 
