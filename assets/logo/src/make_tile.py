@@ -78,21 +78,20 @@ cy = b2 - (iy + (dot[1] + dot[3]) / 2) * k
 x1, x2, b1, b2 = x1 - cx, x2 - cx, b1 - cy, b2 - cy
 
 num = lambda v: ('%.2f' % v).rstrip('0').rstrip('.')
-paths = []
-for line, dx, dy in ((sleeve, x1, b1), (sight, x2, b2)):
+paths, letters = [], {}
+for key, line, dx, dy in (('sleeve', sleeve, x1, b1), ('sight', sight, x2, b2)):
     pen = SVGPathPen(glyphs, ntos=num)
     placed(line, dx, dy, pen)
     paths.append(pen.getCommands())
-ink = bounds(lambda p: (placed(sleeve, x1, b1, p), placed(sight, x2, b2, p)))
-letters = {}
-for i, (key, line, dx, dy) in enumerate((('sleeve', sleeve, x1, b1), ('sight', sight, x2, b2))):
     letters[key] = []
     for glyph in line:
         pen = SVGPathPen(glyphs, ntos=num)
         placed([glyph], dx, dy, pen)
         box = bounds(lambda p: placed([glyph], dx, dy, p))
         letters[key].append({'d': pen.getCommands(), 'ink': [round(v, 2) for v in box]})
-    assert ''.join(l['d'] for l in letters[key]) == paths[i]
+    if ''.join(letter['d'] for letter in letters[key]) != paths[-1]:
+        sys.exit(f"{key}: the letters' paths joined differ from the line's path")
+ink = bounds(lambda p: (placed(sleeve, x1, b1, p), placed(sight, x2, b2, p)))
 
 here = os.path.dirname(os.path.abspath(__file__))
 json.dump({'sleeve': paths[0], 'sight': paths[1], 'ink': [round(v, 2) for v in ink], 'letters': letters},

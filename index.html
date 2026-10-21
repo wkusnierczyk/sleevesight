@@ -119,11 +119,11 @@ nav.top{flex:none}
 .sl-still *{transition:none!important}
 /* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
    so they need no font; "Sleeve" in ink, white on dark as on the brand sheet's black tile, and "sight"
-   in `--sight`, a path to a letter (`#w-sleeve-1` to `#w-sight-5`), so an intro can show or turn each
-   letter on its own. The tile, in the intros only: white on light, black with a faint edge on dark.
-   The record (`#lp`) is the eye logo's disc in its colours, set through variables, since a selector
-   cannot reach into a <use>. On dark, the record's rim takes the outline's grey, and the groove gives
-   way to a wider black disc, so the grey meets the black directly. */
+   in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to `#w-sight-5`), so an
+   intro can show or turn each letter on its own. The tile, in the intros only: white on light, black
+   with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
+   variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
+   grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
 :root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#fff;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
@@ -252,8 +252,9 @@ footer p{margin:0 0 4px}
 .splash svg{display:block;width:100%;height:100%;overflow:visible}
 /* The record's path is about the dot, the origin of the words' units. */
 .sp-f .orbit{transform-box:view-box;transform-origin:0 0;animation:lg-turn 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
-/* G's letters each show at their key's moment; H's e's each turn about the centre of their ink, set
-   on each in the words' units, as the hover's spin does. */
+/* G's letters each show at their key's moment. H's e's each turn about the centre of their ink (set
+   on each <use> in the words' units, `transform-box: view-box`), on the hover's spin (`lg-turn`,
+   900 ms). */
 .sp-g .key{animation:tl-in 1ms var(--at) both}
 .sp-h .turn{transform-box:view-box;animation:lg-turn 900ms cubic-bezier(.45,0,.55,1) var(--at) both}
 .sp-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
