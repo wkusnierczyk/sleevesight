@@ -46,6 +46,7 @@ import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
+import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.history.HistoryDatabase
@@ -104,8 +105,16 @@ class AppGraph(
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
+     * What the sources give for an artist goes in the caches' artist-level table (#238), which
+     * opens the database only at its first query, a lookup's, after the first-run acknowledgement.
      */
-    private val wiring = appPipelineWiring(BuildConfig.VERSION_NAME, JvmAccentFolder, JvmResourceReader)
+    private val wiring =
+        appPipelineWiring(
+            BuildConfig.VERSION_NAME,
+            JvmAccentFolder,
+            JvmResourceReader,
+            StoreArtistResults({ caches }, Dispatchers.IO),
+        )
 
     /**
      * Ends the graph for an emulated process's end only ([SleevesightApplication.onTerminate], which
@@ -145,13 +154,19 @@ class AppGraph(
     private val userActions = UserActions()
 
     /**
-     * The retrieval, artist and synthesis caches, in a database of their own under the app's
+     * The retrieval, artist, artist-level and synthesis caches, in a database of their own under the app's
      * `databases/`, which the backup and transfer rules exclude: unlike the history, they can be
-     * evicted or rebuilt at the cost of the lookups and paid calls again.
+     * evicted or rebuilt at the cost of the lookups and paid calls again; so one a newer version
+     * left is rebuilt rather than failing ([RebuiltOnDowngrade]).
      */
     private val caches by lazy {
         Caches(
-            AndroidSqliteDriver(CacheDatabase.Schema, appContext, CACHE_DATABASE),
+            AndroidSqliteDriver(
+                CacheDatabase.Schema,
+                appContext,
+                CACHE_DATABASE,
+                callback = RebuiltOnDowngrade(CacheDatabase.Schema),
+            ),
             { checkNotNull(latestSettings.value) { "The caches are used before the settings' first read" } },
             normalizer,
         )

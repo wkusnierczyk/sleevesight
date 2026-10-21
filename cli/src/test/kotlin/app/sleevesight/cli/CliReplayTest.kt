@@ -32,6 +32,11 @@ class CliReplayTest {
         // Duplicates in the playlist (22 is 8, 24 is 4) are served from the cache.
         assertTrue("source     peleboy|we in here: W rejected, 0 cited, 0 unverified, 1 rejected" in report)
         assertTrue(Regex("source {5}peleboy\\|we in here: W rejected[^\\n]*cache hit").containsMatchIn(report), report)
+        // The artist cache's reads (#238): no two regression tracks share an artist MusicBrainz
+        // resolves, so the Wikipedia artist articles are all misses here; Last.fm, off in replay,
+        // is where the regression tracks share artists by name (Peleboy, Reem).
+        val artistCache = Regex("Artist cache: wikipedia\\.artist 0 hits, [1-9][0-9]* misses\\.")
+        assertTrue(artistCache.containsMatchIn(report), report)
         // Sources the CLI cannot run are reported as off, with the reason.
         assertTrue("| Last.fm | no | off: no Last.fm key exists yet" in report)
         assertTrue("| Web search | no | off: its fixtures are synthetic" in report)

@@ -12,6 +12,8 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.NameMatcher
 import app.sleevesight.core.resolution.WikidataEvidence
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -19,6 +21,8 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.sources.lastfm.LastFmBio
 import kotlinx.coroutines.Deferred
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.time.TimeSource
@@ -39,6 +43,13 @@ import kotlin.time.TimeSource
  * linking its article (CC BY-SA 4.0, credited to Wikipedia through the link), with only the
  * punctuation the plain-text extract leaves where it drops a pronunciation tidied; then the item's
  * templated Wikidata lines. In order: the song's, then each artist's, in the track's order.
+ *
+ * A resolved artist's article does not depend on the track, so what it gave (its lines, or its
+ * rejection, or that MusicBrainz's id has no Wikidata item) is kept per artist in [artists], the
+ * artist cache (#238, [ARTIST_PART]), for the shorter of Wikipedia's and Wikidata's lifetimes (D9):
+ * a second track by the same artist asks Wikidata and Wikipedia nothing about the artist while it
+ * is fresh. An artist without a MusicBrainz id is not kept: its article, found by name with the
+ * track's own titles, is rejected for want of an id to confirm it.
  */
 class WikipediaSource(
     private val wikipedia: WikipediaClient,
@@ -46,8 +57,11 @@ class WikipediaSource(
     private val names: NameMatcher,
     private val clock: Clock = Clock.System,
     private val timeSource: TimeSource = TimeSource.Monotonic,
+    private val artists: ArtistResults = ArtistResults.None,
 ) : SourceAdapter {
     override val id: SourceId = SourceId.WIKIPEDIA
+
+    override val extractionVersion: Int = EXTRACTION_VERSION
 
     // The identity check asks Wikidata, so a rejection depends on it too.
     override val consults: Set<SourceId> = SourceSwitch.WIKIPEDIA.sources
@@ -64,21 +78,35 @@ class WikipediaSource(
         if (byName is Lookup.Failed) findings.unreachable = true
         val pages = (byName as? Lookup.Found)?.value.orEmpty()
         findings.song = song(track, resolved, pages, findings)
-        val artists = resolved.artists.ifEmpty { credited.map { ResolvedArtist(it, null) } }
-        findings.artists = artists.mapNotNull { artist(it, pages[it.name], findings) }
+        val credits = resolved.artists.ifEmpty { credited.map { ResolvedArtist(it, null) } }
+        val kept = credits.map { stored(it) }
+        val verdicts =
+            credits.mapIndexed { i, artist -> artist.takeIf { kept[i] == null }?.let { artist(it, pages[it.name]) } }
         val retrievedAt = clock.now()
-        val evidence =
-            (
-                listOfNotNull(
-                    findings.song,
-                ) + findings.artists
-            ).flatMap { lines(it, track, retrievedAt, findings) }
-        return SourceResult(findings.outcome(), evidence, start.elapsedNow(), rejections = findings.rejections)
+        val songLines = findings.song?.let { lines(it, track, retrievedAt) }
+        if (songLines?.unreachable == true) findings.unreachable = true
+        val parts =
+            credits.mapIndexed { i, artist ->
+                kept[i] ?: part(checkNotNull(verdicts[i]), track, retrievedAt).also { keep(artist, it) }
+            }
+        for ((artist, part) in credits.zip(parts)) {
+            part.rejection?.let { findings.rejections += Rejection(artist.name, it) }
+            if (part.unreachable) findings.unreachable = true
+        }
+        findings.artistFound = parts.any { it.accepted }
+        val evidence = songLines?.drafts.orEmpty() + parts.flatMap { it.lines }
+        return SourceResult(
+            findings.outcome(),
+            evidence,
+            start.elapsedNow(),
+            rejections = findings.rejections,
+            freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
+        )
     }
 
     private class Findings {
         var song: Verdict.Accepted? = null
-        var artists: List<Verdict.Accepted> = emptyList()
+        var artistFound = false
         val rejections = mutableListOf<Rejection>()
         var unreachable = false
 
@@ -86,11 +114,117 @@ class WikipediaSource(
             when {
                 song?.scope == Scope.SONG -> Outcome.SongArticle
                 song != null -> Outcome.OriginalSong
-                artists.isNotEmpty() -> Outcome.ArtistArticle
+                artistFound -> Outcome.ArtistArticle
                 rejections.isNotEmpty() -> Outcome.Rejected(rejections.first().reason)
                 unreachable -> Outcome.Unreachable
                 else -> Outcome.None
             }
+    }
+
+    /**
+     * What one credited artist gave: whether an article was confirmed, its lines, the rejection's
+     * reason, and whether Wikidata or Wikipedia did not answer, which keeps it out of the artist
+     * cache; for one the artist cache kept, when it stops being fresh.
+     */
+    private class ArtistFinding(
+        val accepted: Boolean,
+        val lines: List<EvidenceDraft>,
+        val rejection: String?,
+        val unreachable: Boolean,
+        val freshUntil: Instant? = null,
+    )
+
+    /** One artist's identity check: its verdict, if any item was checked, and whether a lookup failed. */
+    private class ArtistVerdict(
+        val verdict: Verdict?,
+        val unreachable: Boolean,
+    )
+
+    private suspend fun part(
+        checked: ArtistVerdict,
+        track: NormalizedTrack,
+        retrievedAt: Instant,
+    ): ArtistFinding =
+        when (val verdict = checked.verdict) {
+            is Verdict.Accepted -> {
+                val lines = lines(verdict, track, retrievedAt)
+                ArtistFinding(true, lines.drafts, null, checked.unreachable || lines.unreachable)
+            }
+
+            is Verdict.Rejected -> {
+                ArtistFinding(false, emptyList(), verdict.reason, checked.unreachable)
+            }
+
+            Verdict.Unreachable -> {
+                ArtistFinding(false, emptyList(), null, true)
+            }
+
+            null -> {
+                ArtistFinding(false, emptyList(), null, checked.unreachable)
+            }
+        }
+
+    // The key of [artist]'s entry in the artist cache: its MusicBrainz id, and the name as credited,
+    // which a rejection's reason names. None for an artist without an id.
+    private fun keyOf(artist: ResolvedArtist): String? = artist.mbid?.let { "$it ${artist.name}" }
+
+    // What the artist cache keeps for [artist]; null for none, or a value that cannot be read.
+    private suspend fun stored(artist: ResolvedArtist): ArtistFinding? {
+        val key = keyOf(artist)
+        val part = if (key == null) null else artists.get(ARTIST_PART, key)
+        return try {
+            part?.let { json.decodeFromString(StoredArtist.serializer(), it.value) }?.let { kept ->
+                val lines = kept.lines.map { it.draft() }
+                ArtistFinding(kept.accepted, lines, kept.rejection, unreachable = false, freshUntil = part.freshUntil)
+            }
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+    }
+
+    // Keeps what [artist] gave, unless a lookup failed or it has no MusicBrainz id.
+    private suspend fun keep(
+        artist: ResolvedArtist,
+        finding: ArtistFinding,
+    ) {
+        val key = keyOf(artist)
+        if (key == null || finding.unreachable) return
+        val kept = StoredArtist(finding.accepted, finding.lines.map(::StoredLine), finding.rejection)
+        artists.keep(ARTIST_PART, key, json.encodeToString(StoredArtist.serializer(), kept))
+    }
+
+    /**
+     * One artist's finding in the artist cache: whether an article was confirmed, its lines (each
+     * with its source by tag, its scope by key and when it was retrieved, in ISO 8601), and the
+     * rejection's reason.
+     */
+    @Serializable
+    private class StoredArtist(
+        val accepted: Boolean,
+        val lines: List<StoredLine>,
+        val rejection: String? = null,
+    )
+
+    @Serializable
+    private class StoredLine(
+        val source: String,
+        val scope: String,
+        val text: String,
+        val url: String?,
+        val retrievedAt: String,
+    ) {
+        constructor(draft: EvidenceDraft) :
+            this(draft.source.tag, draft.scope.key, draft.text, draft.url, draft.retrievedAt.toString())
+
+        // The line; an unknown source, scope or time throws, which reads as no entry.
+        fun draft(): EvidenceDraft =
+            EvidenceDraft(
+                requireNotNull(SourceId.ofTag(source)) { "unknown source $source" },
+                requireNotNull(Scope.entries.firstOrNull { it.key == scope }) { "unknown scope $scope" },
+                text,
+                url,
+                Instant.parse(retrievedAt),
+            )
     }
 
     private class Candidate(
@@ -135,39 +269,39 @@ class WikipediaSource(
     private suspend fun artist(
         artist: ResolvedArtist,
         page: WpPage?,
-        findings: Findings,
-    ): Verdict.Accepted? {
+    ): ArtistVerdict {
         val mbid = artist.mbid
+        var unreachable = false
         val item =
             if (mbid != null) {
                 when (val found = check.artistItem(mbid)) {
                     is Lookup.Found -> found.value
-                    else -> null.also { findings.unreachable = true }
+                    else -> null.also { unreachable = true }
                 }
             } else {
                 page?.item
             }
-        val verdict = item?.let { check.artist(it, artist) }
-        when (verdict) {
-            is Verdict.Rejected -> findings.rejections += Rejection(artist.name, verdict.reason)
-            is Verdict.Unreachable -> findings.unreachable = true
-            else -> Unit
-        }
-        return verdict as? Verdict.Accepted
+        return ArtistVerdict(item?.let { check.artist(it, artist) }, unreachable)
     }
+
+    /** An article's lines, and whether its lead could not be read. */
+    private class Lines(
+        val drafts: List<EvidenceDraft>,
+        val unreachable: Boolean,
+    )
 
     private suspend fun lines(
         accepted: Verdict.Accepted,
         track: NormalizedTrack,
         retrievedAt: Instant,
-        findings: Findings,
-    ): List<EvidenceDraft> {
+    ): Lines {
         val title = accepted.item.enwiki
+        var unreachable = false
         val lead =
             when (val found = title?.let { wikipedia.lead(it) }) {
                 null -> null
                 is Lookup.Found -> found.value
-                else -> null.also { findings.unreachable = true }
+                else -> null.also { unreachable = true }
             }
         val subjects =
             listOfNotNull(accepted.item.label, track.title.takeIf { accepted.scope != Scope.ARTIST })
@@ -176,7 +310,7 @@ class WikipediaSource(
             sentences.map {
                 EvidenceDraft(SourceId.WIKIPEDIA, accepted.scope, it, title?.let(::articleUrl), retrievedAt)
             }
-        return quoted + WikidataEvidence.lines(accepted, retrievedAt)
+        return Lines(quoted + WikidataEvidence.lines(accepted, retrievedAt), unreachable)
     }
 
     // The lead's sentences that name one of [subjects], short enough to quote, at most MAX_SENTENCES.
@@ -199,6 +333,19 @@ class WikipediaSource(
     }
 
     companion object {
+        /**
+         * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
+         * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
+         * or the identity check's rejection, or nothing, when no Wikidata item has the id.
+         */
+        val ARTIST_PART: ArtistPart =
+            ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
+
+        /** [extractionVersion]: raised when what the adapter makes of the articles changes. */
+        const val EXTRACTION_VERSION: Int = 1
+
+        private val json = Json { encodeDefaults = false }
+
         /** At most this many sentences per article (D1: short attributed quotes, never whole passages). */
         const val MAX_SENTENCES: Int = 3
 
