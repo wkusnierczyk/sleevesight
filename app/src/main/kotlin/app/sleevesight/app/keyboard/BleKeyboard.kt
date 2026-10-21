@@ -77,7 +77,9 @@ class BleKeyboard(
     private var advertiser: BluetoothLeAdvertiser? = null
 
     // Every device linked to the phone over LE, which the GATT server hears of whatever service it
-    // came for (a watch, earbuds), and those of them that sent a message the session took.
+    // came for (a watch, earbuds), and those of them that sent a message the session took. Changed
+    // on the main thread alone, in the order Bluetooth's callbacks came, so the state said is
+    // always the one they leave.
     private val connected = mutableSetOf<BluetoothDevice>()
     private val typing = mutableSetOf<BluetoothDevice>()
     private val prepared = mutableMapOf<BluetoothDevice, ByteArrayOutputStream>()
@@ -159,12 +161,10 @@ class BleKeyboard(
     private fun close(then: KeyboardState?) {
         stopAdvertising()
         advertiser = null
-        val devices =
-            synchronized(lock) {
-                typing.clear()
-                prepared.clear()
-                connected.toList().also { connected.clear() }
-            }
+        val devices = connected.toList()
+        connected.clear()
+        typing.clear()
+        synchronized(lock) { prepared.clear() }
         server?.let { s ->
             devices.forEach { s.cancelConnection(it) }
             s.close()
@@ -194,7 +194,13 @@ class BleKeyboard(
         try {
             advertiser?.startAdvertising(settings, data, advertising)
         } catch (_: IllegalStateException) {
-            close(if (manager?.adapter?.isEnabled == true) KeyboardState.FAILED else KeyboardState.BLUETOOTH_OFF)
+            // Advertising could not start again. With devices connected, among them perhaps the
+            // computer, the session goes on, and it is tried again at the next connection change;
+            // with none, there is no way in, and the session has failed.
+            when {
+                manager?.adapter?.isEnabled != true -> close(KeyboardState.BLUETOOTH_OFF)
+                connected.isEmpty() -> close(KeyboardState.FAILED)
+            }
         }
     }
 
@@ -209,14 +215,15 @@ class BleKeyboard(
     private val advertising =
         object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                if (synchronized(lock) { typing.isEmpty() }) state(KeyboardState.WAITING)
+                connection()
             }
 
             override fun onStartFailure(errorCode: Int) {
                 when (errorCode) {
                     ADVERTISE_FAILED_ALREADY_STARTED -> {}
                     ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> close(KeyboardState.UNSUPPORTED)
-                    else -> close(KeyboardState.FAILED)
+                    // As when it throws, in `advertise`.
+                    else -> if (connected.isEmpty()) close(KeyboardState.FAILED)
                 }
             }
         }
@@ -237,20 +244,16 @@ class BleKeyboard(
                 status: Int,
                 newState: Int,
             ) {
-                val typed =
-                    synchronized(lock) {
-                        if (newState == BluetoothProfile.STATE_CONNECTED) {
-                            connected += device
-                        } else {
-                            connected -= device
-                            typing -= device
-                            prepared -= device
-                        }
-                        typing.isNotEmpty()
-                    }
+                if (newState != BluetoothProfile.STATE_CONNECTED) synchronized(lock) { prepared -= device }
                 main.post {
                     if (server == null) return@post
-                    if (!typed) state(KeyboardState.WAITING)
+                    if (newState == BluetoothProfile.STATE_CONNECTED) {
+                        connected += device
+                    } else {
+                        connected -= device
+                        typing -= device
+                    }
+                    connection()
                     // A connection may end the advertising, and the device that came may not be the
                     // computer: it starts again at each change, so the computer can always find it.
                     stopAdvertising()
@@ -322,13 +325,21 @@ class BleKeyboard(
         message: ByteArray,
     ): Int {
         val text = session.open(message) ?: return REFUSED
-        val first = synchronized(lock) { typing.add(device) }
         main.post {
-            if (stopped) return@post
-            if (first && server != null) onState(KeyboardState.CONNECTED)
+            if (stopped || server == null) return@post
+            if (typing.add(device)) connection()
             onText(text)
         }
         return BluetoothGatt.GATT_SUCCESS
+    }
+
+    // Says whether a computer is typing, on the main thread, as the sets now are.
+    private fun connection() {
+        if (!stopped &&
+            server != null
+        ) {
+            onState(if (typing.isEmpty()) KeyboardState.WAITING else KeyboardState.CONNECTED)
+        }
     }
 
     private fun state(state: KeyboardState) {

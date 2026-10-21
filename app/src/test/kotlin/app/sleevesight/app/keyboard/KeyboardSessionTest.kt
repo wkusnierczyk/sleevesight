@@ -1,9 +1,7 @@
 package app.sleevesight.app.keyboard
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The phone's side of the keyboard's protocol (#394), against messages the page's code sealed. */
@@ -71,14 +69,6 @@ class KeyboardSessionTest {
         val session = session()
         session.forget()
         assertNull(session.open(messages[0].third))
-    }
-
-    @Test
-    fun `a session is claimed once`() {
-        val code = KeyboardVectors.freshCode()
-        assertTrue(KeyboardSession.parse(code)!!.claim())
-        assertFalse(KeyboardSession.parse(code)!!.claim())
-        assertTrue(KeyboardSession.parse(KeyboardVectors.freshCode())!!.claim())
     }
 
     @Test

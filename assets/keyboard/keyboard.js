@@ -13,6 +13,7 @@ let characteristic = null;
 let counter = 0;
 let sent = null;
 let refused = null;
+let failed = null;
 let writing = false;
 
 function status(message, kind = '') {
@@ -75,11 +76,12 @@ async function connect() {
   status('Connected. What you type here appears on the phone.', 'ok');
   sent = null;
   refused = null;
+  failed = null;
   send();
 }
 
 // Writes the text as it is now, unless it was sent already; then again if it changed meanwhile.
-// A text the phone did not take is not sent again until it changes, and a write that settles after
+// A text that fails twice is not sent again until it is edited, and a write that settles after
 // a reconnection says nothing of the new connection.
 async function send() {
   const text = $('text').value;
@@ -97,12 +99,15 @@ async function send() {
     if (target === characteristic) {
       sent = text;
       refused = null;
+      failed = null;
       if ($('status').className === 'error') status('Connected. What you type here appears on the phone.', 'ok');
     }
   } catch (e) {
-    // A disconnection says so itself; anything else is said here.
+    // A disconnection says so itself; anything else is said here. A text that fails is tried
+    // once more, since Chrome's GATT errors can pass, then not until it is edited.
     if (target === characteristic) {
-      refused = text;
+      if (failed === text) refused = text;
+      failed = text;
       status(`The phone did not take the text: ${e.message}`, 'error');
     }
   } finally {
@@ -112,6 +117,9 @@ async function send() {
 }
 
 function changed() {
+  // A new edit, even back to a text the phone refused, is sent again.
+  refused = null;
+  failed = null;
   const over = textBytes($('text').value) > MAX_TEXT_BYTES;
   $('length').hidden = !over;
   if (!over) send();

@@ -23,7 +23,7 @@ Sleevesight needs notification access, which is how Android lets an app read wha
 
 If you scan an API key's QR code, Sleevesight asks for the camera then, and only then. It reads the code from the camera's frames on the phone; no frame is kept or sent.
 
-If you type into a field from a computer (*Type on a computer*), Sleevesight asks for Bluetooth (*Nearby devices*) then, and only then. The page on the computer, `sleevesight.app/keyboard.html`, sends the text to the phone over Bluetooth, encrypted with a key it makes for that visit and shows only in its QR code; the page makes no network request, and nothing goes through a server. The phone forgets the key when you close the dialog.
+If you type into a field from a computer (*Type on a computer*), Sleevesight asks for Bluetooth (*Nearby devices*) then, and only then. The page on the computer, `sleevesight.app/keyboard.html`, sends the text to the phone over Bluetooth, encrypted with a key it makes for that visit and shows only in its QR code; the page makes no network request, and nothing goes through a server. The phone forgets the key when you close the dialog; it keeps only the session's random identifier, so the same code cannot be used twice.
 
 ## What leaves the phone, and to whom
 

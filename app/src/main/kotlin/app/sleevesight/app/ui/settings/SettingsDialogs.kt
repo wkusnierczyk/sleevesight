@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -33,6 +34,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import app.sleevesight.app.R
 import app.sleevesight.app.keyboard.KeyboardSession
+import app.sleevesight.app.keyboard.SessionLedger
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -105,6 +107,7 @@ internal fun KeyDialog(
     var failed by remember { mutableStateOf<Int?>(null) }
     var scanning by remember { mutableStateOf<ScanFor?>(null) }
     var session by remember { mutableStateOf<KeyboardSession?>(null) }
+    val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
     val value = typed.trim()
 
@@ -123,7 +126,7 @@ internal fun KeyDialog(
         scanner(
             { text ->
                 scanning = null
-                val result = scanned(purpose, id, text.trim())
+                val result = scanned(purpose, id, text.trim(), ledger)
                 failed = result.failed
                 result.key?.let { typed = it }
                 session = result.session
@@ -181,6 +184,7 @@ private fun scanned(
     purpose: ScanFor,
     id: SecretId,
     scanned: String,
+    ledger: SessionLedger,
 ): Scanned =
     when (purpose) {
         ScanFor.KEY -> {
@@ -191,7 +195,7 @@ private fun scanned(
             val session = KeyboardSession.parse(scanned)
             when {
                 session == null -> Scanned(failed = sessionFailure(scanned))
-                !session.claim() -> Scanned(failed = R.string.keyboard_code_used)
+                !ledger.claim(session) -> Scanned(failed = R.string.keyboard_code_used)
                 else -> Scanned(session = session)
             }
         }
