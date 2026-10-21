@@ -268,9 +268,10 @@ enum class WebEngine {
  */
 enum class FontChoice {
     /**
-     * Roboto, bundled with the app, the default: the type of the product page and of the logo,
-     * on every phone. Many phones' system font is not Roboto (Samsung's One UI has its own face,
-     * and users can pick another), so without it the app would look different from phone to phone,
+     * Roboto, bundled with the app, the default: the same type on every phone, in the family the
+     * logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the
+     * same faces. Many phones' system font is not Roboto (Samsung's One UI has its own face, and
+     * users can pick another), so without it the app would look different from phone to phone,
      * and in the store screenshots from what a user then sees.
      */
     APP_FONT,

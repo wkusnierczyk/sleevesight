@@ -3,18 +3,24 @@ package app.sleevesight.app.ui
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontFamily
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.idleUntil
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
@@ -27,7 +33,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -93,13 +103,14 @@ class FontSettingsTest {
     }
 
     @Test
-    fun theSettingSwitchesTheWholeAppToTheSystemFontAndBack() {
+    fun theSettingsRowSwitchesTheThemeToTheSystemFontAndBack() {
         var typography: Typography? = null
+        val fonts = settings.settings.map { it.font }.stateIn(saves, SharingStarted.Eagerly, FontChoice.APP_FONT)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    // As `MainActivity` draws it: the theme follows the stored settings.
-                    SleevesightTheme(settings.settings) {
+                    // The theme follows the stored settings, as `AppGraph.font` has it follow them.
+                    SleevesightTheme(fonts) {
                         typography = MaterialTheme.typography
                         SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
                     }
@@ -124,11 +135,70 @@ class FontSettingsTest {
     }
 
     @Test
+    fun theThemeStartsInTheFontsCurrentValue() {
+        // As after a rotation, or a return to the app, with *System font* stored: no frame in Roboto.
+        val seen = mutableListOf<Typography>()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    SleevesightTheme(MutableStateFlow(FontChoice.SYSTEM_FONT)) { seen += MaterialTheme.typography }
+                }
+            }
+            compose.waitForIdle()
+            assertEquals(Typography(), seen.first())
+        }
+    }
+
+    /** The font family [text] is laid out in, on the screen shown. */
+    private fun familyOf(text: String): FontFamily? {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose
+            .onNodeWithText(text)
+            .fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult]
+            .action
+            ?.invoke(layouts)
+        return layouts
+            .single()
+            .layoutInput.style.fontFamily
+    }
+
+    @Test
+    fun mainActivityDrawsInTheStoredFontAndFollowsIt() {
+        val title = text(R.string.first_run_leaves_title)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            compose.waitUntil(5_000) { shown(title) }
+            assertEquals(Roboto, familyOf(title))
+
+            runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
+            compose.waitUntil(5_000) { familyOf(title) != Roboto }
+
+            // A new activity, as after a rotation, keeps it.
+            scenario.recreate()
+            compose.waitUntil(5_000) { shown(title) }
+            assertNotEquals(Roboto, familyOf(title))
+
+            runBlocking { app.graph.settings.update { it.copy(font = FontChoice.APP_FONT) } }
+            compose.waitUntil(5_000) { familyOf(title) == Roboto }
+        }
+    }
+
+    @Test
+    fun aNewProcessStartsInTheFontLastReadThenFollowsTheSettings() {
+        // As left by an earlier process, whose settings said *System font*; this one's say the default.
+        LastFont(app).value = FontChoice.SYSTEM_FONT
+        // Read at once: the settings' first read resumes on the main looper, which has not run yet.
+        assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
+        idleUntil("the settings' first read") { app.graph.font.value == FontChoice.APP_FONT }
+        assertEquals(FontChoice.APP_FONT, LastFont(app).value)
+    }
+
+    @Test
     fun theCreditsListTheFontWithItsLicence() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
-            compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo()
-            compose.onNodeWithText("SIL Open Font License 1.1").performScrollTo()
+            compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("SIL Open Font License 1.1").performScrollTo().assertIsDisplayed()
         }
     }
 
@@ -141,6 +211,6 @@ class FontSettingsTest {
                 .use { it.readText() }
         assertTrue(licence.startsWith("Copyright 2011 The Roboto Project Authors"))
         assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
-        assertNotEquals(-1, licence.indexOf("PERMISSION & CONDITIONS"))
+        assertTrue(licence.contains("PERMISSION & CONDITIONS"))
     }
 }

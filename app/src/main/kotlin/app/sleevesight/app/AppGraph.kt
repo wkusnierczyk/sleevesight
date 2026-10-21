@@ -35,6 +35,7 @@ import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
+import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
@@ -43,6 +44,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -56,10 +58,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -99,6 +104,23 @@ class AppGraph(
      * leaving the screen, or a rotation, does not cut a save short.
      */
     val settingsSaves: CoroutineScope get() = mainScope
+
+    /** *Font* as last read, for a new process's first frames. */
+    private val lastFont = LastFont(appContext)
+
+    /**
+     * *Font* (#377), for the theme: the stored choice, as it changes, held for the process, so a
+     * new activity (a rotation, a switch to dark mode, a return to the app) starts in it. Before
+     * the settings' first read in a new process, the font last read ([LastFont]). Read whether or
+     * not the first run is acknowledged: the first-run screen is drawn in it too, and reading the
+     * settings file sends nothing.
+     */
+    val font: StateFlow<FontChoice> =
+        settings.settings
+            .map { it.font }
+            .distinctUntilChanged()
+            .onEach { lastFont.value = it }
+            .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
 
     /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
