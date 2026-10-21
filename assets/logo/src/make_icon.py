@@ -26,11 +26,10 @@ The drawing is read from `design/brand.html`, as make_feature_graphic.py reads i
 `<symbol id="lp">` (the rim, the black core, the groove, the label, the label's two marks and the
 spindle hole, in a 16-unit box at 8..24), in the light colourway, `.lt` (`--rim`, `--core` and
 `--groove`), and the ground is that colourway's `--tile-bg`. The script stops if any of it is
-missing, or if the symbol, read as XML, holds an element or an attribute it does not know. Run it again after a
-change to the record or to those colours. The ground is one colour, not one for
-light and one for dark: launchers draw an app's icon the same way whatever the system's theme
-(themed icons apart), and the dark record on white stands out on a light wallpaper and a dark one
-alike.
+missing, or if the symbol, read as XML, holds an element or an attribute it does not know. Run it
+again after a change to the record or to those colours. The ground is one colour, not one for light
+and one for dark: launchers draw an app's icon the same way whatever the system's theme (themed
+icons apart), and the dark record on white stands out on a light wallpaper and a dark one alike.
 
 An adaptive icon is a 108 dp square, which the launcher cuts to its own shape (a circle, a squircle,
 a rounded square) inside the middle 72 dp; a circle of 66 dp about the centre is always shown. The
@@ -120,15 +119,17 @@ def check(role, attrs):
 def parts(symbol, var):
     """The record's parts by role, each a dict of its attributes with `var(--x)` filled in from `.lt`:
     rim, groove, label, hole, and marks (a list). The core is dropped, as `.lt` hides it."""
-    def blank(text):
-        return not (text or '').strip()
     elements = list(symbol)
-    if (symbol.attrib != {'id': 'lp', 'viewBox': '8 8 16 16'} or len(elements) != RECORD_ELEMENTS
-            or not blank(symbol.text) or any(len(el) or not blank(el.text) or not blank(el.tail) for el in elements)):
+    texts = [t.strip() for t in [symbol.text] + [x for el in elements for x in (el.text, el.tail)] if t and t.strip()]
+    nested = next(((el, child) for el in elements for child in el), None)
+    problems = [part for part in (
+        symbol.attrib != {'id': 'lp', 'viewBox': '8 8 16 16'} and f'its attributes are {symbol.attrib}',
+        len(elements) != RECORD_ELEMENTS and f'it holds {len(elements)} elements',
+        texts and f'it holds text {texts[0][:40]!r}',
+        nested and f'a <{nested[0].tag}> holds a <{nested[1].tag}>') if part]
+    if problems:
         sys.exit(f'design/brand.html: <symbol id="lp" viewBox="8 8 16 16"> should hold {RECORD_ELEMENTS} empty '
-                 f'elements and nothing else; it holds {len(elements)} elements'
-                 + ('' if symbol.attrib == {'id': 'lp', 'viewBox': '8 8 16 16'} else f', with {symbol.attrib}')
-                 + '; the script needs updating for it')
+                 f'elements and nothing else; ' + '; '.join(problems) + '; the script needs updating for it')
     roles, circles = {'marks': []}, []
     for el in elements:
         tag, attrs = el.tag, dict(el.attrib)
