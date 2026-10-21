@@ -58,7 +58,7 @@ class RetrievalCache internal constructor(
         val row = context.queries.retrievalGet(source.tag, key).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val storedAt = Instant.fromEpochMilliseconds(row.stored_at)
-        val lifetime = lifetimeOf(tagsOf(row.sources), context.settings())
+        val lifetime = shortestLifetime(sourceTags(row.sources), context.settings())
         val current =
             lifetime != null &&
                 row.format == RetrievalCodec.FORMAT.toLong() &&
@@ -86,9 +86,14 @@ class RetrievalCache internal constructor(
      * Keeps [result], replacing any entry for [source] and [key], and evicts down to the size
      * limit. The entry lives for the shortest lifetime among [consults] (the sources the adapter
      * asked, [SourceAdapter.consults]: a rejection by Wikidata's identity check has no Wikidata line
-     * but depends on Wikidata) and the sources of its lines. Returns whether it was kept: not when
-     * one of them has no lifetime, nor for an [Outcome.Unreachable] or [Outcome.SourceOff] result,
-     * nor when it is larger than the limit.
+     * but depends on Wikidata) and the sources of its lines. A result built from artist-level parts
+     * kept from an earlier track ([SourceResult.freshUntil], #238) is stored as if made early enough
+     * to stop being fresh when the first of them does: it is never served past the parts' lifetimes
+     * in force when it was kept. A later shortening of a part's source lifetime takes effect on the
+     * part in the artist cache at once, and on such an entry within the entry's own lifetime, which
+     * is read at each read as for any entry. Returns whether it was kept: not when one of them has
+     * no lifetime, nor for an [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is
+     * larger than the limit, nor when a reused part is no longer fresh.
      */
     fun put(
         source: SourceId,
@@ -102,13 +107,18 @@ class RetrievalCache internal constructor(
         val payload = RetrievalCodec.encode(result)
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
+        val lifetime = shortestLifetime(sources, context.settings())
+        val now = context.clock.now()
+        val freshUntil = result.freshUntil
+        // The entry's age: from now, or from as far back as makes it stop when a reused part does.
+        val storedAt = if (lifetime == null || freshUntil == null) now else minOf(now, freshUntil - lifetime)
         val keep =
-            lifetimeOf(sources, context.settings()) != null &&
+            lifetime != null &&
                 result.outcome != Outcome.Unreachable &&
                 result.outcome != Outcome.SourceOff &&
+                (freshUntil == null || freshUntil > now) &&
                 context.fits(size)
         if (keep) {
-            val now = context.clock.now().toEpochMilliseconds()
             context.queries.transaction {
                 context.queries.retrievalRemoveKey(source.tag, key)
                 context.queries.retrievalInsert(
@@ -118,8 +128,8 @@ class RetrievalCache internal constructor(
                     format = RetrievalCodec.FORMAT.toLong(),
                     extraction = extractionVersion.toLong(),
                     payload = payload,
-                    stored_at = now,
-                    used_at = now,
+                    stored_at = storedAt.toEpochMilliseconds(),
+                    used_at = now.toEpochMilliseconds(),
                     size_bytes = size,
                 )
                 context.afterWrite()
@@ -137,6 +147,10 @@ class RetrievalCache internal constructor(
      * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
      * recording by its length, so the same song at another length may resolve to another recording.
      * Each part is prefixed with its length, so no two different combinations of parts encode alike.
+     * The folding deliberately takes spellings that fold alike (case, an accent or none: `Björk` and
+     * `bjork`; punctuation between words: `AC/DC` and `AC DC`) as one track: with the title, every
+     * credited artist, the work and the length to the second all equal after folding, it is almost
+     * always the same recording.
      */
     fun keyOf(
         track: NormalizedTrack,
@@ -146,20 +160,6 @@ class RetrievalCache internal constructor(
             listOf(track.lookupKey) + track.artists.map(normalizer::foldForKey).sorted() +
                 listOf(track.from?.let(normalizer::foldForKey), duration?.let { "${it.inWholeSeconds}s" })
         return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
-    }
-
-    private companion object {
-        private fun tagsOf(column: String): List<SourceId?> =
-            column.split(' ').filter { it.isNotEmpty() }.map { SourceId.ofTag(it) }
-
-        // The shortest lifetime among [sources], or null when one has none (or is unknown).
-        private fun lifetimeOf(
-            sources: List<SourceId?>,
-            settings: Settings,
-        ): Duration? {
-            val lifetimes = sources.map { source -> source?.let { settings.cacheLifetimes[it] } }
-            return if (lifetimes.any { it == null }) null else lifetimes.filterNotNull().minOrNull()
-        }
     }
 }
 

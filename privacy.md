@@ -46,7 +46,7 @@ Nothing else leaves the phone.
 
 - The length and cover of each track.
 - The history: the tracks Sleevesight has seen play, the record of track changes it uses to tell your skips from natural ends, and what it has learned from them for each player.
-- What the sources found, kept for a while so the same track is not looked up again (the lifetimes are in the settings).
+- What the sources found, kept for a while so the same track, or the same artist on another track, is not looked up again (the lifetimes are in the settings).
 - The insights written, your settings, and your API keys. The keys are encrypted with a key kept in the phone's Android Keystore, are never shown again once saved, and are never logged.
 
 None of this is part of Android's backup or of a transfer to a new phone.

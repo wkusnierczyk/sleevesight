@@ -270,6 +270,16 @@ class RetrievalCacheTest {
     }
 
     @Test
+    fun `case, accents and punctuation between words fold to one key, letters run together do not`() {
+        fun key(artist: String) = retrieval.keyOf(normalizer.normalize("Song", artist), null)
+
+        // As `keyOf`'s KDoc says, and Last.fm's artist cache, keyed by the name as sent, does not.
+        assertEquals(key("Björk"), key("bjork"))
+        assertEquals(key("AC/DC"), key("AC DC"))
+        assertNotEquals(key("M.I.A."), key("MIA"))
+    }
+
+    @Test
     fun `a rejection by an adapter that consults a shorter-lived source expires with it`() {
         fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WIKIDATA to 1.days))
         val adapter = FakeAdapter(SourceId.WIKIPEDIA, consults = setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
