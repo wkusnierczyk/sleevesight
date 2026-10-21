@@ -16,18 +16,20 @@ import kotlin.time.Instant
  * cannot see. Values are the adapter's own encoding, which the store does not read: [ArtistPart.version]
  * says which. Calls suspend, so an implementation over a blocking database moves them off the
  * caller's thread. An implementation does not throw, but for cancellation: a store that fails
- * misses, and keeps nothing, so the caller asks its source as it would with no cache.
+ * misses and keeps nothing, so the caller asks its source each time (with no cache, the adapters
+ * keep some answers in memory instead).
  *
  * A kept value comes with the time it stops being fresh ([KeptPart.freshUntil]). A track result
  * built from it carries the earliest such time ([SourceResult.freshUntil]), so the retrieval cache
- * does not keep a reused part past its own lifetime. A caller that keeps values in memory as well
- * keeps them no longer than that.
+ * does not keep a reused part past its own lifetime. A caller keeps values in memory instead only
+ * when [persists] is false, so no value is kept in memory past its lifetime here.
  */
 interface ArtistResults {
     /**
-     * Whether this keeps anything: false for [None], and for a wrapper of it. A caller that would
-     * otherwise keep values in memory does so only when this is false, so a value is kept in one
-     * place, never in memory past its lifetime here.
+     * Whether this keeps anything: false for [None]; a wrapper passes its delegate's through (as
+     * `CountedArtistResults` does), or it reads as persisting. A caller that can keep values in
+     * memory does so only when this is false, so a value is kept in one place, never in memory past
+     * its lifetime here.
      */
     val persists: Boolean get() = true
 

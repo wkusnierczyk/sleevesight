@@ -13,9 +13,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * [StorePipelineCache]. [caches] is asked for at the first call, not before: the app's wiring is
  * made at start, and its cache database opens only once the first run is acknowledged.
  *
- * It does not throw, as [ArtistResults] asks: a database that fails to open, read or write is a
- * miss, and keeps nothing, so the adapter asks its source as with no cache. Cancellation is
- * rethrown.
+ * It does not throw, as [ArtistResults] asks: a database that fails to open, read or write misses
+ * and keeps nothing, so the adapter asks its source each time (with no cache, the adapters keep
+ * some answers in memory instead; [persists] stays true here). Cancellation is rethrown.
  */
 class StoreArtistResults(
     private val caches: () -> Caches,
