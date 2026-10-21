@@ -209,6 +209,12 @@ class NowPlayingScreenTest {
             val reason = text(R.string.home_failure_rate_limited)
             compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
         }
+        // A service not offered where the user is says so, and does not blame the key.
+        show(state(PipelineView(track(insight = InsightState.Failed("unavailable_here")), aiReady = true))) {
+            val reason = text(R.string.home_failure_unavailable_here)
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
+            assertEquals("the AI service is not offered in your country", reason)
+        }
         show(state(PipelineView(track(insight = InsightState.Writing("")), aiReady = true))) {
             compose.onNodeWithText(text(R.string.home_insight_writing)).assertExists()
         }

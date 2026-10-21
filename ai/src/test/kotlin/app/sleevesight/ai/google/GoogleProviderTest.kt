@@ -310,7 +310,7 @@ class GoogleProviderTest {
                         """{"error":{"code":400,"message":"User location is not supported for the API use.",""" +
                             """"status":"FAILED_PRECONDITION"}}""",
                         400,
-                    ) to AiErrorKind.UNAUTHORIZED,
+                    ) to AiErrorKind.UNAVAILABLE_HERE,
                     ok(body(402, "RESOURCE_EXHAUSTED"), 402) to AiErrorKind.BILLING,
                     ok(body(404, "NOT_FOUND"), 404) to AiErrorKind.MODEL_NOT_FOUND,
                     ok("<html>gateway</html>", 404) to AiErrorKind.MODEL_NOT_FOUND,
@@ -375,6 +375,9 @@ class GoogleProviderTest {
                     "gemini-3.8-live",
                     "gemini-3.5-transcribe",
                     "gemini-nano-banana-2.1",
+                    "lyria-3.5",
+                    "veo-3.1-generate-preview",
+                    "gemini-omni-1.1-flash",
                 )
             for (id in nonText) assertEquals(false, GoogleProvider.writesText(id), id)
             for (id in listOf("gemini-3.8-flash", "gemini-flash-latest", "gemini-robotics-er-2-preview")) {

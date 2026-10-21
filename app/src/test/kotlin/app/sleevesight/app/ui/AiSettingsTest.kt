@@ -29,6 +29,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
@@ -185,6 +186,29 @@ class AiSettingsTest {
 
             waitFor("the model stored") { current().aiModels[ProviderId.ANTHROPIC] == "claude-opus-5-5" }
             assertEquals("sk-test", provider.keyUsed)
+        }
+    }
+
+    @Test
+    fun aServiceNotOfferedHereSaysSoInTheModelDialog() {
+        val unavailable =
+            object : AiProvider {
+                override val id = ProviderId.GOOGLE
+
+                override suspend fun models(key: Secret): ModelList = ModelList.Failed(AiErrorKind.UNAVAILABLE_HERE)
+
+                override fun stream(
+                    request: CompletionRequest,
+                    key: Secret,
+                ): Flow<CompletionEvent> = emptyFlow()
+            }
+        runBlocking { secrets.set(SecretId.GOOGLE, Secret("google-key")) }
+        show(providers = mapOf(ProviderId.GOOGLE to unavailable)) {
+            compose.onNodeWithText(google(R.string.settings_ai_model_of)).performScrollTo().performClick()
+            val said = text(R.string.settings_model_failed_unavailable_here)
+            waitForText(said)
+            compose.onNodeWithText(said).assertIsDisplayed()
+            assertTrue(absent(R.string.settings_model_failed_unauthorized))
         }
     }
 

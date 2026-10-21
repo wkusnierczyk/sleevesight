@@ -262,9 +262,13 @@ class GoogleProvider(
          * Id segments of the models that take `generateContent` but do not answer a text prompt
          * with text, from the Gemini API's models page on 2026-10-21: image generation (`-image`,
          * and Nano Banana's `banana`), speech (`-tts`, `-audio`), the Live API (`-live`), and
-         * transcription (`-transcribe`). Chosen for a card, each would fail every request.
+         * transcription (`-transcribe`). Chosen for a card, each would fail every request. Also,
+         * as a guard, the music and video families (`lyria`, `veo`, `omni`), which today do not
+         * take `generateContent`: the method is the first filter ([modelInfo]), the id the second.
+         * Whole segments only, never parts of one.
          */
-        val NON_TEXT_SEGMENTS: Set<String> = setOf("image", "tts", "audio", "live", "transcribe", "banana")
+        val NON_TEXT_SEGMENTS: Set<String> =
+            setOf("image", "tts", "audio", "live", "transcribe", "banana", "lyria", "veo", "omni")
 
         /** Whether [id] is a model that writes text from a text prompt, as far as its id tells. */
         fun writesText(id: String): Boolean = id.split('-').none { it in NON_TEXT_SEGMENTS }
@@ -314,14 +318,14 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
  * first. `FAILED_PRECONDITION` is, as the error reference gives it, a project with no billing in a
  * country without the free tier, which billing mends; the API also sends it for a country where it
  * is not offered at all ("User location is not supported"), which billing does not, so that one,
- * told apart by its message (no reason in `details` names it), is the key not being allowed this.
+ * told apart by its message (no reason in `details` names it), is [AiErrorKind.UNAVAILABLE_HERE].
  * `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402, and a rate limit otherwise.
  */
 internal fun kindOf(error: WireError): AiErrorKind? =
     when {
         error.details.any { it.reason?.startsWith(API_KEY_REASON) == true } -> AiErrorKind.UNAUTHORIZED
         error.status == "FAILED_PRECONDITION" && error.message?.contains(LOCATION, ignoreCase = true) == true -> {
-            AiErrorKind.UNAUTHORIZED
+            AiErrorKind.UNAVAILABLE_HERE
         }
         error.status == "RESOURCE_EXHAUSTED" && error.code == PAYMENT_REQUIRED -> AiErrorKind.BILLING
         else -> error.status?.let(::kindOfStatus)

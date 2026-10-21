@@ -89,6 +89,7 @@ internal fun failureText(reason: String): String =
         "offline" -> stringResource(R.string.home_failure_offline)
         "unauthorized" -> stringResource(R.string.home_failure_unauthorized)
         "billing" -> stringResource(R.string.home_failure_billing)
+        "unavailable_here" -> stringResource(R.string.home_failure_unavailable_here)
         "rate_limited" -> stringResource(R.string.home_failure_rate_limited)
         "overloaded" -> stringResource(R.string.home_failure_overloaded)
         "server" -> stringResource(R.string.home_failure_server)

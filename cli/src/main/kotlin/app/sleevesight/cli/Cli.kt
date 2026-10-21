@@ -228,11 +228,10 @@ class Cli(
             val model = settings.model(provider)
             val effort = settings.effort(provider)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
-            return when {
-                ai != null -> "${providerName.replaceFirstChar { it.uppercase() }} $model, effort $effort$replayed"
-                !options.insights -> "off: --no-insights"
-                options.mode == Mode.REPLAY -> "off: no recorded replies"
-                else -> "off: no ${Keys.variableOf(provider)}"
+            return if (ai != null) {
+                "${providerName.replaceFirstChar { it.uppercase() }} $model, effort $effort$replayed"
+            } else {
+                insightsOff(options)
             }
         }
 
@@ -255,6 +254,21 @@ class Cli(
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
         private const val SECONDS_PER_MINUTE = 60
+
+        /**
+         * Why a run with [options] writes no insight, given that it has no AI access: switched
+         * off, nothing recorded to replay, its AI service not among the recorded sources (a record
+         * run sends no AI call it does not record), or no key.
+         */
+        fun insightsOff(options: Options): String {
+            val name = Options.nameOf(options.provider)
+            return when {
+                !options.insights -> "off: --no-insights"
+                options.mode == Mode.REPLAY -> "off: no recorded replies"
+                options.mode == Mode.RECORD && name !in options.record -> "off: --record does not name $name"
+                else -> "off: no ${Keys.variableOf(options.provider)}"
+            }
+        }
 
         /** Playlist position [n] as the player would report it. */
         fun nowPlaying(n: Int): NowPlaying {

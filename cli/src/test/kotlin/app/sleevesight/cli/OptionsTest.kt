@@ -58,6 +58,16 @@ class OptionsTest {
     }
 
     @Test
+    fun `a run without insights says why`() {
+        fun off(vararg args: String) = Cli.insightsOff(Options.parse(args.toList()))
+        assertEquals("off: --record does not name anthropic", off("record", "--record", "wikidata"))
+        assertEquals("off: no SLEEVESIGHT_GOOGLE_API_KEY", off("record", "--record", "google"))
+        assertEquals("off: no SLEEVESIGHT_GOOGLE_API_KEY", off("live", "--provider", "google"))
+        assertEquals("off: no recorded replies", off("replay"))
+        assertEquals("off: --no-insights", off("record", "--record", "wikidata", "--no-insights"))
+    }
+
+    @Test
     fun `the cache is temporary for replay and kept for live, unless given`() {
         assertEquals(CacheChoice.Temporary, Options.parse(listOf("replay")).cache)
         assertEquals(CacheChoice.At(File(".dev/cli/cache.db")), Options.parse(listOf("live")).cache)

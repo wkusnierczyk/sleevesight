@@ -151,6 +151,12 @@ enum class AiErrorKind {
     /** The account cannot pay for the call. */
     BILLING,
 
+    /**
+     * The service is not offered where the user is (Google's "User location is not supported"):
+     * neither the key nor billing mends it.
+     */
+    UNAVAILABLE_HERE,
+
     /** Too many requests; try again later. */
     RATE_LIMITED,
 

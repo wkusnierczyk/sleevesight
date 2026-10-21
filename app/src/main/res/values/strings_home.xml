@@ -66,6 +66,7 @@
     <string name="home_failure_offline">no connection</string>
     <string name="home_failure_unauthorized">the AI service did not accept the key</string>
     <string name="home_failure_billing">the AI service account needs credit</string>
+    <string name="home_failure_unavailable_here">the AI service is not offered in your country</string>
     <string name="home_failure_rate_limited">too many requests just now</string>
     <string name="home_failure_overloaded">the AI service is busy</string>
     <string name="home_failure_server">the AI service had a problem</string>
