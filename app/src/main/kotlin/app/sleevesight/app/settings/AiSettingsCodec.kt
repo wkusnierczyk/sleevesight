@@ -113,6 +113,9 @@ internal object AiSettingsCodec {
      * Moves the one model and effort stored before #227 to [legacyOwner]'s own keys, as [stored]
      * reads them, and removes them, so the provider's own keys alone hold its choices from then on:
      * left, they would come back as its choice once it was set to its default, which has no key.
+     * A key of the provider's own already stored (as after a downgrade and an upgrade again) is
+     * kept as it is, a value this version cannot read included: [stored] read it, not the legacy
+     * one, so only a key not yet stored is written.
      */
     private fun migrateLegacy(
         stored: Settings,
@@ -122,7 +125,7 @@ internal object AiSettingsCodec {
         val owner = legacyOwner(prefs)
         prefs.remove(LEGACY_MODEL)
         prefs.remove(LEGACY_EFFORT)
-        writeModel(owner, stored, prefs)
-        writeEffort(owner, stored, prefs)
+        if (modelKey(owner) !in prefs) writeModel(owner, stored, prefs)
+        if (effortKey(owner) !in prefs) writeEffort(owner, stored, prefs)
     }
 }

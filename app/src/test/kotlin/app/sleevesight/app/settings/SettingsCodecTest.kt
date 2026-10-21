@@ -184,6 +184,26 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun movingTheLegacyKeysKeepsAProvidersOwnKeysAsTheyAre() {
+        // As after a downgrade and an upgrade again: the legacy keys beside a provider's own, one
+        // of them a level this version cannot read.
+        val own =
+            arrayOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
+            )
+        val prefs = legacy(*own)
+
+        SettingsCodec.write(SettingsCodec.read(prefs), prefs)
+
+        // The legacy model moves, as no key of the provider's own holds one; the effort stays.
+        assertEquals(
+            mutablePreferencesOf(*own, stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5"),
+            prefs,
+        )
+    }
+
+    @Test
     fun aProvidersOwnKeysComeBeforeTheOnesStoredBefore() {
         val prefs =
             legacy(

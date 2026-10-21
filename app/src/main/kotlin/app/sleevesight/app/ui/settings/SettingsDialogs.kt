@@ -45,7 +45,7 @@ internal fun <T> ChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(choice.title)) },
+        title = { Text(choice.titleArg?.let { stringResource(choice.title, it) } ?: stringResource(choice.title)) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
                 for ((value, label) in choice.options) {
@@ -229,7 +229,7 @@ internal fun ModelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_model_title)) },
+        title = { Text(stringResource(R.string.settings_ai_model_of, stringResource(providerName(provider)))) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
                 modelStatus(loaded)?.let {

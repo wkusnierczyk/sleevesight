@@ -73,6 +73,11 @@ enum class ReasoningEffort {
  * One provider's reasoning-effort scale: the [levels] it offers, from least to most, and the
  * [default] used until the user chooses one, where null is the provider's own default (no effort
  * sent). Its levels are what the settings offer for the provider, with *the service's default*.
+ *
+ * The levels a service takes can differ between its models (some take none, some name their levels
+ * otherwise, some take a budget of reasoning tokens instead). So the provider's client maps each
+ * level to the control of the model it calls, and drops or clamps a level that model does not take,
+ * as `AnthropicProvider.takesEffort` drops the effort for a model that does not take it.
  */
 data class EffortScale(
     val levels: List<ReasoningEffort>,
