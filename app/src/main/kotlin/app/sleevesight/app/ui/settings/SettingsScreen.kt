@@ -54,10 +54,11 @@ import kotlin.time.Duration.Companion.seconds
  * reasoning effort ([AiSection], #227), the players to follow, where to look, the web search
  * engines and the keyed sources' keys, the genre label sources (D12, #84), the insight settings
  * (D5, D13), the lookup settings (D6, D9), and the history's (#148); at the end, *Scan keys* and,
- * while any key is stored, *Remove all API keys*, the way to the credits, and the developer setting
- * *Diagnostics*. Each change is saved at once. The rows show the stored settings, so a change that
- * cannot be saved (the settings file cannot be read or written) leaves its row at the stored value,
- * and the screen says so above the list until a later change is saved.
+ * while any key is stored, *Remove all API keys*, the way to the credits, the link to the privacy
+ * policy on the site, and the developer setting *Diagnostics*. Each change is saved at once. The
+ * rows show the stored settings, so a change that cannot be saved (the settings file cannot be read
+ * or written) leaves its row at the stored value, and the screen says so above the list until a
+ * later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
@@ -348,12 +349,7 @@ private fun SettingsContent(
         LookupsSection(settings, update, open)
         HistorySection(settings, update, open)
         SavedKeysSection(keys, open)
-        SectionHeading(R.string.settings_section_about)
-        ValueRow(
-            title = stringResource(R.string.credits_title),
-            value = stringResource(R.string.settings_credits_value),
-            onClick = navigation.openCredits,
-        )
+        AboutSection(navigation.openCredits)
         DeveloperSection(settings, update, navigation.openDiagnostics)
     }
 }
