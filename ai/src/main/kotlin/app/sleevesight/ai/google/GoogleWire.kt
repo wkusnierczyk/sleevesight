@@ -58,6 +58,7 @@ internal data class WireErrorBody(
 @Serializable
 internal data class WireError(
     val code: Int? = null,
+    val message: String? = null,
     val status: String? = null,
     val details: List<WireErrorDetail> = emptyList(),
 )

@@ -121,7 +121,11 @@ internal class ContentStream {
             // `CONTINUATION`: the per-request limit was reached, and the reply goes on only in a
             // further request, which this client does not make.
             "MAX_TOKENS", "CONTINUATION" -> StopReason.MAX_TOKENS
-            "SAFETY", "RECITATION", "LANGUAGE", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII" -> StopReason.REFUSAL
+            // `ESCALATION`: filtered by an escalation rule; `PUP_LIMITED_DISABLED`: the account is
+            // limited for breaking the Prohibited Use Policy. Either way the service declined.
+            "SAFETY", "RECITATION", "LANGUAGE", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "ESCALATION",
+            "PUP_LIMITED_DISABLED",
+            -> StopReason.REFUSAL
             else -> StopReason.OTHER
         }
 }

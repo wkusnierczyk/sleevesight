@@ -180,6 +180,8 @@ class GoogleProviderTest {
                     "SAFETY" to StopReason.REFUSAL,
                     "RECITATION" to StopReason.REFUSAL,
                     "PROHIBITED_CONTENT" to StopReason.REFUSAL,
+                    "ESCALATION" to StopReason.REFUSAL,
+                    "PUP_LIMITED_DISABLED" to StopReason.REFUSAL,
                     "MALFORMED_RESPONSE" to StopReason.OTHER,
                     "SOME_FUTURE_REASON" to StopReason.OTHER,
                 )
@@ -304,6 +306,11 @@ class GoogleProviderTest {
                     ok(body(400, "INVALID_ARGUMENT", "API_KEY_INVALID"), 400) to AiErrorKind.UNAUTHORIZED,
                     ok(body(400, "INVALID_ARGUMENT"), 400) to AiErrorKind.INVALID_REQUEST,
                     ok(body(400, "FAILED_PRECONDITION"), 400) to AiErrorKind.BILLING,
+                    ok(
+                        """{"error":{"code":400,"message":"User location is not supported for the API use.",""" +
+                            """"status":"FAILED_PRECONDITION"}}""",
+                        400,
+                    ) to AiErrorKind.UNAUTHORIZED,
                     ok(body(402, "RESOURCE_EXHAUSTED"), 402) to AiErrorKind.BILLING,
                     ok(body(404, "NOT_FOUND"), 404) to AiErrorKind.MODEL_NOT_FOUND,
                     ok("<html>gateway</html>", 404) to AiErrorKind.MODEL_NOT_FOUND,
@@ -345,7 +352,7 @@ class GoogleProviderTest {
         }
 
     @Test
-    fun `the model list follows its pages and keeps the text models`() =
+    fun `the model list follows its pages and keeps only the text models`() =
         runTest {
             val net =
                 ReplayNetClient { request ->
@@ -359,6 +366,20 @@ class GoogleProviderTest {
                 listed.map { it.id },
             )
             assertEquals(ModelInfo("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", null), listed.first())
+            // The image and speech models in the pages take `generateContent` but write no text.
+            val nonText =
+                listOf(
+                    "gemini-3.1-flash-lite-image",
+                    "gemini-3.8-flash-tts",
+                    "gemini-2.5-flash-native-audio-preview-12-2025",
+                    "gemini-3.8-live",
+                    "gemini-3.5-transcribe",
+                    "gemini-nano-banana-2.1",
+                )
+            for (id in nonText) assertEquals(false, GoogleProvider.writesText(id), id)
+            for (id in listOf("gemini-3.8-flash", "gemini-flash-latest", "gemini-robotics-er-2-preview")) {
+                assertEquals(true, GoogleProvider.writesText(id), id)
+            }
             assertEquals(
                 listOf(null, "Chxtb2RlbHMvZ2VtaW5pLWVtYmVkZGluZy0wMDE="),
                 net.requests.map { it.query["pageToken"] },

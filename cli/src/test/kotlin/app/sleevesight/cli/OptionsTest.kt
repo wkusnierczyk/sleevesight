@@ -34,6 +34,26 @@ class OptionsTest {
         assertEquals(ProviderId.GOOGLE, Options.parse(listOf("live", "--provider", "google")).provider)
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
         assertEquals(setOf("google"), Options.parse(listOf("record", "--record", "google")).record)
+    }
+
+    @Test
+    fun `recording an AI service runs that service, and --provider must agree`() {
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("record", "--record", "wikidata,google")).provider)
+        assertEquals(
+            ProviderId.GOOGLE,
+            Options.parse(listOf("record", "--record", "google", "--provider", "google")).provider,
+        )
+        val mismatch =
+            assertFailsWith<IllegalArgumentException> {
+                Options.parse(listOf("record", "--record", "google", "--provider", "anthropic"))
+            }
+        assertEquals(
+            "--record google records google's replies: give --provider google, or leave --provider out",
+            mismatch.message,
+        )
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "anthropic,google")) }
+        // Outside record, --record is ignored, as before.
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("live", "--record", "google")).provider)
         assertEquals("google", Options.nameOf(ProviderId.GOOGLE))
     }
 

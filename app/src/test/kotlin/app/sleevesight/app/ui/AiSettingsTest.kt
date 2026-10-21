@@ -6,7 +6,9 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -92,6 +94,15 @@ class AiSettingsTest {
 
     /** A string that names the provider, for Google. */
     private fun google(id: Int) = app.getString(id, text(R.string.settings_ai_provider_google))
+
+    /** The effort row titled [title] showing the level [level]: one row, whatever the others show. */
+    private fun effortRow(
+        title: String,
+        level: Int,
+    ) = hasText(title) and hasText(text(level))
+
+    /** The text [id] in the open dialog, apart from the rows behind it. */
+    private fun inDialog(id: Int) = hasText(text(id)) and hasAnyAncestor(isDialog())
 
     /** The model row's value, and the dialog's option, for Anthropic's default model. */
     private fun anthropicDefault() =
@@ -202,7 +213,10 @@ class AiSettingsTest {
             anthropic.assertIsOff()
             // Off, its choices are shown and kept.
             compose.onNodeWithText("claude-opus-5-5").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).performScrollTo().assertIsDisplayed()
+            compose
+                .onNode(effortRow(anthropic(R.string.settings_ai_effort_of), R.string.settings_effort_high))
+                .performScrollTo()
+                .assertIsDisplayed()
             assertTrue(absent(R.string.settings_ai_provider_needs_key))
 
             anthropic.performClick()
@@ -257,14 +271,18 @@ class AiSettingsTest {
     @Test
     fun anEffortIsChosenFromTheProvidersOwnScale() =
         show {
-            compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
-            // Anthropic's levels (low, its default, is also the value of its row and of Google's),
-            // and the service's own default.
-            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(3)
-            assertTrue(absent(R.string.settings_effort_minimal))
-            compose.onNodeWithText(text(R.string.settings_effort_medium)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_provider_default)).performClick()
+            // Low, Anthropic's default, is its row's value.
+            val row = anthropic(R.string.settings_ai_effort_of)
+            compose.onNode(effortRow(row, R.string.settings_effort_low)).assertExists()
+            compose.onNodeWithText(row).performScrollTo().performClick()
+            // Anthropic's levels, without minimal, and the service's own default.
+            val levels =
+                listOf(R.string.settings_effort_low, R.string.settings_effort_medium, R.string.settings_effort_high)
+            for (level in levels) {
+                compose.onNode(inDialog(level)).assertIsDisplayed()
+            }
+            assertTrue(compose.onAllNodes(inDialog(R.string.settings_effort_minimal)).fetchSemanticsNodes().isEmpty())
+            compose.onNode(inDialog(R.string.settings_effort_provider_default)).performClick()
             waitFor("the provider's default stored") {
                 ProviderId.ANTHROPIC in current().aiEfforts && current().effort(ProviderId.ANTHROPIC) == null
             }
@@ -280,7 +298,7 @@ class AiSettingsTest {
             compose.onNodeWithText(google(R.string.settings_ai_effort_of)).performScrollTo().performClick()
             compose.onAllNodesWithText(google(R.string.settings_ai_effort_of)).assertCountEquals(2)
             // Google's levels, minimal among them, which Anthropic's scale does not have.
-            compose.onNodeWithText(text(R.string.settings_effort_minimal)).performClick()
+            compose.onNode(inDialog(R.string.settings_effort_minimal)).performClick()
             waitFor("Google's minimal stored") { current().effort(ProviderId.GOOGLE) == ReasoningEffort.MINIMAL }
             assertEquals(ReasoningEffort.LOW, current().effort(ProviderId.ANTHROPIC))
         }

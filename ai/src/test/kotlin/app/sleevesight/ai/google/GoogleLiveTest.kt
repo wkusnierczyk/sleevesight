@@ -36,7 +36,8 @@ class GoogleLiveTest {
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 assertTrue(models.any { it.id == model }, "the default model $model is not listed")
                 val request =
-                    CompletionRequest(model, "Say hello in three words.", maxTokens = 256, effort = settings.effort)
+                    // The default bound: it counts the thinking tokens too, which a small one could spend.
+                    CompletionRequest(model, "Say hello in three words.", effort = settings.effort)
                 val events = provider.stream(request, secret).toList()
                 assertIs<CompletionEvent.Done>(events.last(), events.last().toString())
                 assertTrue(events.filterIsInstance<CompletionEvent.Delta>().joinToString("") { it.text }.isNotBlank())

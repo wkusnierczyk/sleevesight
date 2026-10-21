@@ -64,7 +64,8 @@ data class Options(
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
                                   .dev/cli/cache.db for live; none for record)
-              --provider <name>   the AI service: anthropic or google (default: anthropic)
+              --provider <name>   the AI service: anthropic or google (default: the one --record
+                                  names, else anthropic)
               --model <id>        the provider's model (default: the app's default for it)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
@@ -107,23 +108,42 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
-            val provider =
-                values["--provider"]?.let { name ->
-                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
-                }
+            val provider = provider(values["--provider"], if (mode == Mode.RECORD) record else emptySet())
             return Options(
                 mode = mode,
                 tracks = tracks(values["--tracks"] ?: "regression"),
                 fixtures = File(values["--fixtures"] ?: "fixtures"),
                 out = values["--out"]?.let(::File),
                 cache = if (mode == Mode.RECORD) CacheChoice.None else cache,
-                provider = provider ?: ProviderId.ANTHROPIC,
+                provider = provider,
                 model = values["--model"],
                 web = mode == Mode.LIVE && "--no-web" !in switches,
                 insights = "--no-insights" !in switches,
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
             )
+        }
+
+        /**
+         * The AI service: [given] (`--provider`), else the one [record] names, else Anthropic. A
+         * record run records the replies of the service it runs, so it names at most one, and
+         * `--provider` must agree with it.
+         */
+        private fun provider(
+            given: String?,
+            record: Set<String>,
+        ): ProviderId {
+            val chosen =
+                given?.let { name ->
+                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
+                }
+            val recorded = record.filter { it in PROVIDERS }
+            require(recorded.size <= 1) { "--record takes one AI service at a time, was ${recorded.joinToString()}" }
+            val service = recorded.singleOrNull()
+            require(given == null || service == null || given == service) {
+                "--record $service records $service's replies: give --provider $service, or leave --provider out"
+            }
+            return chosen ?: service?.let(PROVIDERS::getValue) ?: ProviderId.ANTHROPIC
         }
 
         private fun cacheChoice(

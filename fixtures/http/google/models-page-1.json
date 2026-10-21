@@ -56,6 +56,23 @@
    "topK": 64,
    "maxTemperature": 2,
    "thinking": false
+  },
+  {
+   "name": "models/gemini-3.1-flash-lite-image",
+   "version": "001",
+   "displayName": "Nano Banana 2 Lite",
+   "description": "Nano Banana 2 Lite.",
+   "inputTokenLimit": 1048576,
+   "outputTokenLimit": 65536,
+   "supportedGenerationMethods": [
+    "generateContent",
+    "countTokens"
+   ],
+   "temperature": 1,
+   "topP": 0.95,
+   "topK": 64,
+   "maxTemperature": 2,
+   "thinking": true
   }
  ],
  "nextPageToken": "Chxtb2RlbHMvZ2VtaW5pLWVtYmVkZGluZy0wMDE="

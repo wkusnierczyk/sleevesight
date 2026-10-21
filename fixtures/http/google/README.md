@@ -11,8 +11,8 @@ replaced by recordings from a live run with the developer's key, as `anthropic/`
 | File | Request | Built as |
 |---|---|---|
 | `stream-generate-content.sse` | `POST /v1/models/gemini-3.5-flash-lite:streamGenerateContent?alt=sse`, the prompt "Say hello in three words." | Three chunks, each a `GenerateContentResponse` with the usage so far; the last with `finishReason` `STOP`, the thinking tokens and a `thoughtSignature` on its part, as the thinking guide describes |
-| `models-page-1.json` | `GET /v1/models?pageSize=1000` | Two text models and an embedding model, with a `nextPageToken` |
-| `models-page-2.json` | `GET /v1/models?pageSize=1000&pageToken=…` | Two text models and a video model, without a `nextPageToken` |
+| `models-page-1.json` | `GET /v1/models?pageSize=1000` | Two text models, an embedding model and an image model that takes `generateContent`, with a `nextPageToken` |
+| `models-page-2.json` | `GET /v1/models?pageSize=1000&pageToken=…` | Two text models, a speech model that takes `generateContent` and a video model, without a `nextPageToken` |
 
 The ids are the models page's; the token counts, the page token, the response id and the signature
 are made up.

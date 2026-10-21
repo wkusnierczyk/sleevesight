@@ -35,19 +35,21 @@ import kotlin.time.Duration.Companion.minutes
  * with `alt=sse`, read as server-sent events; and the model list, `GET /v1/models`. The key goes in
  * `x-goog-api-key`, through `NetSecrets`, never in the URL, so it is never logged.
  *
- * `generateContent` rather than the newer Interactions API: the documentation calls the Interactions
- * API a beta whose schemas may change and recommends `generateContent` for stable deployments, and
- * the Interactions API stores each interaction on Google's side unless asked not to. The `v1`
- * routes rather than `v1beta`: `v1` is the stable version, and has the thinking control and the
- * model list. Not Vertex AI, which needs a Google Cloud project with OAuth or a service account
+ * `generateContent` rather than the newer Interactions API, which Google recommends for new
+ * projects: the Interactions API stores each exchange on Google's side unless `store=false` is
+ * sent (55 days on the paid tier, a day on the free one), while `generateContent` keeps nothing,
+ * and Google calls it legacy but fully supported. A move to the Interactions API may come later.
+ * The `v1` routes rather than `v1beta`: `v1` is the stable version, and has the thinking control
+ * and the model list. Not Vertex AI, which needs a Google Cloud project with OAuth or a service account
  * rather than a key the user pastes.
  *
  * [CompletionRequest.effort] becomes `generationConfig.thinkingConfig.thinkingLevel` (`minimal`,
  * `low`, `medium`, `high`; [thinkingLevel]) for a model that takes it ([takesThinkingLevel]): a
  * model that does not take `minimal` ([takesMinimal]) gets `low`, the least it takes, and any other
  * model (the Gemini 2.5 models, which take a token budget instead, and names this client cannot
- * read) gets none, and reasons as its default says. Thoughts are not asked for (`includeThoughts`),
- * and a thought part that comes all the same is skipped.
+ * read, such as the `-latest` aliases, whose version is not in the id) gets none, and reasons as
+ * its default says: for those, the effort chosen in the settings has no effect. Thoughts are not
+ * asked for (`includeThoughts`), and a thought part that comes all the same is skipped.
  *
  * The stream's text becomes [CompletionEvent.Delta]s, and its end [CompletionEvent.Done], with the
  * usage and the stop reason, or [CompletionEvent.Error] ([ContentStream]). The request is a `POST`,
@@ -207,7 +209,10 @@ class GoogleProvider(
          * Whether [model] takes `thinkingLevel`: a Gemini model of version 3 or later (`gemini-3…`,
          * `gemini-3.5-…`, `gemini-4-…`). The guide says Gemini 4 requires it and Gemini 3 is meant
          * to use it, while the 2.5 models refuse it and take `thinkingBudget` instead. The model
-         * list carries no thinking levels to ask instead ([ModelInfo]).
+         * list carries no thinking levels to ask instead ([ModelInfo]). An alias without a version
+         * (`gemini-flash-latest`) is not known to take it, so it gets none: the aliases stay in the
+         * list, since they are the user's to choose, and a level sent to the wrong model is an error
+         * on every card while a level not sent only leaves the model's default.
          */
         fun takesThinkingLevel(model: String): Boolean =
             GEMINI_VERSION
@@ -253,13 +258,26 @@ class GoogleProvider(
         /** The method a model must support to write a card. */
         private const val GENERATE_CONTENT = "generateContent"
 
+        /**
+         * Id segments of the models that take `generateContent` but do not answer a text prompt
+         * with text, from the Gemini API's models page on 2026-10-21: image generation (`-image`,
+         * and Nano Banana's `banana`), speech (`-tts`, `-audio`), the Live API (`-live`), and
+         * transcription (`-transcribe`). Chosen for a card, each would fail every request.
+         */
+        val NON_TEXT_SEGMENTS: Set<String> = setOf("image", "tts", "audio", "live", "transcribe", "banana")
+
+        /** Whether [id] is a model that writes text from a text prompt, as far as its id tells. */
+        fun writesText(id: String): Boolean = id.split('-').none { it in NON_TEXT_SEGMENTS }
+
         private fun secrets(key: Secret) = NetSecrets(headers = mapOf("x-goog-api-key" to key.reveal()))
 
-        // Only the models that write text through `generateContent`: the list also holds embedding,
-        // image and video models, which cannot.
+        // Only the models that write text through `generateContent`: the list also holds embedding
+        // and video models, which do not take it, and image, speech and live models, which take it
+        // but answer otherwise ([NON_TEXT_SEGMENTS]).
         private fun modelInfo(model: WireModel): ModelInfo? {
             val id = model.name.removePrefix(MODEL_PREFIX)
-            return if (GENERATE_CONTENT in model.supportedGenerationMethods && MODEL_ID.matches(id)) {
+            val usable = GENERATE_CONTENT in model.supportedGenerationMethods && MODEL_ID.matches(id)
+            return if (usable && writesText(id)) {
                 ModelInfo(id = id, displayName = model.displayName?.takeIf { it.isNotBlank() } ?: id, createdAt = null)
             } else {
                 null
@@ -294,12 +312,17 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
  * The kind of an error Google names, or null for one this client does not know. A key that is not
  * valid comes as `400 INVALID_ARGUMENT` with the reason `API_KEY_INVALID`, so the reason is read
  * first. `FAILED_PRECONDITION` is, as the error reference gives it, a project with no billing in a
- * country without the free tier; `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402, and a rate
- * limit otherwise.
+ * country without the free tier, which billing mends; the API also sends it for a country where it
+ * is not offered at all ("User location is not supported"), which billing does not, so that one,
+ * told apart by its message (no reason in `details` names it), is the key not being allowed this.
+ * `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402, and a rate limit otherwise.
  */
 internal fun kindOf(error: WireError): AiErrorKind? =
     when {
         error.details.any { it.reason?.startsWith(API_KEY_REASON) == true } -> AiErrorKind.UNAUTHORIZED
+        error.status == "FAILED_PRECONDITION" && error.message?.contains(LOCATION, ignoreCase = true) == true -> {
+            AiErrorKind.UNAUTHORIZED
+        }
         error.status == "RESOURCE_EXHAUSTED" && error.code == PAYMENT_REQUIRED -> AiErrorKind.BILLING
         else -> error.status?.let(::kindOfStatus)
     }
@@ -317,6 +340,7 @@ private fun kindOfStatus(status: String): AiErrorKind? =
     }
 
 private const val API_KEY_REASON = "API_KEY_"
+private const val LOCATION = "location is not supported"
 private const val BAD_REQUEST = 400
 private const val PAYMENT_REQUIRED = 402
 private const val NOT_FOUND = 404
