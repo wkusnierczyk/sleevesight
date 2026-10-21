@@ -110,8 +110,9 @@ internal data class Judgement(
  * sent and the MusicBrainz id: in [artists], the artist cache ([OWNERSHIP_PART], #114, #238), for
  * MusicBrainz's lifetime (D9), so a restart, or a new adapter, does not search again, and a
  * judgement resting on a kept verdict says when it stops being fresh ([Judgement.freshUntil]).
- * With no artist cache ([ArtistResults.None]: the CLI without a cache, tests), in memory instead,
- * for the most recent [VERDICTS]; never both, so a verdict is not kept in memory past its lifetime.
+ * With no artist cache (one that does not persist, [ArtistResults.persists]: the CLI without a
+ * cache, tests), in memory instead, for the most recent [VERDICTS]; never both, so a verdict is
+ * not kept in memory past its lifetime.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
@@ -211,7 +212,7 @@ internal class ArtistCheck(
         val nameKey = key(name)
         return when {
             nameKey.isEmpty() -> Verdict(Ownership.UNKNOWN)
-            artists == ArtistResults.None -> remembered(mbid, name, nameKey)
+            !artists.persists -> remembered(mbid, name, nameKey)
             else -> storedOrSearched(mbid, name, nameKey)
         }
     }

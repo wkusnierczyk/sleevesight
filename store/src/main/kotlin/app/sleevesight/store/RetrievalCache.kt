@@ -88,10 +88,12 @@ class RetrievalCache internal constructor(
      * asked, [SourceAdapter.consults]: a rejection by Wikidata's identity check has no Wikidata line
      * but depends on Wikidata) and the sources of its lines. A result built from artist-level parts
      * kept from an earlier track ([SourceResult.freshUntil], #238) is stored as if made early enough
-     * to stop being fresh when the first of them does, so a reused part is not served past its own
-     * lifetime. Returns whether it was kept: not when one of them has no lifetime, nor for an
-     * [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is larger than the limit, nor
-     * when a reused part is no longer fresh.
+     * to stop being fresh when the first of them does: it is never served past the parts' lifetimes
+     * in force when it was kept. A later shortening of a part's source lifetime takes effect on the
+     * part in the artist cache at once, and on such an entry within the entry's own lifetime, which
+     * is read at each read as for any entry. Returns whether it was kept: not when one of them has
+     * no lifetime, nor for an [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is
+     * larger than the limit, nor when a reused part is no longer fresh.
      */
     fun put(
         source: SourceId,
@@ -145,6 +147,9 @@ class RetrievalCache internal constructor(
      * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
      * recording by its length, so the same song at another length may resolve to another recording.
      * Each part is prefixed with its length, so no two different combinations of parts encode alike.
+     * The folding deliberately takes spellings that fold alike (an accent or none, `M.I.A.` and
+     * `MIA`) as one track: with the title, every credited artist, the work and the length to the
+     * second all equal after folding, it is almost always the same recording.
      */
     fun keyOf(
         track: NormalizedTrack,

@@ -128,6 +128,16 @@ class MusicBrainzLabelsTest {
         }
 
     @Test
+    fun `with a cache that keeps nothing, wrapped, a second track still asks nothing`() =
+        runTest {
+            val labels = labels(kept = object : ArtistResults by ArtistResults.None {})
+            labels.labels(listOf("mb-a"))
+            labels.labels(listOf("mb-a"))
+
+            assertEquals(listOf("mb-a"), asked, "the tags are kept in memory instead")
+        }
+
+    @Test
     fun `tags in the artist cache that cannot be read are asked for again`() =
         runTest {
             val kept = MemoryArtistResults()

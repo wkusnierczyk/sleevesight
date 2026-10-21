@@ -2,10 +2,13 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.testing.MemoryArtistResults
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CountedArtistResultsTest {
     private val lastFm = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
@@ -31,4 +34,10 @@ class CountedArtistResultsTest {
             )
             assertEquals("Artist cache: not read.", Report.artistCacheLine(emptyList()))
         }
+
+    @Test
+    fun `it keeps only what its cache keeps, so without one the adapters keep their own in memory`() {
+        assertTrue(CountedArtistResults(MemoryArtistResults()).persists)
+        assertFalse(CountedArtistResults(ArtistResults.None).persists)
+    }
 }

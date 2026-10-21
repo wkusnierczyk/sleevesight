@@ -24,6 +24,13 @@ import kotlin.time.Instant
  * keeps them no longer than that.
  */
 interface ArtistResults {
+    /**
+     * Whether this keeps anything: false for [None], and for a wrapper of it. A caller that would
+     * otherwise keep values in memory does so only when this is false, so a value is kept in one
+     * place, never in memory past its lifetime here.
+     */
+    val persists: Boolean get() = true
+
     /** The value kept for [key] under [part], if kept under [part]'s version and within its lifetime. */
     suspend fun get(
         part: ArtistPart,
@@ -39,6 +46,8 @@ interface ArtistResults {
 
     /** Keeps nothing: every lookup asks afresh. */
     object None : ArtistResults {
+        override val persists: Boolean = false
+
         override suspend fun get(
             part: ArtistPart,
             key: String,

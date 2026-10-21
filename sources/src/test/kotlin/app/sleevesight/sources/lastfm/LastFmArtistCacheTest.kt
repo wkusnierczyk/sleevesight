@@ -209,6 +209,20 @@ class LastFmArtistCacheTest {
         }
 
     @Test
+    fun `with a cache that keeps nothing, wrapped as the CLI wraps it, two tracks send one search`() =
+        runTest {
+            // The CLI's counting wrapper around no cache (`record`, `--cache none`) keeps nothing too.
+            val wrapped = object : ArtistResults by ArtistResults.None {}
+            val search = GordonSearch()
+            val adapter = adapter(search = search, kept = wrapped)
+            adapter.lookup(sundown, resolved())
+            adapter.lookup(carefree, resolved())
+
+            assertFalse(wrapped.persists)
+            assertEquals(1, search.searches, "the verdict is kept in memory instead")
+        }
+
+    @Test
     fun `the kept parts' versions follow the adapter's extraction version`() {
         assertEquals(LastFmAdapter.EXTRACTION_VERSION, LastFmAdapter.ARTIST_PART.extraction)
         assertEquals(LastFmAdapter.EXTRACTION_VERSION, ArtistCheck.OWNERSHIP_PART.extraction)

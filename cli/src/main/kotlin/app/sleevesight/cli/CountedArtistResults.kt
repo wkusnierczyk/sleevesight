@@ -18,6 +18,9 @@ class CountedArtistResults(
     private val hits = ConcurrentHashMap<String, AtomicInteger>()
     private val misses = ConcurrentHashMap<String, AtomicInteger>()
 
+    // Without a cache it keeps nothing, so the adapters keep their verdicts and tags in memory.
+    override val persists: Boolean get() = delegate.persists
+
     override suspend fun get(
         part: ArtistPart,
         key: String,

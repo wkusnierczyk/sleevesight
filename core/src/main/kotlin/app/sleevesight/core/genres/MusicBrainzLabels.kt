@@ -33,13 +33,13 @@ fun interface ArtistTags {
  *
  * Tags are artist-level, so an artist's are kept by MusicBrainz id: a second track by the same
  * artist asks nothing. In [artists], the artist cache (#238, [PART]), for MusicBrainz's lifetime
- * (D9), so they are not asked again after a restart either. With no artist cache
- * ([ArtistResults.None]: the CLI without a cache, tests), in memory instead, for [lifetime], at
- * most [capacity] artists, the least recently used dropped first; never both, so tags are not kept
- * in memory past the cache's lifetime. A failed request is
- * not kept, so the next track by the artist asks again, and gives that artist no labels meanwhile;
- * nothing else follows from it, since the labels are no evidence. An artist MusicBrainz does not
- * know is kept as having no tags.
+ * (D9), so they are not asked again after a restart either. With no artist cache (one that does
+ * not persist, [ArtistResults.persists]: the CLI without a cache, tests), in memory instead, for
+ * [lifetime], at most [capacity] artists, the least recently used dropped first; never both, so
+ * tags are not kept in memory past the cache's lifetime. A failed request is not kept, so the next
+ * track by the artist asks again, and gives that artist no labels meanwhile; nothing else follows
+ * from it, since the labels are no evidence. An artist MusicBrainz does not know is kept as having
+ * no tags.
  */
 class MusicBrainzLabels(
     private val tags: ArtistTags,
@@ -69,7 +69,7 @@ class MusicBrainzLabels(
 
     // The artist's tags, kept or asked for; null when the request failed.
     private suspend fun tagsOf(mbid: String): List<String>? =
-        if (artists == ArtistResults.None) cached(mbid) ?: asked(mbid) else stored(mbid) ?: asked(mbid)
+        if (artists.persists) stored(mbid) ?: asked(mbid) else cached(mbid) ?: asked(mbid)
 
     // The tags MusicBrainz gives, kept; null when the request failed.
     private suspend fun asked(mbid: String): List<String>? =
@@ -94,10 +94,10 @@ class MusicBrainzLabels(
         mbid: String,
         found: List<String>,
     ) {
-        if (artists == ArtistResults.None) {
-            keep(mbid, found)
-        } else {
+        if (artists.persists) {
             artists.keep(PART, mbid, json.encodeToString(TAGS, found))
+        } else {
+            keep(mbid, found)
         }
     }
 
