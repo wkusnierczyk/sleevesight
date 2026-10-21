@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
@@ -60,6 +61,15 @@ import app.sleevesight.core.pipeline.TrackState
  * of two columns (#270): the tags right-aligned in the first, as wide as the widest, so every
  * line's text starts at the same place.
  *
+ * The list is folded ([fold], #269): it starts folded, the heading and the chips showing and
+ * *show* under them, and unfolds a screenful ([Fold.PAGE] lines) at a time, *more* and *show all*
+ * under it while lines remain, *less* back to the first screenful once past it, and *hide* above
+ * it and under it, so folding it is never a scroll away. The unverified lines and the rejected
+ * matches are part of the list, after the evidence lines, under their own headings. While the
+ * list is folded, a chip unfolds it to its source's first line rather than hiding its lines, and
+ * a citation tapped unfolds it to the line cited ([LineFocus.cite]). Each control is a button a
+ * screen reader names in words, and the list says how much of it shows.
+ *
  * When the insight shown is the one written earlier ([cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
  * a rewrite failed, or neither), the lines are those it cites, found when it was written, beside
@@ -67,18 +77,25 @@ import app.sleevesight.core.pipeline.TrackState
  * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
  * sources are asked again once it is back online.
  */
+@Suppress("LongParameterList") // What the section shows, and the two states it is unfolded by.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SourcesSection(
     track: TrackState?,
     chips: List<SourceChip>,
     focus: LineFocus,
+    fold: SourcesFold,
     cardKept: Boolean,
     offline: Boolean = false,
 ) {
     val hidden = focus.hidden
+    val folded = fold.fold == Fold.Folded
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.home_sources_title), style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(R.string.home_sources_title),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.semantics { heading() },
+        )
         val lines = track?.evidence?.lines.orEmpty()
         val unverified = track?.let(::unverifiedLines).orEmpty()
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
@@ -90,24 +107,79 @@ internal fun SourcesSection(
         ) {
             for (chip in chips) {
                 val filters = lines.any { it.source in chip.filters }
-                StatusChip(chip, filtering = filters, shown = chip.filters.none { it in hidden }) { focus.toggle(chip) }
+                val shown = chip.filters.none { it in hidden }
+                StatusChip(chip, filtering = filters, shown = shown, folded = folded) {
+                    if (folded) focus.reveal(chip)?.let(fold::reach) else focus.toggle(chip)
+                }
             }
         }
         if (offline) Small(stringResource(R.string.home_sources_offline))
-        if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        when {
-            lines.isNotEmpty() -> {
-                for (line in lines) {
-                    if (line.source !in hidden) {
-                        EvidenceRow(line, tagWidth, focus.flash?.id == line.id, focus.requesters[line.id])
-                    }
-                }
-            }
-            track?.gathered == true -> Small(stringResource(R.string.home_evidence_empty))
-            else -> Small(stringResource(R.string.home_evidence_looking))
+        if (lines.isEmpty()) {
+            val empty = if (track?.gathered == true) R.string.home_evidence_empty else R.string.home_evidence_looking
+            Small(stringResource(empty))
         }
-        Unverified(unverified, tagWidth)
-        track?.let { Rejected(rejectedMatches(it)) }
+        val entries =
+            lines.filter { it.source !in hidden }.map(Entry::Line) +
+                unverified.map(Entry::Unverified) +
+                track?.let(::rejectedMatches).orEmpty().map(Entry::Rejected)
+        if (entries.isEmpty()) return@Column
+        val total = entries.size
+        val shown = fold.fold.shown(total)
+        FoldStatus(fold, shown, total)
+        if (shown == 0) return@Column
+        if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
+        Entries(entries.take(shown), tagWidth, focus)
+        FoldControls(fold, shown, total)
+    }
+}
+
+/** A row of the list: an evidence line, a line not verified, or a match rejected. */
+private sealed interface Entry {
+    class Line(
+        val line: EvidenceLine,
+    ) : Entry
+
+    class Unverified(
+        val line: EvidenceDraft,
+    ) : Entry
+
+    class Rejected(
+        val match: RejectedMatch,
+    ) : Entry
+}
+
+/** [entries], the unverified lines and the rejected matches each under their heading. */
+@Composable
+private fun Entries(
+    entries: List<Entry>,
+    tagWidth: Dp,
+    focus: LineFocus,
+) {
+    var previous: Entry? = null
+    for (entry in entries) {
+        when (entry) {
+            is Entry.Line -> {
+                val line = entry.line
+                val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
+                EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
+            }
+
+            is Entry.Unverified -> {
+                if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
+                UnverifiedRow(entry.line, tagWidth)
+            }
+
+            is Entry.Rejected -> {
+                if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
+                val match = entry.match
+                val name = sourceName(match.source)
+                Small(
+                    match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, match.reason) }
+                        ?: stringResource(R.string.home_rejected, name, match.reason),
+                )
+            }
+        }
+        previous = entry
     }
 }
 
@@ -123,11 +195,16 @@ internal fun offlineShown(
     view.offline &&
         track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
 
+/**
+ * A source's chip: its tag and state. One whose source has lines ([filtering]) shows or hides them
+ * ([shown]); while the list is [folded], it unfolds the list to them instead, a button then.
+ */
 @Composable
 private fun StatusChip(
     chip: SourceChip,
     filtering: Boolean,
     shown: Boolean,
+    folded: Boolean,
     onToggle: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -135,17 +212,28 @@ private fun StatusChip(
     val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
     val shape = RoundedCornerShape(8.dp)
     // The chip's own text is what it says; the filter is its action and its state.
-    val action = stringResource(R.string.home_source_filter, sourceName(chip.source))
+    val name = sourceName(chip.source)
+    val action = stringResource(if (folded) R.string.home_source_reveal else R.string.home_source_filter, name)
     val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
     val toggle =
-        if (filtering) {
-            Modifier
-                .semantics {
-                    stateDescription = state
-                    toggleableState = ToggleableState(shown)
-                }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
-        } else {
-            Modifier
+        when {
+            !filtering -> {
+                Modifier
+            }
+
+            folded -> {
+                Modifier
+                    .semantics { stateDescription = state }
+                    .clickable(onClickLabel = action, role = Role.Button, onClick = onToggle)
+            }
+
+            else -> {
+                Modifier
+                    .semantics {
+                        stateDescription = state
+                        toggleableState = ToggleableState(shown)
+                    }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
+            }
         }
     Text(
         label,
@@ -258,34 +346,18 @@ private fun Where(
     Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
+/** A line of a match that could not be verified: shown, never cited. */
 @Composable
-private fun Unverified(
-    lines: List<EvidenceDraft>,
+private fun UnverifiedRow(
+    line: EvidenceDraft,
     tagWidth: Dp,
 ) {
-    if (lines.isEmpty()) return
-    Small(stringResource(R.string.home_unverified))
-    for (line in lines) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(4.dp)) {
-            Tag(line.source.tag, tagWidth)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(line.text, style = MaterialTheme.typography.bodySmall)
-                Where(line.scope, line.url)
-            }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(4.dp)) {
+        Tag(line.source.tag, tagWidth)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(line.text, style = MaterialTheme.typography.bodySmall)
+            Where(line.scope, line.url)
         }
-    }
-}
-
-@Composable
-private fun Rejected(matches: List<RejectedMatch>) {
-    if (matches.isEmpty()) return
-    Small(stringResource(R.string.home_rejected_title))
-    for (match in matches) {
-        val name = sourceName(match.source)
-        val text =
-            match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, match.reason) }
-                ?: stringResource(R.string.home_rejected, name, match.reason)
-        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

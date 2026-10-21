@@ -54,6 +54,12 @@ import kotlin.time.Duration.Companion.seconds
  *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
+ * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
+ *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
+ *   lines. Off by default: each new track's list starts folded, as the first one did, since a
+ *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
+ *   nothing about the next. On, a list unfolded past its first screenful comes back at its first
+ *   screenful. Kept while the app's screen is (a rotation included), not across a fresh start.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  */
@@ -77,6 +83,7 @@ data class Settings(
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
+    val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
 ) {
     init {
