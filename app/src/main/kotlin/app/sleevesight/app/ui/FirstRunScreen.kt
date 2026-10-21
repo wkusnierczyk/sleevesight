@@ -27,12 +27,14 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.SleevesightTheme
 
 /**
- * What Sleevesight reads, what leaves the phone and to whom (design, *Privacy and security*), and
- * the way to notification access. [openAccessSettings] returns false when no settings screen for
- * it could be opened.
+ * What Sleevesight reads, what leaves the phone and to whom (design, *Privacy and security*), the
+ * way to notification access, and, last, the link to the privacy policy on the site, which says
+ * more, with where the app stands under the GDPR and the EU AI Act (#295). [openAccessSettings]
+ * returns false when no settings screen for it could be opened.
  *
- * It opens at the top in touch mode. Out of touch mode (a keyboard or a D-pad), its one button
- * takes focus as it opens and is scrolled into view, so the focus shows.
+ * It opens at the top in touch mode. Out of touch mode (a keyboard or a D-pad), its one button,
+ * which comes before the link, takes focus as it opens and is scrolled into view, so the focus
+ * shows.
  */
 @Composable
 fun FirstRunScreen(
@@ -89,6 +91,9 @@ fun FirstRunScreen(
                     )
                 }
             }
+
+            Body(R.string.first_run_privacy)
+            PrivacyPolicyLink()
         }
     }
 }
