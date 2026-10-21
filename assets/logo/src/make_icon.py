@@ -17,7 +17,8 @@ Usage, from the repository root:
 
 `--label plain` draws the label without its marks (as the favicon does), for a later comparison of
 the two, such as a store listing experiment; `--out` writes every file under another directory, at
-the same relative paths, leaving the committed ones as they are. Needs `rsvg-convert` (librsvg;
+the same relative paths, leaving the committed ones as they are (with `--label plain` it must name
+one, so the variant never overwrites the icon in use). Needs `rsvg-convert` (librsvg;
 2.61.4) and ImageMagick 7 (`magick`; 7.1.2), both from Homebrew on a Mac (`brew install librsvg
 imagemagick`). Another version of the renderer may give a slightly different PNG.
 
@@ -25,7 +26,8 @@ The drawing is read from `design/brand.html`, as make_feature_graphic.py reads i
 `<symbol id="lp">` (the rim, the black core, the groove, the label, the label's two marks and the
 spindle hole, in a 16-unit box at 8..24), in the light colourway, `.lt` (`--rim`, `--core` and
 `--groove`), and the ground is that colourway's `--tile-bg`. The script stops if any of it is
-missing, or if the symbol holds anything it does not know. The ground is one colour, not one for
+missing, or if the symbol holds an element or an attribute it does not know. Run it again after a
+change to the record or to those colours. The ground is one colour, not one for
 light and one for dark: launchers draw an app's icon the same way whatever the system's theme
 (themed icons apart), and the dark record on white stands out on a light wallpaper and a dark one
 alike.
@@ -87,6 +89,28 @@ def need(var, *names):
     return [var[name] for name in names]
 
 
+# Each part's attributes, the style apart (the rim's `fill` comes from its style): any other attribute,
+# such as an opacity, would change the drawing in a way the script does not carry over.
+ATTRIBUTES = {
+    'rim': {'cx', 'cy', 'r', 'fill'},
+    'core': {'cx', 'cy', 'r', 'fill'},
+    'groove': {'cx', 'cy', 'r', 'fill', 'stroke', 'stroke-width'},
+    'label or hole': {'cx', 'cy', 'r', 'fill'},
+    'mark': {'d', 'fill', 'stroke', 'stroke-width', 'stroke-linecap'},
+}
+
+
+def check(role, attrs):
+    """Exits when a part of the record has an attribute more or fewer than the script knows for it."""
+    extra, missing = set(attrs) - ATTRIBUTES[role], ATTRIBUTES[role] - set(attrs)
+    if extra or missing:
+        sys.exit(f'design/brand.html: <symbol id="lp">: the {role} has '
+                 + '; '.join(part for part in (
+                     extra and 'attributes the script does not know: ' + ', '.join(sorted(extra)),
+                     missing and 'no ' + ', '.join(sorted(missing))) if part)
+                 + '; the script needs updating for it')
+
+
 def parts(body, var):
     """The record's parts by role, each a dict of its attributes with `var(--x)` filled in from `.lt`:
     rim, groove, label, hole, and marks (a list). The core is dropped, as `.lt` hides it."""
@@ -103,9 +127,12 @@ def parts(body, var):
         style = attrs.pop('style', None)
         if style:
             m = re.fullmatch(r'(fill|display):var\(--(rim|core|groove)\)', style)
-            if not m or (m.group(1) == 'fill') != (m.group(2) == 'rim'):
-                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know: {style!r}')
+            if not m or (m.group(1) == 'fill') != (m.group(2) == 'rim') or tag != 'circle':
+                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know: {el[:60]!r}')
             prop, name = m.groups()
+            if prop == 'fill':
+                attrs['fill'] = '(--rim)'   # its attributes are checked first, its colour set below
+            check(name, attrs)
             value, = need(var, name)
             if prop == 'display' and value == 'none':
                 continue
@@ -113,8 +140,10 @@ def parts(body, var):
                 attrs['fill'] = value
             roles[name] = attrs
         elif tag == 'path' and attrs.get('fill') == 'none' and 'stroke' in attrs:
+            check('mark', attrs)
             roles['marks'].append(attrs)
         elif tag == 'circle' and 'fill' in attrs and 'stroke' not in attrs:
+            check('label or hole', attrs)
             circles.append(attrs)
         else:
             sys.exit(f'design/brand.html: <symbol id="lp">: an element the script does not know: {el[:60]!r}')
@@ -268,6 +297,9 @@ def main():
         roles['marks'] = []
     ground, = need(var, 'tile-bg')
     out = os.path.abspath(args.out)
+    if args.label == 'plain' and os.path.exists(out) and os.path.samefile(out, root):
+        sys.exit('--label plain writes the variant, not the icon in use: give --out <directory> other than '
+                 'the repository root; nothing written')
     files, svg, png = build(roles, ground, out)
     # Everything is made in a temporary directory and moved into place only once the PNG is done, so
     # a failed step leaves the files as they were.
