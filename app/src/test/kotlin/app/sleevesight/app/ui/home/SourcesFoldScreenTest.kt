@@ -550,7 +550,8 @@ class SourcesFoldScreenTest {
             tap(FOLD_SHOW_TAG)
             tap(CHIP_PREFIX + "W")
             tap(CHIP_PREFIX + "W")
-            compose.onNodeWithTag(LINE_PREFIX + "W1").assertExists()
+            // Unfolded to, and scrolled to: it is far below the chip tapped.
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
             assertEquals(23, linesShown())
         }
 
@@ -566,5 +567,34 @@ class SourcesFoldScreenTest {
             tap(FOLD_HIDE_TAG)
             assertEquals(setOf(FOLD_SHOW_TAG), controls())
             status(plural(R.plurals.home_sources_filtered, 3))
+            // *show* then shows the lines the chips hid, not an empty list.
+            tap(FOLD_SHOW_TAG)
+            assertEquals(3, linesShown())
+            compose
+                .onNodeWithTag(CHIP_PREFIX + "MB")
+                .assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.StateDescription,
+                        text(R.string.home_source_lines_shown),
+                    ),
+                )
         }
+
+    @Test
+    fun aTrackChangeWhileTheSettingsAreUnreadKeepsTheFoldTheyKeep() {
+        val keep = Settings(keepSourcesUnfolded = true)
+        show(state(long(20), keep)) { current ->
+            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
+            // Back from another screen: the settings not read yet, and the next track playing.
+            current.value =
+                state(long(20, playing = carefree)).let { NowPlayingState(it.view, it.playing, it.playback) }
+            compose.waitForIdle()
+            assertEquals(0, linesShown())
+            restore()
+            current.value = state(long(20, playing = carefree), keep)
+            compose.waitForIdle()
+            assertEquals(Fold.PAGE, linesShown())
+        }
+    }
 }

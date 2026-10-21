@@ -41,14 +41,23 @@ internal class LineFocus(
         evidence?.lines.orEmpty().associate { it.id to BringIntoViewRequester() }
 
     /**
-     * Hides [chip]'s lines, or shows them if any were hidden; on showing them, returns the first
-     * one's place in the list as it now shows, for the fold to unfold to, else null.
+     * Hides [chip]'s lines, or shows them if any were hidden; on showing them, scrolls to the
+     * first, unflashed, and returns its place in the list as it now shows, for the fold to unfold
+     * to, else null.
      */
     fun toggle(chip: SourceChip): Int? {
         val showing = chip.filters.any { it in hidden }
         hidden = if (showing) hidden - chip.filters else hidden + chip.filters
-        if (!showing) return null
-        return evidence?.lines?.firstOrNull { it.source in chip.filters }?.let { indexOf(it.id) }
+        val first = evidence?.lines?.firstOrNull { it.source in chip.filters }?.takeIf { showing }
+        return first?.let {
+            flash = Flash(it.id, ++taps, flashes = false)
+            indexOf(it.id)
+        }
+    }
+
+    /** Shows every source's lines: the chips hide none. */
+    fun showAll() {
+        hidden = emptySet()
     }
 
     /**

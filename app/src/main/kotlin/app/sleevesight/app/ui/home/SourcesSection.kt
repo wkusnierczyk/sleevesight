@@ -132,7 +132,7 @@ internal fun SourcesSection(
         if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size
         val shown = fold.fold.shown(total)
-        FoldStatus(fold, shown, total, filtered)
+        FoldStatus(fold, shown, total, filtered, focus::showAll)
         if (shown == 0) return@Column
         if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
         Entries(entries.take(shown), tagWidth, focus)

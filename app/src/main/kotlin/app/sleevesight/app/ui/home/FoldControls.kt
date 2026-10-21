@@ -28,9 +28,9 @@ import app.sleevesight.app.R
 /**
  * Above the list: *show* while it is folded, else *hide*; beside it, how much of the list shows
  * ([shown] of [total] entries), or, with every entry hidden by the chips, that they hide the
- * [filtered] lines. A screen reader announces it as it changes once the listener has changed the
- * fold on this track ([SourcesFold.announced]): not while sources land and the list grows by
- * itself, nor on each new track.
+ * [filtered] lines, which *show* then shows again ([showFiltered]). A screen reader announces it
+ * as it changes once the listener has changed the fold on this track ([SourcesFold.announced]):
+ * not while sources land and the list grows by itself, nor on each new track.
  */
 @Composable
 internal fun FoldStatus(
@@ -38,6 +38,7 @@ internal fun FoldStatus(
     shown: Int,
     total: Int,
     filtered: Int,
+    showFiltered: () -> Unit,
 ) {
     val folded = fold.fold == Fold.Folded
     val status =
@@ -51,6 +52,8 @@ internal fun FoldStatus(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (folded) {
             FoldButton(R.string.home_sources_show, R.string.home_sources_show_words, FOLD_SHOW_TAG) {
+                // Every entry hidden by the chips: *show* shows their lines, not an empty list.
+                if (total == 0) showFiltered()
                 fold.set(Fold.Pages(1))
             }
         } else {

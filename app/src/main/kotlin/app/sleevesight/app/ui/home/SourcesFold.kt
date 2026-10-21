@@ -147,14 +147,15 @@ internal class FoldMemory(
 /**
  * The fold of the list shown beside [playing]: as it is kept while [playing] plays on the track
  * last shown ([TrackIdentity.playsOn]); for a new track, folded, or with [keep] (*Keep Sources as
- * you left them*) as it was left ([Fold.forNextTrack]). Worked out as it is read, so a new track
- * never shows the last one's fold for a frame; [follow] then keeps it as the new track's, so a
- * track played again after others starts afresh too.
+ * you left them*) as it was left ([Fold.forNextTrack]); [keep] is null until the settings are
+ * read, and a new track shows folded until then. Worked out as it is read, so a new track never
+ * shows the last one's fold for a frame; [follow] then keeps it as the new track's, so a track
+ * played again after others starts afresh too.
  */
 internal class SourcesFold(
     private val memory: FoldMemory,
     private val playing: NowPlaying,
-    private val keep: Boolean,
+    private val keep: Boolean?,
 ) {
     val fold: Fold
         get() {
@@ -162,7 +163,7 @@ internal class SourcesFold(
             val track = memory.track
             return when {
                 track != null && TrackIdentity.playsOn(track, playing) -> set
-                keep -> set.forNextTrack()
+                keep == true -> set.forNextTrack()
                 else -> Fold.Folded
             }
         }
@@ -181,10 +182,13 @@ internal class SourcesFold(
     /** Unfolds far enough to show the line at [index] of the list as it shows. */
     fun reach(index: Int) = set(fold.reaching(index))
 
-    /** On a new track, keeps the fold it shows as its own, untouched. */
+    /**
+     * On a new track, keeps the fold it shows as its own, untouched; not until the settings are
+     * read ([keep] null), so a fold kept for the next track is not lost to the folded default.
+     */
     fun follow() {
         val track = memory.track
-        if (track != null && TrackIdentity.playsOn(track, playing)) return
+        if (keep == null || (track != null && TrackIdentity.playsOn(track, playing))) return
         memory.fold = fold
         memory.track = playing
         memory.touched = false
@@ -203,7 +207,7 @@ internal fun rememberFoldMemory(): FoldMemory = rememberSaveable(saver = FoldMem
 internal fun sourcesFold(
     memory: FoldMemory,
     playing: NowPlaying,
-    keep: Boolean,
+    keep: Boolean?,
 ): SourcesFold {
     val fold = SourcesFold(memory, playing, keep)
     SideEffect { fold.follow() }

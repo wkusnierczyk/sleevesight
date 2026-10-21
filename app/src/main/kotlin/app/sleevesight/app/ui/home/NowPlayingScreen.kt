@@ -121,7 +121,7 @@ internal fun NowPlayingContent(
     val settings = state.settings
     val modelAllowed = settings?.isEnabled(SourceId.MODEL) == true
     val focus = rememberLineFocus(track?.evidence)
-    val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded == true)
+    val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded)
     // A citation tapped unfolds the list far enough to show its line.
     val cite: (String) -> Unit = { id -> focus.cite(id)?.let(fold::reach) }
     val insight =
