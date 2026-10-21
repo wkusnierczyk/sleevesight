@@ -26,7 +26,7 @@ The drawing is read from `design/brand.html`, as make_feature_graphic.py reads i
 `<symbol id="lp">` (the rim, the black core, the groove, the label, the label's two marks and the
 spindle hole, in a 16-unit box at 8..24), in the light colourway, `.lt` (`--rim`, `--core` and
 `--groove`), and the ground is that colourway's `--tile-bg`. The script stops if any of it is
-missing, or if the symbol holds an element or an attribute it does not know. Run it again after a
+missing, or if the symbol, read as XML, holds an element or an attribute it does not know. Run it again after a
 change to the record or to those colours. The ground is one colour, not one for
 light and one for dark: launchers draw an app's icon the same way whatever the system's theme
 (themed icons apart), and the dark record on white stands out on a light wallpaper and a dark one
@@ -53,6 +53,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from xml.etree import ElementTree
 
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.normpath(os.path.join(here, '..', '..', '..'))
@@ -72,14 +73,19 @@ def css_vars(text):
 
 
 def brand_sheet():
-    """From `design/brand.html`: the body of <symbol id="lp"> and the `.lt` colourway's variables."""
+    """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, and the `.lt` colourway's
+    variables."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
-    sym = re.search(r'<symbol id="lp" viewBox="8 8 16 16">(.*?)</symbol>', page, re.S)
+    sym = re.search(r'<symbol\b[^>]*\bid="lp".*?</symbol>', page, re.S)
     lt = re.search(r'^\.lt\{(.*?)\}', page, re.S | re.M)
     if not sym or not lt:
         sys.exit('design/brand.html: no ' + ' and no '.join(
-            what for what, m in (('<symbol id="lp" viewBox="8 8 16 16">', sym), ('.lt rule', lt)) if not m))
-    return sym.group(1), css_vars(lt.group(1))
+            what for what, m in (('<symbol id="lp">', sym), ('.lt rule', lt)) if not m))
+    try:
+        symbol = ElementTree.fromstring(sym.group(0))
+    except ElementTree.ParseError as e:
+        sys.exit(f'design/brand.html: <symbol id="lp"> is not well-formed XML ({e}); the script reads it as XML')
+    return symbol, css_vars(lt.group(1))
 
 
 def need(var, *names):
@@ -111,28 +117,34 @@ def check(role, attrs):
                  + '; the script needs updating for it')
 
 
-def parts(body, var):
+def parts(symbol, var):
     """The record's parts by role, each a dict of its attributes with `var(--x)` filled in from `.lt`:
     rim, groove, label, hole, and marks (a list). The core is dropped, as `.lt` hides it."""
-    elements = re.findall(r'<[^<>]+/>', body)
-    other = re.sub(r'<[^<>]+/>', '', body).strip()
-    if len(elements) != RECORD_ELEMENTS or other:
-        sys.exit(f'design/brand.html: <symbol id="lp"> should hold {RECORD_ELEMENTS} self-closing elements '
-                 f'and nothing else; it holds {len(elements)}' + (f', and also {other[:40]!r}' if other else '')
+    def blank(text):
+        return not (text or '').strip()
+    elements = list(symbol)
+    if (symbol.attrib != {'id': 'lp', 'viewBox': '8 8 16 16'} or len(elements) != RECORD_ELEMENTS
+            or not blank(symbol.text) or any(len(el) or not blank(el.text) or not blank(el.tail) for el in elements)):
+        sys.exit(f'design/brand.html: <symbol id="lp" viewBox="8 8 16 16"> should hold {RECORD_ELEMENTS} empty '
+                 f'elements and nothing else; it holds {len(elements)} elements'
+                 + ('' if symbol.attrib == {'id': 'lp', 'viewBox': '8 8 16 16'} else f', with {symbol.attrib}')
                  + '; the script needs updating for it')
     roles, circles = {'marks': []}, []
     for el in elements:
-        tag = re.match(r'<(\w+)', el).group(1)
-        attrs = dict(re.findall(r'([\w-]+)="([^"]*)"', el))
+        tag, attrs = el.tag, dict(el.attrib)
         style = attrs.pop('style', None)
         if style:
             m = re.fullmatch(r'(fill|display):var\(--(rim|core|groove)\)', style)
             if not m or (m.group(1) == 'fill') != (m.group(2) == 'rim') or tag != 'circle':
-                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know: {el[:60]!r}')
+                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know on a <{tag}>: '
+                         f'{style!r}')
             prop, name = m.groups()
             if prop == 'fill':
                 attrs['fill'] = '(--rim)'   # its attributes are checked first, its colour set below
             check(name, attrs)
+            if name == 'groove' and attrs['fill'] != 'none':
+                sys.exit(f'design/brand.html: <symbol id="lp">: the groove is filled ({attrs["fill"]!r}); the icon '
+                         'draws it as a stroke alone')
             value, = need(var, name)
             if prop == 'display' and value == 'none':
                 continue
@@ -146,7 +158,7 @@ def parts(body, var):
             check('label or hole', attrs)
             circles.append(attrs)
         else:
-            sys.exit(f'design/brand.html: <symbol id="lp">: an element the script does not know: {el[:60]!r}')
+            sys.exit(f'design/brand.html: <symbol id="lp">: an element the script does not know: <{tag}> {el.attrib}')
     if 'core' in roles:
         sys.exit('design/brand.html: .lt shows the core (--core), which the icon does not draw')
     # Of the circles with no variable, the larger is the label and the smaller the spindle hole.
@@ -291,8 +303,8 @@ def main():
                if not shutil.which(tool)]
     if missing:
         sys.exit('needs ' + ' and '.join(missing) + '; nothing written')
-    body, var = brand_sheet()
-    roles = parts(body, var)
+    symbol, var = brand_sheet()
+    roles = parts(symbol, var)
     if args.label == 'plain':
         roles['marks'] = []
     ground, = need(var, 'tile-bg')
