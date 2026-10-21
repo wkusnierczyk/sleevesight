@@ -107,6 +107,8 @@ internal fun NowPlayingContent(
     actions: NowPlayingActions,
 ) {
     val playing = state.playing
+    // Above the return, so the fold outlives a while with nothing playing.
+    val foldMemory = rememberFoldMemory()
     if (playing == null) {
         NothingPlaying()
         return
@@ -119,6 +121,9 @@ internal fun NowPlayingContent(
     val settings = state.settings
     val modelAllowed = settings?.isEnabled(SourceId.MODEL) == true
     val focus = rememberLineFocus(track?.evidence)
+    val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded)
+    // A citation tapped unfolds the list far enough to show its line.
+    val cite: (String) -> Unit = { id -> focus.cite(id)?.let(fold::reach) }
     val insight =
         InsightContext(
             track = track,
@@ -149,11 +154,12 @@ internal fun NowPlayingContent(
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
-                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, focus::cite))
+                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, cite))
                 SourcesSection(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
                     focus = focus,
+                    fold = fold,
                     cardKept = view.cardShown && track != null,
                     offline = offlineShown(view, track),
                 )

@@ -55,6 +55,7 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+    private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val FONT = stringPreferencesKey("display.font")
 
@@ -63,6 +64,7 @@ internal object SettingsCodec {
 
     private fun lifetimeKey(source: SourceId) = longPreferencesKey("cache.lifetime_ms.${source.name}")
 
+    @Suppress("CyclomaticComplexMethod") // One line per setting, each its own key.
     fun read(prefs: Preferences): Settings =
         Settings(
             layout = enumOf(prefs[LAYOUT]) ?: defaults.layout,
@@ -89,6 +91,7 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
+            keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             font = enumOf(prefs[FONT]) ?: defaults.font,
         )
@@ -178,6 +181,9 @@ internal object SettingsCodec {
         }
         if (moved { it.sessionGap }) {
             prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        }
+        if (moved { it.keepSourcesUnfolded }) {
+            prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
