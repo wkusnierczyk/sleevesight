@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -41,8 +42,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -163,23 +164,53 @@ class FontSettingsTest {
             .layoutInput.style.fontFamily
     }
 
+    /** The font families of the texts laid out on the screen shown, letting no frame pass. */
+    private fun families(): List<FontFamily?> {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose
+            .onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult))
+            .fetchSemanticsNodes()
+            .forEach { it.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts) }
+        return layouts.map { it.layoutInput.style.fontFamily }
+    }
+
+    /**
+     * With the test clock held, frame by frame from the first composition until [title] is laid
+     * out: no text is ever laid out in Roboto, not even for a frame before a later value arrives.
+     */
+    private fun neverInRobotoUntilShown(title: String) {
+        repeat(MAX_FRAMES) { frame ->
+            val families = families()
+            assertTrue("Text in Roboto at frame $frame", families.none { it == Roboto })
+            if (shown(title) && families.isNotEmpty()) return
+            compose.mainClock.advanceTimeByFrame()
+            Thread.sleep(FRAME_SLEEP_MS)
+        }
+        fail("$title not shown within $MAX_FRAMES frames")
+    }
+
     @Test
-    fun mainActivityDrawsInTheStoredFontAndFollowsIt() {
+    fun mainActivityStartsInTheStoredFontAndFollowsIt() {
         val title = text(R.string.first_run_leaves_title)
+        // *System font* stored and read by this process; no `LastFont` from an earlier one.
+        runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
+        idleUntil("the stored font read") { app.graph.font.value == FontChoice.SYSTEM_FONT }
+
+        compose.mainClock.autoAdvance = false
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            compose.waitUntil(5_000) { shown(title) }
-            assertEquals(Roboto, familyOf(title))
-
-            runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
-            compose.waitUntil(5_000) { familyOf(title) != Roboto }
-
-            // A new activity, as after a rotation, keeps it.
-            scenario.recreate()
-            compose.waitUntil(5_000) { shown(title) }
-            assertNotEquals(Roboto, familyOf(title))
+            neverInRobotoUntilShown(title)
+            compose.mainClock.autoAdvance = true
 
             runBlocking { app.graph.settings.update { it.copy(font = FontChoice.APP_FONT) } }
             compose.waitUntil(5_000) { familyOf(title) == Roboto }
+            runBlocking { app.graph.settings.update { it.copy(font = FontChoice.SYSTEM_FONT) } }
+            compose.waitUntil(5_000) { familyOf(title) != Roboto }
+
+            // A new activity, as after a rotation or a return to the app, starts in it too.
+            compose.mainClock.autoAdvance = false
+            scenario.recreate()
+            neverInRobotoUntilShown(title)
+            compose.mainClock.autoAdvance = true
         }
     }
 
@@ -212,5 +243,13 @@ class FontSettingsTest {
         assertTrue(licence.startsWith("Copyright 2011 The Roboto Project Authors"))
         assertTrue(licence.contains("SIL OPEN FONT LICENSE Version 1.1"))
         assertTrue(licence.contains("PERMISSION & CONDITIONS"))
+    }
+
+    private companion object {
+        /** About ten seconds of frames, at 16 ms. */
+        const val MAX_FRAMES = 600
+
+        /** Real time between frames, for DataStore's threads. */
+        const val FRAME_SLEEP_MS = 5L
     }
 }
