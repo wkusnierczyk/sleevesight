@@ -1,0 +1,117 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4.1",
+      "object": "model",
+      "created": 1744316542,
+      "owned_by": "system",
+      "shutdown_date": "2027-01-14"
+    },
+    {
+      "id": "text-embedding-3-small",
+      "object": "model",
+      "created": 1705948997,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-6-luna",
+      "object": "model",
+      "created": 1789000000,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-realtime-2.1",
+      "object": "model",
+      "created": 1788000000,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "whisper-1",
+      "object": "model",
+      "created": 1677532384,
+      "owned_by": "openai-internal",
+      "shutdown_date": "2027-02-26"
+    },
+    {
+      "id": "gpt-6-astra",
+      "object": "model",
+      "created": 1789000000,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-4o-mini-tts",
+      "object": "model",
+      "created": 1742403959,
+      "owned_by": "system",
+      "shutdown_date": "2027-01-06"
+    },
+    {
+      "id": "o3-deep-research",
+      "object": "model",
+      "created": 1749840121,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "object": "model",
+      "created": 1791000000,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-image-2.5-flare",
+      "object": "model",
+      "created": 1790000000,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "omni-moderation-latest",
+      "object": "model",
+      "created": 1731689265,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "o4-mini",
+      "object": "model",
+      "created": 1744225351,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-5-nano",
+      "object": "model",
+      "created": 1754426384,
+      "owned_by": "system",
+      "shutdown_date": "2026-12-11"
+    },
+    {
+      "id": "gpt-5-search-api",
+      "object": "model",
+      "created": 1759514629,
+      "owned_by": "system",
+      "shutdown_date": null
+    },
+    {
+      "id": "ft:gpt-4.1-mini:example-org::abc123",
+      "object": "model",
+      "created": 1760000000,
+      "owned_by": "example-org",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-3.5-turbo-instruct",
+      "object": "model",
+      "created": 1692901427,
+      "owned_by": "system",
+      "shutdown_date": null
+    }
+  ]
+}

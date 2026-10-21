@@ -1,6 +1,7 @@
 package app.sleevesight.cli
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.model.ProviderId
 import java.io.File
 
 /**
@@ -10,18 +11,36 @@ import java.io.File
  */
 class Keys(
     val anthropic: Secret?,
+    val openAi: Secret?,
     val exa: Secret?,
     val lastFm: Secret?,
 ) {
+    /** The key of the AI service [provider], or null for one this tool has none for. */
+    fun ai(provider: ProviderId): Secret? =
+        when (provider) {
+            ProviderId.ANTHROPIC -> anthropic
+            ProviderId.OPENAI -> openAi
+            ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+        }
+
     companion object {
         const val ANTHROPIC = "SLEEVESIGHT_ANTHROPIC_API_KEY"
+        const val OPENAI = "SLEEVESIGHT_OPENAI_API_KEY"
         const val EXA = "SLEEVESIGHT_EXA_API_KEY"
         const val LASTFM = "SLEEVESIGHT_LASTFM_API_KEY"
 
         val DEFAULT_FILE: File = File(System.getProperty("user.home"), ".config/sleevesight/keys.env")
 
         /** No keys: replay needs none. */
-        val NONE: Keys = Keys(null, null, null)
+        val NONE: Keys = Keys(null, null, null, null)
+
+        /** The variable that holds the key of the AI service [provider], or null for one with none. */
+        fun aiVariable(provider: ProviderId): String? =
+            when (provider) {
+                ProviderId.ANTHROPIC -> ANTHROPIC
+                ProviderId.OPENAI -> OPENAI
+                ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+            }
 
         fun load(
             environment: Map<String, String> = System.getenv(),
@@ -31,7 +50,7 @@ class Keys(
 
             fun key(name: String): Secret? =
                 (environment[name] ?: fromFile[name])?.trim()?.takeIf { it.isNotEmpty() }?.let(::Secret)
-            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM))
+            return Keys(key(ANTHROPIC), key(OPENAI), key(EXA), key(LASTFM))
         }
 
         /** The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped. */

@@ -26,6 +26,7 @@ sealed interface NetError {
     /**
      * 429, or a 503 to a GET from a host whose [HostPolicy.rateLimitedOn503] says it signals its limit
      * so (MusicBrainz), still there after the retries, or asking for a wait longer than they allow.
+     * A 429 from a host whose [HostPolicy.passOn429] is set is a response instead.
      */
     data class RateLimited(
         val retryAfter: Duration?,

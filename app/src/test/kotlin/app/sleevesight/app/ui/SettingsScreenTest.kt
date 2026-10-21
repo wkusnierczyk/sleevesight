@@ -205,7 +205,9 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_change_failed))
             // The dialog has closed, and the row still shows the stored effort.
             assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
-            compose.onNodeWithText(text(R.string.settings_effort_low)).performScrollTo().assertIsDisplayed()
+            // Anthropic's row: OpenAI's shows low too.
+            val row = hasText(anthropic(R.string.settings_ai_effort_of)) and hasText(text(R.string.settings_effort_low))
+            compose.onNode(row).performScrollTo().assertIsDisplayed()
             assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }

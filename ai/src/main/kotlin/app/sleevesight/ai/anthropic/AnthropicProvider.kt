@@ -1,6 +1,7 @@
 package app.sleevesight.ai.anthropic
 
 import app.sleevesight.ai.ServerSentEvents
+import app.sleevesight.ai.decode
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
@@ -19,8 +20,6 @@ import app.sleevesight.net.NetResult
 import app.sleevesight.net.NetSecrets
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -218,19 +217,6 @@ class AnthropicProvider(
             )
     }
 }
-
-internal val json = Json { ignoreUnknownKeys = true }
-
-/** [text] decoded as [T], or null if it is not one; why is of no use to the caller. */
-@Suppress("SwallowedException")
-internal inline fun <reified T> decode(text: String): T? =
-    try {
-        json.decodeFromString<T>(text)
-    } catch (e: SerializationException) {
-        null
-    } catch (e: IllegalArgumentException) {
-        null
-    }
 
 /** The kind of a request that got no usable answer from `:net`. */
 internal fun kindOf(error: NetError): AiErrorKind =
