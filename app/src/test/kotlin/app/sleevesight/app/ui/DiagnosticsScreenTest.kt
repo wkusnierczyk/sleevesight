@@ -91,7 +91,14 @@ class DiagnosticsScreenTest {
         Diagnostics(
             log = DiagnosticsLog(),
             readChanges = history::changes,
-            readCacheStats = { CacheStats(TableStats(3, 300), TableStats(2, 20), TableStats(1, 1_000)) },
+            readCacheStats = {
+                CacheStats(
+                    TableStats(3, 300),
+                    TableStats(2, 20),
+                    TableStats(1, 1_000),
+                    TableStats(4, 400),
+                )
+            },
             // The JDBC driver's in-memory database is for one thread.
             io = Dispatchers.Main,
             scope = appScope,
@@ -143,6 +150,7 @@ class DiagnosticsScreenTest {
 
         show(diagnostics) {
             waitForText("retrieval: 3 entries, 300 bytes")
+            waitForText("artist results: 4 entries, 400 bytes")
             assertTrue(y(EventLine.of(newer)) < y(EventLine.of(older)))
         }
     }
@@ -232,7 +240,7 @@ class DiagnosticsScreenTest {
                     gate.await()
                     TrackChangePage(listOf(change(1)), next = null)
                 },
-                readCacheStats = { CacheStats(TableStats(0, 0), TableStats(0, 0), TableStats(0, 0)) },
+                readCacheStats = { CacheStats(TableStats(0, 0), TableStats(0, 0), TableStats(0, 0), TableStats(0, 0)) },
                 io = Dispatchers.IO,
                 scope = appScope,
                 version = "test",

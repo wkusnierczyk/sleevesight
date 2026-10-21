@@ -2,6 +2,8 @@ package app.sleevesight.core.genres
 
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.testing.MemoryArtistResults
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,16 +29,19 @@ class MusicBrainzLabelsTest {
             override fun now() = now
         }
 
-    private fun labels(capacity: Int = MusicBrainzLabels.DEFAULT_CAPACITY) =
-        MusicBrainzLabels(
-            { mbid ->
-                asked += mbid
-                tags.getValue(mbid)
-            },
-            vocabulary,
-            clock,
-            capacity = capacity,
-        )
+    private fun labels(
+        capacity: Int = MusicBrainzLabels.DEFAULT_CAPACITY,
+        kept: ArtistResults = ArtistResults.None,
+    ) = MusicBrainzLabels(
+        { mbid ->
+            asked += mbid
+            tags.getValue(mbid)
+        },
+        vocabulary,
+        clock,
+        capacity = capacity,
+        artists = kept,
+    )
 
     @Test
     fun `each artist's tags, in credit order, each genre once, linking its artist's page`() =
@@ -88,6 +93,31 @@ class MusicBrainzLabelsTest {
             asked.clear()
             now += MusicBrainzLabels.DEFAULT_LIFETIME + 1.days
             labels.labels(listOf("mb-a"))
+            assertEquals(listOf("mb-a"), asked)
+        }
+
+    @Test
+    fun `a second track by the same artist asks nothing while the artist cache has its tags, after a restart too`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val first = labels(kept = kept).labels(listOf("mb-a", "mb-gone", "mb-down"))
+            assertEquals(listOf("mb-a", "mb-gone", "mb-down"), asked)
+            assertEquals(setOf("mb-a", "mb-gone"), kept.keys(MusicBrainzLabels.PART), "a failure is not kept")
+
+            // A new instance, as after a restart: nothing in memory, the artist cache kept.
+            asked.clear()
+            val again = labels(kept = kept).labels(listOf("mb-a", "mb-gone"))
+            assertEquals(emptyList(), asked)
+            assertEquals(first.map { it.label }, again.map { it.label })
+        }
+
+    @Test
+    fun `tags in the artist cache that cannot be read are asked for again`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            kept.keep(MusicBrainzLabels.PART, "mb-a", "not json")
+
+            assertEquals(listOf("Folk", "Country"), labels(kept = kept).labels(listOf("mb-a")).map { it.label })
             assertEquals(listOf("mb-a"), asked)
         }
 

@@ -1,10 +1,13 @@
 package app.sleevesight.sources.lastfm
 
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbArtistSearch
 import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ResolvedArtist
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -101,12 +104,15 @@ internal data class Judgement(
  * 3. Otherwise the match is unverified.
  *
  * Name matching folds case and accents and keeps letters and digits only. One check serves every
- * track its adapter looks up, and keeps the search's answers, all but failures, for the most recent
- * [VERDICTS] names as sent, with the MusicBrainz id, in memory.
+ * track its adapter looks up, and keeps the search's answers, all but failures, by the name as
+ * sent and the MusicBrainz id: in memory for the most recent [VERDICTS], and in [artists], the
+ * artist cache ([OWNERSHIP_PART], #114, #238), for MusicBrainz's lifetime (D9), so a restart, or a
+ * new adapter, does not search again.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
     private val musicBrainz: MusicBrainzLookup,
+    private val artists: ArtistResults = ArtistResults.None,
 ) {
     private val verdicts = Lru<Pair<String, String>, Ownership>(VERDICTS)
 
@@ -184,7 +190,7 @@ internal class ArtistCheck(
      * below the artists listed is wrong, and fails the search, as `MusicBrainzClient.searchArtists`
      * already fails such an answer (a backstop here). Anything else proves neither, as does a
      * name with no letters or digits, which every name key would match. The answer is kept by the
-     * query as sent and the id.
+     * query as sent and the id, in memory and in the artist cache.
      */
     private suspend fun ownership(
         mbid: String,
@@ -194,10 +200,31 @@ internal class ArtistCheck(
         val verdictKey = name.lowercase() to mbid.lowercase()
         return when {
             nameKey.isEmpty() -> Ownership.UNKNOWN
-            else ->
-                verdicts.get(verdictKey)
-                    ?: search(mbid, name, nameKey).also { if (it != Ownership.FAILED) verdicts.put(verdictKey, it) }
+            else -> verdicts.get(verdictKey) ?: storedOrSearched(mbid, name, nameKey)
         }
+    }
+
+    // The verdict the artist cache keeps, now kept in memory too; else the search's, kept in both
+    // unless it failed.
+    private suspend fun storedOrSearched(
+        mbid: String,
+        name: String,
+        nameKey: String,
+    ): Ownership {
+        val verdictKey = name.lowercase() to mbid.lowercase()
+        // The id first: it holds no space, so the first space ends it.
+        val storedKey = "${verdictKey.second} ${verdictKey.first}"
+        val stored = stored(storedKey)
+        val verdict = stored ?: search(mbid, name, nameKey)
+        if (verdict != Ownership.FAILED) verdicts.put(verdictKey, verdict)
+        if (stored == null && verdict != Ownership.FAILED) artists.keep(OWNERSHIP_PART, storedKey, verdict.name)
+        return verdict
+    }
+
+    // The verdict the artist cache keeps for [key]; null for none, or one this version does not know.
+    private suspend fun stored(key: String): Ownership? {
+        val value = artists.get(OWNERSHIP_PART, key)
+        return Ownership.entries.firstOrNull { it.name == value && it != Ownership.FAILED }
     }
 
     private suspend fun search(
@@ -228,6 +255,14 @@ internal class ArtistCheck(
     companion object {
         /** Searches (name as sent, MusicBrainz id) whose answers are kept in memory. */
         const val VERDICTS: Int = 1024
+
+        /**
+         * The search's verdicts in the artist cache (#114 item 4, #238), by the MusicBrainz id and
+         * the name as sent, both lowercased, a space between: `OWNED`, `SHARED` or `UNKNOWN`, the
+         * names of [Ownership] (which are therefore not renamed). A failure is never kept. The
+         * verdict is MusicBrainz's, so it lives for MusicBrainz's lifetime.
+         */
+        val OWNERSHIP_PART: ArtistPart = ArtistPart("lastfm.ownership", 1, setOf(SourceId.MUSICBRAINZ))
     }
 }
 

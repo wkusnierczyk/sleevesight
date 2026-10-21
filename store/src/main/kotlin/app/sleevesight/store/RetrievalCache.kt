@@ -58,7 +58,7 @@ class RetrievalCache internal constructor(
         val row = context.queries.retrievalGet(source.tag, key).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val storedAt = Instant.fromEpochMilliseconds(row.stored_at)
-        val lifetime = lifetimeOf(tagsOf(row.sources), context.settings())
+        val lifetime = shortestLifetime(sourceTags(row.sources), context.settings())
         val current =
             lifetime != null &&
                 row.format == RetrievalCodec.FORMAT.toLong() &&
@@ -103,7 +103,7 @@ class RetrievalCache internal constructor(
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
         val keep =
-            lifetimeOf(sources, context.settings()) != null &&
+            shortestLifetime(sources, context.settings()) != null &&
                 result.outcome != Outcome.Unreachable &&
                 result.outcome != Outcome.SourceOff &&
                 context.fits(size)
@@ -146,20 +146,6 @@ class RetrievalCache internal constructor(
             listOf(track.lookupKey) + track.artists.map(normalizer::foldForKey).sorted() +
                 listOf(track.from?.let(normalizer::foldForKey), duration?.let { "${it.inWholeSeconds}s" })
         return parts.joinToString("") { part -> part?.let { "${it.length}:$it" } ?: "-" }
-    }
-
-    private companion object {
-        private fun tagsOf(column: String): List<SourceId?> =
-            column.split(' ').filter { it.isNotEmpty() }.map { SourceId.ofTag(it) }
-
-        // The shortest lifetime among [sources], or null when one has none (or is unknown).
-        private fun lifetimeOf(
-            sources: List<SourceId?>,
-            settings: Settings,
-        ): Duration? {
-            val lifetimes = sources.map { source -> source?.let { settings.cacheLifetimes[it] } }
-            return if (lifetimes.any { it == null }) null else lifetimes.filterNotNull().minOrNull()
-        }
     }
 }
 

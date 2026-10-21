@@ -8,10 +8,18 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.RecordingResolver
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.testing.MemoryArtistResults
 import app.sleevesight.fixtures.RegressionCase
+import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetError
+import app.sleevesight.net.NetRequest
+import app.sleevesight.net.NetResponse
+import app.sleevesight.net.NetResult
 import app.sleevesight.sources.RecordedTracks
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.testing.ReplayNetClient
@@ -36,19 +44,78 @@ class WikipediaSourceTest {
         object : Clock {
             override fun now() = at
         }
-    private val adapter =
+    private val adapter = adapter()
+
+    private fun adapter(
+        kept: ArtistResults = ArtistResults.None,
+        net: NetClient = this.net,
+    ): WikipediaSource =
         WikipediaSource(
             WikipediaClient(net),
             IdentityCheck(WikidataClient(net), RecordedTracks.names),
             RecordedTracks.names,
             clock,
+            artists = kept,
         )
 
     private suspend fun resolution(n: Int): Resolution =
         resolver.resolve(RecordedTracks.track(n), RecordedTracks.duration(n))
 
-    private suspend fun lookup(n: Int): SourceResult =
-        adapter.lookup(RecordedTracks.track(n), CompletableDeferred(resolution(n)))
+    private suspend fun lookup(
+        n: Int,
+        on: WikipediaSource = adapter,
+    ): SourceResult = on.lookup(RecordedTracks.track(n), CompletableDeferred(resolution(n)))
+
+    @Test
+    fun `a second track by the same artist asks nothing about the artist while the artist cache has it`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val sundown = RegressionCase.RICH_DATA.tracks.single()
+            val first = lookup(sundown, adapter(kept))
+            assertEquals(setOf("$GORDON_LIGHTFOOT Gordon Lightfoot"), kept.keys(WikipediaSource.ARTIST_PART))
+
+            // Another song of his, which the recordings do not hold: its articles by name are none.
+            val carefree = RecordedTracks.track(sundown).copy(title = "Carefree Highway")
+            val gordon = Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", GORDON_LIGHTFOOT)))
+            val cached = NoSongArticle(net, "Carefree Highway")
+            val result = adapter(kept, cached).lookup(carefree, CompletableDeferred(gordon))
+            val fresh = NoSongArticle(net, "Carefree Highway")
+            val asked = adapter(net = fresh).lookup(carefree, CompletableDeferred(gordon))
+
+            assertEquals(1, cached.sent.size, "only the lookup by name: ${cached.sent.map { it.query }}")
+            assertTrue(fresh.sent.size > 1, "without the cache, the artist's item and article are asked for")
+            assertEquals(Outcome.ArtistArticle, result.outcome)
+            assertEquals(asked.outcome, result.outcome)
+            assertEquals(asked.evidence, result.evidence)
+            val artistLines = first.evidence.filter { it.scope == Scope.ARTIST }
+            assertTrue(artistLines.isNotEmpty())
+            assertEquals(artistLines, result.evidence)
+        }
+
+    @Test
+    fun `an artist without a MusicBrainz id is not kept`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            // Peleboy and Reem have no MusicBrainz id in the recorded resolutions.
+            for (n in listOf(8, 12)) lookup(n, adapter(kept))
+
+            assertEquals(emptySet(), kept.keys(WikipediaSource.ARTIST_PART))
+        }
+
+    @Test
+    fun `an artist whose article could not be read is not kept`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val sundown = RegressionCase.RICH_DATA.tracks.single()
+            val resolved = resolution(sundown)
+            // The artist's lead, and only it, fails.
+            val down = NoSongArticle(net, failing = { it.query["titles"] == "Gordon Lightfoot" })
+
+            val result = adapter(kept, down).lookup(RecordedTracks.track(sundown), CompletableDeferred(resolved))
+
+            assertEquals(Outcome.SongArticle, result.outcome)
+            assertEquals(emptySet(), kept.keys(WikipediaSource.ARTIST_PART))
+        }
 
     @Test
     fun `rich data - song and artist articles, quoted verbatim and few, with Wikidata's lines`() =
@@ -255,5 +322,33 @@ class WikipediaSourceTest {
             ),
             WikipediaSource.songTitles(RecordedTracks.track(48)),
         )
+    }
+
+    /**
+     * The recordings, but for a lookup by name whose titles start with [title], which finds no
+     * article, and the requests [failing] picks out, which fail. Keeps what it is sent in [sent].
+     */
+    private class NoSongArticle(
+        private val replay: NetClient,
+        private val title: String? = null,
+        private val failing: (NetRequest) -> Boolean = { false },
+    ) : NetClient {
+        val sent = mutableListOf<NetRequest>()
+
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> {
+            sent += request
+            return when {
+                failing(request) -> NetResult.Failure(NetError.Offline("test"))
+                title != null && request.query["titles"]?.startsWith(title) == true ->
+                    NetResult.Success(NetResponse(200, emptyMap(), """{"query":{"pages":[]}}""".encodeToByteArray()))
+                else -> replay.send(request)
+            }
+        }
+
+        override fun close() = Unit
+    }
+
+    private companion object {
+        const val GORDON_LIGHTFOOT = "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
     }
 }

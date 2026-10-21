@@ -1,0 +1,26 @@
+-- Version 1 to 2 (#238): artist-level source results, kept per artist rather than per track, with
+-- their running total. The rows of version 1 are kept as they are.
+CREATE TABLE artist_result (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    part TEXT NOT NULL,
+    artist_key TEXT NOT NULL,
+    sources TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    stored_at INTEGER NOT NULL,
+    used_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    UNIQUE (part, artist_key)
+);
+
+CREATE INDEX artist_result_used_at ON artist_result (used_at, size_bytes);
+
+INSERT INTO cache_size (name, entries, bytes) VALUES ('artist_result', 0, 0);
+
+CREATE TRIGGER artist_result_inserted AFTER INSERT ON artist_result BEGIN
+    UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'artist_result';
+END;
+
+CREATE TRIGGER artist_result_deleted AFTER DELETE ON artist_result BEGIN
+    UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'artist_result';
+END;

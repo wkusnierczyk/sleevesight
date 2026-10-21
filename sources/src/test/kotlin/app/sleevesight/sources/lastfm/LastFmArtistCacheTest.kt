@@ -1,0 +1,200 @@
+package app.sleevesight.sources.lastfm
+
+import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.platform.JvmAccentFolder
+import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbArtist
+import app.sleevesight.core.resolution.MbArtistSearch
+import app.sleevesight.core.resolution.MbRecording
+import app.sleevesight.core.resolution.MbRecordingDetail
+import app.sleevesight.core.resolution.MbWork
+import app.sleevesight.core.resolution.MusicBrainzLookup
+import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.testing.MemoryArtistResults
+import app.sleevesight.fixtures.Fixtures
+import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetError
+import app.sleevesight.net.NetRequest
+import app.sleevesight.net.NetResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.time.Clock
+import kotlin.time.Instant
+
+/**
+ * Last.fm's answers and the verdicts of its check, kept per artist in the artist cache (#238,
+ * #114 item 4), against the hand-written stubs in `fixtures/http/lastfm/`.
+ */
+class LastFmArtistCacheTest {
+    private val normalizer = Normalizer(JvmAccentFolder)
+    private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+    private val clock =
+        object : Clock {
+            override fun now(): Instant = Instant.parse("2026-10-21T12:00:00Z")
+        }
+
+    private fun adapter(
+        net: NetClient = LastFmStubClient(),
+        search: GordonSearch = GordonSearch(),
+        kept: ArtistResults = ArtistResults.None,
+    ) = LastFmAdapter(net, search, Secret(KEY), vocabulary, JvmAccentFolder, clock, artists = kept)
+
+    private val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
+    private val carefree = normalizer.normalize("Carefree Highway", "Gordon Lightfoot")
+
+    private fun resolved(mbid: String = GORDON_LIGHTFOOT) =
+        CompletableDeferred(Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", mbid))))
+
+    @Test
+    fun `a second track by the same artist asks Last fm and MusicBrainz nothing while the artist cache has it`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val first = LastFmStubClient()
+            val firstSearch = GordonSearch()
+            val before = adapter(first, firstSearch, kept).lookupArtists(sundown, resolved())
+            assertEquals(2, first.requests.size)
+            assertEquals(1, firstSearch.searches)
+            assertEquals(setOf("gordon lightfoot"), kept.keys(LastFmAdapter.ARTIST_PART))
+
+            // A new adapter, as after a restart or a new key: nothing in memory, the cache kept.
+            val second = LastFmStubClient()
+            val secondSearch = GordonSearch()
+            val again = adapter(second, secondSearch, kept).lookupArtists(carefree, resolved())
+
+            assertEquals(emptyList(), second.requests, "no artist.getInfo or artist.getTopTags")
+            assertEquals(0, secondSearch.searches, "the verdict is kept too (#114)")
+            assertEquals(LastFmMatch.Verified, again.artists.single().match)
+            assertEquals(before.result.evidence, again.result.evidence)
+            assertEquals(before.result.unverified, again.result.unverified)
+            assertEquals(before.result.genres, again.result.genres)
+        }
+
+    @Test
+    fun `a kept answer is judged against each track's own resolution`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            adapter(kept = kept).lookup(sundown, resolved())
+
+            val net = LastFmStubClient()
+            val other = adapter(net, kept = kept).lookupArtists(carefree, resolved(OTHER))
+
+            assertEquals(emptyList(), net.requests)
+            assertIs<LastFmMatch.Rejected>(other.artists.single().match)
+            assertTrue(other.result.evidence.isEmpty())
+        }
+
+    @Test
+    fun `an artist Last fm does not know is kept, a failure or another error is not`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val nobody = normalizer.normalize("Song", "Nobody Here")
+            val none = CompletableDeferred(Resolution.NONE)
+            adapter(kept = kept).lookup(nobody, none)
+            val net = LastFmStubClient()
+            val again = adapter(net, kept = kept).lookupArtists(nobody, none)
+            assertEquals(LastFmMatch.NotFound, again.artists.single().match)
+            assertEquals(emptyList(), net.requests)
+
+            val failures =
+                listOf(
+                    NetResult.Failure(NetError.Offline("UnknownHostException")),
+                    LastFmStubClient.ok(Fixtures.text("http/lastfm/invalid-key.json")),
+                )
+            for (failure in failures) {
+                val failing = MemoryArtistResults()
+                adapter(LastFmStubClient(override = { failure }), kept = failing).lookup(sundown, none)
+                assertEquals(emptySet(), failing.keys(LastFmAdapter.ARTIST_PART), "$failure")
+            }
+        }
+
+    @Test
+    fun `an artist whose top tags did not arrive is not kept, so a later lookup gets them`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val timeout = NetResult.Failure(NetError.Offline("timeout"))
+            val tagsFail = { request: NetRequest -> timeout.takeIf { request.query["method"] == "artist.gettoptags" } }
+            adapter(LastFmStubClient(override = tagsFail), kept = kept).lookup(sundown, resolved())
+
+            assertEquals(emptySet(), kept.keys(LastFmAdapter.ARTIST_PART))
+        }
+
+    @Test
+    fun `the cache keeps the bio's quotable sentences, never its summary`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            adapter(kept = kept).lookup(sundown, resolved())
+
+            val value = checkNotNull(kept.get(LastFmAdapter.ARTIST_PART, "gordon lightfoot"))
+            assertFalse("summary" in value, value)
+            assertFalse("Read more on Last.fm" in value, value)
+        }
+
+    @Test
+    fun `a failed search's verdict is not kept in the artist cache`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            adapter(search = GordonSearch(fails = true), kept = kept).lookup(sundown, resolved())
+            assertEquals(emptySet(), kept.keys(ArtistCheck.OWNERSHIP_PART))
+
+            adapter(kept = kept).lookup(sundown, resolved())
+            assertEquals(setOf("$GORDON_LIGHTFOOT gordon lightfoot"), kept.keys(ArtistCheck.OWNERSHIP_PART))
+        }
+
+    @Test
+    fun `a kept answer that cannot be read is asked for again`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            kept.keep(LastFmAdapter.ARTIST_PART, "gordon lightfoot", "not json")
+            val net = LastFmStubClient()
+
+            val lookup = adapter(net, kept = kept).lookupArtists(sundown, resolved())
+
+            assertEquals(2, net.requests.size)
+            assertEquals(LastFmMatch.Verified, lookup.artists.single().match)
+        }
+
+    /**
+     * MusicBrainz's artist search, which knows one Gordon Lightfoot, or [fails]; counts the
+     * [searches]. Resolution's calls are not expected.
+     */
+    class GordonSearch(
+        private val fails: Boolean = false,
+    ) : MusicBrainzLookup {
+        var searches = 0
+            private set
+
+        override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> {
+            searches++
+            return if (fails) {
+                Lookup.Failed("Offline")
+            } else {
+                Lookup.Found(MbArtistSearch(1, listOf(MbArtist(GORDON_LIGHTFOOT, name))))
+            }
+        }
+
+        override suspend fun searchRecordings(
+            title: String,
+            artist: String,
+        ): Lookup<List<MbRecording>> = error("unexpected recording search")
+
+        override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> = error("unexpected recording")
+
+        override suspend fun work(mbid: String): Lookup<MbWork> = error("unexpected work")
+    }
+
+    private companion object {
+        const val KEY = "lastfm-test-key-0123456789"
+        const val GORDON_LIGHTFOOT = "9d97b077-b28d-4ba8-a3d9-c71926e3b2b6"
+        const val OTHER = "00000000-0000-4000-8000-0000000002ff"
+    }
+}

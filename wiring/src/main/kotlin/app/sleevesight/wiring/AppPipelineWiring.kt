@@ -2,6 +2,7 @@ package app.sleevesight.wiring
 
 import app.sleevesight.core.ResourceReader
 import app.sleevesight.core.normalizer.AccentFolder
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.net.NetClient
 
 /**
@@ -10,7 +11,7 @@ import app.sleevesight.net.NetClient
  * the rate limiters belong to the client, so a second wiring would double every limit. The client
  * lives as long as the process; [PipelineWiring.close] closes it, for tests. MusicBrainz's answers
  * are kept for a short time ([PipelineWiring], `RememberedMusicBrainz`), for preparing the next
- * track (D13).
+ * track (D13). What sources give for an artist is kept in [artists], the app's artist cache (#238).
  *
  * Its parameters and result are `:core` types and plain values, so `:app` calls it without `:net`
  * on its compile classpath. Kept apart from [pipelineWiringOn], which takes a `:net` type: no
@@ -20,6 +21,7 @@ fun appPipelineWiring(
     appVersion: String,
     accentFolder: AccentFolder,
     resources: ResourceReader,
+    artists: ArtistResults,
 ): PipelineWiring =
     PipelineWiring(
         NetClient(HostPolicies.netConfig(appVersion)),
@@ -27,4 +29,5 @@ fun appPipelineWiring(
         resources,
         rememberMusicBrainz = true,
         ownsNet = true,
+        artists = artists,
     )
