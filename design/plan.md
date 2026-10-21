@@ -58,6 +58,9 @@ flowchart TD
     i80["#80 Exa's terms (D11)"]
     i100["#100 MetaBrainz inquiry (D12)"]
     i58["#58 Play review"]
+    i227["#227 AI settings per provider"]
+    i228["#228 OpenAI provider"]
+    i229["#229 Google provider"]
   end
 
   subgraph P2["Phase 2. Detail and discovery"]
@@ -118,6 +121,8 @@ flowchart TD
   i80 --> i58
   i100 --> i58
   i100 --> i101
+  i227 --> i228
+  i227 --> i229
 ```
 
 - **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0. [#80][80] and [#100][100] need nothing either, and are best started early.
@@ -181,6 +186,9 @@ flowchart TD
 | [#80][80] | Exa's terms for in-app use (D11), settled before publishing | |
 | [#100][100] | MetaBrainz inquiry: MusicBrainz tags as genre labels (D12); the answer recorded and met, or the tags off by default in the release | |
 | [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57], [#80][80], [#100][100] |
+| [#227][227] | AI settings per provider: a switch, key, model and reasoning effort each, the switches exclusive | |
+| [#228][228] | `:ai`: OpenAI provider | [#227][227] |
+| [#229][229] | `:ai`: Google provider | [#227][227] |
 
 ### Phase 2. Detail and discovery
 
@@ -194,7 +202,7 @@ flowchart TD
 |---|---|---|
 | Release-date semantics | [#52][52] | The recording's first release, the release being played, or both. Recommendation: the first release as "Released", the played release in its source line when it differs |
 | Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
-| AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap |
+| AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap. Phase 1 shipped Anthropic only. **Revised 2026-10-18:** OpenAI and Google move to Phase 1.5 ([#228][228], [#229][229]), after the AI settings per provider ([#227][227]), so alpha testers can choose a provider and vary its effort; Ollama stays in Phase 3 |
 | Web search provider (D11) | [#40][40] | Decided by that spike |
 | Genre label sources and their default (D12) | [#84][84] | MusicBrainz tags are a label source from Phase 1.0, for labels only and never in prompts (revised 2026-10-15); licence findings in [#9][9]. Recommendation: MusicBrainz on, since it needs no key and a new user has no Last.fm key; Last.fm on once its key is set. How two sources' labels combine is decided in [#84][84]; [#101][101] re-evaluates the choice in Phase 2 |
 | The name | [#57][57] | The spoken-aloud test on "Sleevesight" before the store listing fixes it |
@@ -260,3 +268,6 @@ flowchart TD
 [101]: https://github.com/wkusnierczyk/sleevesight/issues/101
 [112]: https://github.com/wkusnierczyk/sleevesight/issues/112
 [132]: https://github.com/wkusnierczyk/sleevesight/issues/132
+[227]: https://github.com/wkusnierczyk/sleevesight/issues/227
+[228]: https://github.com/wkusnierczyk/sleevesight/issues/228
+[229]: https://github.com/wkusnierczyk/sleevesight/issues/229
