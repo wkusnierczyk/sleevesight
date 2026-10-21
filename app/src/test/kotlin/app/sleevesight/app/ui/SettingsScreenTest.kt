@@ -12,9 +12,11 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -211,14 +213,15 @@ class SettingsScreenTest {
         show(settingsStore = store) {
             flaky.writeFailures.set(1)
             compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).performClick()
+            compose.onNode(hasText(text(R.string.settings_effort_high)) and hasAnyAncestor(isDialog())).performClick()
 
             waitForText(text(R.string.settings_change_failed))
             // The dialog has closed, and the row still shows the stored effort.
-            assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
-            // Anthropic's row: OpenAI's shows low too.
-            val row = hasText(anthropic(R.string.settings_ai_effort_of)) and hasText(text(R.string.settings_effort_low))
-            compose.onNode(row).performScrollTo().assertIsDisplayed()
+            val row = hasText(anthropic(R.string.settings_ai_effort_of))
+            assertEquals(0, compose.onAllNodes(isDialog()).fetchSemanticsNodes().size)
+            val high = row and hasText(text(R.string.settings_effort_high))
+            assertEquals(0, compose.onAllNodes(high).fetchSemanticsNodes().size)
+            compose.onNode(row and hasText(text(R.string.settings_effort_low))).performScrollTo().assertIsDisplayed()
             assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }

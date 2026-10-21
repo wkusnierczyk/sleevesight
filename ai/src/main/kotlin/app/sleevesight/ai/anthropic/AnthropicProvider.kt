@@ -9,6 +9,7 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
@@ -34,8 +35,9 @@ import kotlin.time.Instant
  * /v1/messages` with `stream: true`, read as server-sent events; and the model list, `GET
  * /v1/models`. The key goes in `x-api-key`, through `NetSecrets`, so it is never logged.
  *
- * [CompletionRequest.effort] becomes `output_config.effort` (`low`, `medium`, `high`) for a model
- * that takes it ([takesEffort]); without it, or for any other model, the model's default applies.
+ * [CompletionRequest.effort] becomes `output_config.effort` (`low`, `medium`, `high`; [effortName])
+ * for a model that takes it ([takesEffort]); without it, or for any other model, the model's default
+ * applies.
  * Thinking is left at the API's default, which current models reason with: it cannot be switched
  * off on all of them, and the effort is what bounds it.
  *
@@ -141,7 +143,7 @@ class AnthropicProvider(
                 put("max_tokens", request.maxTokens)
                 put("stream", true)
                 request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
-                    putJsonObject("output_config") { put("effort", effort.name.lowercase()) }
+                    putJsonObject("output_config") { put("effort", effortName(effort)) }
                 }
                 putJsonArray("messages") {
                     addJsonObject {
@@ -188,6 +190,18 @@ class AnthropicProvider(
 
         /** Whether [model] takes `output_config.effort`. */
         fun takesEffort(model: String): Boolean = EFFORT_MODELS.any { model == it || model.startsWith("$it-") }
+
+        /**
+         * [effort] as `output_config.effort` names it. Anthropic's scale has no `minimal`, so a
+         * request with it (never one from the settings, which offer only Anthropic's own levels)
+         * is sent as `low`, the least it takes.
+         */
+        fun effortName(effort: ReasoningEffort): String =
+            when (effort) {
+                ReasoningEffort.MINIMAL, ReasoningEffort.LOW -> "low"
+                ReasoningEffort.MEDIUM -> "medium"
+                ReasoningEffort.HIGH -> "high"
+            }
 
         const val BASE_URL: String = "https://api.anthropic.com"
 

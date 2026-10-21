@@ -54,6 +54,45 @@ class OptionsTest {
     }
 
     @Test
+    fun `the AI service is Anthropic unless another is given, and Google can be recorded`() {
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("live")).provider)
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("live", "--provider", "google")).provider)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
+        assertEquals(setOf("google"), Options.parse(listOf("record", "--record", "google")).record)
+    }
+
+    @Test
+    fun `recording an AI service runs that service, and --provider must agree`() {
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("record", "--record", "wikidata,google")).provider)
+        assertEquals(
+            ProviderId.GOOGLE,
+            Options.parse(listOf("record", "--record", "google", "--provider", "google")).provider,
+        )
+        val mismatch =
+            assertFailsWith<IllegalArgumentException> {
+                Options.parse(listOf("record", "--record", "google", "--provider", "anthropic"))
+            }
+        assertEquals(
+            "--record google records google's replies: give --provider google, or leave --provider out",
+            mismatch.message,
+        )
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "anthropic,google")) }
+        // Outside record, --record is ignored, as before.
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("live", "--record", "google")).provider)
+        assertEquals("google", Options.nameOf(ProviderId.GOOGLE))
+    }
+
+    @Test
+    fun `a run without insights says why`() {
+        fun off(vararg args: String) = Cli.insightsOff(Options.parse(args.toList()))
+        assertEquals("off: --record does not name anthropic", off("record", "--record", "wikidata"))
+        assertEquals("off: no SLEEVESIGHT_GOOGLE_API_KEY", off("record", "--record", "google"))
+        assertEquals("off: no SLEEVESIGHT_GOOGLE_API_KEY", off("live", "--provider", "google"))
+        assertEquals("off: no recorded replies", off("replay"))
+        assertEquals("off: --no-insights", off("record", "--record", "wikidata", "--no-insights"))
+    }
+
+    @Test
     fun `the AI service is Anthropic unless given, and OpenAI only for live`() {
         assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).provider)
         assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--provider", "openai")).provider)
@@ -61,6 +100,9 @@ class OptionsTest {
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("replay", "--provider", "openai")) }
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--provider", "openai")) }
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "openai")) }
+        // Google's replies are recorded and replayed, as Anthropic's are.
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("replay", "--provider", "google")).provider)
     }
 
     @Test

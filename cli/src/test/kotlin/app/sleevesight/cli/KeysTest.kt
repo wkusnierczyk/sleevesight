@@ -30,6 +30,7 @@ class KeysTest {
             val keys = Keys.load(mapOf("SLEEVESIGHT_EXA_API_KEY" to "from-env"), file)
             assertEquals("from-env", keys.exa?.reveal())
             assertNull(keys.anthropic)
+            assertNull(keys.google)
             assertFalse("from-env" in keys.exa.toString())
         } finally {
             file.delete()
@@ -38,13 +39,18 @@ class KeysTest {
 
     @Test
     fun `each AI service's key is read from its own variable`() {
-        val file = File.createTempFile("keys", ".env").apply { writeText("SLEEVESIGHT_OPENAI_API_KEY=sk-proj-1\n") }
+        val file =
+            File.createTempFile("keys", ".env").apply {
+                writeText("SLEEVESIGHT_OPENAI_API_KEY=sk-proj-1\nSLEEVESIGHT_GOOGLE_API_KEY=g-1\n")
+            }
         try {
             val keys = Keys.load(mapOf("SLEEVESIGHT_ANTHROPIC_API_KEY" to "sk-ant-1"), file)
             assertEquals("sk-ant-1", keys.forProvider(ProviderId.ANTHROPIC)?.reveal())
             assertEquals("sk-proj-1", keys.forProvider(ProviderId.OPENAI)?.reveal())
-            assertNull(keys.forProvider(ProviderId.GOOGLE))
+            assertEquals("g-1", keys.forProvider(ProviderId.GOOGLE)?.reveal())
+            assertNull(keys.forProvider(ProviderId.OLLAMA))
             assertEquals("SLEEVESIGHT_OPENAI_API_KEY", Keys.variableOf(ProviderId.OPENAI))
+            assertEquals("SLEEVESIGHT_GOOGLE_API_KEY", Keys.variableOf(ProviderId.GOOGLE))
         } finally {
             file.delete()
         }

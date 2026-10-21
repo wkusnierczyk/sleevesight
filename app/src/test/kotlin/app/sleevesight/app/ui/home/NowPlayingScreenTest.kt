@@ -217,6 +217,21 @@ class NowPlayingScreenTest {
             val reason = text(R.string.home_failure_rate_limited)
             compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
         }
+        // A service not offered where the user is says so, and does not blame the key.
+        show(state(PipelineView(track(insight = InsightState.Failed("unavailable_here")), aiReady = true))) {
+            val reason = text(R.string.home_failure_unavailable_here)
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
+            assertEquals("the AI service is not offered in your country", reason)
+        }
+        // A quota used up is not a matter of credit.
+        show(state(PipelineView(track(insight = InsightState.Failed("quota_exhausted")), aiReady = true))) {
+            val reason = text(R.string.home_failure_quota_exhausted)
+            compose.onNodeWithText(text(R.string.home_insight_failed, reason)).assertExists()
+            assertEquals(
+                "the AI service’s quota is used up for now; it resets later, or a higher tier lifts it",
+                reason,
+            )
+        }
         show(state(PipelineView(track(insight = InsightState.Writing("")), aiReady = true))) {
             compose.onNodeWithText(text(R.string.home_insight_writing)).assertExists()
         }
