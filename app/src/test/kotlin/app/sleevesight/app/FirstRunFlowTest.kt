@@ -15,6 +15,11 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -22,6 +27,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
@@ -115,6 +121,10 @@ class FirstRunFlowTest {
     /** As after an earlier run in which the user continued past the first-run screen. */
     private fun acknowledgeFirstRun() = FirstRunAcknowledgement(app).acknowledge()
 
+    /** Whether a node's click action is named [label], as a screen reader announces it. */
+    private fun hasClickLabel(label: String) =
+        SemanticsMatcher("click labelled \"$label\"") { it.config.getOrNull(SemanticsActions.OnClick)?.label == label }
+
     @Test
     fun withoutAccessTheFirstRunScreenSaysWhatLeavesThePhone() {
         setAccess(granted = false)
@@ -141,7 +151,12 @@ class FirstRunFlowTest {
         setAccess(granted = false)
         launch().use { scenario ->
             compose.onNodeWithText(text(R.string.first_run_privacy)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).performScrollTo().performClick()
+            compose
+                .onNodeWithText(PRIVACY_POLICY_SHOWN)
+                .performScrollTo()
+                .assert(hasClickLabel(text(R.string.privacy_policy_open)))
+                .assertHeightIsAtLeast(48.dp)
+                .performClick()
 
             var started: Intent? = null
             scenario.onActivity { started = shadowOf(it).nextStartedActivity }
