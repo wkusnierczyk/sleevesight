@@ -264,7 +264,7 @@ class KeyScanTest {
 
     @Test
     fun textTypedOnAComputerFillsTheFieldAndIsSavedOnSave() =
-        show(scanner = scanning(KeyboardVectors.code), keyboard = typing(" $lastFmKey")) {
+        show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = typing(" $lastFmKey")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_connected))
@@ -280,7 +280,7 @@ class KeyScanTest {
 
     @Test
     fun stopEndsTheSessionAndKeepsWhatWasTyped() =
-        show(scanner = scanning(KeyboardVectors.code), keyboard = typing(lastFmKey)) {
+        show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = typing(lastFmKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_connected))
@@ -289,6 +289,23 @@ class KeyScanTest {
             waitFor("the session ended") { running.isEmpty() }
             compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled()
         }
+
+    @Test
+    fun theSameCodeScannedAgainStartsNoSession() {
+        val code = KeyboardVectors.freshCode()
+        show(scanner = scanning(code), keyboard = typing(lastFmKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_connected))
+            compose.onNodeWithText(text(R.string.keyboard_stop)).performClick()
+            waitForText(text(R.string.settings_key_type))
+            waitFor("the session ended") { running.isEmpty() }
+
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_code_used))
+            assertEquals(0, running.size)
+        }
+    }
 
     @Test
     fun aCodeThatIsNotAKeyboardCodeStartsNoSession() =

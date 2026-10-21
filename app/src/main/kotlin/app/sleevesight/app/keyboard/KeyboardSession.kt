@@ -5,6 +5,7 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.security.GeneralSecurityException
 import java.util.Base64
+import java.util.Collections
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -16,7 +17,10 @@ import javax.crypto.spec.SecretKeySpec
  * with. The page's side is `assets/keyboard/protocol.js`, which describes the format.
  *
  * [open] takes a message only if its counter is above the last one taken, so a message recorded
- * over the air and sent again is refused. [forget] wipes the key: the session ends with the dialog.
+ * over the air and sent again is refused. [claim] refuses a session already used since the app
+ * started, so that the same code scanned again, which would start the counter over, cannot have
+ * those recorded messages replayed: a new session means a reloaded page. [forget] wipes the key:
+ * the session ends with the dialog.
  * Bluetooth's callbacks call it from their own threads, hence the locking.
  */
 class KeyboardSession private constructor(
@@ -54,6 +58,9 @@ class KeyboardSession private constructor(
             null
         }
 
+    /** Whether this session is new to the app: false if a session with its id was claimed before. */
+    fun claim(): Boolean = claimed.add(serviceUuid)
+
     /** Wipes the key; every message is refused from then on. */
     @Synchronized
     fun forget() {
@@ -70,6 +77,9 @@ class KeyboardSession private constructor(
 
         /** The most UTF-8 a message carries: one write, 512 bytes, less the counter and the tag. */
         const val MAX_TEXT_BYTES = 480
+
+        // The sessions run since the app started; a few ids a day at most.
+        private val claimed: MutableSet<UUID> = Collections.synchronizedSet(HashSet())
 
         private const val SERVICE_PREFIX = "5d3e9a7c-1f42-4b8e-"
         private const val ID_BYTES = 8

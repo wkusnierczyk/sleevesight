@@ -12,6 +12,7 @@ const session = newSession();
 let characteristic = null;
 let counter = 0;
 let sent = null;
+let refused = null;
 let writing = false;
 
 function status(message, kind = '') {
@@ -57,7 +58,7 @@ async function connect() {
   device.addEventListener('gattserverdisconnected', () => {
     characteristic = null;
     $('connect').hidden = false;
-    status('Disconnected. If the phone still shows “Waiting for the computer”, connect again; otherwise reload this page for a new code.');
+    status('Disconnected. If the phone still shows “Waiting for the computer”, connect again; if its dialog was closed, reload this page and scan the new code.');
   });
   try {
     status('Connecting…');
@@ -65,19 +66,25 @@ async function connect() {
     const service = await server.getPrimaryService(session.service);
     characteristic = await service.getCharacteristic(CHARACTERISTIC);
   } catch (e) {
+    // Connected, but the phone's service was not found: let the link go.
+    if (device.gatt.connected) device.gatt.disconnect();
     status(`Could not connect to the phone: ${e.message}`, 'error');
     return;
   }
   $('connect').hidden = true;
   status('Connected. What you type here appears on the phone.', 'ok');
   sent = null;
+  refused = null;
   send();
 }
 
 // Writes the text as it is now, unless it was sent already; then again if it changed meanwhile.
+// A text the phone did not take is not sent again until it changes, and a write that settles after
+// a reconnection says nothing of the new connection.
 async function send() {
   const text = $('text').value;
-  if (writing || characteristic === null || text === sent) return;
+  const target = characteristic;
+  if (writing || target === null || text === sent || text === refused) return;
   if (textBytes(text) > MAX_TEXT_BYTES) return;
   if (counter === MAX_COUNTER) {
     status('This session has sent all it can. Reload this page for a new code.', 'error');
@@ -86,17 +93,22 @@ async function send() {
   writing = true;
   try {
     counter++;
-    await characteristic.writeValueWithResponse(await seal(session, counter, text));
-    sent = text;
+    await target.writeValueWithResponse(await seal(session, counter, text));
+    if (target === characteristic) {
+      sent = text;
+      refused = null;
+      if ($('status').className === 'error') status('Connected. What you type here appears on the phone.', 'ok');
+    }
   } catch (e) {
-    // A disconnection says so itself; anything else is said here, and the next change tries again.
-    if (characteristic !== null) status(`The phone did not take the text: ${e.message}`, 'error');
-    return;
+    // A disconnection says so itself; anything else is said here.
+    if (target === characteristic) {
+      refused = text;
+      status(`The phone did not take the text: ${e.message}`, 'error');
+    }
   } finally {
     writing = false;
   }
-  if ($('status').className === 'error') status('Connected. What you type here appears on the phone.', 'ok');
-  if (characteristic !== null && $('text').value !== sent) send();
+  send();
 }
 
 function changed() {

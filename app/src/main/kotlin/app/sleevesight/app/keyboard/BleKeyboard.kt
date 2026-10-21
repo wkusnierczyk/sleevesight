@@ -30,10 +30,10 @@ enum class KeyboardState {
     /** Opening the service and starting to advertise it. */
     STARTING,
 
-    /** Advertising; no computer connected. */
+    /** Advertising; no computer has sent a message yet, or the one that did has gone. */
     WAITING,
 
-    /** A computer is connected. */
+    /** A computer is connected and has sent a message the session took. */
     CONNECTED,
 
     /** Bluetooth is off; the keyboard starts once it is on. */
@@ -75,7 +75,11 @@ class BleKeyboard(
     // Set and cleared on the main thread; read from Bluetooth's, to answer writes.
     @Volatile private var server: BluetoothGattServer? = null
     private var advertiser: BluetoothLeAdvertiser? = null
+
+    // Every device linked to the phone over LE, which the GATT server hears of whatever service it
+    // came for (a watch, earbuds), and those of them that sent a message the session took.
     private val connected = mutableSetOf<BluetoothDevice>()
+    private val typing = mutableSetOf<BluetoothDevice>()
     private val prepared = mutableMapOf<BluetoothDevice, ByteArrayOutputStream>()
     private var listening = false
     private var stopped = false
@@ -97,8 +101,9 @@ class BleKeyboard(
     fun start() {
         if (stopped || listening) return
         listening = true
-        // A protected broadcast, sent by the system alone; exported, since Bluetooth sends it from
-        // a process of its own.
+        // A protected broadcast, which only the platform may send. Exported, since before Android 13
+        // `ContextCompat` guards a receiver that is not with a permission of this app's, which the
+        // Bluetooth app that sends it does not hold.
         ContextCompat.registerReceiver(
             context,
             bluetoothChanges,
@@ -154,8 +159,12 @@ class BleKeyboard(
     private fun close(then: KeyboardState?) {
         stopAdvertising()
         advertiser = null
-        val devices = synchronized(lock) { connected.toList().also { connected.clear() } }
-        synchronized(lock) { prepared.clear() }
+        val devices =
+            synchronized(lock) {
+                typing.clear()
+                prepared.clear()
+                connected.toList().also { connected.clear() }
+            }
         server?.let { s ->
             devices.forEach { s.cancelConnection(it) }
             s.close()
@@ -172,7 +181,8 @@ class BleKeyboard(
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
                 .setConnectable(true)
                 .build()
-        // The service's UUID alone: not the phone's name, which anyone nearby would read.
+        // The service's UUID alone: the phone's name is not advertised (a device that connects can
+        // still read it, from the Generic Access service Android keeps).
         val data =
             AdvertiseData
                 .Builder()
@@ -180,11 +190,11 @@ class BleKeyboard(
                 .setIncludeTxPowerLevel(false)
                 .addServiceUuid(ParcelUuid(session.serviceUuid))
                 .build()
-        // Throws if Bluetooth went off meanwhile, which the receiver then reports.
+        // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
         try {
             advertiser?.startAdvertising(settings, data, advertising)
         } catch (_: IllegalStateException) {
-            close(null)
+            close(if (manager?.adapter?.isEnabled == true) KeyboardState.FAILED else KeyboardState.BLUETOOTH_OFF)
         }
     }
 
@@ -199,7 +209,7 @@ class BleKeyboard(
     private val advertising =
         object : AdvertiseCallback() {
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-                if (synchronized(lock) { connected.isEmpty() }) state(KeyboardState.WAITING)
+                if (synchronized(lock) { typing.isEmpty() }) state(KeyboardState.WAITING)
             }
 
             override fun onStartFailure(errorCode: Int) {
@@ -227,24 +237,24 @@ class BleKeyboard(
                 status: Int,
                 newState: Int,
             ) {
-                val now =
+                val typed =
                     synchronized(lock) {
                         if (newState == BluetoothProfile.STATE_CONNECTED) {
                             connected += device
                         } else {
                             connected -= device
+                            typing -= device
                             prepared -= device
                         }
-                        connected.isNotEmpty()
+                        typing.isNotEmpty()
                     }
                 main.post {
                     if (server == null) return@post
-                    state(if (now) KeyboardState.CONNECTED else KeyboardState.WAITING)
-                    // A connection may end the advertising: it starts again for the next one.
-                    if (!now) {
-                        stopAdvertising()
-                        advertise()
-                    }
+                    if (!typed) state(KeyboardState.WAITING)
+                    // A connection may end the advertising, and the device that came may not be the
+                    // computer: it starts again at each change, so the computer can always find it.
+                    stopAdvertising()
+                    advertise()
                 }
             }
 
@@ -267,7 +277,7 @@ class BleKeyboard(
 
                         preparedWrite -> prepare(device, offset, bytes)
                         offset != 0 -> BluetoothGatt.GATT_INVALID_OFFSET
-                        else -> receive(bytes)
+                        else -> receive(device, bytes)
                     }
                 // A prepared write's answer repeats what it was given.
                 if (responseNeeded) {
@@ -282,7 +292,11 @@ class BleKeyboard(
             ) {
                 val written = synchronized(lock) { prepared.remove(device) }
                 val status =
-                    if (execute && written != null) receive(written.toByteArray()) else BluetoothGatt.GATT_SUCCESS
+                    if (execute && written != null) {
+                        receive(device, written.toByteArray())
+                    } else {
+                        BluetoothGatt.GATT_SUCCESS
+                    }
                 server?.sendResponse(device, requestId, status, 0, null)
             }
         }
@@ -302,9 +316,18 @@ class BleKeyboard(
             }
         }
 
-    private fun receive(message: ByteArray): Int {
+    // Opens [message] from [device]; the first it takes makes that device the computer.
+    private fun receive(
+        device: BluetoothDevice,
+        message: ByteArray,
+    ): Int {
         val text = session.open(message) ?: return REFUSED
-        main.post { if (!stopped) onText(text) }
+        val first = synchronized(lock) { typing.add(device) }
+        main.post {
+            if (stopped) return@post
+            if (first && server != null) onState(KeyboardState.CONNECTED)
+            onText(text)
+        }
         return BluetoothGatt.GATT_SUCCESS
     }
 

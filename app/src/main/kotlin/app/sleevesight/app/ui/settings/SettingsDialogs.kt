@@ -188,7 +188,12 @@ private fun scanned(
         }
 
         ScanFor.KEYBOARD -> {
-            KeyboardSession.parse(scanned)?.let { Scanned(session = it) } ?: Scanned(failed = sessionFailure(scanned))
+            val session = KeyboardSession.parse(scanned)
+            when {
+                session == null -> Scanned(failed = sessionFailure(scanned))
+                !session.claim() -> Scanned(failed = R.string.keyboard_code_used)
+                else -> Scanned(session = session)
+            }
         }
     }
 

@@ -73,8 +73,9 @@ private fun BluetoothKeyboard(
     var state by remember { mutableStateOf(KeyboardState.STARTING) }
     val text by rememberUpdatedState(onText)
     val ask =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-            allowed = results.values.all { it }
+        // Read again rather than from the results, which an interrupted request leaves empty.
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            allowed = granted(context)
             refused = !allowed
         }
     LaunchedEffect(Unit) { if (!allowed) ask.launch(PERMISSIONS) }

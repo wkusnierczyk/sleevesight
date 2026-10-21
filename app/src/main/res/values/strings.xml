@@ -175,6 +175,7 @@
     <string name="settings_key_type">Type on a computer</string>
     <string name="keyboard_not_code">This QR code is not a keyboard code. On a computer, open sleevesight.app/keyboard.html and scan the code it shows.</string>
     <string name="keyboard_code_unreadable">This keyboard code cannot be read: it may be of a later version. Update Sleevesight, or reload the page on the computer and scan again.</string>
+    <string name="keyboard_code_used">This keyboard code was used already. Reload the page on the computer, and scan its new code.</string>
     <string name="keyboard_starting">Starting Bluetooth…</string>
     <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>
