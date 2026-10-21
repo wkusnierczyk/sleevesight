@@ -190,17 +190,18 @@ class Report(
 
     // #239: what consecutive tracks send and write about their artists (`ArtistFacts`).
     private fun StringBuilder.artistFacts() {
-        val rows = ArtistFacts.measure(run.results, run.allowModel)
+        val rows = ArtistFacts.measure(run.results, run.allowModel, ArtistFacts.leftOut(run.diagnostics.events))
         val t = ArtistFacts.totals(rows)
         appendLine("## Artist-level evidence (#239)")
         appendLine()
         appendLine(ARTIST_FACTS_NOTE)
         appendLine()
         appendLine(
-            "| Track | Lines | Artist-level | Prompt chars | Artist-level chars | Resent | Tokens in / out | " +
-                "Artist-only sentences | Artist lines cited | Restated from the last | Restated from any |",
+            "| Track | Lines | Artist-level | Left out | Prompt chars | Artist-level chars | Resent | " +
+                "Tokens in / out | Artist-only sentences | Artist lines cited | Restated from the last | " +
+                "Restated from any |",
         )
-        appendLine("|---|---|---|---|---|---|---|---|---|---|---|")
+        appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|")
         for (r in rows) {
             val written = r.insight is InsightState.Written
             val tokens =
@@ -208,7 +209,7 @@ class Report(
                     ?: if (written) "cached" else insightLabel(r.insight)
             val sentences = if (written) "${r.artistSentences} of ${r.sentences}" else ""
             appendLine(
-                "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | " +
+                "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | ${r.leftOut} | " +
                     "${r.promptChars ?: "none sent"} | ${r.artistChars} | ${r.resent} | $tokens | $sentences | " +
                     "${ids(r.cited, written)} | ${ids(r.fromLast, written)} | ${ids(r.restated, written)} |",
             )
@@ -216,7 +217,8 @@ class Report(
         appendLine()
         appendLine(
             "Over the run: ${t.artistLines} of ${t.lines} evidence lines artist-level " +
-                "(${percent(t.artistLines, t.lines)}); ${t.prompts} prompts, ${t.promptChars} characters, " +
+                "(${percent(t.artistLines, t.lines)}), ${t.leftOut} of them left out of the prompts; " +
+                "${t.prompts} prompts, ${t.promptChars} characters, " +
                 "${t.artistChars} of them artist-level lines (${percent(t.artistChars, t.promptChars)}). " +
                 "Of ${t.written} insights, ${t.restatingLast} restate an artist fact of the last one before " +
                 "and ${t.restating} one of any before; ${t.artistSentences} of ${t.sentences} sentences cite " +
@@ -320,13 +322,15 @@ class Report(
 
         private const val ARTIST_FACTS_NOTE =
             "Per track, in the run's order: its evidence lines and how many are artist-level (Last.fm's bio, " +
-                "the Wikipedia artist article, Wikidata's artist facts); the insight prompt's size, rebuilt " +
-                "as the pipeline sends it, and the artist-level lines' share of it; *resent*, the artist-level " +
-                "lines the track before had too; the insight's sentences citing artist-level lines only; and " +
-                "the artist-level lines it cites that the last insight before it, or any before it, cited too. " +
-                "Lines are matched across tracks by source and text, since ids are positions per track. " +
-                "Citations are what is counted, not prose: a fact restated from a differently worded line, or " +
-                "uncited, is not."
+                "the Wikipedia artist article, Wikidata's artist facts); *left out*, the artist-level lines its " +
+                "prompt left out (#239, `PromptEvidence`: all for a track with enough of its own, else those " +
+                "another insight of the listening session cited); the " +
+                "insight prompt's size, rebuilt as the pipeline sends it, and the share of it the artist-level " +
+                "lines sent take; *resent*, those the track before sent too; the insight's sentences citing " +
+                "artist-level lines only; and the artist-level lines it cites that the last insight before it, " +
+                "or any before it, cited too. Lines are matched across tracks by source and text, since ids are " +
+                "positions per track. Citations are what is counted, not prose: a fact restated from a " +
+                "differently worded line, or uncited, is not."
     }
 }
 

@@ -5,9 +5,11 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.InsightState
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
@@ -126,6 +128,29 @@ class ArtistFactsTest {
         assertEquals(prompt.length, rows[1].promptChars)
         val artistLines = checkNotNull(state.evidence).lines.filter { it.scope == Scope.ARTIST }
         assertEquals(artistLines.sumOf { InsightPrompt.evidenceLine(it).length + 1 }, rows[1].artistChars)
+    }
+
+    @Test
+    fun `the lines a call left out are not in the prompt measured, nor resent`() {
+        val first = track(1, listOf(song("One"), formed, label), "The band formed in 1960 [W2].")
+        val second = track(2, listOf(song("Two"), formed, label), "Its label is Parlophone [WD1].")
+        val events =
+            listOf(
+                PipelineEvent.ModelCall(first.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m"),
+                PipelineEvent.ModelCall(second.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m", listOf("W2")),
+            )
+
+        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, ArtistFacts.leftOut(events))
+
+        assertEquals(listOf(0, 1), rows.map { it.leftOut })
+        val state = second.state
+        val sent = checkNotNull(state.evidence).without(JvmHasher) { it.id == "W2" }
+        assertEquals(InsightPrompt.build(state.nowPlaying, state.normalized, sent, false).length, rows[1].promptChars)
+        val labelLine = sent.lines.single { it.scope == Scope.ARTIST }
+        assertEquals(InsightPrompt.evidenceLine(labelLine).length + 1, rows[1].artistChars)
+        assertEquals(1, rows[1].resent)
+        assertEquals(emptyList(), rows[1].restated)
+        assertEquals(1, ArtistFacts.totals(rows).leftOut)
     }
 
     @Test

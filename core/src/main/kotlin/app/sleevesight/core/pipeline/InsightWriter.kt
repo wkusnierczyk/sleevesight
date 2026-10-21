@@ -19,7 +19,10 @@ import kotlin.time.TimeMark
  * ([GroundingCheck]) before it is shown. When the evidence has nothing to narrate
  * ([EvidenceSet.nothingToNarrate]: no line, or only the player's own release, unless model
  * knowledge is on and the report names the artists), no call is made and the card shows the app's
- * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release.
+ * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release. The prompt
+ * leaves out artist-level lines the insight should not dwell on (#239, [PromptEvidence]): all of
+ * them for a track with enough of its own, else those other tracks' insights in the listening
+ * session cited ([SessionFacts]); the card is checked against, and cites, the whole evidence.
  */
 internal class InsightWriter(
     private val parts: PipelineParts,
@@ -73,6 +76,10 @@ internal class InsightWriter(
             kept != null -> {
                 emit(PipelineEvent.InsightCached(key))
                 val shown = checked(kept, cached = true, usage = null, complete = true)
+                // Its artist facts, for the next tracks of the listening session (#239).
+                (shown as? InsightState.Written)?.let {
+                    parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
+                }
                 control.cardShown(shown as? InsightState.Written, evidence)
                 show(shown)
             }
@@ -117,7 +124,19 @@ internal class InsightWriter(
         card: CardKey,
         control: RunControl,
     ): InsightState {
-        val prompt = InsightPrompt.build(nowPlaying, track, evidence, allowModel)
+        // Less the artist-level lines the insight should not dwell on (#239), each line keeping its
+        // id. The card's key keeps the whole evidence's fingerprint, so a track played again finds
+        // its card, whatever the session cited.
+        val sent =
+            PromptEvidence.of(
+                evidence,
+                parts.sessionFacts.citedByOthers(key),
+                parts.hasher,
+                allowModel,
+                artistsKnown = track.artists.isNotEmpty(),
+            )
+        val prompt = InsightPrompt.build(nowPlaying, track, sent, allowModel)
+        val leftOut = evidence.ids - sent.ids.toSet()
         val request = CompletionRequest(model, prompt, effort = settings.effort(ai.provider.id))
         val text = StringBuilder()
         var end: CompletionEvent? = null
@@ -127,7 +146,7 @@ internal class InsightWriter(
         // cancels it.
         val ran =
             control.unlessStopped {
-                emit(PipelineEvent.ModelCall(key, ai.provider.id, model))
+                emit(PipelineEvent.ModelCall(key, ai.provider.id, model, leftOut))
                 show(InsightState.Writing(""))
                 started = time.timeSource.markNow()
                 ai.provider.stream(request, ai.key).collect { event ->
@@ -175,7 +194,10 @@ internal class InsightWriter(
         val complete = done.stopReason == StopReason.END
         if (complete) guard.attempt("write insight") { keep(card, text) }
         val written = checked(text, cached = false, usage = done.usage, complete = complete)
-        if (written is InsightState.Written) control.cardWritten(written, evidence)
+        if (written is InsightState.Written) {
+            parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, evidence.lines))
+            control.cardWritten(written, evidence)
+        }
         return show(written)
     }
 

@@ -357,6 +357,7 @@ A bio sentence is quoted only whole: a summary's unterminated or ellipsized tail
 ### Synthesis and grounding (`:core`, `:ai`)
 
 - Prompt builders in `:core`, ported from the simulator; the prompt contracts in the design's appendix are their specification.
+- What the insight prompt is given of the evidence (#239, `PromptEvidence`, design *Synthesis*, *The insight stays on the track*): the track's evidence less artist-level lines, all of them for a track with `ENOUGH_OF_ITS_OWN` (4) lines of scope song, original song or web, else those another track's insight in the listening session cited, by source and text (`ArtistFact`; ids are per-track positions). The lines kept keep their ids (`EvidenceSet.without`), so the reply is checked against the whole set, and a card served from the cache, written in another session, cites ids the shown evidence has. What the session cited is `SessionFacts` in `PipelineParts`: in the app, `ListeningSessionFacts` over the history's latest session number (`SessionHistory.latestSessionNumber`), one for the process, so it outlives a rebuild of the parts, kept in memory and dropped when the number changes; a session read that fails counts as the last one read. The history's recorder writes a track's row as it starts, usually before its insight is asked for; one whose insight comes first counts in the session before it. A fact is kept with the tracks that cited it, so a Rewrite of a track is not denied its own facts. In the CLI, a run is one session. `PipelineEvent.ModelCall.leftOut` names the lines a call left out, for the diagnostics log and the CLI's report.
 - `AiProvider` in `:core`, implementations in `:ai`:
 
   ```kotlin
@@ -409,7 +410,7 @@ For the Phase 0.5 gate's judgement (D12, #46), `GenreAgreement` compares the lab
 | Retrieval | source, track (lookup key, credited artists, source work, the player's length) | Days, per source; a user setting (D9). Web search's results too, during development (Exa's terms open, #80) |
 | Artist-level results | part (one source's lookup about an artist), artist (its MusicBrainz id, or its name as sent, where the source is asked by name) | The shortest lifetime of the sources the part depends on (D9): Last.fm's answers 7 days; the Wikipedia artist article, with Wikidata's lines, 7 days; MusicBrainz's tags and Last.fm's verdicts from MusicBrainz's search 30 days |
 | Artist resolution | normalized artist name | Long, months; a user setting (90 days) |
-| Synthesis | kind, entity key, evidence fingerprint, prompt-template version, style hash (D14), provider, model, model-knowledge switch, reasoning effort | Until evicted by size |
+| Synthesis | kind, entity key, evidence fingerprint (of the track's whole evidence, not the part a prompt sent, #239), prompt-template version, style hash (D14), provider, model, model-knowledge switch, reasoning effort | Until evicted by size |
 | Session history | time | Local only; a user setting, *Keep history for* (90 days, or for ever); user-clearable |
 | Track changes (D15) | player, time | Local only, kept and cleared with the session history |
 

@@ -8,6 +8,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -166,6 +167,8 @@ class Cli(
                         hasher = JvmHasher,
                         ai = ai,
                         cache = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None,
+                        // A run is one listening session (#239): its tracks play one after another.
+                        sessionFacts = ListeningSessionFacts { RUN_SESSION },
                     ),
                 ) { settings }
             return runBlocking {
@@ -265,6 +268,7 @@ class Cli(
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
         private const val ANTHROPIC = "anthropic"
+        private const val RUN_SESSION = 1L
         private const val SECONDS_PER_MINUTE = 60
 
         /** Playlist position [n] as the player would report it. */

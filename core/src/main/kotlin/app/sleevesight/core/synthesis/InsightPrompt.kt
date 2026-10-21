@@ -39,8 +39,11 @@ object InsightPrompt {
     /**
      * The version of this prompt's template, part of the synthesis cache key: raised when the
      * contract or the built-in style changes, so cards written from the old prompt are not reused.
+     * Version 4 (#239): the evidence given leaves out artist-level lines, all of them for a track
+     * with enough evidence of its own, else those other insights of the listening session cited
+     * (`PromptEvidence`); the template is version 3's.
      */
-    const val VERSION: Int = 3
+    const val VERSION: Int = 4
 
     /**
      * The prompt for [nowPlaying], normalized as [normalized], written from [evidence]. With

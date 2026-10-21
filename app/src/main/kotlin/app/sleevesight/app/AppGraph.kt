@@ -40,6 +40,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
@@ -234,6 +235,14 @@ class AppGraph(
         HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
 
     /**
+     * The artist facts the listening session's insights cited, which the next tracks' prompts leave
+     * out (#239): kept in memory, per the history's latest session, which the recorder writes as a
+     * track starts, usually before its insight is asked for; a track whose insight comes first counts
+     * in the session before it.
+     */
+    private val sessionFacts = ListeningSessionFacts { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
+
+    /**
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
      * also in the background when the user turns that on (D6); nothing before the first run is
      * acknowledged. Runs off the main thread, since the adapters parse their responses where they
@@ -251,7 +260,8 @@ class AppGraph(
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
-            parts = AppPipelineParts(wiring, normalizer) { StorePipelineCache(caches, Dispatchers.IO) },
+            parts =
+                AppPipelineParts(wiring, normalizer, sessionFacts) { StorePipelineCache(caches, Dispatchers.IO) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
