@@ -55,6 +55,7 @@ internal object SettingsCodec {
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
+    private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
 
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
@@ -88,6 +89,7 @@ internal object SettingsCodec {
                     else -> stored?.takeIf { it > 0 }?.milliseconds ?: defaults.historyLifetime
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
+            keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
         )
 
@@ -176,6 +178,9 @@ internal object SettingsCodec {
         }
         if (moved { it.sessionGap }) {
             prefs.put(SESSION_GAP_MS, settings.sessionGap.inWholeMilliseconds, defaults.sessionGap.inWholeMilliseconds)
+        }
+        if (moved { it.keepSourcesUnfolded }) {
+            prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
     }

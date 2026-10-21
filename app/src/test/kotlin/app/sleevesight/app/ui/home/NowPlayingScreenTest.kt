@@ -128,6 +128,14 @@ class NowPlayingScreenTest {
         settings: Settings = Settings(),
     ) = NowPlayingState(view, sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING), settings = settings)
 
+    // The *Sources* list starts folded (#269): its first screenful, or all of it.
+    private fun unfold() = compose.onNodeWithTag(FOLD_SHOW_TAG).performScrollTo().performClick()
+
+    private fun unfoldAll() {
+        unfold()
+        compose.onNodeWithTag(FOLD_ALL_TAG).performScrollTo().performClick()
+    }
+
     @Test
     fun nothingPlayingShowsTheIdleLine() =
         show(NowPlayingState(PipelineView(track(insight = written("It is a song [MB1]."))), playing = null)) {
@@ -300,6 +308,7 @@ class NowPlayingScreenTest {
     @Test
     fun aCitationShowsItsLineEvenWhenItsSourceIsHidden() =
         show(state(PipelineView(track(insight = written("It topped the charts [W1].")), aiReady = true))) {
+            unfold()
             // Wikipedia's chip hides its lines (a display filter only).
             compose.onNodeWithTag(CHIP_PREFIX + "W").performScrollTo().performClick()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
@@ -336,10 +345,12 @@ class NowPlayingScreenTest {
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
         // Shown in place of a run with no insight (no AI service now): no Rewrite, nothing failed.
         show(state(PipelineView(kept, cardShown = true))) {
+            unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
         }
         // The run's own insight, served from the cache: its lines are the sources' now.
         show(state(PipelineView(kept, aiReady = true))) {
+            unfold()
             assertEquals(0, compose.onAllNodesWithText(text(R.string.home_evidence_cited)).fetchSemanticsNodes().size)
         }
     }
@@ -387,6 +398,7 @@ class NowPlayingScreenTest {
             assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
 
             // Wikipedia's lines hidden (a display filter only); the action shows its line.
+            unfold()
             compose.onNodeWithTag(CHIP_PREFIX + "W").performScrollTo().performClick()
             assertEquals(0, compose.onAllNodesWithTag(LINE_PREFIX + "W1").fetchSemanticsNodes().size)
             compose.runOnUiThread { assertTrue(actions.single().action()) }
@@ -491,7 +503,8 @@ class NowPlayingScreenTest {
                     action.label?.toString()?.startsWith(text(R.string.home_cite, "")) == true
                 }
             assertEquals(evidence.ids.take(16).map { text(R.string.home_cite, it) }, custom.map { it.label.toString() })
-            // A line past them is reached under *Sources*, which lists every line.
+            // A line past them is reached under *Sources*, which lists every line once unfolded.
+            unfoldAll()
             compose.onNodeWithTag(LINE_PREFIX + evidence.ids.last()).performScrollTo().assertIsDisplayed()
         }
     }
@@ -512,6 +525,7 @@ class NowPlayingScreenTest {
         val kept = track(insight = written("It was recorded in 1973 [MB1].", cached = true))
         show(state(PipelineView(kept, aiReady = true, rewrite = true, cardShown = true, writeKey = sundownKey))) {
             compose.onNodeWithText(text(R.string.home_rewrite_offered)).assertExists()
+            unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
             assertEquals(1, writes)
@@ -519,6 +533,7 @@ class NowPlayingScreenTest {
         show(state(PipelineView(kept, aiReady = true, cardShown = true, rewriteFailed = "offline"))) {
             val reason = text(R.string.home_failure_offline)
             compose.onNodeWithText(text(R.string.home_rewrite_failed, reason)).assertExists()
+            unfold()
             compose.onNodeWithText(text(R.string.home_evidence_cited)).assertExists()
             assertEquals(0, compose.onAllNodesWithTag(WRITE_TAG).fetchSemanticsNodes().size)
         }
@@ -527,6 +542,7 @@ class NowPlayingScreenTest {
     @Test
     fun aFilterChipKeepsItsTextAndSaysWhetherItsLinesShow() =
         show(state(PipelineView(track()))) {
+            unfold()
             val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB").performScrollTo()
             chip.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             chip.assert(
@@ -548,6 +564,7 @@ class NowPlayingScreenTest {
     @Test
     fun theLinesTextsStartInOneColumn() =
         show(state(PipelineView(track()))) {
+            unfold()
             val lines = listOf(HomeFixtures.musicBrainzLine, HomeFixtures.wikipediaLine, HomeFixtures.wikidataLine)
             // The tags differ in width (MB1, W1, WD1); the texts beside them start at one x.
             val starts =
@@ -567,6 +584,7 @@ class NowPlayingScreenTest {
     @Config(qualifiers = "w411dp-h891dp-420dpi")
     fun noTagOverflowsItsColumn() =
         show(state(PipelineView(track()))) {
+            unfold()
             for (tag in listOf("MB1", "W1", "WD1")) {
                 val layouts = mutableListOf<TextLayoutResult>()
                 compose
@@ -617,6 +635,7 @@ class NowPlayingScreenTest {
             compose.onNodeWithText(text(R.string.home_source_chip, "MB", kept)).assertExists()
             val needsKey = text(R.string.home_source_chip, "L", text(R.string.home_source_needs_key))
             compose.onNodeWithText(needsKey).assertExists()
+            unfold()
             val wikipedia = text(R.string.settings_source_wikipedia)
             compose.onNodeWithText(text(R.string.home_rejected, wikipedia, "a different Sundown")).assertExists()
         }
