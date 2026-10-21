@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory() as tmp:
     else:
         # The chips' labels are checked, not added: the copy keeps ASCII only.
         labels = ''.join(html.unescape(m) for p in pages for m in CHIP.findall(p))
-        used = {ord(c) for c in labels}
+        used = {ord(c) for c in labels if ord(c) >= 0x20}
         chars = ASCII
     opts = subset.Options()
     opts.layout_features = ['*']
@@ -82,4 +82,6 @@ with tempfile.TemporaryDirectory() as tmp:
     subset.save_font(font, out, opts)
 print(f'{out}: {os.path.getsize(out)} bytes, {len(chars)} characters')
 if missing:
-    print('not in the font, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in missing))
+    where = ('outside the ASCII the Mono copy keeps (widen its characters in `FONTS`)' if scope == 'chips'
+             else 'not in the font')
+    print(f'{where}, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in missing))
