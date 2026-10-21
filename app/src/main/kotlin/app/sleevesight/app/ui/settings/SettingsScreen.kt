@@ -53,9 +53,9 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
- * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
- * the end, *Scan keys* and, while any key is stored, *Remove all API keys*, the way to the credits, and the
- * developer setting *Diagnostics*. Each change is saved at once. The rows show the stored
+ * #84), the insight settings (D5, D13), the lookup settings (D6, D9), the history's (#148), and the
+ * font (#377); at the end, *Scan keys* and, while any key is stored, *Remove all API keys*, the way
+ * to the credits, and the developer setting *Diagnostics*. Each change is saved at once. The rows show the stored
  * settings, so a change that cannot be saved (the settings file cannot be read or written) leaves
  * its row at the stored value, and the screen says so above the list until a later change is saved.
  *
@@ -351,6 +351,7 @@ private fun SettingsContent(
         InsightsSection(settings, update, open)
         LookupsSection(settings, update, open)
         HistorySection(settings, update, open)
+        AppearanceSection(settings, update, open)
         SavedKeysSection(keys, open)
         SectionHeading(R.string.settings_section_about)
         ValueRow(
