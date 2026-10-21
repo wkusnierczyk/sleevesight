@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 
 class OptionsTest {
     @Test
@@ -16,6 +17,30 @@ class OptionsTest {
         assertEquals(80, Options.tracks("all").size)
         assertEquals(listOf(1, 12, 20, 21, 22), Options.tracks("12,1,20-22"))
         assertFailsWith<IllegalArgumentException> { Options.tracks("81") }
+    }
+
+    @Test
+    fun `a tracklist replaces the playlist positions, and not both are given`() {
+        val file = File.createTempFile("tracklist", ".json")
+        try {
+            file.writeText("""{"tracks": [{"title": "Sundown", "artist": "Gordon Lightfoot"}]}""")
+            val options = Options.parse(listOf("live", "--tracklist", file.path))
+            assertEquals(emptyList(), options.tracks)
+            assertEquals(
+                "Sundown",
+                options.tracklist
+                    ?.tracks
+                    ?.single()
+                    ?.title,
+            )
+            assertNull(Options.parse(listOf("live")).tracklist)
+            assertFailsWith<IllegalArgumentException> {
+                Options.parse(listOf("live", "--tracklist", file.path, "--tracks", "1"))
+            }
+        } finally {
+            file.delete()
+        }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--tracklist", "no-such-file.json")) }
     }
 
     @Test

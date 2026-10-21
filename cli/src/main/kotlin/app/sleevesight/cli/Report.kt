@@ -32,11 +32,18 @@ class Diagnostics(
     val artistCache: List<ArtistCacheCount>? = null,
 )
 
-/** Everything a report shows. */
+/**
+ * Everything a report shows. [tracklist] names the tracklist run (`--tracklist`), null for the
+ * fixture playlist; [allowModel] is the run's *Model's own knowledge* switch, which decides the
+ * prompts [ArtistFacts] rebuilds.
+ */
+@Suppress("LongParameterList") // Everything one report shows, each its own part of it.
 class RunSummary(
     val mode: Mode,
     val sources: List<SourceStatus>,
     val insights: String,
+    val tracklist: String? = null,
+    val allowModel: Boolean = false,
     val results: List<TrackResult>,
     val gate: List<Criterion>,
     val diagnostics: Diagnostics,
@@ -67,6 +74,7 @@ class Report(
             coverage()
             gate()
             insights()
+            artistFacts()
             appendLine("## Tracks")
             run.results.forEach { TrackSection(it, columns).render(this) }
             events()
@@ -76,8 +84,10 @@ class Report(
         val d = run.diagnostics
         appendLine("# Sleevesight pipeline: coverage report")
         appendLine()
+        val tracklist = run.tracklist?.let { " Tracklist: $it." }.orEmpty()
         appendLine(
-            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size}. Time: ${d.elapsed.inWholeSeconds} s.",
+            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size}.$tracklist " +
+                "Time: ${d.elapsed.inWholeSeconds} s.",
         )
         appendLine()
         appendLine("| Source | On | Note |")
@@ -178,6 +188,44 @@ class Report(
         appendLine()
     }
 
+    // #239: what consecutive tracks send and write about their artists (`ArtistFacts`).
+    private fun StringBuilder.artistFacts() {
+        val rows = ArtistFacts.measure(run.results, run.allowModel)
+        val t = ArtistFacts.totals(rows)
+        appendLine("## Artist-level evidence (#239)")
+        appendLine()
+        appendLine(ARTIST_FACTS_NOTE)
+        appendLine()
+        appendLine(
+            "| Track | Lines | Artist-level | Prompt chars | Artist-level chars | Resent | Tokens in / out | " +
+                "Artist-only sentences | Artist lines cited | Restated from the last | Restated from any |",
+        )
+        appendLine("|---|---|---|---|---|---|---|---|---|---|---|")
+        for (r in rows) {
+            val written = r.insight is InsightState.Written
+            val tokens =
+                r.usage?.let { "${it.inputTokens} / ${it.outputTokens}" }
+                    ?: if (written) "cached" else insightLabel(r.insight)
+            val sentences = if (written) "${r.artistSentences} of ${r.sentences}" else ""
+            appendLine(
+                "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | " +
+                    "${r.promptChars ?: "none sent"} | ${r.artistChars} | ${r.resent} | $tokens | $sentences | " +
+                    "${ids(r.cited, written)} | ${ids(r.fromLast, written)} | ${ids(r.restated, written)} |",
+            )
+        }
+        appendLine()
+        appendLine(
+            "Over the run: ${t.artistLines} of ${t.lines} evidence lines artist-level " +
+                "(${percent(t.artistLines, t.lines)}); ${t.prompts} prompts, ${t.promptChars} characters, " +
+                "${t.artistChars} of them artist-level lines (${percent(t.artistChars, t.promptChars)}). " +
+                "Of ${t.written} insights, ${t.restatingLast} restate an artist fact of the last one before " +
+                "and ${t.restating} one of any before; ${t.artistSentences} of ${t.sentences} sentences cite " +
+                "artist-level lines only. Tokens billed: ${t.inputTokens} in, ${t.outputTokens} out, " +
+                "over ${t.calls} calls.",
+        )
+        appendLine()
+    }
+
     private fun StringBuilder.events() {
         appendLine()
         appendLine("## Diagnostics log")
@@ -253,6 +301,32 @@ class Report(
             }
 
         fun cell(text: String): String = text.replace("|", "\\|").replace("\n", " ")
+
+        /** [part] of [whole] as a percentage, to one decimal; `-` for none of nothing. */
+        fun percent(
+            part: Int,
+            whole: Int,
+        ): String = if (whole == 0) "-" else Gate.percent(part.toDouble() / whole)
+
+        private fun ids(
+            ids: List<String>,
+            written: Boolean,
+        ): String =
+            when {
+                !written -> ""
+                ids.isEmpty() -> "none"
+                else -> ids.joinToString(", ")
+            }
+
+        private const val ARTIST_FACTS_NOTE =
+            "Per track, in the run's order: its evidence lines and how many are artist-level (Last.fm's bio, " +
+                "the Wikipedia artist article, Wikidata's artist facts); the insight prompt's size, rebuilt " +
+                "as the pipeline sends it, and the artist-level lines' share of it; *resent*, the artist-level " +
+                "lines the track before had too; the insight's sentences citing artist-level lines only; and " +
+                "the artist-level lines it cites that the last insight before it, or any before it, cited too. " +
+                "Lines are matched across tracks by source and text, since ids are positions per track. " +
+                "Citations are what is counted, not prose: a fact restated from a differently worded line, or " +
+                "uncited, is not."
     }
 }
 

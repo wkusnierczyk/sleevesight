@@ -1,0 +1,16 @@
+{
+  "name": "Punisher, Phoebe Bridgers",
+  "tracks": [
+    {"title": "DVD Menu", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "1:10"},
+    {"title": "Garden Song", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:40"},
+    {"title": "Kyoto", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:05"},
+    {"title": "Punisher", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:10"},
+    {"title": "Halloween", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "4:31"},
+    {"title": "Chinese Satellite", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:37"},
+    {"title": "Moon Song", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "4:38"},
+    {"title": "Savior Complex", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "4:02"},
+    {"title": "ICU", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:10"},
+    {"title": "Graceland Too", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "3:56"},
+    {"title": "I Know The End", "artist": "Phoebe Bridgers", "album": "Punisher", "dur": "5:45"}
+  ]
+}

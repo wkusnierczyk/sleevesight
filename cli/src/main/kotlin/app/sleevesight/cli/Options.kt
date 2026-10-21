@@ -34,6 +34,7 @@ sealed interface CacheChoice {
 data class Options(
     val mode: Mode,
     val tracks: List<Int>,
+    val tracklist: Tracklist?,
     val fixtures: File,
     val out: File?,
     val cache: CacheChoice,
@@ -58,6 +59,8 @@ data class Options(
             Options:
               --tracks <spec>     regression (default: the design's regression cases), all, or positions
                                   such as 1,12,20-24
+              --tracklist <file>  run the tracks in this JSON file, in its order, in place of the
+                                  playlist (an album, or one artist's playlist; see `Tracklist`)
               --out <file>        also write the report to this file
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
@@ -94,9 +97,13 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
+            require(values["--tracks"] == null || values["--tracklist"] == null) {
+                "--tracks and --tracklist cannot both be given"
+            }
             return Options(
                 mode = mode,
-                tracks = tracks(values["--tracks"] ?: "regression"),
+                tracks = if (values["--tracklist"] != null) emptyList() else tracks(values["--tracks"] ?: "regression"),
+                tracklist = values["--tracklist"]?.let { Tracklist.read(File(it)) },
                 fixtures = File(values["--fixtures"] ?: "fixtures"),
                 out = values["--out"]?.let(::File),
                 cache = if (mode == Mode.RECORD) CacheChoice.None else cache,
@@ -145,7 +152,8 @@ data class Options(
 
         private val SWITCHES = setOf("--no-web", "--no-insights")
 
-        private val VALUED = setOf("--tracks", "--out", "--fixtures", "--cache", "--model", "--record", "--keys")
+        private val VALUED =
+            setOf("--tracks", "--tracklist", "--out", "--fixtures", "--cache", "--model", "--record", "--keys")
 
         /** The playlist positions [spec] names. */
         fun tracks(spec: String): List<Int> {
