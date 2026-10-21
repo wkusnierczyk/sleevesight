@@ -26,6 +26,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 @OptIn(ExperimentalCoroutinesApi::class) // runCurrent
 class StreamTest {
@@ -99,6 +100,27 @@ class StreamTest {
             assertIs<NetResult.Success<NetResponse>>(result)
             assertEquals(2, calls)
             assertEquals(listOf("one", "two"), lines)
+        }
+
+    @Test
+    fun `a 429 from a host whose policy passes it on is the stream's response, with no lines`() =
+        runTest {
+            var calls = 0
+            val config =
+                NetConfig(
+                    appVersion = "test",
+                    hosts = mapOf("example.org" to HostPolicy(Duration.ZERO, passOn429 = true)),
+                )
+            val (result, lines) =
+                withClient(config, handler = {
+                    calls++
+                    respond("""{"error":{"code":"insufficient_quota"}}""", HttpStatusCode.TooManyRequests)
+                }) { it.lines(post) }
+            val response = assertIs<NetResult.Success<NetResponse>>(result).value
+            assertEquals(429, response.status)
+            assertEquals("""{"error":{"code":"insufficient_quota"}}""", response.body)
+            assertEquals(emptyList(), lines)
+            assertEquals(1, calls)
         }
 
     @Test

@@ -104,8 +104,8 @@ class Cli(
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
         private val settings =
             Settings(
-                aiProvider = ProviderId.ANTHROPIC,
-                aiModels = listOfNotNull(options.model?.let { ProviderId.ANTHROPIC to it }).toMap(),
+                aiProvider = options.provider,
+                aiModels = listOfNotNull(options.model?.let { options.provider to it }).toMap(),
                 enabledSources =
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
@@ -222,20 +222,21 @@ class Cli(
                     !options.insights -> null
                     options.mode == Mode.REPLAY -> Secret("replay").takeIf { store.hasRecordings(ANTHROPIC) }
                     options.mode == Mode.RECORD -> keys.anthropic?.takeIf { ANTHROPIC in options.record }
-                    else -> keys.anthropic
+                    else -> keys.forProvider(options.provider)
                 }
-            return key?.let { AiAccess(wiring.aiProviders.getValue(ProviderId.ANTHROPIC), it) }
+            return key?.let { AiAccess(wiring.aiProviders.getValue(options.provider), it) }
         }
 
         private fun aiNote(): String {
-            val model = settings.model(ProviderId.ANTHROPIC)
-            val effort = settings.effort(ProviderId.ANTHROPIC)?.name?.lowercase() ?: "the model's default"
+            val model = settings.model(options.provider)
+            val effort = settings.effort(options.provider)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
+            val name = AI_NAMES.getValue(options.provider)
             return when {
-                ai != null -> "Anthropic $model, effort $effort$replayed"
+                ai != null -> "$name $model, effort $effort$replayed"
                 !options.insights -> "off: --no-insights"
                 options.mode == Mode.REPLAY -> "off: no recorded replies"
-                else -> "off: no ${Keys.ANTHROPIC}"
+                else -> "off: no ${Keys.variableOf(options.provider)}"
             }
         }
 
@@ -261,6 +262,9 @@ class Cli(
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
         private const val ANTHROPIC = "anthropic"
+
+        /** The AI services' names, for the report. */
+        private val AI_NAMES = mapOf(ProviderId.ANTHROPIC to "Anthropic", ProviderId.OPENAI to "OpenAI")
         private const val SECONDS_PER_MINUTE = 60
 
         /** Playlist position [n] as the player would report it. */

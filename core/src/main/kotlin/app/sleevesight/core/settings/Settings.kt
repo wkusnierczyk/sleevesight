@@ -163,12 +163,23 @@ data class Settings(
         const val SPOTIFY: String = "com.spotify.music"
 
         /**
-         * Each provider's default model. Anthropic: Claude Haiku 5.5, the cheapest current model in
-         * the Anthropic models API on 2026-10-14. The key and its bill are the user's (driver 5), and
-         * an insight narrates a few evidence lines, which needs no larger model; the user can choose
-         * another from the provider's list. The other providers get theirs with their clients.
+         * Each provider's default model: its cheapest current text model. The key and its bill are
+         * the user's (driver 5), and an insight narrates a few evidence lines, which needs no larger
+         * model; the user can choose another from the provider's list. The other providers get
+         * theirs with their clients.
+         *
+         * - Anthropic: Claude Haiku 5.5, the cheapest current model in the Anthropic models API on
+         *   2026-10-14.
+         * - OpenAI: GPT-6 Luna (`gpt-6-luna`, $0.10 and $0.50 per million input and output tokens),
+         *   the cheapest of OpenAI's current models on its models and pricing pages on 2026-10-21.
+         *   GPT-5 nano is cheaper but shuts down on 2026-12-11, as do the older nano models before
+         *   it; GPT-6 Luna is named as their successor.
          */
-        val DEFAULT_MODELS: Map<ProviderId, String> = mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5")
+        val DEFAULT_MODELS: Map<ProviderId, String> =
+            mapOf(
+                ProviderId.ANTHROPIC to "claude-haiku-5-5",
+                ProviderId.OPENAI to "gpt-6-luna",
+            )
 
         /**
          * Each provider's reasoning-effort scale, with its default; a provider with none sends no
@@ -182,10 +193,21 @@ data class Settings(
          * check, not the model's deliberation. Thinking is not switched off: not every model allows
          * it (Claude Opus 5.5 refuses), while every current one takes an effort. A user who prefers
          * more deliberate cards raises it, or chooses the provider's default.
+         *
+         * OpenAI: low, medium and high (`reasoning.effort`), low by default, for the same reasons
+         * (GPT-6 Luna reasons at medium by default). Its models also name `none`, `minimal`,
+         * `xhigh` and `max`, but not all of them take each: GPT-6 Astra and 6.1 Sol refuse `none`,
+         * only GPT-5 takes `minimal`, and `xhigh` and `max` buy depth a card of a few sentences
+         * does not use. Low, medium and high are the levels every current reasoning model takes.
          */
         val EFFORT_SCALES: Map<ProviderId, EffortScale> =
             mapOf(
                 ProviderId.ANTHROPIC to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.OPENAI to
                     EffortScale(
                         levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
                         default = ReasoningEffort.LOW,

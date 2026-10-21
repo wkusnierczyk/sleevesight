@@ -24,6 +24,7 @@ import kotlin.test.assertTrue
 
 class KeysQrTest {
     private val anthropic = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
+    private val openAi = "sk-proj-" + "e5F6_g7-H8".repeat(15)
     private val exa = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFm = "0123456789abcdef0123456789abcdef"
     private val dir = createTempDirectory("keys-qr").toFile()
@@ -90,20 +91,23 @@ class KeysQrTest {
     fun `the keys file's keys are drawn as a setup code, and no key is printed`() {
         val keys =
             File(dir, "keys.env").apply {
-                writeText("SLEEVESIGHT_ANTHROPIC_API_KEY=$anthropic\nSLEEVESIGHT_LASTFM_API_KEY=$lastFm\n")
+                writeText(
+                    "SLEEVESIGHT_ANTHROPIC_API_KEY=$anthropic\nSLEEVESIGHT_OPENAI_API_KEY=$openAi\n" +
+                        "SLEEVESIGHT_LASTFM_API_KEY=$lastFm\n",
+                )
             }
         val run = run("--keys", keys.path)
         assertEquals(0, run.status, run.err)
         val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
         assertEquals(
-            mapOf(KeyName.ANTHROPIC to anthropic, KeyName.LASTFM to lastFm),
+            mapOf(KeyName.ANTHROPIC to anthropic, KeyName.OPENAI to openAi, KeyName.LASTFM to lastFm),
             read.keys.mapValues { it.value.reveal() },
         )
-        for (key in listOf(anthropic, lastFm)) {
+        for (key in listOf(anthropic, openAi, lastFm)) {
             assertFalse(key in run.out)
             assertFalse(key in run.err)
         }
-        assertTrue("Anthropic, Last.fm" in run.err)
+        assertTrue("Anthropic, OpenAI, Last.fm" in run.err)
     }
 
     @Test
@@ -139,7 +143,7 @@ class KeysQrTest {
         val empty = File(dir, "none.env").apply { writeText("# no keys\n") }
         assertEquals(Cli.EXIT_USAGE, run("--keys", empty.path).status)
         assertEquals(Cli.EXIT_USAGE, run("--anthropic-from", "-", "--exa-from", "-").status)
-        assertEquals(Cli.EXIT_USAGE, run("--openai-from", "-").status)
+        assertEquals(Cli.EXIT_USAGE, run("--mistral-from", "-").status)
         assertEquals(Cli.EXIT_USAGE, run("--exa-from", File(dir, "missing").path).status)
         assertEquals(Cli.EXIT_USAGE, run("--exa-from", "a", "--exa-from", "b").status)
     }
@@ -177,7 +181,7 @@ class KeysQrTest {
         assertTrue("Unknown option or unexpected argument\n" in run(anthropic).err)
         assertTrue("Unknown option or unexpected argument\n" in run("--anthropic-from=$anthropic").err)
         assertTrue("Unknown option or unexpected argument\n" in run("--anthropic-from$anthropic").err)
-        assertTrue("Unknown option --openai-from\n" in run("--openai-from", "-").err)
+        assertTrue("Unknown option --mistral-from\n" in run("--mistral-from", "-").err)
         assertTrue("--anthropic-from: no such file\n" in run("--anthropic-from", anthropic).err)
     }
 

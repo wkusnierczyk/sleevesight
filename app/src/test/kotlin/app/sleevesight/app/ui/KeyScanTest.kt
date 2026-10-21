@@ -26,6 +26,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.keyName
 import app.sleevesight.core.Secret
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +108,7 @@ class KeyScanTest {
     private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
+    private val openAiKey = "sk-proj-" + "e5F6_g7-H8".repeat(15)
     private val exaKey = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFmKey = "0123456789abcdef0123456789abcdef"
 
@@ -123,6 +125,28 @@ class KeyScanTest {
 
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitFor("the scanned Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
+        }
+
+    @Test
+    fun eachAiServicesKeyRowScansItsOwnKey() {
+        for ((id, key) in listOf(SecretId.ANTHROPIC to anthropicKey, SecretId.OPENAI to openAiKey)) {
+            show(scanner = scanning(key)) {
+                compose.onNodeWithText(text(keyName(id))).performScrollTo().performClick()
+                compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+                waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
+                compose.onNodeWithText(text(R.string.settings_save)).performClick()
+                waitFor("the scanned $id key stored") { stored(id) == key }
+            }
+        }
+    }
+
+    @Test
+    fun anAnthropicKeyScannedIntoOpenAisFieldIsRefused() =
+        show(scanner = scanning(anthropicKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_openai)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+            waitForText(text(R.string.settings_key_scan_shape))
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
         }
 
     @Test
@@ -146,7 +170,7 @@ class KeyScanTest {
     @Test
     fun scanKeysShowsWhatTheCodeHoldsAndSavesNothingBeforeTheConfirmation() {
         runBlocking { secrets.set(SecretId.EXA, Secret("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f")) }
-        val code = "sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey\nlastfm=not-a-key\nopenai=sk-x"
+        val code = "sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey\nlastfm=not-a-key\nmistral=x"
         show(scanner = scanning(code)) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             val anthropic = text(R.string.settings_key_name_anthropic)
@@ -162,7 +186,7 @@ class KeyScanTest {
                 .performScrollTo()
                 .assertIsDisplayed()
             compose
-                .onNodeWithText(app.getString(R.string.setup_unknown, "openai"))
+                .onNodeWithText(app.getString(R.string.setup_unknown, "mistral"))
                 .performScrollTo()
                 .assertIsDisplayed()
             // No key is shown whole.

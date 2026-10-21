@@ -56,7 +56,8 @@ class KeysQr(
                 }
 
                 keys.isEmpty() -> {
-                    "No keys found: set ${Keys.ANTHROPIC}, ${Keys.EXA} or ${Keys.LASTFM}, or give --<name>-from."
+                    "No keys found: set ${Keys.ANTHROPIC}, ${Keys.OPENAI}, ${Keys.EXA} or ${Keys.LASTFM}, " +
+                        "or give --<name>-from."
                 }
 
                 else -> {
@@ -99,6 +100,7 @@ class KeysQr(
             val loaded = if (given == null) Keys.load(environment) else Keys.load(emptyMap(), given)
             return listOfNotNull(
                 loaded.anthropic?.let { KeyName.ANTHROPIC to it },
+                loaded.openAi?.let { KeyName.OPENAI to it },
                 loaded.exa?.let { KeyName.EXA to it },
                 loaded.lastFm?.let { KeyName.LASTFM to it },
             ).toMap()
@@ -136,8 +138,8 @@ class KeysQr(
 
         val USAGE: String =
             """
-            Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--exa-from <file|->]
-                                           [--lastfm-from <file|->]
+            Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
+                                           [--exa-from <file|->] [--lastfm-from <file|->]
 
               Draws a setup code for the app's Settings, API keys, Scan keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
@@ -185,13 +187,14 @@ class KeysQr(
                 }
             }
 
-        private const val SHAPES = "Anthropic's start sk-ant-, Last.fm's are 32 hexadecimal digits"
+        private const val SHAPES = "Anthropic's start sk-ant-, OpenAI's sk-, Last.fm's are 32 hexadecimal digits"
         private const val COLOURS = "\u001b[30;107m"
         private const val RESET = "\u001b[0m"
 
         private fun label(name: KeyName): String =
             when (name) {
                 KeyName.ANTHROPIC -> "Anthropic"
+                KeyName.OPENAI -> "OpenAI"
                 KeyName.EXA -> "Exa"
                 KeyName.LASTFM -> "Last.fm"
             }

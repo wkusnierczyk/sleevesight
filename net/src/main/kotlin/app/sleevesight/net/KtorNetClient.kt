@@ -231,12 +231,14 @@ internal class KtorNetClient(
         }
         val busy =
             status == HttpStatusCode.ServiceUnavailable && policy?.rateLimitedOn503 == true && request.method.idempotent
+        // A host whose 429 may mean something no retry mends has it read as a response.
+        val tooMany = status == HttpStatusCode.TooManyRequests && policy?.passOn429 != true
         return when {
             status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden -> {
                 Attempt.Failed(NetError.Unauthorized(status.value))
             }
 
-            status == HttpStatusCode.TooManyRequests || busy -> {
+            tooMany || busy -> {
                 retryAfter().let { Attempt.Failed(NetError.RateLimited(it), it) }
             }
 

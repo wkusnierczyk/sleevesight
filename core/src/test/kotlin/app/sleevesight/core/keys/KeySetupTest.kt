@@ -10,6 +10,7 @@ import kotlin.test.assertTrue
 
 class KeySetupTest {
     private val anthropic = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
+    private val openAi = "sk-proj-" + "e5F6_g7-H8".repeat(15)
     private val exa = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFm = "0123456789abcdef0123456789ABCDEF"
 
@@ -17,9 +18,14 @@ class KeySetupTest {
 
     @Test
     fun `a setup code's keys are read in order, each with its service`() {
-        val read = setup("sleevesight-keys:v1\nanthropic=$anthropic\r\nexa = $exa \n\nlastfm=$lastFm\n")
-        assertEquals(listOf(KeyName.ANTHROPIC, KeyName.EXA, KeyName.LASTFM), read.keys.keys.toList())
+        val read =
+            setup("sleevesight-keys:v1\nanthropic=$anthropic\r\nopenai=$openAi\nexa = $exa \n\nlastfm=$lastFm\n")
+        assertEquals(
+            listOf(KeyName.ANTHROPIC, KeyName.OPENAI, KeyName.EXA, KeyName.LASTFM),
+            read.keys.keys.toList(),
+        )
         assertEquals(anthropic, read.keys.getValue(KeyName.ANTHROPIC).reveal())
+        assertEquals(openAi, read.keys.getValue(KeyName.OPENAI).reveal())
         assertEquals(exa, read.keys.getValue(KeyName.EXA).reveal())
         assertEquals(lastFm, read.keys.getValue(KeyName.LASTFM).reveal())
         assertTrue(read.refused.isEmpty())
@@ -55,8 +61,8 @@ class KeySetupTest {
 
     @Test
     fun `unknown names are reported, cut short, and unreadable lines counted`() {
-        val read = setup("sleevesight-keys:v1\nopenai=sk-x\n${"n".repeat(40)}=v\njust-a-line\n=nameless\nexa=$exa")
-        assertEquals(listOf("openai", "n".repeat(24)), read.unknown)
+        val read = setup("sleevesight-keys:v1\nmistral=x\n${"n".repeat(40)}=v\njust-a-line\n=nameless\nexa=$exa")
+        assertEquals(listOf("mistral", "n".repeat(24)), read.unknown)
         assertEquals(2, read.unreadable)
         assertEquals(setOf(KeyName.EXA), read.keys.keys)
     }
@@ -83,6 +89,11 @@ class KeySetupTest {
         assertNull(KeyShape.check(KeyName.ANTHROPIC, anthropic))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.ANTHROPIC, "sk-ant-short"))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.ANTHROPIC, exa))
+        assertNull(KeyShape.check(KeyName.OPENAI, openAi))
+        assertNull(KeyShape.check(KeyName.OPENAI, "sk-" + "a1B2c3D4".repeat(6)))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, anthropic))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, "sk-proj-short"))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, exa))
         assertNull(KeyShape.check(KeyName.EXA, exa))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.EXA, "short"))
         assertEquals(KeyProblem.BAD_CHARACTERS, KeyShape.check(KeyName.EXA, "$exa\n"))
