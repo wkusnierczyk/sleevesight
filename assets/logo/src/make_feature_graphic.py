@@ -83,7 +83,7 @@ def brand_sheet():
     and each colourway's variables, name to value: `lt` and `dk`, each with the page's `--page-muted`
     of its scheme added as `muted`."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
-    sym = re.search(r'<symbol\b[^>]*\bid="lp".*?</symbol>', page, re.S)
+    sym = re.search(r'<symbol\b[^>]*\bid=(["\'])lp\1.*?</symbol>', page, re.S)
     rules = {name: re.search(pattern, page, re.S | re.M) for name, pattern in (
         ('lt', r'^\.lt\{(.*?)\}'), ('dk', r'^\.dk\{(.*?)\}'), ('page', r'^:root\{(.*?)\}'),
         ('page-dark', r'^@media \(prefers-color-scheme: dark\)\{:root\{(.*?)\}'))}
@@ -131,19 +131,25 @@ def record(symbol, var, scheme):
         if '}' in el.tag or any('}' in name for name in el.attrib):
             sys.exit(f'design/brand.html: <symbol id="lp">: a namespaced name the script does not know on a '
                      f'<{el.tag}>: {dict(el.attrib)}; the script needs updating for it')
+        style = el.attrib.get('style')
+        prop = None
+        if style is not None:
+            m = re.fullmatch(r'(fill|display):var\(--([\w-]+)\)', style)
+            if not m:
+                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know on a '
+                         f'<{el.tag}>: {style!r}; it fills in only fill and display from a variable')
+            prop, var_name = m.groups()
+            resolved, = need(var, scheme, var_name)
+        # The style wins over a presentation attribute of the same property, as in the page, so that
+        # attribute is dropped: the rim's `fill` comes from its style alone, and a `display` attribute
+        # cannot hide what the style shows.
         attrs, shown = [], True
         for name, value in el.attrib.items():
             if name == 'style':
-                m = re.fullmatch(r'(fill|display):var\(--([\w-]+)\)', value)
-                if not m:
-                    sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know on a '
-                             f'<{el.tag}>: {value!r}; it fills in only fill and display from a variable')
-                prop, var_name = m.groups()
-                value, = need(var, scheme, var_name)
                 if prop == 'fill':
-                    attrs.append(('fill', value))
-                shown = not (prop == 'display' and value == 'none')
-            else:
+                    attrs.append(('fill', resolved))
+                shown = not (prop == 'display' and resolved == 'none')
+            elif name != prop:
                 attrs.append((name, value))
         if not shown:
             continue
@@ -315,6 +321,10 @@ def main():
     symbol, schemes = brand_sheet()
     tag = Tagline(args.font)
     names = DESIGNS if args.design == 'all' else (args.design,)
+    missing = [f'{tool} (Homebrew: {pkg})' for tool, pkg in (('rsvg-convert', 'librsvg'), ('magick', 'imagemagick'))
+               if not shutil.which(tool)]
+    if 'd2' in names and missing:
+        sys.exit("d2's PNG needs " + ' and '.join(missing) + '; nothing written')
     write([(name, *build(name, tile, symbol, schemes, tag)) for name in names])
 
 

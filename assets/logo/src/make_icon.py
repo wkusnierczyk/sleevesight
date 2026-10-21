@@ -75,7 +75,7 @@ def brand_sheet():
     """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, and the `.lt` colourway's
     variables."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
-    sym = re.search(r'<symbol\b[^>]*\bid="lp".*?</symbol>', page, re.S)
+    sym = re.search(r'<symbol\b[^>]*\bid=(["\'])lp\1.*?</symbol>', page, re.S)
     lt = re.search(r'^\.lt\{(.*?)\}', page, re.S | re.M)
     if not sym or not lt:
         sys.exit('design/brand.html: no ' + ' and no '.join(
