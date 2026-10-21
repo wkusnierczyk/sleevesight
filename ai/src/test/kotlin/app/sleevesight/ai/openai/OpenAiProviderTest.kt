@@ -19,8 +19,11 @@ import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -30,9 +33,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // currentTime
 class OpenAiProviderTest {
     private val key = Secret("sk-proj-test-key")
     private val request =
@@ -46,8 +51,16 @@ class OpenAiProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return OpenAiProvider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList() to net
     }
+
+    /** A provider whose clock stands at [NOW]. */
+    private fun provider(net: NetClient) = OpenAiProvider(net, clock = clock)
+
+    private val clock =
+        object : Clock {
+            override fun now(): Instant = NOW
+        }
 
     private fun sse(vararg events: String): String = events.joinToString("") { "data: $it\n\n" }
 
@@ -153,6 +166,7 @@ class OpenAiProviderTest {
                 "gpt-5.3-codex",
                 "o4-mini",
                 "o3",
+                "ft:o4-mini:example-org::abc123",
             )) {
                 assertTrue(OpenAiProvider.takesEffort(model), model)
             }
@@ -165,6 +179,7 @@ class OpenAiProviderTest {
                 "gpt-5-search-api",
                 "gpt-60",
                 "chat-latest",
+                "ft:gpt-4.1-mini:example-org::abc123",
             )) {
                 assertFalse(OpenAiProvider.takesEffort(model), model)
             }
@@ -238,6 +253,8 @@ class OpenAiProviderTest {
                     """{"type":"response.failed","response":{"status":"failed",""" +
                         """"error":{"code":"server_error","message":"m"}}}""" to AiErrorKind.SERVER,
                     """{"type":"response.failed","response":{"status":"failed","error":null}}""" to AiErrorKind.SERVER,
+                    """{"type":"response.failed","response":{"status":"failed",""" +
+                        """"error":{"type":"rate_limit_error","message":"m"}}}""" to AiErrorKind.RATE_LIMITED,
                     errorEvent("server_is_overloaded") to AiErrorKind.OVERLOADED,
                     errorEvent("insufficient_quota") to AiErrorKind.BILLING,
                     errorEvent("ERR_SOMETHING") to AiErrorKind.SERVER,
@@ -245,6 +262,19 @@ class OpenAiProviderTest {
             for ((event, kind) in cases) {
                 val (events, _) = events { ok(sse(created, delta("Half"), event, completed())) }
                 assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(kind)), events, event)
+            }
+        }
+
+    @Test
+    fun `a response failed for a usage policy is declined, as a refusal is`() =
+        runTest {
+            for (code in listOf("bio_policy", "misalignment_policy_violation", "invalid_prompt")) {
+                val failed =
+                    """{"type":"response.failed","response":{"status":"failed",""" +
+                        """"error":{"code":"$code","message":"m"},"usage":{"input_tokens":9,"output_tokens":2}}}"""
+                val (events, _) = events { ok(sse(created, failed)) }
+                val declined = CompletionEvent.Done(Usage(9, 2), StopReason.REFUSAL)
+                assertEquals(listOf<CompletionEvent>(declined), events, code)
             }
         }
 
@@ -297,6 +327,10 @@ class OpenAiProviderTest {
                     response(429, errorBody("rate_limit_error", "slow_down")) to AiErrorKind.RATE_LIMITED,
                     response(429, "") to AiErrorKind.RATE_LIMITED,
                     response(404, "<html>gateway</html>") to AiErrorKind.MODEL_NOT_FOUND,
+                    // `invalid_request_error` says less than these statuses do.
+                    response(404, errorBody("invalid_request_error", null)) to AiErrorKind.MODEL_NOT_FOUND,
+                    response(413, errorBody("invalid_request_error", null)) to AiErrorKind.REQUEST_TOO_LARGE,
+                    response(503, errorBody("service_unavailable_error", null)) to AiErrorKind.OVERLOADED,
                     response(418, "") to AiErrorKind.UNEXPECTED_RESPONSE,
                 )
             for ((answer, kind) in cases) {
@@ -315,6 +349,76 @@ class OpenAiProviderTest {
             )
             val broke = response(429, errorBody("insufficient_quota", "insufficient_quota"), wait)
             assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), events { broke }.first)
+        }
+
+    @Test
+    fun `a rate limit within the cap is sent once more after its Retry-After, a date included`() =
+        runTest {
+            for ((retryAfter, wait) in listOf("3" to 3.seconds, "Wed, 21 Oct 2026 12:00:07 GMT" to 7.seconds)) {
+                val header = mapOf("Retry-After" to listOf(retryAfter))
+                val limited = response(429, errorBody("requests", "rate_limit_exceeded"), header)
+                var calls = 0
+                val started = currentTime
+                val (events, net) =
+                    events {
+                        calls++
+                        if (calls == 1) limited else ok(recorded("openai/responses-stream.sse"))
+                    }
+                assertEquals("Hello there, friend!", text(events), retryAfter)
+                assertIs<CompletionEvent.Done>(events.last())
+                assertEquals(2, net.requests.size)
+                assertEquals(net.requests[0].body!!.text, net.requests[1].body!!.text)
+                assertEquals(wait.inWholeMilliseconds, currentTime - started, retryAfter)
+            }
+        }
+
+    @Test
+    fun `a rate limit is sent again once only, and not at all past the cap or for an account out of credit`() =
+        runTest {
+            val limited = response(429, errorBody("requests", "rate_limit_exceeded"))
+            val (again, twice) = events { limited }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), again)
+            assertEquals(2, twice.requests.size)
+
+            val long = response(429, errorBody("requests", "rate_limit_exceeded"), mapOf("Retry-After" to listOf("60")))
+            val (late, once) = events { long }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 60.seconds)), late)
+            assertEquals(1, once.requests.size)
+
+            val (broke, billed) = events { response(429, errorBody("insufficient_quota", "insufficient_quota")) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), broke)
+            assertEquals(1, billed.requests.size)
+        }
+
+    @Test
+    fun `an effort the model refuses is dropped, and the request sent once more without it`() =
+        runTest {
+            fun refused(param: String) =
+                response(
+                    400,
+                    """{"error":{"message":"m","type":"invalid_request_error","param":"$param",""" +
+                        """"code":"unsupported_value"}}""",
+                )
+            for (param in listOf("reasoning.effort", "reasoning")) {
+                var calls = 0
+                val (events, net) =
+                    events(request.copy(effort = ReasoningEffort.LOW)) {
+                        calls++
+                        if (calls == 1) refused(param) else ok(recorded("openai/responses-stream.sse"))
+                    }
+                assertIs<CompletionEvent.Done>(events.last(), param)
+                assertEquals(2, net.requests.size)
+                val bodies = net.requests.map { Json.parseToJsonElement(it.body!!.text).jsonObject }
+                assertEquals(Json.parseToJsonElement("""{"effort":"low"}"""), bodies[0]["reasoning"])
+                assertEquals(null, bodies[1]["reasoning"])
+            }
+            // Refused for another parameter, or with no effort sent, it is not sent again.
+            val (other, once) = events(request.copy(effort = ReasoningEffort.LOW)) { refused("input") }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.INVALID_REQUEST)), other)
+            assertEquals(1, once.requests.size)
+            val (none, alone) = events { refused("reasoning.effort") }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.INVALID_REQUEST)), none)
+            assertEquals(1, alone.requests.size)
         }
 
     @Test
@@ -340,37 +444,55 @@ class OpenAiProviderTest {
 
                     override fun close() = Unit
                 }
-            val events = OpenAiProvider(net).stream(request, key).toList()
+            val events = provider(net).stream(request, key).toList()
             assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
         }
 
     @Test
     fun `a collector that stops early cancels the stream`() =
         runTest {
-            val first =
-                OpenAiProvider(
-                    ReplayNetClient {
-                        ok(recorded("openai/responses-stream.sse"))
-                    },
-                ).stream(request, key).first()
+            val cleaned = CompletableDeferred<Unit>()
+            val net =
+                object : NetClient {
+                    override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+                    override suspend fun stream(
+                        request: NetRequest,
+                        onLine: suspend (String) -> Unit,
+                    ): NetResult<NetResponse> {
+                        try {
+                            sse(created, delta("Hello")).lines().forEach { onLine(it) }
+                            awaitCancellation()
+                        } finally {
+                            cleaned.complete(Unit)
+                        }
+                    }
+
+                    override fun close() = Unit
+                }
+            val first = provider(net).stream(request, key).first()
             assertEquals(CompletionEvent.Delta("Hello"), first)
+            assertTrue(cleaned.isCompleted, "the transport's stream was not cancelled")
         }
 
     @Test
-    fun `the model list keeps the text models, newest first`() =
+    fun `the model list keeps the text models still running, newest first`() =
         runTest {
             val net = ReplayNetClient { ok(recorded("openai/models.json")) }
-            val listed = assertIs<ModelList.Listed>(OpenAiProvider(net).models(key)).models
+            val listed = assertIs<ModelList.Listed>(provider(net).models(key)).models
 
+            // Without a shutdown date, then with one; one whose date has passed is gone.
             assertEquals(
                 listOf(
                     "gpt-6.1-sol",
                     "gpt-6-astra",
                     "gpt-6-luna",
                     "ft:gpt-4.1-mini:example-org::abc123",
-                    "gpt-5-nano",
-                    "gpt-4.1",
                     "o4-mini",
+                    "gpt-4",
+                    "gpt-5-nano",
+                    "gpt-4.1-nano",
+                    "gpt-4.1",
                 ),
                 listed.map { it.id },
             )
@@ -383,7 +505,18 @@ class OpenAiProviderTest {
 
     @Test
     fun `text models are told from the others by their ids`() {
-        val text = listOf("gpt-6-luna", "gpt-5.3-codex", "o3", "chatgpt-4o-latest", "chat-latest", "ft:o4-mini:org::x")
+        val text =
+            listOf(
+                "gpt-6-luna",
+                "gpt-5.3-codex",
+                "o3",
+                "chatgpt-4o-latest",
+                "chat-latest",
+                "ft:o4-mini:org::x",
+                "gpt-4",
+                "gpt-4-turbo",
+                "gpt-5-pro",
+            )
         for (id in text) assertTrue(OpenAiProvider.isTextModel(id), id)
         for (id in listOf(
             "text-embedding-3-small",
@@ -399,6 +532,14 @@ class OpenAiProviderTest {
             "gpt-5-search-api",
             "gpt-3.5-turbo-instruct",
             "davinci-002",
+            // On the Responses API without streaming, or not on it at all.
+            "gpt-3.5-turbo",
+            "gpt-3.5-turbo-0125",
+            "ft:gpt-3.5-turbo-0125:example-org::abc123",
+            "o1-mini",
+            "o1-pro",
+            "o3-pro-2025-06-10",
+            "gpt-5.5-pro",
         )) {
             assertFalse(OpenAiProvider.isTextModel(id), id)
         }
@@ -407,7 +548,7 @@ class OpenAiProviderTest {
     @Test
     fun `a model list that fails says why`() =
         runTest {
-            val provider = { answer: NetResult<NetResponse> -> OpenAiProvider(ReplayNetClient { answer }) }
+            val provider = { answer: NetResult<NetResponse> -> provider(ReplayNetClient { answer }) }
             assertEquals(
                 ModelList.Failed(AiErrorKind.UNAUTHORIZED),
                 provider(failure(NetError.Unauthorized(401))).models(key),
@@ -418,4 +559,8 @@ class OpenAiProviderTest {
                 provider(response(429, errorBody("insufficient_quota", "insufficient_quota"))).models(key),
             )
         }
+
+    private companion object {
+        val NOW: Instant = Instant.parse("2026-10-21T12:00:00Z")
+    }
 }

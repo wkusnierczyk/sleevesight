@@ -44,10 +44,12 @@ internal data class WireErrorBody(
     val error: WireError? = null,
 )
 
+/** An error: its `type` and `code`, and in an error body the `param` at fault, if one. */
 @Serializable
 internal data class WireError(
     val type: String? = null,
     val code: String? = null,
+    val param: String? = null,
 )
 
 @Serializable
@@ -59,4 +61,5 @@ internal data class WireModelList(
 internal data class WireModel(
     val id: String,
     val created: Long? = null,
+    @SerialName("shutdown_date") val shutdownDate: String? = null,
 )

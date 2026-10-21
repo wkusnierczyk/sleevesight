@@ -30,12 +30,12 @@ class OptionsTest {
 
     @Test
     fun `the AI service is Anthropic unless given, and OpenAI only for live`() {
-        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).ai)
-        assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--ai", "openai")).ai)
-        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("record", "--ai", "anthropic")).ai)
-        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("replay", "--ai", "openai")) }
-        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--ai", "openai")) }
-        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--ai", "ollama")) }
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).provider)
+        assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--provider", "openai")).provider)
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("record", "--provider", "anthropic")).provider)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("replay", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
     }
 
     @Test

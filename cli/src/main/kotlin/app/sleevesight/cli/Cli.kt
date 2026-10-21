@@ -89,8 +89,8 @@ class Cli(
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
         private val settings =
             Settings(
-                aiProvider = options.ai,
-                aiModels = listOfNotNull(options.model?.let { options.ai to it }).toMap(),
+                aiProvider = options.provider,
+                aiModels = listOfNotNull(options.model?.let { options.provider to it }).toMap(),
                 enabledSources =
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
@@ -201,21 +201,21 @@ class Cli(
                     !options.insights -> null
                     options.mode == Mode.REPLAY -> Secret("replay").takeIf { store.hasRecordings(ANTHROPIC) }
                     options.mode == Mode.RECORD -> keys.anthropic?.takeIf { ANTHROPIC in options.record }
-                    else -> keys.ai(options.ai)
+                    else -> keys.forProvider(options.provider)
                 }
-            return key?.let { AiAccess(wiring.aiProviders.getValue(options.ai), it) }
+            return key?.let { AiAccess(wiring.aiProviders.getValue(options.provider), it) }
         }
 
         private fun aiNote(): String {
-            val model = settings.model(options.ai)
-            val effort = settings.effort(options.ai)?.name?.lowercase() ?: "the model's default"
+            val model = settings.model(options.provider)
+            val effort = settings.effort(options.provider)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
-            val name = AI_NAMES.getValue(options.ai)
+            val name = AI_NAMES.getValue(options.provider)
             return when {
                 ai != null -> "$name $model, effort $effort$replayed"
                 !options.insights -> "off: --no-insights"
                 options.mode == Mode.REPLAY -> "off: no recorded replies"
-                else -> "off: no ${Keys.aiVariable(options.ai)}"
+                else -> "off: no ${Keys.variableOf(options.provider)}"
             }
         }
 

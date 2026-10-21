@@ -41,10 +41,10 @@ class KeysTest {
         val file = File.createTempFile("keys", ".env").apply { writeText("SLEEVESIGHT_OPENAI_API_KEY=sk-proj-1\n") }
         try {
             val keys = Keys.load(mapOf("SLEEVESIGHT_ANTHROPIC_API_KEY" to "sk-ant-1"), file)
-            assertEquals("sk-ant-1", keys.ai(ProviderId.ANTHROPIC)?.reveal())
-            assertEquals("sk-proj-1", keys.ai(ProviderId.OPENAI)?.reveal())
-            assertNull(keys.ai(ProviderId.GOOGLE))
-            assertEquals("SLEEVESIGHT_OPENAI_API_KEY", Keys.aiVariable(ProviderId.OPENAI))
+            assertEquals("sk-ant-1", keys.forProvider(ProviderId.ANTHROPIC)?.reveal())
+            assertEquals("sk-proj-1", keys.forProvider(ProviderId.OPENAI)?.reveal())
+            assertNull(keys.forProvider(ProviderId.GOOGLE))
+            assertEquals("SLEEVESIGHT_OPENAI_API_KEY", Keys.variableOf(ProviderId.OPENAI))
         } finally {
             file.delete()
         }

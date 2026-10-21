@@ -8,17 +8,22 @@ import app.sleevesight.core.ai.Usage
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import kotlin.time.Clock
 
 /**
  * Turns the data of one Responses stream's events into [CompletionEvent]s: `response.created`
  * (the response began), `response.output_text.delta` (a [CompletionEvent.Delta]),
  * `response.refusal.delta` (the model declined: its text is not the reply, so it is not emitted),
  * `response.completed` and `response.incomplete` ([CompletionEvent.Done], with the usage), and
- * `response.failed` and `error` ([CompletionEvent.Error]). The reasoning items, the item and part
- * boundaries, and event types this client does not know are skipped, so new ones do not break it.
- * After the one terminal event, nothing more is emitted.
+ * `response.failed` and `error` ([CompletionEvent.Error]). A response failed for a usage policy
+ * ([POLICY_CODES]) is the model declining, as a refusal is: [CompletionEvent.Done] with
+ * [StopReason.REFUSAL]. The reasoning items, the item and part boundaries, and event types this
+ * client does not know are skipped, so new ones do not break it. After the one terminal event,
+ * nothing more is emitted. [clock] reads a `Retry-After` given as a date.
  */
-internal class ResponseStream {
+internal class ResponseStream(
+    private val clock: Clock,
+) {
     private var started = false
     private var refused = false
     private var ended = false
@@ -72,8 +77,7 @@ internal class ResponseStream {
             }
 
             "response.failed" -> {
-                val code = event.response?.error?.code
-                end(CompletionEvent.Error(code?.let(::kindOfCode) ?: AiErrorKind.SERVER))
+                end(failed(event.response))
             }
 
             "error" -> {
@@ -94,7 +98,7 @@ internal class ResponseStream {
             when {
                 ended -> null
                 result is NetResult.Failure -> failure(result.error)
-                result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value)
+                result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
                 else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
             }
         return error?.let(::end)
@@ -124,10 +128,30 @@ internal class ResponseStream {
         return CompletionEvent.Done(Usage(usage?.inputTokens ?: 0, usage?.outputTokens ?: 0), reason)
     }
 
+    /** A failed response's end: declined for a usage policy, else an error by its code, else its type. */
+    private fun failed(response: WireResponse?): CompletionEvent {
+        val error = response?.error
+        return if (error?.code in POLICY_CODES) {
+            done(response, StopReason.REFUSAL)
+        } else {
+            CompletionEvent.Error(
+                error?.code?.let(::kindOfCode) ?: error?.type?.let(::kindOfType) ?: AiErrorKind.SERVER,
+            )
+        }
+    }
+
     private fun incompleteReason(reason: String?): StopReason =
         when (reason) {
             "max_output_tokens" -> StopReason.MAX_TOKENS
             "content_filter" -> StopReason.REFUSAL
             else -> StopReason.OTHER
         }
+
+    private companion object {
+        /**
+         * The codes of a response failed for a usage policy, from the Responses reference on
+         * 2026-10-21: the model, or OpenAI for it, declined the prompt.
+         */
+        val POLICY_CODES = setOf("bio_policy", "misalignment_policy_violation", "invalid_prompt")
+    }
 }

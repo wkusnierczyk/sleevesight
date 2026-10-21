@@ -112,6 +112,34 @@
       "created": 1692901427,
       "owned_by": "system",
       "shutdown_date": null
+    },
+    {
+      "id": "gpt-4",
+      "object": "model",
+      "created": 1687882411,
+      "owned_by": "openai",
+      "shutdown_date": null
+    },
+    {
+      "id": "gpt-4.1-nano",
+      "object": "model",
+      "created": 1744321707,
+      "owned_by": "system",
+      "shutdown_date": "2026-10-23"
+    },
+    {
+      "id": "gpt-4.5-preview",
+      "object": "model",
+      "created": 1740623059,
+      "owned_by": "system",
+      "shutdown_date": "2025-07-14"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "object": "model",
+      "created": 1677610602,
+      "owned_by": "openai",
+      "shutdown_date": null
     }
   ]
 }

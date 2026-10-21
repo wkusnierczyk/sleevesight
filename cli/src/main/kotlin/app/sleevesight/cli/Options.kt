@@ -38,7 +38,7 @@ data class Options(
     val fixtures: File,
     val out: File?,
     val cache: CacheChoice,
-    val ai: ProviderId,
+    val provider: ProviderId,
     val model: String?,
     val web: Boolean,
     val insights: Boolean,
@@ -64,9 +64,9 @@ data class Options(
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
                                   .dev/cli/cache.db for live; none for record)
-              --ai <service>      the AI service: anthropic (default) or openai; openai only for live,
-                                  since only Anthropic's replies are recorded and replayed
-              --model <id>        the AI service's model (default: the app's default for the service)
+              --provider <name>   the AI service: anthropic or openai (default: anthropic); openai only
+                                  for live, since only Anthropic's replies are recorded and replayed
+              --model <id>        the provider's model (default: the app's default for it)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, anthropic
@@ -82,8 +82,8 @@ data class Options(
 
         private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia", "anthropic")
 
-        /** The AI services `--ai` names, those with a client. */
-        val AI_SERVICES: Map<String, ProviderId> =
+        /** The AI services the CLI can run, by the name `--provider` takes. */
+        val PROVIDERS: Map<String, ProviderId> =
             mapOf("anthropic" to ProviderId.ANTHROPIC, "openai" to ProviderId.OPENAI)
 
         /** Parses [args]; throws [IllegalArgumentException] with the reason for a bad command line. */
@@ -102,12 +102,12 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
-            val ai =
-                values["--ai"]?.let { name ->
-                    AI_SERVICES[name] ?: throw IllegalArgumentException("--ai takes ${AI_SERVICES.keys.joinToString()}")
+            val provider =
+                values["--provider"]?.let { name ->
+                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
                 } ?: ProviderId.ANTHROPIC
-            require(mode == Mode.LIVE || ai == ProviderId.ANTHROPIC) {
-                "--ai ${values["--ai"]} runs only live: only Anthropic's replies are recorded and replayed"
+            require(mode == Mode.LIVE || provider == ProviderId.ANTHROPIC) {
+                "--provider ${values["--provider"]} runs only live: only Anthropic's replies are recorded and replayed"
             }
             return Options(
                 mode = mode,
@@ -115,7 +115,7 @@ data class Options(
                 fixtures = File(values["--fixtures"] ?: "fixtures"),
                 out = values["--out"]?.let(::File),
                 cache = if (mode == Mode.RECORD) CacheChoice.None else cache,
-                ai = ai,
+                provider = provider,
                 model = values["--model"],
                 web = mode == Mode.LIVE && "--no-web" !in switches,
                 insights = "--no-insights" !in switches,
@@ -162,7 +162,7 @@ data class Options(
         private val SWITCHES = setOf("--no-web", "--no-insights")
 
         private val VALUED =
-            setOf("--tracks", "--out", "--fixtures", "--cache", "--ai", "--model", "--record", "--keys")
+            setOf("--tracks", "--out", "--fixtures", "--cache", "--provider", "--model", "--record", "--keys")
 
         /** The playlist positions [spec] names. */
         fun tracks(spec: String): List<Int> {

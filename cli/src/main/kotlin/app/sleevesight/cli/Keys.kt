@@ -11,12 +11,12 @@ import java.io.File
  */
 class Keys(
     val anthropic: Secret?,
-    val openAi: Secret?,
     val exa: Secret?,
     val lastFm: Secret?,
+    val openAi: Secret? = null,
 ) {
-    /** The key of the AI service [provider], or null for one this tool has none for. */
-    fun ai(provider: ProviderId): Secret? =
+    /** The key of the AI service [provider], or null for one without a key here. */
+    fun forProvider(provider: ProviderId): Secret? =
         when (provider) {
             ProviderId.ANTHROPIC -> anthropic
             ProviderId.OPENAI -> openAi
@@ -32,10 +32,10 @@ class Keys(
         val DEFAULT_FILE: File = File(System.getProperty("user.home"), ".config/sleevesight/keys.env")
 
         /** No keys: replay needs none. */
-        val NONE: Keys = Keys(null, null, null, null)
+        val NONE: Keys = Keys(null, null, null)
 
-        /** The variable that holds the key of the AI service [provider], or null for one with none. */
-        fun aiVariable(provider: ProviderId): String? =
+        /** The variable that holds [provider]'s key, or null for one without a key here. */
+        fun variableOf(provider: ProviderId): String? =
             when (provider) {
                 ProviderId.ANTHROPIC -> ANTHROPIC
                 ProviderId.OPENAI -> OPENAI
@@ -50,7 +50,7 @@ class Keys(
 
             fun key(name: String): Secret? =
                 (environment[name] ?: fromFile[name])?.trim()?.takeIf { it.isNotEmpty() }?.let(::Secret)
-            return Keys(key(ANTHROPIC), key(OPENAI), key(EXA), key(LASTFM))
+            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM), key(OPENAI))
         }
 
         /** The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped. */

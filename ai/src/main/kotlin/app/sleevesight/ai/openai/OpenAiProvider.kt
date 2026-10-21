@@ -20,14 +20,16 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.NetSecrets
+import app.sleevesight.net.RetryPolicy
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
@@ -41,7 +43,9 @@ import kotlin.time.Instant
  *
  * [CompletionRequest.effort] becomes `reasoning.effort` (`low`, `medium`, `high`) for a model that
  * takes those levels ([takesEffort]); without it, or for any other model, the model's default
- * applies.
+ * applies. The list of models can be wrong for a new model under a known family's name: if OpenAI
+ * refuses the request for its effort (a 400 naming `reasoning.effort` or `reasoning` as the
+ * parameter at fault), it is sent once more without one, so the model's default applies.
  *
  * The stream's text deltas become [CompletionEvent.Delta]s; reasoning, which the API returns
  * without its text, is skipped. `response.completed` and `response.incomplete` end it with
@@ -52,14 +56,24 @@ import kotlin.time.Instant
  *
  * OpenAI answers 429 both for too many requests and for an account out of credit, and only the
  * body says which; so its host's policy ([HOST_POLICY]) has `:net` pass a 429 on, unretried, and
- * the second becomes [AiErrorKind.BILLING].
+ * the client reads it. An account out of credit is [AiErrorKind.BILLING] at once, since no retry
+ * mends it. A rate limit is sent once more after its `Retry-After` (or [RetryPolicy.delayAfter]'s
+ * first wait without one), when that is within [RetryPolicy.maxDelay], as `:net` retries another
+ * host's 429; a 429 was refused before it was acted on, so the call is not paid twice. Otherwise it
+ * ends as [AiErrorKind.RATE_LIMITED] with the wait. Nothing holds back the next request after one:
+ * each is one track's insight or one tap of *Write*, far apart against any rate limit an account
+ * has, and the next track should not wait out a limit the last one met.
  *
  * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
  * @param baseUrl the API's origin, for tests.
+ * @param retry the waits for a rate limit, as `:net`'s own retries take them.
+ * @param clock for a `Retry-After` given as a date, and the models' shutdown dates.
  */
 class OpenAiProvider(
     private val net: NetClient,
     private val baseUrl: String = BASE_URL,
+    private val retry: RetryPolicy = RetryPolicy(),
+    private val clock: Clock = Clock.System,
 ) : AiProvider {
     override val id: ProviderId = ProviderId.OPENAI
 
@@ -76,7 +90,7 @@ class OpenAiProvider(
                 when {
                     !response.isSuccess -> ModelList.Failed(kindOf(response))
                     list == null -> ModelList.Failed(AiErrorKind.UNEXPECTED_RESPONSE)
-                    else -> ModelList.Listed(textModels(list.data))
+                    else -> ModelList.Listed(textModels(list.data, clock.now()))
                 }
             }
         }
@@ -87,25 +101,62 @@ class OpenAiProvider(
         key: Secret,
     ): Flow<CompletionEvent> =
         channelFlow {
-            val reader = ResponseStream()
-            val events = ServerSentEvents()
+            var effort = request.effort?.takeIf { takesEffort(request.model) }
+            var waited = false
+            do {
+                val reader = ResponseStream(clock)
+                val events = ServerSentEvents()
 
-            // A stream stopped here ends as the reader decided; nothing of the exception is needed.
-            @Suppress("SwallowedException")
-            val result =
-                try {
-                    net.stream(responsesRequest(request, key)) { line ->
-                        events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
-                        if (reader.malformed) throw StopStream()
+                // A stream stopped here ends as the reader decided; nothing of the exception is needed.
+                @Suppress("SwallowedException")
+                val result =
+                    try {
+                        net.stream(responsesRequest(request, effort, key)) { line ->
+                            events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                            if (reader.malformed) throw StopStream()
+                        }
+                    } catch (e: StopStream) {
+                        null
                     }
-                } catch (e: StopStream) {
-                    null
-                }
-            reader.end(result)?.let { send(it) }
+                // An error status comes before any of the body, so nothing was emitted for it.
+                val refused = (result as? NetResult.Success)?.value?.takeUnless { it.isSuccess }
+                val wait = refused?.takeIf { !waited }?.let(::rateLimitWait)
+                val again =
+                    when {
+                        refused == null -> {
+                            false
+                        }
+
+                        effort != null && rejectsEffort(refused) -> {
+                            effort = null
+                            true
+                        }
+
+                        wait != null -> {
+                            delay(wait)
+                            waited = true
+                            true
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                if (!again) reader.end(result)?.let { send(it) }
+            } while (again)
+        }
+
+    /** The wait before sending again after [response], a rate limit; null if it is not one, or too long. */
+    private fun rateLimitWait(response: NetResponse): Duration? =
+        if (kindOf(response) == AiErrorKind.RATE_LIMITED) {
+            (response.retryAfter(clock.now()) ?: retry.delayAfter(1)).takeIf { it <= retry.maxDelay }
+        } else {
+            null
         }
 
     private fun responsesRequest(
         request: CompletionRequest,
+        effort: ReasoningEffort?,
         key: Secret,
     ): NetRequest {
         val body =
@@ -115,9 +166,7 @@ class OpenAiProvider(
                 put("max_output_tokens", request.maxTokens)
                 put("stream", true)
                 put("store", false)
-                request.effort?.takeIf { takesEffort(request.model) }?.let { effort ->
-                    putJsonObject("reasoning") { put("effort", effortName(effort)) }
-                }
+                effort?.let { putJsonObject("reasoning") { put("effort", effortName(it)) } }
             }
         return NetRequest(
             url = "$baseUrl/v1/responses",
@@ -174,10 +223,23 @@ class OpenAiProvider(
         /** The parts of a model id (between hyphens) that mark one not taking low, medium and high. */
         private val NO_EFFORT_PARTS = setOf("pro", "chat", "search")
 
-        /** Whether [model] takes `reasoning.effort` at `low`, `medium` and `high`. */
-        fun takesEffort(model: String): Boolean =
-            EFFORT_MODELS.any { model == it || model.startsWith("$it-") } &&
-                model.split('-').none { it in NO_EFFORT_PARTS }
+        /**
+         * Whether [model] takes `reasoning.effort` at `low`, `medium` and `high`; a fine-tuned
+         * model (`ft:<model>:...`) as its base model does.
+         */
+        fun takesEffort(model: String): Boolean {
+            val base = baseOf(model)
+            return inFamily(base, EFFORT_MODELS) && base.split('-').none { it in NO_EFFORT_PARTS }
+        }
+
+        /** A fine-tuned model's base model (`ft:<model>:<org>:...`), or [id] itself. */
+        private fun baseOf(id: String): String = id.removePrefix("ft:").substringBefore(':')
+
+        /** Whether [id] is one of [families], or a snapshot or variant of one (`<family>-...`). */
+        private fun inFamily(
+            id: String,
+            families: List<String>,
+        ): Boolean = families.any { id == it || id.startsWith("$it-") }
 
         /** [effort] as `reasoning.effort` names it. */
         fun effortName(effort: ReasoningEffort): String =
@@ -210,15 +272,24 @@ class OpenAiProvider(
             )
 
         /**
-         * Whether [id] is a text model the Responses API answers with text: a GPT or o-series model,
-         * or `chat-latest` (fine-tuned ones, `ft:<model>:...`, included), and none of
-         * [NOT_TEXT_PARTS]. The model list holds every model the key may use, embeddings and speech
-         * models among them.
+         * The text models whose pages, on 2026-10-21, do not list streaming from the Responses API,
+         * which this client needs: o1-mini is not on the Responses API at all, and GPT-3.5 Turbo,
+         * o1-pro, o3-pro and GPT-5.5 Pro list no streaming (the Pro models are meant for background
+         * requests). GPT-4, GPT-4 Turbo and GPT-4o list both, and stay offered.
+         */
+        private val NO_STREAM_MODELS =
+            listOf("gpt-3.5-turbo", "o1-mini", "o1-preview", "o1-pro", "o3-pro", "gpt-5.5-pro")
+
+        /**
+         * Whether [id] is a text model the Responses API streams text from: a GPT or o-series model,
+         * or `chat-latest` (fine-tuned ones, `ft:<model>:...`, as their base model), none of
+         * [NOT_TEXT_PARTS], and none of [NO_STREAM_MODELS]. The model list holds every model the key
+         * may use, embeddings and speech models among them.
          */
         fun isTextModel(id: String): Boolean {
-            val base = id.removePrefix("ft:").substringBefore(':')
+            val base = baseOf(id)
             val family = FAMILIES.any { base.startsWith(it) } || base == "chat-latest" || O_SERIES.matches(base)
-            return family && base.split('-').none { it in NOT_TEXT_PARTS }
+            return family && base.split('-').none { it in NOT_TEXT_PARTS } && !inFamily(base, NO_STREAM_MODELS)
         }
 
         private val FAMILIES = listOf("gpt-", "chatgpt-")
@@ -233,12 +304,27 @@ class OpenAiProvider(
 
         private fun secrets(key: Secret) = NetSecrets(headers = mapOf("authorization" to "Bearer ${key.reveal()}"))
 
-        /** The text models of the list, newest first: the list itself is in no stated order. */
-        private fun textModels(models: List<WireModel>): List<ModelInfo> =
-            models
+        /**
+         * The text models of the list: none whose shutdown date has passed by [now], those with
+         * none announced first, and newest first within each (the list itself is in no stated
+         * order). A shutdown date is a calendar date (`2026-10-23`), compared as written.
+         */
+        private fun textModels(
+            models: List<WireModel>,
+            now: Instant,
+        ): List<ModelInfo> {
+            val today = now.toString().take(ISO_DATE_LENGTH)
+            return models
                 .filter { isTextModel(it.id) }
-                .map { ModelInfo(it.id, it.id, it.created?.let(Instant::fromEpochSeconds)) }
-                .sortedWith(compareByDescending<ModelInfo> { it.createdAt }.thenBy { it.id })
+                .filterNot { model -> model.shutdownDate?.take(ISO_DATE_LENGTH)?.let { it < today } == true }
+                .sortedWith(
+                    compareBy<WireModel> { it.shutdownDate != null }
+                        .thenByDescending { it.created }
+                        .thenBy { it.id },
+                ).map { ModelInfo(it.id, it.id, it.created?.let(Instant::fromEpochSeconds)) }
+        }
+
+        private const val ISO_DATE_LENGTH = 10
     }
 }
 
@@ -255,12 +341,13 @@ internal fun kindOf(error: NetError): AiErrorKind =
 
 /**
  * The kind of an error response that `:net` passes on as a response (400, 404, 429 and the like):
- * by the body's `error.code`, else its `error.type`, else the status.
+ * by the body's `error.code`, else its `error.type`, else the status. `invalid_request_error`, the
+ * type of most of them, says less than a 404 or 413 does, so for it the status decides.
  */
 internal fun kindOf(response: NetResponse): AiErrorKind {
     val error = decode<WireErrorBody>(response.body)?.error
     return error?.code?.let(::kindOfCode)
-        ?: error?.type?.let(::kindOfType)
+        ?: error?.type?.takeIf { it != INVALID_REQUEST_TYPE }?.let(::kindOfType)
         ?: when (response.status) {
             BAD_REQUEST -> AiErrorKind.INVALID_REQUEST
             PAYMENT_REQUIRED -> AiErrorKind.BILLING
@@ -271,18 +358,23 @@ internal fun kindOf(response: NetResponse): AiErrorKind {
         }
 }
 
-/** [response]'s error, with the wait a rate limit asks for in `Retry-After`, when in seconds. */
-internal fun errorOf(response: NetResponse): CompletionEvent.Error {
+/** [response]'s error, with the wait a rate limit asks for in `Retry-After`, from [now]. */
+internal fun errorOf(
+    response: NetResponse,
+    now: Instant,
+): CompletionEvent.Error {
     val kind = kindOf(response)
-    val wait =
-        response
-            .header("retry-after")
-            ?.trim()
-            ?.toLongOrNull()
-            ?.takeIf { kind == AiErrorKind.RATE_LIMITED && it >= 0 }
-            ?.seconds
-    return CompletionEvent.Error(kind, wait)
+    return CompletionEvent.Error(kind, response.retryAfter(now).takeIf { kind == AiErrorKind.RATE_LIMITED })
 }
+
+/** Whether [response] refuses the request for its reasoning effort. */
+internal fun rejectsEffort(response: NetResponse): Boolean =
+    response.status == BAD_REQUEST &&
+        decode<WireErrorBody>(response.body)?.error?.param in EFFORT_PARAMS
+
+private val EFFORT_PARAMS = setOf("reasoning.effort", "reasoning")
+
+private const val INVALID_REQUEST_TYPE = "invalid_request_error"
 
 /**
  * The kind of an error OpenAI names by its `code` (in an error body, an `error` event or a failed
@@ -312,7 +404,7 @@ internal fun kindOfCode(code: String): AiErrorKind? =
 /** The kind of an error OpenAI names by its `type`, or null for a type this client does not know. */
 internal fun kindOfType(type: String): AiErrorKind? =
     when (type) {
-        "invalid_request_error" -> AiErrorKind.INVALID_REQUEST
+        INVALID_REQUEST_TYPE -> AiErrorKind.INVALID_REQUEST
         "authentication_error", "permission_error" -> AiErrorKind.UNAUTHORIZED
         "insufficient_quota" -> AiErrorKind.BILLING
         "rate_limit_error" -> AiErrorKind.RATE_LIMITED
