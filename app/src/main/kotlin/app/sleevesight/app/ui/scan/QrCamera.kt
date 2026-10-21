@@ -107,8 +107,8 @@ internal class QrCamera(
     /** Whether [release] has been asked for. */
     private var ending = false
 
-    /** Counted down once the camera being closed for a destroyed surface has let go of it. */
-    private var letGo: CountDownLatch? = null
+    /** The camera being closed for a destroyed surface, and what is counted down once it has let go. */
+    private var letGo: Pair<CameraDevice, CountDownLatch>? = null
 
     override fun surfaceCreated(holder: SurfaceHolder) {
         val shown = holder.surface
@@ -132,10 +132,11 @@ internal class QrCamera(
         val posted =
             handler.post {
                 surface = null
-                if (device == null) {
+                val shown = device
+                if (shown == null) {
                     closed.countDown()
                 } else {
-                    letGo = closed
+                    letGo = shown to closed
                     close()
                 }
             }
@@ -181,29 +182,28 @@ internal class QrCamera(
                         }
                     }
 
-                    override fun onDisconnected(camera: CameraDevice) {
-                        opening = false
-                        val shown = device === camera
-                        close()
-                        if (!shown) camera.close()
-                        // Taken by another app: the view would freeze, so the scan says it cannot go on.
-                        if (shown && surface != null && !ending) unavailable()
-                        quitIfIdle()
-                    }
-
-                    override fun onClosed(camera: CameraDevice) {
-                        letGo?.countDown()
-                        letGo = null
-                    }
+                    override fun onDisconnected(camera: CameraDevice) = lost(camera)
 
                     override fun onError(
                         camera: CameraDevice,
                         error: Int,
-                    ) {
+                    ) = lost(camera)
+
+                    override fun onClosed(camera: CameraDevice) {
+                        val waiting = letGo
+                        if (waiting?.first === camera) {
+                            waiting.second.countDown()
+                            letGo = null
+                        }
+                    }
+
+                    // The camera taken by another app, or failed: the one in use, or one that never
+                    // opened (Android may call either in place of `onOpened`). The same for all:
+                    // everything of it is closed, and while the scan still wants a camera it says it
+                    // cannot go on, rather than leave the view frozen.
+                    private fun lost(camera: CameraDevice) {
                         opening = false
-                        camera.close()
-                        if (device === camera) device = null
-                        // Not after the surface or the scan has gone: the camera was only let go.
+                        if (device === camera) close() else camera.close()
                         if (surface != null && !ending) unavailable()
                         quitIfIdle()
                     }

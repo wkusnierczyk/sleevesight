@@ -86,8 +86,11 @@ class KeysQrTest {
 
     @Test
     fun `the keys file's keys are drawn as a setup code, and no key is printed`() {
-        val keys = File(dir, "keys.env").apply { writeText("SLEEVESIGHT_ANTHROPIC_API_KEY=$anthropic\n") }
-        val run = run("--keys", keys.path, environment = mapOf(Keys.LASTFM to lastFm))
+        val keys =
+            File(dir, "keys.env").apply {
+                writeText("SLEEVESIGHT_ANTHROPIC_API_KEY=$anthropic\nSLEEVESIGHT_LASTFM_API_KEY=$lastFm\n")
+            }
+        val run = run("--keys", keys.path)
         assertEquals(0, run.status, run.err)
         val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
         assertEquals(
@@ -131,7 +134,7 @@ class KeysQrTest {
 
     @Test
     fun `no keys, two from standard input, an unknown option or a missing file is a usage error`() {
-        val empty = File(dir, "none.env")
+        val empty = File(dir, "none.env").apply { writeText("# no keys\n") }
         assertEquals(Cli.EXIT_USAGE, run("--keys", empty.path).status)
         assertEquals(Cli.EXIT_USAGE, run("--anthropic-from", "-", "--exa-from", "-").status)
         assertEquals(Cli.EXIT_USAGE, run("--openai-from", "-").status)
@@ -140,18 +143,50 @@ class KeysQrTest {
     }
 
     @Test
+    fun `a key file that cannot be read is a usage error, without its path`() {
+        val locked = File(dir, anthropic).apply { writeText(anthropic) }
+        check(locked.setReadable(false))
+        try {
+            val run = run("--anthropic-from", locked.path)
+            assertEquals(Cli.EXIT_USAGE, run.status)
+            assertFalse(anthropic in run.err)
+            assertTrue("A key could not be read" in run.err)
+        } finally {
+            locked.setReadable(true)
+        }
+    }
+
+    @Test
     fun `no argument is repeated in an error, in case it is a key`() {
         for (args in listOf(
             listOf(anthropic),
             listOf("--anthropic-from=$anthropic"),
+            listOf("--anthropic-from$anthropic"),
             listOf("--anthropic-from", anthropic),
         )) {
             val run = run(*args.toTypedArray())
             assertEquals(Cli.EXIT_USAGE, run.status)
             assertFalse(anthropic in run.err, "$args")
         }
-        assertTrue("Unexpected argument" in run(anthropic).err)
-        assertTrue("Unknown option --anthropic-from\n" in run("--anthropic-from=$anthropic").err)
+        assertTrue("Unknown option or unexpected argument\n" in run(anthropic).err)
+        assertTrue("Unknown option or unexpected argument\n" in run("--anthropic-from=$anthropic").err)
+        assertTrue("Unknown option or unexpected argument\n" in run("--anthropic-from$anthropic").err)
+        assertTrue("Unknown option --openai-from\n" in run("--openai-from", "-").err)
         assertTrue("--anthropic-from: no such file\n" in run("--anthropic-from", anthropic).err)
+    }
+
+    @Test
+    fun `with --keys, only that file is read, not the environment, and it must exist`() {
+        val file = File(dir, "tester.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val run = run("--keys", file.path, environment = mapOf(Keys.ANTHROPIC to anthropic))
+        assertEquals(0, run.status, run.err)
+        val read = assertIs<SetupRead.Setup>(KeySetup.read(decode(run.out)))
+        assertEquals(mapOf(KeyName.EXA to exa), read.keys.mapValues { it.value.reveal() })
+
+        val missing = run("--keys", File(dir, "tester.emv").path, environment = mapOf(Keys.ANTHROPIC to anthropic))
+        assertEquals(Cli.EXIT_USAGE, missing.status)
+        assertEquals("", missing.out)
+        assertTrue("--keys: no such file\n" in missing.err)
+        assertEquals(Cli.EXIT_USAGE, run("--keys", file.path, "--keys", file.path).status)
     }
 }
