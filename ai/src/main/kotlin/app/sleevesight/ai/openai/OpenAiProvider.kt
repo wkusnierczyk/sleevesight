@@ -148,7 +148,7 @@ class OpenAiProvider(
 
     /** The wait before sending again after [response], a rate limit; null if it is not one, or too long. */
     private fun rateLimitWait(response: NetResponse): Duration? =
-        if (kindOf(response) == AiErrorKind.RATE_LIMITED) {
+        if (response.status == TOO_MANY_REQUESTS && kindOf(response) == AiErrorKind.RATE_LIMITED) {
             (response.retryAfter(clock.now()) ?: retry.delayAfter(1)).takeIf { it <= retry.maxDelay }
         } else {
             null
@@ -366,6 +366,17 @@ internal fun errorOf(
     val kind = kindOf(response)
     return CompletionEvent.Error(kind, response.retryAfter(now).takeIf { kind == AiErrorKind.RATE_LIMITED })
 }
+
+/**
+ * The codes of a prompt declined for a usage policy, from the Responses reference on 2026-10-21, in
+ * an error response, an `error` event or a failed response: the model, or OpenAI for it, declined,
+ * as a refusal does, so the reply ends as one.
+ */
+internal val POLICY_CODES: Set<String> = setOf("bio_policy", "misalignment_policy_violation", "invalid_prompt")
+
+/** Whether [response] declines the prompt for a usage policy. */
+internal fun declinesPrompt(response: NetResponse): Boolean =
+    response.status == BAD_REQUEST && decode<WireErrorBody>(response.body)?.error?.code in POLICY_CODES
 
 /** Whether [response] refuses the request for its reasoning effort. */
 internal fun rejectsEffort(response: NetResponse): Boolean =

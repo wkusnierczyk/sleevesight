@@ -27,6 +27,7 @@ class HostPoliciesTest {
                 assertEquals(policy, config.hosts[host], host)
             }
             assertEquals(stated.keys, config.hosts.keys)
+            assertEquals(HostPolicies.RETRY, config.retry)
             assertEquals("Sleevesight/$version ( ${NetConfig.CONTACT} )", config.userAgent)
         }
     }

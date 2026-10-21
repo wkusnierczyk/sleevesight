@@ -15,11 +15,12 @@ import kotlin.time.Clock
  * (the response began), `response.output_text.delta` (a [CompletionEvent.Delta]),
  * `response.refusal.delta` (the model declined: its text is not the reply, so it is not emitted),
  * `response.completed` and `response.incomplete` ([CompletionEvent.Done], with the usage), and
- * `response.failed` and `error` ([CompletionEvent.Error]). A response failed for a usage policy
- * ([POLICY_CODES]) is the model declining, as a refusal is: [CompletionEvent.Done] with
- * [StopReason.REFUSAL]. The reasoning items, the item and part boundaries, and event types this
- * client does not know are skipped, so new ones do not break it. After the one terminal event,
- * nothing more is emitted. [clock] reads a `Retry-After` given as a date.
+ * `response.failed` and `error` ([CompletionEvent.Error]). A prompt declined for a usage policy
+ * ([POLICY_CODES]), in a failed response, an `error` event or an error response, is declined as a
+ * refusal is: [CompletionEvent.Done] with [StopReason.REFUSAL], with no usage when none is
+ * given. The reasoning items, the item and part boundaries, and event types this client does not
+ * know are skipped, so new ones do not break it. After the one terminal event, nothing more is
+ * emitted. [clock] reads a `Retry-After` given as a date.
  */
 internal class ResponseStream(
     private val clock: Clock,
@@ -81,7 +82,12 @@ internal class ResponseStream(
             }
 
             "error" -> {
-                end(CompletionEvent.Error(event.code?.let(::kindOfCode) ?: AiErrorKind.SERVER))
+                val code = event.code
+                if (code in POLICY_CODES) {
+                    end(CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL))
+                } else {
+                    end(CompletionEvent.Error(code?.let(::kindOfCode) ?: AiErrorKind.SERVER))
+                }
             }
 
             else -> {
@@ -94,14 +100,15 @@ internal class ResponseStream(
      * stopped here), or null if one was emitted already.
      */
     fun end(result: NetResult<NetResponse>?): CompletionEvent? {
-        val error =
+        val last =
             when {
                 ended -> null
                 result is NetResult.Failure -> failure(result.error)
+                result is NetResult.Success && declinesPrompt(result.value) -> declined
                 result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
                 else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
             }
-        return error?.let(::end)
+        return last?.let(::end)
     }
 
     // A connection lost or cut short after the response began leaves an incomplete reply.
@@ -148,10 +155,7 @@ internal class ResponseStream(
         }
 
     private companion object {
-        /**
-         * The codes of a response failed for a usage policy, from the Responses reference on
-         * 2026-10-21: the model, or OpenAI for it, declined the prompt.
-         */
-        val POLICY_CODES = setOf("bio_policy", "misalignment_policy_violation", "invalid_prompt")
+        /** A prompt declined before any reply, which bills nothing. */
+        val declined = CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)
     }
 }

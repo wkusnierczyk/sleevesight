@@ -23,7 +23,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -37,7 +40,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // currentTime
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // currentTime, advanceTimeBy, runCurrent
 class OpenAiProviderTest {
     private val key = Secret("sk-proj-test-key")
     private val request =
@@ -279,6 +282,18 @@ class OpenAiProviderTest {
         }
 
     @Test
+    fun `a prompt declined for a usage policy in an error response or an error event is declined too`() =
+        runTest {
+            for (code in listOf("invalid_prompt", "bio_policy", "misalignment_policy_violation")) {
+                val (refused, _) = events { response(400, errorBody("invalid_request_error", code)) }
+                val declined = CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)
+                assertEquals(listOf<CompletionEvent>(declined), refused, code)
+                val (midStream, _) = events { ok(sse(created, delta("Half"), errorEvent(code), completed())) }
+                assertEquals(listOf(CompletionEvent.Delta("Half"), declined), midStream, code)
+            }
+        }
+
+    @Test
     fun `a stream that ends before its response does is incomplete`() =
         runTest {
             val (events, _) = events { ok(sse(created, delta("Half"))) }
@@ -388,6 +403,26 @@ class OpenAiProviderTest {
             val (broke, billed) = events { response(429, errorBody("insufficient_quota", "insufficient_quota")) }
             assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), broke)
             assertEquals(1, billed.requests.size)
+        }
+
+    @Test
+    fun `only a 429 is sent again for a rate limit, and a cancel during its wait sends nothing more`() =
+        runTest {
+            // A rate limit's code on another status: not a refusal before it was acted on.
+            val (other, once) = events { response(400, errorBody("requests", "rate_limit_exceeded")) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), other)
+            assertEquals(1, once.requests.size)
+
+            val header = mapOf("Retry-After" to listOf("5"))
+            val net = ReplayNetClient { response(429, errorBody("requests", "rate_limit_exceeded"), header) }
+            val collecting = launch { provider(net).stream(request, key).toList() }
+            advanceTimeBy(1_000)
+            runCurrent()
+            assertEquals(1, net.requests.size)
+            collecting.cancel()
+            advanceTimeBy(10_000)
+            runCurrent()
+            assertEquals(1, net.requests.size)
         }
 
     @Test
