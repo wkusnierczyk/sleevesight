@@ -22,14 +22,17 @@ import app.sleevesight.core.synthesis.InsightPrompt
  * counted.
  *
  * The prompt is the one each call sent ([InsightPrompt.build]), rebuilt from the track's state less
- * the artist-level lines the call left out (`PipelineEvent.ModelCall.leftOut`); a track whose insight
- * came from the cache, or was not written, sent none.
+ * the artist-level lines the call left out (`PipelineEvent.ModelCall.leftOut`), read from the track's
+ * own events ([slices]); a track whose insight came from the cache, or was not written, sent none.
  */
 object ArtistFacts {
     /**
      * One track's numbers. [lines] and [artistLines] are the track's evidence; [leftOut] the
-     * artist-level lines its prompt left out (#239, `PromptEvidence`). [promptChars] is null when
-     * the track made no call (cached, not written, nothing to narrate); [artistChars] counts the
+     * artist-level lines its last call's prompt left out (#239, `PromptEvidence`). [calls] are the
+     * calls its run made (two when `NO_EVIDENCE` to a prompt that left lines out was asked again
+     * with them all), [usage] their tokens together, null with none. [promptChars] is the last
+     * call's prompt, null when the track made no call (cached, not written, nothing to narrate),
+     * however its insight ended (`NO_EVIDENCE` included); [artistChars] counts the
      * artist-level lines the prompt holds as it writes them, a newline each. [resent] is the
      * artist-level lines the prompt holds that the last prompt sent before it held too. [cited] are
      * this insight's citations of artist-level lines, by this track's ids; [restated] those an
@@ -41,6 +44,8 @@ object ArtistFacts {
         val lines: Int,
         val artistLines: Int,
         val leftOut: Int,
+        val calls: Int,
+        val usage: Usage?,
         val promptChars: Int?,
         val artistChars: Int,
         val resent: Int,
@@ -50,9 +55,7 @@ object ArtistFacts {
         val cited: List<String>,
         val fromLast: List<String>,
         val restated: List<String>,
-    ) {
-        val usage: Usage? get() = (insight as? InsightState.Written)?.usage
-    }
+    )
 
     /** The run's totals over [rows]. */
     data class Totals(
@@ -73,37 +76,28 @@ object ArtistFacts {
     )
 
     /**
-     * The call each of [results] made, from the run's [events], in run order: a track whose insight
-     * came from a call (written, with its usage, or failed) takes the next `ModelCall` for its
-     * lookup key; one served from the cache, or not written, made none (null).
+     * The run's [events], one slice per track run, in run order: each run begins with its
+     * `Received`, so a track's calls are its own, however its insight ended and however often the
+     * same track comes again.
      */
-    fun calls(
-        results: List<TrackResult>,
-        events: List<PipelineEvent>,
-    ): List<PipelineEvent.ModelCall?> {
-        val made = events.filterIsInstance<PipelineEvent.ModelCall>()
-        var next = 0
-        return results.map { result ->
-            val insight = result.state.insight
-            val called = (insight is InsightState.Written && insight.usage != null) || insight is InsightState.Failed
-            val key = result.state.normalized.lookupKey
-            val at = if (called) (next until made.size).firstOrNull { made[it].key == key } else null
-            at?.let {
-                next = it + 1
-                made[it]
-            }
+    fun slices(events: List<PipelineEvent>): List<List<PipelineEvent>> {
+        val out = mutableListOf<MutableList<PipelineEvent>>()
+        for (event in events) {
+            if (event is PipelineEvent.Received || out.isEmpty()) out += mutableListOf<PipelineEvent>()
+            out.last() += event
         }
+        return out
     }
 
     /**
      * The numbers per track of [results], in their order; [allowModel] is the run's model-knowledge
-     * switch, [calls] the call each track made ([ArtistFacts.calls]), whose prompt is the one measured:
-     * a track that made none sent no prompt.
+     * switch, [slices] each run's events ([ArtistFacts.slices]), whose calls are the ones measured: a
+     * track that made none sent no prompt.
      */
     fun measure(
         results: List<TrackResult>,
         allowModel: Boolean,
-        calls: List<PipelineEvent.ModelCall?> = emptyList(),
+        slices: List<List<PipelineEvent>> = emptyList(),
     ): List<Row> {
         var before: Set<ArtistFact> = emptySet()
         var lastCited: Set<ArtistFact> = emptySet()
@@ -113,7 +107,14 @@ object ArtistFacts {
             val evidence = state.evidence
             val lines = evidence?.lines.orEmpty()
             val artist = lines.filter { it.scope == Scope.ARTIST }
-            val call = calls.getOrNull(index)
+            val slice = slices.getOrNull(index).orEmpty()
+            val calls = slice.filterIsInstance<PipelineEvent.ModelCall>()
+            val done = slice.filterIsInstance<PipelineEvent.ModelDone>().map { it.usage }
+            val usage =
+                done.takeIf { it.isNotEmpty() }?.let { u ->
+                    Usage(u.sumOf { it.inputTokens }, u.sumOf { it.outputTokens })
+                }
+            val call = calls.lastOrNull()
             val out = call?.leftOut.orEmpty().toSet()
             val sent = call?.let { evidence?.without(JvmHasher) { it.id in out } }
             val sentArtist = sent?.lines.orEmpty().filter { it.scope == Scope.ARTIST }
@@ -133,6 +134,8 @@ object ArtistFacts {
                     lines = lines.size,
                     artistLines = artist.size,
                     leftOut = artist.count { it.id in out },
+                    calls = calls.size,
+                    usage = usage,
                     promptChars = prompt?.length,
                     artistChars = sentArtist.sumOf { InsightPrompt.evidenceLine(it).length + 1 },
                     resent = sentArtist.count { ArtistFact.of(it) in before },
@@ -168,7 +171,7 @@ object ArtistFacts {
             restating = written.count { it.restated.isNotEmpty() },
             sentences = written.sumOf { it.sentences },
             artistSentences = written.sumOf { it.artistSentences },
-            calls = usage.size,
+            calls = rows.sumOf { it.calls },
             inputTokens = usage.sumOf { it.inputTokens },
             outputTokens = usage.sumOf { it.outputTokens },
         )

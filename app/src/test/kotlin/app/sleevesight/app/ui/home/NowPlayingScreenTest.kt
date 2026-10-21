@@ -402,6 +402,42 @@ class NowPlayingScreenTest {
     }
 
     @Test
+    fun aCitationOfALineThePromptLeftOutShowsAndReadsAsNoLineWritingAndWritten() {
+        // The prompt held MB1 and W1 (#239): WD1 is the track's, but the model was not given it.
+        val held = setOf("MB1", "W1")
+        val reply = "It topped the charts [W1]. It is a single [WD1]."
+        val writing = InsightState.Writing(reply, held)
+        for (insight in listOf(writing, written(reply, held = held))) {
+            show(state(PipelineView(track(insight = insight), aiReady = true))) {
+                val node =
+                    compose
+                        .onNode(
+                            hasText("It topped the charts", substring = true) and
+                                SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions),
+                        ).performScrollTo()
+                node.assert(
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.ContentDescription,
+                        listOf(
+                            "It topped the charts (${text(R.string.home_cite, "W1")}). " +
+                                "It is a single (${text(R.string.home_cite_unknown, "WD1")}).",
+                        ),
+                    ),
+                )
+                val actions = node.fetchSemanticsNode().config[SemanticsActions.CustomActions]
+                assertEquals(listOf(text(R.string.home_cite, "W1")), actions.map { it.label })
+                val prose =
+                    node
+                        .fetchSemanticsNode()
+                        .config[SemanticsProperties.Text]
+                        .first { "It topped the charts" in it.text }
+                val chip = prose.spanStyles.single { prose.text.substring(it.start, it.end).trim() == "WD1" }
+                assertEquals(lightColorScheme().errorContainer, chip.item.background)
+            }
+        }
+    }
+
+    @Test
     fun aScreenReaderHearsAnUncitedQuotationMarkedOutsideTheQuote() {
         val reply = "It topped the charts [W1]. They called it \"great.\""
         show(state(PipelineView(track(insight = written(reply, allowModel = true)), aiReady = true))) {

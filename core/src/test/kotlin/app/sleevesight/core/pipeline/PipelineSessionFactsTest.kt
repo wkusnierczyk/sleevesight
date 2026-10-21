@@ -12,6 +12,7 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SentenceStatus
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -59,9 +60,15 @@ class PipelineSessionFactsTest {
 
     // Cites the first artist line the prompt holds, by its id; or [guess], whatever the prompt holds.
     private var guess: String? = null
+
+    // Replies `NO_EVIDENCE` to a prompt without the artist's lines.
+    private var noEvidenceWithoutArtist = false
     private val provider =
         FakeProvider { request ->
             guess?.let { return@FakeProvider FakeProvider.done("It is a song [MB1]. The band [$it].") }
+            if (noEvidenceWithoutArtist && "(Last.fm, artist)" !in request.prompt) {
+                return@FakeProvider FakeProvider.done(GroundingCheck.NO_EVIDENCE)
+            }
             val id = listOf("L1", "L2").firstOrNull { "[$it] (Last.fm, artist)" in request.prompt }
             FakeProvider.done(if (id == null) "It is a song [MB1]." else "It is a song [MB1]. The band [$id].")
         }
@@ -106,6 +113,7 @@ class PipelineSessionFactsTest {
             assertTrue("[L2] (Last.fm, artist) $label" in prompt(1))
             // The insight cites the line it was given, by the whole evidence's id, and checks clean.
             val written = assertIs<InsightState.Written>(second.insight)
+            assertEquals(setOf("MB1", "L2"), written.held)
             assertEquals(2, written.grounded.counts.ok)
             assertEquals(
                 listOf("MB1", "L2"),
@@ -169,6 +177,37 @@ class PipelineSessionFactsTest {
 
             val third = prompt(2)
             assertTrue(formed in third && label in third)
+        }
+
+    @Test
+    fun `NO_EVIDENCE to a prompt that left lines out asks again at once with them all, and only that is kept`() =
+        runTest {
+            noEvidenceWithoutArtist = true
+            val cache = MemoryCache()
+            val pipeline = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN), cache = cache)
+            val events = recording(pipeline)
+
+            val state = pipeline.run(track("One"), write = true)
+
+            assertEquals(2, provider.requests.size)
+            assertFalse(formed in prompt(0))
+            assertTrue(formed in prompt(1))
+            val written = assertIs<InsightState.Written>(state.insight)
+            assertEquals(null, written.held)
+            assertEquals(
+                listOf(SentenceStatus.OK, SentenceStatus.OK),
+                written.grounded.paragraphs
+                    .flatten()
+                    .map { it.status },
+            )
+            assertFalse(
+                cache.cards.values
+                    .single()
+                    .contains(GroundingCheck.NO_EVIDENCE),
+            )
+            runCurrent()
+            val calls = events.filterIsInstance<PipelineEvent.ModelCall>()
+            assertEquals(listOf(listOf("L1", "L2"), emptyList()), calls.map { it.leftOut })
         }
 
     @Test

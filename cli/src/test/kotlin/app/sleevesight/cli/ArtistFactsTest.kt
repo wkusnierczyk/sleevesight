@@ -1,5 +1,6 @@
 package app.sleevesight.cli
 
+import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
@@ -20,6 +21,7 @@ import app.sleevesight.core.synthesis.InsightReply
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 class ArtistFactsTest {
@@ -58,10 +60,22 @@ class ArtistFactsTest {
         )
     }
 
-    private fun call(
+    // A run's events: its `Received`, then each call, its left-out ids and its tokens.
+    private fun slice(
         result: TrackResult,
-        vararg leftOut: String,
-    ) = PipelineEvent.ModelCall(result.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m", leftOut.toList())
+        vararg calls: Pair<List<String>, Usage>,
+    ): List<PipelineEvent> {
+        val key = result.state.normalized.lookupKey
+        return listOf(PipelineEvent.Received(result.state.nowPlaying)) +
+            calls.flatMap { (leftOut, usage) ->
+                listOf(
+                    PipelineEvent.ModelCall(key, ProviderId.ANTHROPIC, "m", leftOut),
+                    PipelineEvent.ModelDone(key, usage, StopReason.END, Duration.ZERO),
+                )
+            }
+    }
+
+    private val tokens = Usage(1000, 100)
 
     @Test
     fun `an artist fact cited again is restated, matched by its text though its id moved`() {
@@ -125,7 +139,8 @@ class ArtistFactsTest {
         val first = track(1, listOf(song("One"), formed), "One is a song [W1].", Usage(1000, 100))
         val second = track(2, listOf(song("Two"), formed, label), "Two is a song [W1].", Usage(1000, 100))
 
-        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, listOf(call(first), call(second)))
+        val slices = listOf(slice(first, emptyList<String>() to tokens), slice(second, emptyList<String>() to tokens))
+        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, slices)
 
         assertEquals(listOf(0, 1), rows.map { it.resent })
         assertEquals(listOf(1, 2), rows.map { it.artistLines })
@@ -141,7 +156,11 @@ class ArtistFactsTest {
         val first = track(1, listOf(song("One"), formed, label), "The band formed in 1960 [W2].")
         val second = track(2, listOf(song("Two"), formed, label), "Its label is Parlophone [WD1].")
         val rows =
-            ArtistFacts.measure(listOf(first, second), allowModel = false, listOf(call(first), call(second, "W2")))
+            ArtistFacts.measure(
+                listOf(first, second),
+                allowModel = false,
+                listOf(slice(first, emptyList<String>() to tokens), slice(second, listOf("W2") to tokens)),
+            )
 
         assertEquals(listOf(0, 1), rows.map { it.leftOut })
         val state = second.state
@@ -155,22 +174,43 @@ class ArtistFactsTest {
     }
 
     @Test
-    fun `each track takes the next call for its key in run order, and one from the cache or not written none`() {
-        // The same track four times: written, written again, from the cache, not written.
+    fun `each run's calls are its own, so a fresh NO_EVIDENCE sent a prompt and a repeat of its track sends its own`() {
+        // The same track four times: a call that found no evidence, a call that wrote, from the cache, not written.
         val lines = listOf(song("One"), formed)
-        val first = track(1, lines, "One is a song [W1].", Usage(1000, 100), title = "One")
-        val again = track(2, lines, "One is a song [W1].", Usage(900, 90), title = "One")
+        val none =
+            track(
+                1,
+                lines,
+                title = "One",
+            ).let { it.copy(state = it.state.copy(insight = InsightState.NoEvidence)) }
+        val again = track(2, lines, "One is a song [W1].", tokens, title = "One")
         val cached = track(3, lines, "One is a song [W1].", title = "One")
         val unwritten = track(4, lines, title = "One")
-        val calls = listOf(call(first), call(again, "W2"))
-        val results = listOf(first, again, cached, unwritten)
+        val results = listOf(none, again, cached, unwritten)
+        val events =
+            slice(none, listOf("W2") to tokens) + slice(again, emptyList<String>() to tokens) +
+                slice(cached) + slice(unwritten)
 
-        val paired = ArtistFacts.calls(results, calls + PipelineEvent.InsightCached(first.state.normalized.lookupKey))
+        val rows = ArtistFacts.measure(results, allowModel = false, ArtistFacts.slices(events))
 
-        assertEquals(listOf(calls[0], calls[1], null, null), paired)
-        val rows = ArtistFacts.measure(results, allowModel = false, paired)
         assertEquals(listOf(true, true, false, false), rows.map { it.promptChars != null })
+        assertEquals(listOf(1, 0, 0, 0), rows.map { it.leftOut })
         assertEquals(2, ArtistFacts.totals(rows).prompts)
+    }
+
+    @Test
+    fun `a run asked again with every line counts both calls' tokens, and measures the last prompt`() {
+        val result = track(1, listOf(song("One"), formed), "One is a song [W1].", tokens)
+        val events = slice(result, listOf("W2") to Usage(900, 10), emptyList<String>() to tokens)
+
+        val row = ArtistFacts.measure(listOf(result), allowModel = false, ArtistFacts.slices(events)).single()
+
+        assertEquals(2, row.calls)
+        assertEquals(Usage(1900, 110), row.usage)
+        assertEquals(0, row.leftOut)
+        val state = result.state
+        val prompt = InsightPrompt.build(state.nowPlaying, state.normalized, checkNotNull(state.evidence), false)
+        assertEquals(prompt.length, row.promptChars)
     }
 
     @Test
@@ -187,7 +227,13 @@ class ArtistFactsTest {
         val second = track(2, listOf(song("Two"), formed), "Two is a song [W1].", Usage(900, 80))
         val cached = track(3, listOf(song("Three"), formed), "Three is a song [W1].")
 
-        val totals = ArtistFacts.totals(ArtistFacts.measure(listOf(first, second, cached), allowModel = false))
+        val slices =
+            listOf(
+                slice(first, emptyList<String>() to Usage(1000, 100)),
+                slice(second, emptyList<String>() to Usage(900, 80)),
+                slice(cached),
+            )
+        val totals = ArtistFacts.totals(ArtistFacts.measure(listOf(first, second, cached), allowModel = false, slices))
 
         assertEquals(2, totals.calls)
         assertEquals(1900L, totals.inputTokens)

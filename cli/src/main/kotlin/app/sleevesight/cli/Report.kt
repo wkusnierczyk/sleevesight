@@ -179,7 +179,11 @@ class Report(
                 appendLine("| ${result.n} | ${insightLabel(insight)} | | | | | | | |")
             }
         }
-        val usage = tried.mapNotNull { (it.state.insight as? InsightState.Written)?.usage }
+        // Every call's, a second one asked when the first said `NO_EVIDENCE` to fewer lines (#239) too.
+        val usage =
+            run.diagnostics.events
+                .filterIsInstance<PipelineEvent.ModelDone>()
+                .map { it.usage }
         appendLine()
         appendLine(
             "Tokens billed: ${usage.sumOf { it.inputTokens }} in, ${usage.sumOf { it.outputTokens }} out, " +
@@ -190,8 +194,7 @@ class Report(
 
     // #239: what consecutive tracks send and write about their artists (`ArtistFacts`).
     private fun StringBuilder.artistFacts() {
-        val calls = ArtistFacts.calls(run.results, run.diagnostics.events)
-        val rows = ArtistFacts.measure(run.results, run.allowModel, calls)
+        val rows = ArtistFacts.measure(run.results, run.allowModel, ArtistFacts.slices(run.diagnostics.events))
         val t = ArtistFacts.totals(rows)
         appendLine("## Artist-level evidence (#239)")
         appendLine()

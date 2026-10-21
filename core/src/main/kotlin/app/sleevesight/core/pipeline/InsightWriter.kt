@@ -78,7 +78,7 @@ internal class InsightWriter(
                 emit(PipelineEvent.InsightCached(key))
                 // Against the whole evidence: a card is kept only when it cites no line its prompt
                 // left out (`finish`), so it reads as it read when it was written.
-                val shown = checked(kept, evidence, cached = true, usage = null, complete = true)
+                val shown = checked(kept, Prompted(evidence, evidence), cached = true, usage = null, complete = true)
                 // Its artist facts, for the next tracks of the listening session (#239).
                 (shown as? InsightState.Written)?.let {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
@@ -121,19 +121,20 @@ internal class InsightWriter(
         } while (again)
     }
 
+    // A call, from the evidence less the artist-level lines the insight should not dwell on (#239),
+    // each line keeping its id, or from the [whole] of it. The card's key keeps the whole evidence's
+    // fingerprint, so a track played again finds its card, whatever the session cited.
     private suspend fun stream(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
+        whole: Boolean = false,
     ): InsightState {
-        // Less the artist-level lines the insight should not dwell on (#239), each line keeping its
-        // id. The card's key keeps the whole evidence's fingerprint, so a track played again finds
-        // its card, whatever the session cited.
-        val sent =
-            PromptEvidence.of(evidence, parts.sessionFacts.citedByOthers(key), parts.hasher)
-        val prompt = InsightPrompt.build(nowPlaying, track, sent, allowModel)
-        val leftOut = evidence.ids - sent.ids.toSet()
+        val given =
+            if (whole) evidence else PromptEvidence.of(evidence, parts.sessionFacts.citedByOthers(key), parts.hasher)
+        val sent = Prompted(evidence, given)
+        val prompt = InsightPrompt.build(nowPlaying, track, sent.evidence, allowModel)
         val request = CompletionRequest(model, prompt, effort = settings.effort(ai.provider.id))
         val text = StringBuilder()
         var end: CompletionEvent? = null
@@ -143,14 +144,14 @@ internal class InsightWriter(
         // cancels it.
         val ran =
             control.unlessStopped {
-                emit(PipelineEvent.ModelCall(key, ai.provider.id, model, leftOut))
-                show(InsightState.Writing(""))
+                emit(PipelineEvent.ModelCall(key, ai.provider.id, model, sent.leftOut))
+                show(InsightState.Writing("", sent.held))
                 started = time.timeSource.markNow()
                 ai.provider.stream(request, ai.key).collect { event ->
                     when (event) {
                         is CompletionEvent.Delta -> {
                             text.append(event.text)
-                            show(InsightState.Writing(text.toString()))
+                            show(InsightState.Writing(text.toString(), sent.held))
                         }
 
                         is CompletionEvent.Done, is CompletionEvent.Error -> {
@@ -161,30 +162,40 @@ internal class InsightWriter(
             }
         // Once the reply's end has come (Done or Error), it is the outcome, whatever a Stop did
         // after it while the transport was still open: what was paid for is kept.
-        return when (val last = end) {
-            is CompletionEvent.Done ->
-                finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent)
-            is CompletionEvent.Error -> {
-                emit(PipelineEvent.ModelFailed(key, last.kind))
-                show(InsightState.Failed(last.kind.name.lowercase()))
-            }
+        val outcome =
+            when (val last = end) {
+                is CompletionEvent.Done ->
+                    finish(last, text.toString(), card, checkNotNull(started).elapsedNow(), control, sent)
+                is CompletionEvent.Error -> {
+                    emit(PipelineEvent.ModelFailed(key, last.kind))
+                    show(InsightState.Failed(last.kind.name.lowercase()))
+                }
 
-            else -> {
-                if (ran == null) {
-                    emit(PipelineEvent.ModelStopped(key))
-                    show(InsightState.Stopped)
-                } else {
-                    show(InsightState.Failed(INCOMPLETE))
+                else -> {
+                    if (ran == null) {
+                        emit(PipelineEvent.ModelStopped(key))
+                        show(InsightState.Stopped)
+                    } else {
+                        show(InsightState.Failed(INCOMPLETE))
+                    }
                 }
             }
+        // `NO_EVIDENCE` to a prompt that left lines out: asked once more at once, a second paid call,
+        // with them all, as `PromptEvidence` falls back to them when nothing is left to narrate: an
+        // insight that repeats an artist fact is better than none.
+        return if (outcome == InsightState.NoEvidence && sent.leftOut.isNotEmpty()) {
+            stream(ai, model, card, control, whole = true)
+        } else {
+            outcome
         }
     }
 
     // The reply, checked against what its prompt was [sent] (#239): a citation of a line left out
     // of it is `unknown`, since the model never saw that line, though the track has it. Such a reply
-    // is shown and not kept, so every card in the cache cites only lines its prompt held, and reads
-    // the same when it is served again and checked against the whole evidence, whatever a later
-    // session leaves out.
+    // is shown and not kept, nor is `NO_EVIDENCE` to a prompt that left lines out (`stream` asks
+    // again with them all): every card in the cache cites only lines its prompt held, and reads the
+    // same when it is served again and checked against the whole evidence, whatever a later session
+    // leaves out. A reply not kept is written again, a paid call, the next time the track plays.
     @Suppress("LongParameterList") // The reply, its card, and what its prompt was given.
     private suspend fun finish(
         done: CompletionEvent.Done,
@@ -192,35 +203,36 @@ internal class InsightWriter(
         card: CardKey,
         latency: Duration,
         control: RunControl,
-        sent: EvidenceSet,
+        sent: Prompted,
     ): InsightState {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
         if (done.stopReason == StopReason.REFUSAL) return show(InsightState.Failed(DECLINED))
         val complete = done.stopReason == StopReason.END
         val written = checked(text, sent, cached = false, usage = done.usage, complete = complete)
-        val leftOut = evidence.ids.toSet() - sent.ids.toSet()
-        val citesLeftOut =
-            (written as? InsightState.Written)
-                ?.grounded
-                ?.paragraphs
-                ?.flatten()
-                ?.any { sentence -> sentence.cites.any { it in leftOut } } == true
-        if (complete && !citesLeftOut) guard.attempt("write insight") { keep(card, text) }
+        val keepable =
+            sent.leftOut.isEmpty() ||
+                (written as? InsightState.Written)
+                    ?.grounded
+                    ?.paragraphs
+                    ?.flatten()
+                    ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
+        if (complete && keepable) guard.attempt("write insight") { keep(card, text) }
         if (written is InsightState.Written) {
-            parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.lines))
+            parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
             control.cardWritten(written, evidence)
         }
         return show(written)
     }
 
+    // [text] checked against what was [sent]; a card from the cache against the whole evidence.
     private fun checked(
         text: String,
-        against: EvidenceSet,
+        sent: Prompted,
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
     ): InsightState =
-        when (val reply = GroundingCheck.check(text, against, allowModel)) {
+        when (val reply = GroundingCheck.check(text, sent.evidence, allowModel)) {
             InsightReply.NoEvidence -> {
                 emit(PipelineEvent.NoEvidence(key))
                 InsightState.NoEvidence
@@ -228,7 +240,7 @@ internal class InsightWriter(
 
             is InsightReply.Written -> {
                 emit(PipelineEvent.Grounded(key, reply.grounded.counts))
-                InsightState.Written(reply.grounded, cached, usage, complete)
+                InsightState.Written(reply.grounded, cached, usage, complete, sent.held)
             }
         }
 
@@ -263,6 +275,18 @@ internal class InsightWriter(
     }
 
     private fun emit(event: PipelineEvent) = sink.emit(event)
+
+    // What a prompt was given of the [whole] evidence: [evidence], the same lines or fewer, each with its id.
+    private class Prompted(
+        whole: EvidenceSet,
+        val evidence: EvidenceSet,
+    ) {
+        /** The ids of the lines left out, in the whole evidence's order. */
+        val leftOut: List<String> = if (evidence === whole) emptyList() else whole.ids - evidence.ids.toSet()
+
+        /** The ids it held, when it left some out; null when it held them all. */
+        val held: Set<String>? = evidence.ids.toSet().takeIf { leftOut.isNotEmpty() }
+    }
 
     private companion object {
         const val NO_STYLE = ""
