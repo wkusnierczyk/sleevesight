@@ -184,7 +184,6 @@ class FontSettingsTest {
             assertTrue("Text in Roboto at frame $frame", families.none { it == Roboto })
             if (shown(title) && families.isNotEmpty()) return
             compose.mainClock.advanceTimeByFrame()
-            Thread.sleep(FRAME_SLEEP_MS)
         }
         fail("$title not shown within $MAX_FRAMES frames")
     }
@@ -248,8 +247,5 @@ class FontSettingsTest {
     private companion object {
         /** About ten seconds of frames, at 16 ms. */
         const val MAX_FRAMES = 600
-
-        /** Real time between frames, for DataStore's threads. */
-        const val FRAME_SLEEP_MS = 5L
     }
 }
