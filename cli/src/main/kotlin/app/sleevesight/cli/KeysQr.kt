@@ -94,6 +94,7 @@ class KeysQr(
         require(from.values.count { it == STDIN } <= 1) { "Only one key can be read from standard input" }
         val given = keysFile
         require(given == null || given.isFile) { "--keys: no such file" }
+        require(given == null || from.isEmpty()) { "--keys and --<name>-from cannot be combined" }
         if (from.isEmpty()) {
             val loaded = if (given == null) Keys.load(environment) else Keys.load(emptyMap(), given)
             return listOfNotNull(
@@ -141,6 +142,7 @@ class KeysQr(
               Draws a setup code for the app's Settings, API keys, Scan keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
               any --<name>-from, only the keys in those files, - for standard input (one at most).
+              --keys and --<name>-from cannot be combined.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
             """.trimIndent()

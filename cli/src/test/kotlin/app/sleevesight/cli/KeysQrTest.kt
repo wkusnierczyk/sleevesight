@@ -12,6 +12,8 @@ import com.google.zxing.qrcode.QRCodeReader
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.io.PrintStream
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -143,17 +145,21 @@ class KeysQrTest {
     }
 
     @Test
-    fun `a key file that cannot be read is a usage error, without its path`() {
-        val locked = File(dir, anthropic).apply { writeText(anthropic) }
-        check(locked.setReadable(false))
-        try {
-            val run = run("--anthropic-from", locked.path)
-            assertEquals(Cli.EXIT_USAGE, run.status)
-            assertFalse(anthropic in run.err)
-            assertTrue("A key could not be read" in run.err)
-        } finally {
-            locked.setReadable(true)
-        }
+    fun `a key that cannot be read is a usage error, naming neither where nor why`() {
+        // A read that fails, with the key in its message, as a path in an I/O error would be. Not a
+        // file made unreadable, which root reads all the same.
+        val failing =
+            object : InputStream() {
+                override fun read(): Int = throw IOException("cannot read $anthropic")
+            }
+        val err = ByteArrayOutputStream()
+        val status =
+            Cli(PrintStream(ByteArrayOutputStream(), true), PrintStream(err, true), emptyMap(), failing)
+                .run(listOf("keys-qr", "--anthropic-from", "-"))
+        assertEquals(Cli.EXIT_USAGE, status)
+        val said = err.toString(Charsets.UTF_8)
+        assertFalse(anthropic in said)
+        assertTrue("A key could not be read" in said)
     }
 
     @Test
@@ -173,6 +179,14 @@ class KeysQrTest {
         assertTrue("Unknown option or unexpected argument\n" in run("--anthropic-from$anthropic").err)
         assertTrue("Unknown option --openai-from\n" in run("--openai-from", "-").err)
         assertTrue("--anthropic-from: no such file\n" in run("--anthropic-from", anthropic).err)
+    }
+
+    @Test
+    fun `--keys and --name-from cannot be combined`() {
+        val file = File(dir, "both.env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=$exa\n") }
+        val run = run("--keys", file.path, "--anthropic-from", "-", stdin = anthropic)
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertTrue("--keys and --<name>-from cannot be combined" in run.err)
     }
 
     @Test
