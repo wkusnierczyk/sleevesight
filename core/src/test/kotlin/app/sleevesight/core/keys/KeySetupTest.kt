@@ -11,6 +11,7 @@ import kotlin.test.assertTrue
 class KeySetupTest {
     private val anthropic = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
     private val openAi = "sk-proj-" + "e5F6_g7-H8".repeat(15)
+    private val google = "AIza" + "Sy0aB1-cD2_".repeat(3) + "eF"
     private val exa = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFm = "0123456789abcdef0123456789ABCDEF"
 
@@ -19,13 +20,17 @@ class KeySetupTest {
     @Test
     fun `a setup code's keys are read in order, each with its service`() {
         val read =
-            setup("sleevesight-keys:v1\nanthropic=$anthropic\r\nopenai=$openAi\nexa = $exa \n\nlastfm=$lastFm\n")
+            setup(
+                "sleevesight-keys:v1\nanthropic=$anthropic\r\nopenai=$openAi\ngoogle=$google\n" +
+                    "exa = $exa \n\nlastfm=$lastFm\n",
+            )
         assertEquals(
-            listOf(KeyName.ANTHROPIC, KeyName.OPENAI, KeyName.EXA, KeyName.LASTFM),
+            listOf(KeyName.ANTHROPIC, KeyName.OPENAI, KeyName.GOOGLE, KeyName.EXA, KeyName.LASTFM),
             read.keys.keys.toList(),
         )
         assertEquals(anthropic, read.keys.getValue(KeyName.ANTHROPIC).reveal())
         assertEquals(openAi, read.keys.getValue(KeyName.OPENAI).reveal())
+        assertEquals(google, read.keys.getValue(KeyName.GOOGLE).reveal())
         assertEquals(exa, read.keys.getValue(KeyName.EXA).reveal())
         assertEquals(lastFm, read.keys.getValue(KeyName.LASTFM).reveal())
         assertTrue(read.refused.isEmpty())
@@ -94,6 +99,13 @@ class KeySetupTest {
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, anthropic))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, "sk-proj-short"))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, exa))
+        assertEquals(39, google.length)
+        assertNull(KeyShape.check(KeyName.GOOGLE, google))
+        assertNull(KeyShape.check(KeyName.GOOGLE, "AQ.Ab8RN6" + "Lq0_x-Yz.9".repeat(5)))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.GOOGLE, anthropic))
+        assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.GOOGLE, "AIzaShort"))
+        assertEquals(KeyProblem.BAD_CHARACTERS, KeyShape.check(KeyName.GOOGLE, "$google "))
+        assertEquals(KeyProblem.BAD_CHARACTERS, KeyShape.check(KeyName.OPENAI, "$openAi."))
         assertNull(KeyShape.check(KeyName.EXA, exa))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.EXA, "short"))
         assertEquals(KeyProblem.BAD_CHARACTERS, KeyShape.check(KeyName.EXA, "$exa\n"))

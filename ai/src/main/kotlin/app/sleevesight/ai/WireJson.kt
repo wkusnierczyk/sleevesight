@@ -4,8 +4,8 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * How every provider's client reads its service's JSON: fields it does not know are ignored, so new
- * ones do not break it.
+ * How every provider's client reads its service's JSON: fields it does not know are ignored, so
+ * new ones do not break it.
  */
 internal val wireJson = Json { ignoreUnknownKeys = true }
 

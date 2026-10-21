@@ -109,6 +109,7 @@ class KeyScanTest {
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
     private val openAiKey = "sk-proj-" + "e5F6_g7-H8".repeat(15)
+    private val googleKey = "AQ.Ab8RN6" + "Lq0_x-Yz.9".repeat(5)
     private val exaKey = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
     private val lastFmKey = "0123456789abcdef0123456789abcdef"
 
@@ -129,7 +130,9 @@ class KeyScanTest {
 
     @Test
     fun eachAiServicesKeyRowScansItsOwnKey() {
-        for ((id, key) in listOf(SecretId.ANTHROPIC to anthropicKey, SecretId.OPENAI to openAiKey)) {
+        val keys =
+            listOf(SecretId.ANTHROPIC to anthropicKey, SecretId.OPENAI to openAiKey, SecretId.GOOGLE to googleKey)
+        for ((id, key) in keys) {
             show(scanner = scanning(key)) {
                 compose.onNodeWithText(text(keyName(id))).performScrollTo().performClick()
                 compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
