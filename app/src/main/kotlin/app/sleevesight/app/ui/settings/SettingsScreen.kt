@@ -32,7 +32,6 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
-import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
@@ -48,14 +47,15 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
- * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
- * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
- * the end, *Remove all API keys* while any key is stored, the way to the credits, the link to the
- * privacy policy on the site, and the developer setting *Diagnostics*. Each change is saved at
- * once. The rows show the stored settings, so a change that cannot be saved (the settings file
- * cannot be read or written) leaves its row at the stored value, and the screen says so above the
- * list until a later change is saved.
+ * The settings screen (design, *Settings*): the AI services, each with its switch, key, model and
+ * reasoning effort ([AiSection], #227), the players to follow, where to look, the web search
+ * engines and the keyed sources' keys, the genre label sources (D12, #84), the insight settings
+ * (D5, D13), the lookup settings (D6, D9), and the history's (#148); at the end, *Remove all API
+ * keys* while any key is stored, the way to the credits, the link to the privacy policy on the
+ * site, and the developer setting *Diagnostics*. Each change is saved at once. The rows show the
+ * stored settings, so a change that cannot be saved (the settings file cannot be read or written)
+ * leaves its row at the stored value, and the screen says so above the list until a later change
+ * is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
@@ -129,9 +129,9 @@ fun SettingsScreen(
         is SettingsDialog.Model -> {
             ModelDialog(
                 provider = shown.provider,
-                current = settings?.aiModel,
+                current = settings?.aiModels?.get(shown.provider),
                 load = { loadModels(shown.provider, secretStore, aiProviders) },
-                onSelect = { model -> update { it.copy(aiModel = model) } },
+                onSelect = { model -> update { it.withModel(shown.provider, model) } },
                 onDismiss = close,
             )
         }
@@ -186,11 +186,15 @@ internal class Clearing(
 
 /** The dialogs the screen opens, one at a time. */
 internal sealed interface SettingsDialog {
-    /** One of [options], each a value with its label; [onSelect] saves the one chosen. */
+    /**
+     * One of [options], each a value with its label; [onSelect] saves the one chosen. The [title]
+     * takes [titleArg], when given, as its one argument (a provider's name).
+     */
     class Choice<T>(
         @StringRes val title: Int,
         val options: List<Pair<T, String>>,
         val selected: T,
+        val titleArg: String? = null,
         val onSelect: (T) -> Unit,
     ) : SettingsDialog
 
@@ -235,12 +239,6 @@ internal class KeysShown(
     /** Whether any key is stored, readable or not: *Remove all API keys* is offered then. */
     val anyStored: Boolean get() = states.values.any { it != SecretState.ABSENT }
 }
-
-/**
- * The services offered in Phase 1: Anthropic, the one with a client (the plan's pending decision
- * *AI providers in the MVP* recommends Anthropic only); the others come with their clients.
- */
-private val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC)
 
 /** The cache lifetimes of the sources with an adapter (D9); Discogs's comes with it. */
 private val SHOWN_LIFETIMES =
@@ -321,9 +319,7 @@ private fun SettingsContent(
                 onClick = { open(SettingsDialog.ResetKeys) },
             )
         }
-        SectionHeading(R.string.settings_section_ai)
-        AiServiceRows(settings, secrets, update, open)
-        AiModelRows(settings, update, open)
+        AiSection(settings, secrets, update, open)
         PlayersSection(settings, navigation.playerLabel, update)
         SourcesSection(settings, secrets, update, open)
         LabelsSection(settings, secrets, update)
@@ -333,94 +329,6 @@ private fun SettingsContent(
         SavedKeysSection(keys, open)
         AboutSection(navigation.openCredits)
         DeveloperSection(settings, update, navigation.openDiagnostics)
-    }
-}
-
-/** The service and its key. */
-@Composable
-private fun AiServiceRows(
-    settings: Settings,
-    secrets: Map<SecretId, SecretState>,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val none = stringResource(R.string.settings_ai_provider_none)
-    val providers = listOf<ProviderId?>(null) + OFFERED_PROVIDERS
-    val options = providers.map { it to (it?.let { p -> stringResource(providerName(p)) } ?: none) }
-    ValueRow(
-        title = stringResource(R.string.settings_ai_provider),
-        value = options.firstOrNull { it.first == settings.aiProvider }?.second ?: settings.aiProvider?.name ?: none,
-        summary = stringResource(R.string.settings_ai_providers_hint),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_ai_provider, options, settings.aiProvider) { chosen ->
-                // Another service's model would not exist there: back to the new service's default.
-                update { if (it.aiProvider == chosen) it else it.copy(aiProvider = chosen, aiModel = null) }
-            },
-        )
-    }
-
-    val keyId = settings.aiProvider?.let { SecretId.forProvider(it) }
-    // With no service chosen, a key saved for one stays shown under its own name, to remove or replace.
-    val stored =
-        OFFERED_PROVIDERS
-            .mapNotNull { SecretId.forProvider(it) }
-            .filter { (secrets[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
-    when {
-        keyId != null -> {
-            KeyRow(stringResource(R.string.settings_ai_key), keyId, secrets, indent = false, open)
-        }
-
-        stored.isNotEmpty() -> {
-            for (id in stored) KeyRow(stringResource(keyName(id)), id, secrets, indent = false, open)
-        }
-
-        else -> {
-            ValueRow(
-                title = stringResource(R.string.settings_ai_key),
-                value = stringResource(R.string.settings_ai_model_none),
-                onClick = null,
-            )
-        }
-    }
-}
-
-/** The model and how much it may reason. */
-@Composable
-private fun AiModelRows(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val provider = settings.aiProvider
-    ValueRow(
-        title = stringResource(R.string.settings_ai_model),
-        value =
-            when {
-                provider == null -> stringResource(R.string.settings_ai_model_none)
-                settings.aiModel != null -> settings.aiModel.orEmpty()
-                else -> settings.model?.let { stringResource(R.string.settings_ai_model_default, it) }.orEmpty()
-            },
-        onClick = provider?.let { { open(SettingsDialog.Model(it)) } },
-    )
-
-    val efforts =
-        listOf<Pair<ReasoningEffort?, String>>(
-            ReasoningEffort.LOW to stringResource(R.string.settings_effort_low),
-            ReasoningEffort.MEDIUM to stringResource(R.string.settings_effort_medium),
-            ReasoningEffort.HIGH to stringResource(R.string.settings_effort_high),
-            null to stringResource(R.string.settings_effort_provider_default),
-        )
-    ValueRow(
-        title = stringResource(R.string.settings_ai_effort),
-        value = efforts.first { it.first == settings.aiEffort }.second,
-        summary = stringResource(R.string.settings_ai_effort_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_ai_effort, efforts, settings.aiEffort) { effort ->
-                update { it.copy(aiEffort = effort) }
-            },
-        )
     }
 }
 

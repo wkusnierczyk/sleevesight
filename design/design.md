@@ -255,7 +255,7 @@ data class EvidenceLine(
 
 ### Synthesis
 
-- **Provider abstraction.** `AiProvider` with implementations for Anthropic, OpenAI, Google and a local model through Ollama. The user picks provider and model and supplies the key.
+- **Provider abstraction.** `AiProvider` with implementations for Anthropic, OpenAI, Google and a local model through Ollama. The user switches one provider on, and sets each provider's key, model and reasoning effort, which it keeps while switched off.
 - **Role of the model.** It narrates retrieved evidence. It does not resolve entities, rank sources, or decide what is true.
 - **Citation contract.** Every factual sentence ends with the ids of the evidence lines that support it. No names, dates, places or numbers outside the evidence. No sentence goes uncited: where the evidence covers only part of what an insight would say, the insight is shorter, and says nothing of what is missing (prompt version 3, #193). Version 2 (#46) ended such an insight with the fixed, uncited sentence `Little else is documented.`, which ended nearly every insight and told the reader nothing; the grounding check still reads it as a hedge. When the evidence has nothing to narrate (`EvidenceSet.nothingToNarrate`: no line at all, or only the player's release, which repeats what the player reports), no call is made and the card says "The sources give nothing to write an insight from." With model knowledge on, a set of only the player's release gets a call once the player has reported the artists, since the model may add the one unverified `[M]` sentence the user opted into. Before the artists (some players report the title and album first), it gets none, whatever the switch (#204): the card written then would stand for the track, since nothing is written twice for one track without a tap (D5), and its `[M]` sentence would be written without the artist; with no call, the report with the artists is decided afresh. The model replies `NO_EVIDENCE` if the evidence it is given has nothing usable, and the card says the same. The text holds in every case it shows: sources that found nothing, failed or were unreachable, the release alone, or lines the model found unusable.
 - **Grounding check, in code, before display.** Each sentence is classified as `ok`, `hedge` (states a gap), `model` (cites `M`), `uncited`, or `unknown` (cites an id that does not exist, or cites `M` when model knowledge is off). Uncited and unknown sentences are underlined; the counts are logged.
@@ -319,8 +319,8 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Group | Setting | Default |
 |---|---|---|
 | Layout | Separate pages or expandable boxes | Separate pages |
-| AI service | Provider, model, API key | None until set; the model then defaults per provider (Anthropic: Claude Haiku 5.5, its cheapest current model) |
-| AI service | Reasoning effort: how much the model may reason before it writes (low, medium, high, or the provider's default) | Low: an insight narrates a few lines and is waited for |
+| AI service | Per provider: a switch, its API key and its model; the switches are exclusive, and each provider keeps its key and model while switched off (#227) | All off until one is switched on; the model defaults per provider (Anthropic: Claude Haiku 5.5, its cheapest current model) |
+| AI service | Per provider, reasoning effort: how much the model may reason before it writes, from the provider's own scale, or the provider's default (Anthropic: low, medium, high) | Per provider (Anthropic: low; an insight narrates a few lines and is waited for) |
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
@@ -479,7 +479,7 @@ Session layer, home screen, sources section, insight with grounding check, genre
 
 ### Phase 1.5. Play release
 
-The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. The work is in [plan.md](plan.md).
+The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. With it, the AI service gets a row per provider (#227), and OpenAI and Google join Anthropic (#228, #229; moved from Phase 3 on 2026-10-18), so alpha testers can choose a provider and vary its effort. The work is in [plan.md](plan.md).
 
 ### Phase 2. Detail and discovery
 
@@ -528,6 +528,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-12 | D15: skip detection learned per player on the device, within the fixed rules, without an LLM | Better detection without cost, data leaving the phone, or decisions moving out of code |
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |
 | 2026-10-13 | Phase 1.5, Play release, after Phase 1 | D7 makes Play's review, the listing and the signed bundle work of their own; the MVP's exit needs only an `adb` install |
+| 2026-10-18 | OpenAI and Google move from Phase 3 to Phase 1.5 (#228, #229), after the AI settings per provider (#227); Ollama stays in Phase 3 | Alpha testers can choose a provider and vary its effort, which tells more than an all-Anthropic alpha |
 
 ## Open questions
 
