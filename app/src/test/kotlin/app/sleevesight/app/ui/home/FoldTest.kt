@@ -55,6 +55,27 @@ class FoldTest {
     }
 
     @Test
+    fun aNewTrackKeepsTheFoldItShowsAsItsOwnUntouched() {
+        val memory = FoldMemory()
+        SourcesFold(memory, sundown, keep = false).set(Fold.Pages(2))
+        SourcesFold(memory, carefree, keep = false).follow()
+        assertEquals(Fold.Folded, memory.fold)
+        assertEquals(carefree, memory.track)
+        assertEquals(false, memory.touched)
+        // Back to the first track, with no fold changed on the second: folded, as any new track.
+        assertEquals(Fold.Folded, SourcesFold(memory, sundown, keep = false).fold)
+
+        SourcesFold(memory, carefree, keep = true).set(Fold.Pages(3))
+        SourcesFold(memory, sundown, keep = true).follow()
+        assertEquals(Fold.Pages(1), memory.fold)
+        // The same track playing on leaves it as set.
+        SourcesFold(memory, sundown, keep = true).set(Fold.Pages(2))
+        SourcesFold(memory, sundown.copy(album = "Other"), keep = true).follow()
+        assertEquals(Fold.Pages(2), memory.fold)
+        assertEquals(true, memory.touched)
+    }
+
+    @Test
     fun theFoldAndItsTrackOutliveARecreatedActivity() {
         val scope = SaverScope { true }
         for (fold in listOf(Fold.Folded, Fold.Pages(3), Fold.All)) {

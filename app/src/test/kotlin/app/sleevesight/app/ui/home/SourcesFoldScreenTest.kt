@@ -4,8 +4,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -55,6 +60,8 @@ import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightReply
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,6 +112,21 @@ class SourcesFoldScreenTest {
         settings = settings,
     )
 
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content
+    // and composes it afresh from what was saved, as Android does for a recreated activity (what
+    // `StateRestorationTester` does, which needs a content rule these tests do not use).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
     private fun show(
         initial: NowPlayingState,
         block: (MutableState<NowPlayingState>) -> Unit,
@@ -113,14 +135,25 @@ class SourcesFoldScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize))
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize))
+                            }
+                        }
                     }
                 }
             }
             scenario.onActivity { block(current) }
         }
     }
+
+    private fun announced() =
+        compose
+            .onNodeWithTag(FOLD_STATUS_TAG)
+            .fetchSemanticsNode()
+            .config
+            .getOrNull(SemanticsProperties.LiveRegion) == LiveRegionMode.Polite
 
     private fun tap(tag: String) {
         compose
@@ -312,6 +345,8 @@ class SourcesFoldScreenTest {
             }
 
             check(FOLD_SHOW_TAG)
+            // Not announced until the listener changes the fold.
+            assertFalse(announced())
             // A folded chip is a button that shows its source's lines.
             val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB")
             chip.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
@@ -410,4 +445,126 @@ class SourcesFoldScreenTest {
             compose.onNodeWithText(rejected).assertExists()
         }
     }
+
+    /** [track] with an insight citing [id] in its evidence. */
+    private fun citing(
+        track: TrackState,
+        id: String,
+    ): TrackState {
+        val reply = GroundingCheck.check("It is documented [$id].", checkNotNull(track.evidence), allowModel = false)
+        return track.copy(insight = InsightState.Written((reply as InsightReply.Written).grounded, cached = false))
+    }
+
+    private fun cite(id: String) {
+        compose.onNodeWithText("It is documented", substring = true).performScrollTo().performFirstLinkClick {
+            (it.item as? LinkAnnotation.Clickable)?.tag == CITE_PREFIX + id
+        }
+        compose.waitForIdle()
+    }
+
+    @Test
+    fun aTrackPlayedAgainAfterOthersStartsFoldedWithNoFoldChangedOnTheOthers() =
+        show(state(long(20))) { current ->
+            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
+            current.value = state(long(20, playing = carefree))
+            compose.waitForIdle()
+            current.value = state(long(20))
+            compose.waitForIdle()
+            assertEquals(0, linesShown())
+        }
+
+    @Test
+    fun withTheSettingOnATrackPlayedAgainAfterOthersComesBackAtItsFirstScreenful() {
+        val keep = Settings(keepSourcesUnfolded = true)
+        show(state(long(20), keep)) { current ->
+            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
+            current.value = state(long(20, playing = carefree), keep)
+            compose.waitForIdle()
+            current.value = state(long(20), keep)
+            compose.waitForIdle()
+            assertEquals(Fold.PAGE, linesShown())
+        }
+    }
+
+    @Test
+    fun theFoldOutlivesARestoredScreen() =
+        show(state(long(20))) {
+            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
+            restore()
+            assertEquals(16, linesShown())
+        }
+
+    @Test
+    fun theFoldOutlivesAWhileWithNothingPlaying() {
+        val keep = Settings(keepSourcesUnfolded = true)
+        show(state(long(20), keep)) { current ->
+            tap(FOLD_SHOW_TAG)
+            current.value = NowPlayingState(PipelineView(), playing = null, settings = keep)
+            compose.waitForIdle()
+            current.value = state(long(20, playing = carefree), keep)
+            compose.waitForIdle()
+            assertEquals(Fold.PAGE, linesShown())
+        }
+    }
+
+    @Test
+    fun howMuchShowsIsAnnouncedOnlyOnceTheFoldWasChangedOnTheTrack() =
+        show(state(long(20))) { current ->
+            assertFalse(announced())
+            // Sources landing change the count by themselves: not announced.
+            current.value = state(long(21))
+            compose.waitForIdle()
+            assertFalse(announced())
+            tap(FOLD_SHOW_TAG)
+            assertTrue(announced())
+            current.value = state(long(20, playing = carefree))
+            compose.waitForIdle()
+            assertFalse(announced())
+        }
+
+    @Test
+    fun aCitationOfALineWhoseSourceAChipHidWhilePartlyUnfoldedReachesIt() =
+        show(state(citing(long(20, wikipedia = 3), "W3"))) {
+            tap(FOLD_SHOW_TAG)
+            tap(CHIP_PREFIX + "W")
+            assertEquals(0, count(LINE_PREFIX + "W3"))
+            cite("W3")
+            compose.onNodeWithTag(LINE_PREFIX + "W3").assertIsDisplayed()
+        }
+
+    @Test
+    fun aCitationOfTheLastLineShowsTheWholeList() =
+        show(state(citing(long(20), "MB20"))) {
+            cite("MB20")
+            compose.onNodeWithTag(LINE_PREFIX + "MB20").assertIsDisplayed()
+            assertEquals(20, linesShown())
+            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG), controls())
+        }
+
+    @Test
+    fun aChipShowingItsLinesAgainWhilePartlyUnfoldedUnfoldsToThem() =
+        show(state(long(20, wikipedia = 3))) {
+            tap(FOLD_SHOW_TAG)
+            tap(CHIP_PREFIX + "W")
+            tap(CHIP_PREFIX + "W")
+            compose.onNodeWithTag(LINE_PREFIX + "W1").assertExists()
+            assertEquals(23, linesShown())
+        }
+
+    @Test
+    fun withEveryEntryHiddenByTheChipsHideAndTheCountStay() =
+        show(state(track())) {
+            tap(FOLD_SHOW_TAG)
+            tap(CHIP_PREFIX + "MB")
+            tap(CHIP_PREFIX + "W")
+            assertEquals(0, linesShown())
+            assertEquals(setOf(FOLD_HIDE_TAG), controls())
+            status(plural(R.plurals.home_sources_filtered, 3))
+            tap(FOLD_HIDE_TAG)
+            assertEquals(setOf(FOLD_SHOW_TAG), controls())
+            status(plural(R.plurals.home_sources_filtered, 3))
+        }
 }

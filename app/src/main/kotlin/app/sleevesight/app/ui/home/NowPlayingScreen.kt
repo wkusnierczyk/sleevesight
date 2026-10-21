@@ -107,6 +107,8 @@ internal fun NowPlayingContent(
     actions: NowPlayingActions,
 ) {
     val playing = state.playing
+    // Above the return, so the fold outlives a while with nothing playing.
+    val foldMemory = rememberFoldMemory()
     if (playing == null) {
         NothingPlaying()
         return
@@ -119,7 +121,7 @@ internal fun NowPlayingContent(
     val settings = state.settings
     val modelAllowed = settings?.isEnabled(SourceId.MODEL) == true
     val focus = rememberLineFocus(track?.evidence)
-    val fold = rememberSourcesFold(playing, keep = settings?.keepSourcesUnfolded == true)
+    val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded == true)
     // A citation tapped unfolds the list far enough to show its line.
     val cite: (String) -> Unit = { id -> focus.cite(id)?.let(fold::reach) }
     val insight =

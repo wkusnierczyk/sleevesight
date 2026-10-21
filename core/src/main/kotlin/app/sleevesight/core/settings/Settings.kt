@@ -58,8 +58,9 @@ import kotlin.time.Duration.Companion.seconds
  *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
  *   lines. Off by default: each new track's list starts folded, as the first one did, since a
  *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
- *   nothing about the next. On, a list unfolded past its first screenful comes back at its first
- *   screenful. Kept while the app's screen is (a rotation included), not across a fresh start.
+ *   nothing about the next. On, a list shown past its first screenful but not in full comes back
+ *   at its first screenful. The fold is kept through a rotation and when Android restores the
+ *   screen it closed, not when the app is started afresh.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  */

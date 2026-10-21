@@ -109,15 +109,20 @@
     <string name="home_sources_all_words">Show all sources</string>
     <string name="home_sources_less">… less</string>
     <string name="home_sources_less_words">Show fewer sources</string>
-    <!-- How much of the list shows: the evidence lines, the unverified lines and the rejected matches. -->
+    <!-- How much of the list shows. An entry is an evidence line, an unverified line or a rejected match. -->
     <plurals name="home_sources_folded">
-        <item quantity="one">%d line, folded</item>
-        <item quantity="other">%d lines, folded</item>
+        <item quantity="one">%d entry, folded</item>
+        <item quantity="other">%d entries, folded</item>
     </plurals>
-    <string name="home_sources_showing">Showing %1$d of %2$d lines</string>
+    <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
     <plurals name="home_sources_showing_all">
-        <item quantity="one">Showing %d line</item>
-        <item quantity="other">Showing all %d lines</item>
+        <item quantity="one">Showing %d entry</item>
+        <item quantity="other">Showing all %d entries</item>
+    </plurals>
+    <!-- Every entry hidden: the chips hide all the evidence lines, and there is nothing else. -->
+    <plurals name="home_sources_filtered">
+        <item quantity="one">%d line, hidden by its chip</item>
+        <item quantity="other">All %d lines, hidden by the chips</item>
     </plurals>
     <string name="home_evidence_looking">Looking…</string>
     <string name="home_evidence_empty">No source returned anything about this.</string>

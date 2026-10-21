@@ -125,7 +125,7 @@
 
     <string name="settings_section_home">Home screen</string>
     <string name="settings_keep_sources">Keep Sources as you left them</string>
-    <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before.</string>
+    <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
     <string name="settings_section_lookups">Lookups</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>

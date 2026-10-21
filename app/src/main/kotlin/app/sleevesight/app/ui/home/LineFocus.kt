@@ -19,7 +19,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * [evidence]. A source's chip hides or shows its lines ([toggle]); a citation tapped shows its
  * line, even if its source's lines were hidden, scrolls to it and flashes it ([cite]); a chip
  * chosen while the list is folded shows its source's lines and scrolls to the first ([reveal]).
- * Both say where in the list the line now is, for the fold to unfold to ([SourcesFold.reach]).
+ * Each of them, and a chip that shows its lines again, says where in the list the line now is, for
+ * the fold to unfold to ([SourcesFold.reach]).
  */
 @Stable
 internal class LineFocus(
@@ -39,8 +40,15 @@ internal class LineFocus(
     val requesters: Map<String, BringIntoViewRequester> =
         evidence?.lines.orEmpty().associate { it.id to BringIntoViewRequester() }
 
-    fun toggle(chip: SourceChip) {
-        hidden = if (chip.filters.any { it in hidden }) hidden - chip.filters else hidden + chip.filters
+    /**
+     * Hides [chip]'s lines, or shows them if any were hidden; on showing them, returns the first
+     * one's place in the list as it now shows, for the fold to unfold to, else null.
+     */
+    fun toggle(chip: SourceChip): Int? {
+        val showing = chip.filters.any { it in hidden }
+        hidden = if (showing) hidden - chip.filters else hidden + chip.filters
+        if (!showing) return null
+        return evidence?.lines?.firstOrNull { it.source in chip.filters }?.let { indexOf(it.id) }
     }
 
     /**

@@ -27,22 +27,29 @@ import app.sleevesight.app.R
 
 /**
  * Above the list: *show* while it is folded, else *hide*; beside it, how much of the list shows
- * ([shown] of [total]), which a screen reader announces as it changes.
+ * ([shown] of [total] entries), or, with every entry hidden by the chips, that they hide the
+ * [filtered] lines. A screen reader announces it as it changes once the listener has changed the
+ * fold on this track ([SourcesFold.announced]): not while sources land and the list grows by
+ * itself, nor on each new track.
  */
 @Composable
 internal fun FoldStatus(
     fold: SourcesFold,
     shown: Int,
     total: Int,
+    filtered: Int,
 ) {
+    val folded = fold.fold == Fold.Folded
     val status =
         when {
-            shown == 0 -> pluralStringResource(R.plurals.home_sources_folded, total, total)
+            total == 0 -> pluralStringResource(R.plurals.home_sources_filtered, filtered, filtered)
+            folded -> pluralStringResource(R.plurals.home_sources_folded, total, total)
             shown < total -> stringResource(R.string.home_sources_showing, shown, total)
             else -> pluralStringResource(R.plurals.home_sources_showing_all, total, total)
         }
+    val announced = fold.announced
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (shown == 0) {
+        if (folded) {
             FoldButton(R.string.home_sources_show, R.string.home_sources_show_words, FOLD_SHOW_TAG) {
                 fold.set(Fold.Pages(1))
             }
@@ -58,13 +65,13 @@ internal fun FoldStatus(
             modifier =
                 Modifier
                     .testTag(FOLD_STATUS_TAG)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
+                    .semantics { if (announced) liveRegion = LiveRegionMode.Polite },
         )
     }
 }
 
 /**
- * Under the list: *hide*; *less* once past the first screenful; *more* and *show all* while lines
+ * Under the list: *hide*; *less* once past the first screenful; *more* and *show all* while entries
  * remain, of [total], past the [shown].
  */
 @OptIn(ExperimentalLayoutApi::class)

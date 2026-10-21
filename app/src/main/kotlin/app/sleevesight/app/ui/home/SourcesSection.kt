@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +110,8 @@ internal fun SourcesSection(
                 val filters = lines.any { it.source in chip.filters }
                 val shown = chip.filters.none { it in hidden }
                 StatusChip(chip, filtering = filters, shown = shown, folded = folded) {
-                    if (folded) focus.reveal(chip)?.let(fold::reach) else focus.toggle(chip)
+                    // Lines shown again are unfolded to, wherever they fall in the list.
+                    (if (folded) focus.reveal(chip) else focus.toggle(chip))?.let(fold::reach)
                 }
             }
         }
@@ -120,12 +122,17 @@ internal fun SourcesSection(
         }
         val entries =
             lines.filter { it.source !in hidden }.map(Entry::Line) +
-                unverified.map(Entry::Unverified) +
-                track?.let(::rejectedMatches).orEmpty().map(Entry::Rejected)
-        if (entries.isEmpty()) return@Column
+                unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
+                track
+                    ?.let(::rejectedMatches)
+                    .orEmpty()
+                    .mapIndexed { index, match -> Entry.Rejected(match, index) }
+        // The lines the chips hide: with every entry hidden, the fold and its count still show.
+        val filtered = lines.count { it.source in hidden }
+        if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size
         val shown = fold.fold.shown(total)
-        FoldStatus(fold, shown, total)
+        FoldStatus(fold, shown, total, filtered)
         if (shown == 0) return@Column
         if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
         Entries(entries.take(shown), tagWidth, focus)
@@ -133,19 +140,32 @@ internal fun SourcesSection(
     }
 }
 
-/** A row of the list: an evidence line, a line not verified, or a match rejected. */
+/**
+ * An entry of the list: an evidence line, a line not verified, or a match rejected; [key] keeps
+ * each row's state (a flash, its way into view) with it as the rows before it come and go.
+ */
 private sealed interface Entry {
+    val key: String
+
     class Line(
         val line: EvidenceLine,
-    ) : Entry
+    ) : Entry {
+        override val key: String get() = line.id
+    }
 
     class Unverified(
         val line: EvidenceDraft,
-    ) : Entry
+        index: Int,
+    ) : Entry {
+        override val key: String = "unverified:$index"
+    }
 
     class Rejected(
         val match: RejectedMatch,
-    ) : Entry
+        index: Int,
+    ) : Entry {
+        override val key: String = "rejected:$index"
+    }
 }
 
 /** [entries], the unverified lines and the rejected matches each under their heading. */
@@ -155,31 +175,32 @@ private fun Entries(
     tagWidth: Dp,
     focus: LineFocus,
 ) {
-    var previous: Entry? = null
-    for (entry in entries) {
-        when (entry) {
-            is Entry.Line -> {
-                val line = entry.line
-                val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
-            }
+    entries.forEachIndexed { index, entry ->
+        val previous = entries.getOrNull(index - 1)
+        key(entry.key) {
+            when (entry) {
+                is Entry.Line -> {
+                    val line = entry.line
+                    val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
+                    EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
+                }
 
-            is Entry.Unverified -> {
-                if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
-                UnverifiedRow(entry.line, tagWidth)
-            }
+                is Entry.Unverified -> {
+                    if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
+                    UnverifiedRow(entry.line, tagWidth)
+                }
 
-            is Entry.Rejected -> {
-                if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
-                val match = entry.match
-                val name = sourceName(match.source)
-                Small(
-                    match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, match.reason) }
-                        ?: stringResource(R.string.home_rejected, name, match.reason),
-                )
+                is Entry.Rejected -> {
+                    if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
+                    val match = entry.match
+                    val name = sourceName(match.source)
+                    Small(
+                        match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, match.reason) }
+                            ?: stringResource(R.string.home_rejected, name, match.reason),
+                    )
+                }
             }
         }
-        previous = entry
     }
 }
 
