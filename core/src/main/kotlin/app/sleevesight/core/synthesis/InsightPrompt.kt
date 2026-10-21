@@ -41,7 +41,10 @@ object InsightPrompt {
      * contract or the built-in style changes, so cards written from the old prompt are not reused.
      * Version 4 (#239): the evidence given leaves out artist-level lines, all of them for a track
      * with enough evidence of its own, else those other insights of the listening session cited
-     * (`PromptEvidence`); the template is version 3's.
+     * (`PromptEvidence`); the template is version 3's. Raised all the same, though a version 3 card
+     * is still keyed by the evidence it was written from: the cards written before it on a thinly
+     * documented album are the ones that repeat the artist's facts, and each track kept is written
+     * afresh once, a paid call, when it is next played with insights on.
      */
     const val VERSION: Int = 4
 

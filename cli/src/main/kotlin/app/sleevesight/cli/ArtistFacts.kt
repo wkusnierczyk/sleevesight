@@ -21,17 +21,17 @@ import app.sleevesight.core.synthesis.InsightPrompt
  * citations, not prose, so a fact restated from a differently worded line, or uncited, is not
  * counted.
  *
- * The prompt is the one the pipeline sends ([InsightPrompt.build]), rebuilt from the track's state
- * less the artist-level lines the call left out (`PipelineEvent.ModelCall.leftOut`), so its size is
- * known with no call; a track with nothing to narrate sends none.
+ * The prompt is the one each call sent ([InsightPrompt.build]), rebuilt from the track's state less
+ * the artist-level lines the call left out (`PipelineEvent.ModelCall.leftOut`); a track whose insight
+ * came from the cache, or was not written, sent none.
  */
 object ArtistFacts {
     /**
      * One track's numbers. [lines] and [artistLines] are the track's evidence; [leftOut] the
-     * artist-level lines its prompt left out, as earlier insights cited them. [promptChars] is null
-     * when no prompt is sent (nothing to narrate); [artistChars] counts the artist-level lines the
-     * prompt holds as it writes them, a newline each. [resent] is the artist-level lines the
-     * prompt holds that the run's track before this one sent too. [cited] are
+     * artist-level lines its prompt left out (#239, `PromptEvidence`). [promptChars] is null when
+     * the track made no call (cached, not written, nothing to narrate); [artistChars] counts the
+     * artist-level lines the prompt holds as it writes them, a newline each. [resent] is the
+     * artist-level lines the prompt holds that the last prompt sent before it held too. [cited] are
      * this insight's citations of artist-level lines, by this track's ids; [restated] those an
      * insight before it in the run cited too, the last one written ([fromLast]) or any.
      * [artistSentences] counts the insight's sentences that cite artist-level lines only.
@@ -72,33 +72,50 @@ object ArtistFacts {
         val outputTokens: Long,
     )
 
-    /** The ids each track's last call left out, by lookup key, from the run's [events]. */
-    fun leftOut(events: List<PipelineEvent>): Map<String, List<String>> =
-        events.filterIsInstance<PipelineEvent.ModelCall>().associate { it.key to it.leftOut }
+    /**
+     * The call each of [results] made, from the run's [events], in run order: a track whose insight
+     * came from a call (written, with its usage, or failed) takes the next `ModelCall` for its
+     * lookup key; one served from the cache, or not written, made none (null).
+     */
+    fun calls(
+        results: List<TrackResult>,
+        events: List<PipelineEvent>,
+    ): List<PipelineEvent.ModelCall?> {
+        val made = events.filterIsInstance<PipelineEvent.ModelCall>()
+        var next = 0
+        return results.map { result ->
+            val insight = result.state.insight
+            val called = (insight is InsightState.Written && insight.usage != null) || insight is InsightState.Failed
+            val key = result.state.normalized.lookupKey
+            val at = if (called) (next until made.size).firstOrNull { made[it].key == key } else null
+            at?.let {
+                next = it + 1
+                made[it]
+            }
+        }
+    }
 
     /**
      * The numbers per track of [results], in their order; [allowModel] is the run's model-knowledge
-     * switch, [leftOut] the artist-level lines each track's prompt left out ([ArtistFacts.leftOut]).
+     * switch, [calls] the call each track made ([ArtistFacts.calls]), whose prompt is the one measured:
+     * a track that made none sent no prompt.
      */
     fun measure(
         results: List<TrackResult>,
         allowModel: Boolean,
-        leftOut: Map<String, List<String>> = emptyMap(),
+        calls: List<PipelineEvent.ModelCall?> = emptyList(),
     ): List<Row> {
         var before: Set<ArtistFact> = emptySet()
         var lastCited: Set<ArtistFact> = emptySet()
         val everCited = mutableSetOf<ArtistFact>()
-        return results.map { result ->
+        return results.mapIndexed { index, result ->
             val state = result.state
             val evidence = state.evidence
             val lines = evidence?.lines.orEmpty()
             val artist = lines.filter { it.scope == Scope.ARTIST }
-            val out = leftOut[state.normalized.lookupKey].orEmpty().toSet()
-            val sent =
-                evidence
-                    ?.takeUnless {
-                        it.nothingToNarrate(allowModel, artistsKnown = state.normalized.artists.isNotEmpty())
-                    }?.without(JvmHasher) { it.id in out }
+            val call = calls.getOrNull(index)
+            val out = call?.leftOut.orEmpty().toSet()
+            val sent = call?.let { evidence?.without(JvmHasher) { it.id in out } }
             val sentArtist = sent?.lines.orEmpty().filter { it.scope == Scope.ARTIST }
             val prompt = sent?.let { InsightPrompt.build(state.nowPlaying, state.normalized, it, allowModel) }
             val sentences =
@@ -126,7 +143,7 @@ object ArtistFacts {
                     fromLast = cited.filter { artistIds.getValue(it) in lastCited },
                     restated = cited.filter { artistIds.getValue(it) in everCited },
                 )
-            before = sentArtist.map(ArtistFact::of).toSet()
+            if (sent != null) before = sentArtist.map(ArtistFact::of).toSet()
             if (state.insight is InsightState.Written) {
                 lastCited = citedFacts.toSet()
                 everCited += citedFacts

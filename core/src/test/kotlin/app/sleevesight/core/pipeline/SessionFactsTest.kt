@@ -1,6 +1,9 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.model.SourceId
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,6 +54,33 @@ class SessionFactsTest {
             facts.cite("band|two", setOf(label))
 
             assertEquals(setOf(formed, label), facts.citedByOthers("band|three"))
+        }
+
+    @Test
+    fun `a slow read of the session before cannot clear what the next session kept`() =
+        runTest {
+            val slow = CompletableDeferred<Unit>()
+            var reads = 0
+            val facts =
+                ListeningSessionFacts {
+                    // The first read is of session 1 and lands late; every later one is session 2.
+                    if (++reads == 1) {
+                        slow.await()
+                        1L
+                    } else {
+                        2L
+                    }
+                }
+
+            val early = async { facts.citedByOthers("band|one") }
+            runCurrent()
+            val cite = async { facts.cite("band|two", setOf(formed)) }
+            runCurrent()
+            slow.complete(Unit)
+            early.await()
+            cite.await()
+
+            assertEquals(setOf(formed), facts.citedByOthers("band|three"))
         }
 
     @Test

@@ -190,7 +190,8 @@ class Report(
 
     // #239: what consecutive tracks send and write about their artists (`ArtistFacts`).
     private fun StringBuilder.artistFacts() {
-        val rows = ArtistFacts.measure(run.results, run.allowModel, ArtistFacts.leftOut(run.diagnostics.events))
+        val calls = ArtistFacts.calls(run.results, run.diagnostics.events)
+        val rows = ArtistFacts.measure(run.results, run.allowModel, calls)
         val t = ArtistFacts.totals(rows)
         appendLine("## Artist-level evidence (#239)")
         appendLine()
@@ -210,7 +211,7 @@ class Report(
             val sentences = if (written) "${r.artistSentences} of ${r.sentences}" else ""
             appendLine(
                 "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | ${r.leftOut} | " +
-                    "${r.promptChars ?: "none sent"} | ${r.artistChars} | ${r.resent} | $tokens | $sentences | " +
+                    "${r.promptChars ?: "not sent"} | ${r.artistChars} | ${r.resent} | $tokens | $sentences | " +
                     "${ids(r.cited, written)} | ${ids(r.fromLast, written)} | ${ids(r.restated, written)} |",
             )
         }
@@ -324,13 +325,13 @@ class Report(
             "Per track, in the run's order: its evidence lines and how many are artist-level (Last.fm's bio, " +
                 "the Wikipedia artist article, Wikidata's artist facts); *left out*, the artist-level lines its " +
                 "prompt left out (#239, `PromptEvidence`: all for a track with enough of its own, else those " +
-                "another insight of the listening session cited); the " +
-                "insight prompt's size, rebuilt as the pipeline sends it, and the share of it the artist-level " +
-                "lines sent take; *resent*, those the track before sent too; the insight's sentences citing " +
-                "artist-level lines only; and the artist-level lines it cites that the last insight before it, " +
-                "or any before it, cited too. Lines are matched across tracks by source and text, since ids are " +
-                "positions per track. Citations are what is counted, not prose: a fact restated from a " +
-                "differently worded line, or uncited, is not."
+                "another insight of the listening session cited); the size of the prompt its call sent, " +
+                "rebuilt as the pipeline built it (none for an insight from the cache or not written), and " +
+                "the share of it the artist-level lines take; *resent*, those the prompt sent before it held " +
+                "too; the insight's sentences citing artist-level lines only; and the artist-level lines it " +
+                "cites that the last insight before it, or any before it, cited too. Lines are matched across " +
+                "tracks by source and text, since ids are positions per track. Citations are what is counted, " +
+                "not prose: a fact restated from a differently worded line, or uncited, is not."
     }
 }
 

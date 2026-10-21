@@ -37,8 +37,9 @@ class ArtistFactsTest {
         drafts: List<EvidenceDraft>,
         reply: String? = null,
         usage: Usage? = null,
+        title: String = "Song $n",
     ): TrackResult {
-        val nowPlaying = NowPlaying("Song $n", "The Band", "The Album", player = Settings.SPOTIFY)
+        val nowPlaying = NowPlaying(title, "The Band", "The Album", player = Settings.SPOTIFY)
         val evidence = EvidenceSet.of(drafts, JvmHasher)
         val insight =
             reply?.let {
@@ -56,6 +57,11 @@ class ArtistFactsTest {
             ),
         )
     }
+
+    private fun call(
+        result: TrackResult,
+        vararg leftOut: String,
+    ) = PipelineEvent.ModelCall(result.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m", leftOut.toList())
 
     @Test
     fun `an artist fact cited again is restated, matched by its text though its id moved`() {
@@ -116,10 +122,10 @@ class ArtistFactsTest {
 
     @Test
     fun `resent lines are the artist lines the track before had, and the prompt is the one sent`() {
-        val first = track(1, listOf(song("One"), formed))
-        val second = track(2, listOf(song("Two"), formed, label))
+        val first = track(1, listOf(song("One"), formed), "One is a song [W1].", Usage(1000, 100))
+        val second = track(2, listOf(song("Two"), formed, label), "Two is a song [W1].", Usage(1000, 100))
 
-        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false)
+        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, listOf(call(first), call(second)))
 
         assertEquals(listOf(0, 1), rows.map { it.resent })
         assertEquals(listOf(1, 2), rows.map { it.artistLines })
@@ -134,13 +140,8 @@ class ArtistFactsTest {
     fun `the lines a call left out are not in the prompt measured, nor resent`() {
         val first = track(1, listOf(song("One"), formed, label), "The band formed in 1960 [W2].")
         val second = track(2, listOf(song("Two"), formed, label), "Its label is Parlophone [WD1].")
-        val events =
-            listOf(
-                PipelineEvent.ModelCall(first.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m"),
-                PipelineEvent.ModelCall(second.state.normalized.lookupKey, ProviderId.ANTHROPIC, "m", listOf("W2")),
-            )
-
-        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, ArtistFacts.leftOut(events))
+        val rows =
+            ArtistFacts.measure(listOf(first, second), allowModel = false, listOf(call(first), call(second, "W2")))
 
         assertEquals(listOf(0, 1), rows.map { it.leftOut })
         val state = second.state
@@ -151,6 +152,25 @@ class ArtistFactsTest {
         assertEquals(1, rows[1].resent)
         assertEquals(emptyList(), rows[1].restated)
         assertEquals(1, ArtistFacts.totals(rows).leftOut)
+    }
+
+    @Test
+    fun `each track takes the next call for its key in run order, and one from the cache or not written none`() {
+        // The same track four times: written, written again, from the cache, not written.
+        val lines = listOf(song("One"), formed)
+        val first = track(1, lines, "One is a song [W1].", Usage(1000, 100), title = "One")
+        val again = track(2, lines, "One is a song [W1].", Usage(900, 90), title = "One")
+        val cached = track(3, lines, "One is a song [W1].", title = "One")
+        val unwritten = track(4, lines, title = "One")
+        val calls = listOf(call(first), call(again, "W2"))
+        val results = listOf(first, again, cached, unwritten)
+
+        val paired = ArtistFacts.calls(results, calls + PipelineEvent.InsightCached(first.state.normalized.lookupKey))
+
+        assertEquals(listOf(calls[0], calls[1], null, null), paired)
+        val rows = ArtistFacts.measure(results, allowModel = false, paired)
+        assertEquals(listOf(true, true, false, false), rows.map { it.promptChars != null })
+        assertEquals(2, ArtistFacts.totals(rows).prompts)
     }
 
     @Test

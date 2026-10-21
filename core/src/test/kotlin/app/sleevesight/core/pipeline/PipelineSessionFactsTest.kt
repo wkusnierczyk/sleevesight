@@ -9,8 +9,10 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.SentenceStatus
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -27,14 +29,17 @@ import kotlin.time.Duration
 /** The artist facts an insight cites are left out of the next tracks' prompts in its session (#239). */
 class PipelineSessionFactsTest {
     private val normalizer = Normalizer(JvmAccentFolder)
-    private val settings = Settings(aiProvider = ProviderId.ANTHROPIC)
+    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
     private var session: Long? = 1L
     private val facts = ListeningSessionFacts { session }
 
     private val formed = "The band formed in 1960."
     private val label = "The band's label is Parlophone."
 
-    private fun track(title: String) = nowPlaying(title, "The Band")
+    private fun track(
+        title: String,
+        album: String? = null,
+    ) = nowPlaying(title, "The Band", album)
 
     // MusicBrainz gives [songLines] lines about the song; Last.fm the same two about the artist on every track.
     private fun adapters(songLines: Int = 1): List<SourceAdapter> =
@@ -52,9 +57,11 @@ class PipelineSessionFactsTest {
             },
         )
 
-    // Cites the first artist line the prompt holds, by its id.
+    // Cites the first artist line the prompt holds, by its id; or [guess], whatever the prompt holds.
+    private var guess: String? = null
     private val provider =
         FakeProvider { request ->
+            guess?.let { return@FakeProvider FakeProvider.done("It is a song [MB1]. The band [$it].") }
             val id = listOf("L1", "L2").firstOrNull { "[$it] (Last.fm, artist)" in request.prompt }
             FakeProvider.done(if (id == null) "It is a song [MB1]." else "It is a song [MB1]. The band [$id].")
         }
@@ -126,6 +133,42 @@ class PipelineSessionFactsTest {
             assertEquals(listOf("MB1", "MB2", "MB3", "MB4", "L1", "L2"), state.evidence?.ids)
             runCurrent()
             assertEquals(listOf("L1", "L2"), events.filterIsInstance<PipelineEvent.ModelCall>().single().leftOut)
+        }
+
+    @Test
+    fun `a citation of a line the prompt left out is unknown, not kept, and not counted as told`() =
+        runTest {
+            val cache = MemoryCache()
+            val pipeline = pipeline(cache = cache)
+
+            pipeline.run(track("One"), write = true)
+            guess = "L1"
+            val second = pipeline.run(track("Two"), write = true)
+
+            assertFalse(formed in prompt(1))
+            val sentences = assertIs<InsightState.Written>(second.insight).grounded.paragraphs.flatten()
+            assertEquals(listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN), sentences.map { it.status })
+            // Only track one's card is kept, so a card served from the cache never cites a line it was not given.
+            assertEquals(1, cache.cards.size)
+            // Track two's guess is not a fact it told: for track one, L1 is still its own alone.
+            val one = normalizer.normalize(track("One")).lookupKey
+            assertEquals(emptySet(), facts.citedByOthers(one))
+        }
+
+    @Test
+    fun `with model knowledge on, the fallback is still the artist lines, not the release alone`() =
+        runTest {
+            settings = settings.copy(enabledSources = settings.enabledSources + SourceSwitch.MODEL)
+            val pipeline = pipeline(adapters(songLines = 0))
+
+            pipeline.run(track("One", album = "The Album"), write = true)
+            pipeline.run(track("Two", album = "The Album"), write = true)
+            // Both artist lines are cited by others now: leaving them out would leave the release alone,
+            // which the model may narrate from its own knowledge; the prompt has them all instead.
+            pipeline.run(track("Three", album = "The Album"), write = true)
+
+            val third = prompt(2)
+            assertTrue(formed in third && label in third)
         }
 
     @Test

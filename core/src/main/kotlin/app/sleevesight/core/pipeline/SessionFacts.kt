@@ -73,7 +73,9 @@ interface SessionFacts {
  * before it cited, which costs one artist sentence, not a call.
  *
  * Facts are kept with the tracks whose insights cited them, so a track written again (a tap on
- * Rewrite) is not denied the facts its own first insight cited.
+ * Rewrite) is not denied the facts its own first insight cited. Each call reads the session under
+ * the same lock as the facts, so concurrent calls apply their reads in the order they hold it: a
+ * slow read of the session before cannot clear what a later read's session kept.
  */
 class ListeningSessionFacts(
     private val session: suspend () -> Long?,
@@ -83,22 +85,19 @@ class ListeningSessionFacts(
     private var read = false
     private val citers = mutableMapOf<ArtistFact, MutableSet<String>>()
 
-    override suspend fun citedByOthers(track: String): Set<ArtistFact> {
-        val now = currentSession()
-        return mutex.withLock {
-            follow(now)
+    override suspend fun citedByOthers(track: String): Set<ArtistFact> =
+        mutex.withLock {
+            follow(currentSession())
             citers.filterValues { tracks -> tracks.any { it != track } }.keys.toSet()
         }
-    }
 
     override suspend fun cite(
         track: String,
         facts: Set<ArtistFact>,
     ) {
         if (facts.isEmpty()) return
-        val now = currentSession()
         mutex.withLock {
-            follow(now)
+            follow(currentSession())
             facts.forEach { citers.getOrPut(it) { mutableSetOf() } += track }
         }
     }

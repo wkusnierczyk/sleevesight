@@ -21,7 +21,7 @@ class PromptEvidenceTest {
     private fun sent(
         evidence: EvidenceSet,
         cited: Set<ArtistFact> = emptySet(),
-    ) = PromptEvidence.of(evidence, cited, JvmHasher, allowModel = false, artistsKnown = true).ids
+    ) = PromptEvidence.of(evidence, cited, JvmHasher).ids
 
     @Test
     fun `enough lines about the track leave every artist line out, whatever the session cited`() {
@@ -51,7 +51,7 @@ class PromptEvidenceTest {
     fun `when leaving lines out would leave nothing to narrate, the whole evidence is sent`() {
         val evidence = set(formed, release)
 
-        val all = PromptEvidence.of(evidence, setOf(ArtistFact.of(evidence.lines.first())), JvmHasher, false, true)
+        val all = PromptEvidence.of(evidence, setOf(ArtistFact.of(evidence.lines.first())), JvmHasher)
 
         assertSame(evidence, all)
     }
