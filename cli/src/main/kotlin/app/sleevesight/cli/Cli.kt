@@ -99,7 +99,7 @@ class Cli(
         private val settings =
             Settings(
                 aiProvider = ProviderId.ANTHROPIC,
-                aiModel = options.model,
+                aiModels = listOfNotNull(options.model?.let { ProviderId.ANTHROPIC to it }).toMap(),
                 enabledSources =
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
@@ -222,8 +222,8 @@ class Cli(
         }
 
         private fun aiNote(): String {
-            val model = options.model ?: Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC)
-            val effort = settings.aiEffort?.name?.lowercase() ?: "the model's default"
+            val model = settings.model(ProviderId.ANTHROPIC)
+            val effort = settings.effort(ProviderId.ANTHROPIC)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
             return when {
                 ai != null -> "Anthropic $model, effort $effort$replayed"
