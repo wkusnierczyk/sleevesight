@@ -1,0 +1,33 @@
+Sleevesight shows short, sourced insights about the song you are playing: who made it, where it comes from, what is worth knowing about it. Every factual sentence links to the source it came from.
+
+HOW IT WORKS
+• Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album and cover, and never touches the audio.
+• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia, Last.fm and Exa web search. A match that fails an identity check is shown as rejected, not used quietly.
+• Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. The citations are checked in code before anything is shown, and a sentence without a source is flagged. When little is documented about a track, the insight is short; when nothing is, Sleevesight says so and makes no AI call.
+
+ON SCREEN
+• The cover, title, artists, album and year of first release, in colors taken from the cover.
+• Genre labels from the artists' tags, each saying where it came from.
+• The insight, whose citations jump to their evidence.
+• What each source found, rejected or could not verify.
+
+WORKS WITH YOUR PLAYER
+Spotify is followed by default, and any other player that publishes an Android media session can be switched on. Sleevesight reads the phone's media session, not Spotify's Web API, so it needs no Spotify developer app and no Spotify login, and it works with free Spotify accounts as well as Premium.
+
+YOU CHOOSE
+• Which sources to use, each a switch. MusicBrainz and Wikipedia need no key; Last.fm and Exa need your own API key.
+• When insights are written: for every track, only when you skip, or only when you tap Write. Each insight is a request on your own AI key, so it is on your bill. Automatic writing pauses after five tracks with the app off screen; you can change the count or turn the pause off.
+• Whether anything happens in the background. By default, lookups and writing happen only while the app is on screen.
+
+WHAT YOU NEED
+• Android 8 or later.
+• Notification access, which is how Android lets an app read what a player is playing. Sleevesight ignores the notifications themselves.
+• For insights, your own Anthropic API key. Without one, the app still shows the track and what the sources found.
+
+PRIVACY
+Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's names go straight from your phone to the sources you switch on and to your AI service, on your own keys; nothing reaches the developer. Your keys are encrypted on the phone, and the settings remove any one of them, or all at once. The privacy policy: https://sleevesight.app/privacy.html
+
+OPEN SOURCE
+The code is on GitHub: https://github.com/wkusnierczyk/sleevesight
+
+Sleevesight is not affiliated with Spotify, MusicBrainz, Wikipedia, Last.fm, Exa or Anthropic.
