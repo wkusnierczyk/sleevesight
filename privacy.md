@@ -9,7 +9,7 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 20 October 2026.
+Last updated: 21 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight).
 
@@ -20,6 +20,8 @@ Sleevesight has no server, no accounts, no telemetry, no crash reporting of its 
 ## What the app reads on the phone
 
 Sleevesight needs notification access, which is how Android lets an app read what a music player is playing. It notes which players have a media session, to list them in its settings, and follows only the players you switch on there (Spotify by default); from them it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.
+
+If you scan an API key's QR code, Sleevesight asks for the camera then, and only then. It reads the code from the camera's frames on the phone; no frame is kept or sent.
 
 ## What leaves the phone, and to whom
 

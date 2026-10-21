@@ -55,5 +55,6 @@ androidx.versionedparcelable   Apache-2.0
 androidx.window                Apache-2.0
 com.google.guava               Apache-2.0   # listenablefuture, pulled in by androidx
 org.jspecify                   Apache-2.0   # nullness annotations, pulled in by androidx
+com.google.zxing               Apache-2.0   # QR codes of the API keys: drawn by :cli, read on the phone (#268)
 com.materialkolor              MIT          # material-color-utilities, ported to Kotlin: the art's colours (#52)
 dev.drewhamilton.poko          Apache-2.0   # annotations, pulled in by com.materialkolor

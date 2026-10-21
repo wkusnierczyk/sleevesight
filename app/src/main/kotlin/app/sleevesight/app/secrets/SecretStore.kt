@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.core.Secret
+import app.sleevesight.core.keys.KeyName
 import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -38,18 +39,23 @@ import kotlin.time.Duration.Companion.seconds
 /** The keys the user enters: the AI service's and the keyed sources'. */
 enum class SecretId(
     internal val storageName: String,
+    /** The name a setup code gives the key (#268). */
+    val keyName: KeyName,
 ) {
     /** Anthropic's API key, for the AI service. */
-    ANTHROPIC("ai.anthropic"),
+    ANTHROPIC("ai.anthropic", KeyName.ANTHROPIC),
 
     /** The user's Last.fm API key (design, *Source adapters*). */
-    LASTFM("source.lastfm"),
+    LASTFM("source.lastfm", KeyName.LASTFM),
 
     /** The web search provider's key: Exa, the first (D11). */
-    EXA("source.exa"),
+    EXA("source.exa", KeyName.EXA),
     ;
 
     companion object {
+        /** The key a setup code names [name]. */
+        fun of(name: KeyName): SecretId = entries.first { it.keyName == name }
+
         /** The key [provider] needs, or null for one with no client yet, or none needed (Ollama). */
         fun forProvider(provider: ProviderId): SecretId? =
             when (provider) {
