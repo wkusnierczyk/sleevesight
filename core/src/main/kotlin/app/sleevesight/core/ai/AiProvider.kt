@@ -152,6 +152,12 @@ enum class AiErrorKind {
     BILLING,
 
     /**
+     * The account's quota for a period is used up (Google's requests per day): it resets later,
+     * or a higher tier lifts it. Not a matter of credit, and no retry mends it soon.
+     */
+    QUOTA_EXHAUSTED,
+
+    /**
      * The service is not offered where the user is (Google's "User location is not supported"):
      * neither the key nor billing mends it.
      */

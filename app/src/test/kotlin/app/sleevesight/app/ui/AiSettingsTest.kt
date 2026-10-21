@@ -189,13 +189,16 @@ class AiSettingsTest {
         }
     }
 
-    @Test
-    fun aServiceNotOfferedHereSaysSoInTheModelDialog() {
-        val unavailable =
+    /** Google's model dialog, its list failing with [kind]: it shows [said], and no refused key. */
+    private fun modelDialogSays(
+        kind: AiErrorKind,
+        said: Int,
+    ) {
+        val failing =
             object : AiProvider {
                 override val id = ProviderId.GOOGLE
 
-                override suspend fun models(key: Secret): ModelList = ModelList.Failed(AiErrorKind.UNAVAILABLE_HERE)
+                override suspend fun models(key: Secret): ModelList = ModelList.Failed(kind)
 
                 override fun stream(
                     request: CompletionRequest,
@@ -203,14 +206,22 @@ class AiSettingsTest {
                 ): Flow<CompletionEvent> = emptyFlow()
             }
         runBlocking { secrets.set(SecretId.GOOGLE, Secret("google-key")) }
-        show(providers = mapOf(ProviderId.GOOGLE to unavailable)) {
+        show(providers = mapOf(ProviderId.GOOGLE to failing)) {
             compose.onNodeWithText(google(R.string.settings_ai_model_of)).performScrollTo().performClick()
-            val said = text(R.string.settings_model_failed_unavailable_here)
-            waitForText(said)
-            compose.onNodeWithText(said).assertIsDisplayed()
+            waitForText(text(said))
+            compose.onNodeWithText(text(said)).assertIsDisplayed()
             assertTrue(absent(R.string.settings_model_failed_unauthorized))
+            assertTrue(absent(R.string.settings_model_failed_other))
         }
     }
+
+    @Test
+    fun aServiceNotOfferedHereSaysSoInTheModelDialog() =
+        modelDialogSays(AiErrorKind.UNAVAILABLE_HERE, R.string.settings_model_failed_unavailable_here)
+
+    @Test
+    fun aQuotaUsedUpSaysSoInTheModelDialog() =
+        modelDialogSays(AiErrorKind.QUOTA_EXHAUSTED, R.string.settings_model_failed_quota_exhausted)
 
     @Test
     fun withoutAClientTheDefaultModelIsOffered() =

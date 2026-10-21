@@ -463,17 +463,44 @@ class GoogleProviderTest {
         }
 
     @Test
-    fun `a daily quota is billing at once, a rate limit keeps its wait`() =
+    fun `a daily quota is used up at once, a rate limit keeps its wait`() =
         runTest {
             val daily = response(429, exhausted("GenerateRequestsPerDayPerProjectPerModel-FreeTier", "38s"))
             val (capped, once) = events { daily }
-            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), capped)
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.QUOTA_EXHAUSTED)), capped)
             assertEquals(1, once.requests.size)
 
             val long = response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "38s"))
             val (limited, alone) = events { long }
             assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 38.seconds)), limited)
             assertEquals(1, alone.requests.size)
+        }
+
+    @Test
+    fun `a monthly spending cap without details is billing at once, other 429s stay rate limits`() =
+        runTest {
+            fun exhausted(message: String) =
+                response(429, """{"error":{"code":429,"message":"$message","status":"RESOURCE_EXHAUSTED"}}""")
+            val cap =
+                exhausted(
+                    "Your billing account has exceeded its monthly spending cap. Please go to AI Studio at " +
+                        "https://ai.studio/billing to manage your billing.",
+                )
+            val (capped, once) = events { cap }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), capped)
+            assertEquals(1, once.requests.size)
+            assertEquals(
+                ModelList.Failed(AiErrorKind.BILLING),
+                provider(ReplayNetClient { exhausted("Your project has exceeded its monthly spend cap.") }).models(key),
+            )
+            for (message in listOf(
+                "You exceeded your current quota.",
+                "Spend-based rate limit exceeded per 10 minutes.",
+            )) {
+                val (limited, twice) = events { exhausted(message) }
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), limited, message)
+                assertEquals(2, twice.requests.size, message)
+            }
         }
 
     @Test
@@ -531,10 +558,10 @@ class GoogleProviderTest {
     }
 
     @Test
-    fun `a model list over a daily quota says billing`() =
+    fun `a model list over a daily quota says its quota is used up`() =
         runTest {
             val daily = response(429, exhausted("GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
-            assertEquals(ModelList.Failed(AiErrorKind.BILLING), provider(ReplayNetClient { daily }).models(key))
+            assertEquals(ModelList.Failed(AiErrorKind.QUOTA_EXHAUSTED), provider(ReplayNetClient { daily }).models(key))
         }
 
     private companion object {

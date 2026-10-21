@@ -65,13 +65,14 @@ import kotlin.time.Instant
  * limit per ten minutes) and for a quota that resets only after a day, such as the free tier's
  * requests per day, and only the body's `QuotaFailure` says which; so its host's policy
  * ([HOST_POLICY]) has `:net` pass a 429 on, unretried, and the client reads it. A daily or monthly
- * quota is [AiErrorKind.BILLING] at once ([exhaustsAQuota]): no retry mends it that day, and a
- * paid or higher tier does. A rate limit is sent once more after its `RetryInfo.retryDelay`, else
- * its `Retry-After`, else [RetryPolicy.delayAfter]'s first wait, when that is within
- * [RetryPolicy.maxDelay], as `:net` retries another host's 429 and as `OpenAiProvider` does; a 429
- * was refused before it was acted on, so the call is not paid twice. Otherwise it ends as
- * [AiErrorKind.RATE_LIMITED] with the wait. The model list is not sent again: a 429 there is
- * reported as its kind.
+ * quota is [AiErrorKind.QUOTA_EXHAUSTED] at once ([exhaustsAQuota]): no retry mends it that day,
+ * and a paid or higher tier does. A monthly spending cap reached ([reachesSpendCap]) is
+ * [AiErrorKind.BILLING] at once: the billing account is blocked until its next cycle. A rate limit
+ * is sent once more after its `RetryInfo.retryDelay`, else its `Retry-After`, else
+ * [RetryPolicy.delayAfter]'s first wait, when that is within [RetryPolicy.maxDelay], as `:net`
+ * retries another host's 429 and as `OpenAiProvider` does; a 429 was refused before it was acted
+ * on, so the call is not paid twice. Otherwise it ends as [AiErrorKind.RATE_LIMITED] with the wait.
+ * The model list is not sent again: a 429 there is reported as its kind.
  *
  * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
  * @param retry the waits for a rate limit: [net]'s own `NetConfig.retry`, so both wait alike. It
@@ -383,7 +384,8 @@ internal fun kindOf(error: WireError): AiErrorKind? =
             AiErrorKind.UNAVAILABLE_HERE
         }
         error.status == "RESOURCE_EXHAUSTED" && error.code == PAYMENT_REQUIRED -> AiErrorKind.BILLING
-        error.status == "RESOURCE_EXHAUSTED" && exhaustsAQuota(error) -> AiErrorKind.BILLING
+        error.status == "RESOURCE_EXHAUSTED" && reachesSpendCap(error) -> AiErrorKind.BILLING
+        error.status == "RESOURCE_EXHAUSTED" && exhaustsAQuota(error) -> AiErrorKind.QUOTA_EXHAUSTED
         else -> error.status?.let(::kindOfStatus)
     }
 
@@ -391,8 +393,8 @@ internal fun kindOf(error: WireError): AiErrorKind? =
  * Whether [error]'s `QuotaFailure` names a quota that resets only after a day or a month (`quotaId`
  * `…PerDay…`, `…PerMonth…`), such as the free tier's requests per day, which reset at midnight
  * Pacific time: no retry mends it, and a paid tier or a higher one does, so it is
- * [AiErrorKind.BILLING], at once. A quota per minute, or a 429 that names none (the spend-based
- * limit per ten minutes among them), is a rate limit.
+ * [AiErrorKind.QUOTA_EXHAUSTED], at once. A quota per minute, or a 429 that names none (the
+ * spend-based limit per ten minutes among them), is a rate limit.
  */
 internal fun exhaustsAQuota(error: WireError): Boolean =
     error.details.any { detail ->
@@ -401,6 +403,15 @@ internal fun exhaustsAQuota(error: WireError): Boolean =
             LONG_QUOTAS.any { id.contains(it, ignoreCase = true) }
         }
     }
+
+/**
+ * Whether [error] says a monthly spending cap is reached, the billing account's or the project's:
+ * "Your billing account has exceeded its monthly spending cap", as reported on Google's developer
+ * forum in May 2026, with no `details`. Matched on "monthly spending cap" or "monthly spend cap"
+ * only, so the spend-based rate limit per ten minutes, which a wait mends, stays a rate limit.
+ */
+internal fun reachesSpendCap(error: WireError): Boolean =
+    SPEND_CAPS.any { error.message?.contains(it, ignoreCase = true) == true }
 
 /**
  * The wait [response] asks for: its `RetryInfo.retryDelay` (`"38s"`, `"1.5s"`), else its
@@ -453,6 +464,9 @@ private const val PAYMENT_REQUIRED = 402
 private const val NOT_FOUND = 404
 private const val CONTENT_TOO_LARGE = 413
 private const val TOO_MANY_REQUESTS = 429
+
+/** The words of a message saying a monthly spending cap is reached. */
+private val SPEND_CAPS = listOf("monthly spending cap", "monthly spend cap")
 
 /** The `quotaId` parts of the quotas that reset after a day or a month. */
 private val LONG_QUOTAS = listOf("PerDay", "PerMonth")
