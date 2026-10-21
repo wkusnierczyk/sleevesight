@@ -22,7 +22,8 @@ class QrDecoderTest {
         val matrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size, mapOf(EncodeHintType.MARGIN to 4))
         val dark: Byte = if (inverted) -1 else 0
         val light: Byte = if (inverted) 0 else -1
-        return ByteArray(rowStride * size) { i ->
+        // A camera's last row is not padded.
+        return ByteArray(rowStride * (size - 1) + size) { i ->
             val x = i % rowStride
             val y = i / rowStride
             if (x < size && matrix[x, y]) dark else light

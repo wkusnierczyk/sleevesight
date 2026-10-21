@@ -136,5 +136,14 @@ class KeysQrTest {
         assertEquals(Cli.EXIT_USAGE, run("--anthropic-from", "-", "--exa-from", "-").status)
         assertEquals(Cli.EXIT_USAGE, run("--openai-from", "-").status)
         assertEquals(Cli.EXIT_USAGE, run("--exa-from", File(dir, "missing").path).status)
+        assertEquals(Cli.EXIT_USAGE, run("--exa-from", "a", "--exa-from", "b").status)
+    }
+
+    @Test
+    fun `an argument that is not an option is not repeated, in case it is a key`() {
+        val run = run(anthropic)
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertFalse(anthropic in run.err)
+        assertTrue("Unexpected argument" in run.err)
     }
 }

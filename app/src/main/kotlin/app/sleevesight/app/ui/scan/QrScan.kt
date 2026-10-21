@@ -1,8 +1,9 @@
 package app.sleevesight.app.ui.scan
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.Configuration
+import android.view.Surface
 import android.view.SurfaceView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -38,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -86,10 +89,14 @@ object QrDecoder {
         return read(source) ?: read(InvertedLuminanceSource(source))
     }
 
+    // Any failure is no code: a frame ZXing trips on must not end the scan, or the app.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun read(source: LuminanceSource): String? =
         try {
             QRCodeReader().decode(BinaryBitmap(HybridBinarizer(source)), HINTS).text
         } catch (_: ReaderException) {
+            null
+        } catch (_: RuntimeException) {
             null
         }
 }
@@ -106,11 +113,7 @@ private fun CameraQrScan(
 ) {
     val context = LocalContext.current
     val hasCamera = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
-    var allowed by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED,
-        )
-    }
+    var allowed by remember { mutableStateOf(granted(context)) }
     var refused by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val ask =
@@ -119,6 +122,14 @@ private fun CameraQrScan(
             refused = !granted
         }
     LaunchedEffect(Unit) { if (hasCamera && !allowed) ask.launch(Manifest.permission.CAMERA) }
+    // Allowed in the phone's settings while the scan was open: the camera starts on return.
+    LifecycleResumeEffect(Unit) {
+        if (!allowed && granted(context)) {
+            allowed = true
+            refused = false
+        }
+        onPauseOrDispose {}
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -151,6 +162,9 @@ private fun CameraQrScan(
     }
 }
 
+private fun granted(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
 /**
  * The camera's view, as tall as the screen allows at the frames' proportions, its frames read by
  * [QrCamera]. [onUnavailable] hears that no camera could be opened.
@@ -170,8 +184,10 @@ private fun CameraView(
         LaunchedEffect(Unit) { unavailable() }
         return
     }
-    // The view turns the frames upright; on a sideways sensor that swaps their width and height.
-    val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    // The view turns the frames upright, which may swap their width and height. Read again on a
+    // configuration change, which a turn of the display is.
+    val view = LocalView.current
+    val rotation = remember(LocalConfiguration.current) { view.display?.rotation ?: Surface.ROTATION_0 }
     val ratio = size.width.toFloat() / size.height
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AndroidView(
@@ -181,7 +197,10 @@ private fun CameraView(
                     holder.addCallback(camera)
                 }
             },
-            modifier = Modifier.fillMaxWidth().aspectRatio(if (portrait == camera.sideways) 1 / ratio else ratio),
+            modifier =
+                Modifier.fillMaxWidth().aspectRatio(
+                    if (camera.mounting.swapsSides(rotation)) 1 / ratio else ratio,
+                ),
         )
     }
 }

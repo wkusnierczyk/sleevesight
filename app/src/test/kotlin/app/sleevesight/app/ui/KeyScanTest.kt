@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -68,6 +69,7 @@ class KeyScanTest {
 
     private fun show(
         scanner: QrScanner,
+        secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -75,7 +77,7 @@ class KeyScanTest {
                 activity.setContent {
                     SettingsScreen(
                         settings,
-                        secrets,
+                        secretStore,
                         emptyMap(),
                         { CompletableDeferred(true) },
                         saves,
@@ -202,4 +204,37 @@ class KeyScanTest {
             waitForText(text(R.string.setup_not_a_setup_title))
             compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
         }
+
+    @Test
+    fun aKeyOfTheSetupThatCannotBeSavedIsNamedAndSavedAloneOnTheNextTry() {
+        val flaky = FlakyDataStore(stores.open("flaky-secrets"))
+        val store = SecretStore(flaky, testCipher())
+        show(
+            scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey"),
+            secretStore = store,
+        ) {
+            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
+            waitForText(text(R.string.setup_title))
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+
+            // The first key failed; the second was saved; the dialog stays, naming the one left.
+            val failed = app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic))
+            waitForText(failed)
+            assertEquals(lastFmKey, runBlocking { store.get(SecretId.LASTFM) }?.reveal())
+            assertNull(runBlocking { store.get(SecretId.ANTHROPIC) })
+
+            val writes = flaky.writes.get()
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitFor("the Anthropic key stored") {
+                runBlocking { store.get(SecretId.ANTHROPIC) }?.reveal() ==
+                    anthropicKey
+            }
+            // Only the key left was saved again.
+            assertEquals(writes + 1, flaky.writes.get())
+            waitFor("the dialog closed") {
+                compose.onAllNodesWithText(text(R.string.setup_title)).fetchSemanticsNodes().isEmpty()
+            }
+        }
+    }
 }

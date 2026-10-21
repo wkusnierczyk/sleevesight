@@ -75,7 +75,11 @@ class KeysQr(
         while (rest.hasNext()) {
             val arg = rest.next()
             val name = KeyName.entries.firstOrNull { arg == "--${it.code}-from" }
-            require(name != null || arg == "--keys") { "Unknown option $arg" }
+            // An argument that is not an option is not repeated: it may be a key, typed by mistake.
+            require(name != null || arg == "--keys") {
+                if (arg.startsWith("--")) "Unknown option $arg" else "Unexpected argument"
+            }
+            require(name == null || name !in from) { "$arg given twice" }
             require(rest.hasNext()) { "$arg needs a value" }
             val value = rest.next()
             if (name == null) keysFile = File(value) else from[name] = value
