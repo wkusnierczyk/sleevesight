@@ -518,7 +518,8 @@ A user setting, *Prepare the next track*:
 ### UI (`:app`)
 
 - Compose, Material 3, one activity, Navigation Compose.
-- A credits screen lists each data source with its licence and attribution (*Licensing*), MusicBrainz's with both its licences, since its tags are a genre label source (D12). It opens from the end of the settings (#84).
+- A credits screen lists each data source with its licence and attribution (*Licensing*), MusicBrainz's with both its licences, since its tags are a genre label source (D12), and the font. It opens from the end of the settings (#84).
+- The text is in Roboto (#377): Roboto 3.016's `android/static` Regular, Medium and Bold from [`googlefonts/roboto-3-classic`](https://github.com/googlefonts/roboto-3-classic/releases/tag/v3.016), in `res/font`, set in the theme's `Typography` as one Compose `FontFamily` of the three files. Bundled, not a downloadable font, so nothing is fetched. *Font* (`Settings.font`) chooses the system font instead: Material's default type scale. The diagnostics screen's monospace text sets its own family, so it stays monospace.
 - Dynamic color from the album-art bitmap with material-color-utilities, through its Kotlin port `com.materialkolor:material-color-utilities` (MIT), since Google publishes no artifact of its own: the art's most suitable colour, as `Score` picks it, seeds a tonal-spot scheme, light or dark as the system is, for the now-playing content (#52).
 - The detail content is one composable, mounted as a page or as an expandable box according to the layout setting.
 - No image-loading library: the art arrives as a bitmap from the session. Players that send `METADATA_KEY_ART_URI` or `METADATA_KEY_ALBUM_ART_URI` instead give a URI. A `content://` URI is read through the `ContentResolver` only if the player grants read access, which is not guaranteed (otherwise `SecurityException`, and no art); an `http` URI is fetched by a small art fetcher in `:sources`, since `:app` may not reach `:net`. Measured in Phase 0: Spotify's `content://` art URI is readable by another app; Castbox sends http(s) URIs. Other players are measured as they are covered.
@@ -573,6 +574,8 @@ A source that cannot be reached shows as `unreachable` on its chip. While the ph
 ### Licensing
 
 GPL-3.0. Dependencies must be GPL-3.0 compatible (Apache-2.0, MIT, BSD are); the allowlist file records each one's license.
+
+The bundled font, Roboto, is under the SIL Open Font License 1.1, which lets it be bundled with any software, a GPL program included, as long as each copy carries its copyright notice and licence: the licence's text ships in the app (`assets/licences/roboto-ofl.txt`), and the credits screen names the font, its copyright and its licence (#377).
 
 The data sources carry their own terms, and every evidence line shows its source link:
 
