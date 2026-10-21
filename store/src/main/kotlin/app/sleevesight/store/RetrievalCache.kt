@@ -147,9 +147,10 @@ class RetrievalCache internal constructor(
      * reports, [duration], in whole seconds, or `-` when it reports none: resolution chooses the
      * recording by its length, so the same song at another length may resolve to another recording.
      * Each part is prefixed with its length, so no two different combinations of parts encode alike.
-     * The folding deliberately takes spellings that fold alike (an accent or none, `M.I.A.` and
-     * `MIA`) as one track: with the title, every credited artist, the work and the length to the
-     * second all equal after folding, it is almost always the same recording.
+     * The folding deliberately takes spellings that fold alike (case, an accent or none: `Björk` and
+     * `bjork`; punctuation between words: `AC/DC` and `AC DC`) as one track: with the title, every
+     * credited artist, the work and the length to the second all equal after folding, it is almost
+     * always the same recording.
      */
     fun keyOf(
         track: NormalizedTrack,

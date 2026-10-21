@@ -19,9 +19,9 @@ internal class Fetched(
 /**
  * Last.fm's answers per credited artist's name in [artists], the artist cache (#238,
  * [LastFmAdapter.ARTIST_PART]), by the name exactly as sent: Last.fm answers each spelling on its
- * own (`M.I.A.` and `MIA`, an accent or none, may be different pages, or one may be unknown), so
- * names that fold alike do not share an entry. Kept: an artist with its top tags, or Last.fm not
- * knowing the name.
+ * own (an accent or none, `Björk` and `Bjork`, or other punctuation, `AC/DC` and `AC DC`, may be
+ * different pages, or one may be unknown), so names that fold alike do not share an entry. Kept:
+ * an artist with its top tags, or Last.fm not knowing the name.
  * Not kept: a failed request, another error (a rejected key, the rate limit) or an artist whose top
  * tags did not arrive, which a later lookup may get whole. The bio is kept as its quotable
  * sentences ([LastFmArtist.bio]), never the summary.
