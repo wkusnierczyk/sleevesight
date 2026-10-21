@@ -82,6 +82,8 @@ with tempfile.TemporaryDirectory() as tmp:
     subset.save_font(font, out, opts)
 print(f'{out}: {os.path.getsize(out)} bytes, {len(chars)} characters')
 if missing:
-    where = ('outside the ASCII the Mono copy keeps (widen its characters in `FONTS`)' if scope == 'chips'
-             else 'not in the font')
+    if scope == 'chips':
+        where = 'outside the ASCII the Mono copy keeps (widen `chars` in the chips branch above)'
+    else:
+        where = 'not in the font'
     print(f'{where}, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in missing))
