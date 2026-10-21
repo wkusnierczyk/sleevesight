@@ -39,6 +39,10 @@ internal class InsightWriter(
     private val key = track.lookupKey
     private val allowModel = settings.isEnabled(SourceId.MODEL)
 
+    // Whether the run fell back to the whole evidence (#239), after `NO_EVIDENCE` to a prompt that
+    // left lines out: every later call of the run, a tapped Retry too, goes straight to it.
+    private var whole = false
+
     /**
      * Writes at once when [control] decides so; else, when it waits for a tap, once the user taps
      * Write; else leaves it offered. A model call reports its end to [control], however it ends;
@@ -122,14 +126,14 @@ internal class InsightWriter(
     }
 
     // A call, from the evidence less the artist-level lines the insight should not dwell on (#239),
-    // each line keeping its id, or from the [whole] of it. The card's key keeps the whole evidence's
-    // fingerprint, so a track played again finds its card, whatever the session cited.
+    // each line keeping its id, or from the [whole] of it once the run fell back to it. The card's key
+    // keeps the whole evidence's fingerprint, so a track played again finds its card, whatever the
+    // session cited.
     private suspend fun stream(
         ai: AiAccess,
         model: String,
         card: CardKey,
         control: RunControl,
-        whole: Boolean = false,
     ): InsightState {
         val given =
             if (whole) evidence else PromptEvidence.of(evidence, parts.sessionFacts.citedByOthers(key), parts.hasher)
@@ -180,11 +184,13 @@ internal class InsightWriter(
                     }
                 }
             }
-        // `NO_EVIDENCE` to a prompt that left lines out: asked once more at once, a second paid call,
-        // with them all, as `PromptEvidence` falls back to them when nothing is left to narrate: an
-        // insight that repeats an artist fact is better than none.
+        // `NO_EVIDENCE` to a prompt that left lines out, which `finish` neither shows nor reports:
+        // asked once more at once, a second paid call, with them all, as `PromptEvidence` falls back
+        // to them when nothing is left to narrate: an insight that repeats an artist fact is better
+        // than none. A Retry tapped after that call failed or was stopped asks with them all too.
         return if (outcome == InsightState.NoEvidence && sent.leftOut.isNotEmpty()) {
-            stream(ai, model, card, control, whole = true)
+            whole = true
+            stream(ai, model, card, control)
         } else {
             outcome
         }
@@ -192,8 +198,8 @@ internal class InsightWriter(
 
     // The reply, checked against what its prompt was [sent] (#239): a citation of a line left out
     // of it is `unknown`, since the model never saw that line, though the track has it. Such a reply
-    // is shown and not kept, nor is `NO_EVIDENCE` to a prompt that left lines out (`stream` asks
-    // again with them all): every card in the cache cites only lines its prompt held, and reads the
+    // is shown and not kept; `NO_EVIDENCE` to a prompt that left lines out is not even shown (`stream`
+    // asks again with them all): every card in the cache cites only lines its prompt held, and reads the
     // same when it is served again and checked against the whole evidence, whatever a later session
     // leaves out. A reply not kept is written again, a paid call, the next time the track plays.
     @Suppress("LongParameterList") // The reply, its card, and what its prompt was given.
@@ -206,22 +212,38 @@ internal class InsightWriter(
         sent: Prompted,
     ): InsightState {
         emit(PipelineEvent.ModelDone(key, done.usage, done.stopReason, latency))
-        if (done.stopReason == StopReason.REFUSAL) return show(InsightState.Failed(DECLINED))
-        val complete = done.stopReason == StopReason.END
-        val written = checked(text, sent, cached = false, usage = done.usage, complete = complete)
-        val keepable =
-            sent.leftOut.isEmpty() ||
-                (written as? InsightState.Written)
-                    ?.grounded
-                    ?.paragraphs
-                    ?.flatten()
-                    ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
-        if (complete && keepable) guard.attempt("write insight") { keep(card, text) }
-        if (written is InsightState.Written) {
-            parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
-            control.cardWritten(written, evidence)
+        // `NO_EVIDENCE` to fewer lines than the track has is asked again (`stream`): not shown, not
+        // reported as the track's outcome, not kept.
+        val asksAgain =
+            sent.leftOut.isNotEmpty() &&
+                GroundingCheck.check(text, sent.evidence, allowModel) == InsightReply.NoEvidence
+        return when {
+            done.stopReason == StopReason.REFUSAL -> {
+                show(InsightState.Failed(DECLINED))
+            }
+
+            asksAgain -> {
+                InsightState.NoEvidence
+            }
+
+            else -> {
+                val complete = done.stopReason == StopReason.END
+                val written = checked(text, sent, cached = false, usage = done.usage, complete = complete)
+                val keepable =
+                    sent.leftOut.isEmpty() ||
+                        (written as? InsightState.Written)
+                            ?.grounded
+                            ?.paragraphs
+                            ?.flatten()
+                            ?.none { sentence -> sentence.cites.any { it in sent.leftOut } } == true
+                if (complete && keepable) guard.attempt("write insight") { keep(card, text) }
+                if (written is InsightState.Written) {
+                    parts.sessionFacts.cite(key, ArtistFact.citedIn(written.grounded, sent.evidence.lines))
+                    control.cardWritten(written, evidence)
+                }
+                show(written)
+            }
         }
-        return show(written)
     }
 
     // [text] checked against what was [sent]; a card from the cache against the whole evidence.

@@ -154,8 +154,14 @@ class Report(
         appendLine()
     }
 
+    // Each track run's calls and tokens, from its own events (#239): the one place the report counts them.
+    private val calls: List<ArtistFacts.RunCalls> by lazy { ArtistFacts.RunCalls.perRun(run.diagnostics.events) }
+
+    private fun callsOf(index: Int): ArtistFacts.RunCalls =
+        calls.getOrNull(index) ?: ArtistFacts.RunCalls(emptyList(), null)
+
     private fun StringBuilder.insights() {
-        val tried = run.results.filter { it.state.insight !is InsightState.Idle }
+        val tried = run.results.withIndex().filter { it.value.state.insight !is InsightState.Idle }
         appendLine("## Insights")
         appendLine()
         if (tried.isEmpty()) {
@@ -165,52 +171,42 @@ class Report(
         }
         appendLine("| Track | State | Sentences | ok | model | hedge | uncited | unknown | Tokens in / out |")
         appendLine("|---|---|---|---|---|---|---|---|---|")
-        for (result in tried) {
+        for ((index, result) in tried) {
             val insight = result.state.insight
             if (insight is InsightState.Written) {
                 val c = insight.grounded.counts
-                val tokens = insight.usage?.let { "${it.inputTokens} / ${it.outputTokens}" } ?: "cached"
+                val tokens = tokens(callsOf(index), "cached")
                 val state = if (insight.complete) "written" else "written, cut off"
                 appendLine(
                     "| ${result.n} | $state | ${c.total} | ${c.ok} | ${c.model} | ${c.hedge} | ${c.uncited} | " +
                         "${c.unknown} | $tokens |",
                 )
             } else {
-                appendLine("| ${result.n} | ${insightLabel(insight)} | | | | | | | |")
+                appendLine("| ${result.n} | ${insightLabel(insight)} | | | | | | | ${tokens(callsOf(index), "")} |")
             }
         }
-        // Every call's, a second one asked when the first said `NO_EVIDENCE` to fewer lines (#239) too.
-        val usage =
-            run.diagnostics.events
-                .filterIsInstance<PipelineEvent.ModelDone>()
-                .map { it.usage }
         appendLine()
-        appendLine(
-            "Tokens billed: ${usage.sumOf { it.inputTokens }} in, ${usage.sumOf { it.outputTokens }} out, " +
-                "over ${usage.size} calls (prompt version ${InsightPrompt.VERSION}).",
-        )
+        appendLine("${billed(calls)} (prompt version ${InsightPrompt.VERSION}).")
         appendLine()
     }
 
     // #239: what consecutive tracks send and write about their artists (`ArtistFacts`).
     private fun StringBuilder.artistFacts() {
-        val rows = ArtistFacts.measure(run.results, run.allowModel, ArtistFacts.slices(run.diagnostics.events))
+        val rows = ArtistFacts.measure(run.results, run.allowModel, calls)
         val t = ArtistFacts.totals(rows)
         appendLine("## Artist-level evidence (#239)")
         appendLine()
         appendLine(ARTIST_FACTS_NOTE)
         appendLine()
         appendLine(
-            "| Track | Lines | Artist-level | Left out | Prompt chars | Artist-level chars | Resent | " +
+            "| Track | Lines | Artist-level | Left out | Last prompt chars | Its artist-level chars | Resent | " +
                 "Tokens in / out | Artist-only sentences | Artist lines cited | Restated from the last | " +
                 "Restated from any |",
         )
         appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|")
-        for (r in rows) {
+        rows.forEachIndexed { index, r ->
             val written = r.insight is InsightState.Written
-            val tokens =
-                r.usage?.let { "${it.inputTokens} / ${it.outputTokens}" }
-                    ?: if (written) "cached" else insightLabel(r.insight)
+            val tokens = tokens(callsOf(index), if (written) "cached" else insightLabel(r.insight))
             val sentences = if (written) "${r.artistSentences} of ${r.sentences}" else ""
             appendLine(
                 "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | ${r.leftOut} | " +
@@ -222,12 +218,11 @@ class Report(
         appendLine(
             "Over the run: ${t.artistLines} of ${t.lines} evidence lines artist-level " +
                 "(${percent(t.artistLines, t.lines)}), ${t.leftOut} of them left out of the prompts; " +
-                "${t.prompts} prompts, ${t.promptChars} characters, " +
+                "${t.prompts} prompts sent, ${t.promptChars} characters, " +
                 "${t.artistChars} of them artist-level lines (${percent(t.artistChars, t.promptChars)}). " +
                 "Of ${t.written} insights, ${t.restatingLast} restate an artist fact of the last one before " +
                 "and ${t.restating} one of any before; ${t.artistSentences} of ${t.sentences} sentences cite " +
-                "artist-level lines only. Tokens billed: ${t.inputTokens} in, ${t.outputTokens} out, " +
-                "over ${t.calls} calls.",
+                "artist-level lines only. ${billed(calls)}.",
         )
         appendLine()
     }
@@ -306,6 +301,23 @@ class Report(
                 InsightState.Stopped -> "stopped"
             }
 
+        /** A run's tokens, "in / out" over all its calls, with "(n calls)" for more than one; [none] without. */
+        fun tokens(
+            calls: ArtistFacts.RunCalls,
+            none: String,
+        ): String {
+            val usage = calls.usage ?: return none
+            val count = if (calls.made.size > 1) " (${calls.made.size} calls)" else ""
+            return "${usage.inputTokens} / ${usage.outputTokens}$count"
+        }
+
+        /** What [runs] billed: every call's tokens, over the calls made, failed and stopped ones too. */
+        fun billed(runs: List<ArtistFacts.RunCalls>): String {
+            val usage = runs.mapNotNull { it.usage }
+            return "Tokens billed: ${usage.sumOf { it.inputTokens }} in, ${usage.sumOf { it.outputTokens }} out, " +
+                "over ${runs.sumOf { it.made.size }} calls made"
+        }
+
         fun cell(text: String): String = text.replace("|", "\\|").replace("\n", " ")
 
         /** [part] of [whole] as a percentage, to one decimal; `-` for none of nothing. */
@@ -327,14 +339,15 @@ class Report(
         private const val ARTIST_FACTS_NOTE =
             "Per track, in the run's order: its evidence lines and how many are artist-level (Last.fm's bio, " +
                 "the Wikipedia artist article, Wikidata's artist facts); *left out*, the artist-level lines its " +
-                "prompt left out (#239, `PromptEvidence`: all for a track with enough of its own, else those " +
-                "another insight of the listening session cited); the size of the prompt its call sent, " +
-                "rebuilt as the pipeline built it (none for an insight from the cache or not written), and " +
-                "the share of it the artist-level lines take; *resent*, those the prompt sent before it held " +
-                "too; the insight's sentences citing artist-level lines only; and the artist-level lines it " +
-                "cites that the last insight before it, or any before it, cited too. Lines are matched across " +
-                "tracks by source and text, since ids are positions per track. Citations are what is counted, " +
-                "not prose: a fact restated from a differently worded line, or uncited, is not."
+                "last prompt left out (#239, `PromptEvidence`: all for a track with enough of its own, else " +
+                "those another insight of the listening session cited); the size of the last prompt its run " +
+                "sent, rebuilt as the pipeline built it (none for an insight from the cache or not written), " +
+                "and of its artist-level lines; *resent*, those the prompt sent before it held too; the tokens " +
+                "of every call the run made; the insight's sentences citing artist-level lines only; and the " +
+                "artist-level lines it cites that the last insight before it, or any before it, cited too. The " +
+                "summary counts every prompt sent. Lines are matched across tracks by source and text, since " +
+                "ids are positions per track. Citations are what is counted, not prose: a fact restated from a " +
+                "differently worded line, or uncited, is not."
     }
 }
 

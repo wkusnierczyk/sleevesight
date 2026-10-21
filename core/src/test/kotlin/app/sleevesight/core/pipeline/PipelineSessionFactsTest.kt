@@ -1,6 +1,8 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -14,9 +16,11 @@ import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.SentenceStatus
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.testTimeSource
@@ -28,6 +32,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration
 
 /** The artist facts an insight cites are left out of the next tracks' prompts in its session (#239). */
+@OptIn(ExperimentalCoroutinesApi::class)
 class PipelineSessionFactsTest {
     private val normalizer = Normalizer(JvmAccentFolder)
     private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
@@ -63,11 +68,18 @@ class PipelineSessionFactsTest {
 
     // Replies `NO_EVIDENCE` to a prompt without the artist's lines.
     private var noEvidenceWithoutArtist = false
+
+    // Fails the first call that holds the artist's lines.
+    private var failFirstWithArtist = false
     private val provider =
         FakeProvider { request ->
             guess?.let { return@FakeProvider FakeProvider.done("It is a song [MB1]. The band [$it].") }
             if (noEvidenceWithoutArtist && "(Last.fm, artist)" !in request.prompt) {
                 return@FakeProvider FakeProvider.done(GroundingCheck.NO_EVIDENCE)
+            }
+            if (failFirstWithArtist) {
+                failFirstWithArtist = false
+                return@FakeProvider listOf(CompletionEvent.Error(AiErrorKind.OVERLOADED))
             }
             val id = listOf("L1", "L2").firstOrNull { "[$it] (Last.fm, artist)" in request.prompt }
             FakeProvider.done(if (id == null) "It is a song [MB1]." else "It is a song [MB1]. The band [$id].")
@@ -187,9 +199,16 @@ class PipelineSessionFactsTest {
             val pipeline = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN), cache = cache)
             val events = recording(pipeline)
 
+            val states = mutableListOf<InsightState?>()
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                pipeline.state.collect { states += it?.insight }
+            }
+
             val state = pipeline.run(track("One"), write = true)
 
             assertEquals(2, provider.requests.size)
+            // The first reply is asked again, not shown or reported as the track's.
+            assertFalse(InsightState.NoEvidence in states)
             assertFalse(formed in prompt(0))
             assertTrue(formed in prompt(1))
             val written = assertIs<InsightState.Written>(state.insight)
@@ -208,6 +227,29 @@ class PipelineSessionFactsTest {
             runCurrent()
             val calls = events.filterIsInstance<PipelineEvent.ModelCall>()
             assertEquals(listOf(listOf("L1", "L2"), emptyList()), calls.map { it.leftOut })
+            assertFalse(events.any { it is PipelineEvent.NoEvidence })
+        }
+
+    @Test
+    fun `a Retry after the call with every line failed asks with every line again, not the fewer`() =
+        runTest {
+            noEvidenceWithoutArtist = true
+            failFirstWithArtist = true
+            val pipeline = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN))
+            val control = Granted()
+            RunStep.entries.forEach { control.grants.getValue(it).complete(Unit) }
+            val run = backgroundScope.launch { pipeline.run(track("One"), control) }
+            runCurrent()
+            assertEquals(InsightState.Failed("overloaded"), pipeline.state.value!!.insight)
+
+            control.retries.send(true)
+            runCurrent()
+
+            assertEquals(3, provider.requests.size)
+            assertFalse(formed in prompt(0))
+            assertTrue(formed in prompt(1) && formed in prompt(2))
+            assertIs<InsightState.Written>(pipeline.state.value!!.insight)
+            assertTrue(run.isCompleted)
         }
 
     @Test

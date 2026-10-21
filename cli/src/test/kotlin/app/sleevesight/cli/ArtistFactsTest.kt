@@ -140,7 +140,7 @@ class ArtistFactsTest {
         val second = track(2, listOf(song("Two"), formed, label), "Two is a song [W1].", Usage(1000, 100))
 
         val slices = listOf(slice(first, emptyList<String>() to tokens), slice(second, emptyList<String>() to tokens))
-        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, slices)
+        val rows = ArtistFacts.measure(listOf(first, second), allowModel = false, slices.map(ArtistFacts.RunCalls::of))
 
         assertEquals(listOf(0, 1), rows.map { it.resent })
         assertEquals(listOf(1, 2), rows.map { it.artistLines })
@@ -159,7 +159,8 @@ class ArtistFactsTest {
             ArtistFacts.measure(
                 listOf(first, second),
                 allowModel = false,
-                listOf(slice(first, emptyList<String>() to tokens), slice(second, listOf("W2") to tokens)),
+                listOf(slice(first, emptyList<String>() to tokens), slice(second, listOf("W2") to tokens))
+                    .map(ArtistFacts.RunCalls::of),
             )
 
         assertEquals(listOf(0, 1), rows.map { it.leftOut })
@@ -191,7 +192,7 @@ class ArtistFactsTest {
             slice(none, listOf("W2") to tokens) + slice(again, emptyList<String>() to tokens) +
                 slice(cached) + slice(unwritten)
 
-        val rows = ArtistFacts.measure(results, allowModel = false, ArtistFacts.slices(events))
+        val rows = ArtistFacts.measure(results, allowModel = false, ArtistFacts.RunCalls.perRun(events))
 
         assertEquals(listOf(true, true, false, false), rows.map { it.promptChars != null })
         assertEquals(listOf(1, 0, 0, 0), rows.map { it.leftOut })
@@ -203,14 +204,24 @@ class ArtistFactsTest {
         val result = track(1, listOf(song("One"), formed), "One is a song [W1].", tokens)
         val events = slice(result, listOf("W2") to Usage(900, 10), emptyList<String>() to tokens)
 
-        val row = ArtistFacts.measure(listOf(result), allowModel = false, ArtistFacts.slices(events)).single()
+        val rows = ArtistFacts.measure(listOf(result), allowModel = false, ArtistFacts.RunCalls.perRun(events))
+        val row = rows.single()
 
         assertEquals(2, row.calls)
         assertEquals(Usage(1900, 110), row.usage)
         assertEquals(0, row.leftOut)
         val state = result.state
-        val prompt = InsightPrompt.build(state.nowPlaying, state.normalized, checkNotNull(state.evidence), false)
+        val whole = checkNotNull(state.evidence)
+        val prompt = InsightPrompt.build(state.nowPlaying, state.normalized, whole, false)
         assertEquals(prompt.length, row.promptChars)
+        // The totals count both prompts sent, the fewer lines' first.
+        val fewer = whole.without(JvmHasher) { it.id == "W2" }
+        val first = InsightPrompt.build(state.nowPlaying, state.normalized, fewer, false)
+        val totals = ArtistFacts.totals(rows)
+        assertEquals(2, totals.prompts)
+        assertEquals(2, totals.calls)
+        assertEquals(prompt.length + first.length, totals.promptChars)
+        assertEquals(1900L, totals.inputTokens)
     }
 
     @Test
@@ -233,7 +244,8 @@ class ArtistFactsTest {
                 slice(second, emptyList<String>() to Usage(900, 80)),
                 slice(cached),
             )
-        val totals = ArtistFacts.totals(ArtistFacts.measure(listOf(first, second, cached), allowModel = false, slices))
+        val runs = slices.map(ArtistFacts.RunCalls::of)
+        val totals = ArtistFacts.totals(ArtistFacts.measure(listOf(first, second, cached), allowModel = false, runs))
 
         assertEquals(2, totals.calls)
         assertEquals(1900L, totals.inputTokens)
