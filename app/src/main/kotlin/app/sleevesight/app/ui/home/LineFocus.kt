@@ -48,7 +48,7 @@ internal class LineFocus(
     fun toggle(chip: SourceChip): Int? {
         val showing = chip.filters.any { it in hidden }
         hidden = if (showing) hidden - chip.filters else hidden + chip.filters
-        val first = evidence?.lines?.firstOrNull { it.source in chip.filters }?.takeIf { showing }
+        val first = if (showing) evidence?.lines?.firstOrNull { it.source in chip.filters } else null
         return first?.let {
             flash = Flash(it.id, ++taps, flashes = false)
             indexOf(it.id)

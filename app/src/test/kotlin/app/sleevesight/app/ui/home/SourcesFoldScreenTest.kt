@@ -581,6 +581,24 @@ class SourcesFoldScreenTest {
         }
 
     @Test
+    fun aTrackChangeWhileTheSettingsAreUnreadFoldsTheListWhenTheyKeepNone() {
+        val keep = Settings(keepSourcesUnfolded = true)
+        show(state(long(20), keep)) { current ->
+            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
+            // The settings unread across the track change, then read with the setting off.
+            current.value =
+                state(long(20, playing = carefree)).let { NowPlayingState(it.view, it.playing, it.playback) }
+            compose.waitForIdle()
+            current.value = state(long(20, playing = carefree), Settings())
+            compose.waitForIdle()
+            assertEquals(0, linesShown())
+            tap(FOLD_SHOW_TAG)
+            assertEquals(Fold.PAGE, linesShown())
+        }
+    }
+
+    @Test
     fun aTrackChangeWhileTheSettingsAreUnreadKeepsTheFoldTheyKeep() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
