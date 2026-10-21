@@ -30,6 +30,7 @@ class SettingsTest {
         assertEquals(Crossfade.Autodetect, defaults.crossfade)
         assertEquals(PrepareNextTrack.EVIDENCE, defaults.prepareNextTrack)
         assertFalse(defaults.lookUpInBackground)
+        assertFalse(defaults.keepSourcesUnfolded)
     }
 
     @Test

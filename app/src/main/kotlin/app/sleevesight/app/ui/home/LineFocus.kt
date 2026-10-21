@@ -17,7 +17,10 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Which evidence lines show, and the one a citation points at: display only, for one track's
  * [evidence]. A source's chip hides or shows its lines ([toggle]); a citation tapped shows its
- * line, even if its source's lines were hidden, scrolls to it and flashes it ([cite]).
+ * line, even if its source's lines were hidden, scrolls to it and flashes it ([cite]); a chip
+ * chosen while the list is folded shows its source's lines and scrolls to the first ([reveal]).
+ * Each of them, and a chip that shows its lines again, says where in the list the line now is, for
+ * the fold to unfold to ([SourcesFold.reach]).
  */
 @Stable
 internal class LineFocus(
@@ -27,7 +30,7 @@ internal class LineFocus(
     var hidden: Set<SourceId> by mutableStateOf(emptySet())
         private set
 
-    /** The citation tapped last, until its line has flashed. */
+    /** The line scrolled to last, until it has flashed (or, not flashed, been scrolled to). */
     var flash: Flash? by mutableStateOf(null)
         private set
 
@@ -37,24 +40,69 @@ internal class LineFocus(
     val requesters: Map<String, BringIntoViewRequester> =
         evidence?.lines.orEmpty().associate { it.id to BringIntoViewRequester() }
 
-    fun toggle(chip: SourceChip) {
-        hidden = if (chip.filters.any { it in hidden }) hidden - chip.filters else hidden + chip.filters
+    /**
+     * Hides [chip]'s lines, or shows them if any were hidden; on showing them, scrolls to the
+     * first, unflashed, and returns its place in the list as it now shows, for the fold to unfold
+     * to, else null.
+     */
+    fun toggle(chip: SourceChip): Int? {
+        val showing = chip.filters.any { it in hidden }
+        hidden = if (showing) hidden - chip.filters else hidden + chip.filters
+        val first = if (showing) evidence?.lines?.firstOrNull { it.source in chip.filters } else null
+        return first?.let {
+            flash = Flash(it.id, ++taps, flashes = false)
+            indexOf(it.id)
+        }
     }
 
-    fun cite(id: String) {
+    /** Shows every source's lines: the chips hide none. */
+    fun showAll() {
+        hidden = emptySet()
+    }
+
+    /**
+     * Shows the line [id], scrolls to it and flashes it; returns its place in the list as it now
+     * shows, or null for a line [evidence] does not have.
+     */
+    fun cite(id: String): Int? {
         evidence?.get(id)?.let { hidden = hidden - it.source }
         flash = Flash(id, ++taps)
+        return indexOf(id)
     }
+
+    /**
+     * Shows [chip]'s lines and scrolls to the first, unflashed; returns its place in the list as
+     * it now shows, or null when the chip's sources have no line.
+     */
+    fun reveal(chip: SourceChip): Int? {
+        hidden = hidden - chip.filters
+        val first = evidence?.lines?.firstOrNull { it.source in chip.filters } ?: return null
+        flash = Flash(first.id, ++taps, flashes = false)
+        return indexOf(first.id)
+    }
+
+    /** Where the line [id] is among the lines shown, or null if it is not one of them. */
+    private fun indexOf(id: String): Int? =
+        evidence
+            ?.lines
+            .orEmpty()
+            .filter { it.source !in hidden }
+            .indexOfFirst { it.id == id }
+            .takeIf { it >= 0 }
 
     fun flashed(done: Flash) {
         if (flash == done) flash = null
     }
 }
 
-/** A citation tapped: its line's id, and a count, so the same citation tapped again flashes again. */
+/**
+ * A line scrolled to: its id, and a count, so the same citation tapped again flashes again; a
+ * citation's line [flashes], a chip's first line is only scrolled to.
+ */
 internal data class Flash(
     val id: String,
     val count: Int,
+    val flashes: Boolean = true,
 )
 
 /**
@@ -67,10 +115,11 @@ internal fun rememberLineFocus(evidence: EvidenceSet?): LineFocus {
     val flash = focus.flash
     LaunchedEffect(focus, flash) {
         if (flash == null) return@LaunchedEffect
-        // The line may have been hidden until this tap: it is laid out in the next frame.
+        // The line may have been hidden, or folded away, until this tap: it is laid out in the
+        // next frame.
         withFrameNanos { }
         focus.requesters[flash.id]?.bringIntoView()
-        delay(FLASH)
+        if (flash.flashes) delay(FLASH)
         focus.flashed(flash)
     }
     return focus
