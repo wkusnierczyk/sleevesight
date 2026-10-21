@@ -19,24 +19,32 @@ layout: null
 <meta name="twitter:card" content="summary">
 <!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its
      header logo is the brand sheet's 8b mark, the words and the record; its intro is one of those
-     listed at `.sl-intro` in the style sheet, picked at random on each visit (`data-logo`). Its one
-     font, Roboto Flex, is a cut-down copy served from this site (`assets/fonts/make_page_font.py`),
-     so text added here in new characters needs that copy remade. It keeps nothing in the browser.
+     listed at `.sl-intro` in the style sheet, picked at random on each visit (`data-logo`). Its fonts
+     are Roboto Flex for titles, labels and the app's text (the hero phone and the example boxes, so
+     what the app shows reads apart from the page's own words), Roboto Slab for the running text,
+     and Roboto Mono for the citation chips; each is a cut-down copy served from this site
+     (`assets/fonts/make_page_font.py`), so text added here in new characters needs them remade. It keeps nothing in the browser.
      The palette is the simulator's (`design/simulator.html`), so the page and the app share one look.
      The page as it was before its redesign (#328), with its other logos, is
      `design/product-page-2026-10-20.html`. -->
 <!-- Fetched at once rather than when the style sheet asks for it, so the text swaps to it sooner. -->
 <link rel="preload" href="assets/fonts/RobotoFlex-page.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/RobotoSlab-page.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* A name of its own, so an installed Roboto never stands in for it. */
+/* Names of their own, so an installed Roboto never stands in for them. */
 @font-face{font-family:"Sleevesight Flex";src:url(assets/fonts/RobotoFlex-page.woff2) format("woff2");
   font-weight:400 700;font-stretch:88% 100%;font-display:swap}
+@font-face{font-family:"Sleevesight Slab";src:url(assets/fonts/RobotoSlab-page.woff2) format("woff2");
+  font-weight:350 700;font-display:swap}
+@font-face{font-family:"Sleevesight Mono";src:url(assets/fonts/RobotoMono-page.woff2) format("woff2");
+  font-weight:500;font-display:swap}
 :root{
   --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
   --accent:#3346c9; --on-accent:#ffffff;
   --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
   --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
+  --f-mono:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
   --h:28;
   --s-c1:hsl(var(--h) 28% 95%); --s-c2:hsl(var(--h) 24% 91%); --s-c3:hsl(var(--h) 22% 87%);
   --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
@@ -59,7 +67,11 @@ layout: null
   color-scheme:dark}}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:18px;line-height:1.55}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
+/* Titles, labels, the header and the app's text in Flex; the running text in Slab (body). Before the
+   rules below, so their own weights win; the containers reset Slab's text weight to Flex's regular. */
+h1,h2,h3,.lead{font-family:var(--f-ui)}
+header.top,.phone,.box{font-family:var(--f-ui);font-weight:400}
 a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
 a:hover{text-decoration-thickness:2px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
