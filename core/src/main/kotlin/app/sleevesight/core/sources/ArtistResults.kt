@@ -22,7 +22,7 @@ import kotlin.time.Instant
  * A kept value comes with the time it stops being fresh ([KeptPart.freshUntil]). A track result
  * built from it carries the earliest such time ([SourceResult.freshUntil]), so the retrieval cache
  * does not keep a reused part past its own lifetime. A caller keeps values in memory instead only
- * when [persists] is false, so no value is kept in memory past its lifetime here.
+ * when [persists] is false, so a value is never kept both here and in memory.
  */
 interface ArtistResults {
     /**
