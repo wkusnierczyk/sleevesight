@@ -91,7 +91,7 @@ class PipelineWiring internal constructor(
         mapOf(
             ProviderId.ANTHROPIC to AnthropicProvider(net),
             // The client's retries, as `HostPolicies.netConfig` gives them to `net`.
-            ProviderId.OPENAI to OpenAiProvider(net, retry = HostPolicies.RETRY),
+            ProviderId.OPENAI to OpenAiProvider(net, HostPolicies.RETRY),
         )
 
     /**

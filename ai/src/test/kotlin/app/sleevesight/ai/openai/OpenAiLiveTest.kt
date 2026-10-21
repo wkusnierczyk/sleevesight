@@ -34,7 +34,7 @@ class OpenAiLiveTest {
         // Real time and a real network: not `runTest`, whose virtual clock would skip the timeouts.
         runBlocking {
             NetClient(config).use { net ->
-                val provider = OpenAiProvider(net)
+                val provider = OpenAiProvider(net, config.retry)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 assertTrue(models.any { it.id == model }, "the default model $model is not listed")
                 val events =

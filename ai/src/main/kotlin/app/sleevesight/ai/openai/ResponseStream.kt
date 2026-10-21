@@ -83,8 +83,9 @@ internal class ResponseStream(
 
             "error" -> {
                 val code = event.code
+                // The event carries no usage.
                 if (code in POLICY_CODES) {
-                    end(CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL))
+                    end(REFUSED)
                 } else {
                     end(CompletionEvent.Error(code?.let(::kindOfCode) ?: AiErrorKind.SERVER))
                 }
@@ -104,7 +105,7 @@ internal class ResponseStream(
             when {
                 ended -> null
                 result is NetResult.Failure -> failure(result.error)
-                result is NetResult.Success && declinesPrompt(result.value) -> declined
+                result is NetResult.Success && declinesPrompt(result.value) -> REFUSED
                 result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
                 else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
             }
@@ -139,7 +140,7 @@ internal class ResponseStream(
     private fun failed(response: WireResponse?): CompletionEvent {
         val error = response?.error
         return if (error?.code in POLICY_CODES) {
-            done(response, StopReason.REFUSAL)
+            response?.usage?.let { done(response, StopReason.REFUSAL) } ?: REFUSED
         } else {
             CompletionEvent.Error(
                 error?.code?.let(::kindOfCode) ?: error?.type?.let(::kindOfType) ?: AiErrorKind.SERVER,
@@ -155,7 +156,7 @@ internal class ResponseStream(
         }
 
     private companion object {
-        /** A prompt declined before any reply, which bills nothing. */
-        val declined = CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)
+        /** A refusal with no usage given. */
+        val REFUSED = CompletionEvent.Done(Usage(0, 0), StopReason.REFUSAL)
     }
 }

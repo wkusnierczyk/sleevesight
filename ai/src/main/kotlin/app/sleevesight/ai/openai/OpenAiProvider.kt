@@ -50,9 +50,10 @@ import kotlin.time.Instant
  * The stream's text deltas become [CompletionEvent.Delta]s; reasoning, which the API returns
  * without its text, is skipped. `response.completed` and `response.incomplete` end it with
  * [CompletionEvent.Done], carrying the usage and the stop reason; `response.failed`, an `error`
- * event, an error status or a stream that breaks off end it with [CompletionEvent.Error]. The
- * request is a `POST`, so `:net` never repeats it once it may have been acted on: a paid call is
- * never sent twice.
+ * event, an error status or a stream that breaks off end it with [CompletionEvent.Error]. A prompt
+ * declined for a usage policy ([POLICY_CODES]), in any of those, is no error: it ends as a refusal
+ * does, [CompletionEvent.Done] with [StopReason.REFUSAL]. The request is a `POST`, so `:net`
+ * never repeats it once it may have been acted on: a paid call is never sent twice.
  *
  * OpenAI answers 429 both for too many requests and for an account out of credit, and only the
  * body says which; so its host's policy ([HOST_POLICY]) has `:net` pass a 429 on, unretried, and
@@ -65,14 +66,15 @@ import kotlin.time.Instant
  * has, and the next track should not wait out a limit the last one met.
  *
  * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
+ * @param retry the waits for a rate limit: [net]'s own `NetConfig.retry`, so both wait alike. It
+ *   has no default, so no caller leaves it different by accident.
  * @param baseUrl the API's origin, for tests.
- * @param retry the waits for a rate limit, as `:net`'s own retries take them.
  * @param clock for a `Retry-After` given as a date, and the models' shutdown dates.
  */
 class OpenAiProvider(
     private val net: NetClient,
+    private val retry: RetryPolicy,
     private val baseUrl: String = BASE_URL,
-    private val retry: RetryPolicy = RetryPolicy(),
     private val clock: Clock = Clock.System,
 ) : AiProvider {
     override val id: ProviderId = ProviderId.OPENAI
@@ -391,7 +393,8 @@ private const val INVALID_REQUEST_TYPE = "invalid_request_error"
  * The kind of an error OpenAI names by its `code` (in an error body, an `error` event or a failed
  * response), or null for a code this client does not know. The codes for an account out of credit
  * or over a spending or usage limit come with a 429, and are [AiErrorKind.BILLING]: no retry mends
- * them.
+ * them. The codes of a prompt declined for a usage policy ([POLICY_CODES]) are not here: they
+ * are read first, as a refusal.
  */
 internal fun kindOfCode(code: String): AiErrorKind? =
     when (code) {
@@ -408,7 +411,6 @@ internal fun kindOfCode(code: String): AiErrorKind? =
         "model_not_found" -> AiErrorKind.MODEL_NOT_FOUND
         "context_length_exceeded" -> AiErrorKind.REQUEST_TOO_LARGE
         "invalid_api_key" -> AiErrorKind.UNAUTHORIZED
-        "invalid_prompt" -> AiErrorKind.INVALID_REQUEST
         else -> null
     }
 

@@ -19,6 +19,7 @@ import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
@@ -58,7 +59,7 @@ class OpenAiProviderTest {
     }
 
     /** A provider whose clock stands at [NOW]. */
-    private fun provider(net: NetClient) = OpenAiProvider(net, clock = clock)
+    private fun provider(net: NetClient) = OpenAiProvider(net, RetryPolicy(), clock = clock)
 
     private val clock =
         object : Clock {
@@ -419,9 +420,12 @@ class OpenAiProviderTest {
             advanceTimeBy(1_000)
             runCurrent()
             assertEquals(1, net.requests.size)
+            // Still waiting out the `Retry-After`, not ended.
+            assertTrue(collecting.isActive)
             collecting.cancel()
             advanceTimeBy(10_000)
             runCurrent()
+            assertTrue(collecting.isCancelled)
             assertEquals(1, net.requests.size)
         }
 

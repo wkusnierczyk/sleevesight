@@ -5,6 +5,7 @@ import app.sleevesight.net.NetConfig
 import app.sleevesight.sources.web.ExaWebSearch
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class HostPoliciesTest {
     /**
@@ -27,7 +28,7 @@ class HostPoliciesTest {
                 assertEquals(policy, config.hosts[host], host)
             }
             assertEquals(stated.keys, config.hosts.keys)
-            assertEquals(HostPolicies.RETRY, config.retry)
+            assertSame(HostPolicies.RETRY, config.retry)
             assertEquals("Sleevesight/$version ( ${NetConfig.CONTACT} )", config.userAgent)
         }
     }
