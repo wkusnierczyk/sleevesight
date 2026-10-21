@@ -387,7 +387,7 @@ class SettingsCodecTest {
             arrayOf(
                 stringPreferencesKey("layout") to "CAROUSEL",
                 stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
-                stringPreferencesKey("ai.effort.OPENAI") to "MINIMAL",
+                stringPreferencesKey("ai.effort.OPENAI") to "ULTRA",
                 longPreferencesKey("insights.crossfade_ms") to 60_000L,
                 stringSetPreferencesKey("sources.on") to setOf("TELEPATHY"),
                 stringSetPreferencesKey("sources.off") to setOf("LASTFM", "OUIJA"),
@@ -409,7 +409,7 @@ class SettingsCodecTest {
         SettingsCodec.write(SettingsCodec.read(prefs).copy(layout = Layout.EXPANDABLE_BOXES), prefs)
         assertEquals(Layout.EXPANDABLE_BOXES.name, prefs[stringPreferencesKey("layout")])
         assertEquals("EXTREME", prefs[stringPreferencesKey("ai.effort.ANTHROPIC")])
-        assertEquals("MINIMAL", prefs[stringPreferencesKey("ai.effort.OPENAI")])
+        assertEquals("ULTRA", prefs[stringPreferencesKey("ai.effort.OPENAI")])
     }
 
     @Test

@@ -1,6 +1,7 @@
 package app.sleevesight.wiring
 
 import app.sleevesight.ai.anthropic.AnthropicProvider
+import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.core.ResourceReader
 import app.sleevesight.core.Secret
@@ -86,12 +87,13 @@ class PipelineWiring internal constructor(
         MusicBrainzLabels(MusicBrainzClient(net), vocabulary, artists = artists)
     }
 
-    /** The AI services with a client, by service: Anthropic and OpenAI, so far. */
+    /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
         mapOf(
             ProviderId.ANTHROPIC to AnthropicProvider(net),
-            // The client's retries, as `HostPolicies.netConfig` gives them to `net`.
+            // The clients' retries, as `HostPolicies.netConfig` gives them to `net`.
             ProviderId.OPENAI to OpenAiProvider(net, HostPolicies.RETRY),
+            ProviderId.GOOGLE to GoogleProvider(net, HostPolicies.RETRY),
         )
 
     /**

@@ -45,6 +45,9 @@ enum class SecretId(
     /** OpenAI's API key, for the AI service. */
     OPENAI("ai.openai"),
 
+    /** Google's Gemini API key, for the AI service. */
+    GOOGLE("ai.google"),
+
     /** The user's Last.fm API key (design, *Source adapters*). */
     LASTFM("source.lastfm"),
 
@@ -58,7 +61,8 @@ enum class SecretId(
             when (provider) {
                 ProviderId.ANTHROPIC -> ANTHROPIC
                 ProviderId.OPENAI -> OPENAI
-                ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+                ProviderId.GOOGLE -> GOOGLE
+                ProviderId.OLLAMA -> null
             }
     }
 }

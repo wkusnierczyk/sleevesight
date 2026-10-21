@@ -90,6 +90,26 @@ class SettingsTest {
     }
 
     @Test
+    fun `Google has its default model and its own scale, with minimal, low by default`() {
+        val google = defaults.copy(aiProvider = ProviderId.GOOGLE)
+        assertEquals("gemini-3.5-flash-lite", google.model)
+        assertEquals(ReasoningEffort.LOW, google.effort)
+        assertEquals(
+            EffortScale(
+                listOf(ReasoningEffort.MINIMAL, ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                ReasoningEffort.LOW,
+            ),
+            Settings.EFFORT_SCALES.getValue(ProviderId.GOOGLE),
+        )
+        // Minimal is Google's alone: chosen for Google it stays, while Anthropic's scale makes it its default.
+        val minimal = google.withEffort(ProviderId.GOOGLE, ReasoningEffort.MINIMAL)
+        assertEquals(ReasoningEffort.MINIMAL, minimal.effort)
+        assertEquals(defaults, defaults.withEffort(ProviderId.ANTHROPIC, ReasoningEffort.MINIMAL))
+        val stored = defaults.copy(aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.MINIMAL))
+        assertEquals(ReasoningEffort.LOW, stored.effort(ProviderId.ANTHROPIC))
+    }
+
+    @Test
     fun `a level the provider's scale does not offer is its default`() {
         val scale = EffortScale(listOf(ReasoningEffort.LOW, ReasoningEffort.HIGH), default = ReasoningEffort.HIGH)
         assertEquals(ReasoningEffort.HIGH, scale.coerce(ReasoningEffort.MEDIUM))

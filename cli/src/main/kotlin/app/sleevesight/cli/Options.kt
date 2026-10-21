@@ -64,13 +64,14 @@ data class Options(
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
                                   .dev/cli/cache.db for live; none for record)
-              --provider <name>   the AI service: anthropic or openai (default: anthropic); openai only
-                                  for live, since only Anthropic's replies are recorded and replayed
+              --provider <name>   the AI service: anthropic, openai or google (default: the one
+                                  --record names, else anthropic); openai only for live, since
+                                  only Anthropic's and Google's replies are recorded and replayed
               --model <id>        the provider's model (default: the app's default for it)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
-              --record <list>     sources to record: musicbrainz, wikidata, wikipedia, anthropic
-                                  (default: musicbrainz,wikidata,wikipedia)
+              --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
+                                  services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
 
             Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them;
@@ -80,11 +81,20 @@ data class Options(
             failed, or an insight call failed.
             """.trimIndent()
 
-        private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia", "anthropic")
-
-        /** The AI services the CLI can run, by the name `--provider` takes. */
+        /**
+         * The AI services the CLI can run, by the name `--provider` and `--record` take, which is
+         * also the directory under `fixtures/http/` of those whose replies are recorded.
+         */
         val PROVIDERS: Map<String, ProviderId> =
-            mapOf("anthropic" to ProviderId.ANTHROPIC, "openai" to ProviderId.OPENAI)
+            mapOf("anthropic" to ProviderId.ANTHROPIC, "openai" to ProviderId.OPENAI, "google" to ProviderId.GOOGLE)
+
+        /** The AI services whose replies are recorded and replayed: those with a host in [FixtureStore.SOURCES]. */
+        val RECORDED_AI: Set<String> = PROVIDERS.keys.filter { it in FixtureStore.SOURCES.values }.toSet()
+
+        private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia") + RECORDED_AI
+
+        /** The name of [provider] in `--provider`, `--record` and `fixtures/http/`. */
+        fun nameOf(provider: ProviderId): String = PROVIDERS.entries.first { it.value == provider }.key
 
         /** Parses [args]; throws [IllegalArgumentException] with the reason for a bad command line. */
         fun parse(args: List<String>): Options {
@@ -102,12 +112,9 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
-            val provider =
-                values["--provider"]?.let { name ->
-                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
-                } ?: ProviderId.ANTHROPIC
-            require(mode == Mode.LIVE || provider == ProviderId.ANTHROPIC) {
-                "--provider ${values["--provider"]} runs only live: only Anthropic's replies are recorded and replayed"
+            val provider = provider(values["--provider"], if (mode == Mode.RECORD) record else emptySet())
+            require(mode == Mode.LIVE || nameOf(provider) in RECORDED_AI) {
+                "--provider ${nameOf(provider)} runs only live: its replies are not recorded or replayed"
             }
             return Options(
                 mode = mode,
@@ -122,6 +129,28 @@ data class Options(
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
             )
+        }
+
+        /**
+         * The AI service: [given] (`--provider`), else the one [record] names, else Anthropic. A
+         * record run records the replies of the service it runs, so it names at most one, and
+         * `--provider` must agree with it.
+         */
+        private fun provider(
+            given: String?,
+            record: Set<String>,
+        ): ProviderId {
+            val chosen =
+                given?.let { name ->
+                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
+                }
+            val recorded = record.filter { it in RECORDED_AI }
+            require(recorded.size <= 1) { "--record takes one AI service at a time, was ${recorded.joinToString()}" }
+            val service = recorded.singleOrNull()
+            require(given == null || service == null || given == service) {
+                "--record $service records $service's replies: give --provider $service, or leave --provider out"
+            }
+            return chosen ?: service?.let(PROVIDERS::getValue) ?: ProviderId.ANTHROPIC
         }
 
         private fun cacheChoice(

@@ -244,10 +244,14 @@ class OpenAiProvider(
             families: List<String>,
         ): Boolean = families.any { id == it || id.startsWith("$it-") }
 
-        /** [effort] as `reasoning.effort` names it. */
+        /**
+         * [effort] as `reasoning.effort` names it. OpenAI's scale has no `minimal` (only GPT-5
+         * takes it), so a request with it (never one from the settings, which offer only OpenAI's
+         * own levels) is sent as `low`, the least every current reasoning model takes.
+         */
         fun effortName(effort: ReasoningEffort): String =
             when (effort) {
-                ReasoningEffort.LOW -> "low"
+                ReasoningEffort.MINIMAL, ReasoningEffort.LOW -> "low"
                 ReasoningEffort.MEDIUM -> "medium"
                 ReasoningEffort.HIGH -> "high"
             }

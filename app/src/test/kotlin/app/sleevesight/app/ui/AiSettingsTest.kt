@@ -6,7 +6,9 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -27,6 +29,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
@@ -89,6 +92,18 @@ class AiSettingsTest {
 
     /** A string that names the provider, for Anthropic. */
     private fun anthropic(id: Int) = app.getString(id, text(R.string.settings_ai_provider_anthropic))
+
+    /** A string that names the provider, for Google. */
+    private fun google(id: Int) = app.getString(id, text(R.string.settings_ai_provider_google))
+
+    /** The effort row titled [title] showing the level [level]: one row, whatever the others show. */
+    private fun effortRow(
+        title: String,
+        level: Int,
+    ) = hasText(title) and hasText(text(level))
+
+    /** The text [id] in the open dialog, apart from the rows behind it. */
+    private fun inDialog(id: Int) = hasText(text(id)) and hasAnyAncestor(isDialog())
 
     /** The model row's value, and the dialog's option, for Anthropic's default model. */
     private fun anthropicDefault() =
@@ -174,6 +189,40 @@ class AiSettingsTest {
         }
     }
 
+    /** Google's model dialog, its list failing with [kind]: it shows [said], and no refused key. */
+    private fun modelDialogSays(
+        kind: AiErrorKind,
+        said: Int,
+    ) {
+        val failing =
+            object : AiProvider {
+                override val id = ProviderId.GOOGLE
+
+                override suspend fun models(key: Secret): ModelList = ModelList.Failed(kind)
+
+                override fun stream(
+                    request: CompletionRequest,
+                    key: Secret,
+                ): Flow<CompletionEvent> = emptyFlow()
+            }
+        runBlocking { secrets.set(SecretId.GOOGLE, Secret("google-key")) }
+        show(providers = mapOf(ProviderId.GOOGLE to failing)) {
+            compose.onNodeWithText(google(R.string.settings_ai_model_of)).performScrollTo().performClick()
+            waitForText(text(said))
+            compose.onNodeWithText(text(said)).assertIsDisplayed()
+            assertTrue(absent(R.string.settings_model_failed_unauthorized))
+            assertTrue(absent(R.string.settings_model_failed_other))
+        }
+    }
+
+    @Test
+    fun aServiceNotOfferedHereSaysSoInTheModelDialog() =
+        modelDialogSays(AiErrorKind.UNAVAILABLE_HERE, R.string.settings_model_failed_unavailable_here)
+
+    @Test
+    fun aQuotaUsedUpSaysSoInTheModelDialog() =
+        modelDialogSays(AiErrorKind.QUOTA_EXHAUSTED, R.string.settings_model_failed_quota_exhausted)
+
     @Test
     fun withoutAClientTheDefaultModelIsOffered() =
         show {
@@ -199,7 +248,10 @@ class AiSettingsTest {
             anthropic.assertIsOff()
             // Off, its choices are shown and kept.
             compose.onNodeWithText("claude-opus-5-5").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).performScrollTo().assertIsDisplayed()
+            compose
+                .onNode(effortRow(anthropic(R.string.settings_ai_effort_of), R.string.settings_effort_high))
+                .performScrollTo()
+                .assertIsDisplayed()
             assertTrue(absent(R.string.settings_ai_provider_needs_key))
 
             anthropic.performClick()
@@ -280,15 +332,51 @@ class AiSettingsTest {
     @Test
     fun anEffortIsChosenFromTheProvidersOwnScale() =
         show {
-            compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
-            // Anthropic's levels (low, its default, is also the row's value, as it is OpenAI's), and the
-            // service's own default.
-            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(3)
-            compose.onNodeWithText(text(R.string.settings_effort_medium)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_effort_provider_default)).performClick()
+            // Low, Anthropic's default, is its row's value.
+            val row = anthropic(R.string.settings_ai_effort_of)
+            compose.onNode(effortRow(row, R.string.settings_effort_low)).assertExists()
+            compose.onNodeWithText(row).performScrollTo().performClick()
+            // Anthropic's levels, without minimal, and the service's own default.
+            val levels =
+                listOf(R.string.settings_effort_low, R.string.settings_effort_medium, R.string.settings_effort_high)
+            for (level in levels) {
+                compose.onNode(inDialog(level)).assertIsDisplayed()
+            }
+            assertTrue(compose.onAllNodes(inDialog(R.string.settings_effort_minimal)).fetchSemanticsNodes().isEmpty())
+            compose.onNode(inDialog(R.string.settings_effort_provider_default)).performClick()
             waitFor("the provider's default stored") {
                 ProviderId.ANTHROPIC in current().aiEfforts && current().effort(ProviderId.ANTHROPIC) == null
             }
         }
+
+    @Test
+    fun googleHasItsOwnRowsAndItsOwnScale() =
+        show {
+            compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().assertIsDisplayed()
+            val default = app.getString(R.string.settings_ai_model_default, "gemini-3.5-flash-lite")
+            compose.onNodeWithText(default).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithText(google(R.string.settings_ai_effort_of)).performScrollTo().performClick()
+            compose.onAllNodesWithText(google(R.string.settings_ai_effort_of)).assertCountEquals(2)
+            // Google's levels, minimal among them, which Anthropic's scale does not have.
+            compose.onNode(inDialog(R.string.settings_effort_minimal)).performClick()
+            waitFor("Google's minimal stored") { current().effort(ProviderId.GOOGLE) == ReasoningEffort.MINIMAL }
+            assertEquals(ReasoningEffort.LOW, current().effort(ProviderId.ANTHROPIC))
+        }
+
+    @Test
+    fun switchingGoogleOnSwitchesAnthropicOff() {
+        runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+        show {
+            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
+            val google = compose.onNodeWithText(text(R.string.settings_ai_provider_google)).performScrollTo()
+            google.assertIsOff()
+
+            google.performClick()
+            waitFor("Google switched on") { current().aiProvider == ProviderId.GOOGLE }
+            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOff()
+            assertEquals("gemini-3.5-flash-lite", current().model)
+            assertEquals(ReasoningEffort.LOW, current().effort)
+        }
+    }
 }

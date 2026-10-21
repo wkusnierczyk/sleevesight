@@ -51,8 +51,10 @@ It does not prune. Web search is never recorded: Exa's results are not committed
 `--record anthropic` records the model's replies to the pipeline's prompts, with the developer's key
 in the environment, into `anthropic/` (an `index.json` whose entries also carry the request body's
 SHA-256, `bodySha256`, since every prompt goes to the same URL; each reply as `messages-<hash>.sse`
-with its request body beside it, the message id replaced, and no header kept). No such recording is
-committed yet: the first ones (tracks 1 and 63, 2026-10-14) would fail the gate's uncited criterion
-on a sentence the check splits at "U.S." (#46), and a re-recorded source changes the prompts they
-answer. A reply the replay does not find is reported, not fatal; a source's request it does not find
-fails the run.
+with its request body beside it, the message id replaced, and no header kept). `--record google`
+(which runs Google) does the same for Google's replies, into `google/` (the response id replaced);
+the provider tests' stream there is one such recording, kept apart from the replay's index
+(`google/README.md`). No recording for the replay is committed yet: the first ones (tracks 1 and 63,
+2026-10-14) would fail the gate's uncited criterion on a sentence the check splits at "U.S." (#46),
+and a re-recorded source changes the prompts they answer. A reply the replay does not find is
+reported, not fatal; a source's request it does not find fails the run.

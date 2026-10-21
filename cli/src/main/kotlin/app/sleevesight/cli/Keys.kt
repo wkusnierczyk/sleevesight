@@ -14,18 +14,21 @@ class Keys(
     val exa: Secret?,
     val lastFm: Secret?,
     val openAi: Secret? = null,
+    val google: Secret? = null,
 ) {
     /** The key of the AI service [provider], or null for one without a key here. */
     fun forProvider(provider: ProviderId): Secret? =
         when (provider) {
             ProviderId.ANTHROPIC -> anthropic
             ProviderId.OPENAI -> openAi
-            ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+            ProviderId.GOOGLE -> google
+            ProviderId.OLLAMA -> null
         }
 
     companion object {
         const val ANTHROPIC = "SLEEVESIGHT_ANTHROPIC_API_KEY"
         const val OPENAI = "SLEEVESIGHT_OPENAI_API_KEY"
+        const val GOOGLE = "SLEEVESIGHT_GOOGLE_API_KEY"
         const val EXA = "SLEEVESIGHT_EXA_API_KEY"
         const val LASTFM = "SLEEVESIGHT_LASTFM_API_KEY"
 
@@ -39,7 +42,8 @@ class Keys(
             when (provider) {
                 ProviderId.ANTHROPIC -> ANTHROPIC
                 ProviderId.OPENAI -> OPENAI
-                ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+                ProviderId.GOOGLE -> GOOGLE
+                ProviderId.OLLAMA -> null
             }
 
         fun load(
@@ -50,7 +54,7 @@ class Keys(
 
             fun key(name: String): Secret? =
                 (environment[name] ?: fromFile[name])?.trim()?.takeIf { it.isNotEmpty() }?.let(::Secret)
-            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM), key(OPENAI))
+            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM), openAi = key(OPENAI), google = key(GOOGLE))
         }
 
         /** The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped. */
