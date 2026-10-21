@@ -63,10 +63,21 @@ internal data class WireError(
     val details: List<WireErrorDetail> = emptyList(),
 )
 
-/** One of an error's details; an `ErrorInfo` has a [reason], such as `API_KEY_INVALID`. */
+/**
+ * One of an error's details: an `ErrorInfo` has a [reason], such as `API_KEY_INVALID`; a
+ * `QuotaFailure` its [violations]; a `RetryInfo` its [retryDelay], a protobuf `Duration` (`"38s"`).
+ */
 @Serializable
 internal data class WireErrorDetail(
     val reason: String? = null,
+    val violations: List<WireQuotaViolation> = emptyList(),
+    val retryDelay: String? = null,
+)
+
+/** A quota a request exceeded, by its id (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). */
+@Serializable
+internal data class WireQuotaViolation(
+    val quotaId: String? = null,
 )
 
 @Serializable

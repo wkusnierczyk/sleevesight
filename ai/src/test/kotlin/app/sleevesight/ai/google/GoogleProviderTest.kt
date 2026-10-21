@@ -19,8 +19,13 @@ import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -29,13 +34,48 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // currentTime, advanceTimeBy, runCurrent
 class GoogleProviderTest {
     private val key = Secret("AIza-test-key")
     private val request =
         CompletionRequest(model = "gemini-3.5-flash-lite", prompt = "Say hello in three words.", maxTokens = 256)
     private val stream = "google/stream-generate-content.sse"
+
+    private val clock =
+        object : Clock {
+            override fun now(): Instant = NOW
+        }
+
+    /** A provider whose clock stands at [NOW]. */
+    private fun provider(net: NetClient) = GoogleProvider(net, RetryPolicy(), clock = clock)
+
+    /** A response with [status], [body] and [headers]. */
+    private fun response(
+        status: Int,
+        body: String,
+        headers: Map<String, List<String>> = emptyMap(),
+    ): NetResult<NetResponse> = NetResult.Success(NetResponse(status, headers, body.encodeToByteArray()))
+
+    /** Google's `429 RESOURCE_EXHAUSTED`, for the quota [quotaId], with a `RetryInfo` of [delay] if given. */
+    private fun exhausted(
+        quotaId: String?,
+        delay: String? = null,
+    ): String {
+        val quota =
+            quotaId?.let {
+                """{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":""" +
+                    """"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"$it"}]}"""
+            }
+        val retry = delay?.let { """{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"$it"}""" }
+        val details = listOfNotNull(quota, retry).joinToString(",")
+        return """{"error":{"code":429,"message":"You exceeded your current quota.","status":"RESOURCE_EXHAUSTED",""" +
+            """"details":[$details]}}"""
+    }
 
     // Detekt 1.23.8 cannot resolve `toList` (from a library built with a newer Kotlin than its own), so
     // it takes the modifier for redundant; the compiler requires it.
@@ -45,7 +85,7 @@ class GoogleProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return GoogleProvider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList() to net
     }
 
     private fun sse(vararg chunks: String): String = chunks.joinToString("") { "data: $it\r\n\r\n" }
@@ -73,13 +113,18 @@ class GoogleProviderTest {
     }
 
     @Test
-    fun `a documented stream becomes its text deltas and Done with the usage`() =
+    fun `a recorded stream becomes its text deltas and Done with the usage`() =
         runTest {
             val (events, _) = events { ok(recorded(stream)) }
 
-            assertEquals("Hello there, friend!", text(events))
-            // Output counts the thinking tokens: 5 of the reply and 12 of thought.
-            assertEquals(CompletionEvent.Done(Usage(inputTokens = 7, outputTokens = 17), StopReason.END), events.last())
+            assertEquals(RECORDED_TEXT, text(events))
+            // Output counts the thinking tokens: 94 of the reply and 1132 of thought. The last chunk
+            // has the finish reason, an empty text part and the thought signature.
+            assertEquals(
+                CompletionEvent.Done(Usage(inputTokens = 1339, outputTokens = 1226), StopReason.END),
+                events.last(),
+            )
+            assertEquals(5, events.count { it is CompletionEvent.Delta })
             assertEquals(1, events.count { it !is CompletionEvent.Delta })
         }
 
@@ -340,15 +385,15 @@ class GoogleProviderTest {
 
                     override fun close() = Unit
                 }
-            val events = GoogleProvider(net).stream(request, key).toList()
+            val events = provider(net).stream(request, key).toList()
             assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
         }
 
     @Test
     fun `a collector that stops early cancels the stream`() =
         runTest {
-            val first = GoogleProvider(ReplayNetClient { ok(recorded(stream)) }).stream(request, key).first()
-            assertEquals(CompletionEvent.Delta("Hello"), first)
+            val first = provider(ReplayNetClient { ok(recorded(stream)) }).stream(request, key).first()
+            assertEquals(CompletionEvent.Delta(RECORDED_TEXT.substringBefore("197") + "197"), first)
         }
 
     @Test
@@ -359,7 +404,7 @@ class GoogleProviderTest {
                     val page = if ("pageToken" in request.query) 2 else 1
                     ok(recorded("google/models-page-$page.json"))
                 }
-            val listed = assertIs<ModelList.Listed>(GoogleProvider(net).models(key)).models
+            val listed = assertIs<ModelList.Listed>(provider(net).models(key)).models
 
             assertEquals(
                 listOf("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-argon", "gemini-3.1-flash-lite"),
@@ -398,7 +443,7 @@ class GoogleProviderTest {
     @Test
     fun `a model list that fails says why`() =
         runTest {
-            val provider = { answer: NetResult<NetResponse> -> GoogleProvider(ReplayNetClient { answer }) }
+            val provider = { answer: NetResult<NetResponse> -> provider(ReplayNetClient { answer }) }
             assertEquals(
                 ModelList.Failed(AiErrorKind.UNAUTHORIZED),
                 provider(failure(NetError.Unauthorized(403))).models(key),
@@ -416,4 +461,90 @@ class GoogleProviderTest {
             assertEquals(ModelList.Failed(AiErrorKind.UNEXPECTED_RESPONSE), provider(ok("[]")).models(key))
             assertEquals(ModelList.Listed(emptyList()), provider(ok("{}")).models(key))
         }
+
+    @Test
+    fun `a daily quota is billing at once, a rate limit keeps its wait`() =
+        runTest {
+            val daily = response(429, exhausted("GenerateRequestsPerDayPerProjectPerModel-FreeTier", "38s"))
+            val (capped, once) = events { daily }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), capped)
+            assertEquals(1, once.requests.size)
+
+            val long = response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel-FreeTier", "38s"))
+            val (limited, alone) = events { long }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 38.seconds)), limited)
+            assertEquals(1, alone.requests.size)
+        }
+
+    @Test
+    fun `a rate limit within the cap is sent once more after its RetryInfo or Retry-After`() =
+        runTest {
+            val cases =
+                listOf(
+                    response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel", "1.5s")) to 1_500L,
+                    response(429, exhausted(null), mapOf("Retry-After" to listOf("3"))) to 3_000L,
+                    response(429, exhausted(null)) to RetryPolicy().delayAfter(1).inWholeMilliseconds,
+                )
+            for ((limited, wait) in cases) {
+                var calls = 0
+                val started = currentTime
+                val (events, net) =
+                    events {
+                        calls++
+                        if (calls == 1) limited else ok(recorded(stream))
+                    }
+                assertEquals(RECORDED_TEXT, text(events))
+                assertIs<CompletionEvent.Done>(events.last())
+                assertEquals(2, net.requests.size)
+                assertEquals(net.requests[0].body!!.text, net.requests[1].body!!.text)
+                assertEquals(wait, currentTime - started)
+            }
+        }
+
+    @Test
+    fun `a rate limit is sent again once only, and a cancel during its wait sends nothing more`() =
+        runTest {
+            val limited = response(429, exhausted("GenerateRequestsPerMinutePerProjectPerModel", "2s"))
+            val (again, twice) = events { limited }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 2.seconds)), again)
+            assertEquals(2, twice.requests.size)
+
+            val net = ReplayNetClient { response(429, exhausted(null, "5s")) }
+            val collecting = launch { provider(net).stream(request, key).toList() }
+            advanceTimeBy(1_000)
+            runCurrent()
+            assertEquals(1, net.requests.size)
+            assertTrue(collecting.isActive)
+            collecting.cancel()
+            advanceTimeBy(10_000)
+            runCurrent()
+            assertTrue(collecting.isCompleted)
+            assertEquals(1, net.requests.size)
+        }
+
+    @Test
+    fun `its host's policy has a 429 passed on, so the body can say why`() {
+        assertTrue(GoogleProvider.HOST_POLICY.passOn429)
+        assertEquals("https://${GoogleProvider.HOST}", GoogleProvider.BASE_URL)
+        assertEquals(1.5.seconds, protobufDuration("1.5s"))
+        assertEquals(null, protobufDuration("soon"))
+    }
+
+    @Test
+    fun `a model list over a daily quota says billing`() =
+        runTest {
+            val daily = response(429, exhausted("GenerateRequestsPerDayPerProjectPerModel-FreeTier"))
+            assertEquals(ModelList.Failed(AiErrorKind.BILLING), provider(ReplayNetClient { daily }).models(key))
+        }
+
+    private companion object {
+        val NOW: Instant = Instant.parse("2026-10-21T12:00:00Z")
+
+        /** The reply in `google/stream-generate-content.sse`. */
+        const val RECORDED_TEXT: String =
+            "Written by Gordon Lightfoot, the folk rock song \"Sundown\" was released in early 1974 " +
+                "[MB1][MB2][WD1]. The track became a major success, reaching number one on the U.S. Billboard " +
+                "Hot 100 and on Canada's national singles chart [W2]. This recording features acoustic guitar " +
+                "from Lightfoot and Terry Clements, with production by Lenny Waronker [MB3][MB4][MB6]."
+    }
 }

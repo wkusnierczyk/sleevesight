@@ -8,6 +8,7 @@ import app.sleevesight.core.ai.Usage
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import kotlin.time.Clock
 
 /**
  * Turns the data of one `streamGenerateContent` stream's events into [CompletionEvent]s. Each event
@@ -20,7 +21,9 @@ import app.sleevesight.net.NetResult
  * with no candidate) is a refusal; an `error` in place of a chunk ends it with its kind. After the
  * one terminal event, nothing more is emitted.
  */
-internal class ContentStream {
+internal class ContentStream(
+    private val clock: Clock,
+) {
     private var inputTokens = 0L
     private var outputTokens = 0L
     private var stopReason: StopReason? = null
@@ -83,7 +86,7 @@ internal class ContentStream {
                 ended -> null
                 reason != null -> CompletionEvent.Done(Usage(inputTokens, outputTokens), reason)
                 result is NetResult.Failure -> failure(result.error)
-                result is NetResult.Success && !result.value.isSuccess -> CompletionEvent.Error(kindOf(result.value))
+                result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
                 else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
             }
         return event?.let(::end)

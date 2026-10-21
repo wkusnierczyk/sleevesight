@@ -1,5 +1,6 @@
 package app.sleevesight.wiring
 
+import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.net.NetConfig
 import app.sleevesight.sources.web.ExaWebSearch
@@ -18,7 +19,8 @@ class HostPoliciesTest {
     private val stated =
         NetConfig.DEFAULT_HOSTS +
             (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY) +
-            (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY)
+            (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
+            (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
 
     @Test
     fun `the configuration for any version carries every listed host policy and the version`() {
@@ -40,6 +42,8 @@ class HostPoliciesTest {
         assertEquals(ExaWebSearch.HOST, config.domainFor(exaHost))
         val openAiHost = OpenAiProvider.BASE_URL.removePrefix("https://").substringBefore('/')
         assertEquals(OpenAiProvider.HOST, config.domainFor(openAiHost))
+        val googleHost = GoogleProvider.BASE_URL.removePrefix("https://").substringBefore('/')
+        assertEquals(GoogleProvider.HOST, config.domainFor(googleHost))
         assertEquals(NetConfig.MUSICBRAINZ, config.domainFor("musicbrainz.org"))
         assertEquals(HostPolicies.ALL, config.hosts)
     }

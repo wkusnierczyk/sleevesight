@@ -11,6 +11,7 @@ import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
+import app.sleevesight.net.HostPolicy
 import app.sleevesight.net.NetBody
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetError
@@ -19,6 +20,8 @@ import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
 import app.sleevesight.net.NetSecrets
+import app.sleevesight.net.RetryPolicy
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.addJsonObject
@@ -26,8 +29,11 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Google's Gemini API (`generativelanguage.googleapis.com`, with a key from Google AI Studio), as a
@@ -55,12 +61,29 @@ import kotlin.time.Duration.Companion.minutes
  * usage and the stop reason, or [CompletionEvent.Error] ([ContentStream]). The request is a `POST`,
  * so `:net` never repeats it once it may have been acted on: a paid call is never sent twice.
  *
- * @param net the process's one `NetClient`.
+ * Google answers `429 RESOURCE_EXHAUSTED` both for a rate limit (per minute, or the spend-based
+ * limit per ten minutes) and for a quota that resets only after a day, such as the free tier's
+ * requests per day, and only the body's `QuotaFailure` says which; so its host's policy
+ * ([HOST_POLICY]) has `:net` pass a 429 on, unretried, and the client reads it. A daily or monthly
+ * quota is [AiErrorKind.BILLING] at once ([exhaustsAQuota]): no retry mends it that day, and a
+ * paid or higher tier does. A rate limit is sent once more after its `RetryInfo.retryDelay`, else
+ * its `Retry-After`, else [RetryPolicy.delayAfter]'s first wait, when that is within
+ * [RetryPolicy.maxDelay], as `:net` retries another host's 429 and as `OpenAiProvider` does; a 429
+ * was refused before it was acted on, so the call is not paid twice. Otherwise it ends as
+ * [AiErrorKind.RATE_LIMITED] with the wait. The model list is not sent again: a 429 there is
+ * reported as its kind.
+ *
+ * @param net the process's one `NetClient`, configured with [HOST_POLICY] under [HOST].
+ * @param retry the waits for a rate limit: [net]'s own `NetConfig.retry`, so both wait alike. It
+ *   has no default, so no caller leaves it different by accident.
  * @param baseUrl the API's origin, for tests.
+ * @param clock for a `Retry-After` given as a date.
  */
 class GoogleProvider(
     private val net: NetClient,
+    private val retry: RetryPolicy,
     private val baseUrl: String = BASE_URL,
+    private val clock: Clock = Clock.System,
 ) : AiProvider {
     override val id: ProviderId = ProviderId.GOOGLE
 
@@ -95,21 +118,40 @@ class GoogleProvider(
                 send(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND))
                 return@channelFlow
             }
-            val reader = ContentStream()
-            val events = ServerSentEvents()
+            var waited = false
+            do {
+                val reader = ContentStream(clock)
+                val events = ServerSentEvents()
 
-            // A stream stopped here ends as the reader decided; nothing of the exception is needed.
-            @Suppress("SwallowedException")
-            val result =
-                try {
-                    net.stream(contentRequest(request, key)) { line ->
-                        events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
-                        if (reader.malformed) throw StopStream()
+                // A stream stopped here ends as the reader decided; nothing of the exception is needed.
+                @Suppress("SwallowedException")
+                val result =
+                    try {
+                        net.stream(contentRequest(request, key)) { line ->
+                            events.line(line)?.let { event -> reader.read(event.data)?.let { send(it) } }
+                            if (reader.malformed) throw StopStream()
+                        }
+                    } catch (e: StopStream) {
+                        null
                     }
-                } catch (e: StopStream) {
-                    null
+                // An error status comes before any of the body, so nothing was emitted for it.
+                val refused = (result as? NetResult.Success)?.value?.takeUnless { it.isSuccess }
+                val wait = refused?.takeIf { !waited }?.let(::rateLimitWait)
+                if (wait != null) {
+                    delay(wait)
+                    waited = true
+                } else {
+                    reader.end(result)?.let { send(it) }
                 }
-            reader.end(result)?.let { send(it) }
+            } while (wait != null)
+        }
+
+    /** The wait before sending again after [response], a rate limit; null if it is not one, or too long. */
+    private fun rateLimitWait(response: NetResponse): Duration? =
+        if (response.status == TOO_MANY_REQUESTS && kindOf(response) == AiErrorKind.RATE_LIMITED) {
+            (waitOf(response, clock.now()) ?: retry.delayAfter(1)).takeIf { it <= retry.maxDelay }
+        } else {
+            null
         }
 
     private sealed interface Page {
@@ -179,7 +221,19 @@ class GoogleProvider(
     private class StopStream : RuntimeException()
 
     companion object {
-        const val BASE_URL: String = "https://generativelanguage.googleapis.com"
+        const val HOST: String = "generativelanguage.googleapis.com"
+
+        const val BASE_URL: String = "https://$HOST"
+
+        /**
+         * Google's host policy, which `:wiring`'s list of host policies must hold under [HOST]: no
+         * interval of its own (the limits are per project and tier, and it answers 429 when one is
+         * reached), and its 429 passed on ([HostPolicy.passOn429]). Google answers
+         * `429 RESOURCE_EXHAUSTED` for a per-minute rate limit, which a short wait mends, and also
+         * for a daily quota, which no retry mends that day; only the body's `QuotaFailure` says
+         * which ([kindOf]), so the client reads it.
+         */
+        val HOST_POLICY: HostPolicy = HostPolicy(minInterval = Duration.ZERO, passOn429 = true)
 
         /** The API version this client speaks: the stable one. */
         const val API_VERSION: String = "v1"
@@ -309,6 +363,7 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
             PAYMENT_REQUIRED -> AiErrorKind.BILLING
             NOT_FOUND -> AiErrorKind.MODEL_NOT_FOUND
             CONTENT_TOO_LARGE -> AiErrorKind.REQUEST_TOO_LARGE
+            TOO_MANY_REQUESTS -> AiErrorKind.RATE_LIMITED
             else -> AiErrorKind.UNEXPECTED_RESPONSE
         }
 
@@ -328,8 +383,56 @@ internal fun kindOf(error: WireError): AiErrorKind? =
             AiErrorKind.UNAVAILABLE_HERE
         }
         error.status == "RESOURCE_EXHAUSTED" && error.code == PAYMENT_REQUIRED -> AiErrorKind.BILLING
+        error.status == "RESOURCE_EXHAUSTED" && exhaustsAQuota(error) -> AiErrorKind.BILLING
         else -> error.status?.let(::kindOfStatus)
     }
+
+/**
+ * Whether [error]'s `QuotaFailure` names a quota that resets only after a day or a month (`quotaId`
+ * `…PerDay…`, `…PerMonth…`), such as the free tier's requests per day, which reset at midnight
+ * Pacific time: no retry mends it, and a paid tier or a higher one does, so it is
+ * [AiErrorKind.BILLING], at once. A quota per minute, or a 429 that names none (the spend-based
+ * limit per ten minutes among them), is a rate limit.
+ */
+internal fun exhaustsAQuota(error: WireError): Boolean =
+    error.details.any { detail ->
+        detail.violations.any { violation ->
+            val id = violation.quotaId.orEmpty()
+            LONG_QUOTAS.any { id.contains(it, ignoreCase = true) }
+        }
+    }
+
+/**
+ * The wait [response] asks for: its `RetryInfo.retryDelay` (`"38s"`, `"1.5s"`), else its
+ * `Retry-After`, from [now]; null when it gives neither.
+ */
+internal fun waitOf(
+    response: NetResponse,
+    now: Instant,
+): Duration? =
+    decode<WireErrorBody>(response.body)
+        ?.error
+        ?.details
+        ?.firstNotNullOfOrNull { it.retryDelay?.let(::protobufDuration) }
+        ?: response.retryAfter(now)
+
+/** A protobuf `Duration` in its JSON form (`"38s"`, `"0.5s"`), or null if [text] is not one. */
+internal fun protobufDuration(text: String): Duration? =
+    text
+        .takeIf { it.endsWith("s") }
+        ?.removeSuffix("s")
+        ?.toDoubleOrNull()
+        ?.takeIf { it >= 0 }
+        ?.seconds
+
+/** [response]'s error, with the wait a rate limit asks for, from [now]. */
+internal fun errorOf(
+    response: NetResponse,
+    now: Instant,
+): CompletionEvent.Error {
+    val kind = kindOf(response)
+    return CompletionEvent.Error(kind, waitOf(response, now).takeIf { kind == AiErrorKind.RATE_LIMITED })
+}
 
 private fun kindOfStatus(status: String): AiErrorKind? =
     when (status) {
@@ -349,4 +452,8 @@ private const val BAD_REQUEST = 400
 private const val PAYMENT_REQUIRED = 402
 private const val NOT_FOUND = 404
 private const val CONTENT_TOO_LARGE = 413
+private const val TOO_MANY_REQUESTS = 429
+
+/** The `quotaId` parts of the quotas that reset after a day or a month. */
+private val LONG_QUOTAS = listOf("PerDay", "PerMonth")
 private const val UNAVAILABLE_STATUS = 503

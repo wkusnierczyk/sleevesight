@@ -31,8 +31,10 @@ class GoogleLiveTest {
         val model = settings.model!!
         // Real time and a real network: not `runTest`, whose virtual clock would skip the timeouts.
         runBlocking {
-            NetClient(NetConfig(appVersion = "0.0.0-live-test")).use { net ->
-                val provider = GoogleProvider(net)
+            val hosts = mapOf(GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
+            val config = NetConfig(appVersion = "0.0.0-live-test", hosts = hosts)
+            NetClient(config).use { net ->
+                val provider = GoogleProvider(net, config.retry)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 assertTrue(models.any { it.id == model }, "the default model $model is not listed")
                 val request =
