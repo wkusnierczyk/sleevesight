@@ -16,6 +16,7 @@ import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -33,6 +34,7 @@ import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.CreditsPage
 import app.sleevesight.app.ui.FirstRun
 import app.sleevesight.app.ui.Home
+import app.sleevesight.app.ui.PRIVACY_POLICY_SHOWN
 import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
 import kotlinx.coroutines.flow.first
@@ -117,10 +119,34 @@ class FirstRunFlowTest {
     fun withoutAccessTheFirstRunScreenSaysWhatLeavesThePhone() {
         setAccess(granted = false)
         launch().use {
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            // Out of touch mode, as Robolectric runs, the button has the focus and is in view.
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_to_sources)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_to_ai)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.access_off)).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun outOfTouchModeTheButtonTakesTheFocusAndIsScrolledIntoViewAsTheScreenOpens() {
+        setAccess(granted = false)
+        launch().use {
+            // The button comes before the privacy policy's link, the other thing on it that takes focus.
+            compose.onNodeWithText(text(R.string.open_access_settings)).assertIsFocused().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun theFirstRunScreenLinksToThePrivacyPolicyOnTheSite() {
+        setAccess(granted = false)
+        launch().use { scenario ->
+            compose.onNodeWithText(text(R.string.first_run_privacy)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).performScrollTo().performClick()
+
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://sleevesight.app/privacy.html", started?.dataString)
         }
     }
 
@@ -226,7 +252,7 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = false)
         launch().use {
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
         }
     }
 
