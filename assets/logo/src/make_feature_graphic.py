@@ -84,9 +84,10 @@ def brand_sheet():
     rules = {name: re.search(pattern, page, re.S | re.M) for name, pattern in (
         ('lt', r'^\.lt\{(.*?)\}'), ('dk', r'^\.dk\{(.*?)\}'), ('page', r'^:root\{(.*?)\}'),
         ('page-dark', r'^@media \(prefers-color-scheme: dark\)\{:root\{(.*?)\}'))}
-    if not sym or not all(rules.values()):
-        sys.exit('design/brand.html: no <symbol id="lp">, or no rule for '
-                 + ', '.join(name for name, m in rules.items() if not m))
+    missing = ([] if sym else ['<symbol id="lp" viewBox="8 8 16 16">']) + [
+        f'the {name} rule' for name, m in rules.items() if not m]
+    if missing:
+        sys.exit('design/brand.html: no ' + ', '.join(missing))
     schemes = {'lt': css_vars(rules['lt'].group(1)), 'dk': css_vars(rules['dk'].group(1))}
     for scheme, rule, where in (('lt', 'page', ':root'), ('dk', 'page-dark', ':root in the dark media query')):
         muted = css_vars(rules[rule].group(1)).get('page-muted')
