@@ -20,12 +20,16 @@ data class SourceStatus(
     val note: String,
 )
 
-/** What the run left besides its results: the events, the cache, the requests with no recording. */
+/**
+ * What the run left besides its results: the events, the cache, the requests with no recording, and
+ * the reads of the artist cache (#238) per part, null without a cache.
+ */
 class Diagnostics(
     val events: List<PipelineEvent>,
     val cache: CacheStats?,
     val misses: List<String>,
     val elapsed: Duration,
+    val artistCache: List<ArtistCacheCount>? = null,
 )
 
 /** Everything a report shows. */
@@ -86,8 +90,13 @@ class Report(
             appendLine()
             appendLine(
                 "Cache after the run: retrieval ${it.retrieval.entries} entries (${it.retrieval.bytes} bytes), " +
+                    "artist-level ${it.artistResults.entries} (${it.artistResults.bytes} bytes), " +
                     "synthesis ${it.synthesis.entries} (${it.synthesis.bytes} bytes).",
             )
+        }
+        d.artistCache?.let { counts ->
+            appendLine()
+            appendLine(artistCacheLine(counts))
         }
         if (d.misses.isNotEmpty()) {
             appendLine()
@@ -179,6 +188,18 @@ class Report(
     }
 
     companion object {
+        /**
+         * The artist cache's reads (#238): per part, how many found an entry (an artist-level lookup
+         * not asked again) and how many did not.
+         */
+        fun artistCacheLine(counts: List<ArtistCacheCount>): String =
+            if (counts.isEmpty()) {
+                "Artist cache: not read."
+            } else {
+                "Artist cache: " +
+                    counts.joinToString("; ") { "${it.part} ${it.hits} hits, ${it.misses} misses" } + "."
+            }
+
         /** A source the CLI did not run (no key, or its terms) counts as switched off. */
         const val OFF = "source_off"
         const val WITHHELD = "web result, snippet not quoted (Exa's terms, §4.2(a))"

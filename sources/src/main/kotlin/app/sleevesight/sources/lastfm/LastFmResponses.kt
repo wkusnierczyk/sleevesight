@@ -1,6 +1,7 @@
 package app.sleevesight.sources.lastfm
 
 import app.sleevesight.net.NetError
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -16,9 +17,18 @@ import kotlinx.serialization.json.jsonObject
  *   asked for, which may be another artist altogether (the fixture's track 61).
  * @property mbid Last.fm's MusicBrainz artist id, when it has one.
  * @property tags the top tags, at most five, in Last.fm's order.
- * @property bioSummary the bio's summary as Last.fm sends it, HTML included.
+ * @property bio the sentences of the bio's summary that may be quoted ([LastFmBio.sentences]): the
+ *   summary itself is not kept, so a cached answer holds no more of the bio than is shown.
+ * @property sharedPage the bio says several artists share this page ([LastFmBio.sharedPage]): its
+ *   listeners, tags and similar artists mix them, so the match is never verified. The bio is one of
+ *   two signals and need not say so: [ArtistCheck] also asks MusicBrainz whether another artist has
+ *   the name.
  * @property bioUrl the bio's own page (`…/+wiki`), when given.
+ *
+ * Serializable, as the artist cache keeps it (`LastFmAdapter.ARTIST_PART`): a change to its fields
+ * raises that part's version.
  */
+@Serializable
 data class LastFmArtist(
     val name: String,
     val mbid: String?,
@@ -26,25 +36,20 @@ data class LastFmArtist(
     val listeners: Long?,
     val tags: List<String>,
     val similar: List<LastFmSimilar>,
-    val bioSummary: String?,
+    val bio: List<String>,
+    val sharedPage: Boolean,
     val bioUrl: String?,
-) {
-    /**
-     * The bio says several artists share this page ([LastFmBio.sharedPage]): its listeners, tags
-     * and similar artists mix them, so the match is never verified. The bio is one of two signals
-     * and need not say so: [ArtistCheck] also asks MusicBrainz whether another artist has the name.
-     */
-    val sharedPage: Boolean
-        get() = LastFmBio.sharedPage(bioSummary)
-}
+)
 
 /** A similar artist: by listening overlap, not by sound. */
+@Serializable
 data class LastFmSimilar(
     val name: String,
     val url: String?,
 )
 
 /** A tag with its weight, `count`, which Last.fm scales so the artist's top tag has 100. */
+@Serializable
 data class LastFmTag(
     val name: String,
     val count: Int,
@@ -81,6 +86,7 @@ internal object LastFmJson {
         val root = json.parseToJsonElement(body).jsonObject
         root.error()?.let { return LastFmAnswer.Error(it) }
         val artist = root.obj("artist") ?: error("no artist")
+        val summary = artist.obj("bio")?.string("summary")
         return LastFmAnswer.Found(
             LastFmArtist(
                 name = artist.string("name") ?: error("no artist name"),
@@ -92,7 +98,8 @@ internal object LastFmJson {
                     artist.obj("similar").items("artist").mapNotNull { similar ->
                         similar.string("name")?.let { LastFmSimilar(it, similar.string("url")) }
                     },
-                bioSummary = artist.obj("bio")?.string("summary"),
+                bio = LastFmBio.sentences(summary),
+                sharedPage = LastFmBio.sharedPage(summary),
                 bioUrl =
                     artist
                         .obj("bio")
