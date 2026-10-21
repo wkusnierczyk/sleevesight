@@ -7,6 +7,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import kotlinx.coroutines.Deferred
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * One source of evidence (`design/architecture.md`, *Source adapters*). Implementations live in
@@ -44,9 +45,9 @@ interface SourceAdapter {
      * `Pipeline.prepare`). A queue item has no length, so a result looked up ahead would be kept
      * under a key the playing track never reads, and the requests made for it sent for nothing.
      * Only an adapter that sends no request of its own prepares ahead: MusicBrainz's lines, made
-     * from the resolution, which name the artists for the genre labels. (Last.fm keeps its
-     * verdicts on artists' names, but its lookup ahead would send its own requests again when the
-     * track plays.)
+     * from the resolution, which name the artists for the genre labels. (Last.fm's lookup ahead
+     * sends its own requests; since #238 the artist cache would keep their answers for when the
+     * track plays, so whether it should prepare ahead is open.)
      */
     val preparesAhead: Boolean get() = false
 
@@ -96,6 +97,11 @@ val SourceAdapter.tag: String get() = id.tag
  * [provisional] marks a result that a failed request of the verification left unverified, where a
  * later lookup may verify it (Last.fm's search for other MusicBrainz artists of a name): it is
  * shown, but not kept in the retrieval cache.
+ *
+ * [freshUntil] is set on a result built from artist-level parts kept from an earlier track
+ * ([ArtistResults], #238): the earliest time one of them stops being fresh. The retrieval cache
+ * keeps the result no longer than that, so a reused part is not served past its own lifetime
+ * (D9). Null when no kept part was reused. Not itself kept: the retrieval entry's age carries it.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -107,6 +113,7 @@ data class SourceResult(
     val provisional: Boolean = false,
     val labelArtists: List<String> = emptyList(),
     val firstReleased: String? = null,
+    val freshUntil: Instant? = null,
 )
 
 /** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */

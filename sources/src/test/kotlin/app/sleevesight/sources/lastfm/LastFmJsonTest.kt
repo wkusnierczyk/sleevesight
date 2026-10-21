@@ -10,16 +10,18 @@ class LastFmJsonTest {
         val body =
             """{"artist":{"name":"X","mbid":"","url":"u","stats":{"listeners":"12"},"similar":"",
                "tags":{"tag":{"name":"rap","url":"t"}},
-               "bio":{"links":{"link":{"href":"w"}},"summary":"s"}}}"""
+               "bio":{"links":{"link":{"href":"w"}},"summary":"X is a rapper from the north of England."}}}"""
         val artist = assertIs<LastFmAnswer.Found<LastFmArtist>>(LastFmJson.artistInfo(body)).value
-        assertEquals(LastFmArtist("X", null, "u", 12, listOf("rap"), emptyList(), "s", "w"), artist)
+        // The summary's quotable sentences are kept, not the summary.
+        val bio = listOf("X is a rapper from the north of England.")
+        assertEquals(LastFmArtist("X", null, "u", 12, listOf("rap"), emptyList(), bio, false, "w"), artist)
     }
 
     @Test
     fun `missing parts are absent, not errors`() {
         val answer = LastFmJson.artistInfo("""{"artist":{"name":"X"}}""")
         val artist = assertIs<LastFmAnswer.Found<LastFmArtist>>(answer).value
-        assertEquals(LastFmArtist("X", null, null, null, emptyList(), emptyList(), null, null), artist)
+        assertEquals(LastFmArtist("X", null, null, null, emptyList(), emptyList(), emptyList(), false, null), artist)
     }
 
     @Test

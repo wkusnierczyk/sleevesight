@@ -17,6 +17,7 @@ import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.resolution.RememberedMusicBrainz
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.net.NetClient
 import app.sleevesight.sources.art.ArtFetcher
@@ -45,6 +46,10 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * preparing the next track looks up ahead (D13) is then not asked again when the track plays. The
  * CLI asks afresh for each track, so its reports time every request.
  *
+ * [artists] is the artist cache (#238): what Last.fm, the Wikipedia artist article and MusicBrainz's
+ * tags give for an artist is kept there per artist, so a second track by the same artist does not
+ * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
+ *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
  * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
  * which a phone never calls (the client lives as long as the process) and Robolectric calls after
@@ -56,6 +61,7 @@ class PipelineWiring internal constructor(
     resources: ResourceReader,
     rememberMusicBrainz: Boolean = false,
     private val ownsNet: Boolean = false,
+    private val artists: ArtistResults = ArtistResults.None,
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
@@ -73,9 +79,12 @@ class PipelineWiring internal constructor(
 
     /**
      * MusicBrainz's genre labels (D12, #84), for `PipelineParts.musicBrainzLabels`. One for the
-     * wiring, since it keeps each artist's tags for the process.
+     * wiring, since it keeps each artist's tags: in the artist cache, or, without one, in memory for
+     * the process.
      */
-    val musicBrainzLabels: MusicBrainzLabels by lazy { MusicBrainzLabels(MusicBrainzClient(net), vocabulary) }
+    val musicBrainzLabels: MusicBrainzLabels by lazy {
+        MusicBrainzLabels(MusicBrainzClient(net), vocabulary, artists = artists)
+    }
 
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
@@ -93,9 +102,9 @@ class PipelineWiring internal constructor(
      *
      * The keys and the web engines, unlike those switches, are read here, when the list is built: a
      * key saved or removed, or an engine switched, takes a new list, and so a new pipeline. Each call
-     * builds new adapters, so whatever state one holds starts again: Last.fm's check of an artist's
-     * name (`ArtistCheck` in `LastFmMatch.kt`) loses the verdicts it keeps for up to 1024 names, so
-     * each name is checked again.
+     * builds new adapters, so whatever state one holds in memory starts again: Last.fm's check of an
+     * artist's name (`ArtistCheck` in `LastFmMatch.kt`) keeps its verdicts in the artist cache, which
+     * outlives the adapters, or, without one, in memory for up to 1024 names, which does not.
      */
     fun adapters(
         keys: SourceKeys,
@@ -113,10 +122,11 @@ class PipelineWiring internal constructor(
 
     /** Wikipedia's lead sentences, with Wikidata's identity check. */
     fun wikipedia(): SourceAdapter =
-        WikipediaSource(WikipediaClient(net), IdentityCheck(WikidataClient(net), names), names)
+        WikipediaSource(WikipediaClient(net), IdentityCheck(WikidataClient(net), names), names, artists = artists)
 
     /** Last.fm on the user's [key]. */
-    fun lastFm(key: Secret): SourceAdapter = LastFmAdapter(net, musicBrainz, key, vocabulary, accentFolder)
+    fun lastFm(key: Secret): SourceAdapter =
+        LastFmAdapter(net, musicBrainz, key, vocabulary, accentFolder, artists = artists)
 
     /**
      * Web search through the [engines] given, each with its key, or null for none. Exa is the only

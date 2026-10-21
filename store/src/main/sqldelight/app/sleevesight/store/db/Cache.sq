@@ -42,6 +42,27 @@ CREATE TABLE artist (
 
 CREATE INDEX artist_used_at ON artist (used_at, size_bytes);
 
+-- What a source said about one artist, for every track that credits them (#238): `part` names the
+-- kind (`lastfm.artist`, `wikipedia.artist`, ...), `artist_key` the artist (a MusicBrainz id, or a
+-- folded name where the adapter asks by name), `payload` the adapter's own encoding, never the raw
+-- response, under the part's `version`; a row under another version is a miss. `sources` holds the
+-- tags of the sources the value depends on, each between spaces, as in `retrieval`: the row expires
+-- with the shortest of their lifetimes.
+CREATE TABLE artist_result (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    part TEXT NOT NULL,
+    artist_key TEXT NOT NULL,
+    sources TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    payload TEXT NOT NULL,
+    stored_at INTEGER NOT NULL,
+    used_at INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    UNIQUE (part, artist_key)
+);
+
+CREATE INDEX artist_result_used_at ON artist_result (used_at, size_bytes);
+
 -- A written insight or card, by the full synthesis key (R2, D14), the reasoning effort included
 -- (`low`, `medium`, `high` or `default`).
 CREATE TABLE synthesis (
@@ -65,14 +86,15 @@ CREATE TABLE synthesis (
 CREATE INDEX synthesis_used_at ON synthesis (used_at, size_bytes);
 
 -- Running totals per table, kept by the triggers below in the transaction of each write, so
--- checking the size limit reads three rows instead of every row.
+-- checking the size limit reads one row per table instead of every row.
 CREATE TABLE cache_size (
     name TEXT NOT NULL PRIMARY KEY,
     entries INTEGER NOT NULL,
     bytes INTEGER NOT NULL
 );
 
-INSERT INTO cache_size (name, entries, bytes) VALUES ('retrieval', 0, 0), ('artist', 0, 0), ('synthesis', 0, 0);
+INSERT INTO cache_size (name, entries, bytes)
+VALUES ('retrieval', 0, 0), ('artist', 0, 0), ('synthesis', 0, 0), ('artist_result', 0, 0);
 
 CREATE TRIGGER retrieval_inserted AFTER INSERT ON retrieval BEGIN
     UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'retrieval';
@@ -88,6 +110,14 @@ END;
 
 CREATE TRIGGER artist_deleted AFTER DELETE ON artist BEGIN
     UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'artist';
+END;
+
+CREATE TRIGGER artist_result_inserted AFTER INSERT ON artist_result BEGIN
+    UPDATE cache_size SET entries = entries + 1, bytes = bytes + new.size_bytes WHERE name = 'artist_result';
+END;
+
+CREATE TRIGGER artist_result_deleted AFTER DELETE ON artist_result BEGIN
+    UPDATE cache_size SET entries = entries - 1, bytes = bytes - old.size_bytes WHERE name = 'artist_result';
 END;
 
 CREATE TRIGGER synthesis_inserted AFTER INSERT ON synthesis BEGIN
@@ -159,6 +189,37 @@ DELETE FROM artist WHERE id = :id;
 artistPurge:
 DELETE FROM artist WHERE stored_at <= :storedAtOrBefore;
 
+-- Artist-level results
+
+artistResultGet:
+SELECT id, sources, version, payload, stored_at
+FROM artist_result
+WHERE part = :part AND artist_key = :artistKey;
+
+artistResultRemoveKey:
+DELETE FROM artist_result WHERE part = :part AND artist_key = :artistKey;
+
+artistResultInsert:
+INSERT INTO artist_result (part, artist_key, sources, version, payload, stored_at, used_at, size_bytes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+artistResultTouch:
+UPDATE artist_result SET used_at = :usedAt WHERE id = :id;
+
+artistResultDeleteSeen:
+DELETE FROM artist_result WHERE id = :id AND stored_at = :storedAt;
+
+artistResultDelete:
+DELETE FROM artist_result WHERE id = :id;
+
+-- Rows depending on `tag`'s source stored at or before the cutoff.
+artistResultPurgeSource:
+DELETE FROM artist_result WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at <= :storedAtOrBefore;
+
+-- Each row's sources, for purging the rows that hold a source the app no longer has.
+artistResultSources:
+SELECT id, stored_at, sources FROM artist_result;
+
 -- Synthesis
 
 synthesisGet:
@@ -210,11 +271,16 @@ SELECT 'retrieval' AS name, count(*) AS entries, coalesce(sum(size_bytes), 0) AS
 UNION ALL
 SELECT 'artist', count(*), coalesce(sum(size_bytes), 0) FROM artist
 UNION ALL
+SELECT 'artist_result', count(*), coalesce(sum(size_bytes), 0) FROM artist_result
+UNION ALL
 SELECT 'synthesis', count(*), coalesce(sum(size_bytes), 0) FROM synthesis;
 
--- Retrieval and synthesis rows, least recently used first; artist rows are evicted only after them.
+-- Retrieval, artist-level and synthesis rows, least recently used first; artist resolution rows are
+-- evicted only after them.
 leastRecentlyUsed:
 SELECT 'retrieval' AS name, id, size_bytes, used_at FROM retrieval
+UNION ALL
+SELECT 'artist_result', id, size_bytes, used_at FROM artist_result
 UNION ALL
 SELECT 'synthesis', id, size_bytes, used_at FROM synthesis
 ORDER BY used_at, name, id

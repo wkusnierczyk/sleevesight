@@ -70,6 +70,7 @@ internal object DiagnosticsText {
         } else {
             out.appendLine(cache("retrieval", caches.retrieval))
             out.appendLine(cache("artists", caches.artists))
+            out.appendLine(cache("artist results", caches.artistResults))
             out.appendLine(cache("synthesis", caches.synthesis))
         }
         out.appendLine()

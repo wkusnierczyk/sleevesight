@@ -4,6 +4,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.SourceResult
 import app.sleevesight.core.synthesis.CardKind
@@ -43,8 +44,50 @@ class CachesTest {
 
         fixture.clock.advance(Settings.DEFAULT_ARTIST_CACHE_LIFETIME)
         assertEquals(2, caches.purgeExpired(), "MusicBrainz and the artist")
-        assertEquals(CacheStats(TableStats(0, 0), TableStats(0, 0), caches.stats().synthesis), caches.stats())
+        assertEquals(
+            CacheStats(TableStats(0, 0), TableStats(0, 0), caches.stats().synthesis, TableStats(0, 0)),
+            caches.stats(),
+        )
         assertEquals(1, caches.stats().synthesis.entries)
+    }
+
+    @Test
+    fun `purging deletes the artist-level results past the shortest lifetime of their sources`() {
+        caches.artistResults.put(LASTFM_PART, "a", "v")
+        caches.artistResults.put(BOTH_PART, "a", "v")
+        caches.artistResults.put(MUSICBRAINZ_PART, "a", "v")
+
+        fixture.clock.advance(Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.LASTFM))
+        assertEquals(2, caches.purgeExpired(), "Last.fm's, and the one depending on Last.fm and MusicBrainz")
+        assertEquals(TableStats(1, caches.stats().artistResults.bytes), caches.stats().artistResults)
+        assertNotNull(caches.artistResults.get(MUSICBRAINZ_PART, "a"))
+
+        fixture.clock.advance(Settings.DEFAULT_CACHE_LIFETIMES.getValue(SourceId.MUSICBRAINZ))
+        assertEquals(1, caches.purgeExpired())
+        assertEquals(TableStats(0, 0), caches.stats().artistResults)
+    }
+
+    @Test
+    fun `purging deletes the artist-level results of a source that is no longer cached`() {
+        caches.artistResults.put(LASTFM_PART, "a", "v")
+        caches.artistResults.put(MUSICBRAINZ_PART, "a", "v")
+        fixture.settings = Settings(cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES - SourceId.LASTFM)
+
+        assertEquals(1, caches.purgeExpired())
+        assertNotNull(caches.artistResults.get(MUSICBRAINZ_PART, "a"))
+    }
+
+    @Test
+    fun `purging deletes the artist-level results of a source the app no longer knows`() {
+        caches.artistResults.put(LASTFM_PART, "a", "v")
+        caches.artistResults.put(MUSICBRAINZ_PART, "a", "v")
+        // As a later version would have written it, with a source this one does not know.
+        val now = fixture.clock.now.toEpochMilliseconds()
+        caches.queries.artistResultInsert("future.part", "a", " MB ZZ ", 1, "v", now, now, 1)
+
+        assertEquals(1, caches.purgeExpired())
+        assertEquals(2, caches.stats().artistResults.entries)
+        fixture.assertTotals()
     }
 
     @Test
@@ -99,6 +142,28 @@ class CachesTest {
         assertNull(caches.retrieval.get(SourceId.MUSICBRAINZ, "old|x", 1))
         assertNotNull(caches.synthesis.get(key("newer")))
         assertNotNull(caches.synthesis.get(key("newest")))
+    }
+
+    @Test
+    fun `artist-level results are evicted in one order with retrieval and synthesis entries`() {
+        // Larger than the card written below, so evicting it alone makes room.
+        caches.artistResults.put(MUSICBRAINZ_PART, "old", "v".repeat(100))
+        fixture.clock.advance(1.minutes)
+        caches.retrieval.put(SourceId.MUSICBRAINZ, "newer|x", 1, result())
+        fixture.clock.advance(1.minutes)
+        caches.artistResults.put(MUSICBRAINZ_PART, "newer", "v")
+        fixture.clock.advance(1.minutes)
+        caches.artists.put("resolution", ArtistResolution.None)
+        fixture.clock.advance(1.minutes)
+        fixture.settings = Settings(cacheSizeLimit = caches.sizeBytes())
+
+        caches.synthesis.put(key("newest"), "text")
+
+        assertNull(caches.artistResults.get(MUSICBRAINZ_PART, "old"), "the least recently used")
+        assertNotNull(caches.retrieval.get(SourceId.MUSICBRAINZ, "newer|x", 1))
+        assertNotNull(caches.artistResults.get(MUSICBRAINZ_PART, "newer"))
+        assertNotNull(caches.artists.get("resolution"), "an artist resolution goes only after the others")
+        fixture.assertTotals()
     }
 
     @Test
@@ -163,10 +228,15 @@ class CachesTest {
         caches.retrieval.put(SourceId.DISCOGS, "c|x", 1, result())
         caches.retrieval.put(SourceId.DISCOGS, "c|x", 1, result())
         caches.retrieval.put(SourceId.MUSICBRAINZ, "c|x", 1, result())
+        caches.artistResults.put(LASTFM_PART, "d", "v")
+        caches.artistResults.put(LASTFM_PART, "d", "a longer value, replacing")
+        caches.artistResults.put(MUSICBRAINZ_PART, "d", "v")
         fixture.assertTotals()
         assertEquals(2, caches.stats().retrieval.entries)
+        assertEquals(2, caches.stats().artistResults.entries)
 
         assertNull(caches.retrieval.get(SourceId.MUSICBRAINZ, "c|x", 2), "invalidated by version")
+        assertNull(caches.artistResults.get(MUSICBRAINZ_PART.copy(encoding = 2), "d"), "invalidated by version")
         fixture.assertTotals()
 
         fixture.clock.advance(2.days)
@@ -181,6 +251,12 @@ class CachesTest {
     }
 
     private fun result(): SourceResult = SourceResult(Outcome.None, emptyList(), 100.milliseconds)
+
+    private companion object {
+        val LASTFM_PART = ArtistPart("test.lastfm", 1, 1, setOf(SourceId.LASTFM))
+        val MUSICBRAINZ_PART = ArtistPart("test.musicbrainz", 1, 1, setOf(SourceId.MUSICBRAINZ))
+        val BOTH_PART = ArtistPart("test.both", 1, 1, setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ))
+    }
 
     private fun key(entity: String): SynthesisKey =
         SynthesisKey(CardKind.INSIGHT, entity, "fp", 1, "style", ProviderId.ANTHROPIC, "model", false, null)
