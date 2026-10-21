@@ -60,7 +60,8 @@ class SettingsCodecTest {
             Settings(
                 layout = Layout.EXPANDABLE_BOXES,
                 aiProvider = ProviderId.ANTHROPIC,
-                aiModel = "claude-opus-5-5",
+                aiModels = mapOf(ProviderId.ANTHROPIC to "claude-opus-5-5", ProviderId.OPENAI to "gpt-other"),
+                aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
                 followedPlayers = mapOf(Settings.SPOTIFY to false, "com.example.player" to true),
                 enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
                 webEngines = emptySet(),
@@ -74,7 +75,6 @@ class SettingsCodecTest {
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 artistCacheLifetime = 30.days,
                 cacheSizeLimit = 10_000_000,
-                aiEffort = ReasoningEffort.HIGH,
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
                 showDiagnostics = true,
@@ -117,8 +117,137 @@ class SettingsCodecTest {
 
     @Test
     fun theProvidersDefaultEffortIsKeptApartFromNoChoice() {
-        assertNull(roundTrip(Settings(aiEffort = null)).aiEffort)
-        assertEquals(Settings.DEFAULT_AI_EFFORT, roundTrip(Settings()).aiEffort)
+        val providerDefault = Settings().withEffort(ProviderId.ANTHROPIC, null)
+        assertEquals(providerDefault, roundTrip(providerDefault))
+        assertNull(roundTrip(providerDefault).effort(ProviderId.ANTHROPIC))
+        val scaleDefault = Settings.EFFORT_SCALES.getValue(ProviderId.ANTHROPIC).default
+        assertEquals(scaleDefault, roundTrip(Settings()).effort(ProviderId.ANTHROPIC))
+    }
+
+    @Test
+    fun eachProviderKeepsItsModelAndEffortUnderKeysOfItsOwn() {
+        val prefs = mutablePreferencesOf()
+        val anthropic =
+            Settings(aiProvider = ProviderId.ANTHROPIC)
+                .withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
+                .withEffort(ProviderId.ANTHROPIC, ReasoningEffort.HIGH)
+        SettingsCodec.write(anthropic, prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "HIGH",
+            ),
+            prefs,
+        )
+
+        // Switched off, and another provider's model set: Anthropic's stay, and come back with it.
+        SettingsCodec.write(anthropic.copy(aiProvider = null).withModel(ProviderId.OPENAI, "gpt-other"), prefs)
+        val off = SettingsCodec.read(prefs)
+        assertNull(off.aiProvider)
+        assertEquals("claude-opus-5-5", off.model(ProviderId.ANTHROPIC))
+        assertEquals("gpt-other", off.model(ProviderId.OPENAI))
+        val back = off.copy(aiProvider = ProviderId.ANTHROPIC)
+        SettingsCodec.write(back, prefs)
+        assertEquals("claude-opus-5-5", SettingsCodec.read(prefs).model)
+        assertEquals(ReasoningEffort.HIGH, SettingsCodec.read(prefs).effort)
+    }
+
+    /** What a version before #227 stored: one model and one effort, for the one service chosen. */
+    private fun legacy(vararg extra: Preferences.Pair<*>) =
+        mutablePreferencesOf(
+            stringPreferencesKey("ai.model") to "claude-opus-5-5",
+            stringPreferencesKey("ai.effort") to "HIGH",
+            *extra,
+        )
+
+    @Test
+    fun anInstallFromBeforeKeepsItsProviderModelAndEffort() {
+        val prefs = legacy(stringPreferencesKey("ai.provider") to "ANTHROPIC")
+        val read = SettingsCodec.read(prefs)
+        assertEquals(ProviderId.ANTHROPIC, read.aiProvider)
+        assertEquals("claude-opus-5-5", read.model)
+        assertEquals(ReasoningEffort.HIGH, read.effort)
+
+        // The first write moves them to the provider's own keys, whatever it changes.
+        SettingsCodec.write(read.copy(lookUpInBackground = true), prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "HIGH",
+                booleanPreferencesKey("lookups.background") to true,
+            ),
+            prefs,
+        )
+        assertEquals(read.copy(lookUpInBackground = true), SettingsCodec.read(prefs))
+
+        // Moved, so set back to the defaults they do not come back.
+        SettingsCodec.write(
+            SettingsCodec
+                .read(prefs)
+                .withModel(ProviderId.ANTHROPIC, null)
+                .withEffort(ProviderId.ANTHROPIC, ReasoningEffort.LOW),
+            prefs,
+        )
+        assertEquals("claude-haiku-5-5", SettingsCodec.read(prefs).model)
+        assertEquals(ReasoningEffort.LOW, SettingsCodec.read(prefs).effort)
+    }
+
+    @Test
+    fun anInstallFromBeforeWithNoServiceChosenKeepsTheEffortForAnthropic() {
+        // Only Anthropic was offered, and an effort could be set with no service chosen.
+        val prefs = mutablePreferencesOf(stringPreferencesKey("ai.effort") to "PROVIDER_DEFAULT")
+        val read = SettingsCodec.read(prefs)
+        assertNull(read.aiProvider)
+        assertEquals(mapOf(ProviderId.ANTHROPIC to null), read.aiEfforts)
+        SettingsCodec.write(read, prefs)
+        assertEquals(mutablePreferencesOf(stringPreferencesKey("ai.effort.ANTHROPIC") to "PROVIDER_DEFAULT"), prefs)
+    }
+
+    @Test
+    fun movingALegacyKeyKeepsAProvidersOwnKeyForAnotherSetting() {
+        // A legacy model beside the provider's own effort, a level this version cannot read.
+        val own =
+            arrayOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
+            )
+        val prefs = mutablePreferencesOf(stringPreferencesKey("ai.model") to "claude-opus-5-5", *own)
+
+        SettingsCodec.write(SettingsCodec.read(prefs), prefs)
+
+        // The legacy model moves; the effort, with no legacy key beside it, stays as it was.
+        assertEquals(
+            mutablePreferencesOf(*own, stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5"),
+            prefs,
+        )
+    }
+
+    @Test
+    fun aLegacyKeyBesideAProvidersOwnIsTheLatestChoiceAndWins() {
+        // Only a version from before #227 writes the legacy keys: beside the provider's own, after
+        // a downgrade, so they are the latest choice.
+        val prefs =
+            legacy(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.model.ANTHROPIC") to "claude-sonnet-5-5",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "MEDIUM",
+            )
+        val read = SettingsCodec.read(prefs)
+        assertEquals("claude-opus-5-5", read.model)
+        assertEquals(ReasoningEffort.HIGH, read.effort)
+
+        // Moved at the first write, replacing the provider's own.
+        SettingsCodec.write(read, prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "HIGH",
+            ),
+            prefs,
+        )
     }
 
     @Test
@@ -251,6 +380,8 @@ class SettingsCodecTest {
                 stringPreferencesKey("layout") to "CAROUSEL",
                 stringPreferencesKey("ai.provider") to "SOMEONE",
                 stringPreferencesKey("ai.effort") to "EXTREME",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
+                stringPreferencesKey("ai.model.ANTHROPIC") to " ",
                 stringPreferencesKey("insights.write_automatically") to "SOMETIMES",
                 stringPreferencesKey("insights.prepare_next_track") to "",
                 longPreferencesKey("insights.crossfade_ms") to 60_000L,
@@ -276,7 +407,8 @@ class SettingsCodecTest {
         val later =
             arrayOf(
                 stringPreferencesKey("layout") to "CAROUSEL",
-                stringPreferencesKey("ai.effort") to "EXTREME",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
+                stringPreferencesKey("ai.effort.OPENAI") to "MINIMAL",
                 longPreferencesKey("insights.crossfade_ms") to 60_000L,
                 stringSetPreferencesKey("sources.on") to setOf("TELEPATHY"),
                 stringSetPreferencesKey("sources.off") to setOf("LASTFM", "OUIJA"),
@@ -297,7 +429,8 @@ class SettingsCodecTest {
         // A change to the setting itself replaces what this version cannot read.
         SettingsCodec.write(SettingsCodec.read(prefs).copy(layout = Layout.EXPANDABLE_BOXES), prefs)
         assertEquals(Layout.EXPANDABLE_BOXES.name, prefs[stringPreferencesKey("layout")])
-        assertEquals("EXTREME", prefs[stringPreferencesKey("ai.effort")])
+        assertEquals("EXTREME", prefs[stringPreferencesKey("ai.effort.ANTHROPIC")])
+        assertEquals("MINIMAL", prefs[stringPreferencesKey("ai.effort.OPENAI")])
     }
 
     @Test
