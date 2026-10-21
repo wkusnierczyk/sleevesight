@@ -375,7 +375,9 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
  * country without the free tier, which billing mends; the API also sends it for a country where it
  * is not offered at all ("User location is not supported"), which billing does not, so that one,
  * told apart by its message (no reason in `details` names it), is [AiErrorKind.UNAVAILABLE_HERE].
- * `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402, and a rate limit otherwise.
+ * `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402 or a monthly spending cap reached
+ * ([reachesSpendCap]), [AiErrorKind.BILLING]; a quota per day or month ([exhaustsAQuota]),
+ * [AiErrorKind.QUOTA_EXHAUSTED]; a rate limit otherwise.
  */
 internal fun kindOf(error: WireError): AiErrorKind? =
     when {
