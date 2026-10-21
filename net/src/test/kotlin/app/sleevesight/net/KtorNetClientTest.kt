@@ -368,6 +368,29 @@ class KtorNetClientTest {
         }
 
     @Test
+    fun `a 429 from a host whose policy passes it on is the response, read once`() =
+        runTest {
+            var calls = 0
+            val config =
+                NetConfig(
+                    appVersion = "test",
+                    hosts = mapOf("example.org" to HostPolicy(Duration.ZERO, passOn429 = true)),
+                )
+            val body = """{"error":{"type":"insufficient_quota","code":"insufficient_quota"}}"""
+            val result =
+                withClient(config, handler = {
+                    calls++
+                    respond(body, HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "3"))
+                }) { it.send(post) }
+
+            val response = assertIs<NetResult.Success<NetResponse>>(result).value
+            assertEquals(429, response.status)
+            assertEquals(body, response.body)
+            assertEquals("3", response.header("retry-after"))
+            assertEquals(1, calls)
+        }
+
+    @Test
     fun `a body longer than maxBytes is TooLarge, declared or not`() =
         runTest {
             val small = NetRequest("https://example.org/a", maxBytes = 5)

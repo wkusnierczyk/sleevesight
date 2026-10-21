@@ -40,6 +40,7 @@ class SettingsTest {
             "claude-opus-5-5",
             defaults.copy(aiProvider = ProviderId.ANTHROPIC).withModel(ProviderId.ANTHROPIC, "claude-opus-5-5").model,
         )
+        assertEquals("gpt-6-luna", defaults.copy(aiProvider = ProviderId.OPENAI).model)
         assertNull(defaults.copy(aiProvider = ProviderId.OLLAMA).model)
     }
 
@@ -78,6 +79,10 @@ class SettingsTest {
         assertNull(providerDefault.effort(ProviderId.ANTHROPIC))
         // The scale's default is stored as no choice, so a revised default reaches it.
         assertEquals(defaults, providerDefault.withEffort(ProviderId.ANTHROPIC, ReasoningEffort.LOW))
+        // OpenAI's: low, medium and high, low by default.
+        val openAi = Settings.EFFORT_SCALES.getValue(ProviderId.OPENAI)
+        assertEquals(listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH), openAi.levels)
+        assertEquals(ReasoningEffort.LOW, defaults.effort(ProviderId.OPENAI))
         // A provider with no scale sends no effort, and keeps none.
         assertNull(defaults.effort(ProviderId.OLLAMA))
         assertEquals(defaults, defaults.withEffort(ProviderId.OLLAMA, ReasoningEffort.HIGH))

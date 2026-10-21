@@ -59,10 +59,16 @@ class NetConfig(
  * [rateLimitedOn503] is for a host that answers 503 when its limit is exceeded: a 503 to a GET is
  * then [NetError.RateLimited]. A POST's 503 stays [NetError.Server] and is not retried, since a 503,
  * unlike a 429, does not promise the request was not acted on.
+ *
+ * [passOn429] is for a host whose 429 does not always mean "too many requests": OpenAI answers 429
+ * also when the account is out of credit or over its spending limit, which no retry mends, and says
+ * which in the body. Its 429 is then passed on as a response, body and headers, for the caller to
+ * read, and is not retried; without the flag a 429 is retried and then [NetError.RateLimited].
  */
 data class HostPolicy(
     val minInterval: Duration,
     val rateLimitedOn503: Boolean = false,
+    val passOn429: Boolean = false,
 )
 
 /**
