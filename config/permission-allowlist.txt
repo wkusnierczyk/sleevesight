@@ -5,5 +5,11 @@ android.permission.INTERNET
 android.permission.ACCESS_NETWORK_STATE
 # The camera, asked for only to scan an API key's QR code; frames stay on the phone (#268).
 android.permission.CAMERA
+# Bluetooth, asked for only to type into a field from a computer; nothing is sent back (#394).
+android.permission.BLUETOOTH_ADVERTISE
+android.permission.BLUETOOTH_CONNECT
+# The same before Android 12 (maxSdkVersion 30), granted with the app.
+android.permission.BLUETOOTH
+android.permission.BLUETOOTH_ADMIN
 # Signature permission androidx.core adds for its own unexported receivers.
 ${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION

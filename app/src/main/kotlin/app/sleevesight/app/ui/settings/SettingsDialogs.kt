@@ -3,6 +3,8 @@ package app.sleevesight.app.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -29,9 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import app.sleevesight.app.R
+import app.sleevesight.app.keyboard.KeyboardSession
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.keys.KeyProblem
@@ -79,8 +84,12 @@ internal fun <T> ChoiceDialog(
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
  * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*. The window is
  * secure (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
+ *
+ * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
+ * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
+ * on the phone is. The session ends when the user stops it or the dialog closes.
  */
-@Suppress("LongParameterList") // The key, its state, the actions on it, and the scan.
+@Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
 internal fun KeyDialog(
     id: SecretId,
@@ -88,12 +97,14 @@ internal fun KeyDialog(
     onSave: suspend (String) -> SaveResult,
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
+    keyboard: ComputerKeyboard,
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
-    var scanning by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf<ScanFor?>(null) }
+    var session by remember { mutableStateOf<KeyboardSession?>(null) }
     val scope = rememberCoroutineScope()
     val value = typed.trim()
 
@@ -108,23 +119,33 @@ internal fun KeyDialog(
         }
     }
 
-    if (scanning) {
+    scanning?.let { purpose ->
         scanner(
             { text ->
-                scanning = false
-                val scanned = text.trim()
-                failed = scanFailure(id, scanned)
-                if (failed == null) typed = scanned
+                scanning = null
+                val result = scanned(purpose, id, text.trim())
+                failed = result.failed
+                result.key?.let { typed = it }
+                session = result.session
             },
-            { scanning = false },
+            { scanning = null },
         )
     }
+    val running =
+        session?.let { s ->
+            @Composable { key(s) { keyboard(s, { typed = it }, { session = null }) } }
+        }
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(stringResource(keyName(id))) },
-        text = { KeyEntry(id, typed, { typed = it }, failed, busy, onScan = { scanning = true }) },
+        text = {
+            KeyEntry(id, typed, { typed = it }, failed, busy, running) {
+                failed = null
+                scanning = it
+            }
+        },
         confirmButton = {
             TextButton(
                 onClick = { run { saveFailure(onSave(value)) } },
@@ -145,10 +166,38 @@ internal fun KeyDialog(
     )
 }
 
+/** What a scan in the key dialog is for: the key itself, or a keyboard session's code. */
+private enum class ScanFor { KEY, KEYBOARD }
+
+/** What a scan in the key dialog found: a key, a keyboard session, or what to say instead. */
+private class Scanned(
+    val key: String? = null,
+    val session: KeyboardSession? = null,
+    @StringRes val failed: Int? = null,
+)
+
+/** What [scanned], a QR code's text read [for][purpose] the key [id], gives. */
+private fun scanned(
+    purpose: ScanFor,
+    id: SecretId,
+    scanned: String,
+): Scanned =
+    when (purpose) {
+        ScanFor.KEY -> {
+            scanFailure(id, scanned)?.let { Scanned(failed = it) } ?: Scanned(key = scanned)
+        }
+
+        ScanFor.KEYBOARD -> {
+            KeyboardSession.parse(scanned)?.let { Scanned(session = it) } ?: Scanned(failed = sessionFailure(scanned))
+        }
+    }
+
 /**
- * The key dialog's body: who gets the key [id], the field showing [typed] masked, *Scan QR code*,
- * and what [failed], if anything; the field and the scan are off while [busy].
+ * The key dialog's body: who gets the key [id], the field showing [typed] masked, *Scan QR code*
+ * and *Type on a computer*, or the [keyboard] session running instead, and what [failed], if
+ * anything; the field and the scans are off while [busy].
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
 private fun KeyEntry(
@@ -157,7 +206,8 @@ private fun KeyEntry(
     onType: (String) -> Unit,
     @StringRes failed: Int?,
     busy: Boolean,
-    onScan: () -> Unit,
+    keyboard: (@Composable () -> Unit)?,
+    onScan: (ScanFor) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -172,7 +222,18 @@ private fun KeyEntry(
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
         )
-        TextButton(onClick = onScan, enabled = !busy) { Text(stringResource(R.string.settings_key_scan)) }
+        if (keyboard != null) {
+            keyboard()
+        } else {
+            FlowRow {
+                TextButton(onClick = { onScan(ScanFor.KEY) }, enabled = !busy) {
+                    Text(stringResource(R.string.settings_key_scan))
+                }
+                TextButton(onClick = { onScan(ScanFor.KEYBOARD) }, enabled = !busy) {
+                    Text(stringResource(R.string.settings_key_type))
+                }
+            }
+        }
         failed?.let {
             Text(
                 stringResource(it),
@@ -199,6 +260,11 @@ private fun scanFailure(
             KeyProblem.WRONG_SHAPE, KeyProblem.DUPLICATE -> R.string.settings_key_scan_shape
         }
     }
+
+/** What the key dialog says of [scanned], a QR code's text that is not a keyboard session's. */
+@StringRes
+private fun sessionFailure(scanned: String): Int =
+    if (KeyboardSession.isSessionCode(scanned)) R.string.keyboard_code_unreadable else R.string.keyboard_not_code
 
 /** What the key dialog says of a save that ended as [result]; null for none. */
 @StringRes

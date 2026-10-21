@@ -14,6 +14,7 @@ import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeySetup
@@ -82,8 +83,8 @@ internal fun SavedKeysSection(
  * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
  * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
- * reads QR codes; *Scan keys* shows what a setup code holds by [open]ing the next dialog, and saves
- * nothing until the user confirms it there.
+ * reads QR codes, and [keyboard] runs *Type on a computer* (#394); *Scan keys* shows what a
+ * setup code holds by [open]ing the next dialog, and saves nothing until the user confirms it there.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -93,6 +94,7 @@ internal fun KeyDialogs(
     store: SecretStore,
     saves: CoroutineScope,
     scanner: QrScanner,
+    keyboard: ComputerKeyboard,
     onSealFailed: (Boolean) -> Unit,
     open: (SettingsDialog) -> Unit,
     onDismiss: () -> Unit,
@@ -110,6 +112,7 @@ internal fun KeyDialogs(
                 },
                 onRemove = { saves.async { store.clear(shown.id) }.await() },
                 scanner = scanner,
+                keyboard = keyboard,
                 onDismiss = onDismiss,
             )
         }

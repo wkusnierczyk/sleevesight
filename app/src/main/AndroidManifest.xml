@@ -28,6 +28,28 @@
         android:name="android.hardware.camera.autofocus"
         android:required="false" />
 
+    <!-- To be a computer's keyboard for a field (#394), asked for only when the user taps "Type on
+         a computer": advertising a service named for the session, and taking the computer's
+         connection. Before Android 12, BLUETOOTH and BLUETOOTH_ADMIN do both, granted with the app.
+         The text comes sealed with a key from the session's QR code; nothing is sent back but
+         Bluetooth's acknowledgements. Not location: the phone does not scan. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- BLUETOOTH and BLUETOOTH_ADMIN imply Bluetooth as a required feature: a phone without it
+         can still install the app and type its keys. -->
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
     <!-- No backup and no transfer to another phone: either would take the session history and
          the keys off the phone, which the first-run screen says stay on it. allowBackup="false"
          turns both off before Android 12, so there is no fullBackupContent (which lint's

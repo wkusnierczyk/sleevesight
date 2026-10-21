@@ -1,9 +1,11 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
@@ -20,10 +22,13 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.keyboard.KeyboardStatus
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.core.Secret
@@ -43,7 +48,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Entering keys by QR code on the settings screen (#268), with a scanner that needs no camera. */
+/**
+ * Entering keys by QR code on the settings screen (#268), with a scanner that needs no camera, and
+ * by typing on a computer (#394), with a keyboard that needs no Bluetooth.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class KeyScanTest {
@@ -69,6 +77,7 @@ class KeyScanTest {
 
     private fun show(
         scanner: QrScanner,
+        keyboard: ComputerKeyboard = { _, _, _ -> },
         secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -82,6 +91,7 @@ class KeyScanTest {
                         { CompletableDeferred(true) },
                         saves,
                         scanner = scanner,
+                        keyboard = keyboard,
                     ) { it }
                 }
             }
@@ -105,6 +115,20 @@ class KeyScanTest {
 
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
     private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
+
+    /** Keyboard sessions started and not yet ended. */
+    private val running = mutableListOf<Any>()
+
+    /** A computer that types [text] as soon as the session starts. */
+    private fun typing(text: String): ComputerKeyboard =
+        { session, onText, onStop ->
+            DisposableEffect(session) {
+                running += session
+                onDispose { running -= session }
+            }
+            LaunchedEffect(session) { onText(text) }
+            KeyboardStatus(R.string.keyboard_connected, onStop)
+        }
 
     private val anthropicKey = "sk-ant-api03-" + "a1B2_c3-D4".repeat(9)
     private val exaKey = "0c6d1e2f-3a4b-5c6d-7e8f-9a0b1c2d3e4f"
@@ -237,4 +261,51 @@ class KeyScanTest {
             }
         }
     }
+
+    @Test
+    fun textTypedOnAComputerFillsTheFieldAndIsSavedOnSave() =
+        show(scanner = scanning(KeyboardVectors.code), keyboard = typing(" $lastFmKey")) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_connected))
+            assertEquals(1, running.size)
+            waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
+            assertNull(stored(SecretId.LASTFM))
+
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitFor("the typed Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
+            // Closing the dialog ended the session.
+            waitFor("the session ended") { running.isEmpty() }
+        }
+
+    @Test
+    fun stopEndsTheSessionAndKeepsWhatWasTyped() =
+        show(scanner = scanning(KeyboardVectors.code), keyboard = typing(lastFmKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_connected))
+            compose.onNodeWithText(text(R.string.keyboard_stop)).performClick()
+            waitForText(text(R.string.settings_key_type))
+            waitFor("the session ended") { running.isEmpty() }
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled()
+        }
+
+    @Test
+    fun aCodeThatIsNotAKeyboardCodeStartsNoSession() =
+        show(scanner = scanning(lastFmKey), keyboard = typing(lastFmKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_not_code))
+            assertEquals(0, running.size)
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
+        }
+
+    @Test
+    fun aKeyboardCodeOfALaterVersionIsSaidToBeUnreadable() =
+        show(scanner = scanning("sleevesight-keyboard:v2:whatever"), keyboard = typing(lastFmKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(text(R.string.keyboard_code_unreadable))
+            assertEquals(0, running.size)
+        }
 }
