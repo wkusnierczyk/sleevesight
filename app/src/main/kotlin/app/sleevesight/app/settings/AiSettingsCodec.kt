@@ -20,6 +20,10 @@ import app.sleevesight.core.settings.Settings
  * chosen. They read as that provider's, or Anthropic's with none chosen, since it was the only one
  * offered ([legacyOwner]), and the first write of any setting moves them to that provider's keys
  * ([migrateLegacy]). A downgrade after that reads the model and the effort as their defaults.
+ *
+ * Where a legacy key and the provider's own key for the same setting are both stored, the legacy
+ * one wins, key by key: only a version from before #227 writes it, so beside a key of the
+ * provider's own it was written after a downgrade, and is the user's latest choice.
  */
 internal object AiSettingsCodec {
     private val PROVIDER = stringPreferencesKey("ai.provider")
@@ -44,7 +48,7 @@ internal object AiSettingsCodec {
         val owner = legacyOwner(prefs)
         return ProviderId.entries
             .mapNotNull { provider ->
-                val stored = prefs[modelKey(provider)] ?: prefs[LEGACY_MODEL].takeIf { provider == owner }
+                val stored = prefs[LEGACY_MODEL].takeIf { provider == owner } ?: prefs[modelKey(provider)]
                 stored?.takeIf { it.isNotBlank() }?.let { provider to it }
             }.toMap()
     }
@@ -58,7 +62,7 @@ internal object AiSettingsCodec {
         val owner = legacyOwner(prefs)
         return Settings.EFFORT_SCALES.entries
             .fold(Settings()) { read, (provider, scale) ->
-                val stored = prefs[effortKey(provider)] ?: prefs[LEGACY_EFFORT].takeIf { provider == owner }
+                val stored = prefs[LEGACY_EFFORT].takeIf { provider == owner } ?: prefs[effortKey(provider)]
                 val level = enumOf<ReasoningEffort>(stored)?.takeIf { it in scale.levels }
                 when {
                     stored == PROVIDER_DEFAULT_EFFORT -> read.withEffort(provider, null)
@@ -113,19 +117,21 @@ internal object AiSettingsCodec {
      * Moves the one model and effort stored before #227 to [legacyOwner]'s own keys, as [stored]
      * reads them, and removes them, so the provider's own keys alone hold its choices from then on:
      * left, they would come back as its choice once it was set to its default, which has no key.
-     * A key of the provider's own already stored (as after a downgrade and an upgrade again) is
-     * kept as it is, a value this version cannot read included: [stored] read it, not the legacy
-     * one, so only a key not yet stored is written.
+     * Each legacy key stored replaces the provider's own key for its setting, as it is read in its
+     * place; a key of the provider's own with no legacy key beside it is kept as it is, a value
+     * this version cannot read included.
      */
     private fun migrateLegacy(
         stored: Settings,
         prefs: MutablePreferences,
     ) {
-        if (LEGACY_MODEL !in prefs && LEGACY_EFFORT !in prefs) return
+        val model = LEGACY_MODEL in prefs
+        val effort = LEGACY_EFFORT in prefs
+        if (!model && !effort) return
         val owner = legacyOwner(prefs)
         prefs.remove(LEGACY_MODEL)
         prefs.remove(LEGACY_EFFORT)
-        if (modelKey(owner) !in prefs) writeModel(owner, stored, prefs)
-        if (effortKey(owner) !in prefs) writeEffort(owner, stored, prefs)
+        if (model) writeModel(owner, stored, prefs)
+        if (effort) writeEffort(owner, stored, prefs)
     }
 }

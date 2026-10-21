@@ -70,9 +70,9 @@ The playing track's title and artists go to the sources you enabled (Last.fm get
 | 0. Platform spike | Verified behavior of media sessions, queues, transport controls and deep links on real players | Done |
 | 0.5. Pipeline CLI | Coverage report and generated insights over a test playlist, from the shared pipeline module | Done |
 | 1. Android MVP | Now-playing screen, sources, grounded insight, settings | Under way |
-| 1.5. Play release | Signed app bundle, store listing and privacy policy, Google Play's review | |
+| 1.5. Play release | Signed app bundle, store listing and privacy policy, Google Play's review; OpenAI and Google as AI services, beside Anthropic | |
 | 2. Detail and discovery | Song, artist and album insight; genre and sounds-like cards; lyrics language; follow-up questions to the AI; export of the tracks played, with their insights; layout setting; player controls | |
-| 3. Context and reach | Optional Spotify account, more players, more AI providers and local models, Discogs | |
+| 3. Context and reach | Optional Spotify account, more players, a local model through Ollama, Discogs | |
 
 Details and the reasoning behind each decision are in the [design document](design/design.md); the work to the MVP and its release, with its dependencies, is in the [plan](design/plan.md).
 

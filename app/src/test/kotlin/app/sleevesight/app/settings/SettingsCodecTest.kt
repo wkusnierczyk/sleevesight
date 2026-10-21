@@ -184,19 +184,18 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun movingTheLegacyKeysKeepsAProvidersOwnKeysAsTheyAre() {
-        // As after a downgrade and an upgrade again: the legacy keys beside a provider's own, one
-        // of them a level this version cannot read.
+    fun movingALegacyKeyKeepsAProvidersOwnKeyForAnotherSetting() {
+        // A legacy model beside the provider's own effort, a level this version cannot read.
         val own =
             arrayOf(
                 stringPreferencesKey("ai.provider") to "ANTHROPIC",
                 stringPreferencesKey("ai.effort.ANTHROPIC") to "EXTREME",
             )
-        val prefs = legacy(*own)
+        val prefs = mutablePreferencesOf(stringPreferencesKey("ai.model") to "claude-opus-5-5", *own)
 
         SettingsCodec.write(SettingsCodec.read(prefs), prefs)
 
-        // The legacy model moves, as no key of the provider's own holds one; the effort stays.
+        // The legacy model moves; the effort, with no legacy key beside it, stays as it was.
         assertEquals(
             mutablePreferencesOf(*own, stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5"),
             prefs,
@@ -204,7 +203,9 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun aProvidersOwnKeysComeBeforeTheOnesStoredBefore() {
+    fun aLegacyKeyBesideAProvidersOwnIsTheLatestChoiceAndWins() {
+        // Only a version from before #227 writes the legacy keys: beside the provider's own, after
+        // a downgrade, so they are the latest choice.
         val prefs =
             legacy(
                 stringPreferencesKey("ai.provider") to "ANTHROPIC",
@@ -212,8 +213,19 @@ class SettingsCodecTest {
                 stringPreferencesKey("ai.effort.ANTHROPIC") to "MEDIUM",
             )
         val read = SettingsCodec.read(prefs)
-        assertEquals("claude-sonnet-5-5", read.model)
-        assertEquals(ReasoningEffort.MEDIUM, read.effort)
+        assertEquals("claude-opus-5-5", read.model)
+        assertEquals(ReasoningEffort.HIGH, read.effort)
+
+        // Moved at the first write, replacing the provider's own.
+        SettingsCodec.write(read, prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                stringPreferencesKey("ai.provider") to "ANTHROPIC",
+                stringPreferencesKey("ai.model.ANTHROPIC") to "claude-opus-5-5",
+                stringPreferencesKey("ai.effort.ANTHROPIC") to "HIGH",
+            ),
+            prefs,
+        )
     }
 
     @Test
