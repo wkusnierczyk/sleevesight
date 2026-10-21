@@ -1,23 +1,34 @@
-"""The app icon: the record alone, as the favicon draws it (assets/favicon.svg), on a white ground.
+"""The app icon: the record alone, the brand sheet's drawing of it, on the light text tile's white.
 
-Writes, from the one drawing below:
+Writes, from the one drawing:
 - the launcher icon's layers, as vector drawables in app/src/main/res: `ic_launcher_foreground`
   (the record in colour), `ic_launcher_monochrome` (its shape alone, which Android 13 and later tint
   for a themed icon), and the background colour `ic_launcher_background` (values/ic_launcher.xml);
   `mipmap-anydpi/ic_launcher.xml` puts them together;
 - assets/logo/icon.svg, the icon as Google Play shows it, a full-bleed square (Play rounds the
   corners and adds the shadow itself), and listing/graphics/icon-512.png, its 512 px PNG for the
-  listing, rasterised by rsvg-convert (Homebrew's `librsvg`) and written as RGBA by ImageMagick.
+  listing: 32-bit (RGBA, every pixel opaque), as Play asks
+  (developer.android.com/distribute/google-play/resources/icon-design-specifications).
 
-From the repository's root:
+Usage, from the repository root:
 
-    python3 assets/logo/src/make_icon.py
+    python3 assets/logo/src/make_icon.py                                  # the icon, in place
+    python3 assets/logo/src/make_icon.py --label plain --out <directory>  # the plain-label variant
 
-The record is the favicon's: in its units, the rim of radius 7.5 about (16, 16), the groove (radius
-5.4, 0.8 wide), the label (radius 3) and the spindle hole (radius 0.9), in its light colours. The
-white ground is the light text tile's (tile-light.svg), and it is one colour, not one for light and
-one for dark: launchers draw an app's icon the same way whatever the system's theme (themed icons
-apart), and the dark record on white stands out on a light wallpaper and a dark one alike.
+`--label plain` draws the label without its marks (as the favicon does), for a later comparison of
+the two, such as a store listing experiment; `--out` writes every file under another directory, at
+the same relative paths, leaving the committed ones as they are. Needs `rsvg-convert` (librsvg;
+2.61.4) and ImageMagick 7 (`magick`; 7.1.2), both from Homebrew on a Mac (`brew install librsvg
+imagemagick`). Another version of the renderer may give a slightly different PNG.
+
+The drawing is read from `design/brand.html`, as make_feature_graphic.py reads it: the record is its
+`<symbol id="lp">` (the rim, the black core, the groove, the label, the label's two marks and the
+spindle hole, in a 16-unit box at 8..24), in the light colourway, `.lt` (`--rim`, `--core` and
+`--groove`), and the ground is that colourway's `--tile-bg`. The script stops if any of it is
+missing, or if the symbol holds anything it does not know. The ground is one colour, not one for
+light and one for dark: launchers draw an app's icon the same way whatever the system's theme
+(themed icons apart), and the dark record on white stands out on a light wallpaper and a dark one
+alike.
 
 An adaptive icon is a 108 dp square, which the launcher cuts to its own shape (a circle, a squircle,
 a rounded square) inside the middle 72 dp; a circle of 66 dp about the centre is always shown. The
@@ -26,118 +37,261 @@ leaves a margin of white around it, as the tile does around the words, and the r
 as a ring cut by the mask's edge. The Play icon takes the same 5/6 of its 512 px.
 
 The monochrome layer has only an alpha channel that counts: the system draws it in one colour on a
-tinted ground. The disc is solid, the groove and the spindle hole are cut out of it, and the label
-is drawn at half alpha, so that it stays a lighter tone than the vinyl, as the red label is in colour.
+tinted ground. The disc is solid, with the groove cut out of it; the label is drawn at half alpha, so
+that it stays a lighter tone than the vinyl, as the red label is in colour; and the label's marks and
+the spindle hole, white in colour, are cut out of the label. A vector drawable cannot erase, so the
+cut-outs are outlines filled even-odd: the groove's as a ring, each mark's as the outline of its
+round-capped stroke.
 """
-import os, subprocess, sys
+import argparse
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
 
-ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..'))
-RES = os.path.join(ROOT, 'app', 'src', 'main', 'res')
-
-# The favicon's record, in its units: centre, radii and colours.
-C, RIM_R, GROOVE_R, GROOVE_W, LABEL_R, HOLE_R = 16, 7.5, 5.4, .8, 3, .9
-RIM, GROOVE, LABEL, HOLE = '#1f2328', '#57606a', '#cf222e', '#ffffff'
-GROUND = '#ffffff'
-LABEL_ALPHA = .5          # the label's alpha in the monochrome layer
-
+here = os.path.dirname(os.path.abspath(__file__))
+root = os.path.normpath(os.path.join(here, '..', '..', '..'))
+RECORD_ELEMENTS = 7          # the elements of <symbol id="lp">, the core included
 CANVAS, VISIBLE, RECORD = 108, 72, 60   # dp: the adaptive icon, its masked area, the record's diameter
 PLAY = 512                               # px
+LABEL_ALPHA = .5             # the label's alpha in the monochrome layer
+GENERATED = '<!-- Generated by assets/logo/src/make_icon.py, which says why it is drawn so; edit that. -->\n'
 
 
 def num(v):
     return ('%.3f' % v).rstrip('0').rstrip('.')
 
 
-def circle(cx, cy, r):
+def css_vars(text):
+    return {k: v.strip() for k, v in re.findall(r'--([\w-]+):([^;}]+)', text)}
+
+
+def brand_sheet():
+    """From `design/brand.html`: the body of <symbol id="lp"> and the `.lt` colourway's variables."""
+    page = open(os.path.join(root, 'design', 'brand.html')).read()
+    sym = re.search(r'<symbol id="lp" viewBox="8 8 16 16">(.*?)</symbol>', page, re.S)
+    lt = re.search(r'^\.lt\{(.*?)\}', page, re.S | re.M)
+    if not sym or not lt:
+        sys.exit('design/brand.html: no ' + ' and no '.join(
+            what for what, m in (('<symbol id="lp" viewBox="8 8 16 16">', sym), ('.lt rule', lt)) if not m))
+    return sym.group(1), css_vars(lt.group(1))
+
+
+def need(var, *names):
+    missing = [name for name in names if not var.get(name)]
+    if missing:
+        sys.exit('design/brand.html: .lt sets no ' + ', '.join('--' + name for name in missing))
+    return [var[name] for name in names]
+
+
+def parts(body, var):
+    """The record's parts by role, each a dict of its attributes with `var(--x)` filled in from `.lt`:
+    rim, groove, label, hole, and marks (a list). The core is dropped, as `.lt` hides it."""
+    elements = re.findall(r'<[^<>]+/>', body)
+    other = re.sub(r'<[^<>]+/>', '', body).strip()
+    if len(elements) != RECORD_ELEMENTS or other:
+        sys.exit(f'design/brand.html: <symbol id="lp"> should hold {RECORD_ELEMENTS} self-closing elements '
+                 f'and nothing else; it holds {len(elements)}' + (f', and also {other[:40]!r}' if other else '')
+                 + '; the script needs updating for it')
+    roles, circles = {'marks': []}, []
+    for el in elements:
+        tag = re.match(r'<(\w+)', el).group(1)
+        attrs = dict(re.findall(r'([\w-]+)="([^"]*)"', el))
+        style = attrs.pop('style', None)
+        if style:
+            m = re.fullmatch(r'(fill|display):var\(--(rim|core|groove)\)', style)
+            if not m or (m.group(1) == 'fill') != (m.group(2) == 'rim'):
+                sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know: {style!r}')
+            prop, name = m.groups()
+            value, = need(var, name)
+            if prop == 'display' and value == 'none':
+                continue
+            if prop == 'fill':
+                attrs['fill'] = value
+            roles[name] = attrs
+        elif tag == 'path' and attrs.get('fill') == 'none' and 'stroke' in attrs:
+            roles['marks'].append(attrs)
+        elif tag == 'circle' and 'fill' in attrs and 'stroke' not in attrs:
+            circles.append(attrs)
+        else:
+            sys.exit(f'design/brand.html: <symbol id="lp">: an element the script does not know: {el[:60]!r}')
+    if 'core' in roles:
+        sys.exit('design/brand.html: .lt shows the core (--core), which the icon does not draw')
+    # Of the circles with no variable, the larger is the label and the smaller the spindle hole.
+    if len(circles) != 2:
+        sys.exit('design/brand.html: <symbol id="lp"> should hold two plain circles, the label and the hole; '
+                 f'it holds {len(circles)}')
+    roles['label'], roles['hole'] = sorted(circles, key=lambda c: -float(c['r']))
+    missing = [r for r in ('rim', 'groove') if r not in roles] + ([] if roles['marks'] else ['marks'])
+    if missing:
+        sys.exit('design/brand.html: <symbol id="lp"> has no ' + ', '.join(missing))
+    return roles
+
+
+def circle(c, r=None):
     """A circle as path data: two half arcs, since a vector drawable has no circle."""
+    cx, cy, r = float(c['cx']), float(c['cy']), float(c['r']) if r is None else r
     return (f'M{num(cx - r)},{num(cy)}a{num(r)},{num(r)} 0 1,0 {num(2 * r)},0'
             f'a{num(r)},{num(r)} 0 1,0 {num(-2 * r)},0Z')
 
 
-def ring(cx, cy, r, w):
-    """An annulus of width `w` centred on radius `r`, filled even-odd."""
-    return circle(cx, cy, r + w / 2) + circle(cx, cy, r - w / 2)
-
-
-def shapes(size, diameter):
-    """The record's parts in a square of `size`, the record `diameter` across, as path data."""
-    s, m = diameter / (2 * RIM_R), size / 2
-    return {
-        'rim': circle(m, m, RIM_R * s),
-        'groove': ring(m, m, GROOVE_R * s, GROOVE_W * s),
-        'label': circle(m, m, LABEL_R * s),
-        'hole': circle(m, m, HOLE_R * s),
-        # The monochrome disc: the rim less the groove, the label and the hole (all even-odd).
-        'disc': circle(m, m, RIM_R * s) + ring(m, m, GROOVE_R * s, GROOVE_W * s) + circle(m, m, LABEL_R * s),
-        'label_less_hole': circle(m, m, LABEL_R * s) + circle(m, m, HOLE_R * s),
-    }
+def stroke_outline(mark):
+    """The outline of a round-capped stroke of one segment, as path data to fill: a small arc
+    (`M x y A r r 0 0 s x y`) or a horizontal line (`M x y H x`), the marks the brand sheet draws."""
+    if mark.get('stroke-linecap') != 'round':
+        sys.exit(f'design/brand.html: a mark of <symbol id="lp"> without round caps: {mark["d"]!r}')
+    w = float(mark['stroke-width']) / 2
+    n = r'(-?[\d.]+)'
+    line = re.fullmatch(rf'M{n} {n} H{n}', mark['d'])
+    arc = re.fullmatch(rf'M{n} {n} A{n} {n} 0 0 ([01]) {n} {n}', mark['d'])
+    if line:
+        x1, y, x2 = map(float, line.groups())
+        a, b = min(x1, x2), max(x1, x2)
+        return (f'M{num(a)},{num(y - w)}H{num(b)}A{num(w)},{num(w)} 0 0,1 {num(b)},{num(y + w)}'
+                f'H{num(a)}A{num(w)},{num(w)} 0 0,1 {num(a)},{num(y - w)}Z')
+    if arc and arc.group(3) == arc.group(4):
+        x1, y1, r, _, sweep, x2, y2 = arc.groups()
+        x1, y1, r, x2, y2, sweep = float(x1), float(y1), float(r), float(x2), float(y2), int(sweep)
+        # The centre of the small arc from 1 to 2 that turns the `sweep` way (1: clockwise, y down).
+        mx, my, dx, dy = (x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1
+        chord = math.hypot(dx, dy)
+        if not 0 < chord <= 2 * r:
+            sys.exit(f'design/brand.html: a mark of <symbol id="lp"> with an impossible arc: {mark["d"]!r}')
+        h = math.sqrt(r * r - chord * chord / 4)
+        side = 1 if sweep else -1
+        cx, cy = mx - side * h * dy / chord, my + side * h * dx / chord
+        at = lambda x, y, rr: (cx + (x - cx) * rr / r, cy + (y - cy) * rr / r)
+        (ox1, oy1), (ox2, oy2) = at(x1, y1, r + w), at(x2, y2, r + w)
+        (ix1, iy1), (ix2, iy2) = at(x1, y1, r - w), at(x2, y2, r - w)
+        return (f'M{num(ox1)},{num(oy1)}A{num(r + w)},{num(r + w)} 0 0,{sweep} {num(ox2)},{num(oy2)}'
+                f'A{num(w)},{num(w)} 0 0,{sweep} {num(ix2)},{num(iy2)}'
+                f'A{num(r - w)},{num(r - w)} 0 0,{1 - sweep} {num(ix1)},{num(iy1)}'
+                f'A{num(w)},{num(w)} 0 0,{sweep} {num(ox1)},{num(oy1)}Z')
+    sys.exit(f'design/brand.html: a mark of <symbol id="lp"> the script cannot outline: {mark["d"]!r}')
 
 
 def argb(color, alpha=1.0):
-    return '#%02X%s' % (round(alpha * 255), color.lstrip('#').upper())
+    c = color.lstrip('#')
+    if not re.fullmatch(r'[0-9a-fA-F]{3}|[0-9a-fA-F]{6}', c):
+        sys.exit(f'design/brand.html: a colour the script does not know: {color!r}')
+    if len(c) == 3:
+        c = ''.join(ch * 2 for ch in c)
+    return '#%02X%s' % (round(alpha * 255), c.upper())
 
 
-GENERATED = '<!-- Generated by assets/logo/src/make_icon.py, which says why it is drawn so; edit that. -->\n'
+def placement(size, diameter, rim):
+    """The scale and offset that put the record, `diameter` across, in the middle of a square of `size`."""
+    s = diameter / (2 * float(rim['r']))
+    return s, size / 2 - s * float(rim['cx'])
 
 
-def vector(paths):
-    body = ''.join(
-        f'    <path\n        android:fillColor="{fill}"\n'
-        + (f'        android:fillType="evenOdd"\n' if even_odd else '')
-        + f'        android:pathData="{d}" />\n'
-        for fill, d, even_odd in paths)
+def vector(paths, place):
+    """A vector drawable of the record's paths, in the symbol's units, in a group that places it."""
+    def path(p):
+        keys = [k for k in ('fillColor', 'fillType', 'strokeColor', 'strokeWidth', 'strokeLineCap', 'pathData') if k in p]
+        return '        <path\n' + '\n'.join(f'            android:{k}="{p[k]}"' for k in keys) + ' />\n'
+    s, t = place
     return ('<?xml version="1.0" encoding="utf-8"?>\n' + GENERATED
             + '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
             f'    android:width="{CANVAS}dp"\n    android:height="{CANVAS}dp"\n'
             f'    android:viewportWidth="{CANVAS}"\n    android:viewportHeight="{CANVAS}">\n'
-            + body + '</vector>\n')
+            f'    <group\n        android:scaleX="{num(s)}"\n        android:scaleY="{num(s)}"\n'
+            f'        android:translateX="{num(t)}"\n        android:translateY="{num(t)}">\n'
+            + ''.join(path(p) for p in paths) + '    </group>\n</vector>\n')
 
 
-def write(path, text):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w') as f:
-        f.write(text)
-    print('wrote', os.path.relpath(path, ROOT))
+def build(roles, ground, out):
+    """Every text file, by its path under `out`, and the paths of the Play icon's SVG and PNG."""
+    rim, groove, label, hole, marks = (roles[k] for k in ('rim', 'groove', 'label', 'hole', 'marks'))
+    gr, gw = float(groove['r']), float(groove['stroke-width'])
+    foreground = (
+        [{'fillColor': argb(rim['fill']), 'pathData': circle(rim)},
+         {'strokeColor': argb(groove['stroke']), 'strokeWidth': groove['stroke-width'], 'pathData': circle(groove)},
+         {'fillColor': argb(label['fill']), 'pathData': circle(label)}]
+        + [{'strokeColor': argb(m['stroke']), 'strokeWidth': m['stroke-width'], 'strokeLineCap': 'round',
+            'pathData': m['d']} for m in marks]
+        + [{'fillColor': argb(hole['fill']), 'pathData': circle(hole)}])
+    monochrome = [
+        {'fillColor': argb('#000'), 'fillType': 'evenOdd',
+         'pathData': circle(rim) + circle(groove, gr + gw / 2) + circle(groove, gr - gw / 2) + circle(label)},
+        {'fillColor': argb('#000', LABEL_ALPHA), 'fillType': 'evenOdd',
+         'pathData': circle(label) + ''.join(stroke_outline(m) for m in marks) + circle(hole)},
+    ]
+    place = placement(CANVAS, RECORD, rim)
+    res = os.path.join(out, 'app', 'src', 'main', 'res')
+    files = {
+        os.path.join(res, 'drawable', 'ic_launcher_foreground.xml'): vector(foreground, place),
+        os.path.join(res, 'drawable', 'ic_launcher_monochrome.xml'): vector(monochrome, place),
+        os.path.join(res, 'values', 'ic_launcher.xml'):
+            '<?xml version="1.0" encoding="utf-8"?>\n' + GENERATED
+            + f'<resources>\n    <color name="ic_launcher_background">{argb(ground)}</color>\n</resources>\n',
+        os.path.join(res, 'mipmap-anydpi', 'ic_launcher.xml'):
+            '<?xml version="1.0" encoding="utf-8"?>\n' + GENERATED
+            + '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+            '    <background android:drawable="@color/ic_launcher_background" />\n'
+            '    <foreground android:drawable="@drawable/ic_launcher_foreground" />\n'
+            '    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />\n'
+            '</adaptive-icon>\n',
+    }
+    s, t = placement(PLAY, PLAY * RECORD / VISIBLE, rim)
+    drawing = (
+        [f'<path fill="{rim["fill"]}" d="{circle(rim)}"/>',
+         f'<path fill="none" stroke="{groove["stroke"]}" stroke-width="{groove["stroke-width"]}" d="{circle(groove)}"/>',
+         f'<path fill="{label["fill"]}" d="{circle(label)}"/>']
+        + [f'<path fill="none" stroke="{m["stroke"]}" stroke-width="{m["stroke-width"]}" stroke-linecap="round" '
+           f'd="{m["d"]}"/>' for m in marks]
+        + [f'<path fill="{hole["fill"]}" d="{circle(hole)}"/>'])
+    svg = os.path.join(out, 'assets', 'logo', 'icon.svg')
+    files[svg] = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {PLAY} {PLAY}" width="{PLAY}" height="{PLAY}">'
+                  '<!-- Generated by src/make_icon.py, which says why it is drawn so. -->'
+                  f'<rect width="{PLAY}" height="{PLAY}" fill="{ground}"/>'
+                  f'<g transform="translate({num(t)} {num(t)}) scale({num(s)})">' + ''.join(drawing) + '</g></svg>\n')
+    return files, svg, os.path.join(out, 'listing', 'graphics', 'icon-512.png')
 
 
-p = shapes(CANVAS, RECORD)
-write(os.path.join(RES, 'drawable', 'ic_launcher_foreground.xml'), vector([
-    (argb(RIM), p['rim'], False),
-    (argb(GROOVE), p['groove'], True),
-    (argb(LABEL), p['label'], False),
-    (argb(HOLE), p['hole'], False),
-]))
-write(os.path.join(RES, 'drawable', 'ic_launcher_monochrome.xml'), vector([
-    (argb('#000000'), p['disc'], True),
-    (argb('#000000', LABEL_ALPHA), p['label_less_hole'], True),
-]))
-write(os.path.join(RES, 'values', 'ic_launcher.xml'),
-      '<?xml version="1.0" encoding="utf-8"?>\n' + GENERATED
-      + f'<resources>\n    <color name="ic_launcher_background">{argb(GROUND)}</color>\n</resources>\n')
-write(os.path.join(RES, 'mipmap-anydpi', 'ic_launcher.xml'),
-      '<?xml version="1.0" encoding="utf-8"?>\n' + GENERATED
-      + '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
-      '    <background android:drawable="@color/ic_launcher_background" />\n'
-      '    <foreground android:drawable="@drawable/ic_launcher_foreground" />\n'
-      '    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />\n'
-      '</adaptive-icon>\n')
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    parser.add_argument('--label', choices=('marks', 'plain'), default='marks',
+                        help='the label with its marks (the default, the icon in use) or plain')
+    parser.add_argument('--out', default=root, help='the directory to write under (default: the repository)')
+    args = parser.parse_args()
+    missing = [f'{tool} (Homebrew: {pkg})' for tool, pkg in (('rsvg-convert', 'librsvg'), ('magick', 'imagemagick'))
+               if not shutil.which(tool)]
+    if missing:
+        sys.exit('needs ' + ' and '.join(missing) + '; nothing written')
+    body, var = brand_sheet()
+    roles = parts(body, var)
+    if args.label == 'plain':
+        roles['marks'] = []
+    ground, = need(var, 'tile-bg')
+    out = os.path.abspath(args.out)
+    files, svg, png = build(roles, ground, out)
+    # Everything is made in a temporary directory and moved into place only once the PNG is done, so
+    # a failed step leaves the files as they were.
+    with tempfile.TemporaryDirectory() as tmp:
+        staged = {}
+        for i, (path, text) in enumerate(files.items()):
+            staged[path] = os.path.join(tmp, f'{i}-{os.path.basename(path)}')
+            with open(staged[path], 'w') as f:
+                f.write(text)
+        rgb, staged[png] = os.path.join(tmp, 'rgb.png'), os.path.join(tmp, 'icon-512.png')
+        subprocess.run(['rsvg-convert', '-w', str(PLAY), '-h', str(PLAY), '-f', 'png', '-o', rgb, staged[svg]],
+                       check=True)
+        # rsvg-convert writes an opaque image as 24-bit RGB, and Play asks for 32-bit, so ImageMagick
+        # writes it with an alpha channel, every pixel still opaque, and with no time or date chunk, so
+        # a rerun reproduces it byte for byte.
+        subprocess.run(['magick', rgb, '-strip', '-define', 'png:exclude-chunk=date,time', 'PNG32:' + staged[png]],
+                       check=True)
+        if os.path.getsize(staged[png]) > 1024 * 1024:
+            sys.exit("icon-512.png is over Play's 1024 KB; nothing written")
+        for path, src in staged.items():
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            shutil.move(src, path)
+            print(os.path.relpath(path, out))
 
-q = shapes(PLAY, PLAY * RECORD / VISIBLE)
-svg = os.path.join(ROOT, 'assets', 'logo', 'icon.svg')
-write(svg,
-      f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {PLAY} {PLAY}" width="{PLAY}" height="{PLAY}">'
-      f'<!-- Generated by src/make_icon.py, which says why it is drawn so. -->'
-      f'<rect width="{PLAY}" height="{PLAY}" fill="{GROUND}"/>'
-      f'<path fill="{RIM}" d="{q["rim"]}"/>'
-      f'<path fill="{GROOVE}" fill-rule="evenodd" d="{q["groove"]}"/>'
-      f'<path fill="{LABEL}" d="{q["label"]}"/>'
-      f'<path fill="{HOLE}" d="{q["hole"]}"/></svg>\n')
-png = os.path.join(ROOT, 'listing', 'graphics', 'icon-512.png')
-os.makedirs(os.path.dirname(png), exist_ok=True)
-# Play asks for a 32-bit PNG (RGBA), and rsvg-convert writes an opaque image as 24-bit RGB, so
-# ImageMagick (`magick`) rewrites it with an alpha channel, every pixel still opaque.
-subprocess.run(['rsvg-convert', '-w', str(PLAY), '-h', str(PLAY), '-f', 'png', '-o', png, svg], check=True)
-subprocess.run(['magick', png, '-strip', 'PNG32:' + png], check=True)
-print('wrote', os.path.relpath(png, ROOT))
-if os.path.getsize(png) > 1024 * 1024:
-    sys.exit('icon-512.png is over Play\'s 1024 KB')
+
+if __name__ == '__main__':
+    main()
