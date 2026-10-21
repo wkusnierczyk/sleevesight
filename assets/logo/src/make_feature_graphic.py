@@ -59,6 +59,8 @@ TAG_TEXT = 'Insights on what’s playing'
 TAG_AXES = {'wght': 400, 'wdth': 88, 'opsz': 36}
 TAG_TRACK = -.01              # em, after each letter
 RECORD_ELEMENTS = 7           # the elements of <symbol id="lp">, the core included
+REC_X, REC_Y, REC_SIDE = 54.35, -4.59, 37.5  # the record in the 8b mark, in the words' units: as the
+                              # sheet's `<use href="#lp">` places it, its 16-unit box this side
 FONT_SHA256 = '9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281'  # Roboto Flex 3.200
 DESIGNS = ('d2', 'a2-mark-light', 'b2-mark-dark', 'c-sleeve-light', 'c-sleeve-dark')
 
@@ -85,8 +87,11 @@ def brand_sheet():
         sys.exit('design/brand.html: no <symbol id="lp">, or no rule for '
                  + ', '.join(name for name, m in rules.items() if not m))
     schemes = {'lt': css_vars(rules['lt'].group(1)), 'dk': css_vars(rules['dk'].group(1))}
-    schemes['lt']['muted'] = css_vars(rules['page'].group(1)).get('page-muted')
-    schemes['dk']['muted'] = css_vars(rules['page-dark'].group(1)).get('page-muted')
+    for scheme, rule, where in (('lt', 'page', ':root'), ('dk', 'page-dark', ':root in the dark media query')):
+        muted = css_vars(rules[rule].group(1)).get('page-muted')
+        if not muted:
+            sys.exit(f'design/brand.html: {where} sets no --page-muted')
+        schemes[scheme]['muted'] = muted
     return sym.group(1), schemes
 
 
@@ -108,13 +113,18 @@ def record(body, var, scheme):
                  + '; the script needs updating for it')
     out = []
     for el in elements:
-        style = re.search(r' style="(\w+):var\(--([\w-]+)\)"', el)
+        style = re.search(r' style="([\w-]+):var\(--([\w-]+)\)"', el)
         if style:
             prop, name = style.groups()
+            if prop not in ('fill', 'display'):
+                sys.exit(f'design/brand.html: the record styles {prop} with a variable; '
+                         'the script fills in only fill and display')
             value, = need(var, scheme, name)
             if prop == 'display' and value == 'none':
                 continue
             el = el.replace(style.group(0), f' fill="{value}"' if prop == 'fill' else '')
+        if 'var(' in el:
+            sys.exit(f'design/brand.html: a variable the script does not fill in is left in the record: {el}')
         out.append(el)
     return ''.join(out)
 
@@ -192,10 +202,9 @@ def design_mark(tile, body, schemes, tag, scheme):
     width, tag_size, tag_gap = 540, 46, 44
     var = schemes[scheme]
     bg, ink, red, muted = need(var, scheme, 'bg', 'ink', 'red', 'muted')
-    # 8b in the words' units: the record 37.5 units a side at (54.35, -4.59), so the mark's ink runs
-    # from the words' left edge to the record's right edge, 90.68 to two places, as the sheet's
-    # viewBox for 8b has it.
-    rec_right = round(54.35 + 37.5 / 2 + 7.5 * 37.5 / 16, 2)
+    # The mark's ink runs from the words' left edge to the record's right edge: the box's centre plus
+    # the rim's radius (7.5 of the box's 16 units), 90.68 to two places, as the sheet's 8b viewBox has it.
+    rec_right = round(REC_X + REC_SIDE / 2 + 7.5 * REC_SIDE / 16, 2)
     x0, y0, _, y1 = tile['ink']
     s = width / (rec_right - x0)
     d, (dx0, _, _, _), cap = tag.outline(tag_size)
@@ -206,7 +215,8 @@ def design_mark(tile, body, schemes, tag, scheme):
     return bg, svg(bg,
         f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
         f'<path fill="{ink}" d="{tile["sleeve"]}"/><path fill="{red}" d="{tile["sight"]}"/>'
-        f'<g transform="translate(54.35 -4.59) scale(2.34375) translate(-8 -8)">{record(body, var, scheme)}</g></g>'
+        f'<g transform="translate({num(REC_X)} {num(REC_Y)}) scale({REC_SIDE / 16:.5f}) translate(-8 -8)">'
+        f'{record(body, var, scheme)}</g></g>'
         f'<path fill="{muted}" transform="translate({num(sight_left - dx0)} {num(top + height + tag_gap + cap)})" '
         f'd="{d}"/>')
 
@@ -243,22 +253,26 @@ def build(name, tile, body, schemes, tag):
     return design_sleeve(tile, body, schemes, tag, scheme)
 
 
-def write(name, ground, text):
-    """Made in a temporary directory and moved into place only once complete, so a failed render
-    leaves the files there as they were. d2 goes to `listing/graphics/`, with its PNG."""
+def write(built):
+    """Writes the designs built, each (name, ground, SVG text). Every file is made first in one
+    temporary directory, and they are moved into place only once all are complete, so a failed
+    render leaves the files there as they were. d2 goes to `listing/graphics/`, with its PNG; the
+    others to `assets/logo/feature-graphic/`."""
     with tempfile.TemporaryDirectory() as tmp:
-        svg_tmp = os.path.join(tmp, 'out.svg')
-        with open(svg_tmp, 'w') as f:
-            f.write(text)
-        if name == 'd2':
-            png_tmp, rgba = os.path.join(tmp, 'out.png'), os.path.join(tmp, 'rgba.png')
-            subprocess.run(['rsvg-convert', '-w', str(W), '-h', str(H), '-o', rgba, svg_tmp], check=True)
-            subprocess.run(['magick', rgba, '-background', ground, '-alpha', 'remove', '-alpha', 'off', '-strip',
-                            '-define', 'png:exclude-chunk=date,time', 'PNG24:' + png_tmp], check=True)
-            moves = [(svg_tmp, os.path.join(play_dir, 'feature-graphic.svg')),
-                     (png_tmp, os.path.join(play_dir, 'feature-graphic.png'))]
-        else:
-            moves = [(svg_tmp, os.path.join(designs_dir, name + '.svg'))]
+        moves = []
+        for name, ground, text in built:
+            svg_tmp = os.path.join(tmp, name + '.svg')
+            with open(svg_tmp, 'w') as f:
+                f.write(text)
+            if name == 'd2':
+                png_tmp, rgba = os.path.join(tmp, name + '.png'), os.path.join(tmp, name + '-rgba.png')
+                subprocess.run(['rsvg-convert', '-w', str(W), '-h', str(H), '-o', rgba, svg_tmp], check=True)
+                subprocess.run(['magick', rgba, '-background', ground, '-alpha', 'remove', '-alpha', 'off',
+                                '-strip', '-define', 'png:exclude-chunk=date,time', 'PNG24:' + png_tmp], check=True)
+                moves += [(svg_tmp, os.path.join(play_dir, 'feature-graphic.svg')),
+                          (png_tmp, os.path.join(play_dir, 'feature-graphic.png'))]
+            else:
+                moves.append((svg_tmp, os.path.join(designs_dir, name + '.svg')))
         for src, dst in moves:
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.move(src, dst)
@@ -274,8 +288,8 @@ def main():
     tile = json.load(open(os.path.join(here, 'tile.json')))
     body, schemes = brand_sheet()
     tag = Tagline(args.font)
-    for name in DESIGNS if args.design == 'all' else (args.design,):
-        write(name, *build(name, tile, body, schemes, tag))
+    names = DESIGNS if args.design == 'all' else (args.design,)
+    write([(name, *build(name, tile, body, schemes, tag)) for name in names])
 
 
 if __name__ == '__main__':

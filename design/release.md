@@ -48,7 +48,7 @@ Each release's notes are in `release-notes/<version>.txt`, for example `release-
 
 The Play listing's text is in `listing/en-US/`, one plain-text file per field, in the listing's language, so it is reviewed like the code it describes: `title.txt` (at most 30 characters), `short-description.txt` (80) and `full-description.txt` (4,000), Play's limits. It is entered in Play Console by hand (*Store presence → Main store listing*; the console moves its menus, so look there first), which refuses text over a limit. A change to what the app does, or to what leaves the phone, changes the listing with the README and the [privacy policy](../privacy.md). The listing describes the build on Play, not the roadmap.
 
-The listing's graphics are in `listing/graphics/`, uploaded in Play Console by hand in the same place. For now that is the feature graphic, `feature-graphic.png`; the 512 px icon comes with the launcher icon ([#379](https://github.com/wkusnierczyk/sleevesight/issues/379)), and the screenshots after it. Play's [preview assets](https://support.google.com/googleplay/android-developer/answer/9866151) page sets the feature graphic at 1024 × 500 px, JPEG or 24-bit PNG with no alpha. Play shows it as the cover of a preview video, under the video's play button, and in large-format collections, recommendations and ads. The same page advises:
+The listing's graphics are in `listing/graphics/`, uploaded in Play Console by hand in the same place. For now that is the feature graphic, `feature-graphic.png`; the 512 px icon comes with the launcher icon ([#379](https://github.com/wkusnierczyk/sleevesight/issues/379)), and the screenshots after it. Play's [preview assets](https://support.google.com/googleplay/android-developer/answer/9866151) page sets the feature graphic at 1024 × 500 px, JPEG or 24-bit PNG with no alpha. Play shows it as the cover of a preview video (where a video does not play by itself, "a play button is overlaid on your feature graphic"), and in large-format collections, recommendations and ads. The same page advises:
 
 - the focal point towards the middle, and the logo, the app's name and its slogan out of the zones some formats crop or overlay: here the words and the tagline stay towards the middle, and only the record runs off the edges;
 - no prominent branding that resembles the app icon, since the two are often shown together: the record is also the app icon ([#379](https://github.com/wkusnierczyk/sleevesight/issues/379)), but here it stands beside the words, large and cropped by the edges, not as an icon's tile;
@@ -63,7 +63,7 @@ python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf
 
 With `--design all`, it also rebuilds the other designs tried for the graphic, which the [brand sheet](brand.html) shows beside it, in `assets/logo/feature-graphic/`.
 
-Play Console asks for alt text with the graphic, at most 140 characters, not starting with "image of" or "photo of". It is: *The Sleevesight logo on red: the words Sleeve and sight beside a large vinyl record, and the tagline Insights on what's playing*.
+Play Console asks for alt text with the graphic, at most 140 characters, without "image of" or "photo of" (Play advises against starting with them: screen readers already say it is an image). It is: *The Sleevesight logo on red: the words Sleeve and sight beside a large vinyl record, and the tagline Insights on what's playing*.
 
 ## Versioning
 
