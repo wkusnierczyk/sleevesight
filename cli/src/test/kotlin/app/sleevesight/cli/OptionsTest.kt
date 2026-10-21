@@ -1,5 +1,6 @@
 package app.sleevesight.cli
 
+import app.sleevesight.core.model.ProviderId
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,6 +26,16 @@ class OptionsTest {
         assertFalse(options.web)
         assertEquals(setOf("anthropic"), options.record)
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "web")) }
+    }
+
+    @Test
+    fun `the AI service is Anthropic unless given, and OpenAI only for live`() {
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("replay")).provider)
+        assertEquals(ProviderId.OPENAI, Options.parse(listOf("live", "--provider", "openai")).provider)
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("record", "--provider", "anthropic")).provider)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("replay", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--provider", "openai")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
     }
 
     @Test

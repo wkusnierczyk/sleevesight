@@ -34,6 +34,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
@@ -284,7 +285,7 @@ internal fun ModelDialog(
     val listed = (loaded as? ModelLoad.Listed)?.models.orEmpty()
     val earlier = current?.takeIf { c -> c != default && listed.none { it.id == c } }
     val others =
-        listed.filter { it.id != default }.map { it.id to "${it.displayName} (${it.id})" } +
+        listed.filter { it.id != default }.map { it.id to optionLabel(it) } +
             listOfNotNull(earlier?.let { it to it })
 
     AlertDialog(
@@ -317,6 +318,10 @@ internal fun ModelDialog(
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
+
+/** A listed model as the dialog offers it: its name and id, or its id alone where the service names it by that. */
+internal fun optionLabel(model: ModelInfo): String =
+    if (model.displayName == model.id) model.id else "${model.displayName} (${model.id})"
 
 private fun modelStatus(load: ModelLoad): Int? =
     when (load) {

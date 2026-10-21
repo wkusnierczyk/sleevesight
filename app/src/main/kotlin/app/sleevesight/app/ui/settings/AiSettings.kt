@@ -13,12 +13,12 @@ import app.sleevesight.core.settings.Settings
 
 /**
  * The providers offered, in the order shown: those with a client in `:ai`. Anthropic is the
- * first; each other provider joins with its client (OpenAI #228, Google #229), and needs nothing
+ * first, then OpenAI (#228); each other provider joins with its client (Google #229), and needs nothing
  * more here than its entry, its key ([SecretId.forProvider]) and its names ([providerName],
  * [keyName], [keyRecipient]): its rows, model and effort come from `Settings`
  * ([Settings.DEFAULT_MODELS], [Settings.EFFORT_SCALES]).
  */
-internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC)
+internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, ProviderId.OPENAI)
 
 /**
  * The AI services: per provider offered, a switch, and under it its key, its model and its

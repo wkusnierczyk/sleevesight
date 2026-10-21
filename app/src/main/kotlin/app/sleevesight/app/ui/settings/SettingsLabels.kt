@@ -47,7 +47,8 @@ internal fun keyState(state: SecretState?): String =
 internal fun providerName(provider: ProviderId): Int =
     when (provider) {
         ProviderId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
-        ProviderId.OPENAI, ProviderId.GOOGLE, ProviderId.OLLAMA -> error("$provider is not offered yet")
+        ProviderId.OPENAI -> R.string.settings_ai_provider_openai
+        ProviderId.GOOGLE, ProviderId.OLLAMA -> error("$provider is not offered yet")
     }
 
 /** The name of a reasoning-effort level, as the settings offer it. */
@@ -65,6 +66,7 @@ internal fun effortLabel(effort: ReasoningEffort): String =
 internal fun keyName(id: SecretId): Int =
     when (id) {
         SecretId.ANTHROPIC -> R.string.settings_key_name_anthropic
+        SecretId.OPENAI -> R.string.settings_key_name_openai
         SecretId.LASTFM -> R.string.settings_key_name_lastfm
         SecretId.EXA -> R.string.settings_key_name_exa
     }
@@ -74,6 +76,7 @@ internal fun keyName(id: SecretId): Int =
 internal fun keyRecipient(id: SecretId): Int =
     when (id) {
         SecretId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
+        SecretId.OPENAI -> R.string.settings_ai_provider_openai
         SecretId.LASTFM -> R.string.settings_source_lastfm
         SecretId.EXA -> R.string.settings_key_recipient_exa
     }

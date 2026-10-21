@@ -1,6 +1,7 @@
 package app.sleevesight.cli
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.model.ProviderId
 import java.io.File
 
 /**
@@ -12,9 +13,19 @@ class Keys(
     val anthropic: Secret?,
     val exa: Secret?,
     val lastFm: Secret?,
+    val openAi: Secret? = null,
 ) {
+    /** The key of the AI service [provider], or null for one without a key here. */
+    fun forProvider(provider: ProviderId): Secret? =
+        when (provider) {
+            ProviderId.ANTHROPIC -> anthropic
+            ProviderId.OPENAI -> openAi
+            ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+        }
+
     companion object {
         const val ANTHROPIC = "SLEEVESIGHT_ANTHROPIC_API_KEY"
+        const val OPENAI = "SLEEVESIGHT_OPENAI_API_KEY"
         const val EXA = "SLEEVESIGHT_EXA_API_KEY"
         const val LASTFM = "SLEEVESIGHT_LASTFM_API_KEY"
 
@@ -22,6 +33,14 @@ class Keys(
 
         /** No keys: replay needs none. */
         val NONE: Keys = Keys(null, null, null)
+
+        /** The variable that holds [provider]'s key, or null for one without a key here. */
+        fun variableOf(provider: ProviderId): String? =
+            when (provider) {
+                ProviderId.ANTHROPIC -> ANTHROPIC
+                ProviderId.OPENAI -> OPENAI
+                ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+            }
 
         fun load(
             environment: Map<String, String> = System.getenv(),
@@ -31,7 +50,7 @@ class Keys(
 
             fun key(name: String): Secret? =
                 (environment[name] ?: fromFile[name])?.trim()?.takeIf { it.isNotEmpty() }?.let(::Secret)
-            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM))
+            return Keys(key(ANTHROPIC), key(EXA), key(LASTFM), key(OPENAI))
         }
 
         /** The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped. */
