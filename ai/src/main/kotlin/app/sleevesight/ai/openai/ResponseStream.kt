@@ -140,7 +140,7 @@ internal class ResponseStream(
     private fun failed(response: WireResponse?): CompletionEvent {
         val error = response?.error
         return if (error?.code in POLICY_CODES) {
-            response?.usage?.let { done(response, StopReason.REFUSAL) } ?: REFUSED
+            done(response, StopReason.REFUSAL)
         } else {
             CompletionEvent.Error(
                 error?.code?.let(::kindOfCode) ?: error?.type?.let(::kindOfType) ?: AiErrorKind.SERVER,

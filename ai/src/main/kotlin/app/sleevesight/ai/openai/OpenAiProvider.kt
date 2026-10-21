@@ -51,8 +51,9 @@ import kotlin.time.Instant
  * without its text, is skipped. `response.completed` and `response.incomplete` end it with
  * [CompletionEvent.Done], carrying the usage and the stop reason; `response.failed`, an `error`
  * event, an error status or a stream that breaks off end it with [CompletionEvent.Error]. A prompt
- * declined for a usage policy ([POLICY_CODES]), in any of those, is no error: it ends as a refusal
- * does, [CompletionEvent.Done] with [StopReason.REFUSAL]. The request is a `POST`, so `:net`
+ * declined for a usage policy ([POLICY_CODES]), whether in a 400 error response, an `error` event or
+ * a `response.failed`, is no error: it ends as a refusal does, [CompletionEvent.Done] with
+ * [StopReason.REFUSAL]. The request is a `POST`, so `:net`
  * never repeats it once it may have been acted on: a paid call is never sent twice.
  *
  * OpenAI answers 429 both for too many requests and for an account out of credit, and only the

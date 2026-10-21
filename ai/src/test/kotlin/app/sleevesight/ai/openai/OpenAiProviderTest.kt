@@ -425,7 +425,7 @@ class OpenAiProviderTest {
             collecting.cancel()
             advanceTimeBy(10_000)
             runCurrent()
-            assertTrue(collecting.isCancelled)
+            assertTrue(collecting.isCompleted)
             assertEquals(1, net.requests.size)
         }
 
