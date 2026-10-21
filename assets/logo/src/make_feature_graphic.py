@@ -45,6 +45,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from xml.etree import ElementTree
+from xml.sax.saxutils import escape
 
 import uharfbuzz as hb
 from fontTools.pens.boundsPen import BoundsPen
@@ -77,14 +79,15 @@ def css_vars(text):
 
 
 def brand_sheet():
-    """From `design/brand.html`: the body of <symbol id="lp">, and each colourway's variables, name to
-    value: `lt` and `dk`, each with the page's `--page-muted` of its scheme added as `muted`."""
+    """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, as make_icon.py reads it,
+    and each colourway's variables, name to value: `lt` and `dk`, each with the page's `--page-muted`
+    of its scheme added as `muted`."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
-    sym = re.search(r'<symbol id="lp" viewBox="8 8 16 16">(.*?)</symbol>', page, re.S)
+    sym = re.search(r'<symbol\b[^>]*\bid="lp".*?</symbol>', page, re.S)
     rules = {name: re.search(pattern, page, re.S | re.M) for name, pattern in (
         ('lt', r'^\.lt\{(.*?)\}'), ('dk', r'^\.dk\{(.*?)\}'), ('page', r'^:root\{(.*?)\}'),
         ('page-dark', r'^@media \(prefers-color-scheme: dark\)\{:root\{(.*?)\}'))}
-    missing = ([] if sym else ['<symbol id="lp" viewBox="8 8 16 16">']) + [
+    missing = ([] if sym else ['<symbol id="lp">']) + [
         f'the {name} rule' for name, m in rules.items() if not m]
     if missing:
         sys.exit('design/brand.html: no ' + ', '.join(missing))
@@ -94,7 +97,11 @@ def brand_sheet():
         if not muted:
             sys.exit(f'design/brand.html: {where} sets no --page-muted')
         schemes[scheme]['muted'] = muted
-    return sym.group(1), schemes
+    try:
+        symbol = ElementTree.fromstring(sym.group(0))
+    except ElementTree.ParseError as e:
+        sys.exit(f'design/brand.html: <symbol id="lp"> is not well-formed XML ({e}); the script reads it as XML')
+    return symbol, schemes
 
 
 def need(var, scheme, *names):
@@ -104,30 +111,47 @@ def need(var, scheme, *names):
     return [var[name] for name in names]
 
 
-def record(body, var, scheme):
+def record(symbol, var, scheme):
     """The brand sheet's record, its 16-unit box at 8..24, with a colourway's variables filled in:
-    `--rim` as the fill, `--core` and `--groove` as each element's display."""
-    elements = re.findall(r'<[^>]+/>', body)
-    other = re.sub(r'<[^>]+/>', '', body).strip()
-    if len(elements) != RECORD_ELEMENTS or other:
-        sys.exit(f'design/brand.html: <symbol id="lp"> should hold {RECORD_ELEMENTS} self-closing elements '
-                 f'and nothing else; it holds {len(elements)}' + (f', and also {other[:40]!r}' if other else '')
-                 + '; the script needs updating for it')
+    `--rim` as the fill, `--core` and `--groove` as each element's display. Each element is written
+    back with its attributes in the sheet's order, so the drawing is the sheet's own."""
+    elements = list(symbol)
+    texts = [t.strip() for t in [symbol.text] + [x for el in elements for x in (el.text, el.tail)] if t and t.strip()]
+    nested = next(((el, child) for el in elements for child in el), None)
+    problems = [part for part in (
+        symbol.attrib != {'id': 'lp', 'viewBox': '8 8 16 16'} and f'its attributes are {symbol.attrib}',
+        len(elements) != RECORD_ELEMENTS and f'it holds {len(elements)} elements',
+        texts and f'it holds text {texts[0][:40]!r}',
+        nested and f'a <{nested[0].tag}> holds a <{nested[1].tag}>') if part]
+    if problems:
+        sys.exit(f'design/brand.html: <symbol id="lp" viewBox="8 8 16 16"> should hold {RECORD_ELEMENTS} empty '
+                 f'elements and nothing else; ' + '; '.join(problems) + '; the script needs updating for it')
     out = []
     for el in elements:
-        style = re.search(r' style="([\w-]+):var\(--([\w-]+)\)"', el)
-        if style:
-            prop, name = style.groups()
-            if prop not in ('fill', 'display'):
-                sys.exit(f'design/brand.html: the record styles {prop} with a variable; '
-                         'the script fills in only fill and display')
-            value, = need(var, scheme, name)
-            if prop == 'display' and value == 'none':
-                continue
-            el = el.replace(style.group(0), f' fill="{value}"' if prop == 'fill' else '')
-        if 'var(' in el:
-            sys.exit(f'design/brand.html: a variable the script does not fill in is left in the record: {el}')
-        out.append(el)
+        if '}' in el.tag or any('}' in name for name in el.attrib):
+            sys.exit(f'design/brand.html: <symbol id="lp">: a namespaced name the script does not know on a '
+                     f'<{el.tag}>: {dict(el.attrib)}; the script needs updating for it')
+        attrs, shown = [], True
+        for name, value in el.attrib.items():
+            if name == 'style':
+                m = re.fullmatch(r'(fill|display):var\(--([\w-]+)\)', value)
+                if not m:
+                    sys.exit(f'design/brand.html: <symbol id="lp">: a style the script does not know on a '
+                             f'<{el.tag}>: {value!r}; it fills in only fill and display from a variable')
+                prop, var_name = m.groups()
+                value, = need(var, scheme, var_name)
+                if prop == 'fill':
+                    attrs.append(('fill', value))
+                shown = not (prop == 'display' and value == 'none')
+            else:
+                attrs.append((name, value))
+        if not shown:
+            continue
+        if any('var(' in value for _, value in attrs):
+            sys.exit(f'design/brand.html: a variable the script does not fill in is left in the record, '
+                     f'on a <{el.tag}>: {dict(attrs)}')
+        out.append(f'<{el.tag}' + ''.join(f' {name}="{escape(value, {chr(34): "&quot;"})}"' for name, value in attrs)
+                   + '/>')
     return ''.join(out)
 
 
@@ -178,7 +202,7 @@ def sight_centre(tile):
     return (min(b[1] for b in sight) + max(b[3] for b in sight)) / 2
 
 
-def design_d2(tile, body, schemes, tag):
+def design_d2(tile, symbol, schemes, tag):
     """On Play: the words and the tagline right-aligned, the record large beside "sight"."""
     words_h, tag_size, tag_gap = 270, 40, 40          # px; the gap from the words' ink to the tagline's caps
     radius, record_x, record_gap = 250, W - 150, 48   # the record; the gap from the words' right edge to it
@@ -191,14 +215,14 @@ def design_d2(tile, body, schemes, tag):
     right = record_x - radius - record_gap            # the words' and the tagline's right ink edge
     tx, ty = right - s * x1, top - s * y0
     return ground, svg(ground,
-        place_record(record(body, lt, 'lt'), record_x, ty + s * sight_centre(tile), radius)
+        place_record(record(symbol, lt, 'lt'), record_x, ty + s * sight_centre(tile), radius)
         + f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
         f'<path fill="{WHITE}" d="{tile["sleeve"]}"/><path fill="{sight_ink}" d="{tile["sight"]}"/></g>'
         f'<path fill="{WHITE}" fill-opacity="0.9" '
         f'transform="translate({num(right - tx1)} {num(top + words_h + tag_gap + cap)})" d="{d}"/>')
 
 
-def design_mark(tile, body, schemes, tag, scheme):
+def design_mark(tile, symbol, schemes, tag, scheme):
     """A2 and B2: the 8b mark (the words, the record beside "sight", as tall as it), centred; the
     tagline under it, its left ink edge at that of the s of "sight"."""
     width, tag_size, tag_gap = 540, 46, 44
@@ -218,12 +242,12 @@ def design_mark(tile, body, schemes, tag, scheme):
         f'<g transform="translate({num(tx)} {num(ty)}) scale({s:.5f})">'
         f'<path fill="{ink}" d="{tile["sleeve"]}"/><path fill="{red}" d="{tile["sight"]}"/>'
         f'<g transform="translate({num(REC_X)} {num(REC_Y)}) scale({REC_SIDE / 16:.5f}) translate(-8 -8)">'
-        f'{record(body, var, scheme)}</g></g>'
+        f'{record(symbol, var, scheme)}</g></g>'
         f'<path fill="{muted}" transform="translate({num(sight_left - dx0)} {num(top + height + tag_gap + cap)})" '
         f'd="{d}"/>')
 
 
-def design_sleeve(tile, body, schemes, tag, scheme):
+def design_sleeve(tile, symbol, schemes, tag, scheme):
     """C: the text tile (the sleeve) with the record halfway out of it to the right, as in reveal R2
     (the record 64 units in radius against the tile's 71.5 half side), its label clear of the tile;
     the tagline centred under them."""
@@ -238,7 +262,7 @@ def design_sleeve(tile, body, schemes, tag, scheme):
     tile_cx = W / 2 - (side / 2 + out_by + radius) / 2 + side / 2
     cy = top + side / 2
     return bg, svg(bg,
-        place_record(record(body, var, scheme), tile_cx + out_by, cy, radius)
+        place_record(record(symbol, var, scheme), tile_cx + out_by, cy, radius)
         + f'<g transform="translate({num(tile_cx)} {num(cy)}) scale({s:.5f})">'
         f'<rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" fill="{tile_bg}" stroke="{tile_edge}"/>'
         f'<path fill="{ink}" d="{tile["sleeve"]}"/><path fill="{red}" d="{tile["sight"]}"/></g>'
@@ -246,13 +270,13 @@ def design_sleeve(tile, body, schemes, tag, scheme):
         f'd="{d}"/>')
 
 
-def build(name, tile, body, schemes, tag):
+def build(name, tile, symbol, schemes, tag):
     if name == 'd2':
-        return design_d2(tile, body, schemes, tag)
+        return design_d2(tile, symbol, schemes, tag)
     scheme = 'lt' if name.endswith('-light') else 'dk'
     if name.startswith(('a2-', 'b2-')):
-        return design_mark(tile, body, schemes, tag, scheme)
-    return design_sleeve(tile, body, schemes, tag, scheme)
+        return design_mark(tile, symbol, schemes, tag, scheme)
+    return design_sleeve(tile, symbol, schemes, tag, scheme)
 
 
 def write(built):
@@ -288,10 +312,10 @@ def main():
                         help='the design to build: d2 (the default) for Play, another, or all of them')
     args = parser.parse_args()
     tile = json.load(open(os.path.join(here, 'tile.json')))
-    body, schemes = brand_sheet()
+    symbol, schemes = brand_sheet()
     tag = Tagline(args.font)
     names = DESIGNS if args.design == 'all' else (args.design,)
-    write([(name, *build(name, tile, body, schemes, tag)) for name in names])
+    write([(name, *build(name, tile, symbol, schemes, tag)) for name in names])
 
 
 if __name__ == '__main__':
