@@ -47,6 +47,7 @@ data class Options(
         val USAGE: String =
             """
             Usage: sleevesight-cli <replay|live|record> [options]
+                   sleevesight-cli keys-qr [options]   (a QR code of the keys for the app: below)
 
               replay   Run the pipeline over the recorded responses in fixtures/http/: no network, no keys.
                        Fails on any source request with no recording.
@@ -74,7 +75,7 @@ data class Options(
             recorded AI reply is reported, not fatal) or whose answer could not be recorded; 3 when a
             criterion the run should have checked could not be, because a source was unreachable or
             failed, or an insight call failed.
-            """.trimIndent()
+            """.trimIndent() + "\n\n" + KeysQr.USAGE
 
         private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia", "anthropic")
 

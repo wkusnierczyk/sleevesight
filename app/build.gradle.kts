@@ -48,6 +48,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
+    // Reads an API key's QR code from the camera's frames, on the phone (#268). Not Google's code
+    // scanner, whose ML Kit reports usage to Google; the camera is Android's own API, not CameraX.
+    implementation(libs.zxing.core)
     // The now-playing screen's colours from the album art (design, *User interface*).
     implementation(libs.materialkolor.utilities)
     implementation(libs.kotlinx.coroutines.core)

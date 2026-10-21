@@ -26,11 +26,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.keys.KeyProblem
+import app.sleevesight.core.keys.KeySetup
+import app.sleevesight.core.keys.KeyShape
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.launch
@@ -68,18 +74,26 @@ internal fun <T> ChoiceDialog(
  * only a key the key store could not seal suggests *Reset saved keys*, which cannot cure a file that
  * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
  * result says.
+ *
+ * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
+ * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
+ * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*. The window is
+ * secure (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  */
+@Suppress("LongParameterList") // The key, its state, the actions on it, and the scan.
 @Composable
 internal fun KeyDialog(
     id: SecretId,
     state: SecretState,
     onSave: suspend (String) -> SaveResult,
     onRemove: suspend () -> Boolean,
+    scanner: QrScanner,
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
+    var scanning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val value = typed.trim()
 
@@ -94,32 +108,23 @@ internal fun KeyDialog(
         }
     }
 
+    if (scanning) {
+        scanner(
+            { text ->
+                scanning = false
+                val scanned = text.trim()
+                failed = scanFailure(id, scanned)
+                if (failed == null) typed = scanned
+            },
+            { scanning = false },
+        )
+    }
+
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(stringResource(keyName(id))) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    stringResource(R.string.settings_key_hint, stringResource(keyRecipient(id))),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                OutlinedTextField(
-                    value = typed,
-                    onValueChange = { typed = it },
-                    label = { Text(stringResource(R.string.settings_key_field)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
-                )
-                failed?.let {
-                    Text(
-                        stringResource(it),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        },
+        text = { KeyEntry(id, typed, { typed = it }, failed, busy, onScan = { scanning = true }) },
         confirmButton = {
             TextButton(
                 onClick = { run { saveFailure(onSave(value)) } },
@@ -139,6 +144,61 @@ internal fun KeyDialog(
         },
     )
 }
+
+/**
+ * The key dialog's body: who gets the key [id], the field showing [typed] masked, *Scan QR code*,
+ * and what [failed], if anything; the field and the scan are off while [busy].
+ */
+@Suppress("LongParameterList") // What the body shows, and what it hears.
+@Composable
+private fun KeyEntry(
+    id: SecretId,
+    typed: String,
+    onType: (String) -> Unit,
+    @StringRes failed: Int?,
+    busy: Boolean,
+    onScan: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            stringResource(R.string.settings_key_hint, stringResource(keyRecipient(id))),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        OutlinedTextField(
+            value = typed,
+            onValueChange = onType,
+            label = { Text(stringResource(R.string.settings_key_field)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+        )
+        TextButton(onClick = onScan, enabled = !busy) { Text(stringResource(R.string.settings_key_scan)) }
+        failed?.let {
+            Text(
+                stringResource(it),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+/** What the key dialog says of [scanned], a QR code's text, as the key [id]; null when it is one. */
+@StringRes
+private fun scanFailure(
+    id: SecretId,
+    scanned: String,
+): Int? =
+    if (KeySetup.isSetup(scanned)) {
+        R.string.settings_key_scan_setup
+    } else {
+        when (KeyShape.check(id.keyName, scanned)) {
+            null -> null
+            KeyProblem.EMPTY -> R.string.settings_key_scan_empty
+            KeyProblem.BAD_CHARACTERS -> R.string.settings_key_scan_characters
+            KeyProblem.WRONG_SHAPE, KeyProblem.DUPLICATE -> R.string.settings_key_scan_shape
+        }
+    }
 
 /** What the key dialog says of a save that ended as [result]; null for none. */
 @StringRes

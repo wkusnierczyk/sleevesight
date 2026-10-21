@@ -31,8 +31,11 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.ui.scan.CameraQrScanner
+import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.keys.SetupRead
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
@@ -51,7 +54,7 @@ import kotlin.time.Duration.Companion.seconds
  * The settings screen (design, *Settings*): the AI service and its key, the players to follow,
  * where to look, the web search engines and the keyed sources' keys, the genre label sources (D12,
  * #84), the insight settings (D5, D13), the lookup settings (D6, D9), and the history's (#148); at
- * the end, *Remove all API keys* while any key is stored, the way to the credits, and the
+ * the end, *Scan keys* and, while any key is stored, *Remove all API keys*, the way to the credits, and the
  * developer setting *Diagnostics*. Each change is saved at once. The rows show the stored
  * settings, so a change that cannot be saved (the settings file cannot be read or written) leaves
  * its row at the stored value, and the screen says so above the list until a later change is saved.
@@ -64,7 +67,8 @@ import kotlin.time.Duration.Companion.seconds
  * screen, or a rotation, does not cut one short; the screen and its dialogs only wait for the
  * result, and a screen gone by then shows nothing of it. [onOpenCredits] opens the credits
  * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
- * [playerLabel] names a player by its package.
+ * [scanner] reads an API key's QR code, or a setup code of several (#268): the camera, but for
+ * tests. [playerLabel] names a player by its package.
  */
 @Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
 @Composable
@@ -76,6 +80,7 @@ fun SettingsScreen(
     saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
+    scanner: QrScanner = CameraQrScanner,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -115,7 +120,16 @@ fun SettingsScreen(
         }
 
         is SettingsDialog.Keys -> {
-            KeyDialogs(shown, secrets, secretStore, saves, onSealFailed = { sealFailed = it }, onDismiss = close)
+            KeyDialogs(
+                shown,
+                secrets,
+                secretStore,
+                saves,
+                scanner,
+                onSealFailed = { sealFailed = it },
+                open = { dialog = it },
+                onDismiss = close,
+            )
         }
 
         SettingsDialog.ClearHistory -> {
@@ -215,6 +229,14 @@ internal sealed interface SettingsDialog {
 
     /** *Remove all API keys*, offered while any key is stored; the same removal as [ResetKeys]. */
     data object RemoveAllKeys : Keys
+
+    /** *Scan keys*: the camera, reading a setup code (#268). */
+    data object ScanKeys : Keys
+
+    /** What the setup code scanned holds, [read], to confirm before anything is saved. */
+    class SetupFound(
+        val read: SetupRead,
+    ) : Keys
 
     data object ClearHistory : SettingsDialog
 }

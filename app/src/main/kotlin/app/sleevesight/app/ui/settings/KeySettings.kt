@@ -14,12 +14,14 @@ import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.Secret
+import app.sleevesight.core.keys.KeySetup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 
-// The API keys (#234): each key's row, with its button that removes it, *Remove all API keys*,
-// and their dialogs.
+// The API keys (#234): each key's row, with its button that removes it, *Scan keys* (#268),
+// *Remove all API keys*, and their dialogs.
 
 /**
  * The key [id]'s row: its state, which opens the key's dialog, and, while a key is stored, readable
@@ -50,29 +52,38 @@ internal fun KeyRow(
 }
 
 /**
- * *Remove all API keys*, while any key is stored, readable or not: the way to remove every key
- * at any time, where *Reset saved keys* above the list shows only after a failure.
+ * *Scan keys*, which saves several keys from one QR code, a setup code (#268); and *Remove all API
+ * keys*, while any key is stored, readable or not: the way to remove every key at any time, where
+ * *Reset saved keys* above the list shows only after a failure.
  */
 @Composable
 internal fun SavedKeysSection(
     keys: KeysShown,
     open: (SettingsDialog) -> Unit,
 ) {
-    if (!keys.anyStored) return
     SectionHeading(R.string.settings_section_keys)
     Hint(R.string.settings_keys_hint)
     ValueRow(
-        title = stringResource(R.string.settings_remove_all_keys),
-        value = stringResource(R.string.settings_remove_all_keys_value),
-        onClick = { open(SettingsDialog.RemoveAllKeys) },
+        title = stringResource(R.string.settings_scan_keys),
+        value = stringResource(R.string.settings_scan_keys_value),
+        onClick = { open(SettingsDialog.ScanKeys) },
     )
+    if (keys.anyStored) {
+        ValueRow(
+            title = stringResource(R.string.settings_remove_all_keys),
+            value = stringResource(R.string.settings_remove_all_keys_value),
+            onClick = { open(SettingsDialog.RemoveAllKeys) },
+        )
+    }
 }
 
 /**
  * The saved keys' dialog [shown], on [store]. Each save and removal runs in [saves], which outlives
  * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
- * key store could not seal a key saved, and that it has not once every key is removed.
+ * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
+ * reads QR codes; *Scan keys* shows what a setup code holds by [open]ing the next dialog, and saves
+ * nothing until the user confirms it there.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -81,7 +92,9 @@ internal fun KeyDialogs(
     secrets: Map<SecretId, SecretState>,
     store: SecretStore,
     saves: CoroutineScope,
+    scanner: QrScanner,
     onSealFailed: (Boolean) -> Unit,
+    open: (SettingsDialog) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
@@ -96,6 +109,21 @@ internal fun KeyDialogs(
                         }.await()
                 },
                 onRemove = { saves.async { store.clear(shown.id) }.await() },
+                scanner = scanner,
+                onDismiss = onDismiss,
+            )
+        }
+
+        SettingsDialog.ScanKeys -> {
+            scanner({ text -> open(SettingsDialog.SetupFound(KeySetup.read(text))) }, onDismiss)
+        }
+
+        is SettingsDialog.SetupFound -> {
+            SetupDialog(
+                read = shown.read,
+                secrets = secrets,
+                onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
+                onScanAgain = { open(SettingsDialog.ScanKeys) },
                 onDismiss = onDismiss,
             )
         }
@@ -116,6 +144,20 @@ internal fun KeyDialogs(
             )
         }
     }
+}
+
+/**
+ * Saves [keys] to [store], one after another, and returns the ones that could not be saved;
+ * [onSealFailed] hears whether the key store could not seal one, as for a key saved alone.
+ */
+private suspend fun saveAll(
+    store: SecretStore,
+    keys: Map<SecretId, Secret>,
+    onSealFailed: (Boolean) -> Unit,
+): List<SecretId> {
+    val results = keys.map { (id, key) -> id to store.set(id, key) }
+    onSealFailed(results.any { it.second == SaveResult.NOT_SEALED })
+    return results.filter { it.second != SaveResult.SAVED }.map { it.first }
 }
 
 /** What removing the key [id] says. */

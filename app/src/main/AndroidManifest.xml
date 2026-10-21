@@ -12,6 +12,14 @@
          permission: it reads the connection's state and sends nothing. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- To read an API key's QR code (#268), asked for only when the user taps a scan. Frames are
+         decoded on the phone (ZXing) and neither kept nor sent. A phone without a camera can still
+         install the app and type its keys. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
     <!-- No backup and no transfer to another phone: either would take the session history and
          the keys off the phone, which the first-run screen says stay on it. allowBackup="false"
          turns both off before Android 12, so there is no fullBackupContent (which lint's

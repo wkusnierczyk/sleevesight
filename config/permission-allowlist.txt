@@ -3,5 +3,7 @@
 android.permission.INTERNET
 # Whether the phone is online, to ask unreachable sources again once it is back (#192).
 android.permission.ACCESS_NETWORK_STATE
+# The camera, asked for only to scan an API key's QR code; frames stay on the phone (#268).
+android.permission.CAMERA
 # Signature permission androidx.core adds for its own unexported receivers.
 ${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
