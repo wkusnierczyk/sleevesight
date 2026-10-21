@@ -12,6 +12,7 @@ import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
@@ -77,8 +78,29 @@ class SettingsCodecTest {
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
                 showDiagnostics = true,
+                font = FontChoice.SYSTEM_FONT,
             )
         assertEquals(changed, roundTrip(changed))
+    }
+
+    @Test
+    fun aSettingsFileWithoutTheFontReadsAsTheAppFont() {
+        // As stored before the setting existed (#377): other settings, and no font.
+        val prefs = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertEquals(FontChoice.APP_FONT, SettingsCodec.read(prefs).font)
+    }
+
+    @Test
+    fun theSystemFontIsStoredByName() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(font = FontChoice.SYSTEM_FONT), prefs)
+        assertEquals(mutablePreferencesOf(stringPreferencesKey("display.font") to "SYSTEM_FONT"), prefs)
+    }
+
+    @Test
+    fun aFontThisVersionDoesNotKnowReadsAsTheAppFont() {
+        val prefs = mutablePreferencesOf(stringPreferencesKey("display.font") to "SERIF")
+        assertEquals(FontChoice.APP_FONT, SettingsCodec.read(prefs).font)
     }
 
     @Test
