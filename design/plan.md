@@ -57,6 +57,7 @@ flowchart TD
     i57["#57 Store listing, privacy policy"]
     i80["#80 Exa's terms (D11)"]
     i100["#100 MetaBrainz inquiry (D12)"]
+    i158["#158 Tester brief"]
     i58["#58 Play review"]
     i227["#227 AI settings per provider"]
     i228["#228 OpenAI provider"]
@@ -120,6 +121,7 @@ flowchart TD
   i57 --> i58
   i80 --> i58
   i100 --> i58
+  i158 --> i58
   i100 --> i101
   i227 --> i228
   i227 --> i229
@@ -127,7 +129,7 @@ flowchart TD
 
 - **Starting points:** [#32][32] and [#35][35] need nothing; [#30][30] closes Phase 0. [#80][80] and [#100][100] need nothing either, and are best started early.
 - **Two tracks.** [#47][47] and [#29][29] need only [#30][30], and [#48][48] and [#50][50] also only the domain types and `Settings` from [#33][33], so the Android work runs alongside Phase 0.5. The tracks join at [#49][49] (the `:store` schema from [#41][41]), [#51][51] (the pipeline from [#44][44]) and [#55][55] (the gate, [#46][46]).
-- **Alongside the release.** [#227][227], [#228][228] and [#229][229] do not hold up the first bundle, so none of them is linked to [#58][58]: they can ship in a patch bundle during the closed test, so that testers can choose a provider.
+- **Alongside the release.** [#227][227], [#228][228] and [#229][229] do not hold up the closed test or Play's review ([#58][58]), so none of them is linked to it: they can ship in a later bundle during the closed test, so that testers can choose a provider.
 - **Critical path:** [#32][32] → [#33][33] → [#34][34] → [#36][36] → [#37][37] → [#38][38] → [#44][44] → [#51][51] → [#53][53] → [#20][20] → [#55][55] → [#58][58]. Resolution ([#36][36], [#37][37]) is both the longest stretch and the gate's riskiest criterion: every same-name collision rejected or resolved correctly.
 
 ## Work
@@ -186,12 +188,12 @@ flowchart TD
 | [#57][57] | Store listing and its graphics, launcher icon, privacy policy, data safety form | [#52][52] |
 | [#80][80] | Exa's terms for in-app use (D11), settled before publishing | |
 | [#100][100] | MetaBrainz inquiry: MusicBrainz tags as genre labels (D12); the answer recorded and met, or the tags off by default in the release | |
-| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57], [#80][80], [#100][100] |
+| [#58][58] | Play's requirements for notification access and its target API level; testing track; review | [#55][55], [#56][56], [#57][57], [#80][80], [#100][100], [#158][158] |
 | [#227][227] | AI settings per provider: a switch, key, model and reasoning effort each, the switches exclusive | |
 | [#228][228] | `:ai`: OpenAI provider | [#227][227] |
 | [#229][229] | `:ai`: Google provider | [#227][227] |
 
-[#227][227] to [#229][229] run alongside the release work, not before it: the first bundle does not wait for them, and they can ship in a patch bundle during the closed test ([#58][58]), so that testers can choose a provider.
+[#227][227], [#228][228] and [#229][229] do not hold up the closed test or Play's review ([#58][58]), so none of them is linked to it: they can ship in a later bundle during the closed test, so that testers can choose a provider.
 
 ### Phase 2. Detail and discovery
 
@@ -271,6 +273,7 @@ flowchart TD
 [101]: https://github.com/wkusnierczyk/sleevesight/issues/101
 [112]: https://github.com/wkusnierczyk/sleevesight/issues/112
 [132]: https://github.com/wkusnierczyk/sleevesight/issues/132
+[158]: https://github.com/wkusnierczyk/sleevesight/issues/158
 [227]: https://github.com/wkusnierczyk/sleevesight/issues/227
 [228]: https://github.com/wkusnierczyk/sleevesight/issues/228
 [229]: https://github.com/wkusnierczyk/sleevesight/issues/229
