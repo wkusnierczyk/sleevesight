@@ -43,8 +43,34 @@ class CacheMigrationTest {
 
     @Test
     fun `a version 1 cache upgrades with its entries and totals, and keeps artist-level results`() {
-        versionOne()
+        versionOne(driver)
         CacheDatabase.Schema.migrate(driver, 1, CacheDatabase.Schema.version)
+        assertUpgraded(driver)
+    }
+
+    @Test
+    fun `a version 1 cache opened by the driver with the schema is migrated, as the CLI and the app open it`() {
+        // One in-memory database two connections share, kept while [kept] is open.
+        val url = "jdbc:sqlite:file:cache-version-1?mode=memory&cache=shared"
+        val kept = JdbcSqliteDriver(url)
+        try {
+            versionOne(kept)
+            kept.run("PRAGMA user_version = 1")
+
+            val opened = JdbcSqliteDriver(url, schema = CacheDatabase.Schema)
+            try {
+                assertEquals(2L, opened.userVersion())
+                assertUpgraded(opened)
+            } finally {
+                opened.close()
+            }
+        } finally {
+            kept.close()
+        }
+    }
+
+    // The rows of [versionOne] are there, the totals are exact, and the artist-level table works.
+    private fun assertUpgraded(driver: SqlDriver) {
         val caches = Caches(driver, { Settings() }, Normalizer(JvmAccentFolder), clock)
 
         assertEquals("v1 text", caches.synthesis.get(SYNTHESIS_KEY)?.text)
@@ -53,9 +79,9 @@ class CacheMigrationTest {
         assertEquals(caches.countedStats(), caches.stats(), "the totals kept from version 1 are exact")
         assertEquals(TableStats(0, 0), caches.stats().artistResults)
 
-        val part = ArtistPart("lastfm.artist", 1, setOf(SourceId.LASTFM))
+        val part = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
         caches.artistResults.put(part, "gordon lightfoot", "v")
-        assertEquals("v", caches.artistResults.get(part, "gordon lightfoot"))
+        assertEquals("v", caches.artistResults.get(part, "gordon lightfoot")?.value)
         assertEquals(caches.countedStats(), caches.stats(), "and the new table's total is kept")
         assertEquals(4, caches.stats().entries)
     }
@@ -64,7 +90,7 @@ class CacheMigrationTest {
      * Version 1 with rows in it: `1.db`'s tables, indexes and triggers, made by its own statements,
      * its running totals' rows, and a row in each table as version 1's queries wrote it.
      */
-    private fun versionOne() {
+    private fun versionOne(driver: SqlDriver) {
         // Read-only, so a missing file fails rather than being created.
         driver.run("ATTACH DATABASE 'file:$SCHEMAS/1.db?mode=ro' AS v1")
         val statements =
@@ -111,6 +137,14 @@ class CacheMigrationTest {
     private fun SqlDriver.run(sql: String) {
         execute(null, sql, 0)
     }
+
+    private fun SqlDriver.userVersion(): Long =
+        executeQuery(
+            identifier = null,
+            sql = "PRAGMA user_version",
+            mapper = { cursor -> QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else null) },
+            parameters = 0,
+        ).value ?: error("no user_version")
 
     private companion object {
         /** The committed schema versions; tests run in the module's directory. */

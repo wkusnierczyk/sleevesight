@@ -1,52 +1,53 @@
 package app.sleevesight.sources.lastfm
 
-import app.sleevesight.core.normalizer.AccentFolder
-import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.sources.ArtistResults
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
-/** Last.fm's answers for one name, and when they were retrieved. */
+/**
+ * Last.fm's answers for one name, and when they were retrieved; for answers the artist cache kept,
+ * when they stop being fresh.
+ */
 internal class Fetched(
     val info: LastFmAnswer<LastFmArtist>,
     val topTags: LastFmAnswer<List<LastFmTag>>,
     val retrievedAt: Instant,
+    val freshUntil: Instant? = null,
 )
 
 /**
  * Last.fm's answers per credited artist's name in [artists], the artist cache (#238,
- * [LastFmAdapter.ARTIST_PART]), by the name folded as the retrieval key folds it
- * ([Normalizer.foldForKey]). Kept: an artist with its top tags, or Last.fm not knowing the name.
+ * [LastFmAdapter.ARTIST_PART]), by the name exactly as sent: Last.fm answers each spelling on its
+ * own (`M.I.A.` and `MIA`, an accent or none, may be different pages, or one may be unknown), so
+ * names that fold alike do not share an entry. Kept: an artist with its top tags, or Last.fm not
+ * knowing the name.
  * Not kept: a failed request, another error (a rejected key, the rate limit) or an artist whose top
  * tags did not arrive, which a later lookup may get whole. The bio is kept as its quotable
  * sentences ([LastFmArtist.bio]), never the summary.
  */
 internal class KeptArtists(
     private val artists: ArtistResults,
-    accentFolder: AccentFolder,
 ) {
-    private val normalizer = Normalizer(accentFolder)
-
-    /** The key of [name]'s entry. */
-    fun keyOf(name: String): String = normalizer.foldForKey(name)
-
-    /** What is kept for [key], as answers; null for none, or a value that cannot be read. */
-    suspend fun get(key: String): Fetched? {
-        val value = artists.get(LastFmAdapter.ARTIST_PART, key)
-        return value?.let(::answers)
+    /** What is kept for [name], as answers; null for none, or a value that cannot be read. */
+    suspend fun get(name: String): Fetched? {
+        val part = artists.get(LastFmAdapter.ARTIST_PART, name)
+        return part?.let { answers(it.value, it.freshUntil) }
     }
 
-    /** Keeps [fetched] for [key], if it may be kept. */
+    /** Keeps [fetched] for [name], if it may be kept. */
     suspend fun keep(
-        key: String,
+        name: String,
         fetched: Fetched,
     ) {
         val value = storable(fetched)?.let { json.encodeToString(StoredArtist.serializer(), it) }
-        if (value != null) artists.keep(LastFmAdapter.ARTIST_PART, key, value)
+        if (value != null) artists.keep(LastFmAdapter.ARTIST_PART, name, value)
     }
 
-    private fun answers(value: String): Fetched? {
+    private fun answers(
+        value: String,
+        freshUntil: Instant,
+    ): Fetched? {
         val kept =
             try {
                 json.decodeFromString(StoredArtist.serializer(), value)
@@ -56,9 +57,9 @@ internal class KeptArtists(
         val at = kept?.let { Instant.parseOrNull(it.retrievedAt) } ?: return null
         val artist = kept.artist
         return if (artist == null) {
-            Fetched(LastFmAnswer.Error(LastFmJson.NOT_FOUND), LastFmAnswer.Error(LastFmJson.NOT_FOUND), at)
+            Fetched(LastFmAnswer.Error(LastFmJson.NOT_FOUND), LastFmAnswer.Error(LastFmJson.NOT_FOUND), at, freshUntil)
         } else {
-            Fetched(LastFmAnswer.Found(artist), LastFmAnswer.Found(kept.topTags), at)
+            Fetched(LastFmAnswer.Found(artist), LastFmAnswer.Found(kept.topTags), at, freshUntil)
         }
     }
 

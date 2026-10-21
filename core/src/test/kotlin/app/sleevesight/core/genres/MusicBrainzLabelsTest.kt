@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 class MusicBrainzLabelsTest {
@@ -109,6 +110,21 @@ class MusicBrainzLabelsTest {
             val again = labels(kept = kept).labels(listOf("mb-a", "mb-gone"))
             assertEquals(emptyList(), asked)
             assertEquals(first.map { it.label }, again.map { it.label })
+        }
+
+    @Test
+    fun `tags past the artist cache's lifetime are asked for again, with no fresh lifetime in memory`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 1.days)
+            val labels = labels(kept = kept)
+            labels.labels(listOf("mb-a"))
+            now += 1.days - 1.milliseconds
+            labels.labels(listOf("mb-a"))
+            assertEquals(listOf("mb-a"), asked)
+
+            now += 1.milliseconds
+            labels.labels(listOf("mb-a"))
+            assertEquals(listOf("mb-a", "mb-a"), asked, "the same instance asks again once the kept tags expire")
         }
 
     @Test

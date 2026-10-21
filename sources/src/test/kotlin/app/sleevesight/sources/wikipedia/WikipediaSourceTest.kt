@@ -33,6 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /** The Wikipedia adapter against recorded MusicBrainz, Wikidata and Wikipedia responses. */
@@ -69,7 +70,7 @@ class WikipediaSourceTest {
     @Test
     fun `a second track by the same artist asks nothing about the artist while the artist cache has it`() =
         runTest {
-            val kept = MemoryArtistResults()
+            val kept = MemoryArtistResults(clock, 7.days)
             val sundown = RegressionCase.RICH_DATA.tracks.single()
             val first = lookup(sundown, adapter(kept))
             assertEquals(setOf("$GORDON_LIGHTFOOT Gordon Lightfoot"), kept.keys(WikipediaSource.ARTIST_PART))
@@ -90,7 +91,16 @@ class WikipediaSourceTest {
             val artistLines = first.evidence.filter { it.scope == Scope.ARTIST }
             assertTrue(artistLines.isNotEmpty())
             assertEquals(artistLines, result.evidence)
+            // Kept until a week after `at`, so the retrieval cache keeps the result no longer.
+            assertEquals(at + 7.days, result.freshUntil)
+            assertEquals(null, asked.freshUntil)
+            assertEquals(null, first.freshUntil)
         }
+
+    @Test
+    fun `the kept part's version follows the adapter's extraction version`() {
+        assertEquals(adapter.extractionVersion, WikipediaSource.ARTIST_PART.extraction)
+    }
 
     @Test
     fun `an artist without a MusicBrainz id is not kept`() =

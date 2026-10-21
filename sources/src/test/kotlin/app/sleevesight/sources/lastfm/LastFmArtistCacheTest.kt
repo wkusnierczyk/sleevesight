@@ -29,6 +29,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /**
@@ -38,9 +39,10 @@ import kotlin.time.Instant
 class LastFmArtistCacheTest {
     private val normalizer = Normalizer(JvmAccentFolder)
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
+    private var now = Instant.parse("2026-10-21T12:00:00Z")
     private val clock =
         object : Clock {
-            override fun now(): Instant = Instant.parse("2026-10-21T12:00:00Z")
+            override fun now(): Instant = now
         }
 
     private fun adapter(
@@ -64,7 +66,7 @@ class LastFmArtistCacheTest {
             val before = adapter(first, firstSearch, kept).lookupArtists(sundown, resolved())
             assertEquals(2, first.requests.size)
             assertEquals(1, firstSearch.searches)
-            assertEquals(setOf("gordon lightfoot"), kept.keys(LastFmAdapter.ARTIST_PART))
+            assertEquals(setOf("Gordon Lightfoot"), kept.keys(LastFmAdapter.ARTIST_PART))
 
             // A new adapter, as after a restart or a new key: nothing in memory, the cache kept.
             val second = LastFmStubClient()
@@ -134,7 +136,7 @@ class LastFmArtistCacheTest {
             val kept = MemoryArtistResults()
             adapter(kept = kept).lookup(sundown, resolved())
 
-            val value = checkNotNull(kept.get(LastFmAdapter.ARTIST_PART, "gordon lightfoot"))
+            val value = checkNotNull(kept.get(LastFmAdapter.ARTIST_PART, "Gordon Lightfoot")).value
             assertFalse("summary" in value, value)
             assertFalse("Read more on Last.fm" in value, value)
         }
@@ -154,7 +156,7 @@ class LastFmArtistCacheTest {
     fun `a kept answer that cannot be read is asked for again`() =
         runTest {
             val kept = MemoryArtistResults()
-            kept.keep(LastFmAdapter.ARTIST_PART, "gordon lightfoot", "not json")
+            kept.keep(LastFmAdapter.ARTIST_PART, "Gordon Lightfoot", "not json")
             val net = LastFmStubClient()
 
             val lookup = adapter(net, kept = kept).lookupArtists(sundown, resolved())
@@ -162,6 +164,56 @@ class LastFmArtistCacheTest {
             assertEquals(2, net.requests.size)
             assertEquals(LastFmMatch.Verified, lookup.artists.single().match)
         }
+
+    @Test
+    fun `names that fold alike are separate queries, so they do not share an entry`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            val files = LastFmStubClient.DEFAULT_FILES + ("Gördon Lightfoot" to "not-found")
+            adapter(LastFmStubClient(files), kept = kept).lookup(sundown, resolved())
+
+            val net = LastFmStubClient(files)
+            val accented = normalizer.normalize("Sundown", "Gördon Lightfoot")
+            val lookup = adapter(net, kept = kept).lookupArtists(accented, CompletableDeferred(Resolution.NONE))
+
+            assertEquals(2, net.requests.size, "the other spelling is asked for")
+            assertEquals(LastFmMatch.NotFound, lookup.artists.single().match)
+            assertEquals(setOf("Gordon Lightfoot", "Gördon Lightfoot"), kept.keys(LastFmAdapter.ARTIST_PART))
+        }
+
+    @Test
+    fun `a result built from kept answers says when the first of them stops being fresh`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 7.days)
+            val fresh = adapter(kept = kept).lookup(sundown, resolved())
+            assertEquals(null, fresh.freshUntil, "nothing kept was reused")
+
+            now += 6.days
+            val again = adapter(kept = kept).lookup(carefree, resolved())
+            assertEquals(Instant.parse("2026-10-28T12:00:00Z"), again.freshUntil)
+        }
+
+    @Test
+    fun `a kept verdict past its lifetime is searched again, and not remembered in memory meanwhile`() =
+        runTest {
+            val kept = MemoryArtistResults(clock, 30.days)
+            val search = GordonSearch()
+            val adapter = adapter(search = search, kept = kept)
+            adapter.lookup(sundown, resolved())
+            adapter.lookup(carefree, resolved())
+            assertEquals(1, search.searches)
+
+            now += 30.days
+            adapter.lookup(sundown, resolved())
+            assertEquals(2, search.searches, "the same adapter asks again once the kept verdict expires")
+        }
+
+    @Test
+    fun `the kept parts' versions follow the adapter's extraction version`() {
+        assertEquals(LastFmAdapter.EXTRACTION_VERSION, LastFmAdapter.ARTIST_PART.extraction)
+        assertEquals(LastFmAdapter.EXTRACTION_VERSION, ArtistCheck.OWNERSHIP_PART.extraction)
+        assertEquals(LastFmAdapter.EXTRACTION_VERSION, adapter().extractionVersion)
+    }
 
     /**
      * MusicBrainz's artist search, which knows one Gordon Lightfoot, or [fails]; counts the

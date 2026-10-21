@@ -78,8 +78,8 @@ class PipelineWiring internal constructor(
 
     /**
      * MusicBrainz's genre labels (D12, #84), for `PipelineParts.musicBrainzLabels`. One for the
-     * wiring, since it keeps each artist's tags in memory for the process, as well as in the
-     * artist cache.
+     * wiring, since it keeps each artist's tags: in the artist cache, or, without one, in memory for
+     * the process.
      */
     val musicBrainzLabels: MusicBrainzLabels by lazy {
         MusicBrainzLabels(MusicBrainzClient(net), vocabulary, artists = artists)
@@ -98,8 +98,8 @@ class PipelineWiring internal constructor(
      * The keys and the web engines, unlike those switches, are read here, when the list is built: a
      * key saved or removed, or an engine switched, takes a new list, and so a new pipeline. Each call
      * builds new adapters, so whatever state one holds in memory starts again: Last.fm's check of an
-     * artist's name (`ArtistCheck` in `LastFmMatch.kt`) loses the verdicts it keeps in memory for up
-     * to 1024 names, and reads them from the artist cache instead.
+     * artist's name (`ArtistCheck` in `LastFmMatch.kt`) keeps its verdicts in the artist cache, which
+     * outlives the adapters, or, without one, in memory for up to 1024 names, which does not.
      */
     fun adapters(
         keys: SourceKeys,

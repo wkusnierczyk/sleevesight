@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistPart
+import app.sleevesight.core.sources.KeptPart
 import kotlin.time.Instant
 
 /**
@@ -18,25 +19,26 @@ import kotlin.time.Instant
 class ArtistResultCache internal constructor(
     private val context: CacheContext,
 ) {
-    /** The value kept for [key] under [part], if kept under [part]'s version and within its lifetime. */
+    /**
+     * The value kept for [key] under [part], if kept under [part]'s version and within its lifetime,
+     * with the time it stops being fresh under the current lifetime.
+     */
     fun get(
         part: ArtistPart,
         key: String,
-    ): String? {
+    ): KeptPart? {
         val row = context.queries.artistResultGet(part.name, key).executeAsOneOrNull() ?: return null
         val now = context.clock.now()
         val lifetime = shortestLifetime(sourceTags(row.sources), context.settings())
-        val current =
-            lifetime != null &&
-                row.version == part.version.toLong() &&
-                now - Instant.fromEpochMilliseconds(row.stored_at) < lifetime
+        val freshUntil = lifetime?.let { Instant.fromEpochMilliseconds(row.stored_at) + it }
+        val current = freshUntil != null && row.version == part.version.toLong() && now < freshUntil
         if (current) {
             context.queries.artistResultTouch(now.toEpochMilliseconds(), row.id)
         } else {
             // Only the row this read saw: one written since has another id.
             context.queries.artistResultDeleteSeen(row.id, row.stored_at)
         }
-        return row.payload.takeIf { current }
+        return if (current && freshUntil != null) KeptPart(row.payload, freshUntil) else null
     }
 
     /**

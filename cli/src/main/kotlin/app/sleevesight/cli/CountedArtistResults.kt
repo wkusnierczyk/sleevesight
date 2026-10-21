@@ -2,6 +2,7 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.KeptPart
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -20,7 +21,7 @@ class CountedArtistResults(
     override suspend fun get(
         part: ArtistPart,
         key: String,
-    ): String? =
+    ): KeptPart? =
         delegate.get(part, key).also { found ->
             (if (found == null) misses else hits).computeIfAbsent(part.name) { AtomicInteger() }.incrementAndGet()
         }

@@ -156,11 +156,17 @@ class AppGraph(
     /**
      * The retrieval, artist, artist-level and synthesis caches, in a database of their own under the app's
      * `databases/`, which the backup and transfer rules exclude: unlike the history, they can be
-     * evicted or rebuilt at the cost of the lookups and paid calls again.
+     * evicted or rebuilt at the cost of the lookups and paid calls again; so one a newer version
+     * left is rebuilt rather than failing ([RebuiltOnDowngrade]).
      */
     private val caches by lazy {
         Caches(
-            AndroidSqliteDriver(CacheDatabase.Schema, appContext, CACHE_DATABASE),
+            AndroidSqliteDriver(
+                CacheDatabase.Schema,
+                appContext,
+                CACHE_DATABASE,
+                callback = RebuiltOnDowngrade(CacheDatabase.Schema),
+            ),
             { checkNotNull(latestSettings.value) { "The caches are used before the settings' first read" } },
             normalizer,
         )

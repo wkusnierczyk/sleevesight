@@ -86,9 +86,12 @@ class RetrievalCache internal constructor(
      * Keeps [result], replacing any entry for [source] and [key], and evicts down to the size
      * limit. The entry lives for the shortest lifetime among [consults] (the sources the adapter
      * asked, [SourceAdapter.consults]: a rejection by Wikidata's identity check has no Wikidata line
-     * but depends on Wikidata) and the sources of its lines. Returns whether it was kept: not when
-     * one of them has no lifetime, nor for an [Outcome.Unreachable] or [Outcome.SourceOff] result,
-     * nor when it is larger than the limit.
+     * but depends on Wikidata) and the sources of its lines. A result built from artist-level parts
+     * kept from an earlier track ([SourceResult.freshUntil], #238) is stored as if made early enough
+     * to stop being fresh when the first of them does, so a reused part is not served past its own
+     * lifetime. Returns whether it was kept: not when one of them has no lifetime, nor for an
+     * [Outcome.Unreachable] or [Outcome.SourceOff] result, nor when it is larger than the limit, nor
+     * when a reused part is no longer fresh.
      */
     fun put(
         source: SourceId,
@@ -102,13 +105,18 @@ class RetrievalCache internal constructor(
         val payload = RetrievalCodec.encode(result)
         val sourcesColumn = sources.joinToString(" ", prefix = " ", postfix = " ") { it.tag }
         val size = source.tag.utf8Size() + key.utf8Size() + sourcesColumn.utf8Size() + payload.utf8Size()
+        val lifetime = shortestLifetime(sources, context.settings())
+        val now = context.clock.now()
+        val freshUntil = result.freshUntil
+        // The entry's age: from now, or from as far back as makes it stop when a reused part does.
+        val storedAt = if (lifetime == null || freshUntil == null) now else minOf(now, freshUntil - lifetime)
         val keep =
-            shortestLifetime(sources, context.settings()) != null &&
+            lifetime != null &&
                 result.outcome != Outcome.Unreachable &&
                 result.outcome != Outcome.SourceOff &&
+                (freshUntil == null || freshUntil > now) &&
                 context.fits(size)
         if (keep) {
-            val now = context.clock.now().toEpochMilliseconds()
             context.queries.transaction {
                 context.queries.retrievalRemoveKey(source.tag, key)
                 context.queries.retrievalInsert(
@@ -118,8 +126,8 @@ class RetrievalCache internal constructor(
                     format = RetrievalCodec.FORMAT.toLong(),
                     extraction = extractionVersion.toLong(),
                     payload = payload,
-                    stored_at = now,
-                    used_at = now,
+                    stored_at = storedAt.toEpochMilliseconds(),
+                    used_at = now.toEpochMilliseconds(),
                     size_bytes = size,
                 )
                 context.afterWrite()

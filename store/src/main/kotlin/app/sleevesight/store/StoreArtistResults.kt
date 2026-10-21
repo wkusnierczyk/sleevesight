@@ -2,6 +2,7 @@ package app.sleevesight.store
 
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.KeptPart
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -23,7 +24,7 @@ class StoreArtistResults(
     override suspend fun get(
         part: ArtistPart,
         key: String,
-    ): String? = failingAs(null) { caches().artistResults.get(part, key) }
+    ): KeptPart? = failingAs(null) { caches().artistResults.get(part, key) }
 
     override suspend fun keep(
         part: ArtistPart,

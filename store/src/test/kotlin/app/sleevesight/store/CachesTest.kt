@@ -236,7 +236,7 @@ class CachesTest {
         assertEquals(2, caches.stats().artistResults.entries)
 
         assertNull(caches.retrieval.get(SourceId.MUSICBRAINZ, "c|x", 2), "invalidated by version")
-        assertNull(caches.artistResults.get(MUSICBRAINZ_PART.copy(version = 2), "d"), "invalidated by version")
+        assertNull(caches.artistResults.get(MUSICBRAINZ_PART.copy(encoding = 2), "d"), "invalidated by version")
         fixture.assertTotals()
 
         fixture.clock.advance(2.days)
@@ -253,9 +253,9 @@ class CachesTest {
     private fun result(): SourceResult = SourceResult(Outcome.None, emptyList(), 100.milliseconds)
 
     private companion object {
-        val LASTFM_PART = ArtistPart("test.lastfm", 1, setOf(SourceId.LASTFM))
-        val MUSICBRAINZ_PART = ArtistPart("test.musicbrainz", 1, setOf(SourceId.MUSICBRAINZ))
-        val BOTH_PART = ArtistPart("test.both", 1, setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ))
+        val LASTFM_PART = ArtistPart("test.lastfm", 1, 1, setOf(SourceId.LASTFM))
+        val MUSICBRAINZ_PART = ArtistPart("test.musicbrainz", 1, 1, setOf(SourceId.MUSICBRAINZ))
+        val BOTH_PART = ArtistPart("test.both", 1, 1, setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ))
     }
 
     private fun key(entity: String): SynthesisKey =

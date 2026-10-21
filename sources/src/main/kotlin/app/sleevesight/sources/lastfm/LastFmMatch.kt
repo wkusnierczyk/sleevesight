@@ -11,6 +11,7 @@ import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.ResolvedArtist
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Instant
 
 /**
  * How Last.fm's answer for one credited artist was judged (`design/architecture.md`, *Source
@@ -87,6 +88,7 @@ data class LastFmArtistLookup(
 internal data class Judgement(
     val match: LastFmMatch,
     val provisional: Boolean = false,
+    val freshUntil: Instant? = null,
 )
 
 /**
@@ -105,9 +107,11 @@ internal data class Judgement(
  *
  * Name matching folds case and accents and keeps letters and digits only. One check serves every
  * track its adapter looks up, and keeps the search's answers, all but failures, by the name as
- * sent and the MusicBrainz id: in memory for the most recent [VERDICTS], and in [artists], the
- * artist cache ([OWNERSHIP_PART], #114, #238), for MusicBrainz's lifetime (D9), so a restart, or a
- * new adapter, does not search again.
+ * sent and the MusicBrainz id: in [artists], the artist cache ([OWNERSHIP_PART], #114, #238), for
+ * MusicBrainz's lifetime (D9), so a restart, or a new adapter, does not search again, and a
+ * judgement resting on a kept verdict says when it stops being fresh ([Judgement.freshUntil]).
+ * With no artist cache ([ArtistResults.None]: the CLI without a cache, tests), in memory instead,
+ * for the most recent [VERDICTS]; never both, so a verdict is not kept in memory past its lifetime.
  */
 internal class ArtistCheck(
     private val accentFolder: AccentFolder,
@@ -140,10 +144,12 @@ internal class ArtistCheck(
                     }
 
                     else -> {
-                        when (ownership(resolvedMbid, artist.name)) {
-                            Ownership.OWNED -> Judgement(LastFmMatch.Verified)
+                        val verdict = ownership(resolvedMbid, artist.name)
+                        when (verdict.ownership) {
+                            Ownership.OWNED -> Judgement(LastFmMatch.Verified, freshUntil = verdict.freshUntil)
                             Ownership.FAILED -> Judgement(LastFmMatch.Unverified, provisional = true)
-                            Ownership.SHARED, Ownership.UNKNOWN -> Judgement(LastFmMatch.BioVerified)
+                            Ownership.SHARED, Ownership.UNKNOWN ->
+                                Judgement(LastFmMatch.BioVerified, freshUntil = verdict.freshUntil)
                         }
                     }
                 }
@@ -181,6 +187,12 @@ internal class ArtistCheck(
         FAILED,
     }
 
+    /** An [ownership], and, when the artist cache kept it, when it stops being fresh. */
+    private class Verdict(
+        val ownership: Ownership,
+        val freshUntil: Instant? = null,
+    )
+
     /**
      * Whether [name] is the artist [mbid]'s alone, by name key, from one page of MusicBrainz's
      * artist search: another artist of the name on it shares the name; the artist owns it only when
@@ -190,41 +202,48 @@ internal class ArtistCheck(
      * below the artists listed is wrong, and fails the search, as `MusicBrainzClient.searchArtists`
      * already fails such an answer (a backstop here). Anything else proves neither, as does a
      * name with no letters or digits, which every name key would match. The answer is kept by the
-     * query as sent and the id, in memory and in the artist cache.
+     * query as sent and the id, in the artist cache, or in memory without one.
      */
     private suspend fun ownership(
         mbid: String,
         name: String,
-    ): Ownership {
+    ): Verdict {
         val nameKey = key(name)
-        val verdictKey = name.lowercase() to mbid.lowercase()
         return when {
-            nameKey.isEmpty() -> Ownership.UNKNOWN
-            else -> verdicts.get(verdictKey) ?: storedOrSearched(mbid, name, nameKey)
+            nameKey.isEmpty() -> Verdict(Ownership.UNKNOWN)
+            artists == ArtistResults.None -> remembered(mbid, name, nameKey)
+            else -> storedOrSearched(mbid, name, nameKey)
         }
     }
 
-    // The verdict the artist cache keeps, now kept in memory too; else the search's, kept in both
+    // The verdict kept in memory, else the search's, kept unless it failed.
+    private suspend fun remembered(
+        mbid: String,
+        name: String,
+        nameKey: String,
+    ): Verdict {
+        val verdictKey = name.lowercase() to mbid.lowercase()
+        val verdict =
+            verdicts.get(verdictKey)
+                ?: search(mbid, name, nameKey).also { if (it != Ownership.FAILED) verdicts.put(verdictKey, it) }
+        return Verdict(verdict)
+    }
+
+    // The verdict the artist cache keeps, with when it stops being fresh; else the search's, kept
     // unless it failed.
     private suspend fun storedOrSearched(
         mbid: String,
         name: String,
         nameKey: String,
-    ): Ownership {
-        val verdictKey = name.lowercase() to mbid.lowercase()
+    ): Verdict {
         // The id first: it holds no space, so the first space ends it.
-        val storedKey = "${verdictKey.second} ${verdictKey.first}"
-        val stored = stored(storedKey)
-        val verdict = stored ?: search(mbid, name, nameKey)
-        if (verdict != Ownership.FAILED) verdicts.put(verdictKey, verdict)
-        if (stored == null && verdict != Ownership.FAILED) artists.keep(OWNERSHIP_PART, storedKey, verdict.name)
-        return verdict
-    }
-
-    // The verdict the artist cache keeps for [key]; null for none, or one this version does not know.
-    private suspend fun stored(key: String): Ownership? {
-        val value = artists.get(OWNERSHIP_PART, key)
-        return Ownership.entries.firstOrNull { it.name == value && it != Ownership.FAILED }
+        val storedKey = "${mbid.lowercase()} ${name.lowercase()}"
+        val stored = artists.get(OWNERSHIP_PART, storedKey)
+        val kept = Ownership.entries.firstOrNull { it.name == stored?.value && it != Ownership.FAILED }
+        if (stored != null && kept != null) return Verdict(kept, stored.freshUntil)
+        val verdict = search(mbid, name, nameKey)
+        if (verdict != Ownership.FAILED) artists.keep(OWNERSHIP_PART, storedKey, verdict.name)
+        return Verdict(verdict)
     }
 
     private suspend fun search(
@@ -262,7 +281,8 @@ internal class ArtistCheck(
          * names of [Ownership] (which are therefore not renamed). A failure is never kept. The
          * verdict is MusicBrainz's, so it lives for MusicBrainz's lifetime.
          */
-        val OWNERSHIP_PART: ArtistPart = ArtistPart("lastfm.ownership", 1, setOf(SourceId.MUSICBRAINZ))
+        val OWNERSHIP_PART: ArtistPart =
+            ArtistPart("lastfm.ownership", LastFmAdapter.EXTRACTION_VERSION, 1, setOf(SourceId.MUSICBRAINZ))
     }
 }
 

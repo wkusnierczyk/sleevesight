@@ -45,10 +45,11 @@ import kotlin.time.TimeSource
  * is kept. A failed search makes the result [SourceResult.provisional].
  *
  * Last.fm describes artists, so what it answers for a name is kept per artist in [artists], the
- * artist cache (#238, [ARTIST_PART]), by the name folded as the retrieval key folds it, for
- * Last.fm's lifetime (D9): a second track by the same artist sends no `artist.getInfo` or
- * `artist.getTopTags` while it is fresh, and the verdicts of the search are kept there too
- * ([ArtistCheck.OWNERSHIP_PART]). Each track's answer is still judged against its own resolution.
+ * artist cache (#238, [ARTIST_PART]), by the name as sent, for Last.fm's lifetime (D9): a second
+ * track by the same artist sends no `artist.getInfo` or `artist.getTopTags` while it is fresh, and
+ * the verdicts of the search are kept there too ([ArtistCheck.OWNERSHIP_PART]). Each track's
+ * answer is still judged against its own resolution, and its result says when the first part it
+ * reused stops being fresh ([SourceResult.freshUntil]).
  *
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
  */
@@ -65,14 +66,13 @@ class LastFmAdapter(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.LASTFM
 
-    /** 2: a page other MusicBrainz artists of its name may share has only its bio verified (#75). */
-    override val extractionVersion: Int = 2
+    override val extractionVersion: Int = EXTRACTION_VERSION
 
     /** The verification asks MusicBrainz for the artists of a name. */
     override val consults: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ)
 
     private val check = ArtistCheck(accentFolder, musicBrainz, artists)
-    private val kept = KeptArtists(artists, accentFolder)
+    private val kept = KeptArtists(artists)
 
     override suspend fun lookup(
         track: NormalizedTrack,
@@ -92,10 +92,10 @@ class LastFmAdapter(
             coroutineScope {
                 val fetches = track.artists.map { name -> name to async { fetchArtist(name) } }
                 val resolved = resolution.await()
-                fetches.map { (name, fetch) -> fetch.await().let { judge(name, it, resolved) to it.retrievedAt } }
+                fetches.map { (name, fetch) -> judge(name, fetch.await(), resolved) }
             }
-        val answers = judged.map { it.first }
-        val lines = judged.map { (answer, retrievedAt) -> answer.match to lines(answer, retrievedAt) }
+        val answers = judged.map { it.lookup }
+        val lines = judged.map { it.lookup.match to lines(it.lookup, it.retrievedAt) }
         val verified =
             lines.flatMap { (match, artist) ->
                 when (match) {
@@ -128,21 +128,21 @@ class LastFmAdapter(
                         .distinctBy { it.identity }
                         .take(GenreVocabulary.MAX_LABELS),
                 provisional = answers.any { it.provisional },
+                freshUntil = judged.mapNotNull { it.freshUntil }.minOrNull(),
             )
         return LastFmLookup(result, answers)
     }
 
     // The answers for [name]: kept in the artist cache, or asked for and kept when they are final.
     private suspend fun fetchArtist(name: String): Fetched {
-        val key = kept.keyOf(name)
-        kept.get(key)?.let { return it }
+        kept.get(name)?.let { return it }
         val fetched =
             coroutineScope {
                 val topTags = async { call("artist.gettoptags", name, LastFmJson::topTags) }
                 val info = call("artist.getinfo", name, LastFmJson::artistInfo)
                 Fetched(info, topTags.await(), clock.now())
             }
-        kept.keep(key, fetched)
+        kept.keep(name, fetched)
         return fetched
     }
 
@@ -175,11 +175,23 @@ class LastFmAdapter(
         return answer
     }
 
+    /**
+     * One credited artist judged: its [lookup], when its answers were retrieved, and, when it used
+     * parts the artist cache kept, when the first of them stops being fresh.
+     */
+    private class Judged(
+        val lookup: LastFmArtistLookup,
+        fetched: Fetched,
+        val freshUntil: Instant? = fetched.freshUntil,
+    ) {
+        val retrievedAt: Instant = fetched.retrievedAt
+    }
+
     private suspend fun judge(
         credited: String,
         fetched: Fetched,
         resolution: Resolution,
-    ): LastFmArtistLookup =
+    ): Judged =
         when (val info = fetched.info) {
             is LastFmAnswer.Found -> {
                 val artist = info.value
@@ -194,7 +206,8 @@ class LastFmAdapter(
                     } else {
                         emptyList()
                     }
-                LastFmArtistLookup(credited, match, artist, genres, judgement.provisional)
+                val freshUntil = listOfNotNull(fetched.freshUntil, judgement.freshUntil).minOrNull()
+                Judged(LastFmArtistLookup(credited, match, artist, genres, judgement.provisional), fetched, freshUntil)
             }
 
             is LastFmAnswer.Error -> {
@@ -204,11 +217,14 @@ class LastFmAdapter(
                     } else {
                         LastFmMatch.Failed("Last.fm error ${info.code}")
                     }
-                LastFmArtistLookup(credited, match, null, emptyList())
+                Judged(LastFmArtistLookup(credited, match, null, emptyList()), fetched)
             }
 
             is LastFmAnswer.Unreachable -> {
-                LastFmArtistLookup(credited, LastFmMatch.Failed(info.error.toString()), null, emptyList())
+                Judged(
+                    LastFmArtistLookup(credited, LastFmMatch.Failed(info.error.toString()), null, emptyList()),
+                    fetched,
+                )
             }
         }
 
@@ -262,12 +278,18 @@ class LastFmAdapter(
         const val API_URL: String = "https://ws.audioscrobbler.com/2.0/"
 
         /**
+         * [extractionVersion]. 2: a page other MusicBrainz artists of its name may share has only its
+         * bio verified (#75).
+         */
+        const val EXTRACTION_VERSION: Int = 2
+
+        /**
          * What Last.fm answers for a credited artist's name (`artist.getInfo` and
-         * `artist.getTopTags`), in the artist cache by the folded name (#238): the artist as parsed
+         * `artist.getTopTags`), in the artist cache by the name as sent (#238): the artist as parsed
          * ([LastFmArtist], its bio as the sentences that may be quoted) with its top tags, or the
          * finding that Last.fm does not know the name. Judged afresh for each track.
          */
-        val ARTIST_PART: ArtistPart = ArtistPart("lastfm.artist", 1, setOf(SourceId.LASTFM))
+        val ARTIST_PART: ArtistPart = ArtistPart("lastfm.artist", EXTRACTION_VERSION, 1, setOf(SourceId.LASTFM))
 
         /**
          * Top tags weighted below this (of 100 for the artist's top tag) are a few listeners' and

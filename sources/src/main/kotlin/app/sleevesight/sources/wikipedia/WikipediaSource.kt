@@ -61,6 +61,8 @@ class WikipediaSource(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.WIKIPEDIA
 
+    override val extractionVersion: Int = EXTRACTION_VERSION
+
     // The identity check asks Wikidata, so a rejection depends on it too.
     override val consults: Set<SourceId> = SourceSwitch.WIKIPEDIA.sources
 
@@ -93,7 +95,13 @@ class WikipediaSource(
         }
         findings.artistFound = parts.any { it.accepted }
         val evidence = songLines?.drafts.orEmpty() + parts.flatMap { it.lines }
-        return SourceResult(findings.outcome(), evidence, start.elapsedNow(), rejections = findings.rejections)
+        return SourceResult(
+            findings.outcome(),
+            evidence,
+            start.elapsedNow(),
+            rejections = findings.rejections,
+            freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
+        )
     }
 
     private class Findings {
@@ -116,13 +124,14 @@ class WikipediaSource(
     /**
      * What one credited artist gave: whether an article was confirmed, its lines, the rejection's
      * reason, and whether Wikidata or Wikipedia did not answer, which keeps it out of the artist
-     * cache.
+     * cache; for one the artist cache kept, when it stops being fresh.
      */
     private class ArtistFinding(
         val accepted: Boolean,
         val lines: List<EvidenceDraft>,
         val rejection: String?,
         val unreachable: Boolean,
+        val freshUntil: Instant? = null,
     )
 
     /** One artist's identity check: its verdict, if any item was checked, and whether a lookup failed. */
@@ -162,10 +171,11 @@ class WikipediaSource(
     // What the artist cache keeps for [artist]; null for none, or a value that cannot be read.
     private suspend fun stored(artist: ResolvedArtist): ArtistFinding? {
         val key = keyOf(artist)
-        val value = if (key == null) null else artists.get(ARTIST_PART, key)
+        val part = if (key == null) null else artists.get(ARTIST_PART, key)
         return try {
-            value?.let { json.decodeFromString(StoredArtist.serializer(), it) }?.let { kept ->
-                ArtistFinding(kept.accepted, kept.lines.map { it.draft() }, kept.rejection, unreachable = false)
+            part?.let { json.decodeFromString(StoredArtist.serializer(), it.value) }?.let { kept ->
+                val lines = kept.lines.map { it.draft() }
+                ArtistFinding(kept.accepted, lines, kept.rejection, unreachable = false, freshUntil = part.freshUntil)
             }
         } catch (_: IllegalArgumentException) {
             null
@@ -328,7 +338,11 @@ class WikipediaSource(
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
          * or the identity check's rejection, or nothing, when no Wikidata item has the id.
          */
-        val ARTIST_PART: ArtistPart = ArtistPart("wikipedia.artist", 1, SourceSwitch.WIKIPEDIA.sources)
+        val ARTIST_PART: ArtistPart =
+            ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
+
+        /** [extractionVersion]: raised when what the adapter makes of the articles changes. */
+        const val EXTRACTION_VERSION: Int = 1
 
         private val json = Json { encodeDefaults = false }
 

@@ -8,8 +8,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class CountedArtistResultsTest {
-    private val lastFm = ArtistPart("lastfm.artist", 1, setOf(SourceId.LASTFM))
-    private val wikipedia = ArtistPart("wikipedia.artist", 1, setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
+    private val lastFm = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
+    private val wikipedia = ArtistPart("wikipedia.artist", 1, 1, setOf(SourceId.WIKIPEDIA, SourceId.WIKIDATA))
 
     @Test
     fun `each read is counted as a hit or a miss, per part, and the report says so`() =

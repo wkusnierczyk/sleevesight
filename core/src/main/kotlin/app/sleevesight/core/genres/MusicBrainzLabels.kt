@@ -32,9 +32,11 @@ fun interface ArtistTags {
  * the insight never waits for them.
  *
  * Tags are artist-level, so an artist's are kept by MusicBrainz id: a second track by the same
- * artist asks nothing. In memory for the process, for [lifetime], at most [capacity] artists, the
- * least recently used dropped first; and in [artists], the artist cache (#238, [PART]), for
- * MusicBrainz's lifetime (D9), so they are not asked again after a restart. A failed request is
+ * artist asks nothing. In [artists], the artist cache (#238, [PART]), for MusicBrainz's lifetime
+ * (D9), so they are not asked again after a restart either. With no artist cache
+ * ([ArtistResults.None]: the CLI without a cache, tests), in memory instead, for [lifetime], at
+ * most [capacity] artists, the least recently used dropped first; never both, so tags are not kept
+ * in memory past the cache's lifetime. A failed request is
  * not kept, so the next track by the artist asks again, and gives that artist no labels meanwhile;
  * nothing else follows from it, since the labels are no evidence. An artist MusicBrainz does not
  * know is kept as having no tags.
@@ -66,35 +68,37 @@ class MusicBrainzLabels(
             .take(GenreVocabulary.MAX_LABELS)
 
     // The artist's tags, kept or asked for; null when the request failed.
-    private suspend fun tagsOf(mbid: String): List<String>? = cached(mbid) ?: storedOrAsked(mbid)
+    private suspend fun tagsOf(mbid: String): List<String>? =
+        if (artists == ArtistResults.None) cached(mbid) ?: asked(mbid) else stored(mbid) ?: asked(mbid)
 
-    // The tags the artist cache keeps, now kept in memory too; else asked for, and kept in both.
-    private suspend fun storedOrAsked(mbid: String): List<String>? {
-        val stored = stored(mbid)
-        if (stored != null) keep(mbid, stored)
-        return stored ?: when (val answer = tags.artistTags(mbid)) {
-            is Lookup.Found -> answer.value.also { keepEverywhere(mbid, it) }
-            Lookup.NotFound -> emptyList<String>().also { keepEverywhere(mbid, it) }
+    // The tags MusicBrainz gives, kept; null when the request failed.
+    private suspend fun asked(mbid: String): List<String>? =
+        when (val answer = tags.artistTags(mbid)) {
+            is Lookup.Found -> answer.value.also { keepTags(mbid, it) }
+            Lookup.NotFound -> emptyList<String>().also { keepTags(mbid, it) }
             is Lookup.Failed -> null
         }
-    }
 
     // What the artist cache keeps for [mbid]; null for none, or a value that cannot be read.
     private suspend fun stored(mbid: String): List<String>? {
-        val value = artists.get(PART, mbid)
+        val part = artists.get(PART, mbid)
         return try {
-            value?.let { json.decodeFromString(TAGS, it) }
+            part?.let { json.decodeFromString(TAGS, it.value) }
         } catch (_: IllegalArgumentException) {
             null
         }
     }
 
-    private suspend fun keepEverywhere(
+    // In the artist cache, or in memory without one.
+    private suspend fun keepTags(
         mbid: String,
         found: List<String>,
     ) {
-        keep(mbid, found)
-        artists.keep(PART, mbid, json.encodeToString(TAGS, found))
+        if (artists == ArtistResults.None) {
+            keep(mbid, found)
+        } else {
+            artists.keep(PART, mbid, json.encodeToString(TAGS, found))
+        }
     }
 
     @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
@@ -128,9 +132,10 @@ class MusicBrainzLabels(
 
         /**
          * An artist's tags in the artist cache, by MusicBrainz id: a JSON array of the tags, most
-         * voted first, as [ArtistTags] gave them.
+         * voted first, as [ArtistTags] gave them. Its extraction is 1: the tags are kept as given,
+         * and go through the vocabulary when read.
          */
-        val PART: ArtistPart = ArtistPart("musicbrainz.tags", 1, setOf(SourceId.MUSICBRAINZ))
+        val PART: ArtistPart = ArtistPart("musicbrainz.tags", 1, 1, setOf(SourceId.MUSICBRAINZ))
 
         private val json = Json
         private val TAGS = ListSerializer(String.serializer())
