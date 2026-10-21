@@ -1,0 +1,395 @@
+package app.sleevesight.ai.google
+
+import app.sleevesight.ai.ReplayNetClient
+import app.sleevesight.ai.ReplayNetClient.Companion.failure
+import app.sleevesight.ai.ReplayNetClient.Companion.ok
+import app.sleevesight.ai.ReplayNetClient.Companion.recorded
+import app.sleevesight.core.Secret
+import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.CompletionRequest
+import app.sleevesight.core.ai.ModelInfo
+import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.ai.StopReason
+import app.sleevesight.core.ai.Usage
+import app.sleevesight.net.NetClient
+import app.sleevesight.net.NetError
+import app.sleevesight.net.NetMethod
+import app.sleevesight.net.NetRequest
+import app.sleevesight.net.NetResponse
+import app.sleevesight.net.NetResult
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.time.Duration.Companion.seconds
+
+class GoogleProviderTest {
+    private val key = Secret("AIza-test-key")
+    private val request =
+        CompletionRequest(model = "gemini-3.5-flash-lite", prompt = "Say hello in three words.", maxTokens = 256)
+    private val stream = "google/stream-generate-content.sse"
+
+    // Detekt 1.23.8 cannot resolve `toList` (from a library built with a newer Kotlin than its own), so
+    // it takes the modifier for redundant; the compiler requires it.
+    @Suppress("RedundantSuspendModifier")
+    private suspend fun events(
+        request: CompletionRequest = this.request,
+        answer: (NetRequest) -> NetResult<NetResponse>,
+    ): Pair<List<CompletionEvent>, ReplayNetClient> {
+        val net = ReplayNetClient(answer)
+        return GoogleProvider(net).stream(request, key).toList() to net
+    }
+
+    private fun sse(vararg chunks: String): String = chunks.joinToString("") { "data: $it\r\n\r\n" }
+
+    private fun text(events: List<CompletionEvent>) =
+        events.filterIsInstance<CompletionEvent.Delta>().joinToString("") {
+            it.text
+        }
+
+    private fun body(net: ReplayNetClient): JsonObject =
+        Json
+            .parseToJsonElement(
+                net.requests
+                    .single()
+                    .body!!
+                    .text,
+            ).jsonObject
+
+    private fun chunk(
+        text: String,
+        finish: String? = null,
+    ): String {
+        val reason = finish?.let { ""","finishReason":"$it"""" }.orEmpty()
+        return """{"candidates":[{"content":{"parts":[{"text":"$text"}],"role":"model"}$reason}]}"""
+    }
+
+    @Test
+    fun `a documented stream becomes its text deltas and Done with the usage`() =
+        runTest {
+            val (events, _) = events { ok(recorded(stream)) }
+
+            assertEquals("Hello there, friend!", text(events))
+            // Output counts the thinking tokens: 5 of the reply and 12 of thought.
+            assertEquals(CompletionEvent.Done(Usage(inputTokens = 7, outputTokens = 17), StopReason.END), events.last())
+            assertEquals(1, events.count { it !is CompletionEvent.Delta })
+        }
+
+    @Test
+    fun `the request is one streaming POST to the model, the key only in the secrets`() =
+        runTest {
+            val (_, net) = events { ok(recorded(stream)) }
+
+            val sent = net.requests.single()
+            assertEquals(
+                "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash-lite:streamGenerateContent",
+                sent.url,
+            )
+            assertEquals(mapOf("alt" to "sse"), sent.query)
+            assertEquals(NetMethod.POST, sent.method)
+            assertEquals(mapOf("x-goog-api-key" to "AIza-test-key"), sent.secrets.headers)
+            assertEquals(emptyMap(), sent.secrets.query)
+            assertEquals(mapOf("accept" to "text/event-stream"), sent.headers)
+            assertEquals(GoogleProvider.STREAM_TIMEOUT, sent.timeout)
+            assertEquals(
+                Json.parseToJsonElement(
+                    """{"contents":[{"role":"user","parts":[{"text":"Say hello in three words."}]}],""" +
+                        """"generationConfig":{"maxOutputTokens":256}}""",
+                ),
+                body(net),
+            )
+            assertEquals("application/json", sent.body!!.contentType)
+            assertFalse("AIza" in sent.toString() + sent.url + sent.query + sent.headers + sent.body!!.text)
+        }
+
+    @Test
+    fun `an effort goes in thinkingConfig, and none leaves the model's default`() =
+        runTest {
+            for (effort in ReasoningEffort.entries) {
+                val (_, net) = events(request.copy(effort = effort)) { ok(recorded(stream)) }
+                val config = body(net)["generationConfig"]!!.jsonObject
+                assertEquals(
+                    Json.parseToJsonElement("""{"thinkingLevel":"${effort.name.lowercase()}"}"""),
+                    config["thinkingConfig"],
+                    effort.name,
+                )
+            }
+        }
+
+    @Test
+    fun `a model that does not take minimal gets low, and a model with no levels gets none`() =
+        runTest {
+            val (_, newer) =
+                events(request.copy(model = "gemini-3.8-flash", effort = ReasoningEffort.MINIMAL)) {
+                    ok(recorded(stream))
+                }
+            assertEquals(
+                Json.parseToJsonElement("""{"thinkingLevel":"low"}"""),
+                body(newer)["generationConfig"]!!.jsonObject["thinkingConfig"],
+            )
+            val (_, older) =
+                events(request.copy(model = "gemini-2.5-flash", effort = ReasoningEffort.LOW)) {
+                    ok(recorded(stream))
+                }
+            assertEquals(null, body(older)["generationConfig"]!!.jsonObject["thinkingConfig"])
+
+            val levelled =
+                listOf("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-argon", "gemini-3-flash-preview")
+            for (model in levelled) {
+                assertEquals(true, GoogleProvider.takesThinkingLevel(model), model)
+            }
+            val unlevelled =
+                listOf("gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-flash-latest", "gemma-3-27b-it")
+            for (model in unlevelled) {
+                assertEquals(false, GoogleProvider.takesThinkingLevel(model), model)
+            }
+            for (model in listOf("gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3-flash-preview")) {
+                assertEquals(true, GoogleProvider.takesMinimal(model), model)
+            }
+            for (model in listOf("gemini-3.8-flash", "gemini-4-argon", "gemini-3.1-pro-preview", "gemini-3-flashy")) {
+                assertEquals(false, GoogleProvider.takesMinimal(model), model)
+            }
+        }
+
+    @Test
+    fun `a model id that would change the route is not sent`() =
+        runTest {
+            for (model in listOf("../files", "gemini-3.5-flash-lite?alt=json", "models/gemini-3.8-flash", "")) {
+                val (events, net) = events(request.copy(model = model)) { ok(recorded(stream)) }
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND)), events, model)
+                assertEquals(emptyList(), net.requests, model)
+            }
+        }
+
+    @Test
+    fun `thought parts are skipped, text parts join, and the stop reasons map`() =
+        runTest {
+            val reasons =
+                listOf(
+                    "STOP" to StopReason.END,
+                    "MAX_TOKENS" to StopReason.MAX_TOKENS,
+                    "CONTINUATION" to StopReason.MAX_TOKENS,
+                    "SAFETY" to StopReason.REFUSAL,
+                    "RECITATION" to StopReason.REFUSAL,
+                    "PROHIBITED_CONTENT" to StopReason.REFUSAL,
+                    "MALFORMED_RESPONSE" to StopReason.OTHER,
+                    "SOME_FUTURE_REASON" to StopReason.OTHER,
+                )
+            for ((wire, reason) in reasons) {
+                val (events, _) =
+                    events {
+                        ok(
+                            sse(
+                                """{"candidates":[{"content":{"parts":[{"text":"hmm","thought":true},""" +
+                                    """{"text":"Hi"},{"text":" you"}]}}],"usageMetadata":{"promptTokenCount":10}}""",
+                                """{"candidates":[{"content":{"parts":[{"text":""}]}}],"someFutureField":1}""",
+                                """{"candidates":[{"content":{"parts":[{"text":"!"}]},"finishReason":"$wire"}],""" +
+                                    """"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":3,""" +
+                                    """"thoughtsTokenCount":4}}""",
+                            ),
+                        )
+                    }
+                assertEquals(
+                    listOf(
+                        CompletionEvent.Delta("Hi you"),
+                        CompletionEvent.Delta("!"),
+                        CompletionEvent.Done(Usage(10, 7), reason),
+                    ),
+                    events,
+                    wire,
+                )
+            }
+        }
+
+    @Test
+    fun `usage after the finish reason still counts`() =
+        runTest {
+            val (events, _) =
+                events {
+                    ok(
+                        sse(
+                            chunk("Hi", finish = "STOP"),
+                            """{"usageMetadata":{"promptTokenCount":3,"candidatesTokenCount":1}}""",
+                        ),
+                    )
+                }
+            assertEquals(listOf(CompletionEvent.Delta("Hi"), CompletionEvent.Done(Usage(3, 1), StopReason.END)), events)
+        }
+
+    @Test
+    fun `a blocked prompt is a refusal`() =
+        runTest {
+            val (events, _) =
+                events {
+                    ok(sse("""{"promptFeedback":{"blockReason":"SAFETY"},"usageMetadata":{"promptTokenCount":9}}"""))
+                }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Done(Usage(9, 0), StopReason.REFUSAL)), events)
+        }
+
+    @Test
+    fun `an error in place of a chunk ends the stream with its kind`() =
+        runTest {
+            val (events, _) =
+                events {
+                    ok(
+                        sse(
+                            chunk("Half"),
+                            """{"error":{"code":503,"message":"The model is overloaded.","status":"UNAVAILABLE"}}""",
+                            chunk("more", finish = "STOP"),
+                        ),
+                    )
+                }
+            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.OVERLOADED)), events)
+        }
+
+    @Test
+    fun `a stream that ends before a finish reason is incomplete`() =
+        runTest {
+            val (events, _) = events { ok(sse(chunk("Half"))) }
+            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+        }
+
+    @Test
+    fun `data that is not JSON ends the stream as an unexpected response`() =
+        runTest {
+            val (events, _) = events { ok(sse("not json", chunk("Hi", finish = "STOP"))) }
+            assertEquals(listOf(CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE)), events)
+        }
+
+    @Test
+    fun `transport failures map to their kinds`() =
+        runTest {
+            val cases =
+                listOf(
+                    NetError.Unauthorized(403) to CompletionEvent.Error(AiErrorKind.UNAUTHORIZED),
+                    NetError.RateLimited(30.seconds) to CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 30.seconds),
+                    NetError.Server(503) to CompletionEvent.Error(AiErrorKind.OVERLOADED),
+                    NetError.Server(500) to CompletionEvent.Error(AiErrorKind.SERVER),
+                    NetError.Server(504) to CompletionEvent.Error(AiErrorKind.SERVER),
+                    NetError.Offline("IOException") to CompletionEvent.Error(AiErrorKind.OFFLINE),
+                    NetError.InvalidRequest("header") to CompletionEvent.Error(AiErrorKind.INVALID_REQUEST),
+                    NetError.Protocol("ProtocolException") to CompletionEvent.Error(AiErrorKind.UNEXPECTED_RESPONSE),
+                )
+            for ((error, expected) in cases) {
+                assertEquals(listOf<CompletionEvent>(expected), events { failure(error) }.first, error.toString())
+            }
+        }
+
+    @Test
+    fun `error responses map by their reason and status, else by the HTTP status`() =
+        runTest {
+            fun body(
+                code: Int,
+                status: String,
+                reason: String? = null,
+            ): String {
+                val details =
+                    reason
+                        ?.let {
+                            ""","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"$it",""" +
+                                """"domain":"googleapis.com"}]"""
+                        }.orEmpty()
+                return """{"error":{"code":$code,"message":"m","status":"$status"$details}}"""
+            }
+            val cases =
+                listOf(
+                    ok(body(400, "INVALID_ARGUMENT", "API_KEY_INVALID"), 400) to AiErrorKind.UNAUTHORIZED,
+                    ok(body(400, "INVALID_ARGUMENT"), 400) to AiErrorKind.INVALID_REQUEST,
+                    ok(body(400, "FAILED_PRECONDITION"), 400) to AiErrorKind.BILLING,
+                    ok(body(402, "RESOURCE_EXHAUSTED"), 402) to AiErrorKind.BILLING,
+                    ok(body(404, "NOT_FOUND"), 404) to AiErrorKind.MODEL_NOT_FOUND,
+                    ok("<html>gateway</html>", 404) to AiErrorKind.MODEL_NOT_FOUND,
+                    ok("", 402) to AiErrorKind.BILLING,
+                    ok("", 413) to AiErrorKind.REQUEST_TOO_LARGE,
+                    ok(body(418, "SOME_FUTURE_STATUS"), 418) to AiErrorKind.UNEXPECTED_RESPONSE,
+                )
+            for ((response, kind) in cases) {
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(kind)), events { response }.first, kind.name)
+            }
+        }
+
+    @Test
+    fun `the connection lost after the reply began leaves an incomplete reply`() =
+        runTest {
+            val net =
+                object : NetClient {
+                    override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
+
+                    override suspend fun stream(
+                        request: NetRequest,
+                        onLine: suspend (String) -> Unit,
+                    ): NetResult<NetResponse> {
+                        sse(chunk("Half")).lines().forEach { onLine(it) }
+                        return NetResult.Failure(NetError.Offline("IOException"))
+                    }
+
+                    override fun close() = Unit
+                }
+            val events = GoogleProvider(net).stream(request, key).toList()
+            assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
+        }
+
+    @Test
+    fun `a collector that stops early cancels the stream`() =
+        runTest {
+            val first = GoogleProvider(ReplayNetClient { ok(recorded(stream)) }).stream(request, key).first()
+            assertEquals(CompletionEvent.Delta("Hello"), first)
+        }
+
+    @Test
+    fun `the model list follows its pages and keeps the text models`() =
+        runTest {
+            val net =
+                ReplayNetClient { request ->
+                    val page = if ("pageToken" in request.query) 2 else 1
+                    ok(recorded("google/models-page-$page.json"))
+                }
+            val listed = assertIs<ModelList.Listed>(GoogleProvider(net).models(key)).models
+
+            assertEquals(
+                listOf("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-4-argon", "gemini-3.1-flash-lite"),
+                listed.map { it.id },
+            )
+            assertEquals(ModelInfo("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", null), listed.first())
+            assertEquals(
+                listOf(null, "Chxtb2RlbHMvZ2VtaW5pLWVtYmVkZGluZy0wMDE="),
+                net.requests.map { it.query["pageToken"] },
+            )
+            net.requests.forEach {
+                assertEquals("https://generativelanguage.googleapis.com/v1/models", it.url)
+                assertEquals("1000", it.query["pageSize"])
+                assertEquals(NetMethod.GET, it.method)
+                assertEquals(mapOf("x-goog-api-key" to "AIza-test-key"), it.secrets.headers)
+            }
+        }
+
+    @Test
+    fun `a model list that fails says why`() =
+        runTest {
+            val provider = { answer: NetResult<NetResponse> -> GoogleProvider(ReplayNetClient { answer }) }
+            assertEquals(
+                ModelList.Failed(AiErrorKind.UNAUTHORIZED),
+                provider(failure(NetError.Unauthorized(403))).models(key),
+            )
+            assertEquals(
+                ModelList.Failed(AiErrorKind.UNAUTHORIZED),
+                provider(
+                    ok(
+                        """{"error":{"code":400,"status":"INVALID_ARGUMENT",""" +
+                            """"details":[{"reason":"API_KEY_INVALID"}]}}""",
+                        400,
+                    ),
+                ).models(key),
+            )
+            assertEquals(ModelList.Failed(AiErrorKind.UNEXPECTED_RESPONSE), provider(ok("[]")).models(key))
+            assertEquals(ModelList.Listed(emptyList()), provider(ok("{}")).models(key))
+        }
+}

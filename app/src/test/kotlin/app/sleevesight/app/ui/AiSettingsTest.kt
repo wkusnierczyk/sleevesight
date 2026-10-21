@@ -90,6 +90,9 @@ class AiSettingsTest {
     /** A string that names the provider, for Anthropic. */
     private fun anthropic(id: Int) = app.getString(id, text(R.string.settings_ai_provider_anthropic))
 
+    /** A string that names the provider, for Google. */
+    private fun google(id: Int) = app.getString(id, text(R.string.settings_ai_provider_google))
+
     /** The model row's value, and the dialog's option, for Anthropic's default model. */
     private fun anthropicDefault() =
         app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC))
@@ -255,8 +258,10 @@ class AiSettingsTest {
     fun anEffortIsChosenFromTheProvidersOwnScale() =
         show {
             compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
-            // Anthropic's levels (low, its default, is also the row's value), and the service's own default.
-            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(2)
+            // Anthropic's levels (low, its default, is also the value of its row and of Google's),
+            // and the service's own default.
+            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(3)
+            assertTrue(absent(R.string.settings_effort_minimal))
             compose.onNodeWithText(text(R.string.settings_effort_medium)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_effort_high)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_effort_provider_default)).performClick()
@@ -264,4 +269,35 @@ class AiSettingsTest {
                 ProviderId.ANTHROPIC in current().aiEfforts && current().effort(ProviderId.ANTHROPIC) == null
             }
         }
+
+    @Test
+    fun googleHasItsOwnRowsAndItsOwnScale() =
+        show {
+            compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().assertIsDisplayed()
+            val default = app.getString(R.string.settings_ai_model_default, "gemini-3.5-flash-lite")
+            compose.onNodeWithText(default).performScrollTo().assertIsDisplayed()
+
+            compose.onNodeWithText(google(R.string.settings_ai_effort_of)).performScrollTo().performClick()
+            compose.onAllNodesWithText(google(R.string.settings_ai_effort_of)).assertCountEquals(2)
+            // Google's levels, minimal among them, which Anthropic's scale does not have.
+            compose.onNodeWithText(text(R.string.settings_effort_minimal)).performClick()
+            waitFor("Google's minimal stored") { current().effort(ProviderId.GOOGLE) == ReasoningEffort.MINIMAL }
+            assertEquals(ReasoningEffort.LOW, current().effort(ProviderId.ANTHROPIC))
+        }
+
+    @Test
+    fun switchingGoogleOnSwitchesAnthropicOff() {
+        runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
+        show {
+            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
+            val google = compose.onNodeWithText(text(R.string.settings_ai_provider_google)).performScrollTo()
+            google.assertIsOff()
+
+            google.performClick()
+            waitFor("Google switched on") { current().aiProvider == ProviderId.GOOGLE }
+            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOff()
+            assertEquals("gemini-3.5-flash-lite", current().model)
+            assertEquals(ReasoningEffort.LOW, current().effort)
+        }
+    }
 }

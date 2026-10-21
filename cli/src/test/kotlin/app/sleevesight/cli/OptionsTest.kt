@@ -1,5 +1,6 @@
 package app.sleevesight.cli
 
+import app.sleevesight.core.model.ProviderId
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,6 +26,15 @@ class OptionsTest {
         assertFalse(options.web)
         assertEquals(setOf("anthropic"), options.record)
         assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--record", "web")) }
+    }
+
+    @Test
+    fun `the AI service is Anthropic unless another is given, and Google can be recorded`() {
+        assertEquals(ProviderId.ANTHROPIC, Options.parse(listOf("live")).provider)
+        assertEquals(ProviderId.GOOGLE, Options.parse(listOf("live", "--provider", "google")).provider)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--provider", "ollama")) }
+        assertEquals(setOf("google"), Options.parse(listOf("record", "--record", "google")).record)
+        assertEquals("google", Options.nameOf(ProviderId.GOOGLE))
     }
 
     @Test

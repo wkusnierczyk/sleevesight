@@ -111,6 +111,32 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `each level is sent as Anthropic names it, minimal as low`() =
+        runTest {
+            val sent =
+                ReasoningEffort.entries.associateWith { effort ->
+                    val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
+                    AnthropicProvider(net).stream(request.copy(effort = effort), key).toList()
+                    Json
+                        .parseToJsonElement(
+                            net.requests
+                                .single()
+                                .body!!
+                                .text,
+                        ).jsonObject["output_config"]
+                }
+            assertEquals(
+                mapOf(
+                    ReasoningEffort.MINIMAL to "low",
+                    ReasoningEffort.LOW to "low",
+                    ReasoningEffort.MEDIUM to "medium",
+                    ReasoningEffort.HIGH to "high",
+                ).mapValues { Json.parseToJsonElement("""{"effort":"${it.value}"}""") },
+                sent,
+            )
+        }
+
+    @Test
     fun `a model not known to take an effort gets none`() =
         runTest {
             val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }

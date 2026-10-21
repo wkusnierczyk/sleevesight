@@ -4,7 +4,6 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NowPlaying
-import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
@@ -68,6 +67,10 @@ class Cli(
         private val options: Options,
     ) : AutoCloseable {
         private val keys = if (options.mode == Mode.REPLAY) Keys.NONE else Keys.load(environment, options.keysFile)
+
+        // Before [ai], which reads them.
+        private val provider = options.provider
+        private val providerName = Options.nameOf(provider)
         private val store = FixtureStore(File(options.fixtures, "http"))
         private val live: NetClient? =
             if (options.mode == Mode.REPLAY) null else NetClient(HostPolicies.netConfig(APP_VERSION))
@@ -89,8 +92,8 @@ class Cli(
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
         private val settings =
             Settings(
-                aiProvider = ProviderId.ANTHROPIC,
-                aiModels = listOfNotNull(options.model?.let { ProviderId.ANTHROPIC to it }).toMap(),
+                aiProvider = provider,
+                aiModels = listOfNotNull(options.model?.let { provider to it }).toMap(),
                 enabledSources =
                     Settings.DEFAULT_SOURCES -
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
@@ -124,7 +127,7 @@ class Cli(
                 file.writeText(report)
             }
             // A missing reply of the model is reported, not fatal: a re-recorded source changes the prompts.
-            val sourceMisses = misses.filter { FixtureStore.sourceOf(it.substringAfter(' ')) != ANTHROPIC }
+            val sourceMisses = misses.filter { FixtureStore.sourceOf(it.substringAfter(' ')) !in Options.PROVIDERS }
             return when {
                 sourceMisses.isNotEmpty() -> EXIT_USAGE
                 gate.any { it.verdict == Verdict.FAIL } -> EXIT_GATE
@@ -199,22 +202,22 @@ class Cli(
             val key =
                 when {
                     !options.insights -> null
-                    options.mode == Mode.REPLAY -> Secret("replay").takeIf { store.hasRecordings(ANTHROPIC) }
-                    options.mode == Mode.RECORD -> keys.anthropic?.takeIf { ANTHROPIC in options.record }
-                    else -> keys.anthropic
+                    options.mode == Mode.REPLAY -> Secret("replay").takeIf { store.hasRecordings(providerName) }
+                    options.mode == Mode.RECORD -> keys.forProvider(provider)?.takeIf { providerName in options.record }
+                    else -> keys.forProvider(provider)
                 }
-            return key?.let { AiAccess(wiring.aiProviders.getValue(ProviderId.ANTHROPIC), it) }
+            return key?.let { AiAccess(wiring.aiProviders.getValue(provider), it) }
         }
 
         private fun aiNote(): String {
-            val model = settings.model(ProviderId.ANTHROPIC)
-            val effort = settings.effort(ProviderId.ANTHROPIC)?.name?.lowercase() ?: "the model's default"
+            val model = settings.model(provider)
+            val effort = settings.effort(provider)?.name?.lowercase() ?: "the model's default"
             val replayed = if (options.mode == Mode.REPLAY) ", replayed from the recorded replies" else ""
             return when {
-                ai != null -> "Anthropic $model, effort $effort$replayed"
+                ai != null -> "${providerName.replaceFirstChar { it.uppercase() }} $model, effort $effort$replayed"
                 !options.insights -> "off: --no-insights"
                 options.mode == Mode.REPLAY -> "off: no recorded replies"
-                else -> "off: no ${Keys.ANTHROPIC}"
+                else -> "off: no ${Keys.variableOf(provider)}"
             }
         }
 
@@ -236,7 +239,6 @@ class Cli(
 
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
-        private const val ANTHROPIC = "anthropic"
         private const val SECONDS_PER_MINUTE = 60
 
         /** Playlist position [n] as the player would report it. */

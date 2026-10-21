@@ -207,7 +207,8 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_change_failed))
             // The dialog has closed, and the row still shows the stored effort.
             assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
-            compose.onNodeWithText(text(R.string.settings_effort_low)).performScrollTo().assertIsDisplayed()
+            // Anthropic's row and Google's, both at their default.
+            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(2)
             assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }

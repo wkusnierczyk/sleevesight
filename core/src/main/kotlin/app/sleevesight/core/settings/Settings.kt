@@ -161,11 +161,19 @@ data class Settings(
 
         /**
          * Each provider's default model. Anthropic: Claude Haiku 5.5, the cheapest current model in
-         * the Anthropic models API on 2026-10-14. The key and its bill are the user's (driver 5), and
-         * an insight narrates a few evidence lines, which needs no larger model; the user can choose
+         * the Anthropic models API on 2026-10-14. Google: Gemini 3.5 Flash-Lite, the cheapest stable
+         * text model in the Gemini API's models and pricing pages on 2026-10-21 that is not
+         * deprecated (Gemini 3.1 Flash-Lite costs less, but is deprecated, to shut down on
+         * 2027-05-07, with 3.5 Flash-Lite its replacement; the cheaper 2.5 models are open only to
+         * projects that used them before). The key and its bill are the user's (driver 5), and an
+         * insight narrates a few evidence lines, which needs no larger model; the user can choose
          * another from the provider's list. The other providers get theirs with their clients.
          */
-        val DEFAULT_MODELS: Map<ProviderId, String> = mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5")
+        val DEFAULT_MODELS: Map<ProviderId, String> =
+            mapOf(
+                ProviderId.ANTHROPIC to "claude-haiku-5-5",
+                ProviderId.GOOGLE to "gemini-3.5-flash-lite",
+            )
 
         /**
          * Each provider's reasoning-effort scale, with its default; a provider with none sends no
@@ -179,12 +187,30 @@ data class Settings(
          * check, not the model's deliberation. Thinking is not switched off: not every model allows
          * it (Claude Opus 5.5 refuses), while every current one takes an effort. A user who prefers
          * more deliberate cards raises it, or chooses the provider's default.
+         *
+         * Google: minimal, low, medium and high (`thinkingConfig.thinkingLevel`), low by default, for
+         * the same reasons. Low rather than minimal (Gemini 3.5 Flash-Lite's own default): low is the
+         * least level every current Gemini text model takes (Gemini 3.8 Flash and Gemini 4 Argon
+         * refuse minimal), so the default means the same whichever model is chosen, and it matches
+         * Anthropic's, so cards from the two services are compared at one effort. A user who wants
+         * the fastest cards chooses minimal.
          */
         val EFFORT_SCALES: Map<ProviderId, EffortScale> =
             mapOf(
                 ProviderId.ANTHROPIC to
                     EffortScale(
                         levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.GOOGLE to
+                    EffortScale(
+                        levels =
+                            listOf(
+                                ReasoningEffort.MINIMAL,
+                                ReasoningEffort.LOW,
+                                ReasoningEffort.MEDIUM,
+                                ReasoningEffort.HIGH,
+                            ),
                         default = ReasoningEffort.LOW,
                     ),
             )

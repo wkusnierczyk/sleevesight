@@ -56,7 +56,8 @@ data class CompletionRequest(
 
 /**
  * How much a model may reason before it answers: a provider maps it to its own control (Anthropic's
- * `output_config.effort`), or ignores it where it has none. Less is faster and cheaper.
+ * `output_config.effort`, Google's `thinkingLevel`), or ignores it where it has none. Less is faster
+ * and cheaper.
  *
  * These are the levels of every provider's scale, by name: each provider offers its own levels from
  * them, with its own default ([EffortScale], `Settings.EFFORT_SCALES`), and is sent only those. A
@@ -64,6 +65,8 @@ data class CompletionRequest(
  * is stored (the settings, the synthesis cache's key), so a level is never renamed.
  */
 enum class ReasoningEffort {
+    /** Little or no reasoning: Google's `minimal` (#229). Not on Anthropic's scale. */
+    MINIMAL,
     LOW,
     MEDIUM,
     HIGH,

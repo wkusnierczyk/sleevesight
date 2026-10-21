@@ -319,8 +319,8 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | Group | Setting | Default |
 |---|---|---|
 | Layout | Separate pages or expandable boxes | Separate pages |
-| AI service | Per provider: a switch, its API key and its model; the switches are exclusive, and each provider keeps its key and model while switched off (#227) | All off until one is switched on; the model defaults per provider (Anthropic: Claude Haiku 5.5, its cheapest current model) |
-| AI service | Per provider, reasoning effort: how much the model may reason before it writes, from the provider's own scale, or the provider's default (Anthropic: low, medium, high) | Per provider (Anthropic: low; an insight narrates a few lines and is waited for) |
+| AI service | Per provider: a switch, its API key and its model; the switches are exclusive, and each provider keeps its key and model while switched off (#227) | All off until one is switched on; the model defaults per provider, to its cheapest current one (Anthropic: Claude Haiku 5.5; Google: Gemini 3.5 Flash-Lite) |
+| AI service | Per provider, reasoning effort: how much the model may reason before it writes, from the provider's own scale, or the provider's default (Anthropic: low, medium, high; Google: minimal, low, medium, high) | Per provider (Anthropic and Google: low; an insight narrates a few lines and is waited for) |
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
 | Players to follow | One switch per player seen | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |

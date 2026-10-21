@@ -1,5 +1,6 @@
 package app.sleevesight.cli
 
+import app.sleevesight.core.model.ProviderId
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -23,12 +24,27 @@ class KeysTest {
     }
 
     @Test
+    fun `each AI service's key is read from its own variable`() {
+        val file = File.createTempFile("keys", ".env").apply { writeText("SLEEVESIGHT_GOOGLE_API_KEY=g-1\n") }
+        try {
+            val keys = Keys.load(mapOf("SLEEVESIGHT_ANTHROPIC_API_KEY" to "a-1"), file)
+            assertEquals("g-1", keys.forProvider(ProviderId.GOOGLE)?.reveal())
+            assertEquals("a-1", keys.forProvider(ProviderId.ANTHROPIC)?.reveal())
+            assertNull(keys.forProvider(ProviderId.OPENAI))
+            assertEquals("SLEEVESIGHT_GOOGLE_API_KEY", Keys.variableOf(ProviderId.GOOGLE))
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun `the environment wins over the file, and a key is never shown`() {
         val file = File.createTempFile("keys", ".env").apply { writeText("SLEEVESIGHT_EXA_API_KEY=from-file\n") }
         try {
             val keys = Keys.load(mapOf("SLEEVESIGHT_EXA_API_KEY" to "from-env"), file)
             assertEquals("from-env", keys.exa?.reveal())
             assertNull(keys.anthropic)
+            assertNull(keys.google)
             assertFalse("from-env" in keys.exa.toString())
         } finally {
             file.delete()
