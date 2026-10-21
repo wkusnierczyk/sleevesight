@@ -76,14 +76,15 @@ with tempfile.TemporaryDirectory() as tmp:
     opts.flavor = 'woff2'
     sub = subset.Subsetter(opts)
     sub.populate(unicodes=sorted(chars))
-    # Missing from the copy: a character the font lacks, or (for the chips) one outside what it keeps.
-    missing = sorted(used - (set(font.getBestCmap()) & chars))
+    # Two reasons a character the page uses can be missing from the copy: the font lacks it, or
+    # (for the chips) the font has it but the copy keeps ASCII only.
+    cmap = set(font.getBestCmap())
+    lacks = sorted(used - cmap)
+    dropped = sorted((used & cmap) - chars)
     sub.subset(font)
     subset.save_font(font, out, opts)
 print(f'{out}: {os.path.getsize(out)} bytes, {len(chars)} characters')
-if missing:
-    if scope == 'chips':
-        where = 'outside the ASCII the Mono copy keeps (widen `chars` in the chips branch above)'
-    else:
-        where = 'not in the font'
-    print(f'{where}, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in missing))
+for why, cs in (('not in the font', lacks),
+                ('in the font but not in this copy (widen the chips\' `chars` in make_page_font.py)', dropped)):
+    if cs:
+        print(f'{why}, so drawn by a fallback font: ' + ' '.join(f'{chr(c)} U+{c:04X}' for c in cs))
