@@ -212,6 +212,18 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 @keyframes g-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-112.619%,-136.88%) scale(.41224)}}
 @keyframes g-key{0%{opacity:1}50%,100%{opacity:0}}
 @keyframes h-turn{0%,12.86%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}25.71%,100%{transform:rotate(360deg)}}
+/* I's intro, on B's timings, with C's mark and header. The svg is the mark's ink widened to the right,
+   past where "Sleeve" starts (221.38 by 69 units, so it is centred on the record), at C's scale,
+   centred on the stage, and fades as F's does. Each word slides left into its place, by its distance
+   in the words' units, at the page's moments: "Sleeve" 0.9-2.05 s, "sight" 1.75-2.9 s, behind the
+   record, which is drawn over it. */
+.stage2 .ti{position:absolute;left:25.6785%;top:37.8711%;width:48.6431%;aspect-ratio:221.38/69;transform-origin:0 0;animation:i-fly 7s infinite}
+.stage2 .ti svg{display:block;width:100%;height:100%;overflow:visible;--tile-ink:var(--ink);animation:f-fade 7s infinite}
+.stage2 .ti .i-sleeve{animation:i-sleeve 7s infinite}
+.stage2 .ti .i-sight{animation:i-sight 7s infinite}
+@keyframes i-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-44.223%,-136.88%) scale(.41224)}}
+@keyframes i-sleeve{0%,12.86%{transform:translateX(138.27px);animation-timing-function:cubic-bezier(.45,0,.55,1)}29.29%,100%{transform:none}}
+@keyframes i-sight{0%,25%{transform:translateX(117.58px);animation-timing-function:cubic-bezier(.45,0,.55,1)}41.43%,100%{transform:none}}
 @keyframes e-rec{0%,60%{opacity:1;transform:none;animation-timing-function:cubic-bezier(.6,0,.8,1)}70%,100%{opacity:0;transform:rotate(360deg) scale(.6)}}
 /* A's intro, looped every 14 s: the 2026-10-20 product page's timings (the animated logo's 10 s, the flight
    9.4-10.05 s, the sleeve out, the eye and the name in, one blink at 11.35 s, the page 10.05-10.5 s),
@@ -249,7 +261,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
 @keyframes a-hblink{0%,81.071%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}81.786%,82.071%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}83.071%,100%{transform:scaleY(1)}}
 @keyframes a-hshut{0%{opacity:0}81.643%{opacity:1}82.271%{opacity:0}}
 @keyframes a-page{0%,71.786%{opacity:0;animation-timing-function:ease-out}75%,92%{opacity:1}100%{opacity:0}}
-@media (prefers-reduced-motion: reduce){.stage2 *{animation:none!important}.stage2 .tl,.stage2 .tc,.stage2 .tf,.stage2 .tg,.stage2 .th,.stage2 .ea,.stage2 .ah .a-sleeve{display:none}.stage2 .hdr,.stage2 .ah,.stage2 .ghost,.stage2 .nav{opacity:1}}
+@media (prefers-reduced-motion: reduce){.stage2 *{animation:none!important}.stage2 .tl,.stage2 .tc,.stage2 .tf,.stage2 .tg,.stage2 .th,.stage2 .ti,.stage2 .ea,.stage2 .ah .a-sleeve{display:none}.stage2 .hdr,.stage2 .ah,.stage2 .ghost,.stage2 .nav{opacity:1}}
 
 /* Merch */
 .merch{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
@@ -334,7 +346,7 @@ noscript .lead{margin-top:16px}
   <noscript><p class="lead">The marks, swatches and mock-ups on this page are drawn by its script, which is off.</p></noscript>
 
   <h2>Leading designs</h2>
-  <p class="lead">Designs, each a header logo with its own intro, all kept so testers can compare them. The product page plays C's intro, D's, F's, G's, H's, or one of the two reveals below (R1, R2), picked at random on each visit, and all of them end on C's header (<a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>). A and B are on the page's copy from before that, <a href="product-page-2026-10-20.html?logo=a"><code>product-page-2026-10-20.html</code></a>, with C, by its own switch. D and E are B's and C's intros, each ending on the other's header, so that a phone and a desktop can end on one mark; E is on this sheet only. Everything below them is the wider palette they come from.</p>
+  <p class="lead">Designs, each a header logo with its own intro, all kept so testers can compare them. The product page plays C's intro, D's, F's, G's, H's, I's, or one of the two reveals below (R1, R2), picked at random on each visit, and all of them end on C's header (<a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>). A and B are on the page's copy from before that, <a href="product-page-2026-10-20.html?logo=a"><code>product-page-2026-10-20.html</code></a>, with C, by its own switch. D and E are B's and C's intros, each ending on the other's header, so that a phone and a desktop can end on one mark; E is on this sheet only. Everything below them is the wider palette they come from.</p>
   <div class="lead2">
     <div class="card"><div class="cap"><b>A</b><span>The eye · 2c · on the product page's copy of 2026-10-20, by its switch</span></div>
       <div class="stage2 lt a" role="img" aria-label="Intro A: a record slides out of its sleeve, the eye forms around it, blinks, the record turns twice, the sleeve comes back and shrinks into the header, where the eye and the name appear"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
@@ -472,6 +484,23 @@ noscript .lead{margin-top:16px}
         </ol>
         <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
       </div></div>
+    <div class="card"><div class="cap"><b>I</b><span>The words slide in past the record · C's header · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/387">#387</a>)</span></div>
+      <div class="stage2 lt" role="img" aria-label="Intro I: the record fades in with the words to its right, Sleeve slides left into its place, then sight, passing behind the record, and the mark shrinks into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
+        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
+        <div class="ti"><svg viewBox="-37.59 -37.26 221.38 69" aria-hidden="true"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div>
+      <div class="body">
+        <h3>The words slide in</h3>
+        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
+        <p class="muted" style="margin:0 0 6px">The 8b mark, as C's, the record in the middle of the window. Header: the same mark.</p>
+        <b>Intro</b> (about 4.4 s)
+        <ol>
+          <li>The record fades in, large, where it sits in the mark, with the words to its right, left-aligned with each other.</li>
+          <li>"Sleeve" slides left into its place (0.9-2.05 s), then "sight", starting before "Sleeve" lands and passing behind the record (1.75-2.9 s).</li>
+          <li>The mark shrinks into the header's top left.</li>
+          <li>The rest of the page fades in.</li>
+        </ol>
+        <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
+      </div></div>
   </div>
   <p class="lead" style="margin-top:14px"><b>For the testers:</b> which appeals more, and does B's turn read as anything? It borrows the record's spin without the record, so for someone who never played an LP or a CD it has to work as a plain flourish. C turns with the record in it: does that read better? (D or E, settled in <a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>: on the product page, a phone and a desktop end on one mark, with the record.)</p>
 
@@ -540,9 +569,9 @@ const duo = (k, size) => `<div class="duo"><div class="pane lt">${mark(k, size)}
 
 const tileB = '<svg viewBox="-72 -72 144 144" style="width:144px;height:144px;display:block" aria-hidden="true"><rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke" style="fill:var(--tile-bg);stroke:var(--tile-edge)"/><use href="#words"/></svg>';
 const wordsB = '<svg class="lp-mark" viewBox="-38.59 -38.26 85.11 71" aria-hidden="true"><use href="#words"/></svg>';
-// The panes, two to a card, A to H: A's the eye; B's the tile; C's, D's, F's, G's and H's the 8b mark;
-// E's the words alone, on the page.
-const heads = ['2c', 'tile', '8b', '8b', 'words', '8b', '8b', '8b'];
+// The panes, two to a card, A to I: A's the eye; B's the tile; C's, D's, F's, G's, H's and I's the 8b
+// mark; E's the words alone, on the page.
+const heads = ['2c', 'tile', '8b', '8b', 'words', '8b', '8b', '8b', '8b'];
 document.querySelectorAll('.lead2 .pane').forEach((p, i) => {
   const h = heads[Math.floor(i / 2)];
   p.innerHTML = h === 'tile' ? tileB : h === 'words' ? `<span class="mark s-l">${wordsB}</span>` : mark(h, h === '2c' ? 's-p' : 's-l');

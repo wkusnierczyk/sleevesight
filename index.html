@@ -229,6 +229,11 @@ footer p{margin:0 0 4px}
    - H (`.sp-h`): the mark fades in, and each e of "Sleeve" turns once about the centre of its ink, as
      the record does on hover (`lg-turn`, 900 ms), one after the other from the left, each 600 ms after
      the one before (0.9-3 s). Then the flight, on C's timings.
+   - I (`.sp-i`): the record fades in where it sits in the mark, with the words to its right,
+     left-aligned with each other, as far from it as "sight" is in the mark (10 units). Each word then
+     slides left into its place, on C's turning easing: "Sleeve" (0.9-2.05 s), then "sight" (1.75-2.9 s),
+     starting before "Sleeve" lands and passing behind the record, which is drawn over it. Then the
+     flight, on C's timings.
    - R1 (`.sp-r1`): "Sleeve" fades in, and the record rolls in under it from the left, two and a
      quarter turns over its own circumference (2.25 × 2 × pi × 17.58 = 248.53 units), uncovering "sight"
      (0.7-3.15 s), fading in as it starts, since a wide window would otherwise show it waiting; then
@@ -245,7 +250,7 @@ footer p{margin:0 0 4px}
 .splash{display:none}
 .sl-intro .splash{position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none}
 .sl-intro[data-logo="c"] .sp-c,.sl-intro[data-logo="d"] .sp-d,.sl-intro[data-logo="f"] .sp-f,
-.sl-intro[data-logo="g"] .sp-g,.sl-intro[data-logo="h"] .sp-h{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
+.sl-intro[data-logo="g"] .sp-g,.sl-intro[data-logo="h"] .sp-h,.sl-intro[data-logo="i"] .sp-i{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
 .sl-intro[data-logo="r1"] .sp-r1,.sl-intro[data-logo="r2"] .sp-r2{display:block;animation:sl-gone 1ms var(--land) forwards}
 .splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
@@ -257,6 +262,10 @@ footer p{margin:0 0 4px}
    900 ms). */
 .sp-g .key{animation:tl-in 1ms var(--at) both}
 .sp-h .turn{transform-box:view-box;animation:lg-turn 900ms cubic-bezier(.45,0,.55,1) var(--at) both}
+/* I's words slide in from where they start, right of the record, each by its own distance in the
+   words' units. */
+.sp-i .i-sleeve{animation:i-sleeve 1150ms cubic-bezier(.45,0,.55,1) 900ms both}
+.sp-i .i-sight{animation:i-sight 1150ms cubic-bezier(.45,0,.55,1) 1750ms both}
 .sp-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .splash .rv-all{animation:rv-all 7s both}
 .r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s both}
@@ -281,6 +290,8 @@ footer p{margin:0 0 4px}
 @keyframes tl-bare{to{opacity:0}}
 @keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
 @keyframes lg-turn{to{transform:rotate(360deg)}}
+@keyframes i-sleeve{from{transform:translateX(138.27px)}}
+@keyframes i-sight{from{transform:translateX(117.58px)}}
 @keyframes d-rec{from{opacity:0;transform:rotate(-360deg) scale(.6)}to{opacity:1;transform:none}}
 @keyframes rv-all{0%{opacity:0}5%,100%{opacity:1}}
 @keyframes r1-roll{0%,10%{transform:translateX(-248.53px);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
@@ -309,7 +320,7 @@ document.documentElement.classList.add('js');
 // Set before the first paint: the intro (`data-logo`), and its wait, so the page never shows before
 // the intro starts.
 (function () {
-  var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'r1', 'r2'];
+  var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'];
   root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
   // `location.hash` is empty for a bare `#`, so the address is read whole.
   if (location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
@@ -325,6 +336,7 @@ document.documentElement.classList.add('js');
 <div class="splash sp-f" aria-hidden="true"><div class="fly"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div>
 <div class="splash sp-g" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div>
 <div class="splash sp-h" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div>
+<div class="splash sp-i" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div>
 <!-- R1's "sight" is clipped at the record's centre, so it shows from behind the record as it passes. -->
 <div class="splash sp-r1" aria-hidden="true"><div class="fly"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div>
 <div class="splash sp-r2" aria-hidden="true"><div class="fly"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div>
@@ -520,9 +532,12 @@ document.documentElement.classList.add('js');
   // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
   // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
   // 188 centred on the dot, with room for the record's path; G's and H's are the header's box, the
-  // mark's ink, since nothing in them leaves it; R1's and R2's are the brand sheet's reveals.
+  // mark's ink, since nothing in them leaves it; I's is the mark's ink widened to the right, to 183.79,
+  // past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record, which stays
+  // still in the middle of the window; R1's and R2's are the brand sheet's reveals.
   var boxes = {c: [-54.9, -113.84, 256, 256], d: [-72, -72, 144, 144], f: [-94, -94, 188, 188],
                g: [-37.59, -37.26, 128.27, 69], h: [-37.59, -37.26, 128.27, 69],
+               i: [-37.59, -37.26, 221.38, 69],
                r1: [-56.4, -45.76, 166, 86], r2: [-119.5, -82.76, 292, 160]};
   function start() {
     // The splash is centred in the window, at most 300/144 px to the unit (D's tile 300 px across), less
