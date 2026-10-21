@@ -3,8 +3,10 @@
 Roboto Flex at regular weight, 88% width and the optical size for 52.64 px (the size the tile was
 chosen at, 56 px on the brand sheet), outlined, so the logo needs no font. Placed so that the dot of
 the i in "sight" is at (0, 0), the centre of the tile (-72 to 72), which the intro turns it about.
-Writes tile-light.svg, tile-dark.svg and src/tile.json (the paths and the words' ink box). The paths
-are copied by hand into the `#words` of the product page (`index.html`) and of the brand sheet. From
+Writes tile-light.svg, tile-dark.svg and src/tile.json (the paths and the words' ink box, and each
+letter's path and ink box, `letters`). The letters' paths are copied by hand into the `#words` of the
+product page (`index.html`) and of the brand sheet, one path to a letter, so an intro can show or turn
+each letter on its own; a line's path is its letters' paths one after another. From
 assets/logo, with fontTools and uharfbuzz installed (pip):
 
     python3 src/make_tile.py RobotoFlex.ttf
@@ -76,15 +78,23 @@ cy = b2 - (iy + (dot[1] + dot[3]) / 2) * k
 x1, x2, b1, b2 = x1 - cx, x2 - cx, b1 - cy, b2 - cy
 
 num = lambda v: ('%.2f' % v).rstrip('0').rstrip('.')
-paths = []
-for line, dx, dy in ((sleeve, x1, b1), (sight, x2, b2)):
+paths, letters = [], {}
+for key, line, dx, dy in (('sleeve', sleeve, x1, b1), ('sight', sight, x2, b2)):
     pen = SVGPathPen(glyphs, ntos=num)
     placed(line, dx, dy, pen)
     paths.append(pen.getCommands())
+    letters[key] = []
+    for glyph in line:
+        pen = SVGPathPen(glyphs, ntos=num)
+        placed([glyph], dx, dy, pen)
+        box = bounds(lambda p: placed([glyph], dx, dy, p))
+        letters[key].append({'d': pen.getCommands(), 'ink': [round(v, 2) for v in box]})
+    if ''.join(letter['d'] for letter in letters[key]) != paths[-1]:
+        sys.exit(f"{key}: the letters' paths joined differ from the line's path")
 ink = bounds(lambda p: (placed(sleeve, x1, b1, p), placed(sight, x2, b2, p)))
 
 here = os.path.dirname(os.path.abspath(__file__))
-json.dump({'sleeve': paths[0], 'sight': paths[1], 'ink': [round(v, 2) for v in ink]},
+json.dump({'sleeve': paths[0], 'sight': paths[1], 'ink': [round(v, 2) for v in ink], 'letters': letters},
           open(os.path.join(here, 'tile.json'), 'w'))
 for scheme, (bg, edge, ink_color, red) in COLORS.items():
     open(os.path.join(here, '..', f'tile-{scheme}.svg'), 'w').write(

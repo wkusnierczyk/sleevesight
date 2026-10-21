@@ -26,6 +26,8 @@ dependencies {
     implementation(libs.sqldelight.sqlite.driver)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
+    // Draws the keys' setup code in the terminal (`keys-qr`, #268).
+    implementation(libs.zxing.core)
 }
 
 val fixturesDir = rootProject.layout.projectDirectory.dir("fixtures")
@@ -33,6 +35,8 @@ val fixturesDir = rootProject.layout.projectDirectory.dir("fixtures")
 // Run from the repository root, so the default `fixtures/` and `.dev/` paths resolve there.
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.projectDir
+    // `keys-qr --<name>-from -` reads a key from standard input.
+    standardInput = System.`in`
 }
 
 tasks.withType<Test>().configureEach {

@@ -57,6 +57,8 @@ The diagnostics screen shows what Sleevesight did for the last few hundred steps
 
 The history stays on the phone. *Clear history*, with the history settings, deletes the tracks played and the track changes together, once you confirm. Old entries go by the phone's clock. Each time Sleevesight starts, with the phone or after it was stopped, it takes the clock as right; if the clock is then moved by more than an hour, ahead or back, nothing is deleted until it is set right again. So a clock set ahead before Sleevesight starts deletes old entries by that clock.
 
+A key can be typed, or scanned from a QR code: *Scan QR code* in a key's dialog fills the field with the key a code holds, once it has that service's form (an Anthropic key starts `sk-ant-`, a Last.fm key is 32 hexadecimal digits), and *Scan keys*, under *API keys* in the settings, reads a setup code of several keys, made on a computer with the CLI's `keys-qr` ([Pipeline CLI](#pipeline-cli)). Before anything is saved it lists what it found, each key by its last four characters, says which would replace a key already saved, and reports the keys refused and the names it does not know; *Save* saves them. Do not make such a code with an online QR generator: it would receive the keys. Sleevesight asks for the camera only when you scan, and reads the code on the phone; no frame is kept or sent. The key dialogs and the scan cannot be captured in a screenshot or a screen recording.
+
 Your API keys are encrypted with a key kept in the phone's Android Keystore, are never shown again once saved, and are never logged. Neither they nor the settings are part of Android's backup or a transfer to a new phone. Each saved key's row has a delete button that removes that key, once you confirm, and while any key is saved, *Remove all API keys*, near the end of the settings, removes every one, and the Keystore key with them. If a saved key can no longer be read, as after the phone's Keystore is reset, the settings say so, and you enter it again; before Android 12, while any key is saved, entering one fails, and *Reset saved keys* is the way out. If the phone's key store cannot save a key, or keeps failing, *Reset saved keys*, shown above the settings then, does the same as *Remove all API keys*, so you can enter them afresh; Sleevesight never deletes them on its own. If the phone's storage fails instead, the key dialog says so, and you try again.
 
 ## Privacy
@@ -107,6 +109,13 @@ In October 2026, on GitHub's standard 4-core Linux runner, a CI run that builds 
 ```
 
 `replay` runs the design's regression tracks (the default `--tracks regression`) from `fixtures/http/`, and fails on any source request with no recording (a missing recorded AI reply is reported, not fatal); the build runs it as a test. `live` reads `SLEEVESIGHT_ANTHROPIC_API_KEY`, `SLEEVESIGHT_EXA_API_KEY` and `SLEEVESIGHT_LASTFM_API_KEY` from the environment or from `~/.config/sleevesight/keys.env`; a source or the AI without a key is reported as off. Each insight is a paid call on your key, and each web search a paid search; the cache (`.dev/cli/cache.db`) keeps web search results for a day, as it keeps the other sources' for theirs, so a track looked up again within that day costs no new search (when MusicBrainz was reachable the first time: without its resolution nothing is cached). The report never quotes a web search snippet (Exa's terms), and it marks the insights written from web results, which are not to be committed or posted. Run it with no arguments for the options.
+
+`keys-qr` draws a setup code of your keys in the terminal, for the app's *Scan keys*: the keys from the environment or the keys file, as `live` reads them; with `--keys <file>`, from that file alone, never the environment; or, with `--anthropic-from`, `--exa-from` or `--lastfm-from`, only the keys in the files given, `-` for standard input (not combined with `--keys`). That way a key you hand someone else, such as a tester's, is neither saved beside your own nor typed on the command line, where the shell history would keep it. Nothing is written to a file or sent anywhere, and no key is printed as text. A key that does not have its service's form is refused. Clear the terminal once the code is scanned.
+
+```sh
+./gradlew -q --console=plain :cli:run --args="keys-qr"
+pbpaste | ./gradlew -q --console=plain :cli:run --args="keys-qr --anthropic-from -"   # a key copied from the console
+```
 
 ## License
 

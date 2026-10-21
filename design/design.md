@@ -356,6 +356,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 
   Nothing else leaves the phone, except a diagnostics export the user makes to a file of their choosing (the *Diagnostics* developer setting). The duration, the cover, the session history and the record of track changes used to learn skip detection (D15) stay on it.
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
+- An API key can be entered by QR code (#268): one key in its own field, or a setup code of several, which the CLI draws in the terminal (`keys-qr`) and the settings confirm, each key shown by its last four characters, before anything is saved. The camera is asked for only when the user taps a scan; frames are decoded on the phone (ZXing, on Android's own camera API) and neither kept nor sent. Not Google's code scanner: its ML Kit reports device and usage data to Google. The key dialogs and the scan are secure windows (`FLAG_SECURE`).
 - No telemetry, crash reporting, analytics or accounts of our own. Google Play's Android vitals reports a crash of a Play-installed app to Google when the phone's owner allows usage and diagnostics sharing; that is Google's, not the app's.
 
 ## Structural constraints

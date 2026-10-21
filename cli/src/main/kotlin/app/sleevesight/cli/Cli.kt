@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import java.io.File
+import java.io.InputStream
 import java.io.PrintStream
 import java.util.Collections
 import java.util.Properties
@@ -41,7 +42,8 @@ import kotlin.time.TimeSource
 /**
  * The Phase 0.5 command-line tool (`design/design.md`, *Phase 0.5*): runs the pipeline over the
  * fixture playlist, one track after another, and prints the coverage report ([Report]), whose gate
- * criteria ([Gate]) decide the exit status. See [Options.USAGE].
+ * criteria ([Gate]) decide the exit status. See [Options.USAGE]. `keys-qr` draws a setup code of the
+ * keys instead ([KeysQr]).
  *
  * One [NetClient] per process (architecture, *Networking*), with every host policy `:wiring` lists
  * ([HostPolicies]); the adapters, the resolver and the provider are the app's, built by `:wiring`
@@ -51,8 +53,12 @@ class Cli(
     private val out: PrintStream,
     private val err: PrintStream,
     private val environment: Map<String, String> = System.getenv(),
+    private val input: InputStream = System.`in`,
 ) {
-    fun run(args: List<String>): Int {
+    fun run(args: List<String>): Int =
+        if (args.firstOrNull() == KEYS_QR) KeysQr(out, err, environment, input).run(args.drop(1)) else runPipeline(args)
+
+    private fun runPipeline(args: List<String>): Int {
         val options =
             try {
                 Options.parse(args)
@@ -227,6 +233,9 @@ class Cli(
 
     companion object {
         const val APP_VERSION = "0.0"
+
+        /** The command that draws a setup code of the keys ([KeysQr]). */
+        const val KEYS_QR = "keys-qr"
 
         /** A gate criterion failed. */
         const val EXIT_GATE = 1

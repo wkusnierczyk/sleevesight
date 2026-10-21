@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
                             graph.settingsSaves,
                             links.openCredits,
                             links.openDiagnostics,
-                            graph::playerLabel,
+                            playerLabel = graph::playerLabel,
                         )
                     },
                     pipeline = { NowPlayingHome(homeFeed) },

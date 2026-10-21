@@ -11,6 +11,7 @@ import app.sleevesight.app.TestStores
 import app.sleevesight.app.softwareKey
 import app.sleevesight.app.testCipher
 import app.sleevesight.core.Secret
+import app.sleevesight.core.keys.KeyName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -570,5 +571,11 @@ class SecretStoreTest {
         // Not real keys.
         const val ANTHROPIC_KEY = "sk-ant-test-0123456789abcdefghijklmnop"
         const val LASTFM_KEY = "0123456789abcdef0123456789abcdef"
+    }
+
+    @Test
+    fun everyNameASetupCodeKnowsIsAStoredKey() {
+        for (name in KeyName.entries) assertEquals(name, SecretId.of(name).keyName)
+        assertEquals(SecretId.entries.size, KeyName.entries.size)
     }
 }

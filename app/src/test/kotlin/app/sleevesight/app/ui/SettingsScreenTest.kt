@@ -372,7 +372,16 @@ class SettingsScreenTest {
             scenario.onActivity { activity ->
                 activity.setContent {
                     if (dialogShown) {
-                        KeyDialogs(SettingsDialog.ResetKeys, emptyMap(), gatedSecrets, saves, { sealFailed = it }, {})
+                        KeyDialogs(
+                            SettingsDialog.ResetKeys,
+                            emptyMap(),
+                            gatedSecrets,
+                            saves,
+                            scanner = { _, _ -> },
+                            onSealFailed = { sealFailed = it },
+                            open = {},
+                            onDismiss = {},
+                        )
                     }
                 }
             }
