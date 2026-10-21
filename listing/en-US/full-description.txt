@@ -16,8 +16,8 @@ Spotify is followed by default, and any other player that publishes an Android m
 
 YOU CHOOSE
 • Which sources to use, each a switch. MusicBrainz and Wikipedia need no key; Last.fm and Exa need your own API key.
-• Whether anything happens in the background. With Look up in the background off, as it is by default, lookups and writing happen only while the app is on screen.
-• When insights are written: for every track, only when you skip, or only when you tap Write. Each insight is a request on your own AI key, so it is on your bill. With Look up in the background on, automatic writing pauses after five tracks with the app off screen; you can change the count or turn the pause off.
+• Whether anything happens in the background. With “Look up in the background” off, as it is by default, lookups and writing happen only while the app is on screen.
+• When insights are written: for every track, only when you skip, or only when you tap Write. Each insight is a request on your own AI key, so it is on your bill. With “Look up in the background” on, automatic writing pauses after five tracks with the app off screen; you can change the count or turn the pause off.
 
 WHAT YOU NEED
 • Android 8 or later.
