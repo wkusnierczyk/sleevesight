@@ -75,9 +75,9 @@ class KeysQr(
         while (rest.hasNext()) {
             val arg = rest.next()
             val name = KeyName.entries.firstOrNull { arg == "--${it.code}-from" }
-            // An argument that is not an option is not repeated: it may be a key, typed by mistake.
+            // No argument's value is repeated: it may be a key, typed by mistake (`--anthropic-from=sk-…`).
             require(name != null || arg == "--keys") {
-                if (arg.startsWith("--")) "Unknown option $arg" else "Unexpected argument"
+                if (arg.startsWith("--")) "Unknown option ${arg.substringBefore('=')}" else "Unexpected argument"
             }
             require(name == null || name !in from) { "$arg given twice" }
             require(rest.hasNext()) { "$arg needs a value" }
@@ -106,7 +106,8 @@ class KeysQr(
                 input.bufferedReader().readText()
             } else {
                 val file = File(path)
-                require(file.isFile) { "--${name.code}-from: no such file $path" }
+                // The path is not repeated either: it may be the key itself, given in its place.
+                require(file.isFile) { "--${name.code}-from: no such file" }
                 file.readText()
             }
         return text

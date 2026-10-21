@@ -140,10 +140,18 @@ class KeysQrTest {
     }
 
     @Test
-    fun `an argument that is not an option is not repeated, in case it is a key`() {
-        val run = run(anthropic)
-        assertEquals(Cli.EXIT_USAGE, run.status)
-        assertFalse(anthropic in run.err)
-        assertTrue("Unexpected argument" in run.err)
+    fun `no argument is repeated in an error, in case it is a key`() {
+        for (args in listOf(
+            listOf(anthropic),
+            listOf("--anthropic-from=$anthropic"),
+            listOf("--anthropic-from", anthropic),
+        )) {
+            val run = run(*args.toTypedArray())
+            assertEquals(Cli.EXIT_USAGE, run.status)
+            assertFalse(anthropic in run.err, "$args")
+        }
+        assertTrue("Unexpected argument" in run(anthropic).err)
+        assertTrue("Unknown option --anthropic-from\n" in run("--anthropic-from=$anthropic").err)
+        assertTrue("--anthropic-from: no such file\n" in run("--anthropic-from", anthropic).err)
     }
 }

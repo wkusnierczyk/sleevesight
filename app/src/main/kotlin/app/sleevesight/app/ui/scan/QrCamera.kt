@@ -107,6 +107,9 @@ internal class QrCamera(
     /** Whether [release] has been asked for. */
     private var ending = false
 
+    /** Counted down once the camera being closed for a destroyed surface has let go of it. */
+    private var letGo: CountDownLatch? = null
+
     override fun surfaceCreated(holder: SurfaceHolder) {
         val shown = holder.surface
         handler.post {
@@ -124,12 +127,17 @@ internal class QrCamera(
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         // The surface may not be used once this returns: wait, briefly, for the camera to let go.
+        // `CameraDevice.close()` returns before the camera has, so the wait ends at `onClosed`.
         val closed = CountDownLatch(1)
         val posted =
             handler.post {
                 surface = null
-                close()
-                closed.countDown()
+                if (device == null) {
+                    closed.countDown()
+                } else {
+                    letGo = closed
+                    close()
+                }
             }
         if (posted) closed.await(CLOSE_WAIT_MS, TimeUnit.MILLISECONDS)
     }
@@ -153,6 +161,8 @@ internal class QrCamera(
     private fun open() {
         val id = camera?.first
         val frames = size
+        // One camera at a time: one still opening takes whichever surface there is when it opens.
+        if (opening || device != null) return
         if (id == null || frames == null || ending) return unavailable()
         opening = true
         try {
@@ -173,9 +183,17 @@ internal class QrCamera(
 
                     override fun onDisconnected(camera: CameraDevice) {
                         opening = false
-                        camera.close()
-                        if (device === camera) device = null
+                        val shown = device === camera
+                        close()
+                        if (!shown) camera.close()
+                        // Taken by another app: the view would freeze, so the scan says it cannot go on.
+                        if (shown && surface != null && !ending) unavailable()
                         quitIfIdle()
+                    }
+
+                    override fun onClosed(camera: CameraDevice) {
+                        letGo?.countDown()
+                        letGo = null
                     }
 
                     override fun onError(
@@ -208,6 +226,7 @@ internal class QrCamera(
     ) {
         val images = ImageReader.newInstance(frames.width, frames.height, ImageFormat.YUV_420_888, 2)
         images.setOnImageAvailableListener({ read(it) }, handler)
+        reader?.close()
         reader = images
         val callback =
             object : CameraCaptureSession.StateCallback() {
