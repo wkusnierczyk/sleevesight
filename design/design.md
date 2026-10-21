@@ -359,6 +359,7 @@ Source switches decide what the model may use. The filter chips in the Sources s
 - API keys and tokens are stored encrypted with an Android Keystore-backed key and never logged.
 - An API key can be entered by QR code (#268): one key in its own field, or a setup code of several, which the CLI draws in the terminal (`keys-qr`) and the settings confirm, each key shown by its last four characters, before anything is saved. The camera is asked for only when the user taps a scan; frames are decoded on the phone (ZXing, on Android's own camera API) and neither kept nor sent. Not Google's code scanner: its ML Kit reports device and usage data to Google. The key dialogs and the scan are secure windows (`FLAG_SECURE`).
 - No telemetry, crash reporting, analytics or accounts of our own. Google Play's Android vitals reports a crash of a Play-installed app to Google when the phone's owner allows usage and diagnostics sharing; that is Google's, not the app's.
+- The privacy policy ([`privacy.md`](../privacy.md), at `sleevesight.app/privacy.html`) also says where the app stands under the GDPR and the EU AI Act ([#295](https://github.com/wkusnierczyk/sleevesight/issues/295)): who is responsible for what, the rights and how far each can be used on the phone today, transfers outside the EU, and the app's role and transparency duties under the AI Act (Article 50). The first-run screen, last, and the settings, under *About* beside the credits, link to it.
 
 ## Structural constraints
 

@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +66,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.IOException
 import java.security.ProviderException
@@ -713,6 +715,20 @@ class SettingsScreenTest {
         show(onOpenCredits = { opened = true }) {
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
             assertTrue(opened)
+        }
+    }
+
+    @Test
+    fun thePrivacyPolicyRowOpensThePolicyOnTheSiteInTheBrowser() {
+        show {
+            compose.onNodeWithText(text(R.string.settings_privacy)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_privacy)).performClick()
+
+            var started: Intent? = null
+            onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://sleevesight.app/privacy.html", started?.dataString)
         }
     }
 
