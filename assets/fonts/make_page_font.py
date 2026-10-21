@@ -13,7 +13,8 @@ Bold, every weight rendered bold. Each copy keeps
   - the characters in the page (every one in the file, markup and script included, so text the
     scripts write is covered), plus printable ASCII, Latin-1 and the common punctuation (dashes,
     curly quotes, the ellipsis), so ordinary edits need no rebuild. Mono, used only for the chips'
-    source letters and numbers, keeps printable ASCII alone.
+    source letters and numbers, keeps printable ASCII alone, and the chips' labels (the text of each
+    `class="cite …"` element) are checked against it.
 Text added to the page in a character outside that set falls back to the next font in the stack,
 so after such an edit, run this again for Flex and Slab. A character a font itself lacks, such as the
 check mark ✓, falls back all the same; the script names any the page uses.
@@ -29,6 +30,7 @@ this was written), apache/robotoslab and ofl/robotomono. Their licences are `ass
 """
 import html
 import os
+import re
 import sys
 import tempfile
 
@@ -40,14 +42,15 @@ PAGES = ['index.html']
 ASCII = set(range(0x20, 0x7f))
 EXTRA = ASCII | set(range(0xa0, 0x100)) | set(range(0x2010, 0x2027))
 FONTS = {
-    'flex': ('assets/fonts/RobotoFlex-page.woff2', {'wght': (400, 700), 'wdth': (88, 100), 'opsz': (8, 144)}, True),
-    'slab': ('assets/fonts/RobotoSlab-page.woff2', {'wght': (350, 700)}, True),
-    'mono': ('assets/fonts/RobotoMono-page.woff2', {'wght': 500}, False),
+    'flex': ('assets/fonts/RobotoFlex-page.woff2', {'wght': (400, 700), 'wdth': (88, 100), 'opsz': (8, 144)}, 'page'),
+    'slab': ('assets/fonts/RobotoSlab-page.woff2', {'wght': (350, 700)}, 'page'),
+    'mono': ('assets/fonts/RobotoMono-page.woff2', {'wght': 500}, 'chips'),
 }
+CHIP = re.compile(r'class="cite[ "][^>]*>([^<]*)<')
 
 if len(sys.argv) != 3 or sys.argv[1] not in FONTS:
     sys.exit(__doc__)
-out, axes, page_chars = FONTS[sys.argv[1]]
+out, axes, scope = FONTS[sys.argv[1]]
 font = TTFont(sys.argv[2])
 font = instancer.instantiateVariableFont(
     font, {a.axisTag: axes.get(a.axisTag, a.defaultValue) for a in font['fvar'].axes})
@@ -56,9 +59,16 @@ with tempfile.TemporaryDirectory() as tmp:
     path = os.path.join(tmp, 'instance.ttf')
     font.save(path)
     font = TTFont(path)
-    text = ''.join(html.unescape(open(p, encoding='utf-8').read()) for p in PAGES)
-    used = {ord(c) for c in text if ord(c) >= 0x20} if page_chars else set()
-    chars = used | (EXTRA if page_chars else ASCII)
+    pages = [open(p, encoding='utf-8').read() for p in PAGES]
+    if scope == 'page':
+        text = ''.join(html.unescape(p) for p in pages)
+        used = {ord(c) for c in text if ord(c) >= 0x20}
+        chars = used | EXTRA
+    else:
+        # The chips' labels are checked, not added: the copy keeps ASCII only.
+        labels = ''.join(html.unescape(m) for p in pages for m in CHIP.findall(p))
+        used = {ord(c) for c in labels}
+        chars = ASCII
     opts = subset.Options()
     opts.layout_features = ['*']
     opts.name_IDs = ['*']
@@ -66,7 +76,8 @@ with tempfile.TemporaryDirectory() as tmp:
     opts.flavor = 'woff2'
     sub = subset.Subsetter(opts)
     sub.populate(unicodes=sorted(chars))
-    missing = sorted(used - set(font.getBestCmap()))
+    # Missing from the copy: a character the font lacks, or (for the chips) one outside what it keeps.
+    missing = sorted(used - (set(font.getBestCmap()) & chars))
     sub.subset(font)
     subset.save_font(font, out, opts)
 print(f'{out}: {os.path.getsize(out)} bytes, {len(chars)} characters')

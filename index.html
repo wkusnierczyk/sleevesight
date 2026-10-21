@@ -23,7 +23,8 @@ layout: null
      are Roboto Flex for titles, labels and the app's text (the hero phone and the example boxes, so
      what the app shows reads apart from the page's own words), Roboto Slab for the running text,
      and Roboto Mono for the citation chips; each is a cut-down copy served from this site
-     (`assets/fonts/make_page_font.py`), so text added here in new characters needs them remade. It keeps nothing in the browser.
+     (`assets/fonts/make_page_font.py`), so text added here in new characters needs the Flex and
+     Slab copies remade (Mono holds ASCII, for the chips). It keeps nothing in the browser.
      The palette is the simulator's (`design/simulator.html`), so the page and the app share one look.
      The page as it was before its redesign (#328), with its other logos, is
      `design/product-page-2026-10-20.html`. -->
@@ -68,10 +69,11 @@ layout: null
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
-/* Titles, labels, the header and the app's text in Flex; the running text in Slab (body). Before the
+/* Titles, labels, the header, the skip link, the mock's caption and the app's text in Flex; the
+   running text in Slab (body). Before the
    rules below, so their own weights win; the containers reset Slab's text weight to Flex's regular. */
 h1,h2,h3,.lead{font-family:var(--f-ui)}
-header.top,.phone,.box{font-family:var(--f-ui);font-weight:400}
+header.top,.phone,.box,figcaption,.skip{font-family:var(--f-ui);font-weight:400}
 a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
 a:hover{text-decoration-thickness:2px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
@@ -83,7 +85,7 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
    logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
    the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
-   with the page font). */
+   with the page's Flex). */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
 /* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
