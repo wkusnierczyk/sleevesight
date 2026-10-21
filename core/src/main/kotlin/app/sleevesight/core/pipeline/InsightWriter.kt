@@ -6,7 +6,6 @@ import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.synthesis.CardKind
 import app.sleevesight.core.synthesis.GroundingCheck
 import app.sleevesight.core.synthesis.InsightPrompt
@@ -43,7 +42,8 @@ internal class InsightWriter(
      */
     suspend fun write(control: RunControl) {
         val ai = parts.ai
-        val model = settings.aiModel ?: ai?.let { Settings.DEFAULT_MODELS[it.provider.id] }
+        // The switched-on provider's model, the one whose client the parts carry.
+        val model = ai?.let { settings.model(it.provider.id) }
         when {
             !settings.writeInsights || ai == null || model == null -> {
                 control.decidedWithoutCall()
@@ -118,7 +118,7 @@ internal class InsightWriter(
         control: RunControl,
     ): InsightState {
         val prompt = InsightPrompt.build(nowPlaying, track, evidence, allowModel)
-        val request = CompletionRequest(model, prompt, effort = settings.aiEffort)
+        val request = CompletionRequest(model, prompt, effort = settings.effort(ai.provider.id))
         val text = StringBuilder()
         var end: CompletionEvent? = null
         var started: TimeMark? = null
@@ -211,7 +211,7 @@ internal class InsightWriter(
             provider = ai.provider.id,
             model = model,
             modelKnowledge = allowModel,
-            effort = settings.aiEffort,
+            effort = settings.effort(ai.provider.id),
         )
 
     // D14's style is not built yet: every card uses the built-in style, the hash of no style.

@@ -1,5 +1,6 @@
 package app.sleevesight.core.settings
 
+import app.sleevesight.core.ai.EffortScale
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
@@ -14,7 +15,21 @@ import kotlin.time.Duration.Companion.seconds
  * driver 6). `:app` reads them from DataStore into this type, and `:cli` uses the defaults, so the
  * two run the pipeline the same way. Secrets (API keys, tokens) are not settings.
  *
- * @property aiModel the model the user chose for [aiProvider], or null for its default; read [model].
+ * **The AI service** (#227) is one row per provider, each with its own key, model and reasoning
+ * effort, and a switch; the switches are exclusive. [aiProvider] is the provider switched on, or
+ * null for none. [aiModels] and [aiEfforts] hold each provider's choices whether it is switched on
+ * or not, so switching back to one restores them; read them through [model] and [effort], which
+ * fill in the defaults. A provider joins with its client in `:ai`, its default model in
+ * [DEFAULT_MODELS] and its effort scale in [EFFORT_SCALES] (and, in `:app`, its key and its entry
+ * in the providers offered); nothing here changes for it.
+ *
+ * @property aiProvider the AI service switched on, whose model and effort the pipeline uses; null
+ *   is none, and no insight is written.
+ * @property aiModels the model each provider was set to; a provider not in it uses its default
+ *   ([DEFAULT_MODELS]). Read [model]; set with [withModel].
+ * @property aiEfforts the reasoning effort each provider was set to, where null is the provider's
+ *   own default (no effort sent); a provider not in it uses its scale's default ([EFFORT_SCALES]).
+ *   Read [effort]; set with [withEffort].
  * @property followedPlayers one switch per player seen, by package name; see [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
@@ -34,8 +49,6 @@ import kotlin.time.Duration.Companion.seconds
  *   has none or several, is kept (architecture, *Cache and history*: "long, months").
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
- * @property aiEffort how much the model may reason before it writes, or null for the provider's
- *   default. See [DEFAULT_AI_EFFORT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
  *   are kept, counted back from today to when a track began to play and a change began; null keeps
  *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
@@ -47,7 +60,8 @@ import kotlin.time.Duration.Companion.seconds
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
     val aiProvider: ProviderId? = null,
-    val aiModel: String? = null,
+    val aiModels: Map<ProviderId, String> = emptyMap(),
+    val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
@@ -61,7 +75,6 @@ data class Settings(
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
-    val aiEffort: ReasoningEffort? = DEFAULT_AI_EFFORT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val showDiagnostics: Boolean = false,
@@ -80,8 +93,50 @@ data class Settings(
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
     fun follows(player: String): Boolean = followedPlayers[player] ?: false
 
-    /** The model to write with: the user's choice, or [aiProvider]'s default ([DEFAULT_MODELS]), or none. */
-    val model: String? get() = aiModel ?: aiProvider?.let { DEFAULT_MODELS[it] }
+    /** [provider]'s model: the one it was set to, or its default ([DEFAULT_MODELS]), or none. */
+    fun model(provider: ProviderId): String? = aiModels[provider] ?: DEFAULT_MODELS[provider]
+
+    /** The model to write with: the switched-on provider's ([model]), or none. */
+    val model: String? get() = aiProvider?.let { model(it) }
+
+    /**
+     * [provider]'s reasoning effort: the one it was set to, if its scale offers it, or its scale's
+     * default; null is the provider's own default, and so is a provider with no scale.
+     */
+    fun effort(provider: ProviderId): ReasoningEffort? {
+        val scale = EFFORT_SCALES[provider] ?: return null
+        return if (provider in aiEfforts) scale.coerce(aiEfforts[provider]) else scale.default
+    }
+
+    /** The reasoning effort to write with: the switched-on provider's ([effort]), or none. */
+    val effort: ReasoningEffort? get() = aiProvider?.let { effort(it) }
+
+    /** These settings with [provider]'s model set to [model]; null or blank is its default. */
+    fun withModel(
+        provider: ProviderId,
+        model: String?,
+    ): Settings {
+        val chosen = model?.takeIf { it.isNotBlank() }
+        return copy(aiModels = if (chosen == null) aiModels - provider else aiModels + (provider to chosen))
+    }
+
+    /**
+     * These settings with [provider]'s reasoning effort set to [effort] (null: the provider's own
+     * default), or its scale's default for a level the scale does not offer. The scale's default is
+     * kept as no choice, so a revised default reaches it; a provider with no scale keeps none.
+     */
+    fun withEffort(
+        provider: ProviderId,
+        effort: ReasoningEffort?,
+    ): Settings {
+        val scale = EFFORT_SCALES[provider]
+        val chosen = scale?.coerce(effort)
+        return if (scale == null || chosen == scale.default) {
+            copy(aiEfforts = aiEfforts - provider)
+        } else {
+            copy(aiEfforts = aiEfforts + (provider to chosen))
+        }
+    }
 
     /**
      * Whether lines from [source] may be used: its switch is on, or it is the player's metadata.
@@ -111,6 +166,28 @@ data class Settings(
          * another from the provider's list. The other providers get theirs with their clients.
          */
         val DEFAULT_MODELS: Map<ProviderId, String> = mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5")
+
+        /**
+         * Each provider's reasoning-effort scale, with its default; a provider with none sends no
+         * effort. Providers do not share one scale, so each lists its own levels, as its service
+         * names them, and the settings offer only those.
+         *
+         * Anthropic: low, medium and high (`output_config.effort`), low by default. An insight
+         * narrates a few evidence lines in two to four sentences: it needs little reasoning, and it
+         * is waited for on the now-playing screen, so latency matters more than depth (Claude Haiku
+         * 5.5 reasons by default, at medium effort). What keeps the text honest is the grounding
+         * check, not the model's deliberation. Thinking is not switched off: not every model allows
+         * it (Claude Opus 5.5 refuses), while every current one takes an effort. A user who prefers
+         * more deliberate cards raises it, or chooses the provider's default.
+         */
+        val EFFORT_SCALES: Map<ProviderId, EffortScale> =
+            mapOf(
+                ProviderId.ANTHROPIC to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+            )
 
         /** All on except the model's own knowledge. */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
@@ -177,16 +254,6 @@ data class Settings(
          * write again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
-
-        /**
-         * Low. An insight narrates a few evidence lines in two to four sentences: it needs little
-         * reasoning, and it is waited for on the now-playing screen, so latency matters more than
-         * depth (Claude Haiku 5.5 reasons by default, at medium effort). What keeps the text honest
-         * is the grounding check, not the model's deliberation. Thinking is not switched off: not
-         * every model allows it (Claude Opus 5.5 refuses), while every current one takes an effort.
-         * A user who prefers more deliberate cards raises it, or chooses the provider's default.
-         */
-        val DEFAULT_AI_EFFORT: ReasoningEffort = ReasoningEffort.LOW
 
         /**
          * 5 track changes (#203). Since #190 the first action lasts as long as the process, which

@@ -29,14 +29,11 @@
     <string name="settings_title">Settings</string>
 
     <string name="settings_section_ai">AI service</string>
-    <string name="settings_ai_provider">Service</string>
-    <string name="settings_ai_provider_none">Not chosen</string>
     <string name="settings_ai_provider_anthropic">Anthropic</string>
-    <string name="settings_ai_providers_hint">Only Anthropic is built so far.</string>
-    <string name="settings_ai_key">API key</string>
+    <string name="settings_ai_providers_hint">The service switched on writes the insights; switching one on switches the others off. Each keeps its own key, model and effort.</string>
+    <string name="settings_ai_provider_needs_key">Insights wait until its API key is saved.</string>
     <string name="settings_ai_model">Model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
-    <string name="settings_ai_model_none">Choose a service first</string>
     <string name="settings_ai_effort">Reasoning effort</string>
     <string name="settings_ai_effort_summary">How much the model may reason before it writes. Less is faster and cheaper.</string>
     <string name="settings_effort_low">Low</string>

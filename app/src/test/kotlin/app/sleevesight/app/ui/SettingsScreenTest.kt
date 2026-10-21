@@ -10,7 +10,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -105,6 +104,8 @@ class SettingsScreenTest {
     }
 
     private fun text(id: Int) = app.getString(id)
+
+    private fun absent(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isEmpty()
 
     /** An Anthropic client that lists two models for any key, and records the key it was given. */
     private class FakeProvider : AiProvider {
@@ -236,7 +237,7 @@ class SettingsScreenTest {
             // The dialog has closed, and the row still shows the stored effort.
             assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
             compose.onNodeWithText(text(R.string.settings_effort_low)).performScrollTo().assertIsDisplayed()
-            assertEquals(ReasoningEffort.LOW, current(store).aiEffort)
+            assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }
 
@@ -511,7 +512,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun withNoServiceChosenASavedAiKeyKeepsItsRowToRemoveIt() {
+    fun withNoServiceSwitchedOnASavedAiKeyKeepsItsRowToRemoveIt() {
         runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
         show {
             val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
@@ -522,9 +523,9 @@ class SettingsScreenTest {
             compose.onNodeWithContentDescription(removeAnthropic).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_remove)).performClick()
             waitFor("the Anthropic key removed") { runBlocking { secrets.get(SecretId.ANTHROPIC) } == null }
-            waitFor("its row gone") {
-                compose.onAllNodesWithText(text(R.string.settings_key_name_anthropic)).fetchSemanticsNodes().isEmpty()
-            }
+            waitFor("its button gone") { compose.onAllNodesWithContentDescription(removeAnthropic).isEmpty() }
+            // The row stays, under Anthropic's switch, to enter a key again.
+            compose.onNodeWithText(text(R.string.settings_key_name_anthropic)).performScrollTo().assertIsDisplayed()
         }
     }
 
@@ -593,26 +594,22 @@ class SettingsScreenTest {
     fun theModelComesFromTheServicesList() {
         val provider = FakeProvider()
         show(providers = mapOf(ProviderId.ANTHROPIC to provider)) {
-            compose.onNodeWithText(text(R.string.settings_ai_model)).assertIsNotEnabled()
-
-            compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
-            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
-            // The model row opens its dialog only once the screen has the service.
-            waitForText(anthropicDefault())
+            // A provider's model can be chosen while it is switched off.
+            assertEquals(null, current().aiProvider)
+            compose.onNodeWithText(anthropicDefault()).performScrollTo().assertIsDisplayed()
 
             // Without a key, only the default. The dialog says so once it has looked for the key.
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
+            compose.onNodeWithText(text(R.string.settings_ai_model)).performScrollTo().performClick()
             waitForText(text(R.string.settings_model_no_key))
             compose.onNodeWithText(text(R.string.settings_model_no_key)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
 
             runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
+            compose.onNodeWithText(text(R.string.settings_ai_model)).performScrollTo().performClick()
             waitFor("the listed models") { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
             compose.onNodeWithText("Claude Opus 5.5 (claude-opus-5-5)").performClick()
 
-            waitFor("the model stored") { current().aiModel == "claude-opus-5-5" }
+            waitFor("the model stored") { current().aiModels[ProviderId.ANTHROPIC] == "claude-opus-5-5" }
             assertEquals("sk-test", provider.keyUsed)
         }
     }
@@ -620,18 +617,62 @@ class SettingsScreenTest {
     @Test
     fun withoutAClientTheDefaultModelIsOffered() =
         show {
-            compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
-            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
-            // The model row opens its dialog only once the screen has the service.
-            waitForText(anthropicDefault())
-
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
+            compose.onNodeWithText(text(R.string.settings_ai_model)).performScrollTo().performClick()
             // The dialog shows *Loading* until it has looked for a key, on the key store's thread.
             waitForText(text(R.string.settings_model_unavailable))
             compose.onNodeWithText(text(R.string.settings_model_unavailable)).assertIsDisplayed()
             // In the row and as the dialog's one option.
             compose.onAllNodesWithText(anthropicDefault()).assertCountEquals(2)
+        }
+
+    @Test
+    fun aProvidersSwitchTurnsItOnAndOffAndItKeepsItsModelAndEffort() {
+        runBlocking {
+            settings.update {
+                it
+                    .withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
+                    .withEffort(ProviderId.ANTHROPIC, ReasoningEffort.HIGH)
+            }
+        }
+        show {
+            val anthropic = compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo()
+            anthropic.assertIsOff()
+            // Off, its choices are shown and kept.
+            compose.onNodeWithText("claude-opus-5-5").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_effort_high)).performScrollTo().assertIsDisplayed()
+            assertTrue(absent(R.string.settings_ai_provider_needs_key))
+
+            anthropic.performClick()
+            waitFor("Anthropic switched on") { current().aiProvider == ProviderId.ANTHROPIC }
+            assertEquals("claude-opus-5-5", current().model)
+            assertEquals(ReasoningEffort.HIGH, current().effort)
+            // On with no key saved, it says that insights wait for one.
+            waitForText(text(R.string.settings_ai_provider_needs_key))
+
+            runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
+            waitFor("the key notice gone") { absent(R.string.settings_ai_provider_needs_key) }
+
+            anthropic.performClick()
+            waitFor("Anthropic switched off") { current().aiProvider == null }
+            val off = current()
+            assertEquals(null, off.model)
+            assertEquals("claude-opus-5-5", off.model(ProviderId.ANTHROPIC))
+            assertEquals(ReasoningEffort.HIGH, off.effort(ProviderId.ANTHROPIC))
+        }
+    }
+
+    @Test
+    fun anEffortIsChosenFromTheProvidersOwnScale() =
+        show {
+            compose.onNodeWithText(text(R.string.settings_ai_effort)).performScrollTo().performClick()
+            // Anthropic's levels (low, its default, is also the row's value), and the service's own default.
+            compose.onAllNodesWithText(text(R.string.settings_effort_low)).assertCountEquals(2)
+            compose.onNodeWithText(text(R.string.settings_effort_medium)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_effort_high)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_effort_provider_default)).performClick()
+            waitFor("the provider's default stored") {
+                ProviderId.ANTHROPIC in current().aiEfforts && current().effort(ProviderId.ANTHROPIC) == null
+            }
         }
 
     @Test
