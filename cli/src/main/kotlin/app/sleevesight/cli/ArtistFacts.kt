@@ -29,7 +29,8 @@ import app.sleevesight.core.synthesis.InsightPrompt
  */
 object ArtistFacts {
     /**
-     * One track's numbers. [lines] and [artistLines] are the track's evidence; [leftOut] the
+     * One track's numbers; [label] is how the report names it ([TrackResult.label]). [lines] and
+     * [artistLines] are the track's evidence; [leftOut] the
      * artist-level lines its last call's prompt left out (#239, `PromptEvidence`). [calls] are its
      * run's calls made ([RunCalls], which also holds their tokens): two when `NO_EVIDENCE` to a
      * prompt that left lines out was asked again with them all. [promptChars] is the last call's prompt, null when the
@@ -39,11 +40,13 @@ object ArtistFacts {
      * the run sent. [resent] is the artist-level lines the last prompt holds that the last prompt
      * sent before this track's held too. [cited] are
      * this insight's citations of artist-level lines, by this track's ids; [restated] those an
-     * insight before it in the run cited too, the last one written ([fromLast]) or any.
+     * insight before it in the run (in its pass, when the run is repeated) cited too, the last one
+     * written ([fromLast]) or any.
      * [artistSentences] counts the insight's sentences that cite artist-level lines only.
      */
     data class Row(
         val n: Int,
+        val label: String,
         val lines: Int,
         val artistLines: Int,
         val leftOut: Int,
@@ -128,11 +131,24 @@ object ArtistFacts {
         results: List<TrackResult>,
         allowModel: Boolean,
         runs: List<RunCalls> = emptyList(),
+    ): List<Row> =
+        // Each pass of a repeated run (`--repeat`) is a listening session of its own.
+        results
+            .withIndex()
+            .groupBy { it.value.pass }
+            .values
+            .flatMap { measurePass(it, allowModel, runs) }
+
+    // One pass's rows: [results] with their places in the run, which index [runs].
+    private fun measurePass(
+        results: List<IndexedValue<TrackResult>>,
+        allowModel: Boolean,
+        runs: List<RunCalls>,
     ): List<Row> {
         var before: Set<ArtistFact> = emptySet()
         var lastCited: Set<ArtistFact> = emptySet()
         val everCited = mutableSetOf<ArtistFact>()
-        return results.mapIndexed { index, result ->
+        return results.map { (index, result) ->
             val state = result.state
             val evidence = state.evidence
             val lines = evidence?.lines.orEmpty()
@@ -159,6 +175,7 @@ object ArtistFacts {
             val row =
                 Row(
                     n = result.n,
+                    label = result.label,
                     lines = lines.size,
                     artistLines = artist.size,
                     leftOut = artist.count { it.id in out },

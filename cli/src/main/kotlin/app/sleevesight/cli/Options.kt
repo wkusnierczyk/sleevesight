@@ -45,6 +45,7 @@ data class Options(
     val insights: Boolean,
     val record: Set<String>,
     val keysFile: File,
+    val repeat: Int = 1,
 ) {
     companion object {
         val USAGE: String =
@@ -72,13 +73,18 @@ data class Options(
                                   --record names, else anthropic); openai only for live, since
                                   only Anthropic's and Google's replies are recorded and replayed
               --model <id>        the provider's model (default: the app's default for it)
+              --repeat <n>        run the tracks n times (default 1), each pass a listening session of
+                                  its own, every insight written afresh, none read from the cache;
+                                  the gate pools the passes (not for record)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
                                   services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
 
-            Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them;
+            Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them
+            (uncited sentences in live replies are judged over 50 sentences or more, pooled over
+            the passes; fewer fail only at 15 percent uncited or more);
             1 when one fails; 2 for a usage error, or a source request with no recording (a missing
             recorded AI reply is reported, not fatal) or whose answer could not be recorded; 3 when a
             criterion the run should have checked could not be, because a source was unreachable or
@@ -118,6 +124,12 @@ data class Options(
             val cache = cacheChoice(mode, values["--cache"])
             val (positions, tracklist) = trackChoice(values)
             val provider = provider(values["--provider"], if (mode == Mode.RECORD) record else emptySet())
+            val repeat =
+                values["--repeat"]?.let { requireNotNull(it.toIntOrNull()) { "--repeat takes a number" } } ?: 1
+            require(repeat >= 1) { "--repeat takes 1 or more, was $repeat" }
+            require(repeat == 1 || mode != Mode.RECORD) {
+                "--repeat is not for record: it would record each reply again"
+            }
             require(mode == Mode.LIVE || nameOf(provider) in RECORDED_AI) {
                 "--provider ${nameOf(provider)} runs only live: its replies are not recorded or replayed"
             }
@@ -134,6 +146,7 @@ data class Options(
                 insights = "--no-insights" !in switches,
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
+                repeat = repeat,
             )
         }
 
@@ -214,6 +227,7 @@ data class Options(
                 "--model",
                 "--record",
                 "--keys",
+                "--repeat",
             )
 
         /** The playlist positions [spec] names. */

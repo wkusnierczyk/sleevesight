@@ -116,6 +116,21 @@ class CliReplayTest {
     }
 
     @Test
+    fun `a repeated run lists each pass and checks the collisions in every one`() {
+        val (status, report) =
+            run("replay", "--fixtures", fixtures, "--tracks", "8,12", "--no-insights", "--repeat", "2")
+
+        assertEquals(0, status, report)
+        assertTrue("Tracks: 2, in 2 passes (--repeat:" in report, report)
+        assertTrue("### 8. " in report && Regex("### 12\\. [^\\n]*\\(pass 2\\)").containsMatchIn(report), report)
+        assertTrue("| 12, pass 2 | " in report, report)
+        val collisions =
+            Regex("\\| Every listed same-name collision rejected or correctly resolved \\| PASS \\| ([^\\n]*)")
+        val checks = checkNotNull(collisions.find(report), { report }).groupValues[1]
+        for (pass in 1..2) assertTrue("track 8, pass $pass, W: no song article" in checks, checks)
+    }
+
+    @Test
     fun `a bad command line is a usage error`() {
         assertEquals(Cli.EXIT_USAGE, run("replay", "--frobnicate").first)
         assertEquals(Cli.EXIT_USAGE, run().first)

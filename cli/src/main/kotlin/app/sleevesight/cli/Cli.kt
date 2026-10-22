@@ -8,6 +8,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.CardKey
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
@@ -132,6 +133,9 @@ class Cli(
                     insightsAsked = ai != null,
                     allowModel = allowModel,
                     playlist = options.tracklist == null,
+                    // Recorded replies are the same every pass; live ones vary (#399). A record run's AI is
+                    // live when it records the provider, and off otherwise (`aiAccess`).
+                    sample = if (liveAi()) Gate.Sample.LIVE else Gate.Sample(),
                 )
             val summary =
                 RunSummary(
@@ -141,6 +145,7 @@ class Cli(
                     tracklist = options.tracklist?.let { it.name ?: "unnamed" },
                     allowModel = allowModel,
                     results = results,
+                    passes = options.repeat,
                     gate = gate,
                     diagnostics =
                         Diagnostics(
@@ -167,30 +172,37 @@ class Cli(
             }
         }
 
+        // The tracks, run once, or in [Options.repeat] passes, one after another (`--repeat`, #399).
         private fun runAll(events: MutableList<PipelineEvent>): List<TrackResult> {
-            val pipeline =
-                Pipeline(
-                    PipelineParts(
-                        normalizer = normalizer,
-                        adapters = sources.mapNotNull { it.second },
-                        resolver = wiring.resolver,
-                        hasher = JvmHasher,
-                        ai = ai,
-                        cache = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None,
-                        // A run is one listening session (#239): its tracks play one after another.
-                        sessionFacts = ListeningSessionFacts { RUN_SESSION },
-                    ),
-                ) { settings }
-            return runBlocking {
-                val log = launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { events += it } }
-                val results =
-                    tracks().map { (n, nowPlaying) ->
-                        err.println("track $n")
-                        TrackResult(n, pipeline.run(nowPlaying, write = ai != null))
-                    }
-                yield()
-                log.cancel()
-                results
+            val stored = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None
+            // A repeated run measures the replies, so every pass writes its insights afresh.
+            val cache = if (options.repeat > 1) FreshCards(stored) else stored
+            return (1..options.repeat).flatMap { pass ->
+                // A pass is one listening session (#239): its tracks play one after another.
+                val pipeline =
+                    Pipeline(
+                        PipelineParts(
+                            normalizer = normalizer,
+                            adapters = sources.mapNotNull { it.second },
+                            resolver = wiring.resolver,
+                            hasher = JvmHasher,
+                            ai = ai,
+                            cache = cache,
+                            sessionFacts = ListeningSessionFacts { pass.toLong() },
+                        ),
+                    ) { settings }
+                runBlocking {
+                    val log = launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { events += it } }
+                    val results =
+                        tracks().map { (n, nowPlaying) ->
+                            err.println(if (options.repeat > 1) "track $n, pass $pass" else "track $n")
+                            val state = pipeline.run(nowPlaying, write = ai != null)
+                            TrackResult(n, state, pass.takeIf { options.repeat > 1 })
+                        }
+                    yield()
+                    log.cancel()
+                    results
+                }
             }
         }
 
@@ -247,6 +259,10 @@ class Cli(
             return key?.let { AiAccess(wiring.aiProviders.getValue(provider), it) }
         }
 
+        // Whether the AI's replies are live, not replayed: a live run's, or a record run's that records them.
+        private fun liveAi(): Boolean =
+            options.mode == Mode.LIVE || (options.mode == Mode.RECORD && providerName in options.record)
+
         private fun aiNote(): String {
             val model = settings.model(provider)
             val effort = settings.effort(provider)?.name?.lowercase() ?: "the model's default"
@@ -279,7 +295,6 @@ class Cli(
 
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
-        private const val RUN_SESSION = 1L
 
         /** The AI services' names, for the report. */
         private val AI_NAMES =
@@ -314,4 +329,14 @@ class Cli(
             )
         }
     }
+}
+
+/**
+ * [cache] that serves no card, so every insight is written afresh, and keeps the rest: a repeated
+ * run (`--repeat`) measures the model's replies, which vary from one call to the next (#399).
+ */
+internal class FreshCards(
+    private val cache: PipelineCache,
+) : PipelineCache by cache {
+    override suspend fun card(key: CardKey): String? = null
 }

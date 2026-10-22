@@ -112,4 +112,15 @@ class OptionsTest {
         assertEquals(CacheChoice.None, Options.parse(listOf("live", "--cache", "none")).cache)
         assertFalse(Options.parse(listOf("live", "--no-web")).web)
     }
+
+    @Test
+    fun `a run is repeated with --repeat, once by default, and not when recording`() {
+        assertEquals(1, Options.parse(listOf("live")).repeat)
+        assertEquals(3, Options.parse(listOf("live", "--repeat", "3")).repeat)
+        assertEquals(2, Options.parse(listOf("replay", "--repeat", "2")).repeat)
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--repeat", "0")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("live", "--repeat", "three")) }
+        assertFailsWith<IllegalArgumentException> { Options.parse(listOf("record", "--repeat", "2")) }
+        assertEquals(1, Options.parse(listOf("record", "--repeat", "1")).repeat)
+    }
 }
