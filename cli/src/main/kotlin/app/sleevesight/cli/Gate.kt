@@ -11,6 +11,8 @@ import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.sources.SourceResult
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * One track's run: [n] is its playlist position, or its place in a tracklist (`--tracklist`), from 1.
@@ -60,12 +62,20 @@ data class Criterion(
  * Every criterion is judged over all the run's passes together (`--repeat`). Uncited sentences
  * in live replies are judged over a [Sample.LIVE] of passes and sentences, since they vary from one
  * pass to the next (#399): an insight is two to four sentences, so a pass of the regression tracks
- * has about 20, and one uncited sentence in it is already 5 percent. A smaller sample still fails
- * when no further passes could bring the share under 5 percent ([uncitedFails]).
+ * has about 20, and one uncited sentence in it is already 5 percent. A smaller sample is not
+ * judged, but fails on a gross share ([GROSS_UNCITED]).
  */
 object Gate {
     /** The most uncited sentences may be of all the written insights' sentences, as a fraction. */
     const val MAX_UNCITED: Double = 0.05
+
+    /**
+     * The share of uncited sentences that fails a sample too small to judge ([Sample.LIVE]): one
+     * pass of the regression tracks is about 20 sentences, so 15 percent is three uncited, well
+     * above the one or two that live replies give by chance, and what a prompt that drops citations
+     * wholesale would show at once.
+     */
+    const val GROSS_UNCITED: Double = 0.15
 
     /**
      * The least over which uncited sentences are judged: [passes] that gave a sentence each, and
@@ -192,11 +202,9 @@ object Gate {
 
     /**
      * Whether [uncited] of [sentences], over [passes] passes that gave sentences, fail the uncited
-     * criterion judged over [sample]: over a sample that large, when their share is not under
-     * [MAX_UNCITED]; over a smaller one, only when it would not be under it even if the passes still
-     * to come were as long as these on average, cited throughout, and as many as the sample needs.
-     * So one pass of 20 sentences fails from 3 uncited (3 of 60 at best), and is not judged under
-     * that.
+     * criterion judged over [sample]: with a sample that large, when their share is not under
+     * [MAX_UNCITED]; with a smaller one, which is not judged, only when it is [GROSS_UNCITED] or more
+     * (one pass: 3 of 20).
      */
     fun uncitedFails(
         uncited: Int,
@@ -205,8 +213,8 @@ object Gate {
         sample: Sample,
     ): Boolean {
         if (sentences == 0) return false
-        val best = maxOf(sentences.toDouble() * maxOf(passes, sample.passes) / passes, sample.sentences.toDouble())
-        return uncited / best >= MAX_UNCITED
+        val limit = if (sample.isMetBy(passes, sentences)) MAX_UNCITED else GROSS_UNCITED
+        return uncited.toDouble() / sentences >= limit
     }
 
     /** Whether [passes] passes with [sentences] in all are as large a sample as [sample] asks. */
@@ -253,8 +261,8 @@ object Gate {
 
         // The written insights decide first: one that fails a criterion fails it, whatever else failed.
         // Only when none fails does a failed call leave the criterion unchecked, since it might have.
-        // [judged] is false for the uncited criterion over fewer passes than it needs, which it
-        // [note]s: it fails then only when further passes could not mend it ([uncitedFails]).
+        // [judged] is false for the uncited criterion over a smaller sample than it needs, which it
+        // [note]s: it fails then only on a gross share ([uncitedFails]).
         fun criterion(
             name: String,
             holds: Boolean,
@@ -285,7 +293,7 @@ object Gate {
         val share = if (sentences == 0) 0.0 else uncited.toDouble() / sentences
         val enough = sample.isMetBy(passes, sentences)
         val fails = uncitedFails(uncited, sentences, passes, sample)
-        val note = if (enough) "" else uncitedNote(fails, sample)
+        val note = if (enough) "" else uncitedNote(fails, sample, passes, sentences)
         return listOf(
             criterion(UNKNOWN_CITATIONS, unknown == 0, "$unknown unknown in $sentences sentences"),
             criterion(UNCITED, !fails, "$uncited of $sentences sentences (${percent(share)})", enough, note),
@@ -301,18 +309,21 @@ object Gate {
             .distinct()
             .size
 
-    // What the uncited criterion says over a smaller [sample] than it needs: why it [fails], or that it waits.
+    // What the uncited criterion says over a smaller [sample] than it needs, [passes] passes with
+    // [sentences]: that a gross share [fails] it, or how many passes at their length would judge it.
     private fun uncitedNote(
         fails: Boolean,
         sample: Sample,
-    ): String {
-        val least = "${sample.passes} passes and ${sample.sentences} sentences"
-        return if (fails) {
-            "; too many to pass over $least, with passes of this length, even if the others were fully cited"
+        passes: Int,
+        sentences: Int,
+    ): String =
+        if (fails) {
+            "; ${(GROSS_UNCITED * PERCENT).roundToInt()} percent or more fails however small the sample"
         } else {
-            "; judged over at least $least of live replies, which vary (--repeat ${sample.passes} or more)"
+            val needed = maxOf(sample.passes, ceil(sample.sentences * passes.toDouble() / sentences).toInt())
+            "; judged over at least ${sample.passes} passes and ${sample.sentences} sentences of live replies, " +
+                "which vary: about $needed passes of this length (--repeat $needed)"
         }
-    }
 
     /** One listed check on one track: passed, failed with a problem, or unchecked with a reason. */
     private sealed interface CheckOutcome {
@@ -402,6 +413,7 @@ object Gate {
 
     private const val PER_MILLE = 1000
     private const val PER_CENT = 10.0
+    private const val PERCENT = 100
 
     /** [share] as a percentage, to one decimal. */
     fun percent(share: Double): String = "${(share * PER_MILLE).toLong() / PER_CENT} %"
