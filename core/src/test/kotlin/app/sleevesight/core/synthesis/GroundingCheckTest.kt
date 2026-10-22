@@ -146,6 +146,55 @@ class GroundingCheckTest {
         )
     }
 
+    /** The simulator joins a sentence ending in a quoted title to the next; the check does not (#423). */
+    @Test
+    fun `a stop inside closing quotes ends a sentence when citations follow the quotes`() {
+        for (end in listOf(".\"", ".”", "?'", "!’", ".'\"", ".’”")) {
+            val reply = "Its title track is \"Sundown$end [MB1] It was a single. [W1]"
+            assertEquals(
+                listOf("Its title track is \"Sundown$end [MB1]", "It was a single. [W1]"),
+                GroundingCheck.splitSentences(reply),
+                end,
+            )
+        }
+    }
+
+    /** A title ends in a stop mid-sentence; the cost is an uncited sentence that ends in one, joined. */
+    @Test
+    fun `a stop inside closing quotes with no citation after them does not end a sentence`() {
+        val replies =
+            listOf(
+                "On \"Help!\" John Lennon sings lead. [W1]",
+                "The album \"Help!\" (1965) reached number one. [W1]",
+                "Hendrix's \"Are You Experienced?\" (1967) was his debut. [W1]",
+                "The album \"DAMN.\" (2017) won the Pulitzer Prize. [W1]",
+                "It topped the \"U.S.\" Billboard chart. [W1]",
+                "He called it \"Sundown.\" It charted. [W1]",
+                "He called it \"Help!\" It charted. [W1]",
+            )
+        for (reply in replies) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply))
+    }
+
+    @Test
+    fun `a closing quote or apostrophe without a stop does not end a sentence`() {
+        val reply = "The song \"Sundown\" Gordon wrote in 1973 opens the Beatles' Rubber Soul. [W1]"
+        assertEquals(listOf(reply), GroundingCheck.splitSentences(reply))
+    }
+
+    @Test
+    fun `an uncited sentence after a quoted, cited one is counted as uncited`() {
+        val reply = "The title track is \"Sundown.\" [MB1] It was his biggest hit. It topped the chart. [W1]"
+        val written =
+            assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("MB1", "W1"), allowModel = false))
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.UNCITED, SentenceStatus.OK),
+            written.grounded.paragraphs
+                .flatten()
+                .map { it.status },
+        )
+        assertEquals(1, written.grounded.counts.uncited)
+    }
+
     /**
      * Prompt version 2's fixed sentence for a gap is a hedge, as written; other wordings as the
      * simulator's (#46). Version 3 asks for none, and the check still reads it (#193).
