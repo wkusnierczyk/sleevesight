@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Type on a computer (#394). The page connects to nothing: it fetches only its own script and
+     style sheet, and the policy below forbids any other request, so the browser's network panel
+     shows that nothing is sent. The text goes to the phone over Bluetooth alone, sealed with a key
+     made here and shown only in the QR code. No front matter, so the site copies it as it is. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Sleevesight keyboard</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/keyboard/keyboard.css">
+<script type="module" src="assets/keyboard/keyboard.js"></script>
+</head>
+<body>
+<main>
+  <h1>Type on a computer</h1>
+  <p>Type here, and the text appears in a field of Sleevesight on your phone: an API key, for instance.</p>
+
+  <p id="unsupported" class="error" hidden>This browser cannot use Bluetooth. Open this page in Chrome or Edge on a computer with Bluetooth.</p>
+
+  <ol>
+    <li>On the phone, open the field’s dialog, tap <b>Type on a computer</b>, and scan this code.
+      <div id="code" class="code"></div>
+    </li>
+    <li>When the phone says it is waiting, choose <b>Connect</b> here and pick the phone. It is the only one listed, by its name or as an unknown device.
+      <p><button id="connect" type="button">Connect</button></p>
+    </li>
+    <li>Type. The phone’s field follows what you type; save it on the phone.
+      <p>
+        <input id="text" class="masked" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Text for the phone">
+        <label class="show"><input id="show" type="checkbox"> Show</label>
+      </p>
+      <p id="length" class="error" hidden>Too long: the phone takes up to 480 bytes (480 letters of English, fewer of other scripts). Shorten the text to send it.</p>
+    </li>
+  </ol>
+
+  <p id="status" role="status" aria-live="polite">Not connected.</p>
+
+  <p class="note">Nothing leaves your computer and your phone. The code holds a key made for this visit alone; the phone forgets it when you close its dialog. Reload the page for a new one.</p>
+</main>
+</body>
+</html>

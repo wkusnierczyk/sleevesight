@@ -31,6 +31,8 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiProvider
@@ -69,7 +71,8 @@ import kotlin.time.Duration.Companion.seconds
  * result, and a screen gone by then shows nothing of it. [onOpenCredits] opens the credits
  * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
  * [scanner] reads an API key's QR code, or a setup code of several (#268): the camera, but for
- * tests. [playerLabel] names a player by its package.
+ * tests; [keyboard] runs *Type on a computer* (#394): Bluetooth, but for tests. [playerLabel]
+ * names a player by its package.
  */
 @Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
 @Composable
@@ -82,6 +85,7 @@ fun SettingsScreen(
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
     scanner: QrScanner = CameraQrScanner,
+    keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -127,6 +131,7 @@ fun SettingsScreen(
                 secretStore,
                 saves,
                 scanner,
+                keyboard,
                 onSealFailed = { sealFailed = it },
                 open = { dialog = it },
                 onDismiss = close,

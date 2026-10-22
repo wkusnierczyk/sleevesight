@@ -34,6 +34,12 @@ jobs:
       # read it as resources, and so does `design/simulator.html`, which a `:core` test reads.
       # Pushes to `main` and `dev-*` always build, unless they change only Markdown (`paths-ignore`
       # above), which a pull request has already built where it had to.
+      # The keyboard page's protocol and QR encoder (#394) are checked by the app's tests against
+      # vectors their own code makes; this fails if the vectors were not remade after a change to
+      # them, which `assets/*` alone would not build. The runner's Node is enough.
+      - name: Keyboard vectors current
+        run: node assets/keyboard/make_vectors.mjs --check
+
       - name: Changes that need a build
         id: changes
         run: |

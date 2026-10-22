@@ -364,6 +364,7 @@ class SettingsScreenTest {
                             gatedSecrets,
                             saves,
                             scanner = { _, _ -> },
+                            keyboard = { _, _, _ -> },
                             onSealFailed = { sealFailed = it },
                             open = {},
                             onDismiss = {},
