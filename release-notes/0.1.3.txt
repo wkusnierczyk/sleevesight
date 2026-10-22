@@ -1,0 +1,7 @@
+What's new in 0.1.3:
+- Choose the AI service: Anthropic, OpenAI or Google, each with its own key.
+- Enter keys by scanning a QR code, or type one on a computer over Bluetooth.
+- The app's own icon, and Roboto as the font (the system font is a setting).
+- Sources under an insight start folded; a setting keeps them as you left them.
+- Artist facts are kept per artist; insights leave out those they don't need.
+- Settings, About: the privacy policy, now covering the GDPR and the AI Act.
