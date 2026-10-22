@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         // directly. They are dropped before the navigation graph reads the intent.
         DEEP_LINK_EXTRAS.forEach(intent::removeExtra)
         setContent {
-            SleevesightTheme {
+            SleevesightTheme(fonts = graph.font) {
                 SleevesightNavHost(
                     notificationAccess = graph.notificationAccess,
                     firstRun = graph.firstRun,

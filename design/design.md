@@ -279,7 +279,7 @@ Prompt contracts are in the appendix.
 
 ## User interface
 
-Material 3, with dynamic color taken from the album art (material-color-utilities from the art bitmap). The prototype is the reference for layout.
+Material 3, with dynamic color taken from the album art (material-color-utilities from the art bitmap), and its text in Roboto, bundled with the app, unless the user chooses the system font (*Settings*, #377). The prototype is the reference for layout.
 
 ### Home screen, top to bottom
 
@@ -339,6 +339,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | History | Keep history for: 7, 30 or 90 days, a year, or forever, counted back from today; the session history and the track changes together (#148) | 90 days |
 | History | Start a new session after a break of: 10, 20 or 30 minutes, 1 or 2 hours, counted from when the last track was heard | 30 minutes |
 | History | Clear history: the session history and the track changes, after a confirmation | |
+| Appearance | Font: the app's font (Roboto, bundled), or the system font, the one chosen in the phone's settings; the diagnostics screen's monospace text stays monospace ([#377](https://github.com/wkusnierczyk/sleevesight/issues/377)) | App font: the same type on every phone, in the family the logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the same faces; many phones' system font is not Roboto |
 | API keys | Remove all API keys, while any key is saved, after a confirmation; each key's row also has a button that removes that key, after a confirmation (#234) | |
 | Developer | Diagnostics: the way to the diagnostics screen (*Diagnostics* below) | Off |
 

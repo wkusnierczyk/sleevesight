@@ -43,6 +43,8 @@ import kotlin.time.Duration.Companion.seconds
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
+ * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
+ *   font. See [FontChoice].
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -65,6 +67,7 @@ data class Settings(
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val showDiagnostics: Boolean = false,
+    val font: FontChoice = FontChoice.APP_FONT,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -257,6 +260,24 @@ enum class SourceSwitch(
  */
 enum class WebEngine {
     EXA,
+}
+
+/**
+ * *Font* (#377): the typeface the app's text is set in. The diagnostics screen's monospace text
+ * stays monospace either way.
+ */
+enum class FontChoice {
+    /**
+     * Roboto, bundled with the app, the default: the same type on every phone, in the family the
+     * logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the
+     * same faces. Many phones' system font is not Roboto (Samsung's One UI has its own face, and
+     * users can pick another), so without it the app would look different from phone to phone,
+     * and in the store screenshots from what a user then sees.
+     */
+    APP_FONT,
+
+    /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
+    SYSTEM_FONT,
 }
 
 /** How the detail content is shown. */

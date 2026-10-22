@@ -30,6 +30,11 @@ class SettingsTest {
     }
 
     @Test
+    fun `the app's own font is the default, not the system's`() {
+        assertEquals(FontChoice.APP_FONT, defaults.font)
+    }
+
+    @Test
     fun `the model is the user's choice, else the provider's default, else none`() {
         assertNull(defaults.model)
         assertEquals("claude-haiku-5-5", defaults.copy(aiProvider = ProviderId.ANTHROPIC).model)
