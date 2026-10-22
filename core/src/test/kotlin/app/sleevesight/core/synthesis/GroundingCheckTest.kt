@@ -8,7 +8,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class GroundingCheckTest {
     @Serializable
@@ -195,6 +197,21 @@ class GroundingCheckTest {
     fun `no evidence is a reply of its own`() {
         val empty = EvidenceSet.of(emptyList(), JvmHasher)
         assertEquals(InsightReply.NoEvidence, GroundingCheck.check(" NO_EVIDENCE ", empty, allowModel = false))
+    }
+
+    @Test
+    fun `a streaming reply may be NO_EVIDENCE while it is a start of the marker or the marker as the check reads it`() {
+        val empty = EvidenceSet.of(emptyList(), JvmHasher)
+        val held =
+            listOf("", " ", "N", "NO", " NO_EVI") +
+                listOf("NO_EVIDENCE", "NO_EVIDENCE.", "NO_EVIDENCE: the sources say nothing.")
+        for (partial in held) {
+            assertTrue(GroundingCheck.mayBeNoEvidence(partial), partial)
+        }
+        // Each held form that is the whole marker reads as no evidence once checked.
+        for (reply in held.drop(5)) assertEquals(InsightReply.NoEvidence, GroundingCheck.check(reply, empty, false))
+        val shown = listOf("No", "NO single", "NO_EVIDENCES", "NO_EVIDENCE_X", "It is a song")
+        for (partial in shown) assertFalse(GroundingCheck.mayBeNoEvidence(partial), partial)
     }
 
     private companion object {

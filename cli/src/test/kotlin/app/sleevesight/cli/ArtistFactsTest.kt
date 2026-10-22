@@ -209,7 +209,7 @@ class ArtistFactsTest {
         val row = rows.single()
 
         assertEquals(2, row.calls)
-        assertEquals(Usage(1900, 110), row.usage)
+        assertEquals(Usage(1900, 110), runs.single().usage)
         assertEquals(0, row.leftOut)
         val state = result.state
         val whole = checkNotNull(state.evidence)

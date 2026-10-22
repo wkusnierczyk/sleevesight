@@ -155,8 +155,9 @@ internal class InsightWriter(
                     when (event) {
                         is CompletionEvent.Delta -> {
                             text.append(event.text)
-                            // Not while it may still be `NO_EVIDENCE`, which is no prose for the card.
-                            if (!GroundingCheck.NO_EVIDENCE.startsWith(text.trim())) {
+                            // Not while it may still be `NO_EVIDENCE`, or is, as the check reads it:
+                            // the marker is no prose for the card.
+                            if (!GroundingCheck.mayBeNoEvidence(text.toString())) {
                                 show(InsightState.Writing(text.toString(), sent.held))
                             }
                         }

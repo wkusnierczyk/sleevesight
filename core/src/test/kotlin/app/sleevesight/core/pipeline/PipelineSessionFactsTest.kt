@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
+import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
@@ -71,8 +72,15 @@ class PipelineSessionFactsTest {
 
     // Fails the first call that holds the artist's lines.
     private var failFirstWithArtist = false
+
+    // Streams these chunks, when it gives some for the prompt, in place of the replies above.
+    private var chunks: (String) -> List<String>? = { null }
     private val provider =
         FakeProvider { request ->
+            chunks(request.prompt)?.let { parts ->
+                return@FakeProvider parts.map { CompletionEvent.Delta(it) } +
+                    CompletionEvent.Done(FakeProvider.USAGE, StopReason.END)
+            }
             guess?.let { return@FakeProvider FakeProvider.done("It is a song [MB1]. The band [$it].") }
             if (noEvidenceWithoutArtist && "(Last.fm, artist)" !in request.prompt) {
                 return@FakeProvider FakeProvider.done(GroundingCheck.NO_EVIDENCE)
@@ -230,6 +238,62 @@ class PipelineSessionFactsTest {
             val calls = events.filterIsInstance<PipelineEvent.ModelCall>()
             assertEquals(listOf(listOf("L1", "L2"), emptyList()), calls.map { it.leftOut })
             assertFalse(events.any { it is PipelineEvent.NoEvidence })
+        }
+
+    // The states [pipeline] shows, each one, as `run` publishes them.
+    private fun TestScope.shown(pipeline: Pipeline): List<InsightState?> {
+        val states = mutableListOf<InsightState?>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            pipeline.state.collect { states += it?.insight }
+        }
+        return states
+    }
+
+    private fun List<InsightState?>.partials() = filterIsInstance<InsightState.Writing>().map { it.partial }
+
+    @Test
+    fun `NO_EVIDENCE with punctuation after it never streams onto the card, asked again or not`() =
+        runTest {
+            val replies =
+                listOf(listOf("NO_EVIDENCE", "."), listOf("NO_EVI", "DENCE", ": the sources ", "say nothing."))
+            for ((i, reply) in replies.withIndex()) {
+                session = 10L + 2 * i
+                // Asked again: the fewer lines get the punctuated marker, every line a reply.
+                chunks = { prompt -> reply.takeIf { "(Last.fm, artist)" !in prompt } }
+                val fewer = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN))
+                val states = shown(fewer)
+                fewer.run(track("One"), write = true)
+                assertTrue(states.partials().none { "NO_EVI" in it }, states.partials().toString())
+                assertIs<InsightState.Written>(states.last())
+
+                // Not asked again: in a new session nothing is left out, and the track ends with no evidence.
+                session = 11L + 2 * i
+                chunks = { reply }
+                val whole = pipeline()
+                val ended = shown(whole)
+                whole.run(track("Two"), write = true)
+                assertTrue(ended.partials().none { "NO_EVI" in it }, ended.partials().toString())
+                assertEquals(InsightState.NoEvidence, ended.last())
+            }
+        }
+
+    @Test
+    fun `a reply that starts like the marker shows in full once it diverges, and one that never does is written`() =
+        runTest {
+            chunks = { listOf("N", "O", " single source names the band [MB1].") }
+            val pipeline = pipeline()
+            val states = shown(pipeline)
+            pipeline.run(track("One"), write = true)
+            assertEquals(listOf("NO single source names the band [MB1]."), states.partials().filter { it.isNotEmpty() })
+            val written = assertIs<InsightState.Written>(states.last())
+            assertEquals("NO single source names the band [MB1].", written.grounded.text)
+
+            chunks = { listOf("N", "O") }
+            val short = pipeline()
+            val ended = shown(short)
+            short.run(track("Two"), write = true)
+            assertEquals(emptyList(), ended.partials().filter { it.isNotEmpty() })
+            assertEquals("NO", assertIs<InsightState.Written>(ended.last()).grounded.text)
         }
 
     @Test

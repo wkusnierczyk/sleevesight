@@ -30,9 +30,9 @@ import app.sleevesight.core.synthesis.InsightPrompt
 object ArtistFacts {
     /**
      * One track's numbers. [lines] and [artistLines] are the track's evidence; [leftOut] the
-     * artist-level lines its last call's prompt left out (#239, `PromptEvidence`). [calls] and
-     * [usage] are its run's ([RunCalls]): two calls when `NO_EVIDENCE` to a prompt that left lines
-     * out was asked again with them all. [promptChars] is the last call's prompt, null when the
+     * artist-level lines its last call's prompt left out (#239, `PromptEvidence`). [calls] are its
+     * run's calls made ([RunCalls], which also holds their tokens): two when `NO_EVIDENCE` to a
+     * prompt that left lines out was asked again with them all. [promptChars] is the last call's prompt, null when the
      * track made no call (cached, not written, nothing to narrate), however its insight ended
      * (`NO_EVIDENCE` included); [artistChars] counts the artist-level lines that prompt holds as it
      * writes them, a newline each; [sentChars] and [sentArtistChars] are the same over every prompt
@@ -48,7 +48,6 @@ object ArtistFacts {
         val artistLines: Int,
         val leftOut: Int,
         val calls: Int,
-        val usage: Usage?,
         val promptChars: Int?,
         val artistChars: Int,
         val sentChars: Int,
@@ -164,7 +163,6 @@ object ArtistFacts {
                     artistLines = artist.size,
                     leftOut = artist.count { it.id in out },
                     calls = calls.made.size,
-                    usage = calls.usage,
                     promptChars = last?.first,
                     artistChars = last?.second ?: 0,
                     sentChars = prompts.sumOf { it.first },
