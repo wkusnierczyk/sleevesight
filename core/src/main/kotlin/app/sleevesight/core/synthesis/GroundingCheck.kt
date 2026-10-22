@@ -78,10 +78,10 @@ sealed interface InsightReply {
 /**
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
- * its `NO_EVIDENCE` test, rule for rule but for two deviations from the Phase 0.5 gate (#46): an
- * abbreviation does not end a sentence ([splitSentences]), and prompt version 2's fixed sentence
- * for a gap, [GAP_SENTENCE], is a hedge. The tests compare it with the simulator's own code on the same
- * replies (`core/src/test/resources/grounding/`).
+ * its `NO_EVIDENCE` test, rule for rule but for three deviations: an abbreviation does not end a
+ * sentence, and a stop inside closing quotes does ([splitSentences]; #46, #423), and prompt version
+ * 2's fixed sentence for a gap, [GAP_SENTENCE], is a hedge (#46). The tests compare it with the
+ * simulator's own code on the same replies (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -140,6 +140,11 @@ object GroundingCheck {
      * end one. The cost: a sentence that ends in initials before another word (`... toured the U.S.
      * Billboard named ...`), or in one of [ABBREVIATIONS], is joined to the next, and if it was
      * uncited, the next one's citation hides that.
+     *
+     * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
+     * `'`, `’`) ends a sentence as a bare one does, with or without citations after the quotes
+     * (`... the title track "Sundown." [MB1] It ...`). The simulator joined the two sentences, so an
+     * uncited one before or after a quoted title could pass as cited.
      */
     fun splitSentences(text: String): List<String> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
@@ -205,7 +210,8 @@ object GroundingCheck {
     /**
      * Whether the text before [end] ends a sentence: the simulator's lookbehind
      * `(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)`, read backwards over the citations.
-     * An abbreviation's `.` directly before [end] does not end one ([splitSentences]).
+     * An abbreviation's `.` directly before [end] does not end one, and closing quotes may come
+     * between the stop and the citations ([splitSentences]).
      */
     private fun endsSentence(
         t: String,
@@ -220,6 +226,13 @@ object GroundingCheck {
                 c != null && c in ".!?" -> {
                     // An abbreviation's `.` ends nothing, unless citations follow it (#46).
                     ends = k != end || !endsAbbreviation(t, end)
+                }
+
+                c != null && c in CLOSING_QUOTES -> {
+                    // A stop inside closing quotes ends the sentence too (#423).
+                    var q = k - 1
+                    while (q > 0 && t[q - 1] in CLOSING_QUOTES) q--
+                    ends = q > 0 && t[q - 1] in ".!?"
                 }
 
                 open == null -> {
@@ -332,6 +345,7 @@ object GroundingCheck {
 
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
     private const val WORD_OPENERS = "\"“("
+    private const val CLOSING_QUOTES = "\"”'’"
     private val INITIALS = Regex("(?:[A-Z]\\.)+")
     private val SPACES_AND_TABS = Regex("[ \\t]+")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
