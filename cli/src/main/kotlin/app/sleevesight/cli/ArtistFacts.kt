@@ -64,8 +64,7 @@ object ArtistFacts {
 
     /**
      * The run's totals over [rows]: [prompts], [promptChars] and [artistChars] over every prompt
-     * sent, [calls] every call made (failed and stopped ones too), the tokens of every call whose
-     * reply ended.
+     * sent. Calls and tokens are [RunCalls]', which the report counts (`Report.billed`).
      */
     data class Totals(
         val lines: Int,
@@ -79,9 +78,6 @@ object ArtistFacts {
         val restating: Int,
         val sentences: Int,
         val artistSentences: Int,
-        val calls: Int,
-        val inputTokens: Long,
-        val outputTokens: Long,
     )
 
     /**
@@ -211,7 +207,6 @@ object ArtistFacts {
     /** The totals of [rows]. */
     fun totals(rows: List<Row>): Totals {
         val written = rows.filter { it.insight is InsightState.Written }
-        val usage = rows.mapNotNull { it.usage }
         return Totals(
             lines = rows.sumOf { it.lines },
             artistLines = rows.sumOf { it.artistLines },
@@ -224,9 +219,6 @@ object ArtistFacts {
             restating = written.count { it.restated.isNotEmpty() },
             sentences = written.sumOf { it.sentences },
             artistSentences = written.sumOf { it.artistSentences },
-            calls = rows.sumOf { it.calls },
-            inputTokens = usage.sumOf { it.inputTokens },
-            outputTokens = usage.sumOf { it.outputTokens },
         )
     }
 }

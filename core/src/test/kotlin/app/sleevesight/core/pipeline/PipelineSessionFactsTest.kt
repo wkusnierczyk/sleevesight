@@ -207,8 +207,10 @@ class PipelineSessionFactsTest {
             val state = pipeline.run(track("One"), write = true)
 
             assertEquals(2, provider.requests.size)
-            // The first reply is asked again, not shown or reported as the track's.
+            // The first reply is asked again, not shown or reported as the track's, nor shown as it streams.
             assertFalse(InsightState.NoEvidence in states)
+            val partials = states.filterIsInstance<InsightState.Writing>().map { it.partial }
+            assertTrue(partials.none { GroundingCheck.NO_EVIDENCE in it }, partials.toString())
             assertFalse(formed in prompt(0))
             assertTrue(formed in prompt(1))
             val written = assertIs<InsightState.Written>(state.insight)

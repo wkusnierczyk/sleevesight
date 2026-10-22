@@ -204,7 +204,8 @@ class ArtistFactsTest {
         val result = track(1, listOf(song("One"), formed), "One is a song [W1].", tokens)
         val events = slice(result, listOf("W2") to Usage(900, 10), emptyList<String>() to tokens)
 
-        val rows = ArtistFacts.measure(listOf(result), allowModel = false, ArtistFacts.RunCalls.perRun(events))
+        val runs = ArtistFacts.RunCalls.perRun(events)
+        val rows = ArtistFacts.measure(listOf(result), allowModel = false, runs)
         val row = rows.single()
 
         assertEquals(2, row.calls)
@@ -219,9 +220,8 @@ class ArtistFactsTest {
         val first = InsightPrompt.build(state.nowPlaying, state.normalized, fewer, false)
         val totals = ArtistFacts.totals(rows)
         assertEquals(2, totals.prompts)
-        assertEquals(2, totals.calls)
         assertEquals(prompt.length + first.length, totals.promptChars)
-        assertEquals(1900L, totals.inputTokens)
+        assertEquals("Tokens billed: 1900 in, 110 out, over 2 calls made", Report.billed(runs))
     }
 
     @Test
@@ -244,12 +244,11 @@ class ArtistFactsTest {
                 slice(second, emptyList<String>() to Usage(900, 80)),
                 slice(cached),
             )
-        val runs = slices.map(ArtistFacts.RunCalls::of)
+        val runs = ArtistFacts.RunCalls.perRun(slices.flatten())
         val totals = ArtistFacts.totals(ArtistFacts.measure(listOf(first, second, cached), allowModel = false, runs))
 
-        assertEquals(2, totals.calls)
-        assertEquals(1900L, totals.inputTokens)
-        assertEquals(180L, totals.outputTokens)
+        assertEquals("Tokens billed: 1900 in, 180 out, over 2 calls made", Report.billed(runs))
+        assertEquals(2, totals.prompts)
         assertEquals(3, totals.written)
     }
 }

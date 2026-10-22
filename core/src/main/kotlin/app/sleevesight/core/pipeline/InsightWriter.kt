@@ -155,7 +155,10 @@ internal class InsightWriter(
                     when (event) {
                         is CompletionEvent.Delta -> {
                             text.append(event.text)
-                            show(InsightState.Writing(text.toString(), sent.held))
+                            // Not while it may still be `NO_EVIDENCE`, which is no prose for the card.
+                            if (!GroundingCheck.NO_EVIDENCE.startsWith(text.trim())) {
+                                show(InsightState.Writing(text.toString(), sent.held))
+                            }
                         }
 
                         is CompletionEvent.Done, is CompletionEvent.Error -> {
