@@ -1,5 +1,6 @@
 package app.sleevesight.cli
 
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.RegressionCase
 import java.io.File
@@ -34,9 +35,11 @@ sealed interface CacheChoice {
 data class Options(
     val mode: Mode,
     val tracks: List<Int>,
+    val tracklist: Tracklist?,
     val fixtures: File,
     val out: File?,
     val cache: CacheChoice,
+    val provider: ProviderId,
     val model: String?,
     val web: Boolean,
     val insights: Boolean,
@@ -59,15 +62,20 @@ data class Options(
             Options:
               --tracks <spec>     regression (default: the design's regression cases), all, or positions
                                   such as 1,12,20-24
+              --tracklist <file>  run the tracks in this JSON file, in its order, in place of the
+                                  playlist (an album, or one artist's playlist; see `Tracklist`)
               --out <file>        also write the report to this file
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
                                   .dev/cli/cache.db for live; none for record)
-              --model <id>        the Anthropic model (default: the app's default, claude-haiku-5-5)
+              --provider <name>   the AI service: anthropic, openai or google (default: the one
+                                  --record names, else anthropic); openai only for live, since
+                                  only Anthropic's and Google's replies are recorded and replayed
+              --model <id>        the provider's model (default: the app's default for it)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
-              --record <list>     sources to record: musicbrainz, wikidata, wikipedia, anthropic
-                                  (default: musicbrainz,wikidata,wikipedia)
+              --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
+                                  services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
 
             Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them;
@@ -77,7 +85,20 @@ data class Options(
             failed, or an insight call failed.
             """.trimIndent() + "\n\n" + KeysQr.USAGE
 
-        private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia", "anthropic")
+        /**
+         * The AI services the CLI can run, by the name `--provider` and `--record` take, which is
+         * also the directory under `fixtures/http/` of those whose replies are recorded.
+         */
+        val PROVIDERS: Map<String, ProviderId> =
+            mapOf("anthropic" to ProviderId.ANTHROPIC, "openai" to ProviderId.OPENAI, "google" to ProviderId.GOOGLE)
+
+        /** The AI services whose replies are recorded and replayed: those with a host in [FixtureStore.SOURCES]. */
+        val RECORDED_AI: Set<String> = PROVIDERS.keys.filter { it in FixtureStore.SOURCES.values }.toSet()
+
+        private val SOURCES = setOf("musicbrainz", "wikidata", "wikipedia") + RECORDED_AI
+
+        /** The name of [provider] in `--provider`, `--record` and `fixtures/http/`. */
+        fun nameOf(provider: ProviderId): String = PROVIDERS.entries.first { it.value == provider }.key
 
         /** Parses [args]; throws [IllegalArgumentException] with the reason for a bad command line. */
         fun parse(args: List<String>): Options {
@@ -95,18 +116,54 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
+            val (positions, tracklist) = trackChoice(values)
+            val provider = provider(values["--provider"], if (mode == Mode.RECORD) record else emptySet())
+            require(mode == Mode.LIVE || nameOf(provider) in RECORDED_AI) {
+                "--provider ${nameOf(provider)} runs only live: its replies are not recorded or replayed"
+            }
             return Options(
                 mode = mode,
-                tracks = tracks(values["--tracks"] ?: "regression"),
+                tracks = positions,
+                tracklist = tracklist,
                 fixtures = File(values["--fixtures"] ?: "fixtures"),
                 out = values["--out"]?.let(::File),
                 cache = if (mode == Mode.RECORD) CacheChoice.None else cache,
+                provider = provider,
                 model = values["--model"],
                 web = mode == Mode.LIVE && "--no-web" !in switches,
                 insights = "--no-insights" !in switches,
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
             )
+        }
+
+        // The playlist positions, or the tracklist in their place.
+        private fun trackChoice(values: Map<String, String>): Pair<List<Int>, Tracklist?> {
+            val file = values["--tracklist"] ?: return tracks(values["--tracks"] ?: "regression") to null
+            require(values["--tracks"] == null) { "--tracks and --tracklist cannot both be given" }
+            return emptyList<Int>() to Tracklist.read(File(file))
+        }
+
+        /**
+         * The AI service: [given] (`--provider`), else the one [record] names, else Anthropic. A
+         * record run records the replies of the service it runs, so it names at most one, and
+         * `--provider` must agree with it.
+         */
+        private fun provider(
+            given: String?,
+            record: Set<String>,
+        ): ProviderId {
+            val chosen =
+                given?.let { name ->
+                    requireNotNull(PROVIDERS[name]) { "--provider takes ${PROVIDERS.keys.joinToString()}" }
+                }
+            val recorded = record.filter { it in RECORDED_AI }
+            require(recorded.size <= 1) { "--record takes one AI service at a time, was ${recorded.joinToString()}" }
+            val service = recorded.singleOrNull()
+            require(given == null || service == null || given == service) {
+                "--record $service records $service's replies: give --provider $service, or leave --provider out"
+            }
+            return chosen ?: service?.let(PROVIDERS::getValue) ?: ProviderId.ANTHROPIC
         }
 
         private fun cacheChoice(
@@ -146,7 +203,18 @@ data class Options(
 
         private val SWITCHES = setOf("--no-web", "--no-insights")
 
-        private val VALUED = setOf("--tracks", "--out", "--fixtures", "--cache", "--model", "--record", "--keys")
+        private val VALUED =
+            setOf(
+                "--tracks",
+                "--tracklist",
+                "--out",
+                "--fixtures",
+                "--cache",
+                "--provider",
+                "--model",
+                "--record",
+                "--keys",
+            )
 
         /** The playlist positions [spec] names. */
         fun tracks(spec: String): List<Int> {

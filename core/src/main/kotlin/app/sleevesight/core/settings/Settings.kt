@@ -1,5 +1,6 @@
 package app.sleevesight.core.settings
 
+import app.sleevesight.core.ai.EffortScale
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.ProviderId
@@ -14,7 +15,21 @@ import kotlin.time.Duration.Companion.seconds
  * driver 6). `:app` reads them from DataStore into this type, and `:cli` uses the defaults, so the
  * two run the pipeline the same way. Secrets (API keys, tokens) are not settings.
  *
- * @property aiModel the model the user chose for [aiProvider], or null for its default; read [model].
+ * **The AI service** (#227) is one row per provider, each with its own key, model and reasoning
+ * effort, and a switch; the switches are exclusive. [aiProvider] is the provider switched on, or
+ * null for none. [aiModels] and [aiEfforts] hold each provider's choices whether it is switched on
+ * or not, so switching back to one restores them; read them through [model] and [effort], which
+ * fill in the defaults. A provider joins with its client in `:ai`, its default model in
+ * [DEFAULT_MODELS] and its effort scale in [EFFORT_SCALES] (and, in `:app`, its key and its entry
+ * in the providers offered); nothing here changes for it.
+ *
+ * @property aiProvider the AI service switched on, whose model and effort the pipeline uses; null
+ *   is none, and no insight is written.
+ * @property aiModels the model each provider was set to; a provider not in it uses its default
+ *   ([DEFAULT_MODELS]). Read [model]; set with [withModel].
+ * @property aiEfforts the reasoning effort each provider was set to, where null is the provider's
+ *   own default (no effort sent); a provider not in it uses its scale's default ([EFFORT_SCALES]).
+ *   Read [effort]; set with [withEffort].
  * @property followedPlayers one switch per player seen, by package name; see [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
@@ -34,20 +49,28 @@ import kotlin.time.Duration.Companion.seconds
  *   has none or several, is kept (architecture, *Cache and history*: "long, months").
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
- * @property aiEffort how much the model may reason before it writes, or null for the provider's
- *   default. See [DEFAULT_AI_EFFORT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
  *   are kept, counted back from today to when a track began to play and a change began; null keeps
  *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
  * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
+ * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
+ *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
+ *   lines. Off by default: each new track's list starts folded, as the first one did, since a
+ *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
+ *   nothing about the next. On, a list shown past its first screenful but not in full comes back
+ *   at its first screenful. The fold is kept through a rotation and when Android restores the
+ *   screen it closed, not when the app is started afresh.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
+ * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
+ *   font. See [FontChoice].
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
     val aiProvider: ProviderId? = null,
-    val aiModel: String? = null,
+    val aiModels: Map<ProviderId, String> = emptyMap(),
+    val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
     val followedPlayers: Map<String, Boolean> = mapOf(SPOTIFY to true),
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
@@ -61,10 +84,11 @@ data class Settings(
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
-    val aiEffort: ReasoningEffort? = DEFAULT_AI_EFFORT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
+    val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
+    val font: FontChoice = FontChoice.APP_FONT,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -80,8 +104,50 @@ data class Settings(
     /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
     fun follows(player: String): Boolean = followedPlayers[player] ?: false
 
-    /** The model to write with: the user's choice, or [aiProvider]'s default ([DEFAULT_MODELS]), or none. */
-    val model: String? get() = aiModel ?: aiProvider?.let { DEFAULT_MODELS[it] }
+    /** [provider]'s model: the one it was set to, or its default ([DEFAULT_MODELS]), or none. */
+    fun model(provider: ProviderId): String? = aiModels[provider] ?: DEFAULT_MODELS[provider]
+
+    /** The model to write with: the switched-on provider's ([model]), or none. */
+    val model: String? get() = aiProvider?.let { model(it) }
+
+    /**
+     * [provider]'s reasoning effort: the one it was set to, if its scale offers it, or its scale's
+     * default; null is the provider's own default, and so is a provider with no scale.
+     */
+    fun effort(provider: ProviderId): ReasoningEffort? {
+        val scale = EFFORT_SCALES[provider] ?: return null
+        return if (provider in aiEfforts) scale.coerce(aiEfforts[provider]) else scale.default
+    }
+
+    /** The reasoning effort to write with: the switched-on provider's ([effort]), or none. */
+    val effort: ReasoningEffort? get() = aiProvider?.let { effort(it) }
+
+    /** These settings with [provider]'s model set to [model]; null or blank is its default. */
+    fun withModel(
+        provider: ProviderId,
+        model: String?,
+    ): Settings {
+        val chosen = model?.takeIf { it.isNotBlank() }
+        return copy(aiModels = if (chosen == null) aiModels - provider else aiModels + (provider to chosen))
+    }
+
+    /**
+     * These settings with [provider]'s reasoning effort set to [effort] (null: the provider's own
+     * default), or its scale's default for a level the scale does not offer. The scale's default is
+     * kept as no choice, so a revised default reaches it; a provider with no scale keeps none.
+     */
+    fun withEffort(
+        provider: ProviderId,
+        effort: ReasoningEffort?,
+    ): Settings {
+        val scale = EFFORT_SCALES[provider]
+        val chosen = scale?.coerce(effort)
+        return if (scale == null || chosen == scale.default) {
+            copy(aiEfforts = aiEfforts - provider)
+        } else {
+            copy(aiEfforts = aiEfforts + (provider to chosen))
+        }
+    }
 
     /**
      * Whether lines from [source] may be used: its switch is on, or it is the player's metadata.
@@ -105,12 +171,80 @@ data class Settings(
         const val SPOTIFY: String = "com.spotify.music"
 
         /**
-         * Each provider's default model. Anthropic: Claude Haiku 5.5, the cheapest current model in
-         * the Anthropic models API on 2026-10-14. The key and its bill are the user's (driver 5), and
-         * an insight narrates a few evidence lines, which needs no larger model; the user can choose
-         * another from the provider's list. The other providers get theirs with their clients.
+         * Each provider's default model: its cheapest current text model. The key and its bill are
+         * the user's (driver 5), and an insight narrates a few evidence lines, which needs no larger
+         * model; the user can choose another from the provider's list. The other providers get
+         * theirs with their clients.
+         *
+         * - Anthropic: Claude Haiku 5.5, the cheapest current model in the Anthropic models API on
+         *   2026-10-14.
+         * - OpenAI: GPT-6 Luna (`gpt-6-luna`, $0.10 and $0.50 per million input and output tokens),
+         *   the cheapest of OpenAI's current models on its models and pricing pages on 2026-10-21.
+         *   GPT-5 nano is cheaper but shuts down on 2026-12-11, as do the older nano models before
+         *   it; GPT-6 Luna is named as their successor.
+         * - Google: Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`, $0.30 and $2.50 per million input
+         *   and output tokens), the cheapest stable text model in the Gemini API's models and pricing
+         *   pages on 2026-10-21 that is not deprecated. Gemini 3.1 Flash-Lite costs less, but is
+         *   deprecated, to shut down on 2027-05-07, with 3.5 Flash-Lite its replacement; the cheaper
+         *   2.5 models are open only to projects that used them before.
          */
-        val DEFAULT_MODELS: Map<ProviderId, String> = mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5")
+        val DEFAULT_MODELS: Map<ProviderId, String> =
+            mapOf(
+                ProviderId.ANTHROPIC to "claude-haiku-5-5",
+                ProviderId.OPENAI to "gpt-6-luna",
+                ProviderId.GOOGLE to "gemini-3.5-flash-lite",
+            )
+
+        /**
+         * Each provider's reasoning-effort scale, with its default; a provider with none sends no
+         * effort. Providers do not share one scale, so each lists its own levels, as its service
+         * names them, and the settings offer only those.
+         *
+         * Anthropic: low, medium and high (`output_config.effort`), low by default. An insight
+         * narrates a few evidence lines in two to four sentences: it needs little reasoning, and it
+         * is waited for on the now-playing screen, so latency matters more than depth (Claude Haiku
+         * 5.5 reasons by default, at medium effort). What keeps the text honest is the grounding
+         * check, not the model's deliberation. Thinking is not switched off: not every model allows
+         * it (Claude Opus 5.5 refuses), while every current one takes an effort. A user who prefers
+         * more deliberate cards raises it, or chooses the provider's default.
+         *
+         * OpenAI: low, medium and high (`reasoning.effort`), low by default, for the same reasons
+         * (GPT-6 Luna reasons at medium by default). Its models also name `none`, `minimal`,
+         * `xhigh` and `max`, but not all of them take each: GPT-6 Astra and 6.1 Sol refuse `none`,
+         * only GPT-5 takes `minimal`, and `xhigh` and `max` buy depth a card of a few sentences
+         * does not use. Low, medium and high are the levels every current reasoning model takes.
+         *
+         * Google: minimal, low, medium and high (`thinkingConfig.thinkingLevel`), low by default, for
+         * the same reasons. Low rather than minimal (Gemini 3.5 Flash-Lite's own default): low is the
+         * least level every current Gemini text model takes (Gemini 3.8 Flash and Gemini 4 Argon
+         * refuse minimal), so the default means the same whichever model is chosen, and it matches
+         * Anthropic's and OpenAI's, so cards from the services are compared at one effort. A user
+         * who wants the fastest cards chooses minimal.
+         */
+        val EFFORT_SCALES: Map<ProviderId, EffortScale> =
+            mapOf(
+                ProviderId.ANTHROPIC to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.OPENAI to
+                    EffortScale(
+                        levels = listOf(ReasoningEffort.LOW, ReasoningEffort.MEDIUM, ReasoningEffort.HIGH),
+                        default = ReasoningEffort.LOW,
+                    ),
+                ProviderId.GOOGLE to
+                    EffortScale(
+                        levels =
+                            listOf(
+                                ReasoningEffort.MINIMAL,
+                                ReasoningEffort.LOW,
+                                ReasoningEffort.MEDIUM,
+                                ReasoningEffort.HIGH,
+                            ),
+                        default = ReasoningEffort.LOW,
+                    ),
+            )
 
         /** All on except the model's own knowledge. */
         val DEFAULT_SOURCES: Set<SourceSwitch> = SourceSwitch.entries.toSet() - SourceSwitch.MODEL
@@ -177,16 +311,6 @@ data class Settings(
          * write again, which is why it is not lower.
          */
         const val DEFAULT_CACHE_SIZE_LIMIT: Long = CACHE_MEGABYTES * MEGABYTE
-
-        /**
-         * Low. An insight narrates a few evidence lines in two to four sentences: it needs little
-         * reasoning, and it is waited for on the now-playing screen, so latency matters more than
-         * depth (Claude Haiku 5.5 reasons by default, at medium effort). What keeps the text honest
-         * is the grounding check, not the model's deliberation. Thinking is not switched off: not
-         * every model allows it (Claude Opus 5.5 refuses), while every current one takes an effort.
-         * A user who prefers more deliberate cards raises it, or chooses the provider's default.
-         */
-        val DEFAULT_AI_EFFORT: ReasoningEffort = ReasoningEffort.LOW
 
         /**
          * 5 track changes (#203). Since #190 the first action lasts as long as the process, which
@@ -257,6 +381,24 @@ enum class SourceSwitch(
  */
 enum class WebEngine {
     EXA,
+}
+
+/**
+ * *Font* (#377): the typeface the app's text is set in. The diagnostics screen's monospace text
+ * stays monospace either way.
+ */
+enum class FontChoice {
+    /**
+     * Roboto, bundled with the app, the default: the same type on every phone, in the family the
+     * logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the
+     * same faces. Many phones' system font is not Roboto (Samsung's One UI has its own face, and
+     * users can pick another), so without it the app would look different from phone to phone,
+     * and in the store screenshots from what a user then sees.
+     */
+    APP_FONT,
+
+    /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
+    SYSTEM_FONT,
 }
 
 /** How the detail content is shown. */

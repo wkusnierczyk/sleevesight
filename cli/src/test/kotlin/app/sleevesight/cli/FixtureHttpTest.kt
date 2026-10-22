@@ -88,6 +88,30 @@ class FixtureHttpTest {
         }
 
     @Test
+    fun `a Google stream is recorded with its key left out and its response id replaced`() =
+        runBlocking {
+            val store = FixtureStore(root)
+            val reply = "data: {\"candidates\":[],\"responseId\":\"abc-123\"}\n"
+            val recorder = RecordingNetClient(Live(reply), store, setOf("google"))
+            val post =
+                NetRequest(
+                    "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash-lite:streamGenerateContent",
+                    method = NetMethod.POST,
+                    query = mapOf("alt" to "sse"),
+                    secrets = NetSecrets(headers = mapOf("x-goog-api-key" to "AIza-secret")),
+                    body = NetBody("""{"contents":[]}""", "application/json"),
+                )
+            recorder.stream(post) {}
+            store.save()
+
+            assertIs<NetResult.Success<NetResponse>>(ReplayNetClient(FixtureStore(root)).send(post))
+            val written = root.walkTopDown().filter { it.isFile }.joinToString("\n") { it.readText() }
+            assertFalse("AIza-secret" in written)
+            assertFalse("abc-123" in written)
+            assertTrue("\"responseId\":\"resp_recorded\"" in written, written)
+        }
+
+    @Test
     fun `a MusicBrainz body that cannot be read is not recorded, and is reported`() =
         runBlocking {
             val store = FixtureStore(root)

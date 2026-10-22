@@ -21,12 +21,13 @@ import java.security.MessageDigest
 /**
  * The recorded HTTP responses in `fixtures/http/` (`fixtures/http/README.md`): one directory per
  * source, each with an `index.json` of its requests (method, URL, query, status, file), the format
- * `ReplayNetClient` in `:sources`' test fixtures reads. A `POST` (Anthropic's messages) is matched on
- * its body too, by the body's SHA-256 (`bodySha256`, in the `anthropic` index only).
+ * `ReplayNetClient` in `:sources`' test fixtures reads. A `POST` (an AI service's completion) is
+ * matched on its body too, by the body's SHA-256 (`bodySha256`, in the AI services' indexes only).
  *
- * Only the keyless sources and Anthropic are recorded. Exa's results are not committed (its terms,
- * §4.2(a); `design/design.md`, *Web search provider (D11)*), so web search is neither recorded nor
- * replayed; Last.fm has no key yet. (The live run's on-device cache does keep them, for a day.)
+ * Only the keyless sources and the AI services (Anthropic, Google) are recorded. Exa's results are
+ * not committed (its terms, §4.2(a); `design/design.md`, *Web search provider (D11)*), so web
+ * search is neither recorded nor replayed; Last.fm has no key yet. (The live run's on-device cache
+ * does keep them, for a day.)
  */
 class FixtureStore(
     private val root: File,
@@ -151,6 +152,7 @@ class FixtureStore(
                 "www.wikidata.org" to "wikidata",
                 "en.wikipedia.org" to "wikipedia",
                 "api.anthropic.com" to "anthropic",
+                "generativelanguage.googleapis.com" to "google",
             )
 
         /** The query parameters every request of a source has, left out of file names (as `record.py`). */
@@ -264,7 +266,8 @@ class ReplayNetClient(
  * and records each answer in [store]; every other request is replayed from [store], so recording one
  * source leaves the others' recordings as they are. MusicBrainz responses lose their `tags` and
  * `genres` (CC BY-NC-SA 3.0 supplementary data a search returns unasked), as `record.py` does; an
- * Anthropic stream's message id becomes `msg_recorded`. No key reaches a file: only the URL, query,
+ * Anthropic stream's message id becomes `msg_recorded`, and a Google stream's response id
+ * `resp_recorded`. No key reaches a file: only the URL, query,
  * body hash and body of a request are kept, and a keyless source's request that carries credentials
  * is refused.
  */
@@ -310,7 +313,11 @@ class RecordingNetClient(
                 onLine(line)
             }
         if (result is NetResult.Success && result.value.isSuccess) {
-            val body = lines.joinToString("\n", postfix = "\n").replace(MESSAGE_ID, "\"id\":\"msg_recorded\"")
+            val body =
+                lines
+                    .joinToString("\n", postfix = "\n")
+                    .replace(MESSAGE_ID, "\"id\":\"msg_recorded\"")
+                    .replace(RESPONSE_ID, "\"responseId\":\"resp_recorded\"")
             synchronized(store) { store.record(request, result.value.status, body, "sse") }
         }
         return result
@@ -322,7 +329,7 @@ class RecordingNetClient(
         source: String,
         request: NetRequest,
     ) {
-        if (source == ANTHROPIC) return
+        if (source in Options.PROVIDERS) return
         check(request.secrets.query.isEmpty() && request.secrets.headers.isEmpty() && !request.sensitiveUrl) {
             "Only keyless requests of $source are recorded"
         }
@@ -330,8 +337,8 @@ class RecordingNetClient(
 
     private companion object {
         const val MUSICBRAINZ = "musicbrainz"
-        const val ANTHROPIC = "anthropic"
         val MESSAGE_ID = Regex("\"id\":\\s*\"msg_[A-Za-z0-9_]+\"")
+        val RESPONSE_ID = Regex("\"responseId\":\\s*\"[^\"]*\"")
 
         // Null when the body is not a JSON object or array (the parser takes a bare word as a value).
         fun withoutTags(body: String): String? =

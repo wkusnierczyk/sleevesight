@@ -17,6 +17,9 @@
     <string name="first_run_stays_title">What stays on the phone</string>
     <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself. The length and cover of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
+    <!-- What a screen reader says a tap on the privacy policy's address does. -->
+    <string name="privacy_policy_open">Open in your browser</string>
+    <string name="first_run_privacy">The privacy policy says more, with where Sleevesight stands under the GDPR and the EU AI Act:</string>
 
     <string name="access_off">Notification access is off.</string>
     <string name="access_off_hint">In the settings that open, turn on Sleevesight, then come back here.</string>
@@ -29,16 +32,16 @@
     <string name="settings_title">Settings</string>
 
     <string name="settings_section_ai">AI service</string>
-    <string name="settings_ai_provider">Service</string>
-    <string name="settings_ai_provider_none">Not chosen</string>
     <string name="settings_ai_provider_anthropic">Anthropic</string>
-    <string name="settings_ai_providers_hint">Only Anthropic is built so far.</string>
-    <string name="settings_ai_key">API key</string>
-    <string name="settings_ai_model">Model</string>
+    <string name="settings_ai_provider_openai">OpenAI</string>
+    <string name="settings_ai_provider_google">Google</string>
+    <string name="settings_ai_providers_hint">The service switched on writes the insights, one service at a time. A service switched off keeps its key, model and effort.</string>
+    <string name="settings_ai_provider_needs_key">Insights wait until its API key is saved.</string>
+    <string name="settings_ai_model_of">%1$s model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
-    <string name="settings_ai_model_none">Choose a service first</string>
-    <string name="settings_ai_effort">Reasoning effort</string>
+    <string name="settings_ai_effort_of">%1$s reasoning effort</string>
     <string name="settings_ai_effort_summary">How much the model may reason before it writes. Less is faster and cheaper.</string>
+    <string name="settings_effort_minimal">Minimal</string>
     <string name="settings_effort_low">Low</string>
     <string name="settings_effort_medium">Medium</string>
     <string name="settings_effort_high">High</string>
@@ -48,6 +51,8 @@
     <string name="settings_key_saved">Saved</string>
     <string name="settings_key_unreadable">Saved, but it can no longer be read</string>
     <string name="settings_key_name_anthropic">Anthropic API key</string>
+    <string name="settings_key_name_openai">OpenAI API key</string>
+    <string name="settings_key_name_google">Google Gemini API key</string>
     <string name="settings_key_name_lastfm">Last.fm API key</string>
     <string name="settings_key_name_exa">Exa API key</string>
     <string name="settings_key_recipient_exa">Exa</string>
@@ -72,12 +77,13 @@
     <string name="settings_remove_all">Remove all</string>
     <string name="settings_cancel">Cancel</string>
 
-    <string name="settings_model_title">Model</string>
     <string name="settings_model_loading">Listing the service’s models…</string>
     <string name="settings_model_unavailable">This build cannot list the service’s models yet; the default is used until it can.</string>
     <string name="settings_model_no_key">Save the API key to list the service’s models.</string>
     <string name="settings_model_failed_unauthorized">The models could not be listed: the service refused the key.</string>
     <string name="settings_model_failed_offline">The models could not be listed: no connection.</string>
+    <string name="settings_model_failed_quota_exhausted">The models could not be listed: the service’s quota is used up for now.</string>
+    <string name="settings_model_failed_unavailable_here">The models could not be listed: the service is not offered in your country.</string>
     <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
 
     <string name="settings_section_players">Players to follow</string>
@@ -122,6 +128,9 @@
     <string name="settings_prepare_off">Off</string>
     <string name="settings_prepare_evidence">Evidence</string>
 
+    <string name="settings_section_home">Home screen</string>
+    <string name="settings_keep_sources">Keep Sources as you left them</string>
+    <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
     <string name="settings_section_lookups">Lookups</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>
@@ -142,6 +151,11 @@
     <string name="settings_clear">Clear</string>
     <string name="settings_clear_history_failed">The history could not be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_font">Font</string>
+    <string name="settings_font_app">App font (Roboto)</string>
+    <string name="settings_font_system">System font</string>
+    <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_section_keys">API keys</string>
     <string name="settings_keys_hint">Your API keys, stored encrypted on this phone. Each is sent only to its own service.</string>
     <string name="settings_scan_keys">Scan keys</string>
@@ -192,7 +206,9 @@
     <string name="settings_remove_all_keys_title">Remove all API keys?</string>
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
-    <string name="settings_credits_value">The data sources and their licences</string>
+    <string name="settings_credits_value">The data sources and the font, with their licences</string>
+    <string name="settings_privacy">Privacy policy</string>
+    <string name="settings_privacy_summary">What leaves the phone, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
     <string name="settings_section_developer">Developer</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_summary">Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.</string>
@@ -260,9 +276,9 @@
         <item quantity="other">%d hours</item>
     </plurals>
 
-    <!-- Credits: each data source with its licence and attribution (architecture, Licensing). -->
+    <!-- Credits: each data source, and the font, with its licence and attribution (architecture, Licensing). -->
     <string name="credits_title">Credits</string>
-    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, under their own terms.</string>
+    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, and its text is set in this font, each under its own terms.</string>
     <string name="credits_musicbrainz">MusicBrainz</string>
     <string name="credits_musicbrainz_text">Recordings, releases, artists, credits and dates, from MusicBrainz.</string>
     <string name="credits_musicbrainz_tags">MusicBrainz tags</string>
@@ -275,4 +291,6 @@
     <string name="credits_lastfm_text">Artist bios by Last.fm users, under CC BY-SA; listeners, tags, genre labels and similar artists under Last.fm’s API terms.</string>
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
+    <string name="credits_roboto">Roboto</string>
+    <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
 </resources>

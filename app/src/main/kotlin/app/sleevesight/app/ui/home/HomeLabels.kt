@@ -85,20 +85,25 @@ internal fun sourceName(source: SourceId): String =
 /** The words for an insight's failure, from the fixed label the pipeline gives it (`InsightState.Failed.reason`). */
 @Composable
 internal fun failureText(reason: String): String =
-    when (reason) {
-        "offline" -> stringResource(R.string.home_failure_offline)
-        "unauthorized" -> stringResource(R.string.home_failure_unauthorized)
-        "billing" -> stringResource(R.string.home_failure_billing)
-        "rate_limited" -> stringResource(R.string.home_failure_rate_limited)
-        "overloaded" -> stringResource(R.string.home_failure_overloaded)
-        "server" -> stringResource(R.string.home_failure_server)
-        "model_not_found" -> stringResource(R.string.home_failure_model_not_found)
-        "request_too_large" -> stringResource(R.string.home_failure_request_too_large)
-        "incomplete" -> stringResource(R.string.home_failure_incomplete)
-        "declined" -> stringResource(R.string.home_failure_declined)
-        PipelineHost.FAILED -> stringResource(R.string.home_failure_failed)
-        else -> stringResource(R.string.home_failure_other, reason)
-    }
+    FAILURE_TEXTS[reason]?.let { stringResource(it) } ?: stringResource(R.string.home_failure_other, reason)
+
+/** Each failure label's words: an `AiErrorKind`'s name in lower case, or the pipeline's own label. */
+private val FAILURE_TEXTS: Map<String, Int> =
+    mapOf(
+        "offline" to R.string.home_failure_offline,
+        "unauthorized" to R.string.home_failure_unauthorized,
+        "billing" to R.string.home_failure_billing,
+        "unavailable_here" to R.string.home_failure_unavailable_here,
+        "quota_exhausted" to R.string.home_failure_quota_exhausted,
+        "rate_limited" to R.string.home_failure_rate_limited,
+        "overloaded" to R.string.home_failure_overloaded,
+        "server" to R.string.home_failure_server,
+        "model_not_found" to R.string.home_failure_model_not_found,
+        "request_too_large" to R.string.home_failure_request_too_large,
+        "incomplete" to R.string.home_failure_incomplete,
+        "declined" to R.string.home_failure_declined,
+        PipelineHost.FAILED to R.string.home_failure_failed,
+    )
 
 /** The host of [url], for an evidence line's link; null when it has none. */
 internal fun hostOf(url: String?): String? =

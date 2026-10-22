@@ -56,12 +56,44 @@ data class CompletionRequest(
 
 /**
  * How much a model may reason before it answers: a provider maps it to its own control (Anthropic's
- * `output_config.effort`), or ignores it where it has none. Less is faster and cheaper.
+ * `output_config.effort`, Google's `thinkingLevel`), or ignores it where it has none. Less is faster
+ * and cheaper.
+ *
+ * These are the levels of every provider's scale, by name: each provider offers its own levels from
+ * them, with its own default ([EffortScale], `Settings.EFFORT_SCALES`), and is sent only those. A
+ * provider whose scale has a level not named here adds it, with its label in the settings. The name
+ * is stored (the settings, the synthesis cache's key), so a level is never renamed.
  */
 enum class ReasoningEffort {
+    /** Little or no reasoning: Google's `minimal` (#229). Not on Anthropic's scale. */
+    MINIMAL,
     LOW,
     MEDIUM,
     HIGH,
+}
+
+/**
+ * One provider's reasoning-effort scale: the [levels] it offers, from least to most, and the
+ * [default] used until the user chooses one, where null is the provider's own default (no effort
+ * sent). Its levels are what the settings offer for the provider, with *the service's default*.
+ *
+ * The levels a service takes can differ between its models (some take none, some name their levels
+ * otherwise, some take a budget of reasoning tokens instead). So the provider's client maps each
+ * level to the control of the model it calls, and drops or clamps a level that model does not take,
+ * as `AnthropicProvider.takesEffort` drops the effort for a model that does not take it.
+ */
+data class EffortScale(
+    val levels: List<ReasoningEffort>,
+    val default: ReasoningEffort?,
+) {
+    init {
+        require(levels.isNotEmpty()) { "An effort scale needs a level" }
+        require(levels.distinct() == levels) { "An effort scale lists each level once, was $levels" }
+        require(default == null || default in levels) { "The default $default is not on the scale $levels" }
+    }
+
+    /** [effort] if this scale offers it, or null (the provider's default); else the [default]. */
+    fun coerce(effort: ReasoningEffort?): ReasoningEffort? = if (effort == null || effort in levels) effort else default
 }
 
 /** What a completion stream emits. */
@@ -118,6 +150,18 @@ enum class AiErrorKind {
 
     /** The account cannot pay for the call. */
     BILLING,
+
+    /**
+     * The account's quota for a period is used up (Google's requests per day): it resets later,
+     * or a higher tier lifts it. Not a matter of credit, and no retry mends it soon.
+     */
+    QUOTA_EXHAUSTED,
+
+    /**
+     * The service is not offered where the user is (Google's "User location is not supported"):
+     * neither the key nor billing mends it.
+     */
+    UNAVAILABLE_HERE,
 
     /** Too many requests; try again later. */
     RATE_LIMITED,

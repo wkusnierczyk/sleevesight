@@ -45,6 +45,12 @@ enum class SecretId(
     /** Anthropic's API key, for the AI service. */
     ANTHROPIC("ai.anthropic", KeyName.ANTHROPIC),
 
+    /** OpenAI's API key, for the AI service. */
+    OPENAI("ai.openai", KeyName.OPENAI),
+
+    /** Google's Gemini API key, for the AI service. */
+    GOOGLE("ai.google", KeyName.GOOGLE),
+
     /** The user's Last.fm API key (design, *Source adapters*). */
     LASTFM("source.lastfm", KeyName.LASTFM),
 
@@ -60,7 +66,9 @@ enum class SecretId(
         fun forProvider(provider: ProviderId): SecretId? =
             when (provider) {
                 ProviderId.ANTHROPIC -> ANTHROPIC
-                ProviderId.OPENAI, ProviderId.GOOGLE, ProviderId.OLLAMA -> null
+                ProviderId.OPENAI -> OPENAI
+                ProviderId.GOOGLE -> GOOGLE
+                ProviderId.OLLAMA -> null
             }
     }
 }

@@ -8,9 +8,15 @@ plugins {
 
 sqldelight {
     databases {
+        // The caches can be rebuilt, but a schema change must still open the cache an older version
+        // left: each version is kept (`databases/<version>.db`, from
+        // `generateMainCacheDatabaseSchema`) and every migration is checked against it, as for
+        // the history below. Version 2 (#238) added the artist-level results.
         create("CacheDatabase") {
             packageName = "app.sleevesight.store.db"
             srcDirs("src/main/sqldelight")
+            schemaOutputDirectory = file("src/main/sqldelight/databases")
+            verifyMigrations = true
         }
         // The history cannot be rebuilt, so each schema version is kept (`databases/<version>.db`,
         // from `generateMainHistoryDatabaseSchema`) and every migration is checked against it.

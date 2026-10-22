@@ -52,7 +52,7 @@ jobs:
             while IFS= read -r file; do
               case "$file" in
                 README.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
-                _includes/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/*) ;;
+                _includes/* | _layouts/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/*) ;;
                 design/*.md | design/brand.html) ;;
                 *)
                   echo "Builds for \`$file\`." >> "$GITHUB_STEP_SUMMARY"

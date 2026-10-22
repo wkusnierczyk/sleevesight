@@ -35,17 +35,21 @@ import app.sleevesight.app.session.SkipDetectorLearning
 import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
+import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
+import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
 import app.sleevesight.store.db.CacheDatabase
 import app.sleevesight.store.history.HistoryDatabase
@@ -56,10 +60,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,12 +107,37 @@ class AppGraph(
      */
     val settingsSaves: CoroutineScope get() = mainScope
 
+    /** *Font* as last read, for a new process's first frames. */
+    private val lastFont = LastFont(appContext)
+
+    /**
+     * *Font* (#377), for the theme: the stored choice, as it changes, held for the process, so a
+     * new activity (a rotation, a switch to dark mode, a return to the app) starts in it. Before
+     * the settings' first read in a new process, the font last read ([LastFont]). Read whether or
+     * not the first run is acknowledged: the first-run screen is drawn in it too, and reading the
+     * settings file sends nothing.
+     */
+    val font: StateFlow<FontChoice> =
+        settings.settings
+            .map { it.font }
+            .distinctUntilChanged()
+            .onEach { lastFont.value = it }
+            .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
+
     /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
+     * What the sources give for an artist goes in the caches' artist-level table (#238), which
+     * opens the database only at its first query, a lookup's, after the first-run acknowledgement.
      */
-    private val wiring = appPipelineWiring(BuildConfig.VERSION_NAME, JvmAccentFolder, JvmResourceReader)
+    private val wiring =
+        appPipelineWiring(
+            BuildConfig.VERSION_NAME,
+            JvmAccentFolder,
+            JvmResourceReader,
+            StoreArtistResults({ caches }, Dispatchers.IO),
+        )
 
     /**
      * Ends the graph for an emulated process's end only ([SleevesightApplication.onTerminate], which
@@ -145,13 +177,19 @@ class AppGraph(
     private val userActions = UserActions()
 
     /**
-     * The retrieval, artist and synthesis caches, in a database of their own under the app's
+     * The retrieval, artist, artist-level and synthesis caches, in a database of their own under the app's
      * `databases/`, which the backup and transfer rules exclude: unlike the history, they can be
-     * evicted or rebuilt at the cost of the lookups and paid calls again.
+     * evicted or rebuilt at the cost of the lookups and paid calls again; so one a newer version
+     * left is rebuilt rather than failing ([RebuiltOnDowngrade]).
      */
     private val caches by lazy {
         Caches(
-            AndroidSqliteDriver(CacheDatabase.Schema, appContext, CACHE_DATABASE),
+            AndroidSqliteDriver(
+                CacheDatabase.Schema,
+                appContext,
+                CACHE_DATABASE,
+                callback = RebuiltOnDowngrade(CacheDatabase.Schema),
+            ),
             { checkNotNull(latestSettings.value) { "The caches are used before the settings' first read" } },
             normalizer,
         )
@@ -219,6 +257,14 @@ class AppGraph(
         HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
 
     /**
+     * The artist facts the listening session's insights cited, which the next tracks' prompts leave
+     * out (#239): kept in memory, per the history's latest session, which the recorder writes as a
+     * track starts, usually before its insight is asked for; a track whose insight comes first counts
+     * in the session before it.
+     */
+    private val sessionFacts = ListeningSessionFacts { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
+
+    /**
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
      * also in the background when the user turns that on (D6); nothing before the first run is
      * acknowledged. Runs off the main thread, since the adapters parse their responses where they
@@ -236,7 +282,8 @@ class AppGraph(
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
-            parts = AppPipelineParts(wiring, normalizer) { StorePipelineCache(caches, Dispatchers.IO) },
+            parts =
+                AppPipelineParts(wiring, normalizer, sessionFacts) { StorePipelineCache(caches, Dispatchers.IO) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },

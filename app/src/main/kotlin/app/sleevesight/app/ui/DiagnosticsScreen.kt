@@ -191,6 +191,7 @@ private fun Caches(caches: CachesShown) {
                 for ((name, stats) in listOf(
                     "retrieval" to caches.stats.retrieval,
                     "artists" to caches.stats.artists,
+                    "artist results" to caches.stats.artistResults,
                     "synthesis" to caches.stats.synthesis,
                 )) {
                     Mono(DiagnosticsText.cache(name, stats))

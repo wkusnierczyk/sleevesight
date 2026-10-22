@@ -9,11 +9,12 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
 <!-- The brand sheet: the leading logo designs and their intros, the other marks they come from,
-     two reveals of the record mark, the colours and type, and mock-ups of shirts and stickers. A design
-     reference, not linked from the product page. Hand-written; nothing generates it. Like the product
-     page, it loads nothing from another site: the one web font, Roboto Flex, is a copy cut down to what
-     this page uses (`assets/fonts/make_sheet_font.py`), so text added here in new characters needs that
-     copy remade. -->
+     two reveals of the record mark, the store's feature graphics, the colours and type, and mock-ups
+     of shirts and stickers. A design reference, not linked from the product page. Hand-written;
+     nothing generates it (the feature graphics it shows are files, from `make_feature_graphic.py`).
+     Like the product page, it loads nothing from another site: the one web font, Roboto Flex, is a
+     copy cut down to what this page uses (`assets/fonts/make_sheet_font.py`), so text added here in
+     new characters needs that copy remade. -->
 <style>
 @font-face{font-family:"Roboto Flex";src:url(../assets/fonts/RobotoFlex-sheet.woff) format("woff");
   font-weight:400 700;font-stretch:87.5% 100%;font-display:swap}
@@ -37,6 +38,8 @@ header.sheet p{margin:0;color:var(--page-muted)}
 .foot a{color:inherit}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-muted);margin:44px 0 14px}
 .lead{margin:-6px 0 16px;color:var(--page-muted);max-width:62em}
+/* A long path in a lead breaks anywhere rather than run past a phone's width. */
+.lead code{overflow-wrap:anywhere}
 .card{background:var(--card);border:1px solid var(--card-line);border-radius:14px;overflow:hidden}
 .card .cap{display:flex;gap:10px;align-items:baseline;padding:10px 14px}
 .card .cap b{font-family:ui-monospace,Menlo,monospace;color:var(--page-muted);font-weight:600}
@@ -49,6 +52,12 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
    row end together (the marks stay centred in them). */
 .grid2>.card{display:flex;flex-direction:column}
 .grid2>.card>.duo{flex:1}
+/* The feature graphics: the files `make_feature_graphic.py` writes, each with its own ground, so they
+   are shown as they are, not redrawn in the pane's colourway. */
+.fg img{display:block;width:100%;height:auto;border-top:1px solid var(--card-line)}
+/* A card as tall as its image: stretched to a taller card beside it, it would show its own ground
+   under the image. */
+.grid2.fg{align-items:start}
 
 /* The marks, as in the variants page. */
 .mark{display:inline-flex;align-items:center;gap:.45em;font-size:40px;line-height:1.1;font-weight:700;font-stretch:88%;letter-spacing:-.015em;color:var(--ink);white-space:nowrap}
@@ -311,6 +320,10 @@ noscript .lead{margin-top:16px}
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- The record. Scripts read this symbol and the colourways' variables (`.lt`, and `.dk` for the
+       feature graphic): assets/logo/src/make_icon.py (the app icon) and
+       assets/logo/src/make_feature_graphic.py (Play's feature graphic). After an edit to the symbol or
+       to those colours, run them again. -->
   <symbol id="lp" viewBox="8 8 16 16">
     <circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>
     <circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/>
@@ -515,6 +528,21 @@ noscript .lead{margin-top:16px}
   <h2>Reveals</h2>
   <p class="lead">Two ways of arriving at the 8b mark, for a splash, a video's end card or an intro; both are among the product page's intros, played once and then shrunk into its header. In R1 the record rolls in under "Sleeve" and uncovers "sight"; in R2 the tile is the sleeve, and the record comes out of it.</p>
   <div id="reveals" class="grid2"></div>
+
+  <h2>Feature graphic</h2>
+  <p class="lead">The banner of the Google Play listing, 1024 × 500, shown as a preview video's cover and in Play's collections and ads, which may crop its edges. D2 is the feature graphic: the one on Google Play (<code>listing/graphics/feature-graphic.png</code>), and for now the one to use wherever a single hero graphic is needed. The others are alternative designs, kept in <code>assets/logo/feature-graphic/</code>. All are built by <code>assets/logo/src/make_feature_graphic.py</code> from the words, the record and the colours on this page, the tagline outlined, so none needs a font.</p>
+  <div class="grid2 fg">
+    <div class="card"><div class="cap"><b>D2</b><span>The feature graphic, on Google Play · on red, the record beside "sight"</span></div>
+      <img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline under them, and a large record beside sight, cut off by the edges"></div>
+    <div class="card"><div class="cap"><b>A2</b><span>Alternative · the 8b mark on light, the tagline lined up with "sight"</span></div>
+      <img src="../assets/logo/feature-graphic/a2-mark-light.svg" width="1024" height="500" loading="lazy" alt="On light grey: the 8b mark, Sleeve over a red sight with the record beside it, and the tagline in grey under them"></div>
+    <div class="card"><div class="cap"><b>B2</b><span>Alternative · the 8b mark on dark</span></div>
+      <img src="../assets/logo/feature-graphic/b2-mark-dark.svg" width="1024" height="500" loading="lazy" alt="On near-black: the 8b mark in its dark colours, and the tagline in grey under it"></div>
+    <div class="card"><div class="cap"><b>C</b><span>Alternative · the tile as the sleeve, the record halfway out, as in R2 · light</span></div>
+      <img src="../assets/logo/feature-graphic/c-sleeve-light.svg" width="1024" height="500" loading="lazy" alt="On light grey: the white text tile with a record coming out of it to the right, and the tagline under them"></div>
+    <div class="card"><div class="cap"><b>C</b><span>Alternative · the tile as the sleeve · dark</span></div>
+      <img src="../assets/logo/feature-graphic/c-sleeve-dark.svg" width="1024" height="500" loading="lazy" alt="On near-black: the black text tile with a record coming out of it to the right, and the tagline under them"></div>
+  </div>
 
   <h2>For marketing</h2>
   <p class="lead">The eye over the address, for posters, ads and merch, where the point is to send people to the site. Regular weight throughout, "app" in red; the eye as wide as the address, the two centred on one line.</p>

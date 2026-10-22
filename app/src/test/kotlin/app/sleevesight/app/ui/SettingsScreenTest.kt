@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,11 +11,12 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -45,11 +47,6 @@ import app.sleevesight.app.ui.settings.KeyDialogs
 import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.core.Secret
-import app.sleevesight.core.ai.AiProvider
-import app.sleevesight.core.ai.CompletionEvent
-import app.sleevesight.core.ai.CompletionRequest
-import app.sleevesight.core.ai.ModelInfo
-import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -60,8 +57,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
@@ -73,6 +68,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.IOException
 import java.security.ProviderException
@@ -106,31 +102,13 @@ class SettingsScreenTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    /** An Anthropic client that lists two models for any key, and records the key it was given. */
-    private class FakeProvider : AiProvider {
-        var keyUsed: String? = null
+    private fun absent(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isEmpty()
 
-        override val id = ProviderId.ANTHROPIC
-
-        override suspend fun models(key: Secret): ModelList {
-            keyUsed = key.reveal()
-            return ModelList.Listed(
-                listOf(
-                    ModelInfo("claude-opus-5-5", "Claude Opus 5.5", null),
-                    ModelInfo("claude-haiku-5-5", "Claude Haiku 5.5", null),
-                ),
-            )
-        }
-
-        override fun stream(
-            request: CompletionRequest,
-            key: Secret,
-        ): Flow<CompletionEvent> = emptyFlow()
-    }
+    /** A string that names the provider, for Anthropic. */
+    private fun anthropic(id: Int) = app.getString(id, text(R.string.settings_ai_provider_anthropic))
 
     @Suppress("LongParameterList") // Each test sets what it needs, and leaves the rest.
     private fun show(
-        providers: Map<ProviderId, AiProvider> = emptyMap(),
         onOpenCredits: () -> Unit = {},
         settingsStore: SettingsStore = settings,
         clearHistory: () -> Deferred<Boolean> = ::clearedAtOnce,
@@ -140,7 +118,7 @@ class SettingsScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    SettingsScreen(settingsStore, secretStore, providers, clearHistory, saves, onOpenCredits) {
+                    SettingsScreen(settingsStore, secretStore, emptyMap(), clearHistory, saves, onOpenCredits) {
                         "Label of $it"
                     }
                 }
@@ -169,10 +147,6 @@ class SettingsScreenTest {
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
-    /** The model row's value, and the dialog's option, for Anthropic's default model. */
-    private fun anthropicDefault() =
-        app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC))
-
     @Test
     fun aSwitchIsSavedAtOnce() =
         show {
@@ -181,6 +155,15 @@ class SettingsScreenTest {
 
             compose.onNodeWithText("Label of ${Settings.SPOTIFY}").performScrollTo().performClick()
             waitFor("Spotify stored off") { current().followedPlayers[Settings.SPOTIFY] == false }
+        }
+
+    @Test
+    fun keepingTheSourcesAsLeftIsASwitchOffByDefault() =
+        show {
+            val row = compose.onNodeWithText(text(R.string.settings_keep_sources)).performScrollTo()
+            row.assertIsOff()
+            row.performClick()
+            waitFor("keep sources stored on") { current().keepSourcesUnfolded }
         }
 
     @Test
@@ -229,14 +212,17 @@ class SettingsScreenTest {
         val store = SettingsStore(flaky)
         show(settingsStore = store) {
             flaky.writeFailures.set(1)
-            compose.onNodeWithText(text(R.string.settings_ai_effort)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_effort_high)).performClick()
+            compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
+            compose.onNode(hasText(text(R.string.settings_effort_high)) and hasAnyAncestor(isDialog())).performClick()
 
             waitForText(text(R.string.settings_change_failed))
             // The dialog has closed, and the row still shows the stored effort.
-            assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_effort_high)).fetchSemanticsNodes().size)
-            compose.onNodeWithText(text(R.string.settings_effort_low)).performScrollTo().assertIsDisplayed()
-            assertEquals(ReasoningEffort.LOW, current(store).aiEffort)
+            val row = hasText(anthropic(R.string.settings_ai_effort_of))
+            assertEquals(0, compose.onAllNodes(isDialog()).fetchSemanticsNodes().size)
+            val high = row and hasText(text(R.string.settings_effort_high))
+            assertEquals(0, compose.onAllNodes(high).fetchSemanticsNodes().size)
+            compose.onNode(row and hasText(text(R.string.settings_effort_low))).performScrollTo().assertIsDisplayed()
+            assertEquals(ReasoningEffort.LOW, current(store).effort(ProviderId.ANTHROPIC))
         }
     }
 
@@ -521,7 +507,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun withNoServiceChosenASavedAiKeyKeepsItsRowToRemoveIt() {
+    fun withNoServiceSwitchedOnASavedAiKeyKeepsItsRowToRemoveIt() {
         runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
         show {
             val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
@@ -532,9 +518,9 @@ class SettingsScreenTest {
             compose.onNodeWithContentDescription(removeAnthropic).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_remove)).performClick()
             waitFor("the Anthropic key removed") { runBlocking { secrets.get(SecretId.ANTHROPIC) } == null }
-            waitFor("its row gone") {
-                compose.onAllNodesWithText(text(R.string.settings_key_name_anthropic)).fetchSemanticsNodes().isEmpty()
-            }
+            waitFor("its button gone") { compose.onAllNodesWithContentDescription(removeAnthropic).isEmpty() }
+            // The row stays, under Anthropic's switch, to enter a key again.
+            compose.onNodeWithText(text(R.string.settings_key_name_anthropic)).performScrollTo().assertIsDisplayed()
         }
     }
 
@@ -598,51 +584,6 @@ class SettingsScreenTest {
             assertTrue(runBlocking { failingSecrets.states.first() }.values.all { it == SecretState.ABSENT })
         }
     }
-
-    @Test
-    fun theModelComesFromTheServicesList() {
-        val provider = FakeProvider()
-        show(providers = mapOf(ProviderId.ANTHROPIC to provider)) {
-            compose.onNodeWithText(text(R.string.settings_ai_model)).assertIsNotEnabled()
-
-            compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
-            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
-            // The model row opens its dialog only once the screen has the service.
-            waitForText(anthropicDefault())
-
-            // Without a key, only the default. The dialog says so once it has looked for the key.
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
-            waitForText(text(R.string.settings_model_no_key))
-            compose.onNodeWithText(text(R.string.settings_model_no_key)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
-
-            runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
-            waitFor("the listed models") { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
-            compose.onNodeWithText("Claude Opus 5.5 (claude-opus-5-5)").performClick()
-
-            waitFor("the model stored") { current().aiModel == "claude-opus-5-5" }
-            assertEquals("sk-test", provider.keyUsed)
-        }
-    }
-
-    @Test
-    fun withoutAClientTheDefaultModelIsOffered() =
-        show {
-            compose.onNodeWithText(text(R.string.settings_ai_provider)).performClick()
-            compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performClick()
-            waitFor("Anthropic stored") { current().aiProvider == ProviderId.ANTHROPIC }
-            // The model row opens its dialog only once the screen has the service.
-            waitForText(anthropicDefault())
-
-            compose.onNodeWithText(text(R.string.settings_ai_model)).performClick()
-            // The dialog shows *Loading* until it has looked for a key, on the key store's thread.
-            waitForText(text(R.string.settings_model_unavailable))
-            compose.onNodeWithText(text(R.string.settings_model_unavailable)).assertIsDisplayed()
-            // In the row and as the dialog's one option.
-            compose.onAllNodesWithText(anthropicDefault()).assertCountEquals(2)
-        }
 
     @Test
     fun aCacheLifetimeIsChosen() =
@@ -789,6 +730,20 @@ class SettingsScreenTest {
         show(onOpenCredits = { opened = true }) {
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
             assertTrue(opened)
+        }
+    }
+
+    @Test
+    fun thePrivacyPolicyRowOpensThePolicyOnTheSiteInTheBrowser() {
+        show {
+            compose.onNodeWithText(text(R.string.settings_privacy)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_privacy)).performClick()
+
+            var started: Intent? = null
+            onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://sleevesight.app/privacy.html", started?.dataString)
         }
     }
 

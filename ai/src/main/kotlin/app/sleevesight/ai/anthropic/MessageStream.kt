@@ -1,5 +1,6 @@
 package app.sleevesight.ai.anthropic
 
+import app.sleevesight.ai.decode
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.StopReason

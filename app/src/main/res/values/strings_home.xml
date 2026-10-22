@@ -66,6 +66,8 @@
     <string name="home_failure_offline">no connection</string>
     <string name="home_failure_unauthorized">the AI service did not accept the key</string>
     <string name="home_failure_billing">the AI service account needs credit</string>
+    <string name="home_failure_quota_exhausted">the AI service’s quota is used up for now; it resets later, or a higher tier lifts it</string>
+    <string name="home_failure_unavailable_here">the AI service is not offered in your country</string>
     <string name="home_failure_rate_limited">too many requests just now</string>
     <string name="home_failure_overloaded">the AI service is busy</string>
     <string name="home_failure_server">the AI service had a problem</string>
@@ -93,9 +95,37 @@
     <string name="home_source_release">release</string>
     <string name="home_source_model_allowed">allowed</string>
     <string name="home_source_filter">Show or hide the lines of %1$s</string>
+    <!-- A chip's action while the list is folded: it unfolds the list to that source's first line. -->
+    <string name="home_source_reveal">Show the lines of %1$s</string>
     <string name="home_source_lines_shown">lines shown</string>
     <string name="home_source_lines_hidden">lines hidden</string>
     <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
+    <!-- The fold of the list of sources: each control as drawn, and as a screen reader says it. -->
+    <string name="home_sources_show">show &gt;</string>
+    <string name="home_sources_show_words">Show sources</string>
+    <string name="home_sources_hide">&lt; hide</string>
+    <string name="home_sources_hide_words">Hide sources</string>
+    <string name="home_sources_more">more…</string>
+    <string name="home_sources_more_words">Show more sources</string>
+    <string name="home_sources_all">show all &gt;&gt;</string>
+    <string name="home_sources_all_words">Show all sources</string>
+    <string name="home_sources_less">… less</string>
+    <string name="home_sources_less_words">Show fewer sources</string>
+    <!-- How much of the list shows. An entry is an evidence line, an unverified line or a rejected match. -->
+    <plurals name="home_sources_folded">
+        <item quantity="one">%d entry, folded</item>
+        <item quantity="other">%d entries, folded</item>
+    </plurals>
+    <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
+    <plurals name="home_sources_showing_all">
+        <item quantity="one">Showing %d entry</item>
+        <item quantity="other">Showing all %d entries</item>
+    </plurals>
+    <!-- Every entry hidden: the chips hide all the evidence lines, and there is nothing else. -->
+    <plurals name="home_sources_filtered">
+        <item quantity="one">%d line, hidden by its chip</item>
+        <item quantity="other">All %d lines, hidden by the chips</item>
+    </plurals>
     <string name="home_evidence_looking">Looking…</string>
     <string name="home_evidence_empty">No source returned anything about this.</string>
     <string name="home_evidence_cited">The lines the insight cites, found when it was written.</string>

@@ -28,8 +28,9 @@ import app.sleevesight.core.genres.LabelSource
 
 /**
  * The credits (architecture, *UI*, *Licensing*): each data source the app uses, with its licence
- * and attribution. MusicBrainz is listed with both its licences, CC0 for its core data and
- * CC BY-NC-SA 3.0 for its tags, which are a genre label source (D12, #84).
+ * and attribution, and then the font it bundles, Roboto (#377). MusicBrainz is listed with both its
+ * licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a genre label source
+ * (D12, #84).
  */
 @Composable
 fun CreditsScreen() {
@@ -45,6 +46,7 @@ fun CreditsScreen() {
             Text(stringResource(R.string.credits_title), style = MaterialTheme.typography.headlineMedium)
             Text(stringResource(R.string.credits_intro), style = MaterialTheme.typography.bodyLarge)
             for (credit in CREDITS) CreditEntry(credit)
+            CreditEntry(FONT_CREDIT)
         }
     }
 }
@@ -80,6 +82,18 @@ internal val CREDITS: List<Credit> =
         Credit(R.string.credits_wikidata, R.string.credits_wikidata_text, CC0),
         Credit(R.string.credits_lastfm, R.string.credits_lastfm_text, null),
         Credit(R.string.credits_exa, R.string.credits_exa_text, null),
+    )
+
+/**
+ * Roboto, the app's font, with its copyright notice and its licence, as the SIL Open Font License
+ * asks of software that bundles the font; the licence's text is in the app too
+ * (`assets/licences/roboto-ofl.txt`).
+ */
+internal val FONT_CREDIT: Credit =
+    Credit(
+        R.string.credits_roboto,
+        R.string.credits_roboto_text,
+        Licence("SIL Open Font License 1.1", "https://openfontlicense.org"),
     )
 
 @Composable

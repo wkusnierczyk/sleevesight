@@ -69,6 +69,23 @@ class EvidenceSetTest {
     }
 
     @Test
+    fun `a set without some lines keeps each kept line's id, and is itself when none is left out`() {
+        val full = EvidenceSet.of(retrieval.values.flatten(), JvmHasher)
+        val artist =
+            full.lines
+                .filter { it.scope == Scope.ARTIST }
+                .map { it.id }
+                .toSet()
+
+        val less = full.without(JvmHasher) { it.id in artist }
+
+        assertEquals(full.lines.filter { it.id !in artist }, less.lines)
+        assertTrue(artist.isNotEmpty() && less.ids.none { it in artist })
+        assertNotEquals(full.fingerprint, less.fingerprint)
+        assertTrue(full.without(JvmHasher) { false } === full)
+    }
+
+    @Test
     fun `ids are the source tag and a position within the source`() {
         val evidence = landingIn(SourceId.WEB, SourceId.PLAYER, SourceId.LASTFM, SourceId.WIKIPEDIA)
         assertEquals(listOf("W1", "W2", "W3", "W4", "W5", "W6"), evidence.ids.filter { it.startsWith("W") })

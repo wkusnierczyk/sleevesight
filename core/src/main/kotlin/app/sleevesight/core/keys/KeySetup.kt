@@ -10,6 +10,8 @@ enum class KeyName(
     val code: String,
 ) {
     ANTHROPIC("anthropic"),
+    OPENAI("openai"),
+    GOOGLE("google"),
     EXA("exa"),
     LASTFM("lastfm"),
     ;
@@ -25,10 +27,13 @@ enum class KeyProblem {
     /** Nothing after the name. */
     EMPTY,
 
-    /** A space, a line break or a character no key of the service has. */
+    /** A space, a line break or a character no key of the service has (a dot only Google's may). */
     BAD_CHARACTERS,
 
-    /** Not the service's shape: Anthropic's starts `sk-ant-`, Last.fm's is 32 hexadecimal digits. */
+    /**
+     * Not the service's shape: Anthropic's starts `sk-ant-`, OpenAI's `sk-` (and not `sk-ant-`),
+     * Google's `AIza` or `AQ.`, Last.fm's is 32 hexadecimal digits.
+     */
     WRONG_SHAPE,
 
     /** The name given twice, so which key is meant cannot be told. */
@@ -38,14 +43,26 @@ enum class KeyProblem {
 /**
  * The shape each service's key has, checked on a key read from a code, not on one typed. A check
  * is loose where the service does not document its keys' form: Exa's are only checked for their
- * characters and a plausible length, so a key of a form Exa adopts later still passes.
+ * characters and a plausible length, so a key of a form Exa adopts later still passes. OpenAI's
+ * keys start `sk-` whatever their kind (a project's `sk-proj-`, a service account's `sk-svcacct-`),
+ * so only that and a plausible length are checked; a key that starts `sk-ant-` is Anthropic's,
+ * and refused as OpenAI's. Google's start `AIza`, or `AQ.` for the newer authentication keys AI
+ * Studio makes, which hold a dot; only that and a plausible length are checked, so a later key of
+ * either kind still passes.
  */
 object KeyShape {
     private val TOKEN = Regex("[A-Za-z0-9_-]+")
+    private val GOOGLE_TOKEN = Regex("[A-Za-z0-9._-]+")
     private val HEX_32 = Regex("[0-9a-fA-F]{32}")
     private const val ANTHROPIC_PREFIX = "sk-ant-"
     private const val ANTHROPIC_SHORTEST = 40
     private const val ANTHROPIC_LONGEST = 400
+    private const val OPENAI_PREFIX = "sk-"
+    private const val OPENAI_SHORTEST = 40
+    private const val OPENAI_LONGEST = 400
+    private val GOOGLE_PREFIXES = listOf("AIza", "AQ.")
+    private const val GOOGLE_SHORTEST = 30
+    private const val GOOGLE_LONGEST = 400
     private const val EXA_SHORTEST = 16
     private const val EXA_LONGEST = 200
 
@@ -59,7 +76,7 @@ object KeyShape {
                 KeyProblem.EMPTY
             }
 
-            !TOKEN.matches(value) -> {
+            !(if (name == KeyName.GOOGLE) GOOGLE_TOKEN else TOKEN).matches(value) -> {
                 KeyProblem.BAD_CHARACTERS
             }
 
@@ -69,6 +86,13 @@ object KeyShape {
                         KeyName.ANTHROPIC ->
                             value.startsWith(ANTHROPIC_PREFIX) &&
                                 value.length in ANTHROPIC_SHORTEST..ANTHROPIC_LONGEST
+                        KeyName.OPENAI ->
+                            value.startsWith(OPENAI_PREFIX) &&
+                                !value.startsWith(ANTHROPIC_PREFIX) &&
+                                value.length in OPENAI_SHORTEST..OPENAI_LONGEST
+                        KeyName.GOOGLE ->
+                            GOOGLE_PREFIXES.any { value.startsWith(it) } &&
+                                value.length in GOOGLE_SHORTEST..GOOGLE_LONGEST
                         KeyName.EXA -> value.length in EXA_SHORTEST..EXA_LONGEST
                         KeyName.LASTFM -> HEX_32.matches(value)
                     }

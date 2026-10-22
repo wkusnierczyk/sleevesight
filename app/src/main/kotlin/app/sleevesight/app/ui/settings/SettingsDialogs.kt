@@ -41,6 +41,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
@@ -58,7 +59,7 @@ internal fun <T> ChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(choice.title)) },
+        title = { Text(choice.titleArg?.let { stringResource(choice.title, it) } ?: stringResource(choice.title)) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
                 for ((value, label) in choice.options) {
@@ -359,12 +360,12 @@ internal fun ModelDialog(
     val listed = (loaded as? ModelLoad.Listed)?.models.orEmpty()
     val earlier = current?.takeIf { c -> c != default && listed.none { it.id == c } }
     val others =
-        listed.filter { it.id != default }.map { it.id to "${it.displayName} (${it.id})" } +
+        listed.filter { it.id != default }.map { it.id to optionLabel(it) } +
             listOfNotNull(earlier?.let { it to it })
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_model_title)) },
+        title = { Text(stringResource(R.string.settings_ai_model_of, stringResource(providerName(provider)))) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
                 modelStatus(loaded)?.let {
@@ -393,6 +394,10 @@ internal fun ModelDialog(
     )
 }
 
+/** A listed model as the dialog offers it: its name and id, or its id alone where the service names it by that. */
+internal fun optionLabel(model: ModelInfo): String =
+    if (model.displayName == model.id) model.id else "${model.displayName} (${model.id})"
+
 private fun modelStatus(load: ModelLoad): Int? =
     when (load) {
         ModelLoad.Loading -> {
@@ -415,6 +420,8 @@ private fun modelStatus(load: ModelLoad): Int? =
             when (load.kind) {
                 AiErrorKind.UNAUTHORIZED -> R.string.settings_model_failed_unauthorized
                 AiErrorKind.OFFLINE -> R.string.settings_model_failed_offline
+                AiErrorKind.UNAVAILABLE_HERE -> R.string.settings_model_failed_unavailable_here
+                AiErrorKind.QUOTA_EXHAUSTED -> R.string.settings_model_failed_quota_exhausted
                 else -> R.string.settings_model_failed_other
             }
         }

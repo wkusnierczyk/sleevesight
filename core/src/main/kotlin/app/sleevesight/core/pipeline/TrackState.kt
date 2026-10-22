@@ -88,21 +88,31 @@ sealed interface InsightState {
         val canWrite: Boolean,
     ) : InsightState
 
-    /** The model is writing; [partial] is the text so far, not yet checked. */
+    /**
+     * The model is writing; [partial] is the text so far, not yet checked. [held] are the ids of the
+     * lines its prompt held when it left some of the track's out (#239, `PromptEvidence`), null when
+     * it held them all: a citation outside them shows as one of no line, as the check will read it.
+     */
     data class Writing(
         val partial: String,
+        val held: Set<String>? = null,
     ) : InsightState
 
     /**
      * Written and checked. [cached] when served from the synthesis cache, with no call; [usage] is
      * the call's, null when cached. [complete] is false when the reply was cut off at the token
-     * limit: shown, but not kept.
+     * limit: shown, but not kept. [held] are the ids of the lines its prompt held when it left some
+     * of the track's out (#239), as the check read it: a citation outside them is `unknown`, and its
+     * chip shows and reads as one of no line, though the track has that line. Null when the prompt
+     * held every line, and for a card from the cache, which is kept only when it cites none outside
+     * them (`InsightWriter.finish`).
      */
     data class Written(
         val grounded: GroundedText,
         val cached: Boolean,
         val usage: Usage? = null,
         val complete: Boolean = true,
+        val held: Set<String>? = null,
     ) : InsightState
 
     /**

@@ -13,6 +13,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.wiring.SourceKeys
 import app.sleevesight.wiring.appPipelineWiring
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ class AppPipelinePartsTest {
 
     private val stores by lazy { TestStores(tmp.root) }
     private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
-    private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader)
+    private val wiring = appPipelineWiring("0.1.0", JvmAccentFolder, JvmResourceReader, ArtistResults.None)
     private val parts = AppPipelineParts(wiring, Normalizer(JvmAccentFolder)) { PipelineCache.None }
 
     // The wiring made its own client, which each test closes, as `WiringTest` does.
@@ -112,6 +113,10 @@ class AppPipelinePartsTest {
         assertEquals(ProviderId.ANTHROPIC, parts(PipelineKeys(ai = Secret("ai")), anthropic).ai?.provider?.id)
         assertNull("no key", parts(PipelineKeys(), anthropic).ai)
         assertNull("no service chosen", parts(PipelineKeys(ai = Secret("ai")), Settings()).ai)
-        assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OPENAI)).ai)
+        val openAi = Settings(aiProvider = ProviderId.OPENAI)
+        assertEquals(ProviderId.OPENAI, parts(PipelineKeys(ai = Secret("ai")), openAi).ai?.provider?.id)
+        val google = Settings(aiProvider = ProviderId.GOOGLE)
+        assertEquals(ProviderId.GOOGLE, parts(PipelineKeys(ai = Secret("ai")), google).ai?.provider?.id)
+        assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OLLAMA)).ai)
     }
 }

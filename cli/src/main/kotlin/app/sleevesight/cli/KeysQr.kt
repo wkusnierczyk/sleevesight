@@ -56,7 +56,8 @@ class KeysQr(
                 }
 
                 keys.isEmpty() -> {
-                    "No keys found: set ${Keys.ANTHROPIC}, ${Keys.EXA} or ${Keys.LASTFM}, or give --<name>-from."
+                    "No keys found: set ${Keys.ANTHROPIC}, ${Keys.OPENAI}, ${Keys.GOOGLE}, ${Keys.EXA} " +
+                        "or ${Keys.LASTFM}, or give --<name>-from."
                 }
 
                 else -> {
@@ -97,11 +98,7 @@ class KeysQr(
         require(given == null || from.isEmpty()) { "--keys and --<name>-from cannot be combined" }
         if (from.isEmpty()) {
             val loaded = if (given == null) Keys.load(environment) else Keys.load(emptyMap(), given)
-            return listOfNotNull(
-                loaded.anthropic?.let { KeyName.ANTHROPIC to it },
-                loaded.exa?.let { KeyName.EXA to it },
-                loaded.lastFm?.let { KeyName.LASTFM to it },
-            ).toMap()
+            return KeyName.entries.mapNotNull { name -> keyOf(loaded, name)?.let { name to it } }.toMap()
         }
         return from.mapValues { (name, path) -> Secret(readKey(name, path)) }
     }
@@ -136,8 +133,8 @@ class KeysQr(
 
         val USAGE: String =
             """
-            Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--exa-from <file|->]
-                                           [--lastfm-from <file|->]
+            Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
+                                           [--google-from <file|->] [--exa-from <file|->] [--lastfm-from <file|->]
 
               Draws a setup code for the app's Settings, API keys, Scan keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
@@ -185,13 +182,29 @@ class KeysQr(
                 }
             }
 
-        private const val SHAPES = "Anthropic's start sk-ant-, Last.fm's are 32 hexadecimal digits"
+        private const val SHAPES =
+            "Anthropic's start sk-ant-, OpenAI's sk-, Google's AIza or AQ., Last.fm's are 32 hexadecimal digits"
         private const val COLOURS = "\u001b[30;107m"
         private const val RESET = "\u001b[0m"
+
+        // The key [loaded] holds for [name].
+        private fun keyOf(
+            loaded: Keys,
+            name: KeyName,
+        ): Secret? =
+            when (name) {
+                KeyName.ANTHROPIC -> loaded.anthropic
+                KeyName.OPENAI -> loaded.openAi
+                KeyName.GOOGLE -> loaded.google
+                KeyName.EXA -> loaded.exa
+                KeyName.LASTFM -> loaded.lastFm
+            }
 
         private fun label(name: KeyName): String =
             when (name) {
                 KeyName.ANTHROPIC -> "Anthropic"
+                KeyName.OPENAI -> "OpenAI"
+                KeyName.GOOGLE -> "Google"
                 KeyName.EXA -> "Exa"
                 KeyName.LASTFM -> "Last.fm"
             }
