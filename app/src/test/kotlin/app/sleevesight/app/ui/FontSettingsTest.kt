@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
+import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -217,8 +218,14 @@ class FontSettingsTest {
     fun aNewProcessStartsInTheFontLastReadThenFollowsTheSettings() {
         // As left by an earlier process, whose settings said *System font*; this one's say the default.
         LastFont(app).value = FontChoice.SYSTEM_FONT
-        // Read at once: the settings' first read resumes on the main looper, which has not run yet.
+        // The settings' first read held off: while a directory stands where their file goes, every
+        // read fails, and is retried. Without it the read could land before `font` is first read:
+        // DataStore reads on a thread of its own, and a read done before the collector suspends
+        // resumes it at once, on the main thread, with no turn of the main looper.
+        val file = app.preferencesDataStoreFile("settings")
+        assertTrue(file.mkdirs())
         assertEquals(FontChoice.SYSTEM_FONT, app.graph.font.value)
+        assertTrue(file.delete())
         idleUntil("the settings' first read") { app.graph.font.value == FontChoice.APP_FONT }
         assertEquals(FontChoice.APP_FONT, LastFont(app).value)
     }
