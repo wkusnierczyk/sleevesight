@@ -83,8 +83,8 @@ data class Options(
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
 
             Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them
-            (uncited sentences in live replies are judged over 3 passes and 50 sentences or more,
-            --repeat 3; less fails only at 15 percent uncited or more);
+            (uncited sentences in live replies are judged over 50 sentences or more, pooled over
+            the passes; fewer fail only at 15 percent uncited or more);
             1 when one fails; 2 for a usage error, or a source request with no recording (a missing
             recorded AI reply is reported, not fatal) or whose answer could not be recorded; 3 when a
             criterion the run should have checked could not be, because a source was unreachable or

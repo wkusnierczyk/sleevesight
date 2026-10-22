@@ -212,35 +212,35 @@ class GateTest {
     }
 
     @Test
-    fun `live replies' uncited sentences are judged over a full sample, pooled`() {
+    fun `live replies' uncited sentences are judged over 50 sentences or more, pooled over passes`() {
         val cited = state(1, reply = "It is a song [MB1].")
         val uncited = state(1, reply = "It is a song.")
 
-        // [count] passes of [length] one-sentence insights, the [withUncited] first of them with one uncited.
-        fun passes(
+        // [count] passes of [length] one-sentence insights, the first [uncitedCount] of the run uncited.
+        fun run(
             count: Int,
-            withUncited: Int,
-            length: Int = 20,
-        ) = List(count) { pass ->
-            (List(length - 1) { cited } + if (pass < withUncited) uncited else cited).map { it.copy(pass = pass + 1) }
-        }.flatten()
+            length: Int,
+            uncitedCount: Int,
+        ) = Gate.evaluate(
+            List(count * length) { i ->
+                (if (i < uncitedCount) uncited else cited).copy(pass = if (count > 1) i / length + 1 else null)
+            },
+            insightsAsked = true,
+            sample = Gate.Sample.LIVE,
+        )[1]
 
-        fun uncitedOver(results: List<TrackResult>) =
-            Gate.evaluate(results, insightsAsked = true, sample = Gate.Sample.LIVE)[1]
-
-        // A full sample, three passes and 60 sentences: 1 or 2 of 60 pass; 3 of 60, 5 percent, fails.
-        val pooled = uncitedOver(passes(3, 1))
-        assertEquals(Verdict.PASS, pooled.verdict, pooled.detail)
-        assertTrue("1 of 60 sentences" in pooled.detail && "over 3 passes" in pooled.detail, pooled.detail)
-        assertEquals(Verdict.PASS, uncitedOver(passes(3, 2)).verdict)
-        assertEquals(Verdict.FAIL, uncitedOver(passes(3, 3)).verdict)
-        // Two passes, 2 of 40: not judged.
-        assertEquals(Verdict.NOT_CHECKED, uncitedOver(passes(2, 2)).verdict)
-        // Three passes of 16, 48 sentences, 3 uncited (6.25 percent): under 50 sentences and under the
-        // gross share, so not judged; four passes of that length would make the sample.
-        val short = uncitedOver(passes(3, 3, length = 16))
+        // One pass of the whole playlist, as prompt version 1's gate run (35 of 265, 13.2 percent): it fails.
+        assertEquals(Verdict.FAIL, run(1, 265, 35).verdict)
+        // One pass of 60: 2 uncited pass, 3 (5 percent) fail.
+        assertEquals(Verdict.PASS, run(1, 60, 2).verdict)
+        assertEquals(Verdict.FAIL, run(1, 60, 3).verdict)
+        // Three passes of 16 (48 sentences) with 3 uncited: not judged; a fourth (64) makes the sample, and passes.
+        val short = run(3, 16, 3)
         assertEquals(Verdict.NOT_CHECKED, short.verdict, short.detail)
         assertTrue("about 4 passes of this length (--repeat 4)" in short.detail, short.detail)
+        val four = run(4, 16, 3)
+        assertEquals(Verdict.PASS, four.verdict, four.detail)
+        assertTrue("3 of 64 sentences" in four.detail && "over 4 passes" in four.detail, four.detail)
         val wrong = listOf(state(1, reply = "It is a song [W9]."))
         val unknown = Gate.evaluate(wrong, insightsAsked = true, sample = Gate.Sample.LIVE)
         assertEquals(Verdict.FAIL, unknown[0].verdict)
@@ -273,7 +273,16 @@ class GateTest {
     }
 
     @Test
-    fun `a pass with no sentence to judge does not count toward the three`() {
+    fun `a small sample not judged is incomplete when an insight call failed too`() {
+        val cited = state(1, reply = "It is a song [MB1].")
+        val failed = cited.copy(state = cited.state.copy(insight = InsightState.Failed("offline")))
+        val result = Gate.evaluate(List(20) { cited } + failed, insightsAsked = true, sample = Gate.Sample.LIVE)[1]
+        assertEquals(Verdict.NOT_CHECKED, result.verdict, result.detail)
+        assertTrue(result.incomplete, "the run exits ${Cli.EXIT_UNCHECKED}")
+    }
+
+    @Test
+    fun `a pass with no sentence gives nothing to the sample`() {
         val cited = state(1, reply = "It is a song [MB1].")
         // One pass of cited insights, and two in which every reply was NO_EVIDENCE.
         val noEvidence =
@@ -294,21 +303,14 @@ class GateTest {
     fun `three passes judge only with enough sentences among them`() {
         val cited = state(1, reply = "It is a song [MB1].")
         val uncited = state(1, reply = "It is a song.")
-
-        // Passes of 20, 1 and 1 sentences, [uncitedCount] of the first pass's uncited: 22 sentences,
-        // under the 50 a live sample needs.
-        fun thin(uncitedCount: Int) =
+        // Passes of 20, 1 and 1 sentences, one uncited: 22 sentences, under the 50 a live sample needs.
+        val thin =
             Gate.evaluate(
-                (List(20 - uncitedCount) { cited } + List(uncitedCount) { uncited }).map { it.copy(pass = 1) } +
-                    cited.copy(pass = 2) + cited.copy(pass = 3),
+                (List(19) { cited } + uncited).map { it.copy(pass = 1) } + cited.copy(pass = 2) + cited.copy(pass = 3),
                 insightsAsked = true,
                 sample = Gate.Sample.LIVE,
             )[1]
-
-        // 1 of 22 is under 5 percent, but not judged on so few sentences; 4 of 22 (18 percent) is gross.
-        val one = thin(1)
-        assertEquals(Verdict.NOT_CHECKED, one.verdict, one.detail)
-        assertTrue("3 passes and 50 sentences" in one.detail, one.detail)
-        assertEquals(Verdict.FAIL, thin(4).verdict)
+        assertEquals(Verdict.NOT_CHECKED, thin.verdict, thin.detail)
+        assertTrue("at least 50 sentences" in thin.detail, thin.detail)
     }
 }

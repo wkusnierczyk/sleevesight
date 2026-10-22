@@ -60,10 +60,10 @@ data class Criterion(
  * check.
  *
  * Every criterion is judged over all the run's passes together (`--repeat`). Uncited sentences
- * in live replies are judged over a [Sample.LIVE] of passes and sentences, since they vary from one
- * pass to the next (#399): an insight is two to four sentences, so a pass of the regression tracks
- * has about 20, and one uncited sentence in it is already 5 percent. A smaller sample is not
- * judged, but fails on a gross share ([GROSS_UNCITED]).
+ * in live replies are judged over a sample of at least [Sample.LIVE] sentences, since they vary
+ * from one call to the next (#399): an insight is two to four sentences, so a pass of the
+ * regression tracks has about 20, and one uncited sentence in it is already 5 percent. A smaller
+ * sample is not judged, but fails on a gross share ([GROSS_UNCITED]).
  */
 object Gate {
     /** The most uncited sentences may be of all the written insights' sentences, as a fraction. */
@@ -78,22 +78,20 @@ object Gate {
     const val GROSS_UNCITED: Double = 0.15
 
     /**
-     * The least over which uncited sentences are judged: [passes] that gave a sentence each, and
-     * [sentences] over them all. Both, since a pass counts with a single sentence: passes of 20, 1
-     * and 1 sentences are three passes, but no more of a sample than one.
+     * The least over which uncited sentences are judged: [sentences] over all of a run's passes,
+     * whatever their number, so one pass of the whole playlist (about 280) is a full sample, as is
+     * one of the regression tracks repeated (`--repeat`).
      */
     data class Sample(
-        val passes: Int = 1,
         val sentences: Int = 0,
     ) {
         companion object {
             /**
-             * For live replies: three passes, and 50 sentences, under which one uncited sentence is
-             * 2 percent at most and it takes three to fail. Three passes of the regression tracks
-             * (about 20 sentences each) reach both, for a few cents; a run over fewer or thinner
-             * tracks needs more passes (`--repeat`).
+             * For live replies: 50 sentences, at which one uncited sentence is 2 percent and it takes
+             * three to fail. Three passes of the regression tracks (about 20 sentences each) reach it,
+             * for a few cents.
              */
-            val LIVE: Sample = Sample(passes = 3, sentences = 50)
+            val LIVE: Sample = Sample(sentences = 50)
         }
     }
 
@@ -180,7 +178,9 @@ object Gate {
      * anything to narrate. [playlist] is whether [results] are the fixture playlist's positions:
      * the collisions are listed by position, so a run over a tracklist (`--tracklist`) leaves them
      * unchecked, as nothing in it applied. [sample] is the least over which uncited sentences are
-     * judged ([uncitedFails]); a pass (`--repeat`) counts when its insights have a sentence.
+     * judged ([uncitedFails]). Under it the uncited criterion is not checked, and the run does not
+     * fail on it, but for a gross share; if an insight call failed too, it is incomplete, as any
+     * criterion a failed call left unchecked, and the run exits [Cli.EXIT_UNCHECKED].
      */
     fun evaluate(
         results: List<TrackResult>,
@@ -201,27 +201,19 @@ object Gate {
             }
 
     /**
-     * Whether [uncited] of [sentences], over [passes] passes that gave sentences, fail the uncited
-     * criterion judged over [sample]: with a sample that large, when their share is not under
-     * [MAX_UNCITED]; with a smaller one, which is not judged, only when it is [GROSS_UNCITED] or more
-     * (one pass: 3 of 20).
+     * Whether [uncited] of [sentences] fail the uncited criterion judged over [sample]: with a
+     * sample that large, when their share is not under [MAX_UNCITED]; with a smaller one, which is
+     * not judged, only when it is [GROSS_UNCITED] or more (one pass of 20: 3 uncited).
      */
     fun uncitedFails(
         uncited: Int,
         sentences: Int,
-        passes: Int,
         sample: Sample,
     ): Boolean {
         if (sentences == 0) return false
-        val limit = if (sample.isMetBy(passes, sentences)) MAX_UNCITED else GROSS_UNCITED
+        val limit = if (sentences >= sample.sentences) MAX_UNCITED else GROSS_UNCITED
         return uncited.toDouble() / sentences >= limit
     }
-
-    /** Whether [passes] passes with [sentences] in all are as large a sample as [sample] asks. */
-    fun Sample.isMetBy(
-        passes: Int,
-        sentences: Int,
-    ): Boolean = passes >= this.passes && sentences >= this.sentences
 
     private fun citations(
         results: List<TrackResult>,
@@ -291,8 +283,8 @@ object Gate {
                 else -> Criterion(name, Verdict.PASS, "$detail; $tally")
             }
         val share = if (sentences == 0) 0.0 else uncited.toDouble() / sentences
-        val enough = sample.isMetBy(passes, sentences)
-        val fails = uncitedFails(uncited, sentences, passes, sample)
+        val enough = sentences >= sample.sentences
+        val fails = uncitedFails(uncited, sentences, sample)
         val note = if (enough) "" else uncitedNote(fails, sample, passes, sentences)
         return listOf(
             criterion(UNKNOWN_CITATIONS, unknown == 0, "$unknown unknown in $sentences sentences"),
@@ -300,8 +292,8 @@ object Gate {
         )
     }
 
-    // The passes whose [written] insights gave a sentence to judge: one of only NO_EVIDENCE, failed
-    // calls or empty replies does not count toward the passes the uncited criterion needs.
+    // The passes whose [written] insights gave a sentence: one of only NO_EVIDENCE, failed calls or
+    // empty replies gives none, and the report counts it out.
     private fun passesWithSentences(written: List<TrackResult>): Int =
         written
             .filter { ((it.state.insight as? InsightState.Written)?.grounded?.counts?.total ?: 0) > 0 }
@@ -320,9 +312,9 @@ object Gate {
         if (fails) {
             "; ${(GROSS_UNCITED * PERCENT).roundToInt()} percent or more fails however small the sample"
         } else {
-            val needed = maxOf(sample.passes, ceil(sample.sentences * passes.toDouble() / sentences).toInt())
-            "; judged over at least ${sample.passes} passes and ${sample.sentences} sentences of live replies, " +
-                "which vary: about $needed passes of this length (--repeat $needed)"
+            val needed = ceil(sample.sentences * passes.toDouble() / sentences).toInt()
+            "; judged over at least ${sample.sentences} sentences of live replies, which vary: about $needed " +
+                "passes of this length (--repeat $needed)"
         }
 
     /** One listed check on one track: passed, failed with a problem, or unchecked with a reason. */
