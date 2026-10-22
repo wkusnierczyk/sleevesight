@@ -300,7 +300,7 @@ class GateTest {
     }
 
     @Test
-    fun `three passes judge only with enough sentences among them`() {
+    fun `passes of 20, 1 and 1 sentences are not a full sample`() {
         val cited = state(1, reply = "It is a song [MB1].")
         val uncited = state(1, reply = "It is a song.")
         // Passes of 20, 1 and 1 sentences, one uncited: 22 sentences, under the 50 a live sample needs.

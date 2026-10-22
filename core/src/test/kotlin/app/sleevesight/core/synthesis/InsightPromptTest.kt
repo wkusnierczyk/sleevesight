@@ -32,6 +32,13 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
+    fun `the stored prompts are version 5's`() {
+        // A change to the template changes the stored prompts and raises the version with them (the
+        // synthesis cache keys cards by it): update both together.
+        assertEquals(5, InsightPrompt.VERSION)
+    }
+
+    @Test
     fun `a song article, model knowledge off`() {
         assertEquals(stored("insight-1.txt"), prompt(1, allowModel = false))
     }

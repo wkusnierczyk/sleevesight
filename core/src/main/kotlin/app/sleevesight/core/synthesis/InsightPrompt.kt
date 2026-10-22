@@ -37,10 +37,10 @@ import app.sleevesight.core.model.SourceId
  * narrate (`EvidenceSet.nothingToNarrate`), no prompt is sent and the app shows its own text
  * (`InsightWriter`). The prompt is deterministic, so the same input gives the same prompt.
  *
- * Its fixed part (everything but the track's fields and the evidence lines) is shorter than the
- * least a provider caches as a prompt prefix on the default models (#399; the design's *No cached
- * prefix*), so the prompt keeps the data before the instructions rather than ordering itself for a
- * cache.
+ * Its fixed part (everything but the track's fields and the evidence lines) is not cached: the
+ * data comes first, so it is no prefix, it is at or under the least a provider caches on the
+ * default models, and a warm cache would save almost nothing (#399; the design's *No cached
+ * prefix*).
  */
 object InsightPrompt {
     /**

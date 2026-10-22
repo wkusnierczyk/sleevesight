@@ -133,8 +133,9 @@ class Cli(
                     insightsAsked = ai != null,
                     allowModel = allowModel,
                     playlist = options.tracklist == null,
-                    // Recorded replies are the same every pass; live ones vary (#399).
-                    sample = if (options.mode == Mode.REPLAY) Gate.Sample() else Gate.Sample.LIVE,
+                    // Recorded replies are the same every pass; live ones vary (#399). A record run's AI is
+                    // live when it records the provider, and off otherwise (`aiAccess`).
+                    sample = if (liveAi()) Gate.Sample.LIVE else Gate.Sample(),
                 )
             val summary =
                 RunSummary(
@@ -257,6 +258,10 @@ class Cli(
                 }
             return key?.let { AiAccess(wiring.aiProviders.getValue(provider), it) }
         }
+
+        // Whether the AI's replies are live, not replayed: a live run's, or a record run's that records them.
+        private fun liveAi(): Boolean =
+            options.mode == Mode.LIVE || (options.mode == Mode.RECORD && providerName in options.record)
 
         private fun aiNote(): String {
             val model = settings.model(provider)
