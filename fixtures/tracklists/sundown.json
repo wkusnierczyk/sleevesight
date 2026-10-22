@@ -1,0 +1,15 @@
+{
+  "name": "Sundown, Gordon Lightfoot",
+  "tracks": [
+    {"title": "Somewhere U.S.A.", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "2:56"},
+    {"title": "High and Dry", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "2:17"},
+    {"title": "Seven Island Suite", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "6:03"},
+    {"title": "Circle of Steel", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "2:49"},
+    {"title": "Is There Anyone Home", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "3:20"},
+    {"title": "The Watchman's Gone", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "4:20"},
+    {"title": "Sundown", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "3:33"},
+    {"title": "Carefree Highway", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "3:46"},
+    {"title": "The List", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "3:11"},
+    {"title": "Too Late for Prayin'", "artist": "Gordon Lightfoot", "album": "Sundown", "dur": "4:16"}
+  ]
+}

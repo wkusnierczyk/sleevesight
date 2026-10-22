@@ -108,6 +108,9 @@ class SessionHistory(
         queries.playedStopped(at.toEpochMilliseconds())
     }
 
+    /** The number of the latest listening session, null when nothing has played (#239, `SessionFacts`). */
+    fun latestSessionNumber(): Long? = queries.lastPlayed().executeAsOneOrNull()?.session
+
     /** The tracks of the latest listening session, in the order they played; empty when there are none. */
     fun latestSession(): List<PlayedTrack> {
         val last = queries.lastPlayed().executeAsOneOrNull() ?: return emptyList()

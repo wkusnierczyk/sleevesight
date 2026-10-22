@@ -52,9 +52,11 @@ class AiAccess(
 /**
  * What the pipeline is built from: the stages it joins. [adapters] holds one adapter per source.
  * [musicBrainzLabels] gives MusicBrainz's genre labels (#84), asked for after the evidence; without
- * it (the CLI), MusicBrainz gives none.
+ * it (the CLI), MusicBrainz gives none. [sessionFacts] holds the artist facts the listening
+ * session's insights cited (#239), which a later track's prompt leaves out (`PromptEvidence`); it
+ * outlives a rebuild of the parts, so the app passes the same one to each.
  */
-@Suppress("LongParameterList") // Seven independent stages; the last three are optional.
+@Suppress("LongParameterList") // Eight independent stages; the last four are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -63,6 +65,7 @@ class PipelineParts(
     val ai: AiAccess? = null,
     val cache: PipelineCache = PipelineCache.None,
     val musicBrainzLabels: MusicBrainzLabels? = null,
+    val sessionFacts: SessionFacts = SessionFacts.None,
 ) {
     init {
         require(adapters.map { it.id }.distinct().size == adapters.size) { "One adapter per source" }

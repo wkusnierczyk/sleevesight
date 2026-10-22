@@ -50,6 +50,7 @@ internal fun paragraphsOf(text: String): List<String> =
  * underlined. Its citations are read as the check read them, against the card's own evidence and
  * with the model's own knowledge as it was allowed when the card was written
  * ([GroundedText.allowModel]), not as the settings now allow it: a card kept stays as it was checked.
+ * A line outside [held], the ids its prompt held when it left some out (#239), reads as no line.
  */
 @Composable
 internal fun CheckedProse(
@@ -57,11 +58,12 @@ internal fun CheckedProse(
     grounded: GroundedText,
     evidence: EvidenceSet?,
     onCite: (String) -> Unit,
+    held: Set<String>? = null,
 ) {
     val styles = citeStyles()
     val resources = LocalResources.current
     val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
-    val policy = CitePolicy(evidence, grounded.allowModel)
+    val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
     val uncited = resources.getString(R.string.home_cite_none)
     val said =
@@ -89,16 +91,17 @@ internal fun CheckedProse(
 
 /**
  * A paragraph still being written: its citations show, read as the settings allow them now, under
- * which it is written; the underlines wait for the check.
+ * which it is written, and against the ids its prompt [held]; the underlines wait for the check.
  */
 @Composable
 internal fun UncheckedProse(
     paragraph: String,
     context: InsightContext,
     onCite: (String) -> Unit,
+    held: Set<String>? = null,
 ) {
     val styles = citeStyles()
-    val policy = CitePolicy(context.track?.evidence, context.modelAllowed)
+    val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held)
     val text = buildAnnotatedString { appendSentence(paragraph, policy, styles, onCite, null) }
     Prose(ProseText(text, spoken(paragraph, policy, LocalResources.current), lines(listOf(paragraph), policy)), onCite)
 }
@@ -143,7 +146,7 @@ private fun spoken(
                 is Segment.Text -> segment.text
                 is Segment.Cite -> {
                     val said =
-                        when (citeKind(segment.id, policy.evidence, policy.modelAllowed)) {
+                        when (citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)) {
                             CiteKind.LINE -> resources.getString(R.string.home_cite, segment.id)
                             CiteKind.MODEL -> resources.getString(R.string.home_cite_model)
                             CiteKind.UNKNOWN -> resources.getString(R.string.home_cite_unknown, segment.id)
@@ -165,14 +168,16 @@ private fun lines(
         .flatMap(::segments)
         .filterIsInstance<Segment.Cite>()
         .map { it.id }
-        .filter { citeKind(it, policy.evidence, policy.modelAllowed) == CiteKind.LINE }
+        .filter { citeKind(it, policy.evidence, policy.modelAllowed, policy.held) == CiteKind.LINE }
         .distinct()
         .take(MAX_LINE_ACTIONS)
 
-// What a citation is read against: the evidence, and whether the model's own knowledge may be cited.
+// What a citation is read against: the evidence, whether the model's own knowledge may be cited, and
+// the ids the prompt held when it left some out (#239).
 private class CitePolicy(
     val evidence: EvidenceSet?,
     val modelAllowed: Boolean,
+    val held: Set<String>? = null,
 )
 
 private class CiteStyles(
@@ -207,7 +212,7 @@ private fun AnnotatedString.Builder.appendSentence(
         when (segment) {
             is Segment.Text -> appendText(segment.text, flagged)
             is Segment.Cite -> {
-                val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed)
+                val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)
                 appendCite(segment.id, kind, styles, onCite)
             }
         }

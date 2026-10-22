@@ -77,8 +77,48 @@ class CliReplayTest {
     }
 
     @Test
+    fun `the report measures the artist-level evidence per track (#239)`() {
+        val (status, report) = run("replay", "--fixtures", fixtures, "--tracks", "1", "--no-insights")
+
+        assertEquals(0, status, report)
+        assertTrue("## Artist-level evidence (#239)" in report, report)
+        // Track 1's evidence holds Wikipedia's and Wikidata's lines about Gordon Lightfoot.
+        assertTrue(Regex("\\| 1 \\| [0-9]+ \\| [1-9][0-9]* \\(").containsMatchIn(report), report)
+    }
+
+    @Test
+    fun `a tracklist runs in its order, numbered from 1, with the playlist's collisions unchecked`() {
+        // Playlist positions 7 and 1 as a player reports them, so their recordings replay.
+        val file = Files.createTempFile("tracklist", ".json").toFile()
+        try {
+            file.writeText(
+                """
+                {"name": "Two recorded tracks", "tracks": [
+                  {"title": "Fisherman's Blues - 2006 Remaster", "artist": "The Waterboys",
+                   "album": "${Cli.nowPlaying(7).album}", "dur": "4:26"},
+                  {"title": "Sundown", "artist": "Gordon Lightfoot", "album": "${Cli.nowPlaying(1).album}",
+                   "dur": "3:33"}
+                ]}
+                """.trimIndent(),
+            )
+            val (status, report) =
+                run("replay", "--fixtures", fixtures, "--tracklist", file.path, "--no-insights")
+
+            assertEquals(0, status, report)
+            assertFalse("Requests with no recording" in report, report)
+            assertTrue("Tracks: 2. Tracklist: Two recorded tracks." in report, report)
+            assertTrue("### 1. Fisherman's Blues - 2006 Remaster, The Waterboys" in report, report)
+            assertTrue("### 2. Sundown, Gordon Lightfoot" in report, report)
+            assertTrue("| NOT_CHECKED | a tracklist run: the collisions are playlist positions |" in report, report)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun `a bad command line is a usage error`() {
         assertEquals(Cli.EXIT_USAGE, run("replay", "--frobnicate").first)
         assertEquals(Cli.EXIT_USAGE, run().first)
+        assertEquals(Cli.EXIT_USAGE, run("replay", "--tracklist", "no-such-file.json").first)
     }
 }

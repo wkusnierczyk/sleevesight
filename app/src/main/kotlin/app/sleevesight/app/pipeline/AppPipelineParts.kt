@@ -7,6 +7,7 @@ import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.SessionFacts
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
@@ -26,11 +27,13 @@ import kotlinx.coroutines.flow.flow
  * switched on: Last.fm only with its key, web search only through an engine switched on
  * with its key. The AI access is the chosen service's client with its key, or none when no service
  * is chosen, it has no client yet, or its key is not saved or cannot be read: insights then wait,
- * and the evidence is still shown.
+ * and the evidence is still shown. [sessionFacts], the artist facts the listening session's
+ * insights cited (#239), is one for the process, passed to every build.
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
     private val normalizer: Normalizer,
+    private val sessionFacts: SessionFacts = SessionFacts.None,
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -45,6 +48,7 @@ class AppPipelineParts(
             ai = settings.aiProvider?.let { wiring.aiProviders[it] }?.let { p -> keys.ai?.let { AiAccess(p, it) } },
             cache = cache(),
             musicBrainzLabels = wiring.musicBrainzLabels,
+            sessionFacts = sessionFacts,
         )
 }
 

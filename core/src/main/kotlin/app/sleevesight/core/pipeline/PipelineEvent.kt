@@ -129,11 +129,15 @@ sealed interface PipelineEvent {
         val reason: String,
     ) : PipelineEvent
 
-    /** A paid call started. */
+    /**
+     * A paid call started. [leftOut] are the ids of the artist-level lines its prompt left out
+     * (#239, `PromptEvidence`).
+     */
     data class ModelCall(
         override val key: String,
         val provider: ProviderId,
         val model: String,
+        val leftOut: List<String> = emptyList(),
     ) : PipelineEvent
 
     /** The call finished: tokens billed, why it stopped, how long it took. */

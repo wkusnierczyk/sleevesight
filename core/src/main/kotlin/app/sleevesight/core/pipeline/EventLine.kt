@@ -24,7 +24,9 @@ object EventLine {
             is PipelineEvent.EvidenceAssembled -> "evidence   ${e.key}: ${e.lines} lines from ${e.sources} sources"
             is PipelineEvent.InsightCached -> "insight    ${e.key}: cache hit"
             is PipelineEvent.InsightWaits -> "insight    ${e.key}: ${e.reason}"
-            is PipelineEvent.ModelCall -> "model      ${e.key}: ${e.provider.name.lowercase()} ${e.model}"
+            is PipelineEvent.ModelCall ->
+                "model      ${e.key}: ${e.provider.name.lowercase()} ${e.model}" +
+                    if (e.leftOut.isEmpty()) "" else ", artist lines left out: ${e.leftOut.joinToString()}"
             is PipelineEvent.ModelDone -> modelDone(e)
             is PipelineEvent.ModelFailed -> "model      ${e.key}: failed, ${e.kind.name.lowercase()}"
             is PipelineEvent.ModelStopped -> "model      ${e.key}: stopped"

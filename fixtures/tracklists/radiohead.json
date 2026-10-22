@@ -1,0 +1,15 @@
+{
+  "name": "Radiohead, one artist across albums",
+  "tracks": [
+    {"title": "Creep", "artist": "Radiohead", "album": "Pablo Honey", "dur": "3:58"},
+    {"title": "High and Dry", "artist": "Radiohead", "album": "The Bends", "dur": "4:17"},
+    {"title": "Fake Plastic Trees", "artist": "Radiohead", "album": "The Bends", "dur": "4:50"},
+    {"title": "Paranoid Android", "artist": "Radiohead", "album": "OK Computer", "dur": "6:23"},
+    {"title": "Karma Police", "artist": "Radiohead", "album": "OK Computer", "dur": "4:21"},
+    {"title": "No Surprises", "artist": "Radiohead", "album": "OK Computer", "dur": "3:48"},
+    {"title": "Everything In Its Right Place", "artist": "Radiohead", "album": "Kid A", "dur": "4:11"},
+    {"title": "Idioteque", "artist": "Radiohead", "album": "Kid A", "dur": "5:09"},
+    {"title": "Reckoner", "artist": "Radiohead", "album": "In Rainbows", "dur": "4:50"},
+    {"title": "Weird Fishes/ Arpeggi", "artist": "Radiohead", "album": "In Rainbows", "dur": "5:18"}
+  ]
+}

@@ -105,14 +105,20 @@ internal fun segments(sentence: String): List<Segment> {
 /** How a citation chip shows: a line it can scroll to, the model's own knowledge, or a line that does not exist. */
 internal enum class CiteKind { LINE, MODEL, UNKNOWN }
 
-/** What citing [id] points at, in [evidence]: `M` only when the model's own knowledge is allowed. */
+/**
+ * What citing [id] points at, in [evidence]: `M` only when the model's own knowledge is allowed. A
+ * line outside [held], the ids the prompt held when it left some of the track's out (#239), is no
+ * line, as the grounding check reads it: the model was not given it, though the track has it.
+ */
 internal fun citeKind(
     id: String,
     evidence: EvidenceSet?,
     modelAllowed: Boolean,
+    held: Set<String>? = null,
 ): CiteKind =
     when {
         id == SourceId.MODEL.tag -> if (modelAllowed) CiteKind.MODEL else CiteKind.UNKNOWN
+        held != null && id !in held -> CiteKind.UNKNOWN
         evidence?.get(id) != null -> CiteKind.LINE
         else -> CiteKind.UNKNOWN
     }
