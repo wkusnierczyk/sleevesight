@@ -96,6 +96,7 @@ class KeySetupTest {
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.ANTHROPIC, exa))
         assertNull(KeyShape.check(KeyName.OPENAI, openAi))
         assertNull(KeyShape.check(KeyName.OPENAI, "sk-" + "a1B2c3D4".repeat(6)))
+        assertNull(KeyShape.check(KeyName.OPENAI, "sk-svcacct-" + "a1B2_c3-D4".repeat(12)))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, anthropic))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, "sk-proj-short"))
         assertEquals(KeyProblem.WRONG_SHAPE, KeyShape.check(KeyName.OPENAI, exa))
