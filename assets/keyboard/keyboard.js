@@ -6,6 +6,7 @@ import { CHARACTERISTIC, MAX_COUNTER, MAX_TEXT_BYTES, newSession, seal, textByte
 import { encode } from './qr.js';
 
 const QUIET_ZONE = 4;
+const RETRY_MS = 500;
 const $ = (id) => document.getElementById(id);
 
 const session = newSession();
@@ -104,7 +105,8 @@ async function send() {
     }
   } catch (e) {
     // A disconnection says so itself; anything else is said here. A text that fails is tried
-    // once more, since Chrome's GATT errors can pass, then not until it is edited.
+    // once more, half a second later, since Chrome's GATT errors can pass (an operation still in
+    // progress), then not until it is edited.
     if (target === characteristic) {
       if (failed === text) refused = text;
       failed = text;
@@ -113,7 +115,8 @@ async function send() {
   } finally {
     writing = false;
   }
-  send();
+  if (failed === $('text').value && refused !== failed) setTimeout(send, RETRY_MS);
+  else send();
 }
 
 function changed() {

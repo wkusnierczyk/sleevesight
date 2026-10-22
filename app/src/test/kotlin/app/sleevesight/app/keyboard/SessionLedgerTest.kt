@@ -37,10 +37,35 @@ class SessionLedgerTest {
         val ledger = SessionLedger(file)
         val first = KeyboardVectors.freshCode()
         ledger.claim(session(first))
-        repeat(SessionLedger.LIMIT) { ledger.claim(session()) }
-        assertEquals(SessionLedger.LIMIT, file.readLines().size)
+        val later = List(SessionLedger.LIMIT) { session() }
+        later.forEach { ledger.claim(it) }
+        // Each line is the service's UUID of a session claimed, and nothing else.
+        assertEquals(later.map { it.serviceUuid.toString() }, file.readLines())
         assertTrue(SessionLedger(file).claim(session(first)))
-        assertFalse(file.readText().contains(first.substringAfterLast(':')))
+    }
+
+    @Test
+    fun `a ledger that cannot be read is not written over`() {
+        // A directory where the file would be: reading it fails.
+        val file = tmp.newFolder("sessions")
+        val ledger = SessionLedger(file)
+        val code = KeyboardVectors.freshCode()
+        assertTrue(ledger.claim(session(code)))
+        assertFalse(ledger.claim(session(code)))
+        assertTrue(file.isDirectory)
+    }
+
+    @Test
+    fun `a write that fails leaves the ledger as it was`() {
+        val file = tmp.root.resolve("sessions")
+        val code = KeyboardVectors.freshCode()
+        assertTrue(SessionLedger(file).claim(session(code)))
+        val before = file.readText()
+        // The new file cannot be made: a directory stands where it would go.
+        tmp.root.resolve("sessions.new").mkdir()
+        assertTrue(SessionLedger(file).claim(session()))
+        assertEquals(before, file.readText())
+        assertFalse(SessionLedger(file).claim(session(code)))
     }
 
     @Test

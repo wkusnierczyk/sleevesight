@@ -2,7 +2,10 @@ package app.sleevesight.app.keyboard
 
 import android.content.Context
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * The keyboard sessions this phone has run (#394), by their service's UUID, which the session's id
@@ -16,10 +19,15 @@ class SessionLedger(
 ) {
     private var runs: MutableList<String>? = null
 
+    // False once the file could not be read: writing then would replace what it holds with this
+    // run's sessions alone.
+    private var readable = true
+
     /**
      * Whether [session] is new, recording it if so. A ledger that cannot be read or written is
-     * taken as empty or not kept: refusing every session would leave the keyboard unusable for a
-     * risk that needs someone nearby recording.
+     * taken as empty or kept in memory only: refusing every session while storage fails (a full
+     * disk) would leave the keyboard unusable, for a risk that needs someone nearby who recorded an
+     * earlier session's messages and the process to have ended since.
      */
     @Synchronized
     fun claim(session: KeyboardSession): Boolean {
@@ -28,7 +36,7 @@ class SessionLedger(
         if (id in known) return false
         known += id
         while (known.size > LIMIT) known.removeAt(0)
-        write(known)
+        if (readable) write(known)
         return true
     }
 
@@ -36,15 +44,29 @@ class SessionLedger(
         try {
             if (file.exists()) file.readLines().filter { it.isNotBlank() }.toMutableList() else mutableListOf()
         } catch (_: IOException) {
+            readable = false
             mutableListOf()
         }
 
+    // Writes a new file beside the ledger, synced, then puts it in the ledger's place in one move:
+    // a crash or a full disk leaves the ledger as it was, never cut short.
     private fun write(ids: List<String>) {
+        val next = File(file.path + ".new")
         try {
             file.parentFile?.mkdirs()
-            file.writeText(ids.joinToString("\n", postfix = "\n"))
+            FileOutputStream(next).use { out ->
+                out.write(ids.joinToString("\n", postfix = "\n").toByteArray())
+                out.fd.sync()
+            }
+            Files.move(
+                next.toPath(),
+                file.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING,
+            )
         } catch (_: IOException) {
-            // Kept in memory for this run.
+            // Kept in memory for this run; the file keeps what it had.
+            next.delete()
         }
     }
 
