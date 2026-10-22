@@ -159,31 +159,17 @@ class GroundingCheckTest {
         }
     }
 
+    /** A title ends in a stop mid-sentence; the cost is an uncited sentence that ends in one, joined. */
     @Test
-    fun `a full stop inside closing quotes ends a sentence with no citation after it, unless it ends initials`() {
-        for (end in listOf(".\"", ".”", ".'\"", ".’”")) {
-            val reply = "He called it \"Sundown$end It charted. [W1]"
-            assertEquals(
-                listOf("He called it \"Sundown$end", "It charted. [W1]"),
-                GroundingCheck.splitSentences(reply),
-                end,
-            )
-        }
-        val initials = "It topped the \"U.S.\" Billboard chart. [W1] It was big in the \"U.S.\" It charted. [W2]"
-        assertEquals(
-            listOf("It topped the \"U.S.\" Billboard chart. [W1]", "It was big in the \"U.S.\"", "It charted. [W2]"),
-            GroundingCheck.splitSentences(initials),
-        )
-    }
-
-    /** A title ends in `!` or `?` mid-sentence; the cost is an uncited sentence that ends in one, joined. */
-    @Test
-    fun `a quoted exclamation or question mark with no citation after it does not end a sentence`() {
+    fun `a stop inside closing quotes with no citation after them does not end a sentence`() {
         val replies =
             listOf(
                 "On \"Help!\" John Lennon sings lead. [W1]",
                 "The album \"Help!\" (1965) reached number one. [W1]",
                 "Hendrix's \"Are You Experienced?\" (1967) was his debut. [W1]",
+                "The album \"DAMN.\" (2017) won the Pulitzer Prize. [W1]",
+                "It topped the \"U.S.\" Billboard chart. [W1]",
+                "He called it \"Sundown.\" It charted. [W1]",
                 "He called it \"Help!\" It charted. [W1]",
             )
         for (reply in replies) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply))

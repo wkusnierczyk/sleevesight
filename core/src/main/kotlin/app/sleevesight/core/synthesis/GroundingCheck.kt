@@ -79,9 +79,9 @@ sealed interface InsightReply {
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
  * its `NO_EVIDENCE` test, rule for rule but for three deviations: an abbreviation does not end a
- * sentence, and a stop inside closing quotes does ([splitSentences]; #46, #423), and prompt version
- * 2's fixed sentence for a gap, [GAP_SENTENCE], is a hedge (#46). The tests compare it with the
- * simulator's own code on the same replies (`core/src/test/resources/grounding/`).
+ * sentence, a stop inside closing quotes and before citations does ([splitSentences]; #46, #423),
+ * and prompt version 2's fixed sentence for a gap, [GAP_SENTENCE], is a hedge (#46). The tests
+ * compare it with the simulator's own code on the same replies (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -142,13 +142,13 @@ object GroundingCheck {
      * uncited, the next one's citation hides that.
      *
      * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
-     * `'`, `’`) ends a sentence when citations follow the quotes (`... the title track "Sundown."
-     * [MB1] It ...`), and a `.` also when none do, unless it ends an abbreviation as above (`the
-     * "U.S." Billboard chart`). The simulator joined the two sentences, so an uncited one before or
-     * after a quoted title could pass as cited. A quoted `!` or `?` with no citation after it ends
-     * nothing, since a title that ends in one sits mid-sentence (`On "Help!" Lennon sang ...`,
-     * `"Help!" (1965) reached ...`). The cost: an uncited sentence that ends in one (`He called it
-     * "Help!" It charted. [W1]`) is joined to the next, and that one's citation hides it.
+     * `'`, `’`) and then citations ends a sentence, as it does with the citations straight after it
+     * (`... the title track "Sundown." [MB1] It ...`). The simulator joined the two sentences, so an
+     * uncited one after a cited, quoted title could pass as cited. With no citation after the
+     * quotes, it ends nothing, as in the simulator: a title that ends in a stop sits mid-sentence
+     * (`On "Help!" Lennon sang ...`, `"DAMN." (2017) won ...`). The cost: an uncited sentence that
+     * ends in a quoted stop (`He called it "Sundown." It charted. [W1]`) is joined to the next, and
+     * that one's citation hides it.
      */
     fun splitSentences(text: String): List<String> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
@@ -215,7 +215,7 @@ object GroundingCheck {
      * Whether the text before [end] ends a sentence: the simulator's lookbehind
      * `(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)`, read backwards over the citations.
      * An abbreviation's `.` directly before [end] does not end one, and closing quotes may come
-     * between the stop and the citations, under the rules of [splitSentences].
+     * between the stop and the citations ([splitSentences]).
      */
     private fun endsSentence(
         t: String,
@@ -224,20 +224,15 @@ object GroundingCheck {
         var k = end
         var ends: Boolean? = null
         while (ends == null) {
-            // The stop may sit inside closing quotes, from [stop] to [k] (#423).
+            // A stop may sit inside closing quotes, from [stop] to [k], when citations follow (#423).
             var stop = k
-            while (stop > 0 && t[stop - 1] in CLOSING_QUOTES) stop--
+            if (k != end) while (stop > 0 && t[stop - 1] in CLOSING_QUOTES) stop--
             val c = t.getOrNull(stop - 1)
             val open = citationBefore(t, k)
             when {
-                c == '.' -> {
+                c != null && c in ".!?" -> {
                     // An abbreviation's `.` ends nothing, unless citations follow it (#46).
-                    ends = k != end || !endsAbbreviation(t, end, stop)
-                }
-
-                c == '!' || c == '?' -> {
-                    // Inside quotes, only with citations after them: a title ends in one (#423).
-                    ends = stop == k || k != end
+                    ends = k != end || !endsAbbreviation(t, end)
                 }
 
                 open == null -> {
@@ -254,28 +249,26 @@ object GroundingCheck {
     }
 
     /**
-     * Whether the text just before [stop], the end of the word before the whitespace at [end] (its
-     * closing quotes left out), is an abbreviation and its `.`: the word, after any opening `(`,
-     * `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials not followed by one of
-     * [SENTENCE_OPENERS].
+     * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
+     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
+     * not followed by one of [SENTENCE_OPENERS].
      */
     private fun endsAbbreviation(
         t: String,
         end: Int,
-        stop: Int = end,
     ): Boolean {
-        if (t.getOrNull(stop - 1) != '.') return false
-        var start = stop - 1
+        if (t.getOrNull(end - 1) != '.') return false
+        var start = end - 1
         while (start > 0 && !isJsWhitespace(t[start - 1])) start--
-        while (start < stop && t[start] in WORD_OPENERS) start++
-        val word = t.substring(start, stop)
+        while (start < end && t[start] in WORD_OPENERS) start++
+        val word = t.substring(start, end)
         // The next word, after the whitespace and any opening `(`, `"` or `“`.
         var next = end
         while (next < t.length && (isJsWhitespace(t[next]) || t[next] in WORD_OPENERS)) next++
-        var nextEnd = next
-        while (nextEnd < t.length && !isJsWhitespace(t[nextEnd])) nextEnd++
+        var stop = next
+        while (stop < t.length && !isJsWhitespace(t[stop])) stop++
         // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
-        val opens = t.substring(next, nextEnd).trimEnd(',', ';', ':').replace('’', '\'') in SENTENCE_OPENERS
+        val opens = t.substring(next, stop).trimEnd(',', ';', ':').replace('’', '\'') in SENTENCE_OPENERS
         return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
     }
 
