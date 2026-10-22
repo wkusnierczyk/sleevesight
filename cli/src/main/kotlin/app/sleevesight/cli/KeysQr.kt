@@ -184,7 +184,7 @@ class KeysQr(
 
         private const val SHAPES =
             "Anthropic's start sk-ant-, OpenAI's sk- (not sk-ant-), Google's AIza or AQ., " +
-                "Last.fm's are 32 hexadecimal digits"
+                "Last.fm's are 32 hexadecimal digits, Exa's 16 to 200 characters"
         private const val COLOURS = "\u001b[30;107m"
         private const val RESET = "\u001b[0m"
 
