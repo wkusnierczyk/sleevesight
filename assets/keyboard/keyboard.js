@@ -15,6 +15,13 @@ let counter = 0;
 let sent = null;
 let refused = null;
 let failed = null;
+let retry = null;
+
+// Drops a retry waiting to be made: an edit or a connection change makes it pointless.
+function cancelRetry() {
+  clearTimeout(retry);
+  retry = null;
+}
 let writing = false;
 
 function status(message, kind = '') {
@@ -59,6 +66,7 @@ async function connect() {
   }
   device.addEventListener('gattserverdisconnected', () => {
     characteristic = null;
+    cancelRetry();
     $('connect').hidden = false;
     status('Disconnected. If the phone still shows “Waiting for the computer”, connect again; if its dialog was closed, reload this page and scan the new code.');
   });
@@ -78,6 +86,7 @@ async function connect() {
   sent = null;
   refused = null;
   failed = null;
+  cancelRetry();
   send();
 }
 
@@ -115,14 +124,22 @@ async function send() {
   } finally {
     writing = false;
   }
-  if (failed === $('text').value && refused !== failed) setTimeout(send, RETRY_MS);
-  else send();
+  if (failed === text && failed === $('text').value && refused !== failed) {
+    // Tried again only while the text is still the one that failed, on the same connection.
+    retry = setTimeout(() => {
+      retry = null;
+      if (characteristic === target && $('text').value === text) send();
+    }, RETRY_MS);
+  } else {
+    send();
+  }
 }
 
 function changed() {
   // A new edit, even back to a text the phone refused, is sent again.
   refused = null;
   failed = null;
+  cancelRetry();
   const over = textBytes($('text').value) > MAX_TEXT_BYTES;
   $('length').hidden = !over;
   if (!over) send();

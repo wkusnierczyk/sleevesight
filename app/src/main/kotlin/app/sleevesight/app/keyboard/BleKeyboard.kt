@@ -54,6 +54,11 @@ enum class KeyboardState {
  * acknowledgements. A message longer than one packet comes as prepared writes, kept per computer
  * until executed.
  *
+ * Each time the service is opened (at [start], and again when Bluetooth comes back on) it is an
+ * [Opening] of its own: its server, its advertising, the devices linked to it and their writes.
+ * Closing one makes everything it is still told, by Bluetooth or by work it posted, do nothing, so
+ * nothing of an opening closed can reach the next.
+ *
  * [start] follows Bluetooth being turned off and on; [stop] ends everything, and the [session]'s
  * owner then forgets its key. [onText] and [onState] are called on the main thread.
  *
@@ -70,23 +75,9 @@ class BleKeyboard(
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(BluetoothManager::class.java)
-    private val lock = Any()
 
-    // Set and cleared on the main thread; read from Bluetooth's, to answer writes.
-    @Volatile private var server: BluetoothGattServer? = null
-    private var advertiser: BluetoothLeAdvertiser? = null
-
-    // Every device linked to the phone over LE, which the GATT server hears of whatever service it
-    // came for (a watch, earbuds), and those of them that sent a message the session took. Changed
-    // on the main thread alone, in the order Bluetooth's callbacks came, so the state said is
-    // always the one they leave.
-    private val connected = mutableSetOf<BluetoothDevice>()
-    private val typing = mutableSetOf<BluetoothDevice>()
-    private val prepared = mutableMapOf<BluetoothDevice, ByteArrayOutputStream>()
-
-    // Counts the openings of the service, on the main thread; a callback of an earlier one, closed
-    // since (Bluetooth turned off, then on), is ignored.
-    private var opened = 0
+    // The opening now open, set and cleared on the main thread.
+    private var current: Opening? = null
     private var listening = false
     private var stopped = false
 
@@ -128,8 +119,9 @@ class BleKeyboard(
     }
 
     private fun open() {
-        if (stopped || server != null) return
+        if (stopped || current != null) return
         val adapter = manager?.adapter
+        val advertiser = adapter?.takeIf { it.isEnabled && it.isMultipleAdvertisementSupported }?.bluetoothLeAdvertiser
         when {
             adapter == null || !context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE) -> {
                 state(KeyboardState.UNSUPPORTED)
@@ -139,192 +131,273 @@ class BleKeyboard(
                 state(KeyboardState.BLUETOOTH_OFF)
             }
 
-            !adapter.isMultipleAdvertisementSupported || adapter.bluetoothLeAdvertiser == null -> {
+            advertiser == null -> {
                 state(KeyboardState.UNSUPPORTED)
             }
 
             else -> {
                 state(KeyboardState.STARTING)
-                advertiser = adapter.bluetoothLeAdvertiser
-                val callback = Gatt(++opened)
-                server = manager.openGattServer(context, callback)
-                callback.server = server
-                val service = BluetoothGattService(session.serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-                service.addCharacteristic(
-                    BluetoothGattCharacteristic(
-                        KeyboardSession.CHARACTERISTIC,
-                        BluetoothGattCharacteristic.PROPERTY_WRITE,
-                        BluetoothGattCharacteristic.PERMISSION_WRITE,
-                    ),
-                )
-                // Advertising starts once the service is added (`onServiceAdded`).
-                if (server?.addService(service) != true) close(KeyboardState.FAILED)
+                current = Opening(manager, advertiser).also { it.open() }
             }
         }
     }
 
-    // Ends what is open, then says [then], if anything.
+    // Closes the opening now open, if any, then says [then], if anything.
     private fun close(then: KeyboardState?) {
-        opened++
-        stopAdvertising()
-        advertiser = null
-        val devices = connected.toList()
-        connected.clear()
-        typing.clear()
-        synchronized(lock) { prepared.clear() }
-        server?.let { s ->
-            devices.forEach { s.cancelConnection(it) }
-            s.close()
-        }
-        server = null
+        current?.close()
+        current = null
         then?.let { state(it) }
     }
 
-    private fun advertise() {
-        val settings =
-            AdvertiseSettings
-                .Builder()
-                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
-                .setConnectable(true)
-                .build()
-        // The service's UUID alone: the phone's name is not advertised (a device that connects can
-        // still read it, from the Generic Access service Android keeps).
-        val data =
-            AdvertiseData
-                .Builder()
-                .setIncludeDeviceName(false)
-                .setIncludeTxPowerLevel(false)
-                .addServiceUuid(ParcelUuid(session.serviceUuid))
-                .build()
-        // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
-        try {
-            advertiser?.startAdvertising(settings, data, advertising)
-        } catch (_: IllegalStateException) {
-            // Advertising could not start again. With the computer typing, the session goes on, and
-            // it is tried again at the next connection change; without it (another device, such as
-            // a watch, may still be linked), there is no way in, and the session has failed.
-            when {
-                manager?.adapter?.isEnabled != true -> close(KeyboardState.BLUETOOTH_OFF)
-                typing.isEmpty() -> close(KeyboardState.FAILED)
+    private fun state(state: KeyboardState) {
+        main.post { if (!stopped) onState(state) }
+    }
+
+    /**
+     * One opening of the service: its server, its advertising, the devices linked to it and their
+     * writes. Once [closed], what Bluetooth still tells it, and work it posted, does nothing.
+     */
+    private inner class Opening(
+        private val manager: BluetoothManager,
+        private val advertiser: BluetoothLeAdvertiser,
+    ) {
+        private val lock = Any()
+
+        @Volatile private var closed = false
+        private var server: BluetoothGattServer? = null
+
+        // The advertising started last; a result of one started before it is ignored. Whether one
+        // has started at all, in this opening.
+        private var advertising: AdvertiseCallback? = null
+        private var advertised = false
+
+        // Every device linked to the phone over LE, which the GATT server hears of whatever service
+        // it came for (a watch, earbuds), and those of them that sent a message the session took.
+        // Changed on the main thread alone, in the order Bluetooth's callbacks came, so the state
+        // said is always the one they leave.
+        private val connected = mutableSetOf<BluetoothDevice>()
+        private val typing = mutableSetOf<BluetoothDevice>()
+
+        // Long messages' parts, per device, under the lock: Bluetooth writes them from its threads.
+        private val prepared = mutableMapOf<BluetoothDevice, ByteArrayOutputStream>()
+
+        fun open() {
+            val opened = manager.openGattServer(context, callbacks)
+            server = opened
+            val service = BluetoothGattService(session.serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            service.addCharacteristic(
+                BluetoothGattCharacteristic(
+                    KeyboardSession.CHARACTERISTIC,
+                    BluetoothGattCharacteristic.PROPERTY_WRITE,
+                    BluetoothGattCharacteristic.PERMISSION_WRITE,
+                ),
+            )
+            // Advertising starts once the service is added (`onServiceAdded`).
+            if (opened?.addService(service) != true) fail(KeyboardState.FAILED)
+        }
+
+        fun close() {
+            synchronized(lock) {
+                closed = true
+                prepared.clear()
+            }
+            stopAdvertising()
+            server?.let { s ->
+                connected.forEach { s.cancelConnection(it) }
+                s.close()
+            }
+            server = null
+            connected.clear()
+            typing.clear()
+        }
+
+        // Ends this opening, if it is still the one open, and says [state].
+        private fun fail(state: KeyboardState) {
+            if (!closed && current === this) this@BleKeyboard.close(state)
+        }
+
+        // Runs [work] on the main thread while this opening is open.
+        private fun later(work: () -> Unit) {
+            main.post { if (!closed && !stopped) work() }
+        }
+
+        private fun advertise() {
+            val settings =
+                AdvertiseSettings
+                    .Builder()
+                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                    .setConnectable(true)
+                    .build()
+            // The service's UUID alone: the phone's name is not advertised (a device that connects
+            // can still read it, from the Generic Access service Android keeps).
+            val data =
+                AdvertiseData
+                    .Builder()
+                    .setIncludeDeviceName(false)
+                    .setIncludeTxPowerLevel(false)
+                    .addServiceUuid(ParcelUuid(session.serviceUuid))
+                    .build()
+            val attempt = Advertising()
+            advertising = attempt
+            // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
+            try {
+                advertiser.startAdvertising(settings, data, attempt)
+            } catch (_: IllegalStateException) {
+                attempt.failed(bluetoothOff = manager.adapter?.isEnabled != true)
             }
         }
-    }
 
-    private fun stopAdvertising() {
-        try {
-            advertiser?.stopAdvertising(advertising)
-        } catch (_: IllegalStateException) {
-            // Bluetooth is off, which has stopped it.
+        private fun stopAdvertising() {
+            val attempt = advertising ?: return
+            advertising = null
+            try {
+                advertiser.stopAdvertising(attempt)
+            } catch (_: IllegalStateException) {
+                // Bluetooth is off, which has stopped it.
+            }
         }
-    }
 
-    private val advertising =
-        object : AdvertiseCallback() {
+        // Says whether a computer is typing, as the sets now are.
+        private fun connection() {
+            if (!closed && !stopped) onState(if (typing.isEmpty()) KeyboardState.WAITING else KeyboardState.CONNECTED)
+        }
+
+        /** One start of the advertising; its results count only while it is the latest. */
+        private inner class Advertising : AdvertiseCallback() {
+            private fun latest() = !closed && advertising === this
+
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+                if (!latest()) return
+                advertised = true
                 connection()
             }
 
             override fun onStartFailure(errorCode: Int) {
+                if (!latest()) return
                 when (errorCode) {
                     ADVERTISE_FAILED_ALREADY_STARTED -> {}
-                    ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> close(KeyboardState.UNSUPPORTED)
-                    // As when it throws, in `advertise`.
-                    else -> if (typing.isEmpty()) close(KeyboardState.FAILED)
+                    ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> fail(KeyboardState.UNSUPPORTED)
+                    else -> failed(bluetoothOff = false)
                 }
             }
-        }
 
-    /**
-     * The callbacks of the [opening]th opening of the service, answering through its own [server];
-     * what they post to the main thread is dropped once that opening is closed.
-     */
-    private inner class Gatt(
-        private val opening: Int,
-    ) : BluetoothGattServerCallback() {
-        @Volatile var server: BluetoothGattServer? = null
-
-        // Runs [work] on the main thread while this opening is the one open.
-        private fun later(work: () -> Unit) {
-            main.post { if (!stopped && opening == opened && this@BleKeyboard.server != null) work() }
-        }
-
-        override fun onServiceAdded(
-            status: Int,
-            service: BluetoothGattService,
-        ) {
-            later { if (status == BluetoothGatt.GATT_SUCCESS) advertise() else close(KeyboardState.FAILED) }
-        }
-
-        override fun onConnectionStateChange(
-            device: BluetoothDevice,
-            status: Int,
-            newState: Int,
-        ) {
-            if (newState != BluetoothProfile.STATE_CONNECTED) synchronized(lock) { prepared -= device }
-            later {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    connected += device
-                } else {
-                    connected -= device
-                    typing -= device
-                }
-                connection()
-                // A connection may end the advertising, and the device that came may not be the
-                // computer: it starts again at each change, so the computer can always find it.
-                stopAdvertising()
-                advertise()
-            }
-        }
-
-        @Suppress("LongParameterList") // Android's signature.
-        override fun onCharacteristicWriteRequest(
-            device: BluetoothDevice,
-            requestId: Int,
-            characteristic: BluetoothGattCharacteristic,
-            preparedWrite: Boolean,
-            responseNeeded: Boolean,
-            offset: Int,
-            value: ByteArray?,
-        ) {
-            val bytes = value ?: ByteArray(0)
-            val status =
+            // Advertising could not start. The first time in an opening, the session has failed: the
+            // computer has no way in. Later, at a connection change, the session goes on whatever
+            // is linked (a computer that has just connected writes only some time after), and it is
+            // tried again a little later, while no computer is typing, and at the next change.
+            fun failed(bluetoothOff: Boolean) {
+                advertising = null
                 when {
-                    characteristic.uuid != KeyboardSession.CHARACTERISTIC -> {
-                        BluetoothGatt.GATT_WRITE_NOT_PERMITTED
-                    }
-
-                    preparedWrite -> prepare(device, offset, bytes)
-                    offset != 0 -> BluetoothGatt.GATT_INVALID_OFFSET
-                    else -> receive(device, bytes)
+                    bluetoothOff -> fail(KeyboardState.BLUETOOTH_OFF)
+                    !advertised -> fail(KeyboardState.FAILED)
+                    else -> main.postDelayed({ if (retries()) advertise() }, ADVERTISE_RETRY_MS)
                 }
-            // A prepared write's answer repeats what it was given.
-            if (responseNeeded) {
-                server?.sendResponse(device, requestId, status, offset, bytes.takeIf { preparedWrite })
             }
+
+            // Whether to try advertising again: the opening is open, nothing advertises since, and
+            // no computer is typing.
+            private fun retries() = !closed && !stopped && advertising == null && typing.isEmpty()
         }
 
-        override fun onExecuteWrite(
-            device: BluetoothDevice,
-            requestId: Int,
-            execute: Boolean,
-        ) {
-            val written = synchronized(lock) { prepared.remove(device) }
-            val status =
-                if (execute && written != null) {
-                    receive(device, written.toByteArray())
-                } else {
-                    BluetoothGatt.GATT_SUCCESS
+        private val callbacks =
+            object : BluetoothGattServerCallback() {
+                override fun onServiceAdded(
+                    status: Int,
+                    service: BluetoothGattService,
+                ) {
+                    later { if (status == BluetoothGatt.GATT_SUCCESS) advertise() else fail(KeyboardState.FAILED) }
                 }
-            server?.sendResponse(device, requestId, status, 0, null)
-        }
+
+                override fun onConnectionStateChange(
+                    device: BluetoothDevice,
+                    status: Int,
+                    newState: Int,
+                ) {
+                    if (newState != BluetoothProfile.STATE_CONNECTED) synchronized(lock) { prepared -= device }
+                    later {
+                        if (newState == BluetoothProfile.STATE_CONNECTED) {
+                            connected += device
+                        } else {
+                            connected -= device
+                            typing -= device
+                        }
+                        connection()
+                        // A connection may end the advertising, and the device that came may not be
+                        // the computer: it starts again at each change, so the computer can always
+                        // find it.
+                        stopAdvertising()
+                        advertise()
+                    }
+                }
+
+                @Suppress("LongParameterList") // Android's signature.
+                override fun onCharacteristicWriteRequest(
+                    device: BluetoothDevice,
+                    requestId: Int,
+                    characteristic: BluetoothGattCharacteristic,
+                    preparedWrite: Boolean,
+                    responseNeeded: Boolean,
+                    offset: Int,
+                    value: ByteArray?,
+                ) {
+                    val bytes = value ?: ByteArray(0)
+                    val status =
+                        when {
+                            closed -> BluetoothGatt.GATT_FAILURE
+                            characteristic.uuid != KeyboardSession.CHARACTERISTIC -> {
+                                BluetoothGatt.GATT_WRITE_NOT_PERMITTED
+                            }
+
+                            preparedWrite -> prepare(device, offset, bytes)
+                            offset != 0 -> BluetoothGatt.GATT_INVALID_OFFSET
+                            else -> receive(device, bytes)
+                        }
+                    // A prepared write's answer repeats what it was given.
+                    if (responseNeeded) {
+                        server?.sendResponse(device, requestId, status, offset, bytes.takeIf { preparedWrite })
+                    }
+                }
+
+                override fun onExecuteWrite(
+                    device: BluetoothDevice,
+                    requestId: Int,
+                    execute: Boolean,
+                ) {
+                    val written = synchronized(lock) { prepared.remove(device) }
+                    val status =
+                        if (execute && written != null) {
+                            receive(device, written.toByteArray())
+                        } else {
+                            BluetoothGatt.GATT_SUCCESS
+                        }
+                    server?.sendResponse(device, requestId, status, 0, null)
+                }
+            }
+
+        // Keeps a part of a long message, written in order.
+        private fun prepare(
+            device: BluetoothDevice,
+            offset: Int,
+            bytes: ByteArray,
+        ): Int =
+            synchronized(lock) {
+                val buffer = prepared.getOrPut(device) { ByteArrayOutputStream() }
+                when {
+                    closed -> BluetoothGatt.GATT_FAILURE
+                    offset != buffer.size() -> BluetoothGatt.GATT_INVALID_OFFSET
+                    buffer.size() + bytes.size > MAX_WRITE_BYTES -> BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH
+                    else -> BluetoothGatt.GATT_SUCCESS.also { buffer.write(bytes) }
+                }
+            }
 
         // Opens [message] from [device]; the first it takes makes that device the computer.
         private fun receive(
             device: BluetoothDevice,
             message: ByteArray,
         ): Int {
-            val text = session.open(message) ?: return REFUSED
+            // An opening closed takes nothing more.
+            val text = (if (closed) null else session.open(message)) ?: return REFUSED
             later {
                 if (typing.add(device)) connection()
                 onText(text)
@@ -333,39 +406,14 @@ class BleKeyboard(
         }
     }
 
-    // Keeps a part of a long message, written in order.
-    private fun prepare(
-        device: BluetoothDevice,
-        offset: Int,
-        bytes: ByteArray,
-    ): Int =
-        synchronized(lock) {
-            val buffer = prepared.getOrPut(device) { ByteArrayOutputStream() }
-            when {
-                offset != buffer.size() -> BluetoothGatt.GATT_INVALID_OFFSET
-                buffer.size() + bytes.size > MAX_WRITE_BYTES -> BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH
-                else -> BluetoothGatt.GATT_SUCCESS.also { buffer.write(bytes) }
-            }
-        }
-
-    // Says whether a computer is typing, on the main thread, as the sets now are.
-    private fun connection() {
-        if (!stopped &&
-            server != null
-        ) {
-            onState(if (typing.isEmpty()) KeyboardState.WAITING else KeyboardState.CONNECTED)
-        }
-    }
-
-    private fun state(state: KeyboardState) {
-        main.post { if (!stopped) onState(state) }
-    }
-
     private companion object {
         // Web Bluetooth's largest write.
         const val MAX_WRITE_BYTES = 512
 
         // An application error (ATT 0x80): the message was refused.
         const val REFUSED = 0x80
+
+        // How long after a failed restart the advertising is tried again.
+        const val ADVERTISE_RETRY_MS = 5_000L
     }
 }
