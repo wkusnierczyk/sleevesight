@@ -148,21 +148,45 @@ class GroundingCheckTest {
 
     /** The simulator joins a sentence ending in a quoted title to the next; the check does not (#423). */
     @Test
-    fun `a stop inside closing quotes ends a sentence, with citations after the quotes or not`() {
+    fun `a stop inside closing quotes ends a sentence when citations follow the quotes`() {
         for (end in listOf(".\"", ".”", "?'", "!’", ".'\"", ".’”")) {
-            val reply =
-                "Its title track is \"Sundown$end [MB1] It was a single. [W1] He called it \"Sundown$end It charted."
+            val reply = "Its title track is \"Sundown$end [MB1] It was a single. [W1]"
             assertEquals(
-                listOf(
-                    "Its title track is \"Sundown$end [MB1]",
-                    "It was a single. [W1]",
-                    "He called it \"Sundown$end",
-                    "It charted.",
-                ),
+                listOf("Its title track is \"Sundown$end [MB1]", "It was a single. [W1]"),
                 GroundingCheck.splitSentences(reply),
                 end,
             )
         }
+    }
+
+    @Test
+    fun `a full stop inside closing quotes ends a sentence with no citation after it, unless it ends initials`() {
+        for (end in listOf(".\"", ".”", ".'\"", ".’”")) {
+            val reply = "He called it \"Sundown$end It charted. [W1]"
+            assertEquals(
+                listOf("He called it \"Sundown$end", "It charted. [W1]"),
+                GroundingCheck.splitSentences(reply),
+                end,
+            )
+        }
+        val initials = "It topped the \"U.S.\" Billboard chart. [W1] It was big in the \"U.S.\" It charted. [W2]"
+        assertEquals(
+            listOf("It topped the \"U.S.\" Billboard chart. [W1]", "It was big in the \"U.S.\"", "It charted. [W2]"),
+            GroundingCheck.splitSentences(initials),
+        )
+    }
+
+    /** A title ends in `!` or `?` mid-sentence; the cost is an uncited sentence that ends in one, joined. */
+    @Test
+    fun `a quoted exclamation or question mark with no citation after it does not end a sentence`() {
+        val replies =
+            listOf(
+                "On \"Help!\" John Lennon sings lead. [W1]",
+                "The album \"Help!\" (1965) reached number one. [W1]",
+                "Hendrix's \"Are You Experienced?\" (1967) was his debut. [W1]",
+                "He called it \"Help!\" It charted. [W1]",
+            )
+        for (reply in replies) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply))
     }
 
     @Test
