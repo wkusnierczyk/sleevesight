@@ -225,7 +225,7 @@ class GateTest {
         }.flatten()
 
         fun uncitedOver(results: List<TrackResult>) =
-            Gate.evaluate(results, insightsAsked = true, minPasses = Gate.MIN_LIVE_PASSES)[1]
+            Gate.evaluate(results, insightsAsked = true, sample = Gate.Sample.LIVE)[1]
 
         // Three passes, pooled: 1 of 60 passes, whatever one pass alone had; 3 of 60 is 5 percent, and fails.
         val pooled = uncitedOver(passes(3, 1))
@@ -235,7 +235,8 @@ class GateTest {
         // Two passes with 2 of 40 uncited: three passes might still pass, so it is not judged.
         assertEquals(Verdict.NOT_CHECKED, uncitedOver(passes(2, 2)).verdict)
         assertEquals(Verdict.PASS, uncitedOver(passes(3, 2)).verdict)
-        val unknown = Gate.evaluate(listOf(state(1, reply = "It is a song [W9].")), insightsAsked = true, minPasses = 3)
+        val wrong = listOf(state(1, reply = "It is a song [W9]."))
+        val unknown = Gate.evaluate(wrong, insightsAsked = true, sample = Gate.Sample.LIVE)
         assertEquals(Verdict.FAIL, unknown[0].verdict)
     }
 
@@ -248,13 +249,13 @@ class GateTest {
             Gate.evaluate(
                 List(20 - uncitedOf20) { cited } + List(uncitedOf20) { uncited },
                 insightsAsked = true,
-                minPasses = Gate.MIN_LIVE_PASSES,
+                sample = Gate.Sample.LIVE,
             )[1]
 
         // 3 of 20 is 3 of 60 at best over three passes: 5 percent, which is not under it.
         val at = onePass(3)
         assertEquals(Verdict.FAIL, at.verdict, at.detail)
-        assertTrue("however well cited the others" in at.detail, at.detail)
+        assertTrue("even if the others were fully cited" in at.detail, at.detail)
         // 2 of 20 could be 2 of 60: not judged yet, and the run does not fail on it.
         val under = onePass(2)
         assertEquals(Verdict.NOT_CHECKED, under.verdict, under.detail)
@@ -278,9 +279,34 @@ class GateTest {
             Gate.evaluate(
                 List(20) { cited.copy(pass = 1) } + noEvidence,
                 insightsAsked = true,
-                minPasses = Gate.MIN_LIVE_PASSES,
+                sample = Gate.Sample.LIVE,
             )[1]
         assertEquals(Verdict.NOT_CHECKED, result.verdict, result.detail)
         assertTrue("over 1 passes with sentences" in result.detail, result.detail)
+    }
+
+    @Test
+    fun `three passes judge only with enough sentences among them`() {
+        val cited = state(1, reply = "It is a song [MB1].")
+        val uncited = state(1, reply = "It is a song.")
+
+        // Passes of 20, 1 and 1 sentences, [uncitedCount] of the first pass's uncited: 22 sentences,
+        // under the 50 a live sample needs, so the share is judged against 50 at best.
+        fun thin(uncitedCount: Int) =
+            Gate.evaluate(
+                (List(20 - uncitedCount) { cited } + List(uncitedCount) { uncited }).map { it.copy(pass = 1) } +
+                    cited.copy(pass = 2) + cited.copy(pass = 3),
+                insightsAsked = true,
+                sample = Gate.Sample.LIVE,
+            )[1]
+
+        // 1 of 22 is under 5 percent, but not judged on so few sentences.
+        val one = thin(1)
+        assertEquals(Verdict.NOT_CHECKED, one.verdict, one.detail)
+        assertTrue("3 passes and 50 sentences" in one.detail, one.detail)
+        // 3 of 22 could be 3 of 50 at best: 6 percent, which fails.
+        val three = thin(3)
+        assertEquals(Verdict.FAIL, three.verdict, three.detail)
+        assertTrue("even if the others were fully cited" in three.detail, three.detail)
     }
 }

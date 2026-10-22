@@ -134,7 +134,7 @@ class Cli(
                     allowModel = allowModel,
                     playlist = options.tracklist == null,
                     // Recorded replies are the same every pass; live ones vary (#399).
-                    minPasses = if (options.mode == Mode.REPLAY) 1 else Gate.MIN_LIVE_PASSES,
+                    sample = if (options.mode == Mode.REPLAY) Gate.Sample() else Gate.Sample.LIVE,
                 )
             val summary =
                 RunSummary(
