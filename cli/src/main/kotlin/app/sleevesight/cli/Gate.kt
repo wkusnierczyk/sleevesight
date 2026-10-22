@@ -12,7 +12,7 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.sources.SourceResult
 
-/** One playlist position's run. */
+/** One track's run: [n] is its playlist position, or its place in a tracklist (`--tracklist`), from 1. */
 data class TrackResult(
     val n: Int,
     val state: TrackState,
@@ -133,13 +133,26 @@ object Gate {
      * failed insight call leaves the citation criteria incomplete rather than quietly smaller.
      * [allowModel] is the run's *Model's own knowledge* switch, which decides, with whether the
      * track's report named its artists, whether a track with only the player's release line had
-     * anything to narrate.
+     * anything to narrate. [playlist] is whether [results] are the fixture playlist's positions:
+     * the collisions are listed by position, so a run over a tracklist (`--tracklist`) leaves them
+     * unchecked, as nothing in it applied.
      */
     fun evaluate(
         results: List<TrackResult>,
         insightsAsked: Boolean,
         allowModel: Boolean = false,
-    ): List<Criterion> = citations(results, insightsAsked, allowModel) + collisions(results)
+        playlist: Boolean = true,
+    ): List<Criterion> =
+        citations(results, insightsAsked, allowModel) +
+            if (playlist) {
+                collisions(results)
+            } else {
+                Criterion(
+                    COLLISIONS_NAME,
+                    Verdict.NOT_CHECKED,
+                    "a tracklist run: the collisions are playlist positions",
+                )
+            }
 
     private fun citations(
         results: List<TrackResult>,

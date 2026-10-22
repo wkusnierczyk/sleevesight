@@ -56,6 +56,19 @@ class EvidenceSet private constructor(
         lines.isEmpty() ||
             (lines.all { it.source == SourceId.PLAYER } && !(allowModel && artistsKnown))
 
+    /**
+     * This set without the lines [leaveOut] picks, fingerprinted with [hasher]. Each line kept keeps
+     * its id, so what is written from the smaller set cites the lines of this one (#239: the
+     * artist-level lines left out of a prompt). This set itself when nothing is left out.
+     */
+    fun without(
+        hasher: Hasher,
+        leaveOut: (EvidenceLine) -> Boolean,
+    ): EvidenceSet {
+        val kept = lines.filterNot(leaveOut)
+        return if (kept.size == lines.size) this else EvidenceSet(kept, fingerprint(kept, hasher))
+    }
+
     override fun equals(other: Any?): Boolean = other is EvidenceSet && lines == other.lines
 
     override fun hashCode(): Int = lines.hashCode()

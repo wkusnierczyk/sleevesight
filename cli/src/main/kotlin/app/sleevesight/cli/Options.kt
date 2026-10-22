@@ -35,6 +35,7 @@ sealed interface CacheChoice {
 data class Options(
     val mode: Mode,
     val tracks: List<Int>,
+    val tracklist: Tracklist?,
     val fixtures: File,
     val out: File?,
     val cache: CacheChoice,
@@ -61,6 +62,8 @@ data class Options(
             Options:
               --tracks <spec>     regression (default: the design's regression cases), all, or positions
                                   such as 1,12,20-24
+              --tracklist <file>  run the tracks in this JSON file, in its order, in place of the
+                                  playlist (an album, or one artist's playlist; see `Tracklist`)
               --out <file>        also write the report to this file
               --fixtures <dir>    the fixtures directory (default: fixtures)
               --cache <file|none> the cache database (default: a fresh temporary one for replay,
@@ -113,13 +116,15 @@ data class Options(
                     ?: setOf("musicbrainz", "wikidata", "wikipedia")
             require(record.all { it in SOURCES }) { "--record takes ${SOURCES.joinToString()}" }
             val cache = cacheChoice(mode, values["--cache"])
+            val (positions, tracklist) = trackChoice(values)
             val provider = provider(values["--provider"], if (mode == Mode.RECORD) record else emptySet())
             require(mode == Mode.LIVE || nameOf(provider) in RECORDED_AI) {
                 "--provider ${nameOf(provider)} runs only live: its replies are not recorded or replayed"
             }
             return Options(
                 mode = mode,
-                tracks = tracks(values["--tracks"] ?: "regression"),
+                tracks = positions,
+                tracklist = tracklist,
                 fixtures = File(values["--fixtures"] ?: "fixtures"),
                 out = values["--out"]?.let(::File),
                 cache = if (mode == Mode.RECORD) CacheChoice.None else cache,
@@ -130,6 +135,13 @@ data class Options(
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
             )
+        }
+
+        // The playlist positions, or the tracklist in their place.
+        private fun trackChoice(values: Map<String, String>): Pair<List<Int>, Tracklist?> {
+            val file = values["--tracklist"] ?: return tracks(values["--tracks"] ?: "regression") to null
+            require(values["--tracks"] == null) { "--tracks and --tracklist cannot both be given" }
+            return emptyList<Int>() to Tracklist.read(File(file))
         }
 
         /**
@@ -192,7 +204,17 @@ data class Options(
         private val SWITCHES = setOf("--no-web", "--no-insights")
 
         private val VALUED =
-            setOf("--tracks", "--out", "--fixtures", "--cache", "--provider", "--model", "--record", "--keys")
+            setOf(
+                "--tracks",
+                "--tracklist",
+                "--out",
+                "--fixtures",
+                "--cache",
+                "--provider",
+                "--model",
+                "--record",
+                "--keys",
+            )
 
         /** The playlist positions [spec] names. */
         fun tracks(spec: String): List<Int> {

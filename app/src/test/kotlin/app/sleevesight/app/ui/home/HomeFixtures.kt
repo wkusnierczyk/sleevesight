@@ -79,13 +79,18 @@ internal object HomeFixtures {
         insight = insight,
     )
 
-    /** [reply], checked against [evidence] as written, the model's own knowledge allowed or not. */
+    /**
+     * [reply], checked against [evidence] as written, the model's own knowledge allowed or not; with
+     * [held], against only those of its lines, as a prompt that left the others out (#239).
+     */
     fun written(
         reply: String,
         cached: Boolean = false,
         allowModel: Boolean = false,
+        held: Set<String>? = null,
     ): InsightState.Written {
-        val grounded = (GroundingCheck.check(reply, evidence, allowModel) as InsightReply.Written).grounded
-        return InsightState.Written(grounded, cached)
+        val against = held?.let { ids -> evidence.without(JvmHasher) { it.id !in ids } } ?: evidence
+        val grounded = (GroundingCheck.check(reply, against, allowModel) as InsightReply.Written).grounded
+        return InsightState.Written(grounded, cached, held = held)
     }
 }

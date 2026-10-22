@@ -181,13 +181,26 @@ object GroundingCheck {
         return CheckedSentence(sentence, cites, status)
     }
 
+    /**
+     * Whether [partial], a reply still streaming, may yet be read as [NO_EVIDENCE], or already is:
+     * after [check]'s own trimming, empty, a start of the marker, or the marker as [check] reads it
+     * (`NO_EVIDENCE`, `NO_EVIDENCE.`, `NO_EVIDENCE: …`). A view of the streaming text holds it back
+     * while this holds (#239), so the marker never shows as prose; a reply that turns out to be
+     * something else shows in full as soon as it diverges, and in full once checked.
+     */
+    fun mayBeNoEvidence(partial: String): Boolean {
+        val text = partial.trimJs()
+        return NO_EVIDENCE.startsWith(text) || isNoEvidence(text)
+    }
+
     // The simulator's `/^NO_EVIDENCE\b/`: the marker, then the end or a character that is not a
     // JavaScript word character.
     private fun isNoEvidence(text: String): Boolean =
         text.startsWith(NO_EVIDENCE) &&
-            (text.length == NO_EVIDENCE.length || !isWordChar(text[NO_EVIDENCE.length]))
+            (text.length == NO_EVIDENCE.length || text[NO_EVIDENCE.length] !in WORD_CHARS)
 
-    private fun isWordChar(c: Char): Boolean = c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '_'
+    // JavaScript's `\w`, ASCII letters, digits and the underscore.
+    private val WORD_CHARS: Set<Char> = (('a'..'z') + ('A'..'Z') + ('0'..'9') + '_').toSet()
 
     /**
      * Whether the text before [end] ends a sentence: the simulator's lookbehind

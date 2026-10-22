@@ -8,6 +8,7 @@ import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
+import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineEvent
@@ -125,12 +126,20 @@ class Cli(
             if (options.mode == Mode.RECORD) store.save()
             val misses = recorder?.misses ?: replay.misses
             val allowModel = settings.isEnabled(SourceId.MODEL)
-            val gate = Gate.evaluate(results, insightsAsked = ai != null, allowModel = allowModel)
+            val gate =
+                Gate.evaluate(
+                    results,
+                    insightsAsked = ai != null,
+                    allowModel = allowModel,
+                    playlist = options.tracklist == null,
+                )
             val summary =
                 RunSummary(
                     mode = options.mode,
                     sources = sources.map { it.first },
                     insights = aiNote(),
+                    tracklist = options.tracklist?.let { it.name ?: "unnamed" },
+                    allowModel = allowModel,
                     results = results,
                     gate = gate,
                     diagnostics =
@@ -168,20 +177,27 @@ class Cli(
                         hasher = JvmHasher,
                         ai = ai,
                         cache = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None,
+                        // A run is one listening session (#239): its tracks play one after another.
+                        sessionFacts = ListeningSessionFacts { RUN_SESSION },
                     ),
                 ) { settings }
             return runBlocking {
                 val log = launch(start = CoroutineStart.UNDISPATCHED) { pipeline.events.collect { events += it } }
                 val results =
-                    options.tracks.map { n ->
+                    tracks().map { (n, nowPlaying) ->
                         err.println("track $n")
-                        TrackResult(n, pipeline.run(nowPlaying(n), write = ai != null))
+                        TrackResult(n, pipeline.run(nowPlaying, write = ai != null))
                     }
                 yield()
                 log.cancel()
                 results
             }
         }
+
+        // The tracks to run, numbered: the tracklist's from 1 in its order, else the playlist positions.
+        private fun tracks(): List<Pair<Int, NowPlaying>> =
+            options.tracklist?.tracks?.mapIndexed { index, track -> index + 1 to track }
+                ?: options.tracks.map { it to nowPlaying(it) }
 
         private fun sources(): List<Pair<SourceStatus, SourceAdapter?>> =
             listOf(
@@ -263,6 +279,7 @@ class Cli(
 
         /** A criterion the run should have checked could not be: a source or an insight call failed. */
         const val EXIT_UNCHECKED = 3
+        private const val RUN_SESSION = 1L
 
         /** The AI services' names, for the report. */
         private val AI_NAMES =

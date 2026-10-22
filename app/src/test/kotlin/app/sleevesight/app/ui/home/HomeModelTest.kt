@@ -90,6 +90,11 @@ class HomeModelTest {
         assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true))
         assertEquals(CiteKind.UNKNOWN, citeKind("M", evidence, modelAllowed = false))
         assertEquals(CiteKind.UNKNOWN, citeKind("MB1", null, modelAllowed = false))
+        // A line its prompt left out (#239) is no line, though the track has it; `M` is not a line.
+        val held = setOf("MB1")
+        assertEquals(CiteKind.LINE, citeKind("MB1", evidence, modelAllowed = false, held))
+        assertEquals(CiteKind.UNKNOWN, citeKind("W1", evidence, modelAllowed = false, held))
+        assertEquals(CiteKind.MODEL, citeKind("M", evidence, modelAllowed = true, held))
     }
 
     @Test
