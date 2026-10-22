@@ -32,7 +32,7 @@ enum class KeyProblem {
 
     /**
      * Not the service's shape: Anthropic's starts `sk-ant-`, OpenAI's `sk-` (and not `sk-ant-`),
-     * Google's `AIza` or `AQ.`, Last.fm's is 32 hexadecimal digits.
+     * Google's `AIza` or `AQ.`, Last.fm's is 32 hexadecimal digits, Exa's 16 to 200 characters.
      */
     WRONG_SHAPE,
 

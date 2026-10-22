@@ -145,6 +145,24 @@ class KeysQrTest {
     }
 
     @Test
+    fun `an Anthropic key given as OpenAI's is refused, and the message says why`() {
+        val run = run("--openai-from", "-", stdin = "sk-ant-api03-" + "a1B2c3D4".repeat(10))
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("OpenAI key does not look like one" in run.err)
+        assertTrue("OpenAI's sk- (not sk-ant-)" in run.err)
+    }
+
+    @Test
+    fun `an Exa key of the wrong length is refused, and the message gives Exa's shape`() {
+        val run = run("--exa-from", "-", stdin = "too-short")
+        assertEquals(Cli.EXIT_USAGE, run.status)
+        assertEquals("", run.out)
+        assertTrue("Exa key does not look like one" in run.err)
+        assertTrue("Exa's 16 to 200 characters" in run.err)
+    }
+
+    @Test
     fun `no keys, two from standard input, an unknown option or a missing file is a usage error`() {
         val empty = File(dir, "none.env").apply { writeText("# no keys\n") }
         assertEquals(Cli.EXIT_USAGE, run("--keys", empty.path).status)
