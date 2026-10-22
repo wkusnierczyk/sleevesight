@@ -127,7 +127,7 @@ class CliReplayTest {
         val collisions =
             Regex("\\| Every listed same-name collision rejected or correctly resolved \\| PASS \\| ([^\\n]*)")
         val checks = checkNotNull(collisions.find(report), { report }).groupValues[1]
-        assertEquals(2, Regex("track 8, W: no song article").findAll(checks).count(), checks)
+        for (pass in 1..2) assertTrue("track 8, pass $pass, W: no song article" in checks, checks)
     }
 
     @Test

@@ -134,11 +134,7 @@ class Cli(
                     allowModel = allowModel,
                     playlist = options.tracklist == null,
                     // Recorded replies are the same every pass; live ones vary (#399).
-                    passes =
-                        Gate.Passes(
-                            count = options.repeat,
-                            toJudgeUncited = if (options.mode == Mode.REPLAY) 1 else Gate.MIN_LIVE_PASSES,
-                        ),
+                    minPasses = if (options.mode == Mode.REPLAY) 1 else Gate.MIN_LIVE_PASSES,
                 )
             val summary =
                 RunSummary(

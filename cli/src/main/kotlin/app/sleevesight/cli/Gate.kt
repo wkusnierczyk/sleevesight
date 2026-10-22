@@ -58,9 +58,10 @@ data class Criterion(
  * check.
  *
  * Every criterion is judged over all the run's passes together (`--repeat`). Uncited sentences
- * are judged only over at least [MIN_LIVE_PASSES] passes when the replies are live, since they vary
+ * are judged over at least [MIN_LIVE_PASSES] passes when the replies are live, since they vary
  * from one pass to the next (#399): an insight is two to four sentences, so a pass of the
- * regression tracks has about 20, and one uncited sentence in it is already 5 percent.
+ * regression tracks has about 20, and one uncited sentence in it is already 5 percent. Fewer
+ * passes still fail when no further passes could bring the share under 5 percent ([uncitedFails]).
  */
 object Gate {
     /** The most uncited sentences may be of all the written insights' sentences, as a fraction. */
@@ -155,17 +156,17 @@ object Gate {
      * track's report named its artists, whether a track with only the player's release line had
      * anything to narrate. [playlist] is whether [results] are the fixture playlist's positions:
      * the collisions are listed by position, so a run over a tracklist (`--tracklist`) leaves them
-     * unchecked, as nothing in it applied. [passes] says how many passes [results] hold
-     * (`--repeat`), and over how many uncited sentences are judged.
+     * unchecked, as nothing in it applied. [minPasses] is the fewest passes (`--repeat`) over which
+     * uncited sentences are judged ([uncitedFails]); a pass counts when its insights have a sentence.
      */
     fun evaluate(
         results: List<TrackResult>,
         insightsAsked: Boolean,
         allowModel: Boolean = false,
         playlist: Boolean = true,
-        passes: Passes = Passes(),
+        minPasses: Int = 1,
     ): List<Criterion> =
-        citations(results, insightsAsked, allowModel, passes) +
+        citations(results, insightsAsked, allowModel, minPasses) +
             if (playlist) {
                 collisions(results)
             } else {
@@ -177,20 +178,27 @@ object Gate {
             }
 
     /**
-     * How many passes a run's results hold ([count], `--repeat`), and the fewest over which its
-     * uncited sentences are judged ([toJudgeUncited]): with fewer, that criterion is not checked,
-     * and the run does not fail on it ([MIN_LIVE_PASSES]).
+     * Whether [uncited] of [sentences], over [passes] passes that gave sentences, fail the uncited
+     * criterion judged over [minPasses]: with enough passes, when their share is not under
+     * [MAX_UNCITED]; with fewer, only when it would not be under it even if each pass still to come
+     * were as long and cited throughout. So with three passes required, one pass fails with 15
+     * percent uncited or more (3 of 20), and is not judged under that.
      */
-    data class Passes(
-        val count: Int = 1,
-        val toJudgeUncited: Int = 1,
-    )
+    fun uncitedFails(
+        uncited: Int,
+        sentences: Int,
+        passes: Int,
+        minPasses: Int,
+    ): Boolean {
+        val judged = maxOf(passes, minPasses)
+        return uncited.toDouble() * passes / (sentences.toDouble() * judged) >= MAX_UNCITED
+    }
 
     private fun citations(
         results: List<TrackResult>,
         insightsAsked: Boolean,
         allowModel: Boolean,
-        passes: Passes,
+        minPasses: Int,
     ): List<Criterion> {
         // The tracks with something to narrate: the others get no call (`EvidenceSet.nothingToNarrate`).
         val withEvidence =
@@ -200,14 +208,17 @@ object Gate {
                         .isNotEmpty()
                 it.state.evidence?.nothingToNarrate(allowModel, artistsKnown) == false
             }
-        val written = withEvidence.mapNotNull { (it.state.insight as? InsightState.Written)?.grounded?.counts }
+        val writtenResults = withEvidence.filter { it.state.insight is InsightState.Written }
+        val written = writtenResults.map { (it.state.insight as InsightState.Written).grounded.counts }
         val failed =
             withEvidence.mapNotNull { r ->
-                (r.state.insight as? InsightState.Failed)?.let { r.n to it.reason }
+                (r.state.insight as? InsightState.Failed)?.let { r.label to it.reason }
             }
-        val over = if (passes.count > 1) " over ${passes.count} passes" else ""
+        val passes = passesWithSentences(writtenResults)
+        val repeated = results.map { it.pass }.distinct().size > 1
         val tally =
-            "${written.size} of ${withEvidence.size} insights written$over" +
+            "${written.size} of ${withEvidence.size} insights written" +
+                (if (repeated) " over $passes passes with sentences" else "") +
                 if (failed.isEmpty()) {
                     ""
                 } else {
@@ -221,11 +232,14 @@ object Gate {
 
         // The written insights decide first: one that fails a criterion fails it, whatever else failed.
         // Only when none fails does a failed call leave the criterion unchecked, since it might have.
+        // [judged] is false for the uncited criterion over fewer passes than it needs, which it
+        // [note]s: it fails then only when further passes could not mend it ([uncitedFails]).
         fun criterion(
             name: String,
             holds: Boolean,
             detail: String,
-            enoughPasses: Boolean = true,
+            judged: Boolean = true,
+            note: String = "",
         ): Criterion =
             when {
                 !insightsAsked -> Criterion(name, Verdict.NOT_CHECKED, "no insight was asked for")
@@ -236,15 +250,8 @@ object Gate {
                         "no insight was written ($tally)",
                         failed.isNotEmpty(),
                     )
-                !enoughPasses ->
-                    Criterion(
-                        name,
-                        Verdict.NOT_CHECKED,
-                        "$detail; $tally; judged over at least ${passes.toJudgeUncited} passes of live " +
-                            "replies, which vary (--repeat ${passes.toJudgeUncited})",
-                        failed.isNotEmpty(),
-                    )
-                !holds -> Criterion(name, Verdict.FAIL, "$detail; $tally")
+                !holds -> Criterion(name, Verdict.FAIL, "$detail; $tally$note")
+                !judged -> Criterion(name, Verdict.NOT_CHECKED, "$detail; $tally$note", failed.isNotEmpty())
                 failed.isNotEmpty() ->
                     Criterion(
                         name,
@@ -255,16 +262,34 @@ object Gate {
                 else -> Criterion(name, Verdict.PASS, "$detail; $tally")
             }
         val share = if (sentences == 0) 0.0 else uncited.toDouble() / sentences
+        val enough = passes >= minPasses
+        val fails = uncitedFails(uncited, sentences, passes, minPasses)
+        val note = if (enough) "" else uncitedNote(fails, minPasses)
         return listOf(
             criterion(UNKNOWN_CITATIONS, unknown == 0, "$unknown unknown in $sentences sentences"),
-            criterion(
-                UNCITED,
-                share < MAX_UNCITED,
-                "$uncited of $sentences sentences (${percent(share)})",
-                enoughPasses = passes.count >= passes.toJudgeUncited,
-            ),
+            criterion(UNCITED, !fails, "$uncited of $sentences sentences (${percent(share)})", enough, note),
         )
     }
+
+    // The passes whose [written] insights gave a sentence to judge: one of only NO_EVIDENCE, failed
+    // calls or empty replies does not count toward the passes the uncited criterion needs.
+    private fun passesWithSentences(written: List<TrackResult>): Int =
+        written
+            .filter { ((it.state.insight as? InsightState.Written)?.grounded?.counts?.total ?: 0) > 0 }
+            .map { it.pass }
+            .distinct()
+            .size
+
+    // What the uncited criterion says over fewer passes than [minPasses]: why it [fails], or that it waits.
+    private fun uncitedNote(
+        fails: Boolean,
+        minPasses: Int,
+    ): String =
+        if (fails) {
+            "; too many to pass over $minPasses passes, however well cited the others"
+        } else {
+            "; judged over at least $minPasses passes of live replies, which vary (--repeat $minPasses)"
+        }
 
     /** One listed check on one track: passed, failed with a problem, or unchecked with a reason. */
     private sealed interface CheckOutcome {
@@ -333,7 +358,7 @@ object Gate {
         result: TrackResult,
         check: Check,
     ): CheckOutcome? {
-        val label = "track ${result.n}, ${check.source.tag}: ${check.rule}"
+        val label = "track ${result.label}, ${check.source.tag}: ${check.rule}"
         return when (val state = result.state.sources[check.source]) {
             null, SourceState.Pending -> null
             is SourceState.Failed -> CheckOutcome.Unchecked(label, "the lookup failed (${state.reason})")
