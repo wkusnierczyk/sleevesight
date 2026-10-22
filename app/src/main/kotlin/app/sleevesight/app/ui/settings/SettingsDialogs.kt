@@ -42,8 +42,6 @@ import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
-import app.sleevesight.core.keys.KeyProblem
-import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.keys.KeyShape
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
@@ -170,38 +168,6 @@ internal fun KeyDialog(
     )
 }
 
-/** What a scan in the key dialog is for: the key itself, or a keyboard session's code. */
-private enum class ScanFor { KEY, KEYBOARD }
-
-/** What a scan in the key dialog found: a key, a keyboard session, or what to say instead. */
-private class Scanned(
-    val key: String? = null,
-    val session: KeyboardSession? = null,
-    @StringRes val failed: Int? = null,
-)
-
-/** What [scanned], a QR code's text read [for][purpose] the key [id], gives. */
-private fun scanned(
-    purpose: ScanFor,
-    id: SecretId,
-    scanned: String,
-    ledger: SessionLedger,
-): Scanned =
-    when (purpose) {
-        ScanFor.KEY -> {
-            scanFailure(id, scanned)?.let { Scanned(failed = it) } ?: Scanned(key = scanned)
-        }
-
-        ScanFor.KEYBOARD -> {
-            val session = KeyboardSession.parse(scanned)
-            when {
-                session == null -> Scanned(failed = sessionFailure(scanned))
-                !ledger.claim(session) -> Scanned(failed = R.string.keyboard_code_used)
-                else -> Scanned(session = session)
-            }
-        }
-    }
-
 /**
  * The key dialog's body: who gets the key [id], the field showing [typed] masked, *Scan QR code*
  * and *Type on a computer*, or the [keyboard] session running instead, and what [failed], if
@@ -253,28 +219,6 @@ private fun KeyEntry(
         }
     }
 }
-
-/** What the key dialog says of [scanned], a QR code's text, as the key [id]; null when it is one. */
-@StringRes
-private fun scanFailure(
-    id: SecretId,
-    scanned: String,
-): Int? =
-    if (KeySetup.isSetup(scanned)) {
-        R.string.settings_key_scan_setup
-    } else {
-        when (KeyShape.check(id.keyName, scanned)) {
-            null -> null
-            KeyProblem.EMPTY -> R.string.settings_key_scan_empty
-            KeyProblem.BAD_CHARACTERS -> R.string.settings_key_scan_characters
-            KeyProblem.WRONG_SHAPE, KeyProblem.DUPLICATE -> R.string.settings_key_scan_shape
-        }
-    }
-
-/** What the key dialog says of [scanned], a QR code's text that is not a keyboard session's. */
-@StringRes
-private fun sessionFailure(scanned: String): Int =
-    if (KeyboardSession.isSessionCode(scanned)) R.string.keyboard_code_unreadable else R.string.keyboard_not_code
 
 /** What the key dialog says of a save that ended as [result]; null for none. */
 @StringRes
