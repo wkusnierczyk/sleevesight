@@ -113,6 +113,18 @@ class ArtistFactsTest {
     }
 
     @Test
+    fun `each pass of a repeated run is a session of its own, so nothing is restated across passes`() {
+        val first = track(1, listOf(song("One"), formed), "The band formed in 1960 [W2].").copy(pass = 1)
+        val again = track(1, listOf(song("One"), formed), "The band formed in 1960 [W2].").copy(pass = 2)
+        val second = track(2, listOf(song("Two"), formed), "The band formed in 1960 [W2].").copy(pass = 2)
+
+        val rows = ArtistFacts.measure(listOf(first, again, second), allowModel = false)
+
+        assertEquals(listOf(emptyList(), emptyList(), listOf("W2")), rows.map { it.restated })
+        assertEquals(listOf("1, pass 1", "1, pass 2", "2, pass 2"), rows.map { it.label })
+    }
+
+    @Test
     fun `the last insight is the last one written, past a track with none`() {
         val first = track(1, listOf(song("One"), formed), "The band formed in 1960 [W2].")
         val unwritten = track(2, listOf(song("Two"), formed))

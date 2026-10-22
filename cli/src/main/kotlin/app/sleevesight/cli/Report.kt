@@ -35,7 +35,8 @@ class Diagnostics(
 /**
  * Everything a report shows. [tracklist] names the tracklist run (`--tracklist`), null for the
  * fixture playlist; [allowModel] is the run's *Model's own knowledge* switch, which decides the
- * prompts [ArtistFacts] rebuilds.
+ * prompts [ArtistFacts] rebuilds; [passes] is how many times the tracks ran (`--repeat`), each pass
+ * in [results] in turn.
  */
 @Suppress("LongParameterList") // Everything one report shows, each its own part of it.
 class RunSummary(
@@ -45,6 +46,7 @@ class RunSummary(
     val tracklist: String? = null,
     val allowModel: Boolean = false,
     val results: List<TrackResult>,
+    val passes: Int = 1,
     val gate: List<Criterion>,
     val diagnostics: Diagnostics,
 )
@@ -85,8 +87,15 @@ class Report(
         appendLine("# Sleevesight pipeline: coverage report")
         appendLine()
         val tracklist = run.tracklist?.let { " Tracklist: $it." }.orEmpty()
+        val passes =
+            if (run.passes > 1) {
+                ", in ${run.passes} passes (--repeat: each a listening session of its own, every insight written " +
+                    "afresh; the tables list every pass, and the gate pools them)"
+            } else {
+                ""
+            }
         appendLine(
-            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size}.$tracklist " +
+            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size / run.passes}$passes.$tracklist " +
                 "Time: ${d.elapsed.inWholeSeconds} s.",
         )
         appendLine()
@@ -178,11 +187,11 @@ class Report(
                 val tokens = tokens(callsOf(index), "cached")
                 val state = if (insight.complete) "written" else "written, cut off"
                 appendLine(
-                    "| ${result.n} | $state | ${c.total} | ${c.ok} | ${c.model} | ${c.hedge} | ${c.uncited} | " +
+                    "| ${result.label} | $state | ${c.total} | ${c.ok} | ${c.model} | ${c.hedge} | ${c.uncited} | " +
                         "${c.unknown} | $tokens |",
                 )
             } else {
-                appendLine("| ${result.n} | ${insightLabel(insight)} | | | | | | | ${tokens(callsOf(index), "")} |")
+                appendLine("| ${result.label} | ${insightLabel(insight)} | | | | | | | ${tokens(callsOf(index), "")} |")
             }
         }
         appendLine()
@@ -209,7 +218,7 @@ class Report(
             val tokens = tokens(callsOf(index), if (written) "cached" else insightLabel(r.insight))
             val sentences = if (written) "${r.artistSentences} of ${r.sentences}" else ""
             appendLine(
-                "| ${r.n} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | ${r.leftOut} | " +
+                "| ${r.label} | ${r.lines} | ${r.artistLines} (${percent(r.artistLines, r.lines)}) | ${r.leftOut} | " +
                     "${r.promptChars ?: "not sent"} | ${r.artistChars} | ${r.resent} | $tokens | $sentences | " +
                     "${ids(r.cited, written)} | ${ids(r.fromLast, written)} | ${ids(r.restated, written)} |",
             )
@@ -363,7 +372,8 @@ private class TrackSection(
     fun render(out: StringBuilder) =
         with(out) {
             appendLine()
-            appendLine("### ${result.n}. ${state.nowPlaying.title}, ${state.nowPlaying.artists}")
+            val pass = result.pass?.let { " (pass $it)" }.orEmpty()
+            appendLine("### ${result.n}. ${state.nowPlaying.title}, ${state.nowPlaying.artists}$pass")
             appendLine()
             state.nowPlaying.album?.let { appendLine("Release: $it.") }
             val artists = state.normalized.artists.joinToString(", ")

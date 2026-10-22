@@ -210,4 +210,37 @@ class GateTest {
         assertEquals(Verdict.PASS, Gate.evaluate(cited + cited.take(1) + uncited, insightsAsked = true)[1].verdict)
         assertEquals(Verdict.PASS, Gate.evaluate(cited, insightsAsked = true)[0].verdict)
     }
+
+    @Test
+    fun `live replies' uncited sentences are judged over at least three passes, pooled`() {
+        val cited = (1..9).map { state(1, reply = "It is a song [MB1].") }
+        val uncited = state(1, reply = "It is a song.")
+
+        // Three passes of ten sentences, the first [withUncited] with one uncited.
+        fun passes(withUncited: Int) =
+            List(3) { pass ->
+                val last = if (pass < withUncited) uncited else cited.first()
+                (cited + last).map { it.copy(pass = pass + 1) }
+            }
+
+        fun uncitedOver(
+            results: List<TrackResult>,
+            count: Int,
+        ) = Gate.evaluate(results, insightsAsked = true, passes = Gate.Passes(count, Gate.MIN_LIVE_PASSES))[1]
+
+        // One pass of ten sentences, one uncited: 10 percent, but too few passes to judge.
+        val one = uncitedOver(cited + uncited, 1)
+        assertEquals(Verdict.NOT_CHECKED, one.verdict)
+        assertFalse(one.incomplete, "the run does not fail on it")
+        assertTrue("1 of 10 sentences" in one.detail && "at least 3 passes" in one.detail, one.detail)
+        // Three passes, pooled: 1 of 30 is under 5 percent, whatever one pass alone had.
+        val pooled = uncitedOver(passes(1).flatten(), 3)
+        assertEquals(Verdict.PASS, pooled.verdict, pooled.detail)
+        assertTrue("1 of 30 sentences" in pooled.detail && "over 3 passes" in pooled.detail, pooled.detail)
+        // Two uncited of 30 fail; over two passes they are not judged; an unknown citation fails in one.
+        assertEquals(Verdict.FAIL, uncitedOver(passes(2).flatten(), 3).verdict)
+        assertEquals(Verdict.NOT_CHECKED, uncitedOver(passes(2).take(2).flatten(), 2).verdict)
+        val unknown = Gate.evaluate(listOf(state(1, reply = "It is a song [W9].")), insightsAsked = true)
+        assertEquals(Verdict.FAIL, unknown[0].verdict)
+    }
 }

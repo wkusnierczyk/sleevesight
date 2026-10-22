@@ -12,11 +12,19 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.sources.SourceResult
 
-/** One track's run: [n] is its playlist position, or its place in a tracklist (`--tracklist`), from 1. */
+/**
+ * One track's run: [n] is its playlist position, or its place in a tracklist (`--tracklist`), from 1.
+ * [pass] is which pass of a repeated run (`--repeat`) it belongs to, from 1, or null when the run
+ * is not repeated.
+ */
 data class TrackResult(
     val n: Int,
     val state: TrackState,
-)
+    val pass: Int? = null,
+) {
+    /** How the report names it: its number, and its pass when the run is repeated. */
+    val label: String get() = pass?.let { "$n, pass $it" } ?: "$n"
+}
 
 /** How a gate criterion came out. */
 enum class Verdict {
@@ -46,12 +54,24 @@ data class Criterion(
 /**
  * The Phase 0.5 gate's criteria that a run can check (`design/design.md`, *Phase 0.5*; #46): zero
  * `unknown` citations, uncited sentences under 5 percent, and every listed same-name collision
- * either rejected or correctly resolved. The fourth, the owner's review of the coverage numbers,
- * is not a check.
+ * either rejected or correctly resolved. The fourth, the review of the coverage numbers, is not a
+ * check.
+ *
+ * Every criterion is judged over all the run's passes together (`--repeat`). Uncited sentences
+ * are judged only over at least [MIN_LIVE_PASSES] passes when the replies are live, since they vary
+ * from one pass to the next (#399): an insight is two to four sentences, so a pass of the
+ * regression tracks has about 20, and one uncited sentence in it is already 5 percent.
  */
 object Gate {
     /** The most uncited sentences may be of all the written insights' sentences, as a fraction. */
     const val MAX_UNCITED: Double = 0.05
+
+    /**
+     * The fewest passes over which live replies' uncited sentences are judged: three passes of the
+     * regression tracks give about 60 sentences, so one uncited sentence is under 2 percent and it
+     * takes three to fail, while a run stays a few cents.
+     */
+    const val MIN_LIVE_PASSES: Int = 3
 
     /**
      * A source's check of one collision: null when the result is right, else what is wrong.
@@ -135,15 +155,17 @@ object Gate {
      * track's report named its artists, whether a track with only the player's release line had
      * anything to narrate. [playlist] is whether [results] are the fixture playlist's positions:
      * the collisions are listed by position, so a run over a tracklist (`--tracklist`) leaves them
-     * unchecked, as nothing in it applied.
+     * unchecked, as nothing in it applied. [passes] says how many passes [results] hold
+     * (`--repeat`), and over how many uncited sentences are judged.
      */
     fun evaluate(
         results: List<TrackResult>,
         insightsAsked: Boolean,
         allowModel: Boolean = false,
         playlist: Boolean = true,
+        passes: Passes = Passes(),
     ): List<Criterion> =
-        citations(results, insightsAsked, allowModel) +
+        citations(results, insightsAsked, allowModel, passes) +
             if (playlist) {
                 collisions(results)
             } else {
@@ -154,10 +176,21 @@ object Gate {
                 )
             }
 
+    /**
+     * How many passes a run's results hold ([count], `--repeat`), and the fewest over which its
+     * uncited sentences are judged ([toJudgeUncited]): with fewer, that criterion is not checked,
+     * and the run does not fail on it ([MIN_LIVE_PASSES]).
+     */
+    data class Passes(
+        val count: Int = 1,
+        val toJudgeUncited: Int = 1,
+    )
+
     private fun citations(
         results: List<TrackResult>,
         insightsAsked: Boolean,
         allowModel: Boolean,
+        passes: Passes,
     ): List<Criterion> {
         // The tracks with something to narrate: the others get no call (`EvidenceSet.nothingToNarrate`).
         val withEvidence =
@@ -172,8 +205,9 @@ object Gate {
             withEvidence.mapNotNull { r ->
                 (r.state.insight as? InsightState.Failed)?.let { r.n to it.reason }
             }
+        val over = if (passes.count > 1) " over ${passes.count} passes" else ""
         val tally =
-            "${written.size} of ${withEvidence.size} insights written" +
+            "${written.size} of ${withEvidence.size} insights written$over" +
                 if (failed.isEmpty()) {
                     ""
                 } else {
@@ -189,8 +223,9 @@ object Gate {
         // Only when none fails does a failed call leave the criterion unchecked, since it might have.
         fun criterion(
             name: String,
-            passes: Boolean,
+            holds: Boolean,
             detail: String,
+            enoughPasses: Boolean = true,
         ): Criterion =
             when {
                 !insightsAsked -> Criterion(name, Verdict.NOT_CHECKED, "no insight was asked for")
@@ -201,7 +236,15 @@ object Gate {
                         "no insight was written ($tally)",
                         failed.isNotEmpty(),
                     )
-                !passes -> Criterion(name, Verdict.FAIL, "$detail; $tally")
+                !enoughPasses ->
+                    Criterion(
+                        name,
+                        Verdict.NOT_CHECKED,
+                        "$detail; $tally; judged over at least ${passes.toJudgeUncited} passes of live " +
+                            "replies, which vary (--repeat ${passes.toJudgeUncited})",
+                        failed.isNotEmpty(),
+                    )
+                !holds -> Criterion(name, Verdict.FAIL, "$detail; $tally")
                 failed.isNotEmpty() ->
                     Criterion(
                         name,
@@ -214,7 +257,12 @@ object Gate {
         val share = if (sentences == 0) 0.0 else uncited.toDouble() / sentences
         return listOf(
             criterion(UNKNOWN_CITATIONS, unknown == 0, "$unknown unknown in $sentences sentences"),
-            criterion(UNCITED, share < MAX_UNCITED, "$uncited of $sentences sentences (${percent(share)})"),
+            criterion(
+                UNCITED,
+                share < MAX_UNCITED,
+                "$uncited of $sentences sentences (${percent(share)})",
+                enoughPasses = passes.count >= passes.toJudgeUncited,
+            ),
         )
     }
 
