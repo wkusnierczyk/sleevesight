@@ -383,7 +383,7 @@ A bio sentence is quoted only whole: a summary's unterminated or ellipsized tail
 
 The user shapes how insights are written, within limits the grounding check depends on (D14). Each prompt has two parts:
 
-- **Contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It is restated after the style, so a style adds preferences but cannot override it.
+- **Contract**, fixed: the evidence format and ids, the citation rule, no names, dates, places or numbers outside the evidence, the scope rules, `NO_EVIDENCE`, plain text without markdown, and for the genre and sounds-like cards their JSON structure. It comes after the style, under a heading saying it holds whatever the style says, so a style adds preferences but cannot override it (stated before the style as well until prompt version 5, #399).
 - **Style**, a user setting: length, tone, focus, audience, and free text.
 
 The setting:
@@ -395,7 +395,7 @@ The setting:
 - The synthesis cache key includes a hash of the style the card actually used, so a changed style writes afresh rather than serving text in the old one.
 - The output language is a separate question: the grounding check's hedge detection is English-only.
 
-Free text is the user's own input to their own prompt, so it is not untrusted in the sense web snippets are; a style that asks for uncited claims still meets the restated contract and then the grounding check.
+Free text is the user's own input to their own prompt, so it is not untrusted in the sense web snippets are; a style that asks for uncited claims still meets the contract after it and then the grounding check.
 
 ### Genre labels (`:core`)
 
@@ -662,7 +662,7 @@ Findings of [#9](https://github.com/wkusnierczyk/sleevesight/issues/9), 2026-10-
 - **Adapter tests** against recorded HTTP responses in `fixtures/http/`. Tests replay them through `ReplayNetClient`, a `NetClient` in `:sources`' test fixtures that serves the recorded files (#36): `NetClient` is an interface, so the adapters need no Ktor `MockEngine`, which Detekt keeps inside `:net`. Until `:cli record` exists, a recording run of the same lookups prints each exchange and a script writes the files (`fixtures/http/README.md`). CI never calls a live service.
 - **Provider tests** against recorded streams; a live smoke test runs locally with the developer's keys, never in CI.
 - **Session-layer tests** in `:app` under Robolectric (JUnit 4): mapping `MediaMetadata` and `PlaybackState` to `NowPlaying` and `PlaybackInfo`, dropping players not followed, and offering only advertised transport actions.
-- **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action; preparing the next track (D13) in each of its modes, including a dropped preparation when the queue or the track changes, and none before the playing track's requests are over; and a style (D14) changing the prompt but not the restated contract.
+- **Pipeline tests** with fake adapters and a fake provider, through `kotlinx-coroutines-test` virtual time: debounce, cancellation on a superseded track, cache reuse, the auto-write setting (D5) in each of its modes, including no write before the first user action; preparing the next track (D13) in each of its modes, including a dropped preparation when the queue or the track changes, and none before the playing track's requests are over; and a style (D14) changing the prompt but not the contract after it.
 - **Phase 0.5 gate** (from the design) is a `:cli` run with assertions: zero `unknown` citations, uncited under 5 percent, every listed collision rejected or correctly resolved.
 
 How the CLI is made (#45), where the design leaves room:
