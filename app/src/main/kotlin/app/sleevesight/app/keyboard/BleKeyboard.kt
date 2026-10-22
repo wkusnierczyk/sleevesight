@@ -137,7 +137,10 @@ class BleKeyboard(
 
             else -> {
                 state(KeyboardState.STARTING)
-                current = Opening(manager, advertiser).also { it.open() }
+                // Current before it opens, so a failure while it opens ends it.
+                val opening = Opening(manager, advertiser)
+                current = opening
+                opening.open()
             }
         }
     }
@@ -164,12 +167,22 @@ class BleKeyboard(
         private val lock = Any()
 
         @Volatile private var closed = false
-        private var server: BluetoothGattServer? = null
+
+        // Set on the main thread; read from Bluetooth's, to answer writes.
+        @Volatile private var server: BluetoothGattServer? = null
 
         // The advertising started last; a result of one started before it is ignored. Whether one
         // has started at all, in this opening.
         private var advertising: AdvertiseCallback? = null
         private var advertised = false
+
+        // Tries advertising again after a failed restart, while the opening is open, nothing
+        // advertises since, and no computer is typing. One at a time: posting it again replaces it.
+        private val retry =
+            Runnable {
+                val idle = advertising == null && typing.isEmpty()
+                if (!closed && !stopped && idle) advertise()
+            }
 
         // Every device linked to the phone over LE, which the GATT server hears of whatever service
         // it came for (a watch, earbuds), and those of them that sent a message the session took.
@@ -201,6 +214,7 @@ class BleKeyboard(
                 closed = true
                 prepared.clear()
             }
+            main.removeCallbacks(retry)
             stopAdvertising()
             server?.let { s ->
                 connected.forEach { s.cancelConnection(it) }
@@ -238,6 +252,8 @@ class BleKeyboard(
                     .setIncludeTxPowerLevel(false)
                     .addServiceUuid(ParcelUuid(session.serviceUuid))
                     .build()
+            // One advertising at a time: the one before, if any, is stopped first.
+            stopAdvertising()
             val attempt = Advertising()
             advertising = attempt
             // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
@@ -277,7 +293,11 @@ class BleKeyboard(
                 if (!latest()) return
                 when (errorCode) {
                     ADVERTISE_FAILED_ALREADY_STARTED -> {}
-                    ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> fail(KeyboardState.UNSUPPORTED)
+                    // Once advertising has started in this opening, a restart's failure of any kind
+                    // is retried, as `failed` says.
+                    ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> {
+                        if (advertised) failed(bluetoothOff = false) else fail(KeyboardState.UNSUPPORTED)
+                    }
                     else -> failed(bluetoothOff = false)
                 }
             }
@@ -291,13 +311,12 @@ class BleKeyboard(
                 when {
                     bluetoothOff -> fail(KeyboardState.BLUETOOTH_OFF)
                     !advertised -> fail(KeyboardState.FAILED)
-                    else -> main.postDelayed({ if (retries()) advertise() }, ADVERTISE_RETRY_MS)
+                    else -> {
+                        main.removeCallbacks(retry)
+                        main.postDelayed(retry, ADVERTISE_RETRY_MS)
+                    }
                 }
             }
-
-            // Whether to try advertising again: the opening is open, nothing advertises since, and
-            // no computer is typing.
-            private fun retries() = !closed && !stopped && advertising == null && typing.isEmpty()
         }
 
         private val callbacks =
@@ -326,7 +345,6 @@ class BleKeyboard(
                         // A connection may end the advertising, and the device that came may not be
                         // the computer: it starts again at each change, so the computer can always
                         // find it.
-                        stopAdvertising()
                         advertise()
                     }
                 }
