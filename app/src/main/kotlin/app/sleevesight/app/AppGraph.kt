@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.database.SQLException
 import android.net.ConnectivityManager
 import android.util.Log
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -36,6 +37,7 @@ import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
+import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
@@ -96,7 +98,7 @@ class AppGraph(
     val firstRun = FirstRunAcknowledgement(appContext)
 
     /** The user's settings. DataStore allows one instance per file in a process, so only here. */
-    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE))
+    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)))
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))
@@ -337,13 +339,17 @@ class AppGraph(
         }
     }
 
-    /** A player's name as the phone knows it, else as the design knows it, else its package. */
+    /**
+     * A player's name as the phone knows it, else as the design knows it, else its package. A
+     * player with a launcher icon is visible to the app through the manifest's `<queries>` (#435).
+     */
     fun playerLabel(packageName: String): String {
         val pm = appContext.packageManager
         return try {
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (_: PackageManager.NameNotFoundException) {
-            // Not installed, or not visible to this app (package visibility, Android 11 and later).
+            // Not installed, or not visible to this app (package visibility, Android 11 and later):
+            // a player with no launcher icon.
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
@@ -362,13 +368,16 @@ class AppGraph(
          * A Preferences DataStore in the app's own files (`files/datastore/`), which the backup and
          * transfer rules exclude with everything else. A file DataStore cannot parse is replaced by
          * an empty one: the settings return to their defaults, the keys read as not set.
+         * [migrations] run before the first read, as DataStore runs them.
          */
         fun preferences(
             context: Context,
             name: String,
+            migrations: List<DataMigration<Preferences>> = emptyList(),
         ): DataStore<Preferences> =
             PreferenceDataStoreFactory.create(
                 corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+                migrations = migrations,
                 produceFile = { context.preferencesDataStoreFile(name) },
             )
     }

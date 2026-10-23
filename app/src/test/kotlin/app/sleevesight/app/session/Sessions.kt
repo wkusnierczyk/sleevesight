@@ -11,6 +11,8 @@ import android.media.session.PlaybackState
 internal object Sessions {
     const val SPOTIFY = "com.spotify.music"
     const val YOUTUBE_MUSIC = "com.google.android.apps.youtube.music"
+    const val VIDEO_APP = "com.example.video"
+    const val TELECOM = "com.android.server.telecom"
 
     @Suppress("LongParameterList") // One parameter per metadata key the tests set.
     fun metadata(
@@ -76,6 +78,7 @@ internal object Sessions {
 }
 
 /** A player's session whose changes the test makes, calling the registered callbacks as the system would. */
+@Suppress("LongParameterList") // One parameter per thing a session publishes.
 internal class FakeSession(
     override val player: String,
     override var metadata: MediaMetadata? = Sessions.metadata(),
@@ -83,6 +86,7 @@ internal class FakeSession(
     override var queue: List<MediaSession.QueueItem>? = null,
     override var queueTitle: CharSequence? = null,
     override var sessionActivity: android.app.PendingIntent? = null,
+    override var marksCall: Boolean = false,
 ) : PlayerSession {
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()

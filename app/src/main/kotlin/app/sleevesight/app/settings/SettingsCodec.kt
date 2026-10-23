@@ -199,11 +199,32 @@ internal object SettingsCodec {
      * is: a player is followed only on the user's choice. Not through [readSwitches]: the players
      * are package names, not an enum, and a player listed but switched off is a state a set of
      * switches turned on cannot hold.
+     *
+     * A phone call's package ([Settings.isCall]) is never read, whichever key holds it: an older
+     * version listed it like any player, and a file with it switched on must not follow it (#435).
      */
     private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
-        defaults.followedPlayers +
-            prefs[PLAYERS_ON].orEmpty().associateWith { true } +
-            prefs[PLAYERS_OFF].orEmpty().associateWith { false }
+        (
+            defaults.followedPlayers +
+                prefs[PLAYERS_ON].orEmpty().associateWith { true } +
+                prefs[PLAYERS_OFF].orEmpty().associateWith { false }
+        ).filterKeys { !Settings.isCall(it) }
+
+    /**
+     * Drops from *Players to follow* what an older version listed by the old rule, any app with a
+     * media session (#435): each player listed off that is not listed by default, so it is listed
+     * again only once it reports music ([SettingsStore.playerSeen]), and every phone call's package,
+     * whatever its switch. A player switched on stays, so the user's choice is not undone; one
+     * listed by default stays too, since dropping its `off` would switch it back on. Rewrites only
+     * the two players' keys.
+     */
+    fun prunePlayers(prefs: MutablePreferences) {
+        val listedByDefault = defaults.followedPlayers.keys
+        val on = prefs[PLAYERS_ON].orEmpty().filterNot(Settings::isCall).toSet()
+        val off = prefs[PLAYERS_OFF].orEmpty().filter { it in listedByDefault && !Settings.isCall(it) }.toSet()
+        prefs.put(PLAYERS_ON, on.ifEmpty { null }, null)
+        prefs.put(PLAYERS_OFF, off.ifEmpty { null }, null)
+    }
 
     /**
      * A set of switches as overrides of each switch's [default]: a switch the user has not moved

@@ -147,7 +147,7 @@ flowchart LR
 
 ### Session layer
 
-- `NotificationListenerService` plus `MediaSessionManager`. Follows only the players switched on under Settings, Players to follow; events from other packages are dropped and logged as ignored.
+- `NotificationListenerService` plus `MediaSessionManager`. Follows only the players switched on under Settings, Players to follow; events from other packages are dropped and logged as ignored. A player is listed there once its session has reported music, a title and an artist, so calls and most video apps never are; phone calls (the telecom and dialer packages, or a session whose audio is voice communication) are never read, whatever the settings say (#435).
 - **Debounce of 650 ms** on metadata changes. A person flicking through tracks produces a burst of changes; only the last one triggers lookups. In-flight retrieval and synthesis for a superseded track are cancelled.
 - Seeking or pausing changes playback state, not metadata, and never triggers a lookup.
 - Exposes transport controls and the session activity to the UI.
@@ -325,7 +325,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | AI service | Per provider: a switch, its API key and its model; the switches are exclusive, and each provider keeps its key and model while switched off (#227) | All off until one is switched on; the model defaults per provider, to its cheapest current model (Anthropic: Claude Haiku 5.5; OpenAI: GPT-6 Luna; Google: Gemini 3.5 Flash-Lite) |
 | AI service | Per provider, reasoning effort: how much the model may reason before it writes, from the provider's own scale, or the provider's default (Anthropic and OpenAI: low, medium, high; Google: minimal, low, medium, high) | Per provider (all three: low; an insight narrates a few lines and is waited for) |
 | Spotify account | Connect (OAuth PKCE, user's own client ID) | Off |
-| Players to follow | One switch per player seen | Spotify on |
+| Players to follow | One switch per player that has reported music (a title and an artist), by its name; never a phone call | Spotify on |
 | Where to look | MusicBrainz, Wikipedia, Last.fm, Discogs, Web search, Model's own knowledge | All on except model knowledge |
 | Where to look | Web search engines: a switch per engine, under Web search (Exa first; an engine joins with its adapter, D11, #84) | All on; each searches once its key is set |
 | Genre labels | Label sources: Last.fm, MusicBrainz; Discogs in Phase 3 (D12, [#84](https://github.com/wkusnierczyk/sleevesight/issues/84)) | Both on: MusicBrainz needs no key, and Last.fm gives labels once its key is set. A source gives labels only while it is on under *Where to look*. In the release, MusicBrainz is off by default unless [#100](https://github.com/wkusnierczyk/sleevesight/issues/100) is answered and its terms met |

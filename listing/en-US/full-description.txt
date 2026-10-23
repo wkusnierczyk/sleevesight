@@ -12,7 +12,7 @@ ON SCREEN
 • What each source found, rejected or could not verify.
 
 WORKS WITH YOUR PLAYER
-Spotify is followed by default, and any other player that publishes an Android media session can be switched on. Sleevesight reads the phone's media session, not Spotify's Web API, so it needs no Spotify developer app and no Spotify login, whichever Spotify plan you have.
+Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Phone calls are never read. Sleevesight reads the phone's media session, not Spotify's Web API, so it needs no Spotify developer app and no Spotify login, whichever Spotify plan you have.
 
 YOU CHOOSE
 • Which sources to use, each a switch. MusicBrainz and Wikipedia need no key; Last.fm and Exa need your own API key.

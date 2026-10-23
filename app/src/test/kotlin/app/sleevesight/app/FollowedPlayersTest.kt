@@ -62,12 +62,16 @@ class FollowedPlayersTest {
         store: SettingsStore = graph.settings,
     ) = runBlocking { store.update { it.copy(followedPlayers = it.followedPlayers + (player to on)) } }
 
-    /** A session of [player], playing "Sundown". */
+    /** A session of [player], playing "Sundown": music, with an artist, so the player is listed (#435). */
     private fun addSession(player: String): MediaController {
         val controller = MediaController(app, MediaSession(app, "test").sessionToken)
         shadowOf(controller).setPackageName(player)
         shadowOf(controller).setMetadata(
-            MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown").build(),
+            MediaMetadata
+                .Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Gordon Lightfoot")
+                .build(),
         )
         shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
         return controller

@@ -7,6 +7,8 @@ import android.media.session.PlaybackState
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.Sessions.SPOTIFY
+import app.sleevesight.app.session.Sessions.TELECOM
+import app.sleevesight.app.session.Sessions.VIDEO_APP
 import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.bitmap
 import app.sleevesight.app.session.Sessions.metadata
@@ -96,6 +98,95 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         assertEquals(1, ignoredLines().size)
         assertTrue(ignoredLines().single().msg.contains(YOUTUBE_MUSIC))
         assertEquals(setOf(YOUTUBE_MUSIC, SPOTIFY), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aPlayerIsSeenOnlyOnceItsSessionReportsMusic() {
+        // A video app: a title, no artist. Not seen; only a probe on its metadata.
+        val video = FakeSession(VIDEO_APP, metadata = metadata(title = "Episode 1", artist = null))
+        system.active = listOf(video)
+        repository.start()
+
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+        assertEquals(1, video.callbacks.size)
+
+        // Its state changes are not read; a track with an artist lists it, and the probe goes.
+        video.send(metadata(title = "Episode 2", artist = null))
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+        video.send(metadata(title = "Song", artist = "Singer"))
+        assertEquals(setOf(VIDEO_APP), repository.seenPlayers.value)
+        assertTrue(video.callbacks.isEmpty())
+        assertNull(repository.nowPlaying.value)
+    }
+
+    @Test
+    fun aProbeIsRemovedWhenItsSessionLeavesTheList() {
+        val video = FakeSession(VIDEO_APP, metadata = null)
+        system.active = listOf(video)
+        repository.start()
+        assertEquals(1, video.callbacks.size)
+
+        system.change(emptyList())
+        assertTrue(video.callbacks.isEmpty())
+
+        repository.stop()
+        assertTrue(video.callbacks.isEmpty())
+    }
+
+    @Test
+    fun aFollowedPlayerWithNoArtistIsNotSeen() {
+        val spotify = FakeSession(SPOTIFY, metadata = metadata(artist = null))
+        system.active = listOf(spotify)
+        repository.start()
+
+        assertEquals("Sundown", repository.nowPlaying.value?.title)
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+
+        spotify.settled(metadata())
+        assertEquals(setOf(SPOTIFY), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aPhoneCallIsNeverReadEvenWhenFollowed() {
+        // The caller as the title, and telecom switched on, as an older settings file may have it.
+        val call = FakeSession(TELECOM, metadata = metadata(title = "+44 20 7946 0000", artist = "Caller"))
+        followed.value = setOf(SPOTIFY, TELECOM)
+        system.active = listOf(call)
+
+        repository.start()
+
+        assertTrue(call.callbacks.isEmpty())
+        assertNull(repository.nowPlaying.value)
+        assertEquals(PlaybackInfo.NONE, repository.playback.value)
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aSessionThatMarksACallIsNeverRead() {
+        val voip =
+            FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Alice", artist = "Voice call"), marksCall = true)
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        system.active = listOf(voip)
+
+        repository.start()
+
+        assertTrue(voip.callbacks.isEmpty())
+        assertNull(repository.nowPlaying.value)
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aFollowedSessionThatTurnsIntoACallShowsNoTrack() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        assertEquals("Song", repository.nowPlaying.value?.title)
+
+        app.marksCall = true
+        app.settled(metadata(title = "Alice", artist = "Voice call"))
+
+        assertNull(repository.nowPlaying.value)
     }
 
     @Test

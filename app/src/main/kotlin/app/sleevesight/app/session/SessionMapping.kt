@@ -13,6 +13,7 @@ import kotlin.time.Duration.Companion.seconds
  * *Session layer*). Pure functions over the framework's value types, so the tests build the
  * inputs directly.
  */
+@Suppress("TooManyFunctions") // One mapping per thing a session publishes, and the tests of it.
 object SessionMapping {
     /**
      * The track [metadata] describes, or null when it names none: a session with no title (a Sonos
@@ -42,6 +43,14 @@ object SessionMapping {
             )
         }
     }
+
+    /**
+     * Whether [metadata] reports music: a title ([title]) and an artist (`ARTIST`), blank values
+     * absent; the album is not needed. What lists a player under *Players to follow* (#435): a
+     * call (a caller as its title, no artist) and most video apps never report it.
+     */
+    fun reportsMusic(metadata: MediaMetadata?): Boolean =
+        title(metadata) != null && metadata?.text(MediaMetadata.METADATA_KEY_ARTIST) != null
 
     /** The track's title as [nowPlaying] reads it. */
     fun title(metadata: MediaMetadata?): String? =

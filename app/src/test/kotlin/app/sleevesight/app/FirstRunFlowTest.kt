@@ -480,10 +480,21 @@ class FirstRunFlowTest {
         idleFor("no session read") { seenPlayers().isEmpty() }
     }
 
-    /** A media session of a player not followed, so starting the session layer reads only the list. */
+    /**
+     * A media session of a player not followed, so starting the session layer reads only the list,
+     * and the session's metadata to tell that it is music.
+     */
     private fun addSession(player: String) {
         val controller = MediaController(app, MediaSession(app, "test").sessionToken)
         shadowOf(controller).setPackageName(player)
+        // Music, a title and an artist, so the player is listed (#435).
+        shadowOf(controller).setMetadata(
+            MediaMetadata
+                .Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Gordon Lightfoot")
+                .build(),
+        )
         shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
     }
 

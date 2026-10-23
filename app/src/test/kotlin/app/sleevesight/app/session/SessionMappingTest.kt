@@ -25,6 +25,17 @@ import kotlin.time.Duration.Companion.seconds
 @Config(sdk = [36])
 class SessionMappingTest {
     @Test
+    fun musicIsATitleAndAnArtist() {
+        assertTrue(SessionMapping.reportsMusic(metadata()))
+        assertTrue(SessionMapping.reportsMusic(metadata(title = null, displayTitle = "Sundown")))
+        // A call (a caller as the title) or a video: no artist.
+        assertFalse(SessionMapping.reportsMusic(metadata(title = "+44 20 7946 0000", artist = null)))
+        assertFalse(SessionMapping.reportsMusic(metadata(artist = "  ")))
+        assertFalse(SessionMapping.reportsMusic(metadata(title = null)))
+        assertFalse(SessionMapping.reportsMusic(null))
+    }
+
+    @Test
     fun spotifysMetadataMapsToNowPlaying() {
         val metadata =
             metadata(

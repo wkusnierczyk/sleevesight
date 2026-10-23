@@ -42,8 +42,19 @@ import kotlin.time.Duration.Companion.seconds
  * **Players to follow** come from [followed], package names: in the app, the settings'
  * `SettingsStore.followedPlayers`, which `AppGraph` hands it (#126); with none given, `Settings`'
  * default (Spotify). Sessions of other players are dropped, and each newly seen one is logged as
- * ignored; no callback is registered on them. A player with several sessions is followed through
- * the first, the one the system ranks highest.
+ * ignored. A player with several sessions is followed through the first, the one the system ranks
+ * highest.
+ *
+ * **Phone calls are never read** (#435): a session whose package is a call's (`Settings.isCall`:
+ * telecom, the dialers) or that marks itself a call ([PlayerSession.marksCall]) is dropped whatever
+ * [followed] says, before anything of it is read, and is never one of the [seenPlayers]. A
+ * followed session that turns into a call shows no track while it is one.
+ *
+ * **Players seen** ([seenPlayers]), for *Players to follow*, are those whose session has reported
+ * music, a title and an artist ([SessionMapping.reportsMusic]): a followed player's from its own
+ * callback; another's from its session as listed, and until it has, from a callback that reads only
+ * its metadata, for that test, and is removed once the player has passed it or its session ends.
+ * Nothing else of an unfollowed player's session is read, and nothing of its metadata is kept.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
  * else the first followed session: the system lists the most recently active first.
@@ -145,7 +156,10 @@ class SessionRepository(
      */
     val art: StateFlow<Bitmap?> = artState.asStateFlow()
 
-    /** The players with an active session since the process started, followed or not: for *Players to follow*. */
+    /**
+     * The players whose session has reported music since the process started, followed or not;
+     * never a call: for *Players to follow* (#435).
+     */
     val seenPlayers: StateFlow<Set<String>> = seenState.asStateFlow()
 
     /**
@@ -160,6 +174,7 @@ class SessionRepository(
     private var followedPlayers: Set<String> = emptySet()
     private var ignored: Set<String> = emptySet()
     private val attached = LinkedHashMap<Any, Attached>()
+    private val probes = HashMap<Any, Probe>()
     private var artSources: List<ArtSource> = emptyList()
     private var artJob: Job? = null
     private var lastShown: Attached? = null
@@ -198,6 +213,8 @@ class SessionRepository(
         }
         attached.values.forEach { it.release() }
         attached.clear()
+        probes.values.forEach { it.release() }
+        probes.clear()
         ignored = emptySet()
         publish()
         // Not replayed to a collector after the next start; `publish` has cleared `lastShown`.
@@ -208,18 +225,86 @@ class SessionRepository(
     private fun onSessionsChanged(active: List<PlayerSession>) {
         // A list dispatched before the listener was removed may arrive after it.
         if (!listening) return
-        seenState.update { it + active.map(PlayerSession::player) }
-        val ignoredNow = active.map(PlayerSession::player).filterNot { it in followedPlayers }.toSet()
-        (ignoredNow - ignored).forEach { Log.i(TAG, "Ignored: the media session of $it, a player not followed") }
+        // A call is dropped before anything of it is read, whatever the settings say.
+        val readable = active.filterNot(::isCall)
+        val ignoredNow =
+            active
+                .filterNot { it in readable && it.player in followedPlayers }
+                .map(PlayerSession::player)
+                .toSet()
+        (ignoredNow - ignored).forEach {
+            Log.i(TAG, "Ignored: the media session of $it, a player not followed or a call")
+        }
         ignored = ignoredNow
+        watchForMusic(readable)
 
-        val wanted = active.filter { it.player in followedPlayers }.distinctBy(PlayerSession::player)
+        val wanted = readable.filter { it.player in followedPlayers }.distinctBy(PlayerSession::player)
         val keys = wanted.map(PlayerSession::key).toSet()
         attached.values.filter { it.session.key !in keys }.forEach { it.release() }
         val next = wanted.associateBy(PlayerSession::key) { attached[it.key] ?: Attached(it) }
         attached.clear()
         attached.putAll(next)
         publish()
+    }
+
+    /**
+     * Notes which players not followed report music ([seenPlayers]): from their sessions as listed,
+     * and, for those that have not yet, from a [Probe] on each session until one does. A followed
+     * player's own callback notes it ([Attached]).
+     */
+    private fun watchForMusic(readable: List<PlayerSession>) {
+        val others = readable.filter { it.player !in followedPlayers }
+        others.filter { SessionMapping.reportsMusic(it.metadata) }.forEach { markSeen(it.player) }
+        val unseen = others.filter { it.player !in seenState.value }
+        val keys = unseen.map(PlayerSession::key).toSet()
+        probes.values.filter { it.session.key !in keys }.forEach { it.release() }
+        probes.keys.retainAll(keys)
+        for (session in unseen) {
+            if (session.key in probes) continue
+            probes[session.key] = Probe(session)
+            // Registered before this read, so music reported in between reaches one or the other.
+            if (SessionMapping.reportsMusic(session.metadata)) markSeen(session.player)
+        }
+    }
+
+    /** Adds [player] to [seenPlayers], once, and removes the probes on its sessions. */
+    private fun markSeen(player: String) {
+        if (player in seenState.value) return
+        seenState.update { it + player }
+        val done = probes.filterValues { it.session.player == player }
+        done.values.forEach { it.release() }
+        probes.keys.removeAll(done.keys)
+    }
+
+    /**
+     * A session not followed that has not reported music yet: a callback that reads its metadata
+     * only to tell whether it is music ([SessionMapping.reportsMusic]), keeps nothing of it, and is
+     * removed once its player is seen ([markSeen]), its session leaves the list, or it ends.
+     */
+    private inner class Probe(
+        val session: PlayerSession,
+    ) {
+        private val callback =
+            object : MediaController.Callback() {
+                override fun onMetadataChanged(metadata: MediaMetadata?) {
+                    if (probes[session.key] !== this@Probe) return
+                    if (SessionMapping.reportsMusic(metadata)) markSeen(session.player)
+                }
+
+                override fun onSessionDestroyed() {
+                    if (probes[session.key] !== this@Probe) return
+                    release()
+                    probes.remove(session.key)
+                }
+            }
+
+        init {
+            session.register(callback)
+        }
+
+        fun release() {
+            session.unregister(callback)
+        }
     }
 
     /** Publishes the shown player's state; [settled] is the session whose settle triggered it, if one did. */
@@ -342,6 +427,7 @@ class SessionRepository(
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
                     ifAttached {
+                        if (SessionMapping.reportsMusic(metadata) && !session.marksCall) markSeen(session.player)
                         val title = SessionMapping.title(metadata)
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
                         beginReport(newTitle = title != null && title != previousTitle)
@@ -453,6 +539,7 @@ class SessionRepository(
             // The first track is settled at once: after process death the playing track is shown
             // without waiting.
             settle()
+            if (SessionMapping.reportsMusic(metadata)) markSeen(session.player)
         }
 
         fun release() {
@@ -543,7 +630,9 @@ class SessionRepository(
          */
         private fun settle() {
             val previous = track
-            val now = SessionMapping.nowPlaying(session.player, metadata, item(previous))
+            // A followed session that has turned into a call (a VoIP app) names no track while it is one.
+            val now =
+                if (session.marksCall) null else SessionMapping.nowPlaying(session.player, metadata, item(previous))
             track = now
             trackMetadata = metadata
             val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
@@ -626,5 +715,8 @@ class SessionRepository(
         val DEFAULT_FOLLOWED: Set<String> = Settings().followedPlayers.filterValues { it }.keys
 
         private const val TAG = "Sleevesight"
+
+        /** Whether [session] is a call: by its package (`Settings.isCall`) or by its own mark. */
+        private fun isCall(session: PlayerSession): Boolean = Settings.isCall(session.player) || session.marksCall
     }
 }

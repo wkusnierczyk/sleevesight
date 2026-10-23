@@ -1,5 +1,6 @@
 package app.sleevesight.app.session
 
+import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
@@ -26,10 +27,21 @@ class ListenerServiceTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val manager = app.getSystemService(MediaSessionManager::class.java)
 
-    /** A session of a player not followed, so attaching reads only the list of sessions. */
+    /**
+     * A session of a player not followed, so attaching reads only the list of sessions, and the
+     * session's metadata to tell that it is music.
+     */
     private fun addSession(player: String = OTHER_PLAYER): MediaController {
         val controller = MediaController(app, MediaSession(app, "test").sessionToken)
         shadowOf(controller).setPackageName(player)
+        // Music, a title and an artist, so the player is listed (#435).
+        shadowOf(controller).setMetadata(
+            MediaMetadata
+                .Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Gordon Lightfoot")
+                .build(),
+        )
         shadowOf(manager).addController(controller)
         return controller
     }

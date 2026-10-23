@@ -30,7 +30,8 @@ import kotlin.time.Duration.Companion.seconds
  * @property aiEfforts the reasoning effort each provider was set to, where null is the provider's
  *   own default (no effort sent); a provider not in it uses its scale's default ([EFFORT_SCALES]).
  *   Read [effort]; set with [withEffort].
- * @property followedPlayers one switch per player seen, by package name; see [follows].
+ * @property followedPlayers one switch per player whose session reported music, by package name;
+ *   never a phone call's ([isCall]). See [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
@@ -101,8 +102,11 @@ data class Settings(
         }
     }
 
-    /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
-    fun follows(player: String): Boolean = followedPlayers[player] ?: false
+    /**
+     * Whether events from [player] (a package name) are followed; a player not yet seen is not, and
+     * a phone call's ([isCall]) never is, whatever its switch.
+     */
+    fun follows(player: String): Boolean = !isCall(player) && followedPlayers[player] ?: false
 
     /** [provider]'s model: the one it was set to, or its default ([DEFAULT_MODELS]), or none. */
     fun model(provider: ProviderId): String? = aiModels[provider] ?: DEFAULT_MODELS[provider]
@@ -169,6 +173,29 @@ data class Settings(
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /**
+         * The packages whose media sessions are phone calls (#435): Android's telecom service, the
+         * telephony process, and the dialers and in-call screens of AOSP, Google and Samsung. A
+         * call's session may carry the caller's name or number as its title, which must never be
+         * looked up or sent to an AI service, so these are never listed, recorded or followed,
+         * whatever a settings file says. Not a setting: calls are not what the app is for. A call
+         * from another app (a VoIP app) is told by its session instead (the session layer's
+         * `PlayerSession.marksCall`).
+         */
+        val CALL_PACKAGES: Set<String> =
+            setOf(
+                "com.android.server.telecom",
+                "com.android.phone",
+                "com.android.dialer",
+                "com.android.incallui",
+                "com.google.android.dialer",
+                "com.samsung.android.dialer",
+                "com.samsung.android.incallui",
+            )
+
+        /** Whether [player] (a package name) is one whose sessions are phone calls: [CALL_PACKAGES]. */
+        fun isCall(player: String): Boolean = player in CALL_PACKAGES
 
         /**
          * Each provider's default model: its cheapest current text model. The key and its bill are
