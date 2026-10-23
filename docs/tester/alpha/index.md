@@ -7,6 +7,25 @@ title: Testing Sleevesight
 permalink: /docs/tester/alpha/
 ---
 
+<!-- The product page's type (`index.html`): Roboto Slab for the running text, Roboto Flex for the
+     headings, Roboto Mono for code, from the page's own cut-down copies (`assets/fonts/make_page_font.py`),
+     which hold printable ASCII, Latin-1 and the common punctuation, so this page's text needs no
+     rebuild while it stays within them. -->
+<style>
+@font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
+@font-face{font-family:"Sleevesight Slab";src:url({{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}) format("woff2");
+  font-weight:350 700;font-display:swap}
+@font-face{font-family:"Sleevesight Mono";src:url({{ '/assets/fonts/RobotoMono-page.woff2' | relative_url }}) format("woff2");
+  font-weight:500;font-display:swap}
+.markdown-body{font-family:"Sleevesight Slab",ui-serif,Georgia,serif;font-weight:350;font-size:18px;line-height:1.55}
+.markdown-body strong,.markdown-body b{font-weight:700}
+.markdown-body h1,.markdown-body h2,.markdown-body h3{font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:700;letter-spacing:-.01em}
+.markdown-body h1{font-stretch:90%}
+.markdown-body h2,.markdown-body h3{font-stretch:92%}
+.markdown-body code{font-family:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;font-weight:500}
+</style>
+
 # Testing Sleevesight
 
 Thank you for testing Sleevesight. This page says what the app is, how to install it, what to try, what to tell us, and what leaves your phone while you test.
