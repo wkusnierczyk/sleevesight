@@ -48,6 +48,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.StoreArtistResults
@@ -141,18 +142,33 @@ class AppGraph(
             .stateIn(mainScope, SharingStarted.Eagerly, lastIntro.value)
 
     /**
+     * *Keep what sources said about each artist* (#420), as last read (off until the first read),
+     * for the artist-level cache and the retrieval cache alike.
+     */
+    private val artistKeeping =
+        ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
+
+    /**
+     * What the sources give for an artist, in the caches' artist-level table (#238), only while
+     * [artistKeeping] is on. It opens the database only at its first query, a lookup's, after the
+     * first-run acknowledgement. What was kept, there and in the retrieval cache, is deleted whenever
+     * the switch reads off (`init`), at start too, so an install upgraded from a version that kept it
+     * unasked keeps nothing.
+     */
+    private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping)
+
+    /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
-     * What the sources give for an artist goes in the caches' artist-level table (#238), which
-     * opens the database only at its first query, a lookup's, after the first-run acknowledgement.
+     * What the sources give for an artist goes in the caches' artist-level table ([artistResults]).
      */
     private val wiring =
         appPipelineWiring(
             BuildConfig.VERSION_NAME,
             JvmAccentFolder,
             JvmResourceReader,
-            StoreArtistResults({ caches }, Dispatchers.IO),
+            artistResults,
         )
 
     /**
@@ -299,7 +315,11 @@ class AppGraph(
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
             parts =
-                AppPipelineParts(wiring, normalizer, sessionFacts) { StorePipelineCache(caches, Dispatchers.IO) },
+                AppPipelineParts(
+                    wiring,
+                    normalizer,
+                    sessionFacts,
+                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
@@ -341,6 +361,19 @@ class AppGraph(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // What was kept about artists is deleted whenever *Keep what sources said about each
+        // artist* reads off (#420): when it is turned off, and on start while it is off. The switch
+        // reads off before the clear starts, so a lookup in progress keeps nothing after it.
+        mainScope.launch {
+            latestSettings
+                .filterNotNull()
+                .map { it.keepArtistResults }
+                .distinctUntilChanged()
+                .collect { keeps ->
+                    // One that fails is tried again at the next lookup while the switch is off.
+                    if (!keeps && !artistKeeping.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                }
+        }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
         // settings are read only then); reads never return them either way.
         mainScope.launch {

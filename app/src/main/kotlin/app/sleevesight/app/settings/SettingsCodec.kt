@@ -51,6 +51,7 @@ internal object SettingsCodec {
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
+    private val KEEP_ARTIST_RESULTS = booleanPreferencesKey("cache.keep_artist_results")
     private val ARTIST_LIFETIME_MS = longPreferencesKey("cache.artist_lifetime_ms")
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
@@ -83,6 +84,7 @@ internal object SettingsCodec {
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
             cacheLifetimes = readLifetimes(prefs),
+            keepArtistResults = prefs[KEEP_ARTIST_RESULTS] ?: defaults.keepArtistResults,
             artistCacheLifetime =
                 prefs[ARTIST_LIFETIME_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.artistCacheLifetime,
             cacheSizeLimit = prefs[CACHE_SIZE_LIMIT]?.takeIf { it >= 0 } ?: defaults.cacheSizeLimit,
@@ -165,6 +167,9 @@ internal object SettingsCodec {
                 settings.cacheLifetimes[source]?.inWholeMilliseconds,
                 Settings.DEFAULT_CACHE_LIFETIMES[source]?.inWholeMilliseconds,
             )
+        }
+        if (moved { it.keepArtistResults }) {
+            prefs.put(KEEP_ARTIST_RESULTS, settings.keepArtistResults, defaults.keepArtistResults)
         }
         if (moved { it.artistCacheLifetime }) {
             prefs.put(

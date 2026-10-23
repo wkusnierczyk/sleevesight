@@ -1,5 +1,6 @@
 package app.sleevesight.store
 
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
@@ -212,7 +213,13 @@ class CachesTest {
         val tooLong = "x".repeat(fixture.settings.cacheSizeLimit.toInt())
         assertFalse(caches.synthesis.put(key("big"), tooLong))
         assertFalse(caches.artists.put(tooLong, ArtistResolution.None))
-        val big = SourceResult(Outcome.None, emptyList(), 1.milliseconds, rejections = listOf(Rejection(tooLong, "y")))
+        val big =
+            SourceResult(
+                Outcome.None,
+                emptyList(),
+                1.milliseconds,
+                rejections = listOf(Rejection(tooLong, "y", Scope.SONG)),
+            )
         assertFalse(caches.retrieval.put(SourceId.DISCOGS, "d|x", 1, big))
 
         assertEquals(before, caches.stats())

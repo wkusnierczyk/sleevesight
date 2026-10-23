@@ -70,6 +70,7 @@ class LastFmAdapterTest {
             val lookup = adapter().lookupArtists(fixtureTrack(1), resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT))
 
             assertEquals(Outcome.ArtistArticle, lookup.result.outcome)
+            assertFalse(lookup.result.trackOnly, "Last.fm's answers are about the artist (#420)")
             assertEquals(LastFmMatch.Verified, lookup.artists.single().match)
             assertTrue(lookup.result.unverified.isEmpty())
             val url = "https://www.last.fm/music/Gordon+Lightfoot"
@@ -159,7 +160,7 @@ class LastFmAdapterTest {
             val match = assertIs<LastFmMatch.Rejected>(lookup.artists.single().match)
             assertEquals("Last.fm corrected Jessiah to Jesaiah, and no MusicBrainz id confirms it", match.reason)
             assertEquals(Outcome.Rejected(match.reason), lookup.result.outcome)
-            assertEquals(listOf(Rejection("Jessiah", match.reason)), lookup.result.rejections)
+            assertEquals(listOf(Rejection("Jessiah", match.reason, Scope.ARTIST)), lookup.result.rejections)
             assertTrue(lookup.result.evidence.isEmpty())
             assertTrue(lookup.result.unverified.isEmpty())
             assertTrue(
@@ -557,7 +558,7 @@ class LastFmAdapterTest {
                 lookup.artists.map { it.match },
             )
             assertEquals(Outcome.ArtistArticle, lookup.result.outcome)
-            assertEquals(listOf(Rejection("Tony K", TONY_K_REASON)), lookup.result.rejections)
+            assertEquals(listOf(Rejection("Tony K", TONY_K_REASON, Scope.ARTIST)), lookup.result.rejections)
             assertEquals(
                 listOf("Last.fm counts 5,325 listeners for Peleboy.", "Last.fm lists artists similar to Peleboy"),
                 lookup.result.evidence.map { it.text.substringBefore(" by listening") },

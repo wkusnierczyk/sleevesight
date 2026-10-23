@@ -149,6 +149,18 @@ class SettingsScreenTest {
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
     @Test
+    fun keepingWhatSourcesSaidAboutArtistsIsOffUntilSwitchedOn() =
+        show {
+            val title = text(R.string.settings_keep_artists)
+            compose.onNodeWithText(title).performScrollTo().assertIsOff()
+            compose.onNodeWithText(text(R.string.settings_keep_artists_summary)).assertIsDisplayed()
+
+            compose.onNodeWithText(title).performClick()
+            waitFor("keeping artist results stored on") { current().keepArtistResults }
+            waitForNode(hasText(title) and isOn())
+        }
+
+    @Test
     fun aSwitchIsSavedAtOnce() =
         show {
             compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
