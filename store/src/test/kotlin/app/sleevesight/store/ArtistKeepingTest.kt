@@ -276,6 +276,60 @@ class ArtistKeepingTest {
             assertEquals(0, stats().retrieval.entries)
         }
 
+    /** A switch with a clear that counts its runs, failing while [failingClears] says so. */
+    private inner class CountedClears {
+        var keeps = false
+        var failingClears = true
+        var runs = 0
+        val keeping =
+            ArtistKeeping({ keeps }) {
+                runs++
+                if (failingClears) error("the database could not be written")
+            }
+    }
+
+    @Test
+    fun `retries queued behind one that succeeds do not clear again`() =
+        runBlocking {
+            val counted = CountedClears()
+            assertFalse(counted.keeping.clear())
+            counted.failingClears = false
+            val held = CompletableDeferred<Unit>()
+            // A write holds the lock (the switch reads on for it), while two reads queue retries.
+            counted.keeps = true
+            val writing = launch(start = CoroutineStart.UNDISPATCHED) { counted.keeping.ifOn { held.await() } }
+            counted.keeps = false
+            val first = launch(start = CoroutineStart.UNDISPATCHED) { counted.keeping.retryClear() }
+            val second = launch(start = CoroutineStart.UNDISPATCHED) { counted.keeping.retryClear() }
+
+            held.complete(Unit)
+            writing.join()
+            first.join()
+            second.join()
+
+            assertEquals(2, counted.runs, "the failed clear, and one retry")
+        }
+
+    @Test
+    fun `a retry waiting while the switch turns on does not clear`() =
+        runBlocking {
+            val counted = CountedClears()
+            assertFalse(counted.keeping.clear())
+            counted.failingClears = false
+            val held = CompletableDeferred<Unit>()
+            counted.keeps = true
+            val writing = launch(start = CoroutineStart.UNDISPATCHED) { counted.keeping.ifOn { held.await() } }
+            counted.keeps = false
+            val retry = launch(start = CoroutineStart.UNDISPATCHED) { counted.keeping.retryClear() }
+
+            counted.keeps = true
+            held.complete(Unit)
+            writing.join()
+            retry.join()
+
+            assertEquals(1, counted.runs, "only the failed clear")
+        }
+
     @Test
     fun `a track's result being kept when the switch turns off is cleared, never kept after the clear`() =
         runBlocking {
@@ -302,6 +356,7 @@ class ArtistKeepingTest {
                 RetrievalCodec.ARTIST_SCOPE_MARKER,
                 RetrievalCodec.GENRES_MARKER,
                 RetrievalCodec.LABEL_ARTISTS_MARKER,
+                RetrievalCodec.ARTIST_ARTICLE_MARKER,
             )
 
         for ((name, payload) in encoded) assertTrue(markers.any { it in payload }, name)
@@ -388,6 +443,9 @@ class ArtistKeepingTest {
                             labelArtists = listOf("mbid-gordon"),
                         ) to SourceId.MUSICBRAINZ
                     ),
+                // Wikidata accepted the artist's item, with no line to quote from it.
+                "artist found, no lines" to
+                    (SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO) to SourceId.WIKIPEDIA),
                 // The song article accepted, the artist article rejected.
                 "wikipedia mixed" to
                     (

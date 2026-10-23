@@ -89,6 +89,7 @@ class Caches(
                         RetrievalCodec.ARTIST_SCOPE_MARKER,
                         RetrievalCodec.GENRES_MARKER,
                         RetrievalCodec.LABEL_ARTISTS_MARKER,
+                        RetrievalCodec.ARTIST_ARTICLE_MARKER,
                     ).value
         }
 

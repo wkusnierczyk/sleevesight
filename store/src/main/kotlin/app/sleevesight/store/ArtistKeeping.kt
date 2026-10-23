@@ -41,27 +41,35 @@ class ArtistKeeping(
      * after it. Returns whether it did: false when the database failed, and then a read while the
      * switch is off tries again ([retryClear]). It does not throw, but for cancellation.
      */
-    suspend fun clear(): Boolean =
-        turns.withLock {
-            val cleared =
-                try {
-                    clearAll()
-                    true
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (
-                    // A database that failed; the next read while the switch is off tries again.
-                    @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
-                ) {
-                    false
-                }
-            uncleared = !cleared
-            cleared
-        }
+    suspend fun clear(): Boolean = turns.withLock { clearHeld() }
 
-    /** Clears again if the switch is off and the last clear failed; for the stores' reads. */
+    /**
+     * Clears again if the switch is off and the last clear failed; for the stores' reads. Both are
+     * checked before taking the lock, so a read costs nothing in the usual case, and again once it
+     * is held, so a retry that waited behind another, which succeeded, or behind the switch's
+     * turning on, does nothing.
+     */
     suspend fun retryClear() {
-        if (uncleared && !keeps()) clear()
+        if (!uncleared || keeps()) return
+        turns.withLock { if (uncleared && !keeps()) clearHeld() }
+    }
+
+    // The clear, with [turns] held.
+    private suspend fun clearHeld(): Boolean {
+        val cleared =
+            try {
+                clearAll()
+                true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (
+                // A database that failed; the next read while the switch is off tries again.
+                @Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception,
+            ) {
+                false
+            }
+        uncleared = !cleared
+        return cleared
     }
 
     companion object {

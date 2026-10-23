@@ -139,7 +139,7 @@
     <string name="settings_cache_wikidata">Wikidata</string>
     <string name="settings_cache_web">Web search</string>
     <string name="settings_keep_artists">Keep what sources said about each artist</string>
-    <string name="settings_keep_artists_summary">Off: nothing the sources say about an artist is kept, so each track’s artists are looked up again, and their names go to the sources you switch on with every track. A track played before is looked up again in full too, its MusicBrainz match included, so lookups are slower and more requests go out. On: what they say about each artist you play stays on this phone for as long as its sources’ findings, so fewer requests leave it; each track’s own lookups still send its artists’ names. Turning this off deletes what was kept.</string>
+    <string name="settings_keep_artists_summary">Off: nothing the sources say about an artist is kept, so each track’s artists are looked up again, and their names go to the sources you switch on with every track. A track played before is looked up again too, at every source whose answer says something about its artists (Last.fm, Wikipedia, and MusicBrainz whenever it resolves them), so lookups are slower and more requests go out. On: what they say about each artist you play stays on this phone for as long as its sources’ findings, so fewer requests leave it; each track’s own lookups still send its artists’ names. Turning this off deletes what was kept.</string>
     <string name="settings_section_history">History</string>
     <string name="settings_history_hint">The tracks Sleevesight has seen play, and the track changes it learns your skips from. Kept only on this phone.</string>
     <string name="settings_keep_history">Keep history for</string>

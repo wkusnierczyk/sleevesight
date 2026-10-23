@@ -169,7 +169,8 @@ retrievalDeleteAboutArtists:
 DELETE FROM retrieval
 WHERE instr(payload, :scopeMarker) > 0
    OR instr(payload, :genresMarker) > 0
-   OR instr(payload, :labelArtistsMarker) > 0;
+   OR instr(payload, :labelArtistsMarker) > 0
+   OR instr(payload, :artistArticleMarker) > 0;
 
 -- Artist resolution
 

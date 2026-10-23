@@ -36,18 +36,21 @@ internal object RetrievalCodec {
 
     /**
      * Text an encoded result holds only if it says something about an artist ([aboutArtists]): an
-     * artist-level line or rejection (both with the artist scope), genre labels (from artists'
-     * tags), or the artists' MusicBrainz ids. A string's own text cannot hold any of them, since its
-     * quotation marks are escaped, and an empty list is not encoded. For deleting such results in
+     * artist-level line or rejection (both with the artist scope), the artist-article outcome,
+     * genre labels (from artists' tags), or the artists' MusicBrainz ids. A string's own text
+     * cannot hold any of them, since its quotation marks are escaped, and an empty list is not
+     * encoded. For deleting such results in
      * the database (`retrievalDeleteAboutArtists`, #420) without decoding every one.
      */
     val ARTIST_SCOPE_MARKER: String = "\"scope\":\"${Scope.ARTIST.key}\""
     const val GENRES_MARKER: String = "\"genres\":["
     const val LABEL_ARTISTS_MARKER: String = "\"labelArtists\":["
+    const val ARTIST_ARTICLE_MARKER: String = "\"outcome\":\"artist_article\""
 
     /**
      * Whether [result] says something about an artist: an artist-level line ([Scope.ARTIST]), verified
-     * or not; a verdict on an artist's page; genre labels, which come from artists' tags; or the
+     * or not; a verdict on an artist's page, a rejection or an accepted artist article
+     * ([Outcome.ArtistArticle], with lines or without); genre labels, which come from artists' tags; or the
      * artists' MusicBrainz ids ([SourceResult.labelArtists]). Such a result is kept only while
      * *Keep what sources said about each artist* is on (#420), so while it is off MusicBrainz's
      * result, which names the artists it resolved, is not kept either.
@@ -56,7 +59,8 @@ internal object RetrievalCodec {
         (result.evidence + result.unverified).any { it.scope == Scope.ARTIST } ||
             result.rejections.any { it.scope == Scope.ARTIST } ||
             result.genres.isNotEmpty() ||
-            result.labelArtists.isNotEmpty()
+            result.labelArtists.isNotEmpty() ||
+            result.outcome == Outcome.ArtistArticle
 
     fun encode(result: SourceResult): String =
         json.encodeToString(
