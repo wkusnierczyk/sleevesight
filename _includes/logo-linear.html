@@ -1,7 +1,9 @@
 <!-- The linear logo, for a page with no menu: "Sleevesight" on one line in Roboto Flex regular,
      "sight" in the wordmark's red, with the record trailing, aligned as in the stacked mark
      (`index.html`, the header's 8b): from the top of the "h" to the foot of the "g", centred on them,
-     10 units of that mark (0.27 em) after the "t". In Roboto Flex's units (2048 to the em), "h" rises
+     10 units of that mark (0.275 em) after the "t" (.266 em of margin, after the "t"'s side bearing and
+     the trailing letter-spacing). In Roboto Flex's units (2048 to the em), at its default optical
+     size, 14, which the logo pins as the stacked mark's outlines do, "h" rises
      to 1536 and "g" falls to -436, so the record is 0.963 em across, its foot 0.213 em under the
      baseline. It heads the page and stays at the top as the page scrolls, at the same size (unlike
      the product page's header, it does not shrink); the headings keep clear of it when a link jumps
@@ -15,7 +17,7 @@
 .logo-linear{position:sticky;top:0;z-index:10;margin:0 0 24px;padding:12px 0;background:#fff;border-bottom:1px solid #eaecef}
 .markdown-body h1,.markdown-body h2,.markdown-body h3{scroll-margin-top:84px}
 .logo-linear a{display:inline-block;font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-weight:400;font-size:30px;line-height:1.2;letter-spacing:-.015em;color:#141a22;text-decoration:none}
+  font-weight:400;font-optical-sizing:none;font-size:30px;line-height:1.2;letter-spacing:-.015em;color:#141a22;text-decoration:none}
 .logo-linear .sight{color:#cc212d}
 .logo-linear svg{width:.963em;height:.963em;vertical-align:-.213em;margin-left:.266em}
 </style>
