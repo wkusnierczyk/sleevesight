@@ -5,7 +5,10 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -203,6 +206,7 @@ class ArtistResultCacheTest {
                         fixture.caches
                     },
                     coroutineContext,
+                    keeps = { true },
                 )
             assertEquals(0, opened, "the caches are asked for only at the first call")
 
@@ -215,9 +219,94 @@ class ArtistResultCacheTest {
     @Test
     fun `the adapters' view reads a failing database as a miss, and keeps nothing, without throwing`() =
         runBlocking {
-            val store = StoreArtistResults({ error("the database could not be opened") }, coroutineContext)
+            val store = StoreArtistResults({ error("the database could not be opened") }, coroutineContext) { true }
 
             store.keep(LASTFM, "a", "v")
+            assertNull(store.get(LASTFM, "a"))
+            assertFalse(store.clear(), "a clear that failed says so")
+        }
+
+    @Test
+    fun `the adapters' view reads and keeps nothing while keeping artists is off`() =
+        runBlocking {
+            results.put(LASTFM, "kept", "before")
+            var opened = 0
+            val store =
+                StoreArtistResults(
+                    {
+                        opened++
+                        fixture.caches
+                    },
+                    coroutineContext,
+                ) { false }
+
+            store.keep(LASTFM, "a", "v")
+            assertNull(store.get(LASTFM, "a"))
+            assertNull(store.get(LASTFM, "kept"), "what was kept before is not read either")
+            assertNull(results.get(LASTFM, "a"), "nothing was kept")
+            assertEquals(0, opened, "the database is not touched")
+        }
+
+    @Test
+    fun `the switch is read at each call`() =
+        runBlocking {
+            var keeps = false
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { keeps }
+
+            store.keep(LASTFM, "a", "off")
+            keeps = true
+            assertNull(store.get(LASTFM, "a"))
+            store.keep(LASTFM, "a", "on")
+            assertEquals("on", store.get(LASTFM, "a")?.value)
+            keeps = false
+            assertNull(store.get(LASTFM, "a"))
+        }
+
+    @Test
+    fun `clearing deletes every artist-level result and artist resolution, and nothing else`() =
+        runBlocking {
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { true }
+            store.keep(LASTFM, "a", "v")
+            store.keep(WIKIPEDIA, "b", "w")
+            fixture.caches.artists.put("a", ArtistResolution.Resolved("mbid-a"))
+            fixture.caches.retrieval.put(
+                SourceId.LASTFM,
+                "sundown",
+                1,
+                SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO),
+            )
+
+            assertTrue(store.clear())
+
+            val stats = fixture.caches.stats()
+            assertEquals(0, stats.artistResults.entries)
+            assertEquals(0, stats.artists.entries)
+            assertEquals(1, stats.retrieval.entries, "the track-level cache is not the artists'")
+            fixture.assertTotals()
+        }
+
+    @Test
+    fun `a value being kept when the switch turns off is cleared, never kept after the clear`() =
+        runBlocking {
+            var keeps = true
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { keeps }
+            // The switch turns off, and its clear is called, while a lookup's value is being written:
+            // the clear runs at once up to its first suspension, which is waiting for the write.
+            fixture.driver.before("INSERT INTO artist_result") {
+                keeps = false
+                launch(start = CoroutineStart.UNDISPATCHED) { store.clear() }
+            }
+
+            store.keep(LASTFM, "a", "v")
+            yield()
+
+            assertEquals(
+                0,
+                fixture.caches
+                    .stats()
+                    .artistResults.entries,
+            )
+            keeps = true
             assertNull(store.get(LASTFM, "a"))
         }
 

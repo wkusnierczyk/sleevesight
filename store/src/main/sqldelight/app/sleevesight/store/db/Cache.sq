@@ -189,6 +189,10 @@ DELETE FROM artist WHERE id = :id;
 artistPurge:
 DELETE FROM artist WHERE stored_at <= :storedAtOrBefore;
 
+-- Every artist resolution, when keeping what is said about artists is switched off (#420).
+artistDeleteAll:
+DELETE FROM artist;
+
 -- Artist-level results
 
 artistResultGet:
@@ -219,6 +223,10 @@ DELETE FROM artist_result WHERE instr(sources, ' ' || :tag || ' ') > 0 AND store
 -- Each row's sources, for purging the rows that hold a source the app no longer has.
 artistResultSources:
 SELECT id, stored_at, sources FROM artist_result;
+
+-- Every artist-level result, when keeping what is said about artists is switched off (#420).
+artistResultDeleteAll:
+DELETE FROM artist_result;
 
 -- Synthesis
 

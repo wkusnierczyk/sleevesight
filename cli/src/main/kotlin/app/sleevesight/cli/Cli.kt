@@ -102,9 +102,14 @@ class Cli(
         // The settings are read at each call, after they are made below.
         private val caches = driver?.let { Caches(it, { settings }, normalizer) }
 
-        // The artist cache (#238) in the run's cache, counted for the report; none without one.
+        // The artist cache (#238) in the run's cache, counted for the report; none without one. On
+        // whatever the app's default (#420): the run's cache is the developer's, and the report
+        // measures what the artist cache saves.
         private val artists =
-            CountedArtistResults(caches?.let { StoreArtistResults({ it }, Dispatchers.IO) } ?: ArtistResults.None)
+            CountedArtistResults(
+                caches?.let { StoreArtistResults({ it }, Dispatchers.IO) { settings.keepArtistResults } }
+                    ?: ArtistResults.None,
+            )
         private val wiring = pipelineWiringOn(net, JvmAccentFolder, JvmResourceReader, artists)
         private val ai: AiAccess? = aiAccess()
         private val sources: List<Pair<SourceStatus, SourceAdapter?>> = sources()
@@ -117,6 +122,7 @@ class Cli(
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
                 labelSources = setOf(LabelSource.LASTFM),
+                keepArtistResults = true,
             )
 
         fun run(): Int {

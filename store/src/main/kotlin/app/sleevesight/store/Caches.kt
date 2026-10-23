@@ -74,6 +74,16 @@ class Caches(
             deleted + enforceLimit()
         }
 
+    /**
+     * Deletes everything kept about artists: the artist-level results and the artist resolutions,
+     * for *Keep what sources said about each artist* switched off (#420). Returns how many entries
+     * it deleted.
+     */
+    fun clearArtists(): Long =
+        queries.transactionWithResult {
+            queries.artistResultDeleteAll().value + queries.artistDeleteAll().value
+        }
+
     // Rows holding a source tag the app no longer knows, as the adapter's source or among the
     // sources of its lines or consulted (or, for an artist-level result, depended on); a read
     // treats them as misses. Reads the small `sources` column of every row, once per purge.

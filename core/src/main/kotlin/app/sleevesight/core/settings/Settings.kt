@@ -45,8 +45,18 @@ import kotlin.time.Duration.Companion.seconds
  *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
+ * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
+ *   sources said about an artist (Last.fm's answers, the Wikipedia artist article and its Wikidata
+ *   facts, MusicBrainz's tags) is kept on the phone, per artist, for the next track by the artist.
+ *   Off by default, for new installs and for those upgraded from a version that kept it unasked:
+ *   what is kept per artist amounts to a list of the artists heard, which a user should choose to
+ *   keep. Off, nothing is kept per artist, each track's artists are looked up again, and what was
+ *   kept is deleted; on, each artist is looked up once and kept for its sources' lifetimes
+ *   ([cacheLifetimes]), so fewer requests leave the phone. It covers the artist resolutions kept
+ *   for [artistCacheLifetime] too.
  * @property artistCacheLifetime how long a credited artist's MusicBrainz id, or the finding that it
- *   has none or several, is kept (architecture, *Cache and history*: "long, months").
+ *   has none or several, is kept (architecture, *Cache and history*: "long, months"), while
+ *   [keepArtistResults] is on.
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
@@ -82,6 +92,7 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
+    val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,

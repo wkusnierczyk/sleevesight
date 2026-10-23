@@ -125,18 +125,27 @@ class AppGraph(
             .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
 
     /**
+     * What the sources give for an artist, in the caches' artist-level table (#238), only while
+     * *Keep what sources said about each artist* is on (#420), as last read (off until the first
+     * read). It opens the database only at its first query, a lookup's, after the first-run
+     * acknowledgement. What was kept is deleted whenever the switch reads off (`init`), at start
+     * too, so an install upgraded from a version that kept it unasked keeps nothing.
+     */
+    private val artistResults =
+        StoreArtistResults({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
+
+    /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
-     * What the sources give for an artist goes in the caches' artist-level table (#238), which
-     * opens the database only at its first query, a lookup's, after the first-run acknowledgement.
+     * What the sources give for an artist goes in the caches' artist-level table ([artistResults]).
      */
     private val wiring =
         appPipelineWiring(
             BuildConfig.VERSION_NAME,
             JvmAccentFolder,
             JvmResourceReader,
-            StoreArtistResults({ caches }, Dispatchers.IO),
+            artistResults,
         )
 
     /**
@@ -325,6 +334,18 @@ class AppGraph(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // What was kept about artists is deleted whenever *Keep what sources said about each
+        // artist* reads off (#420): when it is turned off, and on start while it is off. The switch
+        // reads off before the clear starts, so a lookup in progress keeps nothing after it.
+        mainScope.launch {
+            latestSettings
+                .filterNotNull()
+                .map { it.keepArtistResults }
+                .distinctUntilChanged()
+                .collect { keeps ->
+                    if (!keeps && !artistResults.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                }
+        }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
         // settings are read only then); reads never return them either way.
         mainScope.launch {
