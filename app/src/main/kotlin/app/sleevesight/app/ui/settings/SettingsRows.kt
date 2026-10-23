@@ -44,17 +44,24 @@ internal fun Hint(
     Text(stringResource(text), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
 }
 
-/** A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. */
+/**
+ * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
+ * sets its title in the theme's error colour, for a privacy choice (#420).
+ */
+@Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
 internal fun SwitchRow(
     title: String,
     summary: String?,
     checked: Boolean,
     indent: Boolean = false,
+    highlight: Boolean = false,
     onChange: ((Boolean) -> Unit)?,
 ) {
     val enabled = onChange != null
-    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else DISABLED_ALPHA)
+    val alpha = if (enabled) 1f else DISABLED_ALPHA
+    val color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+    val titleColor = if (highlight) MaterialTheme.colorScheme.error.copy(alpha = alpha) else color
     Row(
         modifier =
             Modifier
@@ -68,7 +75,7 @@ internal fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         }
         Spacer(Modifier.width(16.dp))
