@@ -11,12 +11,26 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * An artist-level evidence line ([Scope.ARTIST]) as the same fact on another track: its source and
  * text. Its id is a position among one track's lines (`W3` here may be `W2` on the next track), but
- * the artist-level cache (#238) gives every track by the artist the same lines, word for word.
+ * with the artist-level cache (#238) on, every track by the artist gets the same lines, word for
+ * word. With it off (#420, the default), each track's artist lines are fetched again, and a source
+ * normally gives the same text again, but may not to the character: an article's typography or
+ * spacing edited in between, say. So two facts are the same when their sources are and their texts
+ * match once folded ([matchKey]): case, spacing, quotation marks, apostrophes, dashes and a closing
+ * full stop do not tell them apart. A fact whose words changed is another fact, and may be told
+ * again.
  */
-data class ArtistFact(
+class ArtistFact(
     val source: SourceId,
     val text: String,
 ) {
+    private val key: String = matchKey(text)
+
+    override fun equals(other: Any?): Boolean = other is ArtistFact && source == other.source && key == other.key
+
+    override fun hashCode(): Int = (source to key).hashCode()
+
+    override fun toString(): String = "ArtistFact(source=$source, text=$text)"
+
     companion object {
         /** [line]'s fact. */
         fun of(line: EvidenceLine): ArtistFact = ArtistFact(line.source, line.text)
@@ -33,6 +47,44 @@ data class ArtistFact(
                     .toSet()
             return lines.filter { it.scope == Scope.ARTIST && it.id in cites }.map(::of).toSet()
         }
+
+        private val SPACES = Regex("\\s+")
+
+        /**
+         * [text] folded for matching: lowercased, typographic quotation marks, apostrophes and dashes
+         * as their plain forms, every run of white space (a no-break space too) as one space, and no
+         * space at either end, nor a full stop at the end.
+         */
+        internal fun matchKey(text: String): String =
+            text
+                .lowercase()
+                .map { FOLDED[it] ?: it }
+                .joinToString("")
+                .replace(SPACES, " ")
+                .trim()
+                .removeSuffix(".")
+                .trimEnd()
+
+        private val FOLDED: Map<Char, Char> =
+            mapOf(
+                '\u2018' to '\'',
+                '\u2019' to '\'',
+                '\u201B' to '\'',
+                '\u2032' to '\'',
+                '\u201C' to '"',
+                '\u201D' to '"',
+                '\u201E' to '"',
+                '\u2033' to '"',
+                '\u2010' to '-',
+                '\u2011' to '-',
+                '\u2012' to '-',
+                '\u2013' to '-',
+                '\u2014' to '-',
+                '\u2212' to '-',
+                '\u00A0' to ' ',
+                '\u202F' to ' ',
+                '\u2007' to ' ',
+            )
     }
 }
 
