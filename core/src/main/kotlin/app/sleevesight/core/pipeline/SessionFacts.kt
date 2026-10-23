@@ -48,11 +48,12 @@ class ArtistFact(
             return lines.filter { it.scope == Scope.ARTIST && it.id in cites }.map(::of).toSet()
         }
 
-        private val SPACES = Regex("\\s+")
+        // Java's `\s` is ASCII white space only; `\p{Zs}` adds every other space (thin, hair, no-break).
+        private val SPACES = Regex("[\\s\\p{Zs}]+")
 
         /**
          * [text] folded for matching: lowercased, typographic quotation marks, apostrophes and dashes
-         * as their plain forms, every run of white space (a no-break space too) as one space, and no
+         * as their plain forms, every run of white space (any Unicode space too) as one space, and no
          * space at either end, nor a full stop at the end.
          */
         internal fun matchKey(text: String): String =
@@ -81,9 +82,6 @@ class ArtistFact(
                 '\u2013' to '-',
                 '\u2014' to '-',
                 '\u2212' to '-',
-                '\u00A0' to ' ',
-                '\u202F' to ' ',
-                '\u2007' to ' ',
             )
     }
 }

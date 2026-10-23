@@ -92,6 +92,8 @@ class SessionFactsTest {
             ArtistFact(SourceId.WIKIPEDIA, " The band  formed in 1960. ").hashCode(),
         )
         assertEquals(label, ArtistFact(SourceId.WIKIDATA, "The band\u2019s label is Parlophone."))
+        // Thin, hair and narrow no-break spaces, as Wikipedia uses.
+        assertEquals(formed, ArtistFact(SourceId.WIKIPEDIA, "The band\u2009formed\u200Ain\u202F1960."))
         assertEquals(
             ArtistFact(SourceId.WIKIPEDIA, "Formed in 1960 \u2013 1961."),
             ArtistFact(SourceId.WIKIPEDIA, "Formed in 1960 - 1961."),
