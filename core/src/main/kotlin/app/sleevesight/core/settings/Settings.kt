@@ -85,6 +85,10 @@ import kotlin.time.Duration.Companion.seconds
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
+ * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
+ *   while it is not open (not a return to it), plays one of the logo's intros before showing its
+ *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
+ *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -110,6 +114,7 @@ data class Settings(
     val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
     val font: FontChoice = FontChoice.APP_FONT,
+    val introAtStart: Boolean = true,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }

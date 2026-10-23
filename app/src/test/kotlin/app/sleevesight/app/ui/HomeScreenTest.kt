@@ -25,6 +25,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.ui.logo.HEADER_LOGO_HEIGHT
+import app.sleevesight.app.ui.logo.LineBox
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -97,7 +99,7 @@ class HomeScreenTest {
         }
 
     @Test
-    fun theNameScrollsHomeToTheTop() =
+    fun theLogoScrollsHomeToTheTop() =
         show {
             scrollToTheEnd()
             compose
@@ -108,9 +110,9 @@ class HomeScreenTest {
         }
 
     @Test
-    fun theNameIsReadAsScrollToTopNotAsItsText() =
+    fun theLogoIsReadAsScrollToTopNotAsTheName() =
         show {
-            // TalkBack reads the label, not the name's text a second time.
+            // TalkBack reads the label, and no name a second time.
             compose.onNodeWithContentDescription(toTop).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.app_name)).assertDoesNotExist()
         }
@@ -157,12 +159,13 @@ class HomeScreenTest {
             }
         }
 
-    // A narrow phone at twice the font size: the name is wider than the row, and it gives way to
-    // the cogwheel, which keeps its whole target on screen. Native graphics, so the name's text
-    // has its real width (Robolectric's default graphics measure it far narrower).
+    // A very narrow screen at twice the font size: the logo (about 147 dp with its padding, in dp,
+    // not scaled with the font) and the cogwheel's 48 dp do not fit in 160 dp, so the logo's box
+    // gives way and the logo shrinks to fit (`linePlace`), and the cogwheel keeps its whole target
+    // on screen. Native graphics, as when the header held the name's text (#445).
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Config(qualifiers = "w240dp-h640dp", fontScale = 2f)
+    @Config(qualifiers = "w160dp-h640dp", fontScale = 2f)
     fun atALargeFontTheCogwheelKeepsItsTarget() =
         show {
             val min = with(compose.density) { 48.dp.toPx() }
@@ -172,8 +175,11 @@ class HomeScreenTest {
             assertTrue("$bounds", bounds.width >= min && bounds.height >= min)
             // Squeezed, the icon was drawn 28 dp wide and its target ran off the screen's edge.
             assertTrue("$bounds in $root", bounds.right <= root.right)
-            val name = compose.onNodeWithContentDescription(toTop).fetchSemanticsNode().boundsInRoot
-            assertTrue("$name before $bounds", name.right <= bounds.left)
+            val logo = compose.onNodeWithContentDescription(toTop).fetchSemanticsNode().boundsInRoot
+            assertTrue("$logo before $bounds", logo.right <= bounds.left)
+            // The logo's box gave way: narrower than the logo at full size with its padding.
+            val full = with(compose.density) { (HEADER_LOGO_HEIGHT * (LineBox.width / LineBox.height) + 16.dp).toPx() }
+            assertTrue("$logo shrunk from $full", logo.width < full)
         }
 
     private companion object {

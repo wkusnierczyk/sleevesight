@@ -12,6 +12,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
@@ -21,8 +22,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -79,7 +78,7 @@ class DeveloperSettingsTest {
 
             compose.onNodeWithText(text(R.string.settings_diagnostics)).performScrollTo().performClick()
             compose.waitUntil(5_000) { shown(R.string.settings_diagnostics_open) }
-            assertEquals(true, runBlocking { settings.settings.first() }.showDiagnostics)
+            assertEquals(true, settings.now().showDiagnostics)
 
             compose.onNodeWithText(text(R.string.settings_diagnostics_open)).performScrollTo().performClick()
             assertEquals(1, opened)
