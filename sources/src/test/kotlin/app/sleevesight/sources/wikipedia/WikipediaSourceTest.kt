@@ -268,6 +268,26 @@ class WikipediaSourceTest {
         }
 
     @Test
+    fun `a song article found for a track with no credited artist is about the track alone`() =
+        runTest {
+            val sundown = RegressionCase.RICH_DATA.tracks.single()
+            // The recorded track, its artists left out: as a player reporting no artist, with a
+            // resolution that names none.
+            val recorded = RecordedTracks.track(sundown)
+            val track = Normalizer(JvmAccentFolder).normalize(recorded.title, "")
+            val resolved = resolution(sundown).copy(artists = emptyList())
+            // The pages request without the artist's titles, answered from the recorded one.
+            val asked = NoArtistTitles(net, recorded.artists.single())
+
+            val result = adapter(net = asked).lookup(track, CompletableDeferred(resolved))
+
+            // The song's article, found; with no artist credited, it is the original's.
+            assertEquals(Outcome.OriginalSong, result.outcome)
+            assertTrue(result.evidence.isNotEmpty() && result.evidence.none { it.scope == Scope.ARTIST })
+            assertTrue(result.trackOnly, "no artist to look up (#420)")
+        }
+
+    @Test
     fun `nothing documented gives none`() =
         runTest {
             for (n in listOf(23, 30)) {
@@ -351,6 +371,27 @@ class WikipediaSourceTest {
             ),
             WikipediaSource.songTitles(RecordedTracks.track(48)),
         )
+    }
+
+    /**
+     * Answers a pages request asked without [artist]'s titles from the recorded one that has them
+     * ("Sundown (Gordon Lightfoot song)" before the song's titles, the artist's name after); the
+     * adapter reads only the titles it asked for.
+     */
+    private class NoArtistTitles(
+        private val replay: NetClient,
+        private val artist: String,
+    ) : NetClient {
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> {
+            val titles = request.query["titles"]
+            if (titles == null || artist in titles || '|' !in titles) return replay.send(request)
+            val title = titles.substringAfterLast('|')
+            val recorded = "$title ($artist song)|$titles|$artist"
+            val query = request.query + ("titles" to recorded)
+            return replay.send(NetRequest(request.url, request.method, query, request.headers, request.secrets))
+        }
+
+        override fun close() = Unit
     }
 
     /**
