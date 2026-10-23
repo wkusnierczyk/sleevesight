@@ -108,6 +108,40 @@ nav.top a:hover{color:var(--ink);text-decoration:underline}
 
 section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
+section p{max-width:44em}
+section h3{margin:40px 0 12px;font-size:22px;line-height:1.25;font-weight:600}
+code{font-family:var(--f-mono);font-weight:500;font-size:.86em}
+/* Fonts: a card for each face, its name set in itself; then the uses, as a table; then the
+   examples, each a stage with its caption under it. */
+.faces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:20px}
+.face{border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--surface);display:flex;flex-direction:column}
+.face .spec{margin:0;font-size:46px;line-height:1.1}
+.face .abc{margin:6px 0 14px;font-size:17px;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}
+.face h4{margin:0 0 8px;font-family:var(--f-ui);font-size:19px;font-weight:600}
+.face p{margin:0 0 10px;font-size:16.5px}
+.face .meta{margin:auto 0 0;padding-top:8px;font-size:15px;color:var(--muted)}
+.f-flex{font-family:var(--f-ui);font-weight:400}
+.f-slab{font-family:var(--f-text);font-weight:350}
+.f-mono{font-family:var(--f-mono);font-weight:500}
+table.uses{border-collapse:collapse;width:100%;font-size:16.5px}
+.uses th,.uses td{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line)}
+.uses th{font-family:var(--f-ui);font-weight:600;font-size:15px;color:var(--muted)}
+.uses td:first-child{white-space:nowrap}
+.samples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:20px 0 0}
+.samples figure{margin:0;display:flex;flex-direction:column}
+.stage{flex:1;display:flex;align-items:center;border:1px solid var(--line);border-radius:16px;padding:28px 24px;min-width:0;overflow:hidden}
+.samples figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+/* The linear logo, as on the tester brief (`_includes/logo-linear.html`): the stacked mark's type,
+   with the record trailing, aligned as in the stacked mark. */
+.linear{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-variation-settings:"opsz" 52.64;font-size:clamp(32px,8vw,48px);line-height:1.2;letter-spacing:-.015em;white-space:nowrap;color:var(--tile-ink)}
+.linear .sight{color:var(--sight)}
+.linear svg{width:.935em;height:.935em;vertical-align:-.211em;margin-left:.267em}
+.s-head{margin:0;font-family:var(--f-ui);font-size:clamp(30px,4.6vw,44px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em}
+.s-para{margin:0;font-size:18px}
+pre.s-code{margin:0;font-family:var(--f-mono);font-weight:500;font-size:14px;line-height:1.6;white-space:pre;overflow-x:auto}
+.stage.code{background:var(--sunken)}
+ol.refs{margin:0;padding-left:1.4em;font-size:15.5px;color:var(--muted)}
+ol.refs li{margin:0 0 4px}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
 footer p{margin:0 0 4px}
 
@@ -207,6 +241,7 @@ footer p{margin:0 0 4px}
 @media (max-width:560px){
   body{font-size:17px}
   section{padding:36px 0}
+  .faces,.samples{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 <script>
@@ -243,6 +278,7 @@ document.documentElement.classList.add('js');
   <nav class="top" aria-label="Site">
     <ul>
       <li><a href="#introduction">Introduction</a></li>
+      <li><a href="#fonts">Fonts</a></li>
     </ul>
   </nav>
 </div></div></header>
@@ -251,6 +287,95 @@ document.documentElement.classList.add('js');
 <main id="main">
 <section id="introduction" aria-labelledby="introduction-h">
   <h2 id="introduction-h">Introduction</h2>
+</section>
+
+<section id="fonts" aria-labelledby="fonts-h">
+  <h2 id="fonts-h">Fonts</h2>
+  <p>Sleevesight is set in Roboto: the logo, this site and the app all take their type from the one family.</p>
+
+  <h3>Roboto</h3>
+  <p>Roboto is Google's own typeface. Christian Robertson drew it at Google, and it first shipped in 2011, as the system font of Android 4.0, Ice Cream Sandwich, in place of Droid Sans, which had been made for the coarse screens of the first Android phones [1]. The first release had mixed reviews; one critic called it a "four-headed Frankenfont", its parents a Helvetica-like grotesque and a humanist sans like Frutiger or Myriad, with touches of Univers and DIN [2]. In 2014, for Android 5.0, Lollipop, and Google's new Material Design, it was redrawn: slightly wider and rounder, with round dots on the i and j in place of square ones, a straight leg on the R, and new Thin, Medium and Black weights [1]. It has been the type of Material Design, and of much of Google's own software, ever since.</p>
+  <p>Google describes it as having a "dual nature": a mechanical skeleton and largely geometric forms, but friendly, open curves, and letters left at their natural widths rather than forced into a rigid rhythm, which reads more like a humanist or serif type than most grotesques do [3]. It has grown into a superfamily: Roboto Condensed, Roboto Slab (2013), Roboto Mono (2015), and in 2022 Roboto Serif and Roboto Flex [1].</p>
+
+  <h3>The three faces</h3>
+  <p>The site uses three members of the family. What each is, and what it was made for:</p>
+  <div class="faces">
+    <div class="face">
+      <p class="spec f-flex">Flex</p>
+      <p class="abc f-flex">Aa Bb Gg Rr 0123</p>
+      <h4>Roboto Flex</h4>
+      <p>A variable Roboto, made for Google by Font Bureau and released in 2022 [4]. One file moves along thirteen axes: weight, width, slant, grade and optical size, and eight parametric ones (stroke thicknesses, counter width, and the heights of capitals, lowercase, ascenders, descenders and figures) [5].</p>
+      <p>Made so that one family can run from small interface text to large display type, the optical size reshaping each letter for the size it is set at.</p>
+      <p class="meta"><a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a> · <a href="https://github.com/google/fonts/tree/main/ofl/robotoflex">google/fonts</a></p>
+    </div>
+    <div class="face">
+      <p class="spec f-slab">Slab</p>
+      <p class="abc f-slab">Aa Bb Gg Rr 0123</p>
+      <h4>Roboto Slab</h4>
+      <p>Roboto with slab serifs: the same skeleton and proportions, with square serifs added. Released in 2013, it was Google Keep's font until 2018, and gained a variable weight axis in 2019 [1][6].</p>
+      <p>The serifs give text a firmer, more even line than the sans, for longer reading and for editorial headings.</p>
+      <p class="meta"><a href="../assets/fonts/LICENSE-RobotoSlab.txt">Apache License 2.0</a> · <a href="https://github.com/google/fonts/tree/main/apache/robotoslab">google/fonts</a></p>
+    </div>
+    <div class="face">
+      <p class="spec f-mono">Mono</p>
+      <p class="abc f-mono">{ } ( ) 0O 1lI</p>
+      <h4>Roboto Mono</h4>
+      <p>A monospaced Roboto, released in 2015 [1]. It changes forms where a fixed width needs it: the narrow I, l and i gain serifs, the round C and O take the straighter sides of Roboto Condensed [7].</p>
+      <p>Made for source code: 1, l and I, and 0 and O, are easy to tell apart, braces have sharper points than parentheses, and periods and commas are enlarged [7].</p>
+      <p class="meta"><a href="../assets/fonts/OFL-RobotoMono.txt">SIL Open Font License 1.1</a> · <a href="https://github.com/google/fonts/tree/main/ofl/robotomono">google/fonts</a></p>
+    </div>
+  </div>
+
+  <h3>Where they come from</h3>
+  <p>All three come from Google Fonts, taken as variable fonts from its own repository, <a href="https://github.com/google/fonts">github.com/google/fonts</a>. The pages do not link to Google Fonts: a script in this repository, <code>assets/fonts/make_page_font.py</code>, fixes each font's unused axes and cuts it down to the characters the pages use, and the copies it makes are served from this site with the pages. Nothing is fetched from Google, or from anywhere else, when a page loads, so a visit sends nothing to Google for its fonts.</p>
+  <p>The app carries its own Roboto, regular and medium, inside it, so it downloads nothing either. Its <em>Font</em> setting can switch to the phone's system font.</p>
+
+  <h3>How we use them</h3>
+  <table class="uses">
+    <thead><tr><th scope="col">Face</th><th scope="col">For</th><th scope="col">Set at</th></tr></thead>
+    <tbody>
+      <tr><td class="f-flex">Roboto Flex</td><td>Headings, labels, the menu; the words of the logo</td><td>400 to 700, width 88% to 100%; the logo's words at 400, width 88%, optical size 52.64, drawn as outlines, so they need no font</td></tr>
+      <tr><td class="f-slab">Roboto Slab</td><td>Running text</td><td>350, bold at 700</td></tr>
+      <tr><td class="f-mono">Roboto Mono</td><td>Code; the source chips on the product page</td><td>500</td></tr>
+      <tr><td>Roboto</td><td>The app</td><td>Regular and medium</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Examples</h3>
+  <div class="samples">
+    <figure>
+      <div class="stage"><span class="linear" role="img" aria-label="Sleevesight">Sleeve<span class="sight">sight</span><svg viewBox="0.5 0.5 15 15" aria-hidden="true"><use href="#lp" width="16" height="16"/></svg></span></div>
+      <figcaption>The linear logo: Roboto Flex 400, width 88%, optical size 52.64, tracking -1.5%; the record trailing.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><p class="s-head">Insights on what's playing</p></div>
+      <figcaption>A heading, the product page's title: Roboto Flex 700, width 90%, tracking -2%.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><p class="s-para">Sleevesight knows what your music player is playing and shows short, <strong>sourced</strong> insights about the artist, the song and the album, each with a link to where it came from.</p></div>
+      <figcaption>A paragraph: Roboto Slab 350 at 18 px, bold at 700.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage code"><pre class="s-code">@font-face {
+  font-family: "Sleevesight Slab";
+  src: url(RobotoSlab-page.woff2)
+       format("woff2");
+  font-weight: 350 700;
+}</pre></div>
+      <figcaption>A code block: Roboto Mono 500; the rule that loads this page's Slab.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Sources</h3>
+  <ol class="refs">
+    <li><a href="https://en.wikipedia.org/wiki/Roboto">Roboto</a>, Wikipedia.</li>
+    <li>Stephen Coles, <a href="https://typographica.org/on-typography/roboto-typeface-is-a-four-headed-frankenstein/">Roboto Is Was a Four-headed Frankenfont</a>, Typographica, 19 October 2011.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/ofl/roboto/DESCRIPTION.en_us.html">Roboto</a>, Google Fonts' description.</li>
+    <li><a href="https://m3.material.io/blog/roboto-flex">Roboto Flex now on Google Fonts</a>, Material Design blog, 5 May 2022.</li>
+    <li><a href="https://github.com/google/fonts/tree/main/ofl/robotoflex">Roboto Flex</a>, Google Fonts' repository: the font and its axes.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/apache/robotoslab/DESCRIPTION.en_us.html">Roboto Slab</a>, Google Fonts' description.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/ofl/robotomono/DESCRIPTION.en_us.html">Roboto Mono</a>, Google Fonts' description.</li>
+  </ol>
 </section>
 </main>
 
