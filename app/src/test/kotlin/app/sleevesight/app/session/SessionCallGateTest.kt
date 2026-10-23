@@ -104,13 +104,12 @@ internal class SessionCallGateTest(
             assertTrue(case, queues.none { it?.title == CALL_QUEUE })
         }
 
-        // The call is over: music reported after it, and a settle window after its first report,
-        // shows as usual.
+        // The call is over: a settle window after it is first handled so, the session is read
+        // afresh, and music shows as usual.
         app.marksCall = false
         system.change(listOf(app, spotify))
-        app.send(metadata(title = "Next"))
-        waitOutTheCall()
         app.send(metadata(title = "Fresh"))
+        waitOutTheCall()
         app.settled(state(PlaybackState.STATE_PLAYING, positionMs = 1_000))
         assertEquals(case, "Fresh", repository.nowPlaying.value?.title)
     }

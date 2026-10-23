@@ -68,8 +68,8 @@ internal abstract class SessionRepositoryFixture {
     protected fun settle() = scheduler.advanceUntilIdle()
 
     /**
-     * Lets [SessionRepository.SETTLE] pass in virtual time, whether or not anything waits for it: a
-     * session seen as a call is taken again only that long after its first report with the mark off.
+     * Lets [SessionRepository.SETTLE] pass in virtual time: a session seen as a call is read afresh
+     * that long after it is first handled with the mark off.
      */
     protected fun waitOutTheCall() {
         scheduler.advanceTimeBy(SessionRepository.SETTLE.inWholeMilliseconds)

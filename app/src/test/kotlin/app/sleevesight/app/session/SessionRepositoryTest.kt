@@ -190,16 +190,13 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.settled(metadata(title = "Alice", artist = "Voice call"))
         assertNull(repository.nowPlaying.value)
 
-        // Back to media: what the call left is not mapped, even when a state settles.
+        // Back to media: the session is ignored for a settle window, whatever it reports.
         app.call(false)
-        app.settled(state(PlaybackState.STATE_PAUSED))
+        app.send(metadata(title = "Next song"))
+        scheduler.runCurrent()
         assertNull(repository.nowPlaying.value)
-        // A report queued from the call's last moments, handled with the mark already off: not taken.
-        app.settled(metadata(title = "Alice", artist = "Voice call"))
-        assertNull(repository.nowPlaying.value)
-        // A metadata report a settle window later is taken, and the session again with it.
+        // Then it is read afresh, as any player.
         waitOutTheCall()
-        app.settled(metadata(title = "Next song"))
         assertEquals("Next song", repository.nowPlaying.value?.title)
         assertTrue(shown.none { it?.title == "Alice" })
     }
@@ -236,8 +233,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSessionSeenAsACallIsNotReadWhenAttachedAgain() {
-        // A calling app keeps its caller's details once the mark is gone.
+    fun aSessionInItsWaitAfterACallIsNotReadWhenAttachedAgain() {
         val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
         followed.value = setOf(YOUTUBE_MUSIC)
         system.active = listOf(app)
@@ -247,13 +243,37 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.marksCall = false
         val reads = app.reads
 
-        // Attached afresh, as when the players followed change.
+        // Attached afresh, as when the players followed change, within the wait.
         followed.value = emptySet()
         followed.value = setOf(YOUTUBE_MUSIC)
-        settle()
+        scheduler.runCurrent()
 
         assertEquals(reads, app.reads)
         assertNull(repository.nowPlaying.value)
+    }
+
+    @Test
+    fun aPlayerIsShownAtOnceWithItsStateAfterTheWait() {
+        // YouTube Music's order: the state before the metadata, both within the wait.
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        val spotify = FakeSession(SPOTIFY, playbackState = state(PlaybackState.STATE_PAUSED))
+        followed.value = setOf(YOUTUBE_MUSIC, SPOTIFY)
+        system.active = listOf(app, spotify)
+        repository.start()
+        app.call(true)
+        assertEquals(sundown, repository.nowPlaying.value)
+
+        app.call(false)
+        app.send(state(PlaybackState.STATE_PLAYING, positionMs = 2_000))
+        app.send(metadata(title = "After"))
+        scheduler.runCurrent()
+        assertEquals(sundown, repository.nowPlaying.value)
+
+        // No report after the wait: the session is read afresh, its state with it.
+        waitOutTheCall()
+        assertEquals("After", repository.nowPlaying.value?.title)
+        assertEquals(YOUTUBE_MUSIC, repository.playback.value.player)
+        assertEquals(PlaybackStatus.PLAYING, repository.playback.value.status)
     }
 
     @Test
@@ -273,10 +293,17 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         assertNull(repository.playerActivity())
         assertEquals(reads, app.reads)
         assertEquals(sundown, repository.nowPlaying.value)
+
+        // In the wait after the call, too.
+        app.call(false)
+        assertNull(repository.playerActivity())
+        assertEquals(reads, app.reads)
+        waitOutTheCall()
+        assertSame(screen, repository.playerActivity())
     }
 
     @Test
-    fun callerMetadataBeforeTheAudioChangeIsNeverShown() {
+    fun callerMetadataIsNotShownWhileMarkedNorDuringTheWait() {
         // The usage flips before the callback for it arrives: the metadata callback checks first.
         val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
         followed.value = setOf(YOUTUBE_MUSIC)
@@ -287,22 +314,31 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.marksCall = true
         app.settled(metadata(title = "Alice", artist = "Voice call"))
         app.marksCall = false
-        app.settled(state(PlaybackState.STATE_PLAYING, positionMs = 1_000))
+        app.send(state(PlaybackState.STATE_PLAYING, positionMs = 1_000))
+        scheduler.runCurrent()
 
         assertTrue(shown.none { it?.title == "Alice" })
         assertNull(repository.nowPlaying.value)
     }
 
     @Test
-    fun aProbeOnASessionThatTurnsIntoACallIsRemoved() {
+    fun anUnfollowedPlayerIsListedAfterACallEnds() {
         val video = FakeSession(VIDEO_APP, metadata = metadata(artist = null))
         system.active = listOf(video)
         repository.start()
-        assertEquals(1, video.callbacks.size)
 
         video.call(true)
-        assertTrue(video.callbacks.isEmpty())
+        video.send(metadata(title = "Song", artist = "Singer"))
         assertEquals(emptySet<String>(), repository.seenPlayers.value)
+
+        // Music within the wait is not taken; the session is checked afresh after it.
+        video.call(false)
+        video.send(metadata(title = "Song", artist = "Singer"))
+        scheduler.runCurrent()
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+        waitOutTheCall()
+        assertEquals(setOf(VIDEO_APP), repository.seenPlayers.value)
+        assertTrue(video.callbacks.isEmpty())
     }
 
     @Test
@@ -313,9 +349,10 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
 
         // The usage flips without its own callback first: the metadata callback checks it.
         video.marksCall = true
+        val reads = video.reads
         video.send(metadata(title = "Alice", artist = "Voice call"))
 
-        assertTrue(video.callbacks.isEmpty())
+        assertEquals(reads, video.reads)
         assertEquals(emptySet<String>(), repository.seenPlayers.value)
     }
 
@@ -328,7 +365,6 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         repository.start()
 
         assertEquals(0, caller.reads)
-        assertTrue(caller.callbacks.isEmpty())
         assertEquals(emptySet<String>(), repository.seenPlayers.value)
     }
 
