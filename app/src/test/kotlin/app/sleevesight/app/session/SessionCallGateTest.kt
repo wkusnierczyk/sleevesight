@@ -19,8 +19,10 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * A followed session that is, or becomes, a call (#435), through every way the session layer
  * learns of a session ([Entry]) and at each point of its reports' life ([Timing]): nothing of the
- * call is read once it is marked, nor published from it; another followed player that plays stays
- * shown; and music reported once the call is over shows as usual.
+ * call is published; another followed player that plays stays shown; and music reported once the
+ * call is over shows as usual. The session's getters are not read once it is marked
+ * (`FakeSession.reads`); that tells something only for [Entry.INITIAL], since the other entries
+ * hand their data to a callback as its arguments, which the published state checks instead.
  *
  * The mark is flipped silently, as Android 16 does for a change of usage within a local session,
  * except for [Entry.AUDIO_INFO], which flips it through the audio-info callback.
@@ -102,9 +104,12 @@ internal class SessionCallGateTest(
             assertTrue(case, queues.none { it?.title == CALL_QUEUE })
         }
 
-        // The call is over: music reported after it shows as usual.
+        // The call is over: music reported after it, and a settle window after its first report,
+        // shows as usual.
         app.marksCall = false
         system.change(listOf(app, spotify))
+        app.send(metadata(title = "Next"))
+        waitOutTheCall()
         app.send(metadata(title = "Fresh"))
         app.settled(state(PlaybackState.STATE_PLAYING, positionMs = 1_000))
         assertEquals(case, "Fresh", repository.nowPlaying.value?.title)

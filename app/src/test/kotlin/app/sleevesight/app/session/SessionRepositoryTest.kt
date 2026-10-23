@@ -194,9 +194,85 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         app.call(false)
         app.settled(state(PlaybackState.STATE_PAUSED))
         assertNull(repository.nowPlaying.value)
+        // A report queued from the call's last moments, handled with the mark already off: not taken.
+        app.settled(metadata(title = "Alice", artist = "Voice call"))
+        assertNull(repository.nowPlaying.value)
+        // A metadata report a settle window later is taken, and the session again with it.
+        waitOutTheCall()
         app.settled(metadata(title = "Next song"))
         assertEquals("Next song", repository.nowPlaying.value?.title)
         assertTrue(shown.none { it?.title == "Alice" })
+    }
+
+    @Test
+    fun theFirstReadsStopAtTheCall() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Alice", artist = "Voice call"))
+        // The mark comes as the metadata is read: the state, the queue and its title are never read.
+        app.onMetadataRead = { app.marksCall = true }
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+
+        repository.start()
+
+        assertEquals(1, app.reads)
+        assertNull(repository.nowPlaying.value)
+        assertEquals(PlaybackInfo.NONE, repository.playback.value)
+    }
+
+    @Test
+    fun aSessionClearedAsACallDoesNotHideAPausedPlayer() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        val spotify = FakeSession(SPOTIFY, playbackState = state(PlaybackState.STATE_PAUSED))
+        followed.value = setOf(YOUTUBE_MUSIC, SPOTIFY)
+        system.active = listOf(app, spotify)
+        repository.start()
+        assertEquals("Song", repository.nowPlaying.value?.title)
+
+        app.marksCall = true
+        app.send(state(PlaybackState.STATE_PLAYING, positionMs = 5_000))
+
+        assertEquals(sundown, repository.nowPlaying.value)
+        assertEquals(SPOTIFY, repository.playback.value.player)
+    }
+
+    @Test
+    fun aSessionSeenAsACallIsNotReadWhenAttachedAgain() {
+        // A calling app keeps its caller's details once the mark is gone.
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        app.marksCall = true
+        app.send(metadata(title = "Alice", artist = "Voice call"))
+        app.marksCall = false
+        val reads = app.reads
+
+        // Attached afresh, as when the players followed change.
+        followed.value = emptySet()
+        followed.value = setOf(YOUTUBE_MUSIC)
+        settle()
+
+        assertEquals(reads, app.reads)
+        assertNull(repository.nowPlaying.value)
+    }
+
+    @Test
+    fun thePlayersScreenOfACallIsNotRead() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val screen = PendingIntent.getActivity(context, 1, Intent(Intent.ACTION_MAIN), PendingIntent.FLAG_IMMUTABLE)
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"), sessionActivity = screen)
+        val spotify = FakeSession(SPOTIFY, playbackState = state(PlaybackState.STATE_PAUSED))
+        followed.value = setOf(YOUTUBE_MUSIC, SPOTIFY)
+        system.active = listOf(app, spotify)
+        repository.start()
+        assertSame(screen, repository.playerActivity())
+
+        app.marksCall = true
+        val reads = app.reads
+
+        assertNull(repository.playerActivity())
+        assertEquals(reads, app.reads)
+        assertEquals(sundown, repository.nowPlaying.value)
     }
 
     @Test

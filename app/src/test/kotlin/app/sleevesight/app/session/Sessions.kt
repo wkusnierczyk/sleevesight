@@ -102,11 +102,12 @@ internal class FakeSession(
         private set
 
     override var metadata: MediaMetadata? = metadata
-        get() =
-            field.also {
-                metadataReads++
-                reads++
-            }
+        get() {
+            metadataReads++
+            reads++
+            onMetadataRead()
+            return field
+        }
     override var playbackState: PlaybackState? = playbackState
         get() = field.also { reads++ }
     override var queue: List<MediaSession.QueueItem>? = queue
@@ -115,6 +116,9 @@ internal class FakeSession(
         get() = field.also { reads++ }
     override var sessionActivity: android.app.PendingIntent? = sessionActivity
         get() = field.also { reads++ }
+
+    /** Runs as [metadata] is read, before its value is returned: a change the player makes at that moment. */
+    var onMetadataRead: () -> Unit = {}
 
     /** Runs as a callback is registered: a change the player makes at that moment, before any is heard. */
     var onRegister: () -> Unit = {}
