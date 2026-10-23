@@ -15,7 +15,7 @@ Thank you for testing Sleevesight. This page says what the app is, how to instal
 
 An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation before showing it. The [product page](https://sleevesight.app/) shows what a card looks like.
 
-The app runs no server and has no accounts: nothing you play reaches its developer. That also means we learn nothing unless you tell us, which is why your reports matter.
+The app runs no server and has no accounts: nothing you play reaches its developer. That also means we learn little unless you tell us: Google Play gives us only install counts and, from phones that share usage and diagnostics with Google, crash reports that name no one. That is why your reports matter.
 
 ## Joining and installing
 
@@ -47,7 +47,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 - **Skip detection.** Under *When I skip*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Pause automatic writing after*); the card then asks for a tap.
 - **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is underlined. A line under the insight counts the sentences grounded.
-- **Diagnostics.** At the end of Settings, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file you choose; nothing of it leaves the phone otherwise.
+- **Diagnostics.** At the end of Settings, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise.
 
 ## What to tell us
 
@@ -61,7 +61,7 @@ Anything that surprises you. In particular:
 - **The app icon:** how it looks on your home screen, with your launcher and, on Android 13 or later, with themed icons on. A screenshot of the home screen helps.
 - **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/), one of several intros plays, picked at random (not on a reload, and not with *Reduce motion* on in your system settings); a click on the logo plays one again, picked afresh. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
 
-With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds the track changes and what the app did with them. It also lists every track change recorded on the phone, with the tracks' titles and times: the whole history kept (90 days by default), not only around then. So send it only if you are happy to.
+With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds what the app did, and every track change recorded on the phone, with the tracks' titles and times. That is the whole history kept (90 days by default), not only the tracks around your report, so send it only if you are happy to.
 
 Send reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
 
@@ -74,7 +74,7 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Your API keys** go only to the service each belongs to, with each request to it.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 
