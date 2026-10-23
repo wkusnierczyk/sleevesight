@@ -36,6 +36,7 @@ import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
+import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
@@ -123,6 +124,21 @@ class AppGraph(
             .distinctUntilChanged()
             .onEach { lastFont.value = it }
             .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
+
+    /** *Logo intro at start* as last read, for a new process's decision before its first frame. */
+    private val lastIntro = LastIntro(appContext)
+
+    /**
+     * *Logo intro at start* (#383): the stored choice, held for the process, and before the
+     * settings' first read in a new process, the one last read ([LastIntro]), which is what a cold
+     * start goes by, since it decides before its first frame.
+     */
+    val introAtStart: StateFlow<Boolean> =
+        settings.settings
+            .map { it.introAtStart }
+            .distinctUntilChanged()
+            .onEach { lastIntro.value = it }
+            .stateIn(mainScope, SharingStarted.Eagerly, lastIntro.value)
 
     /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and

@@ -1,15 +1,25 @@
 package app.sleevesight.app
 
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
+import app.sleevesight.app.ui.logo.LocalLogoIntro
+import app.sleevesight.app.ui.logo.LogoIntro
+import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.normalizer.Normalizer
@@ -43,30 +53,57 @@ class MainActivity : ComponentActivity() {
         // another app could send Navigation's explicit deep-link extras to open a destination
         // directly. They are dropped before the navigation graph reads the intent.
         DEEP_LINK_EXTRAS.forEach(intent::removeExtra)
+        val intro = if (playsIntro(savedInstanceState)) LogoIntro.random(animatorDurationScale()) else null
         setContent {
             SleevesightTheme(fonts = graph.font) {
-                SleevesightNavHost(
-                    notificationAccess = graph.notificationAccess,
-                    firstRun = graph.firstRun,
-                    openAccessSettings = ::openAccessSettings,
-                    settings = { links ->
-                        SettingsScreen(
-                            graph.settings,
-                            graph.secrets,
-                            graph.aiProviders,
-                            graph.historyRetention::clear,
-                            graph.settingsSaves,
-                            links.openCredits,
-                            links.openDiagnostics,
-                            playerLabel = graph::playerLabel,
+                CompositionLocalProvider(LocalLogoIntro provides intro) {
+                    Box(Modifier.fillMaxSize()) {
+                        SleevesightNavHost(
+                            notificationAccess = graph.notificationAccess,
+                            firstRun = graph.firstRun,
+                            openAccessSettings = ::openAccessSettings,
+                            settings = { links ->
+                                SettingsScreen(
+                                    graph.settings,
+                                    graph.secrets,
+                                    graph.aiProviders,
+                                    graph.historyRetention::clear,
+                                    graph.settingsSaves,
+                                    links.openCredits,
+                                    links.openDiagnostics,
+                                    playerLabel = graph::playerLabel,
+                                )
+                            },
+                            pipeline = { NowPlayingHome(homeFeed) },
+                            diagnostics = { DiagnosticsScreen(graph.diagnostics) },
                         )
-                    },
-                    pipeline = { NowPlayingHome(homeFeed) },
-                    diagnostics = { DiagnosticsScreen(graph.diagnostics) },
-                )
+                        intro?.let { LogoIntroOverlay(it) }
+                    }
+                }
             }
         }
     }
+
+    /**
+     * Whether this start plays the logo's intro (#383): the app opened from the launcher (or as the
+     * launcher opens it, as the store's Open does) while it was not running, so with no state to
+     * restore; not a return from the background, which brings back the running activity, nor a
+     * rotation or Android restoring a screen it closed, which have state to restore. Its process
+     * may have been running, for the notification listener, which keeps it for days: the intro
+     * goes by whether the app was open, not by the process. Only with *Logo intro at start* on (as
+     * last read, before the settings' first read), with the phone's animations on (*Remove
+     * animations* sets the scale to 0), and without touch exploration (TalkBack), for which the
+     * intro would be a silent wait.
+     */
+    private fun playsIntro(saved: Bundle?): Boolean {
+        val fromLauncher = intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER)
+        val exploring = getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+        return saved == null && fromLauncher && graph.introAtStart.value && animatorDurationScale() > 0f && !exploring
+    }
+
+    /** The phone's animator duration scale (developer options; 0 under *Remove animations*). */
+    private fun animatorDurationScale(): Float =
+        Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
 
     // The pipeline sends requests only while the app is visible, unless *Look up in the
     // background* is on (D6). Started and stopped, not resumed and paused: a dialog or the split
