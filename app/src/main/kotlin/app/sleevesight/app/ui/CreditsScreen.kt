@@ -98,8 +98,9 @@ internal val FONT_CREDIT: Credit =
     )
 
 /**
- * Material Symbols, Google's icons, whose outlines the app's icons are (the cogwheel, #445, and the
- * others in `res/drawable`), under the Apache License 2.0.
+ * Material Symbols, Google's icons, whose outlines the `ic_*` symbols in `res/drawable` other than
+ * the launcher's are (the cogwheel, #445, among them), under the Apache License 2.0; the licence's
+ * text is in the app too (`assets/licences/apache-2.0.txt`).
  */
 internal val ICON_CREDIT: Credit =
     Credit(

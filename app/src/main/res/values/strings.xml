@@ -292,7 +292,7 @@
     <string name="credits_exa">Exa</string>
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>
-    <string name="credits_material_symbols">Material Symbols</string>
-    <string name="credits_material_symbols_text">The app’s icons, from Material Symbols by Google.</string>
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
+    <string name="credits_material_symbols">Material Symbols</string>
+    <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>
 </resources>

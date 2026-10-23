@@ -588,6 +588,8 @@ GPL-3.0. Dependencies must be GPL-3.0 compatible (Apache-2.0, MIT, BSD are); the
 
 The bundled font, Roboto, is under the SIL Open Font License 1.1, which lets it be bundled with any software, a GPL program included, as long as each copy carries its copyright notice and licence: the licence's text ships in the app (`assets/licences/roboto-ofl.txt`), and the credits screen names the font, its copyright and its licence (#377).
 
+The icons (the `ic_*` symbols in `res/drawable` other than the launcher's, such as the cogwheel, #445) are Material Symbols outlines by Google, under the Apache License 2.0, which asks that each copy carry the licence: its text ships in the app (`assets/licences/apache-2.0.txt`), and the credits screen names the set and links the licence.
+
 The data sources carry their own terms, and every evidence line shows its source link:
 
 | Source | Licence of what is used |
