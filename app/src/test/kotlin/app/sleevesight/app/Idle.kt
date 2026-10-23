@@ -1,6 +1,11 @@
 package app.sleevesight.app
 
 import android.os.Looper
+import app.sleevesight.app.settings.SettingsStore
+import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.fail
 import org.robolectric.Shadows.shadowOf
 import java.time.Duration
@@ -52,3 +57,13 @@ fun idleFor(
         step()
     }
 }
+
+/** How long [now] waits for the settings. */
+private const val READ_LIMIT_MS = 5_000L
+
+/**
+ * The settings as this store reads them now, failing after [READ_LIMIT_MS] rather than waiting on
+ * a read that keeps failing: the store retries a failed read for ever, with a growing backoff, so
+ * an unbounded `first()` on the main thread could hang a test with no limit.
+ */
+fun SettingsStore.now(): Settings = runBlocking { withTimeout(READ_LIMIT_MS) { settings.first() } }

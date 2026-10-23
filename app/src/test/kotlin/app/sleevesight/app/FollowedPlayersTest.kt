@@ -52,8 +52,7 @@ class FollowedPlayersTest {
         stores.close()
     }
 
-    private fun storedPlayers(store: SettingsStore = graph.settings): Map<String, Boolean> =
-        runBlocking { store.settings.first().followedPlayers }
+    private fun storedPlayers(store: SettingsStore = graph.settings): Map<String, Boolean> = store.now().followedPlayers
 
     /** Sets [player]'s switch under *Players to follow*, as the settings screen does. */
     private fun follow(

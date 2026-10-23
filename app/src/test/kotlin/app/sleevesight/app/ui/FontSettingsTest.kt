@@ -21,6 +21,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
 import app.sleevesight.app.idleUntil
+import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.SettingsStore
@@ -126,13 +127,13 @@ class FontSettingsTest {
             compose.onNodeWithText(text(R.string.settings_font)).performScrollTo().performClick()
             compose.onNodeWithText(systemFont).performClick()
             compose.waitUntil(5_000) { shown(systemFont) && typography?.bodyLarge?.fontFamily != Roboto }
-            assertEquals(FontChoice.SYSTEM_FONT, runBlocking { settings.settings.first() }.font)
+            assertEquals(FontChoice.SYSTEM_FONT, settings.now().font)
             assertEquals(Typography(), typography)
 
             compose.onNodeWithText(text(R.string.settings_font)).performScrollTo().performClick()
             compose.onNodeWithText(appFont).performClick()
             compose.waitUntil(5_000) { typography?.bodyLarge?.fontFamily == Roboto }
-            assertEquals(FontChoice.APP_FONT, runBlocking { settings.settings.first() }.font)
+            assertEquals(FontChoice.APP_FONT, settings.now().font)
         }
     }
 

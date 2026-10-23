@@ -25,6 +25,8 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.ui.logo.HEADER_LOGO_HEIGHT
+import app.sleevesight.app.ui.logo.LineBox
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -175,6 +177,9 @@ class HomeScreenTest {
             assertTrue("$bounds in $root", bounds.right <= root.right)
             val logo = compose.onNodeWithContentDescription(toTop).fetchSemanticsNode().boundsInRoot
             assertTrue("$logo before $bounds", logo.right <= bounds.left)
+            // The logo's box gave way: narrower than the logo at full size with its padding.
+            val full = with(compose.density) { (HEADER_LOGO_HEIGHT * (LineBox.width / LineBox.height) + 16.dp).toPx() }
+            assertTrue("$logo shrunk from $full", logo.width < full)
         }
 
     private companion object {
