@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class StorePipelineCacheTest {
     private val fixture = CacheFixture()
-    private val cache = StorePipelineCache(fixture.caches, EmptyCoroutineContext)
+    private val cache = StorePipelineCache(fixture.caches, EmptyCoroutineContext, ArtistKeeping.ALWAYS)
     private val sundown = fixture.normalizer.normalize("Sundown", "Gordon Lightfoot")
     private val adapter =
         object : SourceAdapter {

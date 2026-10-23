@@ -376,7 +376,7 @@ class RetrievalCacheTest {
                 ) + wikidata,
             latency = 412.milliseconds + 7.nanoseconds,
             unverified = listOf(EvidenceDraft(source, Scope.ARTIST, "An unverified line.", null, at)),
-            rejections = listOf(Rejection("Sundown", "a disambiguation page")),
+            rejections = listOf(Rejection("Sundown", "a disambiguation page", Scope.SONG)),
             genres =
                 listOf(
                     GenreLabel(

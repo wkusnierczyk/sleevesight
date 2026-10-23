@@ -74,6 +74,7 @@ class SettingsCodecTest {
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
+                keepArtistResults = true,
                 artistCacheLifetime = 30.days,
                 cacheSizeLimit = 10_000_000,
                 historyLifetime = 7.days,
@@ -83,6 +84,27 @@ class SettingsCodecTest {
                 font = FontChoice.SYSTEM_FONT,
             )
         assertEquals(changed, roundTrip(changed))
+    }
+
+    @Test
+    fun keepingArtistResultsIsOffByDefaultAndForAnInstallFromBefore() {
+        assertEquals(false, Settings().keepArtistResults)
+        // As stored before the setting existed (#420), when the artist cache was kept unasked.
+        val before =
+            mutablePreferencesOf(
+                booleanPreferencesKey("lookups.background") to true,
+                longPreferencesKey("cache.artist_lifetime_ms") to 30.days.inWholeMilliseconds,
+            )
+        assertEquals(false, SettingsCodec.read(before).keepArtistResults)
+    }
+
+    @Test
+    fun keepingArtistResultsOnIsStored() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(keepArtistResults = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("cache.keep_artist_results") to true), prefs)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned off again, it is the default and has no key", prefs.asMap().isEmpty())
     }
 
     @Test

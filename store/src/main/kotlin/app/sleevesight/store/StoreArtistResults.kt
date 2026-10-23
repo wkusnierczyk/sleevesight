@@ -13,6 +13,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * [StorePipelineCache]. [caches] is asked for at the first call, not before: the app's wiring is
  * made at start, and its cache database opens only once the first run is acknowledged.
  *
+ * [keeping] is *Keep what sources said about each artist* (#420): while it is off, nothing is read
+ * or kept, so each track's artists are looked up again, and the adapters keep nothing in memory in
+ * its place either ([persists] stays true), since the switch is about what is kept of the artists
+ * heard. Its writes take turns with [ArtistKeeping.clear], and a read while the switch is off
+ * tries again a clear that failed ([ArtistKeeping.retryClear]).
+ *
  * It does not throw, as [ArtistResults] asks: a database that fails to open, read or write misses
  * and keeps nothing, so the adapter asks its source each time (with no cache, the adapters keep
  * some answers in memory instead; [persists] stays true here). Cancellation is rethrown.
@@ -20,18 +26,23 @@ import kotlin.coroutines.cancellation.CancellationException
 class StoreArtistResults(
     private val caches: () -> Caches,
     private val io: CoroutineContext,
+    private val keeping: ArtistKeeping,
 ) : ArtistResults {
     override suspend fun get(
         part: ArtistPart,
         key: String,
-    ): KeptPart? = failingAs(null) { caches().artistResults.get(part, key) }
+    ): KeptPart? {
+        if (keeping.on) return failingAs(null) { caches().artistResults.get(part, key) }
+        keeping.retryClear()
+        return null
+    }
 
     override suspend fun keep(
         part: ArtistPart,
         key: String,
         value: String,
     ) {
-        failingAs(false) { caches().artistResults.put(part, key, value) }
+        keeping.ifOn { failingAs(false) { caches().artistResults.put(part, key, value) } }
     }
 
     // [call] in [io], or [failed] when it throws anything but cancellation.
