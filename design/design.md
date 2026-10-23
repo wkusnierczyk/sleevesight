@@ -353,7 +353,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | History | Start a new session after a break of: 10, 20 or 30 minutes, 1 or 2 hours, counted from when the last track was heard | 30 minutes |
 | History | Clear history: the session history and the track changes, after a confirmation | |
 | Appearance | Font: the app's font (Roboto, bundled), or the system font, the one chosen in the phone's settings; the diagnostics screen's monospace text stays monospace ([#377](https://github.com/wkusnierczyk/sleevesight/issues/377)) | App font: the same type on every phone, in the family the logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the same faces; many phones' system font is not Roboto |
-| Appearance | Logo intro at start: whether the app, opened from the launcher while it is not open (not a return to it), plays a logo intro before its first screen ([#383](https://github.com/wkusnierczyk/sleevesight/issues/383)) | On: a few seconds, only when the app is opened while it is not open, skipped by a tap, Back or any key; never under *Remove animations* |
+| Appearance | Logo intro at start: whether the app, opened from the launcher while it is not open (not a return to it), plays a logo intro before its first screen ([#383](https://github.com/wkusnierczyk/sleevesight/issues/383)) | On: a few seconds, only when the app is opened while it is not open, skipped by a tap, Back or any key; never under *Remove animations* or TalkBack |
 | API keys | Remove all API keys, while any key is saved, after a confirmation; each key's row also has a button that removes that key, after a confirmation (#234) | |
 | Developer | Diagnostics: the way to the diagnostics screen (*Diagnostics* below) | Off |
 
