@@ -284,9 +284,15 @@ Prompt contracts are in the appendix.
 
 Material 3, with dynamic color taken from the album art (material-color-utilities from the art bitmap), and its text in Roboto, bundled with the app, unless the user chooses the system font (*Settings*, #377). The prototype is the reference for layout.
 
+### Logo and intro
+
+The header of the home screen carries the logo on one line (#383): "Sleeve" in ink and "sight" in the wordmark's red (`#cc212d` on light, `#f0443a` on dark), followed by the record, in the stacked mark's type (Roboto Flex regular, 88% wide), drawn from outlines (`assets/logo/src/make_app_logo.py`), so the app carries no Roboto Flex. The product page's stacked mark is too tall for an app bar.
+
+When the app is opened from the launcher with no screen to restore (not a return from the background, nor a rotation), it plays one of the product page's intros, picked at random: C, D, F, R1 or R2 (`index.html`, `.sl-intro`), on its timings, after Android's splash screen. Each ends on the stacked mark, which comes apart as it flies onto the header: "Sleeve", "sight" and the record each travel to their places on the one line while shrinking to it, and the screen arrives behind them (D's record turns in beside "sight" once its words have landed). On the first-run screen, which has no header logo, the mark fades where it is instead. A tap, Back or any key ends the intro at once (keys Android counts as system keys, `KeyEvent.isSystem`, such as volume and media keys, still do their own work too), and while it plays the screen beneath is hidden from accessibility services. It does not play under *Remove animations* (animator duration scale 0), with touch exploration on (TalkBack), or with *Logo intro at start* off; other animator duration scales stretch or shorten it. The process may have been running for the notification listener: what counts is whether the app was open.
+
 ### Home screen, top to bottom
 
-**Header** (#445). Pinned at the top; everything under it scrolls, with a thin divider under it once scrolled. At the left, the app's name (the one-line logo once it lands, #383): a tap scrolls Home back to the top, animated, or at once with the phone's animations off; a screen reader says "Sleevesight, scroll to top". At the right, the Material *settings* symbol, a cogwheel, opens the settings, with the content description and tooltip "Settings". Both are at least 48 dp targets. A menu icon, if one comes, goes beside the cogwheel.
+**Header** (#445). Pinned at the top; everything under it scrolls, with a thin divider under it once scrolled. At the left, the one-line logo (#383, *Logo and intro* above): a tap scrolls Home back to the top, animated, or at once with the phone's animations off; a screen reader says "Sleevesight, scroll to top". At the right, the Material *settings* symbol, a cogwheel, opens the settings, with the content description and tooltip "Settings". Both are at least 48 dp targets. A menu icon, if one comes, goes beside the cogwheel.
 
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
 2. **Album art**, which opens the album in the player. Playback progress under it.
@@ -347,6 +353,7 @@ Labelled by where they came from: "Played this session" by default, and "In this
 | History | Start a new session after a break of: 10, 20 or 30 minutes, 1 or 2 hours, counted from when the last track was heard | 30 minutes |
 | History | Clear history: the session history and the track changes, after a confirmation | |
 | Appearance | Font: the app's font (Roboto, bundled), or the system font, the one chosen in the phone's settings; the diagnostics screen's monospace text stays monospace ([#377](https://github.com/wkusnierczyk/sleevesight/issues/377)) | App font: the same type on every phone, in the family the logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the same faces; many phones' system font is not Roboto |
+| Appearance | Logo intro at start: whether the app, opened from the launcher while it is not open (not a return to it), plays a logo intro before its first screen ([#383](https://github.com/wkusnierczyk/sleevesight/issues/383)) | On: a few seconds, only when the app is opened while it is not open, skipped by a tap, Back or any key; never under *Remove animations* or TalkBack |
 | API keys | Remove all API keys, while any key is saved, after a confirmation; each key's row also has a button that removes that key, after a confirmation (#234) | |
 | Developer | Diagnostics: the way to the diagnostics screen (*Diagnostics* below) | Off |
 

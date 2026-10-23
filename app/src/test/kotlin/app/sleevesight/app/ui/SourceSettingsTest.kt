@@ -21,6 +21,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
@@ -36,7 +37,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -96,7 +96,7 @@ class SourceSettingsTest {
     }
 
     /** The stored settings; a step that reads the screen after them waits for it too. */
-    private fun current(): Settings = runBlocking { settings.settings.first() }
+    private fun current(): Settings = settings.now()
 
     /** Waits for [condition]; a timeout names [what]. */
     private fun waitFor(

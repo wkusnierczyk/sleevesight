@@ -59,6 +59,7 @@ internal object SettingsCodec {
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val FONT = stringPreferencesKey("display.font")
+    private val INTRO = booleanPreferencesKey("display.intro")
 
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
     private const val FOREVER = -1L
@@ -96,6 +97,7 @@ internal object SettingsCodec {
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             font = enumOf(prefs[FONT]) ?: defaults.font,
+            introAtStart = prefs[INTRO] ?: defaults.introAtStart,
         )
 
     /**
@@ -192,6 +194,7 @@ internal object SettingsCodec {
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
+        if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
     }
 
     /**

@@ -38,10 +38,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import kotlinx.coroutines.launch
 
@@ -85,10 +85,9 @@ fun HomeScreen(
 }
 
 /**
- * Home's header (#445), pinned above what scrolls: the app's name, which scrolls Home back to the
- * top, and the cogwheel, which opens the settings. A divider under it shows once Home has scrolled.
- * The name is where the header logo goes (#383), keeping its tap, its spoken label and its target;
- * a menu icon, if one comes, goes beside the cogwheel.
+ * Home's header (#445), pinned above what scrolls: the one-line logo ([HeaderLogo], #383), which
+ * scrolls Home back to the top, and the cogwheel, which opens the settings. A divider under it
+ * shows once Home has scrolled. A menu icon, if one comes, goes beside the cogwheel.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,25 +105,21 @@ private fun HomeHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Weighted, so the cogwheel is measured first and keeps its 48 dp at any font size; not
-            // filled, so the tap target is the name and not the row's empty middle.
+            // filled, so the tap target is the logo and not the row's empty middle.
             Box(
                 modifier =
                     Modifier
                         .weight(1f, fill = false)
                         .heightIn(min = 48.dp)
                         // One button: the click and its role from `clickable`, the spoken label in
-                        // place of the name's text.
+                        // place of the logo, which says nothing itself.
                         .clickable(role = Role.Button, onClick = onScrollToTop)
                         .clearAndSetSemantics { contentDescription = toTop }
                         .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(
-                    stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // The one-line logo (#383), in place of the name, which the label still says.
+                HeaderLogo()
             }
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
