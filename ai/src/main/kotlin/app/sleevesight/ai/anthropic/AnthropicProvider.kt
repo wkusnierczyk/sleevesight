@@ -245,7 +245,7 @@ internal fun kindOf(error: NetError): AiErrorKind =
 
 /** The kind of an error response that `:net` passes on as a response (400, 402, 404, 413 and the like). */
 internal fun kindOf(response: NetResponse): AiErrorKind =
-    decode<WireErrorBody>(response.body)?.error?.type?.let(::kindOfType)
+    decode<WireErrorBody>(response.body)?.error?.let(::kindOf)
         ?: when (response.status) {
             BAD_REQUEST -> AiErrorKind.INVALID_REQUEST
             PAYMENT_REQUIRED -> AiErrorKind.BILLING
@@ -254,10 +254,37 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
             else -> AiErrorKind.UNEXPECTED_RESPONSE
         }
 
+/**
+ * The kind of an error Anthropic names, or null for one this client does not know. A spend limit
+ * the user set on the organization or the workspace, once reached, comes as `400
+ * invalid_request_error`, the type of a malformed request, and only its message says which
+ * ([SPEND_LIMIT_MESSAGES]), so that one is [AiErrorKind.BILLING]: no retry mends it before the
+ * limit resets or is raised.
+ */
+internal fun kindOf(error: WireError): AiErrorKind? =
+    when {
+        error.type == INVALID_REQUEST_TYPE && SPEND_LIMIT_MESSAGES.any { error.message?.startsWith(it) == true } -> {
+            AiErrorKind.BILLING
+        }
+        else -> error.type?.let(::kindOfType)
+    }
+
+/**
+ * How the message of a reached spend limit begins, for the organization's and for a workspace's, as
+ * Anthropic's rate limits page gives them; the rest says when access resumes.
+ */
+private val SPEND_LIMIT_MESSAGES =
+    listOf(
+        "You have reached your specified API usage limits",
+        "You have reached your specified workspace API usage limits",
+    )
+
+private const val INVALID_REQUEST_TYPE = "invalid_request_error"
+
 /** The kind of an error Anthropic names by its `error.type`, or null for a type this client does not know. */
 internal fun kindOfType(type: String): AiErrorKind? =
     when (type) {
-        "invalid_request_error" -> AiErrorKind.INVALID_REQUEST
+        INVALID_REQUEST_TYPE -> AiErrorKind.INVALID_REQUEST
         "authentication_error", "permission_error" -> AiErrorKind.UNAUTHORIZED
         "billing_error" -> AiErrorKind.BILLING
         "not_found_error" -> AiErrorKind.MODEL_NOT_FOUND

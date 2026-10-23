@@ -281,6 +281,37 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `a spend limit reached is billing, though its type is that of a malformed request`() =
+        runTest {
+            // The bodies as Anthropic's rate limits page gives them: 400 invalid_request_error, the
+            // message naming the limit set on the organization, or on the workspace.
+            fun body(message: String) =
+                """{"type":"error","error":{"type":"invalid_request_error","message":"$message"},""" +
+                    """"request_id":"req_011CSHoEeqs5C35K2UUqR7Fy"}"""
+            val cases =
+                listOf(
+                    "You have reached your specified API usage limits. " +
+                        "You will regain access on 2026-11-01 at 00:00 UTC.",
+                    "You have reached your specified workspace API usage limits. " +
+                        "You will regain access on 2026-11-01 at 00:00 UTC.",
+                )
+            for (message in cases) {
+                assertEquals(
+                    listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)),
+                    events { ok(body(message), 400) }.first,
+                    message,
+                )
+            }
+            val malformed = body("max_tokens: Field required")
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.INVALID_REQUEST)),
+                events { ok(malformed, 400) }.first,
+            )
+            val limited = AnthropicProvider(ReplayNetClient { ok(body(cases[1]), 400) })
+            assertEquals(ModelList.Failed(AiErrorKind.BILLING), limited.models(key))
+        }
+
+    @Test
     fun `the connection lost after the message began leaves an incomplete reply`() =
         runTest {
             val net =

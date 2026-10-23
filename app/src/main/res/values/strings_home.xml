@@ -65,7 +65,7 @@
     <!-- Why an insight could not be written: the fixed labels the pipeline gives. -->
     <string name="home_failure_offline">no connection</string>
     <string name="home_failure_unauthorized">the AI service did not accept the key</string>
-    <string name="home_failure_billing">the AI service account needs credit</string>
+    <string name="home_failure_billing">the AI service account needs credit, or has reached its spending limit</string>
     <string name="home_failure_quota_exhausted">the AI service’s quota is used up for now; it resets later, or a higher tier lifts it</string>
     <string name="home_failure_unavailable_here">the AI service is not offered in your country</string>
     <string name="home_failure_rate_limited">too many requests just now</string>
