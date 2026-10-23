@@ -6,6 +6,8 @@ package app.sleevesight.sources.wikipedia
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.RecordingResolver
 import app.sleevesight.core.sources.ArtistResults
@@ -251,6 +253,18 @@ class WikipediaSourceTest {
                 },
                 "$texts",
             )
+        }
+
+    @Test
+    fun `a track with no credited artist is about the track alone`() =
+        runTest {
+            val track = Normalizer(JvmAccentFolder).normalize("Sundown", "")
+            // Every request fails: nothing about an artist can come of it either way.
+            val down = NoSongArticle(net, failing = { true })
+
+            val result = adapter(net = down).lookup(track, CompletableDeferred(Resolution.NONE))
+
+            assertTrue(result.trackOnly, "no artist to look up (#420)")
         }
 
     @Test

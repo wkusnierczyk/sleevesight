@@ -276,7 +276,7 @@ class ArtistResultCacheTest {
             store.keep(WIKIPEDIA, "b", "w")
             fixture.caches.artists.put("a", ArtistResolution.Resolved("mbid-a"))
             fixture.caches.retrieval.put(
-                SourceId.LASTFM,
+                SourceId.WEB,
                 "sundown",
                 1,
                 SourceResult(Outcome.None, emptyList(), Duration.ZERO, trackOnly = true),

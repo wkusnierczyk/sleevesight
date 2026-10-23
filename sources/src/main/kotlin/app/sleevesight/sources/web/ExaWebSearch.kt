@@ -25,6 +25,7 @@ import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
@@ -63,25 +64,19 @@ class ExaWebSearch(
         resolution: Deferred<Resolution>,
     ): SourceResult {
         val start = timeSource.markNow()
-        // Web pages about the song (`Scope.WEB`): nothing about the artists is kept from them (#420).
-        if (!filter.canCheck(
-                track,
-            )
-        ) {
-            return SourceResult(Outcome.None, emptyList(), start.elapsedNow(), trackOnly = true)
-        }
-        val result = net.fetch(request(track), ::parse)
+        if (!filter.canCheck(track)) return result(Outcome.None, emptyList(), start)
+        val fetched = net.fetch(request(track), ::parse)
         val retrievedAt = clock.now()
         val outcome: Outcome
         val evidence: List<EvidenceDraft>
-        when (result) {
+        when (fetched) {
             is NetResult.Failure -> {
                 outcome = Outcome.Unreachable
                 evidence = emptyList()
             }
 
             is NetResult.Success -> {
-                val response = result.value
+                val response = fetched.value
                 if (response == null) {
                     outcome = Outcome.Unreachable
                     evidence = emptyList()
@@ -96,8 +91,20 @@ class ExaWebSearch(
                 }
             }
         }
-        return SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true)
+        return result(outcome, evidence, start)
     }
+
+    /**
+     * Every result this adapter returns, marked as about the track ([SourceResult.trackOnly],
+     * #420): web pages about the recording, found by it, so they are kept with *Keep what sources
+     * said about each artist* off too, and a replay makes no paid search. A kept page's snippet may
+     * still name or describe the recording's artists, which the settings and the privacy policy say.
+     */
+    private fun result(
+        outcome: Outcome,
+        evidence: List<EvidenceDraft>,
+        start: TimeMark,
+    ): SourceResult = SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true)
 
     /** The search request for [track]: the key in a header, through [NetSecrets] only. */
     internal fun request(track: NormalizedTrack): NetRequest =
