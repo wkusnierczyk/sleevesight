@@ -147,7 +147,7 @@ flowchart LR
 
 ### Session layer
 
-- `NotificationListenerService` plus `MediaSessionManager`. Follows only the players switched on under Settings, Players to follow; events from other packages are dropped and logged as ignored. A player is listed there once its session has reported music, a title and an artist, so calls and most video apps never are; phone calls (the telecom and dialer packages, or a session whose audio is voice communication, checked again before each metadata or queue report and on each audio change) are never read, whatever the settings say (#435). A VoIP call in an ordinary media session is not recognised.
+- `NotificationListenerService` plus `MediaSessionManager`. Follows only the players switched on under Settings, Players to follow; events from other packages are dropped and logged as ignored. A player is listed there once its session has reported music, a title and an artist, so dialer calls and most video apps never are; phone calls (the telecom and dialer packages, or a session whose audio is voice communication, checked again before every read and report, and as reports settle) are never read, whatever the settings say (#435), from when Android marks them. A VoIP call in an ordinary media session is not recognised.
 - **Debounce of 650 ms** on metadata changes. A person flicking through tracks produces a burst of changes; only the last one triggers lookups. In-flight retrieval and synthesis for a superseded track are cancelled.
 - Seeking or pausing changes playback state, not metadata, and never triggers a lookup.
 - Exposes transport controls and the session activity to the UI.

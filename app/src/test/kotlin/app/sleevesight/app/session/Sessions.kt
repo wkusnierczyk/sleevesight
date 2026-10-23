@@ -84,10 +84,10 @@ internal object Sessions {
 internal class FakeSession(
     override val player: String,
     metadata: MediaMetadata? = Sessions.metadata(),
-    override var playbackState: PlaybackState? = Sessions.state(),
-    override var queue: List<MediaSession.QueueItem>? = null,
-    override var queueTitle: CharSequence? = null,
-    override var sessionActivity: android.app.PendingIntent? = null,
+    playbackState: PlaybackState? = Sessions.state(),
+    queue: List<MediaSession.QueueItem>? = null,
+    queueTitle: CharSequence? = null,
+    sessionActivity: android.app.PendingIntent? = null,
     override var marksCall: Boolean = false,
 ) : PlayerSession {
     override val key: Any = Any()
@@ -97,8 +97,24 @@ internal class FakeSession(
     var metadataReads = 0
         private set
 
+    /** How often the session layer has read anything the player reports: metadata, state, queue, its screen. */
+    var reads = 0
+        private set
+
     override var metadata: MediaMetadata? = metadata
-        get() = field.also { metadataReads++ }
+        get() =
+            field.also {
+                metadataReads++
+                reads++
+            }
+    override var playbackState: PlaybackState? = playbackState
+        get() = field.also { reads++ }
+    override var queue: List<MediaSession.QueueItem>? = queue
+        get() = field.also { reads++ }
+    override var queueTitle: CharSequence? = queueTitle
+        get() = field.also { reads++ }
+    override var sessionActivity: android.app.PendingIntent? = sessionActivity
+        get() = field.also { reads++ }
 
     /** Runs as a callback is registered: a change the player makes at that moment, before any is heard. */
     var onRegister: () -> Unit = {}
@@ -132,6 +148,16 @@ internal class FakeSession(
             it.onQueueChanged(items)
             it.onQueueTitleChanged(title)
         }
+    }
+
+    fun sendQueueItems(items: List<MediaSession.QueueItem>) {
+        queue = items
+        callbacks.toList().forEach { it.onQueueChanged(items) }
+    }
+
+    fun sendQueueTitle(title: String) {
+        queueTitle = title
+        callbacks.toList().forEach { it.onQueueTitleChanged(title) }
     }
 
     /** Turns the session into a call, or back ([marksCall]), as its audio attributes would. */

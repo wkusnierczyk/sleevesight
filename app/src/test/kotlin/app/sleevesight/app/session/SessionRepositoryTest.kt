@@ -244,6 +244,19 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
+    fun aSessionMarkedACallAsItsProbeRegistersIsNotRead() {
+        val caller = FakeSession(VIDEO_APP, metadata = metadata(title = "Alice", artist = "Voice call"))
+        caller.onRegister = { caller.marksCall = true }
+        system.active = listOf(caller)
+
+        repository.start()
+
+        assertEquals(0, caller.reads)
+        assertTrue(caller.callbacks.isEmpty())
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+    }
+
+    @Test
     fun aPlayerAlreadySeenHasNoMoreMetadataRead() {
         val other = FakeSession(VIDEO_APP)
         system.active = listOf(other)
