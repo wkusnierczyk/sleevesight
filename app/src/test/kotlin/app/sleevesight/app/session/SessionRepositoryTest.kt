@@ -329,7 +329,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
     }
 
     @Test
-    fun aSessionDestroyedDuringTheWaitIsNeverRead() {
+    fun aSessionDestroyedDuringTheWaitLeavesNoWait() {
         val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
         followed.value = setOf(YOUTUBE_MUSIC)
         system.active = listOf(app)
@@ -339,14 +339,18 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         val reads = app.reads
 
         app.destroy()
-        waitOutTheCall()
-
+        scheduler.runCurrent()
         assertEquals(reads, app.reads)
         assertNull(repository.nowPlaying.value)
+
+        // Its wait went with it: listed again within what was left of it, the same session is
+        // read at once, not after a wait.
+        system.change(listOf(app))
+        assertEquals("Song", repository.nowPlaying.value?.title)
     }
 
     @Test
-    fun aSessionLeavingTheListDuringTheWaitIsNeverRead() {
+    fun aSessionLeavingTheListDuringTheWaitLeavesNoWait() {
         val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
         followed.value = setOf(YOUTUBE_MUSIC)
         system.active = listOf(app)
@@ -356,10 +360,14 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         val reads = app.reads
 
         system.change(emptyList())
-        waitOutTheCall()
-
+        scheduler.runCurrent()
         assertEquals(reads, app.reads)
         assertNull(repository.nowPlaying.value)
+
+        // Its wait went with it: listed again within what was left of it, the same session is
+        // read at once, not after a wait.
+        system.change(listOf(app))
+        assertEquals("Song", repository.nowPlaying.value?.title)
     }
 
     @Test

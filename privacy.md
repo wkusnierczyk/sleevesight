@@ -9,7 +9,7 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 21 October 2026.
+Last updated: 23 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight). Near the end, it says where Sleevesight stands under the EU's data protection law, [the GDPR](#the-gdpr), and its law on artificial intelligence, [the AI Act](#the-eu-ai-act).
 
