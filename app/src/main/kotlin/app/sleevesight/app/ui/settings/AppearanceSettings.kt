@@ -7,8 +7,9 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
 
 /**
- * How the app looks: *Font* (#377), the app's own font, Roboto, or the phone's system font. A
- * change shows at once, in the whole app.
+ * How the app looks: *Font* (#377), the app's own font, Roboto, or the phone's system font, a
+ * change showing at once, in the whole app; and *Logo intro at start* (#383), from the next time
+ * the app is opened.
  */
 @Composable
 internal fun AppearanceSection(
@@ -33,4 +34,9 @@ internal fun AppearanceSection(
             },
         )
     }
+    SwitchRow(
+        title = stringResource(R.string.settings_intro),
+        summary = stringResource(R.string.settings_intro_summary),
+        checked = settings.introAtStart,
+    ) { on -> update { it.copy(introAtStart = on) } }
 }

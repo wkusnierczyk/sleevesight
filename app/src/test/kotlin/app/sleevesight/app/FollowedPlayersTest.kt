@@ -17,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -52,8 +51,7 @@ class FollowedPlayersTest {
         stores.close()
     }
 
-    private fun storedPlayers(store: SettingsStore = graph.settings): Map<String, Boolean> =
-        runBlocking { store.settings.first().followedPlayers }
+    private fun storedPlayers(store: SettingsStore = graph.settings): Map<String, Boolean> = store.now().followedPlayers
 
     /** Sets [player]'s switch under *Players to follow*, as the settings screen does. */
     private fun follow(
@@ -85,7 +83,7 @@ class FollowedPlayersTest {
 
         idleUntil("the player listed") { OTHER_PLAYER in storedPlayers() }
         assertEquals(mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to false), storedPlayers())
-        assertEquals(setOf(Settings.SPOTIFY), runBlocking { graph.settings.followedPlayers.first() })
+        assertEquals(setOf(Settings.SPOTIFY), graph.settings.followedPlayers.now())
         idleFor("no track shown, no callback registered") {
             shown.all { it == null } && shadowOf(controller).callbacks.isEmpty()
         }

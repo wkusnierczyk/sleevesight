@@ -81,6 +81,7 @@ class SettingsCodecTest {
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
                 font = FontChoice.SYSTEM_FONT,
+                introAtStart = false,
             )
         assertEquals(changed, roundTrip(changed))
     }
@@ -124,6 +125,20 @@ class SettingsCodecTest {
     fun aFontThisVersionDoesNotKnowReadsAsTheAppFont() {
         val prefs = mutablePreferencesOf(stringPreferencesKey("display.font") to "SERIF")
         assertEquals(FontChoice.APP_FONT, SettingsCodec.read(prefs).font)
+    }
+
+    @Test
+    fun aSettingsFileWithoutTheIntroPlaysIt() {
+        // As stored before the setting existed (#383): other settings, and no intro.
+        val prefs = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertTrue(SettingsCodec.read(prefs).introAtStart)
+    }
+
+    @Test
+    fun theIntroSwitchedOffIsStoredUnderItsKey() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(introAtStart = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false), prefs)
     }
 
     @Test
