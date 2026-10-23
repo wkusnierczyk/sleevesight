@@ -163,14 +163,10 @@ SELECT id, stored_at, sources FROM retrieval;
 retrievalPurgeFormat:
 DELETE FROM retrieval WHERE format <> :format;
 
--- The results that say something about an artist, when keeping that is switched off (#420): those
--- whose payload holds one of the markers `RetrievalCodec` names.
+-- Every result not known to be about the track alone, when keeping what is said about artists is
+-- switched off (#420): those whose payload lacks `RetrievalCodec.TRACK_ONLY_MARKER`.
 retrievalDeleteAboutArtists:
-DELETE FROM retrieval
-WHERE instr(payload, :scopeMarker) > 0
-   OR instr(payload, :genresMarker) > 0
-   OR instr(payload, :labelArtistsMarker) > 0
-   OR instr(payload, :artistArticleMarker) > 0;
+DELETE FROM retrieval WHERE instr(payload, :trackOnlyMarker) = 0;
 
 -- Artist resolution
 

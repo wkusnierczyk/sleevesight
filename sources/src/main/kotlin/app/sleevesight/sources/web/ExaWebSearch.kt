@@ -63,7 +63,13 @@ class ExaWebSearch(
         resolution: Deferred<Resolution>,
     ): SourceResult {
         val start = timeSource.markNow()
-        if (!filter.canCheck(track)) return SourceResult(Outcome.None, emptyList(), start.elapsedNow())
+        // Web pages about the song (`Scope.WEB`): nothing about the artists is kept from them (#420).
+        if (!filter.canCheck(
+                track,
+            )
+        ) {
+            return SourceResult(Outcome.None, emptyList(), start.elapsedNow(), trackOnly = true)
+        }
         val result = net.fetch(request(track), ::parse)
         val retrievedAt = clock.now()
         val outcome: Outcome
@@ -90,7 +96,7 @@ class ExaWebSearch(
                 }
             }
         }
-        return SourceResult(outcome, evidence, start.elapsedNow())
+        return SourceResult(outcome, evidence, start.elapsedNow(), trackOnly = true)
     }
 
     /** The search request for [track]: the key in a header, through [NetSecrets] only. */

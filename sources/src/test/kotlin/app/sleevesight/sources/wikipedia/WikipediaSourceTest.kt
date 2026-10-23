@@ -132,6 +132,7 @@ class WikipediaSourceTest {
         runTest {
             val result = lookup(RegressionCase.RICH_DATA.tracks.single())
             assertEquals(Outcome.SongArticle, result.outcome)
+            assertFalse(result.trackOnly, "the artist article was looked up (#420)")
             val song = result.evidence.filter { it.source == SourceId.WIKIPEDIA && it.scope == Scope.SONG }
             assertEquals(
                 "\"Sundown\" is a song by Canadian folk artist Gordon Lightfoot, from the titular album, " +
@@ -255,7 +256,11 @@ class WikipediaSourceTest {
     @Test
     fun `nothing documented gives none`() =
         runTest {
-            for (n in listOf(23, 30)) assertEquals(Outcome.None, lookup(n).outcome, "track $n")
+            for (n in listOf(23, 30)) {
+                val result = lookup(n)
+                assertEquals(Outcome.None, result.outcome, "track $n")
+                assertFalse(result.trackOnly, "no artist article is a finding about the artist too (#420)")
+            }
         }
 
     @Test

@@ -156,7 +156,7 @@ class ArtistKeepingTest {
         }
 
     @Test
-    fun `off, a result with nothing about an artist is kept as before, a song's rejection too`() =
+    fun `off, a result marked as about the track alone is kept as before, a song rejection too`() =
         runBlocking {
             for (result in listOf(SONG, SONG_REJECTED)) {
                 val adapter = FixedSource(SourceId.WIKIPEDIA, result)
@@ -217,7 +217,7 @@ class ArtistKeepingTest {
 
             keeps = true
             assertEquals(2, stats().retrieval.entries)
-            assertEquals(SONG, pipeline.result(song, sundown, null), "a line quoting the markers is not one")
+            assertEquals(SONG, pipeline.result(song, sundown, null))
             assertEquals(SONG_REJECTED, pipeline.result(rejected, carefree, null))
             assertEquals(0, stats().artistResults.entries)
             fixture.assertTotals()
@@ -349,23 +349,21 @@ class ArtistKeepingTest {
         }
 
     @Test
-    fun `the markers are what an encoded result about an artist holds, and nothing else's`() {
-        val encoded = ABOUT_ARTISTS.mapValues { RetrievalCodec.encode(it.value.first) }
-        val markers =
-            listOf(
-                RetrievalCodec.ARTIST_SCOPE_MARKER,
-                RetrievalCodec.GENRES_MARKER,
-                RetrievalCodec.LABEL_ARTISTS_MARKER,
-                RetrievalCodec.ARTIST_ARTICLE_MARKER,
-            )
-
-        for ((name, payload) in encoded) assertTrue(markers.any { it in payload }, name)
-        for (other in listOf(SONG, SONG_REJECTED)) {
-            val payload = RetrievalCodec.encode(other)
-            assertFalse(markers.any { it in payload }, payload)
-            assertFalse(RetrievalCodec.aboutArtists(other))
+    fun `only a result marked as about the track alone carries the marker`() {
+        for ((name, result) in ABOUT_ARTISTS) {
+            assertFalse(RetrievalCodec.TRACK_ONLY_MARKER in RetrievalCodec.encode(result.first), name)
+            assertTrue(RetrievalCodec.aboutArtists(result.first), name)
         }
-        assertTrue(ABOUT_ARTISTS.values.all { RetrievalCodec.aboutArtists(it.first) })
+        for (other in listOf(SONG, SONG_REJECTED)) {
+            assertTrue(RetrievalCodec.TRACK_ONLY_MARKER in RetrievalCodec.encode(other))
+            assertFalse(RetrievalCodec.aboutArtists(other))
+            assertEquals(other, RetrievalCodec.decode(RetrievalCodec.encode(other)))
+        }
+    }
+
+    @Test
+    fun `a result of a kind no adapter marked is taken as about the artists`() {
+        assertTrue(RetrievalCodec.aboutArtists(SourceResult(Outcome.SongArticle, emptyList(), Duration.ZERO)))
     }
 
     @Test
@@ -379,8 +377,8 @@ class ArtistKeepingTest {
         val PART = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
         val AT: Instant = Instant.parse("2026-10-14T12:00:00Z")
 
-        // A song line whose text holds every marker, as quoted text.
-        const val QUOTED = "It reads \"scope\":\"artist\", \"genres\":[ and \"labelArtists\":[ in its text."
+        // A line whose text holds the marker, as quoted text.
+        const val QUOTED = "It reads \"trackOnly\":true in its text."
 
         fun draft(
             source: SourceId,
@@ -389,7 +387,12 @@ class ArtistKeepingTest {
         ) = EvidenceDraft(source, scope, text, null, AT)
 
         val SONG =
-            SourceResult(Outcome.SongArticle, listOf(draft(SourceId.WIKIPEDIA, Scope.SONG, QUOTED)), Duration.ZERO)
+            SourceResult(
+                Outcome.SongArticle,
+                listOf(draft(SourceId.WIKIPEDIA, Scope.SONG, "A song.")),
+                Duration.ZERO,
+                trackOnly = true,
+            )
 
         // Wikipedia's song article found, after a song candidate was rejected: about the song only.
         val SONG_REJECTED =
@@ -443,6 +446,26 @@ class ArtistKeepingTest {
                             labelArtists = listOf("mbid-gordon"),
                         ) to SourceId.MUSICBRAINZ
                     ),
+                // Last.fm does not know the artist: an empty result, a verdict on the artist all the same.
+                "lastfm unknown artist" to (SourceResult(Outcome.None, emptyList(), Duration.ZERO) to SourceId.LASTFM),
+                // MusicBrainz finds a namesake collision: a rejection naming the artists.
+                "musicbrainz namesakes" to
+                    (
+                        SourceResult(
+                            Outcome.Rejected("several MusicBrainz artists named Reem have a matching recording"),
+                            emptyList(),
+                            Duration.ZERO,
+                        ) to SourceId.MUSICBRAINZ
+                    ),
+                // An unmarked line quoting the marker is no marker.
+                "quoting the marker" to
+                    (
+                        SourceResult(
+                            Outcome.SongArticle,
+                            listOf(draft(SourceId.WIKIPEDIA, Scope.SONG, QUOTED)),
+                            Duration.ZERO,
+                        ) to SourceId.WIKIPEDIA
+                    ),
                 // Wikidata accepted the artist's item, with no line to quote from it.
                 "artist found, no lines" to
                     (SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO) to SourceId.WIKIPEDIA),
@@ -450,6 +473,7 @@ class ArtistKeepingTest {
                 "wikipedia mixed" to
                     (
                         SONG.copy(
+                            trackOnly = false,
                             rejections =
                                 listOf(
                                     Rejection("Sundown (album)", "an album, not a song", Scope.SONG),

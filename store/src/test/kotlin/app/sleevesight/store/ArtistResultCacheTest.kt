@@ -279,7 +279,7 @@ class ArtistResultCacheTest {
                 SourceId.LASTFM,
                 "sundown",
                 1,
-                SourceResult(Outcome.None, emptyList(), Duration.ZERO),
+                SourceResult(Outcome.None, emptyList(), Duration.ZERO, trackOnly = true),
             )
 
             assertTrue(keeping { false }.clear())

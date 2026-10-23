@@ -113,6 +113,7 @@ class ExaWebSearchTest {
         runTest {
             val (result, _) = lookUp(1, "01-sundown")
             assertEquals(Outcome.SongArticle, result.outcome)
+            assertTrue(result.trackOnly, "web pages about the song: kept with the artist cache off too (#420)")
             assertLines(
                 "01-sundown",
                 listOf(

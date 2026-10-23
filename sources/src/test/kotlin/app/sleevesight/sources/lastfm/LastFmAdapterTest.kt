@@ -70,6 +70,7 @@ class LastFmAdapterTest {
             val lookup = adapter().lookupArtists(fixtureTrack(1), resolved("Gordon Lightfoot" to GORDON_LIGHTFOOT))
 
             assertEquals(Outcome.ArtistArticle, lookup.result.outcome)
+            assertFalse(lookup.result.trackOnly, "Last.fm's answers are about the artist (#420)")
             assertEquals(LastFmMatch.Verified, lookup.artists.single().match)
             assertTrue(lookup.result.unverified.isEmpty())
             val url = "https://www.last.fm/music/Gordon+Lightfoot"

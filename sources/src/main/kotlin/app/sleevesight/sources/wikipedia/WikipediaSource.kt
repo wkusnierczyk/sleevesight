@@ -101,6 +101,9 @@ class WikipediaSource(
             start.elapsedNow(),
             rejections = findings.rejections,
             freshUntil = parts.mapNotNull { it.freshUntil }.minOrNull(),
+            // Every credited artist's article is looked up, and its finding, found or not, is about
+            // the artist (#420): only a track with no artist to look up is about the track alone.
+            trackOnly = credits.isEmpty(),
         )
     }
 
