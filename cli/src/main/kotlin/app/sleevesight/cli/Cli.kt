@@ -24,6 +24,7 @@ import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.net.NetClient
+import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.StoreArtistResults
 import app.sleevesight.store.StorePipelineCache
@@ -107,7 +108,7 @@ class Cli(
         // measures what the artist cache saves.
         private val artists =
             CountedArtistResults(
-                caches?.let { StoreArtistResults({ it }, Dispatchers.IO) { settings.keepArtistResults } }
+                caches?.let { StoreArtistResults({ it }, Dispatchers.IO, ArtistKeeping.ALWAYS) }
                     ?: ArtistResults.None,
             )
         private val wiring = pipelineWiringOn(net, JvmAccentFolder, JvmResourceReader, artists)
@@ -122,7 +123,6 @@ class Cli(
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
                 labelSources = setOf(LabelSource.LASTFM),
-                keepArtistResults = true,
             )
 
         fun run(): Int {
@@ -180,7 +180,8 @@ class Cli(
 
         // The tracks, run once, or in [Options.repeat] passes, one after another (`--repeat`, #399).
         private fun runAll(events: MutableList<PipelineEvent>): List<TrackResult> {
-            val stored = caches?.let { StorePipelineCache(it, Dispatchers.IO) } ?: PipelineCache.None
+            val stored =
+                caches?.let { StorePipelineCache(it, Dispatchers.IO, ArtistKeeping.ALWAYS) } ?: PipelineCache.None
             // A repeated run measures the replies, so every pass writes its insights afresh.
             val cache = if (options.repeat > 1) FreshCards(stored) else stored
             return (1..options.repeat).flatMap { pass ->

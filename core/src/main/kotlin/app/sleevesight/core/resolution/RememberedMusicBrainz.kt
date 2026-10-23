@@ -24,6 +24,8 @@ import kotlin.time.TimeSource
  *
  * A short lifetime, not the retrieval cache's (D9): the answers are kept for the track about to
  * play, and MusicBrainz's data changes no faster than that. In memory only, for the process.
+ * Whatever *Keep what sources said about each artist* says (#420): that switch is about what is
+ * stored on the phone, and this is half an hour of memory that also serves the track's own lookups.
  */
 class RememberedMusicBrainz(
     private val musicBrainz: MusicBrainzLookup,

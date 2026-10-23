@@ -485,7 +485,7 @@ private fun LookupsSection(
         }
     }
 
-    // A privacy choice (#420), so its title is in the theme's warning colour: what is kept per
+    // A privacy choice (#420), so its title is in the theme's error colour: what is kept per
     // artist amounts to a list of the artists heard. Beside the lifetimes it is kept for; in the
     // settings' later sections (#444), both go under *History*.
     SwitchRow(

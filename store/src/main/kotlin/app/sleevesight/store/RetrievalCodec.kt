@@ -32,6 +32,23 @@ internal object RetrievalCodec {
 
     private val SCOPES: Map<String, Scope> = Scope.entries.associateBy { it.key }
 
+    /**
+     * Text an encoded result holds only if it says something about an artist ([aboutArtists]): an
+     * artist-level line, or genre labels (from artists' tags). A line's own text cannot hold either,
+     * since its quotation marks are escaped. For deleting such results in the database
+     * (`retrievalDeleteAboutArtists`, #420) without decoding every one.
+     */
+    val ARTIST_LINE_MARKER: String = "\"scope\":\"${Scope.ARTIST.key}\""
+    const val GENRES_MARKER: String = "\"genres\":["
+
+    /**
+     * Whether [result] says something about an artist: an artist-level line ([Scope.ARTIST]), verified
+     * or not, or genre labels, which come from artists' tags. Such a result is kept only while
+     * *Keep what sources said about each artist* is on (#420).
+     */
+    fun aboutArtists(result: SourceResult): Boolean =
+        (result.evidence + result.unverified).any { it.scope == Scope.ARTIST } || result.genres.isNotEmpty()
+
     fun encode(result: SourceResult): String =
         json.encodeToString(
             ResultJson.serializer(),

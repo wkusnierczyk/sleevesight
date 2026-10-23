@@ -206,7 +206,7 @@ class ArtistResultCacheTest {
                         fixture.caches
                     },
                     coroutineContext,
-                    keeps = { true },
+                    ArtistKeeping.ALWAYS,
                 )
             assertEquals(0, opened, "the caches are asked for only at the first call")
 
@@ -219,7 +219,12 @@ class ArtistResultCacheTest {
     @Test
     fun `the adapters' view reads a failing database as a miss, and keeps nothing, without throwing`() =
         runBlocking {
-            val store = StoreArtistResults({ error("the database could not be opened") }, coroutineContext) { true }
+            val store =
+                StoreArtistResults(
+                    { error("the database could not be opened") },
+                    coroutineContext,
+                    ArtistKeeping.ALWAYS,
+                )
 
             store.keep(LASTFM, "a", "v")
             assertNull(store.get(LASTFM, "a"))
@@ -238,7 +243,8 @@ class ArtistResultCacheTest {
                         fixture.caches
                     },
                     coroutineContext,
-                ) { false }
+                    ArtistKeeping { false },
+                )
 
             store.keep(LASTFM, "a", "v")
             assertNull(store.get(LASTFM, "a"))
@@ -251,7 +257,7 @@ class ArtistResultCacheTest {
     fun `the switch is read at each call`() =
         runBlocking {
             var keeps = false
-            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { keeps }
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext, ArtistKeeping { keeps })
 
             store.keep(LASTFM, "a", "off")
             keeps = true
@@ -265,7 +271,7 @@ class ArtistResultCacheTest {
     @Test
     fun `clearing deletes every artist-level result and artist resolution, and nothing else`() =
         runBlocking {
-            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { true }
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext, ArtistKeeping.ALWAYS)
             store.keep(LASTFM, "a", "v")
             store.keep(WIKIPEDIA, "b", "w")
             fixture.caches.artists.put("a", ArtistResolution.Resolved("mbid-a"))
@@ -289,7 +295,7 @@ class ArtistResultCacheTest {
     fun `a value being kept when the switch turns off is cleared, never kept after the clear`() =
         runBlocking {
             var keeps = true
-            val store = StoreArtistResults({ fixture.caches }, coroutineContext) { keeps }
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext, ArtistKeeping { keeps })
             // The switch turns off, and its clear is called, while a lookup's value is being written:
             // the clear runs at once up to its first suspension, which is waiting for the write.
             fixture.driver.before("INSERT INTO artist_result") {

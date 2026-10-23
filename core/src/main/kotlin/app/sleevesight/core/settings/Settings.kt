@@ -46,14 +46,18 @@ import kotlin.time.Duration.Companion.seconds
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
- *   sources said about an artist (Last.fm's answers, the Wikipedia artist article and its Wikidata
- *   facts, MusicBrainz's tags) is kept on the phone, per artist, for the next track by the artist.
- *   Off by default, for new installs and for those upgraded from a version that kept it unasked:
- *   what is kept per artist amounts to a list of the artists heard, which a user should choose to
- *   keep. Off, nothing is kept per artist, each track's artists are looked up again, and what was
- *   kept is deleted; on, each artist is looked up once and kept for its sources' lifetimes
- *   ([cacheLifetimes]), so fewer requests leave the phone. It covers the artist resolutions kept
- *   for [artistCacheLifetime] too.
+ *   sources said about an artist (Last.fm's answers and tags, the Wikipedia artist article and its
+ *   Wikidata facts, MusicBrainz's tags) is kept on the phone: per artist, for the next track by the
+ *   artist, and in each track's kept findings. Off by default, for new installs and for those
+ *   upgraded from a version that kept it unasked: kept together, it amounts to a record of the
+ *   artists heard, which a user should choose to keep. Off, none of it is kept, each track's
+ *   artists are looked up again, and what was kept is deleted; what stays is the record of which
+ *   tracks were played (the history, the track cache's keys) and the insights written, which may
+ *   retell some of it. On, it is kept for its sources' lifetimes ([cacheLifetimes]), so fewer
+ *   requests about artists leave the phone; each track's own lookups still send its artists'
+ *   names. Either way MusicBrainz's answers, its artist searches included, are held in memory for
+ *   half an hour (`RememberedMusicBrainz`), for the track about to play, and never stored. It covers
+ *   the artist resolutions kept for [artistCacheLifetime] too.
  * @property artistCacheLifetime how long a credited artist's MusicBrainz id, or the finding that it
  *   has none or several, is kept (architecture, *Cache and history*: "long, months"), while
  *   [keepArtistResults] is on.
