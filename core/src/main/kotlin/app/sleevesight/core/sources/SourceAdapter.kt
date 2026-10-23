@@ -1,6 +1,7 @@
 package app.sleevesight.core.sources
 
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
@@ -102,6 +103,13 @@ val SourceAdapter.tag: String get() = id.tag
  * ([ArtistResults], #238): the earliest time one of them stops being fresh. The retrieval cache
  * keeps the result no longer than that, so a reused part is not served past its own lifetime
  * (D9). Null when no kept part was reused. Not itself kept: the retrieval entry's age carries it.
+ *
+ * [trackOnly] marks a result known to say nothing about the track's artists: no artist's page,
+ * line, tag or id, and no verdict on one, found or not. Only the adapter that built it knows, so it
+ * sets it, on the paths that consult no artist (Exa's web search; Wikipedia with no artist to look
+ * up; MusicBrainz finding no recording). While *Keep what sources said about each artist* is off
+ * (#420), the retrieval cache keeps and reads back only such results: false, the default, counts
+ * as about the artists, so a result of a new kind is not kept until its adapter says otherwise.
  */
 data class SourceResult(
     val outcome: Outcome,
@@ -114,10 +122,17 @@ data class SourceResult(
     val labelArtists: List<String> = emptyList(),
     val firstReleased: String? = null,
     val freshUntil: Instant? = null,
+    val trackOnly: Boolean = false,
 )
 
-/** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */
+/**
+ * A candidate that failed the entity check: what it was looked up for, [subject], and why it was
+ * rejected. [scope] is what the candidate was about: [Scope.ARTIST] for an artist's page (Last.fm's
+ * artist, the Wikipedia artist article), so a verdict on an artist is kept only as what was said
+ * about the artist is (#420); [Scope.SONG] for the song's.
+ */
 data class Rejection(
     val subject: String,
     val reason: String,
+    val scope: Scope,
 )
