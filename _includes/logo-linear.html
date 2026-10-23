@@ -1,0 +1,18 @@
+<!-- The linear logo, for a page with no menu: "Sleevesight" on one line in Roboto Flex regular,
+     "sight" in the wordmark's red, with the record trailing, as tall as the capitals. It heads the
+     page and scrolls away with it. The record is the product page's (`index.html`, `#lp`), in its
+     light colours, since the theme has no dark mode. The font is the site's own cut-down copy, so
+     nothing is fetched from another site. Used by `_layouts/default.html` when the page sets
+     `logo: linear`. -->
+<style>
+@font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
+.logo-linear{margin:0 0 32px}
+.logo-linear a{display:inline-flex;align-items:baseline;gap:.18em;font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-weight:400;font-size:30px;line-height:1.2;letter-spacing:-.015em;color:#141a22;text-decoration:none}
+.logo-linear .sight{color:#cc212d}
+.logo-linear svg{width:.72em;height:.72em;flex:none}
+</style>
+<header class="logo-linear">
+  <a href="{{ '/' | relative_url }}" aria-label="Sleevesight, home"><span aria-hidden="true">Sleeve<span class="sight">sight</span></span><svg viewBox="8 8 16 16" aria-hidden="true"><circle cx="16" cy="16" r="7.5" fill="#1f2328"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></svg></a>
+</header>
