@@ -6,7 +6,7 @@
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
-    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It notes which players report music (a track with a title and an artist), to list them in its settings by name; from the players you follow (Spotify by default) it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads phone calls, and never touches the audio.</string>
+    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow; from the players you follow (Spotify by default) it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
     <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Last.fm gets the artists’ names only, Wikidata only identifiers, and the album name goes to none of them. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
@@ -87,7 +87,7 @@
     <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
 
     <string name="settings_section_players">Players to follow</string>
-    <string name="settings_players_hint">Sleevesight reads only the players switched on here. A player is listed once it has played music: a track with a title and an artist. Phone calls are never listed or read.</string>
+    <string name="settings_players_hint">Sleevesight follows only the players switched on here. Other players are only checked for music, a track with a title and an artist, to be listed here; nothing of them is kept or sent. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
 
     <string name="settings_section_sources">Where to look</string>
     <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and each web search engine need your own.</string>

@@ -220,7 +220,8 @@ internal object SettingsCodec {
      */
     fun prunePlayers(prefs: MutablePreferences) {
         val listedByDefault = defaults.followedPlayers.keys
-        val on = prefs[PLAYERS_ON].orEmpty().filterNot(Settings::isCall).toSet()
+        // A player in both keys reads as off, so it is not kept as on.
+        val on = (prefs[PLAYERS_ON].orEmpty() - prefs[PLAYERS_OFF].orEmpty()).filterNot(Settings::isCall).toSet()
         val off = prefs[PLAYERS_OFF].orEmpty().filter { it in listedByDefault && !Settings.isCall(it) }.toSet()
         prefs.put(PLAYERS_ON, on.ifEmpty { null }, null)
         prefs.put(PLAYERS_OFF, off.ifEmpty { null }, null)

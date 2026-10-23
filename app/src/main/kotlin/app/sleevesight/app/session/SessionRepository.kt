@@ -47,14 +47,16 @@ import kotlin.time.Duration.Companion.seconds
  *
  * **Phone calls are never read** (#435): a session whose package is a call's (`Settings.isCall`:
  * telecom, the dialers) or that marks itself a call ([PlayerSession.marksCall]) is dropped whatever
- * [followed] says, before anything of it is read, and is never one of the [seenPlayers]. A
- * followed session that turns into a call shows no track while it is one.
+ * [followed] says, before anything of it is read, and is never one of the [seenPlayers]. The mark
+ * is checked again before each metadata or queue report is read and on each audio change: a
+ * followed session that turns into a call forgets what it held and shows no track, and a probe on
+ * one is removed. A VoIP call in an ordinary media session (usage media) is not recognised.
  *
  * **Players seen** ([seenPlayers]), for *Players to follow*, are those whose session has reported
  * music, a title and an artist ([SessionMapping.reportsMusic]): a followed player's from its own
- * callback; another's from its session as listed, and until it has, from a callback that reads only
- * its metadata, for that test, and is removed once the player has passed it or its session ends.
- * Nothing else of an unfollowed player's session is read, and nothing of its metadata is kept.
+ * callback; another's, until it has, from a callback that reads only its metadata, for that test,
+ * and is removed once the player has passed it or its session ends. Nothing else of an unfollowed
+ * player's session is read, nothing of its metadata is kept, and a player seen has nothing more read.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
  * else the first followed session: the system lists the most recently active first.
@@ -248,28 +250,27 @@ class SessionRepository(
     }
 
     /**
-     * Notes which players not followed report music ([seenPlayers]): from their sessions as listed,
-     * and, for those that have not yet, from a [Probe] on each session until one does. A followed
-     * player's own callback notes it ([Attached]).
+     * Notes which players not followed report music ([seenPlayers]), through a [Probe] on each
+     * session of a player not seen yet: its metadata is read once as the probe is registered, and
+     * then only as the player reports it, until the player is seen. A player already seen has
+     * nothing of it read. A followed player's own callback notes it ([Attached]).
      */
     private fun watchForMusic(readable: List<PlayerSession>) {
-        val others = readable.filter { it.player !in followedPlayers }
-        others.filter { SessionMapping.reportsMusic(it.metadata) }.forEach { markSeen(it.player) }
-        val unseen = others.filter { it.player !in seenState.value }
+        val unseen = readable.filter { it.player !in followedPlayers && it.player !in seenState.value }
         val keys = unseen.map(PlayerSession::key).toSet()
         probes.values.filter { it.session.key !in keys }.forEach { it.release() }
         probes.keys.retainAll(keys)
         for (session in unseen) {
-            if (session.key in probes) continue
+            // Another session of the same player may have just passed.
+            if (session.key in probes || session.player in seenState.value) continue
             probes[session.key] = Probe(session)
             // Registered before this read, so music reported in between reaches one or the other.
             if (SessionMapping.reportsMusic(session.metadata)) markSeen(session.player)
         }
     }
 
-    /** Adds [player] to [seenPlayers], once, and removes the probes on its sessions. */
+    /** Adds [player] to [seenPlayers] and removes every probe on its sessions. */
     private fun markSeen(player: String) {
-        if (player in seenState.value) return
         seenState.update { it + player }
         val done = probes.filterValues { it.session.player == player }
         done.values.forEach { it.release() }
@@ -279,7 +280,9 @@ class SessionRepository(
     /**
      * A session not followed that has not reported music yet: a callback that reads its metadata
      * only to tell whether it is music ([SessionMapping.reportsMusic]), keeps nothing of it, and is
-     * removed once its player is seen ([markSeen]), its session leaves the list, or it ends.
+     * removed once its player is seen ([markSeen]), its session leaves the list, or it ends. A
+     * session that marks a call ([PlayerSession.marksCall]) has its metadata unread, and its probe
+     * removed, as soon as its audio says so or before its next metadata is read.
      */
     private inner class Probe(
         val session: PlayerSession,
@@ -288,13 +291,19 @@ class SessionRepository(
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
                     if (probes[session.key] !== this@Probe) return
-                    if (SessionMapping.reportsMusic(metadata)) markSeen(session.player)
+                    if (session.marksCall) {
+                        drop()
+                    } else if (SessionMapping.reportsMusic(metadata)) {
+                        markSeen(session.player)
+                    }
+                }
+
+                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
+                    if (probes[session.key] === this@Probe && session.marksCall) drop()
                 }
 
                 override fun onSessionDestroyed() {
-                    if (probes[session.key] !== this@Probe) return
-                    release()
-                    probes.remove(session.key)
+                    if (probes[session.key] === this@Probe) drop()
                 }
             }
 
@@ -304,6 +313,12 @@ class SessionRepository(
 
         fun release() {
             session.unregister(callback)
+        }
+
+        /** Releases this probe and forgets it. */
+        private fun drop() {
+            release()
+            probes.remove(session.key)
         }
     }
 
@@ -426,8 +441,10 @@ class SessionRepository(
         val callback =
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
+                    // A call's metadata (the caller) is never looked at, nor kept.
+                    if (attached[session.key] === this@Attached && session.marksCall) return asCall()
                     ifAttached {
-                        if (SessionMapping.reportsMusic(metadata) && !session.marksCall) markSeen(session.player)
+                        if (SessionMapping.reportsMusic(metadata)) markSeen(session.player)
                         val title = SessionMapping.title(metadata)
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
                         beginReport(newTitle = title != null && title != previousTitle)
@@ -451,11 +468,17 @@ class SessionRepository(
                 }
 
                 override fun onQueueChanged(queue: List<MediaSession.QueueItem>?) {
+                    if (attached[session.key] === this@Attached && session.marksCall) return asCall()
                     ifAttached { this@Attached.queue = queue }
                 }
 
                 override fun onQueueTitleChanged(title: CharSequence?) {
+                    if (attached[session.key] === this@Attached && session.marksCall) return asCall()
                     ifAttached { queueTitle = title }
+                }
+
+                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
+                    if (attached[session.key] === this@Attached && session.marksCall) asCall()
                 }
 
                 override fun onSessionDestroyed() {
@@ -545,6 +568,25 @@ class SessionRepository(
         fun release() {
             settling?.cancel()
             session.unregister(callback)
+        }
+
+        /**
+         * The session now marks a call ([PlayerSession.marksCall]): forgets what it held (the
+         * metadata, the queue, the track settled and any settle pending) and publishes no track
+         * for it. Nothing held then can become a track once the call ends: a track is mapped
+         * again only from metadata the player reports after it.
+         */
+        fun asCall() {
+            settling?.cancel()
+            settling = null
+            pending = false
+            metadata = null
+            queue = null
+            queueTitle = null
+            track = null
+            trackMetadata = null
+            change = null
+            publish()
         }
 
         /**

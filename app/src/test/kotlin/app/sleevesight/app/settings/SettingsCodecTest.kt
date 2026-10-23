@@ -353,6 +353,17 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun pruningNeverTurnsAPlayerInBothKeysOn() {
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                stringSetPreferencesKey("players.off") to setOf(OTHER_PLAYER),
+            )
+        SettingsCodec.prunePlayers(prefs)
+        assertFalse(SettingsCodec.read(prefs).follows(OTHER_PLAYER))
+    }
+
+    @Test
     fun pruningWithNothingToDropLeavesNoKeys() {
         val prefs = mutablePreferencesOf(stringSetPreferencesKey("players.off") to setOf("com.example.video"))
         SettingsCodec.prunePlayers(prefs)

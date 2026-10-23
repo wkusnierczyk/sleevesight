@@ -110,7 +110,7 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         assertEquals(emptySet<String>(), repository.seenPlayers.value)
         assertEquals(1, video.callbacks.size)
 
-        // Its state changes are not read; a track with an artist lists it, and the probe goes.
+        // Another title with no artist leaves it unseen; a track with an artist lists it, and the probe goes.
         video.send(metadata(title = "Episode 2", artist = null))
         assertEquals(emptySet<String>(), repository.seenPlayers.value)
         video.send(metadata(title = "Song", artist = "Singer"))
@@ -182,11 +182,96 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         system.active = listOf(app)
         repository.start()
         assertEquals("Song", repository.nowPlaying.value?.title)
+        val shown = recordTracks()
+
+        app.call(true)
+        assertNull(repository.nowPlaying.value)
+        // The caller's metadata, reported during the call, is never shown nor kept.
+        app.settled(metadata(title = "Alice", artist = "Voice call"))
+        assertNull(repository.nowPlaying.value)
+
+        // Back to media: what the call left is not mapped, even when a state settles.
+        app.call(false)
+        app.settled(state(PlaybackState.STATE_PAUSED))
+        assertNull(repository.nowPlaying.value)
+        app.settled(metadata(title = "Next song"))
+        assertEquals("Next song", repository.nowPlaying.value?.title)
+        assertTrue(shown.none { it?.title == "Alice" })
+    }
+
+    @Test
+    fun callerMetadataBeforeTheAudioChangeIsNeverShown() {
+        // The usage flips before the callback for it arrives: the metadata callback checks first.
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        val shown = recordTracks()
 
         app.marksCall = true
         app.settled(metadata(title = "Alice", artist = "Voice call"))
+        app.marksCall = false
+        app.settled(state(PlaybackState.STATE_PLAYING, positionMs = 1_000))
 
+        assertTrue(shown.none { it?.title == "Alice" })
         assertNull(repository.nowPlaying.value)
+    }
+
+    @Test
+    fun aProbeOnASessionThatTurnsIntoACallIsRemoved() {
+        val video = FakeSession(VIDEO_APP, metadata = metadata(artist = null))
+        system.active = listOf(video)
+        repository.start()
+        assertEquals(1, video.callbacks.size)
+
+        video.call(true)
+        assertTrue(video.callbacks.isEmpty())
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aProbeReadsNoMetadataOfASessionMarkingACall() {
+        val video = FakeSession(VIDEO_APP, metadata = metadata(artist = null))
+        system.active = listOf(video)
+        repository.start()
+
+        // The usage flips without its own callback first: the metadata callback checks it.
+        video.marksCall = true
+        video.send(metadata(title = "Alice", artist = "Voice call"))
+
+        assertTrue(video.callbacks.isEmpty())
+        assertEquals(emptySet<String>(), repository.seenPlayers.value)
+    }
+
+    @Test
+    fun aPlayerAlreadySeenHasNoMoreMetadataRead() {
+        val other = FakeSession(VIDEO_APP)
+        system.active = listOf(other)
+        repository.start()
+        assertEquals(setOf(VIDEO_APP), repository.seenPlayers.value)
+        val reads = other.metadataReads
+
+        system.change(listOf(other))
+        system.change(listOf(other))
+
+        assertEquals(reads, other.metadataReads)
+        assertTrue(other.callbacks.isEmpty())
+    }
+
+    @Test
+    fun aPlayerSeenThroughOneSessionGetsNoProbeOnItsOther() {
+        val first = FakeSession(VIDEO_APP, metadata = metadata(artist = null))
+        val second = FakeSession(VIDEO_APP, metadata = metadata(artist = null))
+        // Music arrives as the first session's probe registers.
+        first.onRegister = { first.metadata = metadata() }
+        system.active = listOf(first, second)
+
+        repository.start()
+
+        assertEquals(setOf(VIDEO_APP), repository.seenPlayers.value)
+        assertTrue(first.callbacks.isEmpty())
+        assertTrue(second.callbacks.isEmpty())
+        assertEquals(0, second.metadataReads)
     }
 
     @Test

@@ -1,11 +1,13 @@
 package app.sleevesight.app.session
 
 import android.graphics.Bitmap
+import android.media.AudioAttributes
 import android.media.MediaDescription
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import org.robolectric.shadows.PlaybackInfoBuilder
 
 /** Builders and fakes for the session-layer tests. */
 internal object Sessions {
@@ -81,7 +83,7 @@ internal object Sessions {
 @Suppress("LongParameterList") // One parameter per thing a session publishes.
 internal class FakeSession(
     override val player: String,
-    override var metadata: MediaMetadata? = Sessions.metadata(),
+    metadata: MediaMetadata? = Sessions.metadata(),
     override var playbackState: PlaybackState? = Sessions.state(),
     override var queue: List<MediaSession.QueueItem>? = null,
     override var queueTitle: CharSequence? = null,
@@ -90,6 +92,13 @@ internal class FakeSession(
 ) : PlayerSession {
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()
+
+    /** How often the session layer has read [metadata]. */
+    var metadataReads = 0
+        private set
+
+    override var metadata: MediaMetadata? = metadata
+        get() = field.also { metadataReads++ }
 
     /** Runs as a callback is registered: a change the player makes at that moment, before any is heard. */
     var onRegister: () -> Unit = {}
@@ -123,6 +132,18 @@ internal class FakeSession(
             it.onQueueChanged(items)
             it.onQueueTitleChanged(title)
         }
+    }
+
+    /** Turns the session into a call, or back ([marksCall]), as its audio attributes would. */
+    fun call(on: Boolean) {
+        marksCall = on
+        val usage = if (on) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_MEDIA
+        val info =
+            PlaybackInfoBuilder
+                .newBuilder()
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).build())
+                .build()
+        callbacks.toList().forEach { it.onAudioInfoChanged(info) }
     }
 
     fun destroy() = callbacks.toList().forEach { it.onSessionDestroyed() }
