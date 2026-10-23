@@ -8,6 +8,7 @@ import app.sleevesight.core.ai.Usage
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import kotlin.time.Clock
 
 /**
  * Turns the data of one Messages stream's events into [CompletionEvent]s: `message_start` (input
@@ -15,9 +16,11 @@ import app.sleevesight.net.NetResult
  * (the stop reason and output tokens), `message_stop` ([CompletionEvent.Done]) and `error`
  * ([CompletionEvent.Error]). `ping`, the block boundaries, other deltas and event types this client
  * does not know are skipped, so new ones do not break it. After the one terminal event, nothing
- * more is emitted.
+ * more is emitted. [clock] reads a `retry-after` given as a date.
  */
-internal class MessageStream {
+internal class MessageStream(
+    private val clock: Clock,
+) {
     private var inputTokens = 0L
     private var outputTokens = 0L
     private var stopReason: StopReason = StopReason.OTHER
@@ -89,7 +92,7 @@ internal class MessageStream {
             when {
                 ended -> null
                 result is NetResult.Failure -> failure(result.error)
-                result is NetResult.Success && !result.value.isSuccess -> CompletionEvent.Error(kindOf(result.value))
+                result is NetResult.Success && !result.value.isSuccess -> errorOf(result.value, clock.now())
                 else -> CompletionEvent.Error(AiErrorKind.INCOMPLETE)
             }
         return error?.let(::end)

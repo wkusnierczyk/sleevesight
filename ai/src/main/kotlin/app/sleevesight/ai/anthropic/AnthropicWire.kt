@@ -48,6 +48,13 @@ internal data class WireErrorBody(
 internal data class WireError(
     val type: String? = null,
     val message: String? = null,
+    val details: WireErrorDetails? = null,
+)
+
+/** An error's details: `error_code` tells the tier's spend cap reached from a rate limit. */
+@Serializable
+internal data class WireErrorDetails(
+    @SerialName("error_code") val errorCode: String? = null,
 )
 
 @Serializable
