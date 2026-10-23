@@ -415,6 +415,9 @@ class FirstRunFlowTest {
             }
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.credits_intro)).assertIsDisplayed()
+            // The icons' set, Material Symbols, with its licence (#445).
+            compose.onNodeWithText(text(R.string.credits_material_symbols)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Apache License 2.0").performScrollTo().assertIsDisplayed()
         }
     }
 
