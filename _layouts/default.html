@@ -1,10 +1,12 @@
 {% comment %}
   The Primer theme's `_layouts/default.html`, from `jekyll-theme-primer` 0.6.0 (the version the
   `github-pages` gem pins; MIT, Copyright (c) 2016-2017 GitHub, Inc., its licence in
-  `_layouts/LICENSE-primer.md`), with one change: AnchorJS 4.1.0 (MIT, Bryan Braun, its licence in
+  `_layouts/LICENSE-primer.md`), with two changes: AnchorJS 4.1.0 (MIT, Bryan Braun, its licence in
   `assets/js/LICENSE-anchor-js.txt`), which adds links to the headings, is served from this site
   (`assets/js/anchor.min.js`, the same file, so the same integrity hash) instead of from cdnjs, so
-  a visit sends nothing to a third party for it (#295). Keep it in step with the theme's layout.
+  a visit sends nothing to a third party for it (#295); and a page that sets `logo: linear` is
+  headed by the linear logo (`_includes/logo-linear.html`) in place of the site's title (#158).
+  Keep it in step with the theme's layout.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -19,7 +21,9 @@
   </head>
   <body>
     <div class="container-lg px-3 my-5 markdown-body">
-      {% if site.title and site.title != page.title %}
+      {% if page.logo == "linear" %}
+      {% include logo-linear.html %}
+      {% elsif site.title and site.title != page.title %}
       <h1><a href="{{ "/" | absolute_url }}">{{ site.title }}</a></h1>
       {% endif %}
 

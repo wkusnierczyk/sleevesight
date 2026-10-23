@@ -5,6 +5,7 @@
 layout: default
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
+logo: linear
 ---
 
 <!-- The product page's type (`index.html`): Roboto Slab for the running text, Roboto Flex for the
