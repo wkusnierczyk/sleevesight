@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * Home's header (#445): it stays while Home scrolls, the app's name scrolls Home back to the top
@@ -109,7 +111,7 @@ class HomeScreenTest {
     fun theNameIsReadAsScrollToTopNotAsItsText() =
         show {
             // TalkBack reads the label, not the name's text a second time.
-            assertEquals("Sleevesight, scroll to top", toTop)
+            compose.onNodeWithContentDescription(toTop).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.app_name)).assertDoesNotExist()
         }
 
@@ -153,6 +155,25 @@ class HomeScreenTest {
                 val bounds = compose.onNodeWithContentDescription(label).fetchSemanticsNode().touchBoundsInRoot
                 assertTrue("$label: $bounds", bounds.width >= min && bounds.height >= min)
             }
+        }
+
+    // A narrow phone at twice the font size: the name is wider than the row, and it gives way to
+    // the cogwheel, which keeps its whole target on screen. Native graphics, so the name's text
+    // has its real width (Robolectric's default graphics measure it far narrower).
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w240dp-h640dp", fontScale = 2f)
+    fun atALargeFontTheCogwheelKeepsItsTarget() =
+        show {
+            val min = with(compose.density) { 48.dp.toPx() }
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            val cog = compose.onNodeWithContentDescription(text(R.string.home_settings)).fetchSemanticsNode()
+            val bounds = cog.touchBoundsInRoot
+            assertTrue("$bounds", bounds.width >= min && bounds.height >= min)
+            // Squeezed, the icon was drawn 28 dp wide and its target ran off the screen's edge.
+            assertTrue("$bounds in $root", bounds.right <= root.right)
+            val name = compose.onNodeWithContentDescription(toTop).fetchSemanticsNode().boundsInRoot
+            assertTrue("$name before $bounds", name.right <= bounds.left)
         }
 
     private companion object {

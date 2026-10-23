@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -39,8 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
@@ -104,26 +102,30 @@ private fun HomeHeader(
     Column {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Weighted, so the cogwheel is measured first and keeps its 48 dp at any font size; not
+            // filled, so the tap target is the name and not the row's empty middle.
             Box(
                 modifier =
                     Modifier
+                        .weight(1f, fill = false)
                         .heightIn(min = 48.dp)
+                        // One button: the click and its role from `clickable`, the spoken label in
+                        // place of the name's text.
                         .clickable(role = Role.Button, onClick = onScrollToTop)
-                        .clearAndSetSemantics {
-                            contentDescription = toTop
-                            role = Role.Button
-                            onClick {
-                                onScrollToTop()
-                                true
-                            }
-                        }.padding(horizontal = 8.dp),
+                        .clearAndSetSemantics { contentDescription = toTop }
+                        .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            Spacer(modifier = Modifier.weight(1f))
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
                 tooltip = { PlainTooltip { Text(settings) } },
