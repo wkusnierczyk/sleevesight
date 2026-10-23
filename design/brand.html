@@ -95,8 +95,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-
    and the clip share one easing, so they stay in step. The viewBox is centred on 8b's ink. The svg does
    not clip, the pane does. The record starts 101 units left of the svg, less what the pane leaves beside
    it, so from 22 units beyond the pane's edge (the panes stacked, at their widest: 700px, 80 units beside
-   the svg) to 95 (the narrowest panes); in two columns of cards (1088px and wider) it is 93, so the
-   record is off-screen for over a third of the roll's distance.
+   the svg) to 96 (the svg filling a 364px pane at its full 340px, only the pane's padding beside it); in
+   two columns of cards (1088px and wider) it is 93, over a third of the roll's distance.
    R1 has no tile, so its words take the page's ink. */
 .rv-pane{background:var(--bg);display:grid;place-items:center;padding:20px 12px;overflow:hidden;min-width:0}
 .rv-pane svg{display:block;width:min(100%,340px);height:auto}
