@@ -19,7 +19,7 @@ The app runs no server and has no accounts: nothing you play reaches its develop
 
 ## Joining and installing
 
-1. **Opt in.** Open the opt-in link from your invitation, signed in to the Google account your phone's Play Store uses, and accept. A link for another account, or an *internal app sharing* link, will not work.
+1. **Opt in.** Open the opt-in link from your invitation, signed in to the Google account your phone's Play Store uses, and accept. Accepting with another account, or opening an *internal app sharing* link, will not work.
 2. **Install.** Open the Play Store page from the opt-in page and install. Right after opting in, the Play Store on the phone may say *Item not found* for a while. Meanwhile, the store's web page, [play.google.com/store/apps/details?id=app.sleevesight](https://play.google.com/store/apps/details?id=app.sleevesight), opened in a browser with the same account, offers *Install* and sends the app to your phone.
 3. **Install from Play only.** Only a copy installed from Play takes part in the test and gets its updates. On Android 13 or later, a copy installed any other way may also be refused notification access.
 
@@ -36,7 +36,7 @@ The app runs no server and has no accounts: nothing you play reaches its develop
 So that you need not pay for testing, we can give you an Anthropic key of your own, on the project's account. It comes as a QR code, in person or in a private message, never on this page or anywhere public.
 
 - **Saving it.** In Settings, under *API keys*, tap *Scan keys* and point the camera at the code. The app lists what it found, by the key's last four characters; *Save* saves it. Then switch on *Anthropic* under *AI service*. The app asks for the camera only while you scan, and keeps no frame.
-- **What it means for privacy.** With our key, your track names, what the sources found and the request go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
+- **What it means for privacy.** With our key, your track's title, artists and album, and what the sources found, go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
 - **Cost.** Each insight is a paid call. *Write insights automatically*, on by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: the card says *The insight could not be written*, with a short reason such as *something went wrong* or *the AI service account needs credit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in.
 - **Your key is yours.** Please do not share it. We can see each key's use, and can turn one off without touching the others.
 
@@ -59,9 +59,9 @@ Anything that surprises you. In particular:
 - **Crashes**, freezes, or a screen that does not make sense.
 - **Battery or data** use you did not expect.
 - **The app icon:** how it looks on your home screen, with your launcher and, on Android 13 or later, with themed icons on. A screenshot of the home screen helps.
-- **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/), one of several intros plays, picked at random (not with *Reduce motion* on in your system settings), and a click on the logo plays another. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
+- **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/), one of several intros plays, picked at random (not on a reload, and not with *Reduce motion* on in your system settings); a click on the logo plays one again, picked afresh. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
 
-With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds the track changes and what the app did with them. It also lists the tracks you played around then, so send it only if you are happy to.
+With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds the track changes and what the app did with them. It also lists every track change recorded on the phone, with the tracks' titles and times: the whole history kept (90 days by default), not only around then. So send it only if you are happy to.
 
 Send reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
 
@@ -74,7 +74,7 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Your API keys** go only to the service each belongs to, with each request to it.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics and send them yourself. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 
