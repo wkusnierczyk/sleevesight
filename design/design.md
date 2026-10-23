@@ -286,6 +286,8 @@ Material 3, with dynamic color taken from the album art (material-color-utilitie
 
 ### Home screen, top to bottom
 
+**Header** (#445). Pinned at the top; everything under it scrolls, with a thin divider under it once scrolled. At the left, the app's name (the one-line logo once it lands, #383): a tap scrolls Home back to the top, animated, or at once with the phone's animations off; a screen reader says "Sleevesight, scroll to top". At the right, the Material *settings* symbol, a cogwheel, opens the settings, with the content description and tooltip "Settings". Both are at least 48 dp targets. A menu icon, if one comes, goes beside the cogwheel.
+
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
 2. **Album art**, which opens the album in the player. Playback progress under it.
 3. **Key data.** Song title, then artists (each one separately), then album, then "Released YYYY" on its own line.
