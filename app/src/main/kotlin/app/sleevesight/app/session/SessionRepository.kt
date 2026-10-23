@@ -193,7 +193,8 @@ class SessionRepository(
      * The sessions seen as a call and not read again since, by key, each with the wait that reads
      * it again ([readAgain]) once a [SETTLE] has passed from its first handling with the mark off;
      * null while it is still marked, or not handled since. Such a session is not shown, and nothing
-     * it reports is taken. An entry goes when the session is read again, or leaves the list.
+     * it reports is taken. An entry goes when the session is read again, is destroyed, or leaves
+     * the list.
      */
     private val afterCall = HashMap<Any, Job?>()
     private var artSources: List<ArtSource> = emptyList()

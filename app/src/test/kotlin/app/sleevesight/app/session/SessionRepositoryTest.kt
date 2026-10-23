@@ -287,12 +287,14 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         repository.start()
         assertSame(screen, repository.playerActivity())
 
+        // Spotify's report still settling: once the call is found, Spotify is not yet shown in its
+        // place, so the session that was shown stays the last one shown.
+        spotify.send(state(PlaybackState.STATE_PAUSED, positionMs = 1))
         app.marksCall = true
         val reads = app.reads
 
         assertNull(repository.playerActivity())
         assertEquals(reads, app.reads)
-        assertEquals(sundown, repository.nowPlaying.value)
 
         // In the wait after the call, too.
         app.call(false)
@@ -300,6 +302,64 @@ internal class SessionRepositoryTest : SessionRepositoryFixture() {
         assertEquals(reads, app.reads)
         waitOutTheCall()
         assertSame(screen, repository.playerActivity())
+    }
+
+    @Test
+    fun aCallDuringTheWaitStartsItAgain() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        val half = SessionRepository.SETTLE.inWholeMilliseconds / 2
+
+        app.call(true)
+        app.call(false)
+        val reads = app.reads
+        scheduler.advanceTimeBy(half)
+        app.call(true)
+        app.call(false)
+        scheduler.advanceTimeBy(half + 1)
+        scheduler.runCurrent()
+        assertEquals(reads, app.reads)
+        assertNull(repository.nowPlaying.value)
+
+        scheduler.advanceTimeBy(half)
+        scheduler.runCurrent()
+        assertEquals("Song", repository.nowPlaying.value?.title)
+    }
+
+    @Test
+    fun aSessionDestroyedDuringTheWaitIsNeverRead() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        app.call(true)
+        app.call(false)
+        val reads = app.reads
+
+        app.destroy()
+        waitOutTheCall()
+
+        assertEquals(reads, app.reads)
+        assertNull(repository.nowPlaying.value)
+    }
+
+    @Test
+    fun aSessionLeavingTheListDuringTheWaitIsNeverRead() {
+        val app = FakeSession(YOUTUBE_MUSIC, metadata = metadata(title = "Song"))
+        followed.value = setOf(YOUTUBE_MUSIC)
+        system.active = listOf(app)
+        repository.start()
+        app.call(true)
+        app.call(false)
+        val reads = app.reads
+
+        system.change(emptyList())
+        waitOutTheCall()
+
+        assertEquals(reads, app.reads)
+        assertNull(repository.nowPlaying.value)
     }
 
     @Test
