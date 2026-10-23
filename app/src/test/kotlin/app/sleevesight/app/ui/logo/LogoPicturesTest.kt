@@ -14,8 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.assertHeightIsEqualTo
-import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -28,6 +26,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -125,11 +124,48 @@ class LogoPicturesTest {
             }) {
                 val theme = if (dark) "dark" else "light"
                 keep("home-header-$theme", compose.onRoot().captureToImage().asAndroidBitmap())
-                // The logo, named as the app's name was, at its size, in the header's row.
-                val node = compose.onNodeWithContentDescription(app.getString(R.string.app_name))
-                node.assertHeightIsEqualTo(HEADER_LOGO_HEIGHT)
-                node.assertWidthIsEqualTo(HEADER_LOGO_HEIGHT * (LineBox.width / LineBox.height))
-                assertLogo(node.captureToImage().asAndroidBitmap(), if (dark) LogoColors.Dark else LogoColors.Light)
+                // The logo in the header's tap target, "Sleevesight, scroll to top": 8 dp in, centred,
+                // at its full size.
+                val toTop = app.getString(R.string.home_scroll_to_top, app.getString(R.string.app_name))
+                val box = compose.onNodeWithContentDescription(toTop).captureToImage().asAndroidBitmap()
+                val density = app.resources.displayMetrics.density
+                val height = HEADER_LOGO_HEIGHT.value * density
+                val width = height * LineBox.width / LineBox.height
+                assertTrue(
+                    "the target holds the logo: ${box.width} x ${box.height}",
+                    box.width >= width + 16 * density - 1,
+                )
+                val logo =
+                    Bitmap.createBitmap(
+                        box,
+                        (8 * density).toInt(),
+                        ((box.height - height) / 2).toInt(),
+                        width.toInt(),
+                        height.toInt(),
+                    )
+                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light)
+            }
+        }
+    }
+
+    @Test
+    fun theLandedLogoIsTheHeadersOwnInItsTapTarget() {
+        // The last moment of the intro, its background gone, drawing the landed logo, against the
+        // header's own logo once it has ended: the same pixels, so the hand-over does not jump.
+        for (variant in listOf(IntroVariant.C, IntroVariant.D)) {
+            val landed = LogoIntro(variant).apply { elapsed = (variant.end(toHeader = true) - 1).toFloat() }
+            val ended = LogoIntro(variant).apply { skip() }
+            var before: Bitmap? = null
+            show(dark = false, { IntroOverHome(landed) }) {
+                assertNotNull(landed.target)
+                before = compose.onRoot().captureToImage().asAndroidBitmap()
+            }
+            show(dark = false, { IntroOverHome(ended) }) {
+                val after = compose.onRoot().captureToImage().asAndroidBitmap()
+                val a = before!!.pixels()
+                val b = after.pixels()
+                val off = a.indices.count { i -> !near(a[i], Color(b[i])) }
+                assertTrue("$variant: $off pixels differ", off <= MOVED_PIXELS)
             }
         }
     }
@@ -184,6 +220,9 @@ class LogoPicturesTest {
 
     private companion object {
         const val FADED_IN = 700L
+
+        /** Antialiasing's leeway; a logo a pixel off would differ along all its edges. */
+        const val MOVED_PIXELS = 40
     }
 }
 
@@ -195,7 +234,9 @@ private fun IntroOverHome(intro: LogoIntro) {
     CompositionLocalProvider(LocalLogoIntro provides intro) {
         Box(Modifier.fillMaxSize()) {
             HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { Text("Now playing") }
-            Canvas(Modifier.fillMaxSize()) { drawIntro(intro.variant, intro.elapsed, intro.target, background, colors) }
+            Canvas(Modifier.fillMaxSize()) {
+                if (!intro.finished) drawIntro(intro.variant, intro.elapsed, intro.target, background, colors)
+            }
         }
     }
 }

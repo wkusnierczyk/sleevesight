@@ -8,9 +8,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -28,7 +26,8 @@ import androidx.compose.ui.unit.toSize
  * 0.266 em after the "t", so [height] is the record's. In the light or dark colours as the
  * screen's background is light or dark.
  *
- * It is named by its caller (Home sets "Sleevesight" on it). While the intro plays
+ * It says nothing itself: its caller names it (Home's header: "Sleevesight, scroll to top"). If
+ * its box is narrower than the logo, the logo shrinks to fit. While the intro plays
  * ([LocalLogoIntro]), it tells the intro where it is, and draws nothing: the intro draws the
  * logo flying onto it and landed, and this one takes over when the intro ends.
  */
@@ -48,14 +47,12 @@ fun HeaderLogo(
         }
     Canvas(place.size(height * (LineBox.width / LineBox.height), height)) {
         if (!shown) return@Canvas
-        val k = size.height / LineBox.height
-        scale(k, k, pivot = Offset.Zero) {
-            translate(-LineBox.LEFT, -LineBox.TOP) {
-                drawSleeve(colors)
-                translate(LineShift.x, LineShift.y) {
-                    drawSight(colors)
-                    drawRecord(colors, RecordCentre)
-                }
+        // As the intro's landing draws it ([headerPlace]), so the two meet exactly.
+        at(linePlace(size)) {
+            drawSleeve(colors)
+            translate(LineShift.x, LineShift.y) {
+                drawSight(colors)
+                drawRecord(colors, RecordCentre)
             }
         }
     }

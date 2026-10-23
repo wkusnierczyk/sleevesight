@@ -198,11 +198,23 @@ internal fun headerPlace(
     target: Rect,
     shift: Offset,
 ): Place {
-    val h = target.height / LineBox.height
-    return Place(target.topLeft + (shift - Offset(LineBox.LEFT, LineBox.TOP)) * h, h)
+    val line = linePlace(target.size)
+    return Place(target.topLeft + line.at + shift * line.scale, line.scale)
 }
 
-private inline fun DrawScope.at(
+/**
+ * Where the one-line logo draws the stacked mark's units in a box of [size] ("Sleeve"'s place;
+ * "sight" and the record are [LineShift] further): as large as fits, so its full height unless the
+ * box is narrower than the logo (a narrow screen at a large font), at the left, centred
+ * vertically.
+ */
+internal fun linePlace(size: Size): Place {
+    val k = minOf(size.height / LineBox.height, size.width / LineBox.width)
+    val top = (size.height - LineBox.height * k) / 2
+    return Place(Offset(0f, top) - Offset(LineBox.LEFT, LineBox.TOP) * k, k)
+}
+
+internal inline fun DrawScope.at(
     place: Place,
     crossinline block: DrawScope.() -> Unit,
 ) = translate(place.at.x, place.at.y) { scale(place.scale, place.scale, pivot = Offset.Zero) { block() } }

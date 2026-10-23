@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -396,7 +397,7 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
-            compose.onNodeWithText(text(R.string.home_settings)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.settings_section_ai)).fetchSemanticsNodes().isNotEmpty()
             }
@@ -408,12 +409,15 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
-            compose.onNodeWithText(text(R.string.home_settings)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.credits_title)).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.credits_intro)).assertIsDisplayed()
+            // The icons' set, Material Symbols, with its licence (#445).
+            compose.onNodeWithText(text(R.string.credits_material_symbols)).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Apache License 2.0").performScrollTo().assertIsDisplayed()
         }
     }
 
