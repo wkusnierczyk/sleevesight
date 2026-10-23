@@ -3,6 +3,7 @@ package app.sleevesight.app
 import android.os.Looper
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -58,12 +59,15 @@ fun idleFor(
     }
 }
 
-/** How long [now] waits for the settings. */
+/** How long [now] waits for a value. */
 private const val READ_LIMIT_MS = 5_000L
 
 /**
- * The settings as this store reads them now, failing after [READ_LIMIT_MS] rather than waiting on
- * a read that keeps failing: the store retries a failed read for ever, with a growing backoff, so
- * an unbounded `first()` on the main thread could hang a test with no limit.
+ * This flow's first value, failing after [READ_LIMIT_MS] rather than waiting on one that never
+ * comes: the settings store retries a failed read for ever, with a growing backoff, so an
+ * unbounded `first()` on the main thread could hang a test with no limit.
  */
-fun SettingsStore.now(): Settings = runBlocking { withTimeout(READ_LIMIT_MS) { settings.first() } }
+fun <T> Flow<T>.now(): T = runBlocking { withTimeout(READ_LIMIT_MS) { first() } }
+
+/** The settings as this store reads them now, within [READ_LIMIT_MS] ([Flow.now]). */
+fun SettingsStore.now(): Settings = settings.now()
