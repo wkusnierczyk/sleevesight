@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.logo
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,10 +13,13 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -26,6 +30,9 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.testTag
@@ -58,7 +65,7 @@ class LogoIntro internal constructor(
     var finished: Boolean by mutableStateOf(false)
         private set
 
-    /** Ends the intro at once: a tap, or Back. */
+    /** Ends the intro at once: a tap, Back, or a key. */
     fun skip() {
         finished = true
     }
@@ -85,8 +92,11 @@ const val LOGO_INTRO_TAG: String = "logo-intro"
 
 /**
  * Plays [intro] over the whole screen, on the screen's background ([MaterialTheme]'s surface),
- * until it ends or a tap or Back ends it. It is hidden from screen readers: it says nothing, and
- * is not played while touch exploration is on (`MainActivity`).
+ * until it ends, or a tap, Back or any key ends it ([endsOnKeys], which `MainActivity` also sets
+ * above the screen, so a key reaches the intro whatever holds the focus). It is hidden
+ * from screen readers: it says nothing, and is not played while touch exploration is on; while it
+ * plays, `MainActivity` hides the screen beneath from accessibility services, so none can reach
+ * it behind the intro.
  */
 @Composable
 fun LogoIntroOverlay(
@@ -97,6 +107,8 @@ fun LogoIntroOverlay(
     val background = MaterialTheme.colorScheme.surface
     val colors = logoColors()
     BackHandler { intro.skip() }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(focus) { focus.requestFocus() }
     LaunchedEffect(intro) {
         val start = withFrameNanos { it }
         while (!intro.finished) {
@@ -107,6 +119,10 @@ fun LogoIntroOverlay(
         modifier
             .fillMaxSize()
             .clearAndSetSemantics { testTag = LOGO_INTRO_TAG }
+            // Holds the focus while nothing beneath does, so a key comes here.
+            .endsOnKeys(intro)
+            .focusRequester(focus)
+            .focusable()
             .pointerInput(intro) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false).consume()
@@ -119,6 +135,20 @@ fun LogoIntroOverlay(
 }
 
 private const val NANOS_PER_MS = 1_000_000f
+
+/**
+ * While [intro] plays, any key but Back (which the intro's own Back handler takes) ends it and
+ * goes no further: the screen it would act on is behind the intro. On an ancestor of the screen
+ * and of the intro, it sees every key before whatever holds the focus.
+ */
+fun Modifier.endsOnKeys(intro: LogoIntro?): Modifier =
+    if (intro == null) {
+        this
+    } else {
+        onPreviewKeyEvent { event ->
+            (!intro.finished && event.key != Key.Back).also { if (it) intro.skip() }
+        }
+    }
 
 /** The largest a splash is drawn: the page's 300 px for D's tile, 144 units across. */
 private val MAX_SPLASH = 300.dp
@@ -207,8 +237,8 @@ internal fun DrawScope.drawIntro(
             } else {
                 val sleeve = splash.lerp(headerPlace(target, Offset.Zero), e)
                 val sight = splash.lerp(headerPlace(target, LineShift), e)
-                // D's tile fades as it flies, so the words land on their own.
-                pose.tile?.let { at(sleeve) { drawTile(colors, it, 1 - e, 1f / sleeve.scale) } }
+                // D's tile fades as it flies, so the words land on their own; R2's, already gone, stays gone.
+                pose.tile?.let { at(sleeve) { drawTile(colors, it, pose.tileAlpha * (1 - e), 1f / sleeve.scale) } }
                 at(sleeve) { drawSleeve(colors) }
                 at(sight) {
                     drawSight(colors)

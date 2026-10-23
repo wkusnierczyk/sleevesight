@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.toSize
  * 0.266 em after the "t", so [height] is the record's. In the light or dark colours as the
  * screen's background is light or dark.
  *
- * It says nothing to a screen reader: the header it is in names it. While the intro plays
+ * It is named by its caller (Home sets "Sleevesight" on it). While the intro plays
  * ([LocalLogoIntro]), it tells the intro where it is, and draws nothing: the intro draws the
  * logo flying onto it and landed, and this one takes over when the intro ends.
  */

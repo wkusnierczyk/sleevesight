@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.logo
 
 import android.content.Intent
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -9,18 +10,22 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -31,9 +36,10 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * The logo's intro (#383): played when the app is opened from the launcher while not running, not
- * on a return or a rotation; a tap or Back ends it; never under *Remove animations*, with the
- * setting off, or under touch exploration; and it lands on the header's logo.
+ * The logo's intro (#383): played when the app is opened from the launcher while it is not open,
+ * not on a return or a rotation; a tap, Back or a key ends it; the screen beneath is out of
+ * accessibility's reach while it plays; never under *Remove animations*, with the setting off, or
+ * under touch exploration; and it lands on the header's logo.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -93,16 +99,61 @@ class LogoIntroTest {
     }
 
     @Test
-    fun aReturnFromTheBackgroundOrARotationPlaysNoIntro() {
+    fun aKeyEndsTheIntroAndGoesNoFurther() {
         ActivityScenario.launch<MainActivity>(fromLauncher()).use { scenario ->
             assertTrue(playing())
+            var handled = false
+            scenario.onActivity {
+                handled = it.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB))
+            }
+            assertTrue("the key taken by the intro", handled)
+            assertFalse(playing())
+        }
+    }
+
+    @Test
+    fun theScreenBeneathIsOutOfAccessibilitysReachWhileTheIntroPlays() {
+        // The first-run screen, as at a first start.
+        val title = app.getString(R.string.first_run_leaves_title)
+
+        fun beneath() = compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
+        ActivityScenario.launch<MainActivity>(fromLauncher()).use {
+            assertTrue(playing())
+            assertFalse("hidden while it plays", beneath())
             intro().performTouchInput { click() }
+            frame()
+            assertTrue("back once it ends", beneath())
+        }
+    }
+
+    @Test
+    fun aReturnFromTheBackgroundGoesOnWithTheSameIntro() {
+        ActivityScenario.launch<MainActivity>(fromLauncher()).use { scenario ->
+            assertTrue(playing())
+            compose.mainClock.advanceTimeBy(1_000)
+            var before: LogoIntro? = null
+            scenario.onActivity { before = it.intro }
+            val elapsed = before!!.elapsed
+            assertTrue(elapsed > 0f)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.moveToState(Lifecycle.State.RESUMED)
-            assertFalse("back from the background", playing())
+            frame()
+            var after: LogoIntro? = null
+            scenario.onActivity { after = it.intro }
+            // No new activity, so no new intro: the same one, not started again.
+            assertSame(before, after)
+            assertTrue("not restarted", after!!.elapsed >= elapsed)
+        }
+    }
+
+    @Test
+    fun aRotationPlaysNoIntro() {
+        ActivityScenario.launch<MainActivity>(fromLauncher()).use { scenario ->
+            assertTrue(playing())
             // A new activity with state to restore, as after a rotation.
             scenario.recreate()
-            assertFalse("after a rotation", playing())
+            assertFalse(playing())
+            scenario.onActivity { assertNull(it.intro) }
         }
     }
 

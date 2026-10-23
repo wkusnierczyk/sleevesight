@@ -66,7 +66,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
  * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
- *   while not running, plays one of the logo's intros before showing its screen. On by default:
+ *   while it is not open (not a return to it), plays one of the logo's intros before showing its screen. On by default:
  *   it is a few seconds, played only at a cold start, and a tap ends it; it never plays while the
  *   phone's *Remove animations* is on. Off, for someone who would rather not wait at all.
  */

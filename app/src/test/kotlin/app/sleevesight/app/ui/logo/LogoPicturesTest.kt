@@ -7,18 +7,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.R
+import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import org.junit.Assert.assertTrue
@@ -42,6 +49,8 @@ import kotlin.math.abs
 class LogoPicturesTest {
     @get:Rule
     val compose = createEmptyComposeRule()
+
+    private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
 
     private val out = System.getenv("SLEEVESIGHT_PICTURES")?.let { File(it).apply { mkdirs() } }
 
@@ -70,7 +79,7 @@ class LogoPicturesTest {
     /** [content] as an activity's content, in the app's theme, light or [dark]. */
     private fun show(
         dark: Boolean,
-        content: @androidx.compose.runtime.Composable () -> Unit,
+        content: @Composable () -> Unit,
         check: () -> Unit,
     ) = ActivityScenario.launch(MainActivity::class.java).use { scenario ->
         scenario.onActivity { it.setContent { SleevesightTheme(darkTheme = dark) { content() } } }
@@ -78,23 +87,32 @@ class LogoPicturesTest {
         check()
     }
 
+    /**
+     * [logo] is the one-line logo in [colors]: "Sleeve" in ink in the left 40%, "sight" in red after
+     * it, the record last, from the box's proportions in units (Sleeve to 44.99, sight from 46.94
+     * to 109.36, of 192.11).
+     */
+    private fun assertLogo(
+        logo: Bitmap,
+        colors: LogoColors,
+    ) {
+        val part = { from: Float, to: Float ->
+            val left = (logo.width * from).toInt()
+            Bitmap.createBitmap(logo, left, 0, (logo.width * (to - from)).toInt(), logo.height).pixels()
+        }
+        assertTrue("ink in Sleeve", part(0f, .4f).any { near(it, colors.ink) })
+        assertTrue("no red in Sleeve", part(0f, .4f).none { near(it, colors.sight) })
+        assertTrue("red in sight", part(.45f, .7f).any { near(it, colors.sight) })
+        assertTrue("the record's rim", part(.8f, 1f).any { near(it, colors.rim) })
+    }
+
     @Test
     fun theHeaderLogoIsSleeveInInkAndSightInRedWithTheRecord() {
         for (dark in listOf(false, true)) {
-            val colors = if (dark) LogoColors.Dark else LogoColors.Light
             show(dark, { HeaderLogo(Modifier.testTag("logo"), height = HEADER_LOGO_HEIGHT * 3) }) {
                 val logo = compose.onNodeWithTag("logo").captureToImage().asAndroidBitmap()
                 keep("header-logo-${if (dark) "dark" else "light"}", logo)
-                // "Sleeve" in the left 40%, "sight" after it, the record last: from the box's
-                // proportions in units (Sleeve to 44.99, sight from 46.94 to 109.36, of 192.11).
-                val third = { from: Float, to: Float ->
-                    val left = (logo.width * from).toInt()
-                    Bitmap.createBitmap(logo, left, 0, (logo.width * (to - from)).toInt(), logo.height)
-                }
-                assertTrue("ink in Sleeve", third(0f, .4f).pixels().any { near(it, colors.ink) })
-                assertTrue("no red in Sleeve", third(0f, .4f).pixels().none { near(it, colors.sight) })
-                assertTrue("red in sight", third(.45f, .7f).pixels().any { near(it, colors.sight) })
-                assertTrue("the record's rim", third(.8f, 1f).pixels().any { near(it, colors.rim) })
+                assertLogo(logo, if (dark) LogoColors.Dark else LogoColors.Light)
             }
         }
     }
@@ -107,6 +125,24 @@ class LogoPicturesTest {
             }) {
                 val theme = if (dark) "dark" else "light"
                 keep("home-header-$theme", compose.onRoot().captureToImage().asAndroidBitmap())
+                // The logo, named as the app's name was, at its size, in the header's row.
+                val node = compose.onNodeWithContentDescription(app.getString(R.string.app_name))
+                node.assertHeightIsEqualTo(HEADER_LOGO_HEIGHT)
+                node.assertWidthIsEqualTo(HEADER_LOGO_HEIGHT * (LineBox.width / LineBox.height))
+                assertLogo(node.captureToImage().asAndroidBitmap(), if (dark) LogoColors.Dark else LogoColors.Light)
+            }
+        }
+    }
+
+    @Test
+    fun r2sTileStaysGoneAsTheMarkFlies() {
+        // R2's tile has faded by 3.78 s; the flight starts at 4.1 s, and lands at 4.75 s.
+        val tile = LogoColors.Dark.tile
+        for (t in listOf(4150L, 4300L, 4500L)) {
+            val intro = LogoIntro(IntroVariant.R2).apply { elapsed = t.toFloat() }
+            show(dark = true, { IntroOverHome(intro) }) {
+                val picture = compose.onRoot().captureToImage().asAndroidBitmap()
+                assertTrue("R2's tile at $t", picture.pixels().none { near(it, tile) })
             }
         }
     }
@@ -133,16 +169,7 @@ class LogoPicturesTest {
         dark: Boolean,
     ) {
         val intro = LogoIntro(variant).apply { elapsed = t.toFloat() }
-        show(dark, {
-            val background = MaterialTheme.colorScheme.surface
-            val colors = logoColors()
-            CompositionLocalProvider(LocalLogoIntro provides intro) {
-                Box(Modifier.fillMaxSize()) {
-                    HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { Text("Now playing") }
-                    Canvas(Modifier.fillMaxSize()) { drawIntro(variant, t.toFloat(), intro.target, background, colors) }
-                }
-            }
-        }) {
+        show(dark, { IntroOverHome(intro) }) {
             val picture = compose.onRoot().captureToImage().asAndroidBitmap()
             val theme = if (dark) "dark" else "light"
             keep("intro-${variant.name.lowercase()}-${"%04d".format(t)}-$theme", picture)
@@ -157,5 +184,18 @@ class LogoPicturesTest {
 
     private companion object {
         const val FADED_IN = 700L
+    }
+}
+
+/** [intro] at its [LogoIntro.elapsed], over the home screen, landing on its header's logo. */
+@Composable
+private fun IntroOverHome(intro: LogoIntro) {
+    val background = MaterialTheme.colorScheme.surface
+    val colors = logoColors()
+    CompositionLocalProvider(LocalLogoIntro provides intro) {
+        Box(Modifier.fillMaxSize()) {
+            HomeScreen(accessGranted = true, onOpenFirstRun = {}, onOpenSettings = {}) { Text("Now playing") }
+            Canvas(Modifier.fillMaxSize()) { drawIntro(intro.variant, intro.elapsed, intro.target, background, colors) }
+        }
     }
 }
