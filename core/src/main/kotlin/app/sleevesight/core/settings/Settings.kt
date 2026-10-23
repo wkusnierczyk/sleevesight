@@ -50,8 +50,10 @@ import kotlin.time.Duration.Companion.seconds
  *   Wikidata facts, MusicBrainz's tags) is kept on the phone: per artist, for the next track by the
  *   artist, and in each track's kept findings. Off by default, for new installs and for those
  *   upgraded from a version that kept it unasked: kept together, it amounts to a record of the
- *   artists heard, which a user should choose to keep. Off, none of it is kept, each track's
- *   artists are looked up again, and what was kept is deleted; what stays is the record of which
+ *   artists heard, which a user should choose to keep. Off, none of it is kept (nor the sources'
+ *   verdicts on artists' pages, nor the artists' MusicBrainz ids), each track's artists are looked
+ *   up again, a track played before is looked up again in full, its MusicBrainz match included,
+ *   and what was kept is deleted; what stays is the record of which
  *   tracks were played (the history, the track cache's keys) and the insights written, which may
  *   retell some of it. On, it is kept for its sources' lifetimes ([cacheLifetimes]), so fewer
  *   requests about artists leave the phone; each track's own lookups still send its artists'

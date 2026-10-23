@@ -90,7 +90,7 @@ class WikipediaSource(
                 kept[i] ?: part(checkNotNull(verdicts[i]), track, retrievedAt).also { keep(artist, it) }
             }
         for ((artist, part) in credits.zip(parts)) {
-            part.rejection?.let { findings.rejections += Rejection(artist.name, it) }
+            part.rejection?.let { findings.rejections += Rejection(artist.name, it, Scope.ARTIST) }
             if (part.unreachable) findings.unreachable = true
         }
         findings.artistFound = parts.any { it.accepted }
@@ -256,7 +256,9 @@ class WikipediaSource(
         for (candidate in candidates) {
             when (val verdict = check.song(candidate.item, track, resolution, candidate.route)) {
                 is Verdict.Accepted -> return verdict
-                is Verdict.Rejected -> rejections += Rejection(candidate.title ?: candidate.item, verdict.reason)
+                is Verdict.Rejected ->
+                    rejections +=
+                        Rejection(candidate.title ?: candidate.item, verdict.reason, Scope.SONG)
                 is Verdict.Unreachable -> findings.unreachable = true
             }
         }

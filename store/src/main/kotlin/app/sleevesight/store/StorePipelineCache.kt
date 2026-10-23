@@ -31,10 +31,12 @@ class StorePipelineCache(
         adapter: SourceAdapter,
         track: NormalizedTrack,
         duration: Duration?,
-    ): SourceResult? =
-        withContext(io) { caches.retrieval.get(adapter, track, duration)?.result }
+    ): SourceResult? {
+        keeping.retryClear()
+        return withContext(io) { caches.retrieval.get(adapter, track, duration)?.result }
             // One kept before the switch was turned off, which a clear that failed left.
             ?.takeUnless { RetrievalCodec.aboutArtists(it) && !keeping.on }
+    }
 
     override suspend fun keep(
         adapter: SourceAdapter,

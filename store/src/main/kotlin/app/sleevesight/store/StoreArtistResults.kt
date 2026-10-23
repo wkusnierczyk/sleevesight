@@ -16,10 +16,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * [keeping] is *Keep what sources said about each artist* (#420): while it is off, nothing is read
  * or kept, so each track's artists are looked up again, and the adapters keep nothing in memory in
  * its place either ([persists] stays true), since the switch is about what is kept of the artists
- * heard. [clear] deletes what was kept, here and in the retrieval cache ([Caches.clearArtists]), in
- * turn with the writes ([ArtistKeeping]). A clear that failed is tried again at each read while the
- * switch is off, so a database that failed once does not leave what was kept for the rest of the
- * process.
+ * heard. Its writes take turns with [ArtistKeeping.clear], and a read while the switch is off
+ * tries again a clear that failed ([ArtistKeeping.retryClear]).
  *
  * It does not throw, as [ArtistResults] asks: a database that fails to open, read or write misses
  * and keeps nothing, so the adapter asks its source each time (with no cache, the adapters keep
@@ -30,15 +28,12 @@ class StoreArtistResults(
     private val io: CoroutineContext,
     private val keeping: ArtistKeeping,
 ) : ArtistResults {
-    // Whether the last clear failed, so a read while the switch is off tries it again.
-    @Volatile private var uncleared = false
-
     override suspend fun get(
         part: ArtistPart,
         key: String,
     ): KeptPart? {
         if (keeping.on) return failingAs(null) { caches().artistResults.get(part, key) }
-        if (uncleared) clear()
+        keeping.retryClear()
         return null
     }
 
@@ -48,23 +43,6 @@ class StoreArtistResults(
         value: String,
     ) {
         keeping.ifOn { failingAs(false) { caches().artistResults.put(part, key, value) } }
-    }
-
-    /**
-     * Deletes what is kept about artists ([Caches.clearArtists]), after any write in progress.
-     * Returns whether it did: false when the database failed, and then a read while the switch is
-     * off tries again.
-     */
-    suspend fun clear(): Boolean {
-        val cleared =
-            keeping.clearing {
-                failingAs(false) {
-                    caches().clearArtists()
-                    true
-                }
-            }
-        uncleared = !cleared
-        return cleared
     }
 
     // [call] in [io], or [failed] when it throws anything but cancellation.

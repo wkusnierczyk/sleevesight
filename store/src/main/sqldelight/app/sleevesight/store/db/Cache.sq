@@ -166,7 +166,10 @@ DELETE FROM retrieval WHERE format <> :format;
 -- The results that say something about an artist, when keeping that is switched off (#420): those
 -- whose payload holds one of the markers `RetrievalCodec` names.
 retrievalDeleteAboutArtists:
-DELETE FROM retrieval WHERE instr(payload, :lineMarker) > 0 OR instr(payload, :genresMarker) > 0;
+DELETE FROM retrieval
+WHERE instr(payload, :scopeMarker) > 0
+   OR instr(payload, :genresMarker) > 0
+   OR instr(payload, :labelArtistsMarker) > 0;
 
 -- Artist resolution
 

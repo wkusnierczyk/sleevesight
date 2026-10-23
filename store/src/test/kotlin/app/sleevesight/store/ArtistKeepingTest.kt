@@ -8,12 +8,16 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
+import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -23,15 +27,22 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /**
  * *Keep what sources said about each artist* (#420) across the two stores that would keep it: the
- * artist-level cache and the retrieval cache, which keeps a track's result with its artist lines.
+ * artist-level cache and the retrieval cache, which keeps a track's result with what it says about
+ * the artists.
  */
 class ArtistKeepingTest {
     private val fixture = CacheFixture()
     private var keeps = false
-    private val keeping = ArtistKeeping { keeps }
+    private var failing = false
+    private val keeping =
+        ArtistKeeping.over(
+            { if (failing) error("the database could not be opened") else fixture.caches },
+            EmptyCoroutineContext,
+        ) { keeps }
     private val artists = StoreArtistResults({ fixture.caches }, EmptyCoroutineContext, keeping)
     private val pipeline = StorePipelineCache(fixture.caches, EmptyCoroutineContext, keeping)
     private val sundown = fixture.normalizer.normalize("Sundown", "Gordon Lightfoot")
@@ -64,6 +75,19 @@ class ArtistKeepingTest {
         }
     }
 
+    /** An adapter that answers [result] to every lookup, and counts them. */
+    private class FixedSource(
+        override val id: SourceId,
+        private val result: SourceResult,
+    ) : SourceAdapter {
+        var requests = 0
+
+        override suspend fun lookup(
+            track: NormalizedTrack,
+            resolution: Deferred<Resolution>,
+        ): SourceResult = result.also { requests++ }
+    }
+
     // A track's run as the pipeline makes it: the retrieval cache, else the adapter, then kept.
     private suspend fun run(
         adapter: SourceAdapter,
@@ -79,7 +103,8 @@ class ArtistKeepingTest {
     private fun line(
         scope: Scope,
         text: String,
-    ) = EvidenceDraft(SourceId.LASTFM, scope, text, null, fixture.clock.now)
+        source: SourceId = SourceId.LASTFM,
+    ) = EvidenceDraft(source, scope, text, null, fixture.clock.now)
 
     private fun stats() = fixture.caches.stats()
 
@@ -113,99 +138,267 @@ class ArtistKeepingTest {
         }
 
     @Test
-    fun `off, a result with nothing about an artist is kept as before`() =
+    fun `off, every kind of result about an artist is asked for again, on it is kept`() =
         runBlocking {
-            val song = SourceResult(Outcome.SongArticle, listOf(line(Scope.SONG, "A song.")), Duration.ZERO)
-            val adapter = BioSource(artists)
+            for ((name, result) in ABOUT_ARTISTS) {
+                for (on in listOf(false, true)) {
+                    keeps = on
+                    val adapter = FixedSource(result.second, result.first)
+                    val track = fixture.normalizer.normalize("$name $on", "Gordon Lightfoot")
 
-            pipeline.keep(adapter, sundown, null, song)
+                    run(adapter, track)
+                    run(adapter, track)
 
-            assertEquals(song, pipeline.result(adapter, sundown, null))
+                    assertEquals(if (on) 1 else 2, adapter.requests, "$name, switch on: $on")
+                }
+            }
+            assertEquals(ABOUT_ARTISTS.size.toLong(), stats().retrieval.entries, "only those kept while on")
         }
 
     @Test
-    fun `off, a result kept before is not read, unverified lines and genre labels counting too`() =
+    fun `off, a result with nothing about an artist is kept as before, a song's rejection too`() =
+        runBlocking {
+            for (result in listOf(SONG, SONG_REJECTED)) {
+                val adapter = FixedSource(SourceId.WIKIPEDIA, result)
+                val track = fixture.normalizer.normalize("${result.rejections.size}", "Gordon Lightfoot")
+
+                run(adapter, track)
+                assertEquals(result, run(adapter, track))
+                assertEquals(1, adapter.requests)
+            }
+        }
+
+    @Test
+    fun `off, a result about an artist kept before is not read`() =
         runBlocking {
             keeps = true
-            val adapter = BioSource(artists)
-            val unverified =
-                SourceResult(Outcome.None, emptyList(), Duration.ZERO, unverified = listOf(line(Scope.ARTIST, "Bio.")))
-            val genres = SourceResult(Outcome.None, emptyList(), Duration.ZERO, genres = listOf(FOLK))
-            pipeline.keep(adapter, sundown, null, unverified)
-            pipeline.keep(adapter, carefree, null, genres)
+            for ((name, result) in ABOUT_ARTISTS) {
+                pipeline.keep(
+                    FixedSource(result.second, result.first),
+                    fixture.normalizer.normalize(name, "A"),
+                    null,
+                    result.first,
+                )
+            }
 
             keeps = false
-            assertNull(pipeline.result(adapter, sundown, null))
-            assertNull(pipeline.result(adapter, carefree, null))
+            for ((name, result) in ABOUT_ARTISTS) {
+                val track = fixture.normalizer.normalize(name, "A")
+                assertNull(pipeline.result(FixedSource(result.second, result.first), track, null), name)
+            }
             keeps = true
-            assertNotNull(pipeline.result(adapter, sundown, null), "kept, only not read while off")
+            val (name, first) = ABOUT_ARTISTS.entries.first()
+            assertNotNull(
+                pipeline.result(FixedSource(first.second, first.first), fixture.normalizer.normalize(name, "A"), null),
+                "kept, only not read while off",
+            )
         }
 
     @Test
     fun `clearing deletes the retrieval entries that say something about an artist, and only those`() =
         runBlocking {
             keeps = true
-            val adapter = BioSource(artists)
-            val song = SourceResult(Outcome.SongArticle, listOf(line(Scope.SONG, QUOTED)), Duration.ZERO)
-            val bio = SourceResult(Outcome.ArtistArticle, listOf(line(Scope.ARTIST, "Bio.")), Duration.ZERO)
-            val genres = SourceResult(Outcome.None, emptyList(), Duration.ZERO, genres = listOf(FOLK))
-            val third = fixture.normalizer.normalize("If You Could Read My Mind", "Gordon Lightfoot")
-            pipeline.keep(adapter, sundown, null, song)
-            pipeline.keep(adapter, carefree, null, bio)
-            pipeline.keep(adapter, third, null, genres)
+            for ((name, result) in ABOUT_ARTISTS) {
+                pipeline.keep(
+                    FixedSource(result.second, result.first),
+                    fixture.normalizer.normalize(name, "A"),
+                    null,
+                    result.first,
+                )
+            }
+            val song = FixedSource(SourceId.WIKIPEDIA, SONG)
+            val rejected = FixedSource(SourceId.WIKIPEDIA, SONG_REJECTED)
+            pipeline.keep(song, sundown, null, SONG)
+            pipeline.keep(rejected, carefree, null, SONG_REJECTED)
             artists.keep(PART, "gordon lightfoot", "Bio.")
 
             keeps = false
-            assertTrue(artists.clear())
+            assertTrue(keeping.clear())
 
             keeps = true
-            assertEquals(1, stats().retrieval.entries)
-            assertEquals(song, pipeline.result(adapter, sundown, null), "a line quoting the marker is not one")
+            assertEquals(2, stats().retrieval.entries)
+            assertEquals(SONG, pipeline.result(song, sundown, null), "a line quoting the markers is not one")
+            assertEquals(SONG_REJECTED, pipeline.result(rejected, carefree, null))
             assertEquals(0, stats().artistResults.entries)
             fixture.assertTotals()
         }
 
     @Test
-    fun `a clear that failed is tried again at the next read while off`() =
+    fun `clearing deletes the retrieval entries of an older encoding, which cannot say what they hold`() {
+        fixture.caches.queries.retrievalInsert(
+            source = SourceId.LASTFM.tag,
+            lookup_key = "old",
+            sources = " ${SourceId.LASTFM.tag} ",
+            format = (RetrievalCodec.FORMAT - 1).toLong(),
+            extraction = 1,
+            payload = "{}",
+            stored_at = 0,
+            used_at = 0,
+            size_bytes = 2,
+        )
+
+        fixture.caches.clearArtists()
+
+        assertEquals(0, stats().retrieval.entries)
+    }
+
+    @Test
+    fun `a clear that failed is tried again by an artist-cache read while off`() =
         runBlocking {
             keeps = true
             artists.keep(PART, "gordon lightfoot", "Bio.")
             keeps = false
-            var failing = true
-            val flaky =
-                StoreArtistResults(
-                    { if (failing) error("the database could not be opened") else fixture.caches },
-                    EmptyCoroutineContext,
-                    keeping,
-                )
+            failing = true
 
-            assertFalse(flaky.clear())
+            assertFalse(keeping.clear())
             assertEquals(1, stats().artistResults.entries)
             failing = false
-            assertNull(flaky.get(PART, "anyone"))
+            assertNull(artists.get(PART, "anyone"))
 
             assertEquals(0, stats().artistResults.entries, "the read cleared what the failed clear left")
         }
 
     @Test
-    fun `the markers are what an encoded result about an artist holds`() {
-        val bio = SourceResult(Outcome.ArtistArticle, listOf(line(Scope.ARTIST, "Bio.")), Duration.ZERO)
-        val genres = SourceResult(Outcome.None, emptyList(), Duration.ZERO, genres = listOf(FOLK))
-        val song = SourceResult(Outcome.SongArticle, listOf(line(Scope.SONG, QUOTED)), Duration.ZERO)
+    fun `a clear that failed is tried again by a track's read alone while off`() =
+        runBlocking {
+            keeps = true
+            artists.keep(PART, "gordon lightfoot", "Bio.")
+            val musicBrainz = ABOUT_ARTISTS.getValue("musicbrainz ids")
+            pipeline.keep(FixedSource(musicBrainz.second, musicBrainz.first), sundown, null, musicBrainz.first)
+            keeps = false
+            failing = true
 
-        assertTrue(RetrievalCodec.ARTIST_LINE_MARKER in RetrievalCodec.encode(bio))
-        assertTrue(RetrievalCodec.GENRES_MARKER in RetrievalCodec.encode(genres))
-        val encoded = RetrievalCodec.encode(song)
-        assertFalse(RetrievalCodec.ARTIST_LINE_MARKER in encoded || RetrievalCodec.GENRES_MARKER in encoded)
-        assertTrue(RetrievalCodec.aboutArtists(bio) && RetrievalCodec.aboutArtists(genres))
-        assertFalse(RetrievalCodec.aboutArtists(song))
+            assertFalse(keeping.clear())
+            failing = false
+            assertNull(pipeline.result(FixedSource(SourceId.MUSICBRAINZ, SONG), carefree, null))
+
+            assertEquals(0, stats().artistResults.entries)
+            assertEquals(0, stats().retrieval.entries)
+        }
+
+    @Test
+    fun `a track's result being kept when the switch turns off is cleared, never kept after the clear`() =
+        runBlocking {
+            keeps = true
+            val adapter = BioSource(ArtistResults.None)
+            // The switch turns off, and its clear is called, while the track's result is being
+            // written: the clear runs at once up to its first suspension, which waits for the write.
+            fixture.driver.before("INSERT INTO retrieval") {
+                keeps = false
+                launch(start = CoroutineStart.UNDISPATCHED) { keeping.clear() }
+            }
+
+            run(adapter, sundown)
+            yield()
+
+            assertEquals(0, stats().retrieval.entries)
+        }
+
+    @Test
+    fun `the markers are what an encoded result about an artist holds, and nothing else's`() {
+        val encoded = ABOUT_ARTISTS.mapValues { RetrievalCodec.encode(it.value.first) }
+        val markers =
+            listOf(
+                RetrievalCodec.ARTIST_SCOPE_MARKER,
+                RetrievalCodec.GENRES_MARKER,
+                RetrievalCodec.LABEL_ARTISTS_MARKER,
+            )
+
+        for ((name, payload) in encoded) assertTrue(markers.any { it in payload }, name)
+        for (other in listOf(SONG, SONG_REJECTED)) {
+            val payload = RetrievalCodec.encode(other)
+            assertFalse(markers.any { it in payload }, payload)
+            assertFalse(RetrievalCodec.aboutArtists(other))
+        }
+        assertTrue(ABOUT_ARTISTS.values.all { RetrievalCodec.aboutArtists(it.first) })
+    }
+
+    @Test
+    fun `a rejection's scope survives the encoding`() {
+        val result = ABOUT_ARTISTS.getValue("wikipedia mixed").first
+        assertEquals(result, RetrievalCodec.decode(RetrievalCodec.encode(result)))
+        assertEquals(SONG_REJECTED, RetrievalCodec.decode(RetrievalCodec.encode(SONG_REJECTED)))
     }
 
     private companion object {
         val PART = ArtistPart("lastfm.artist", 1, 1, setOf(SourceId.LASTFM))
-        val FOLK = GenreLabel("folk", "folk", 1, "Folk", "folk")
+        val AT: Instant = Instant.parse("2026-10-14T12:00:00Z")
 
-        // A song line whose text holds both markers, as quoted text.
-        const val QUOTED = "It reads \"scope\":\"artist\" and \"genres\":[ in its text."
+        // A song line whose text holds every marker, as quoted text.
+        const val QUOTED = "It reads \"scope\":\"artist\", \"genres\":[ and \"labelArtists\":[ in its text."
+
+        fun draft(
+            source: SourceId,
+            scope: Scope,
+            text: String,
+        ) = EvidenceDraft(source, scope, text, null, AT)
+
+        val SONG =
+            SourceResult(Outcome.SongArticle, listOf(draft(SourceId.WIKIPEDIA, Scope.SONG, QUOTED)), Duration.ZERO)
+
+        // Wikipedia's song article found, after a song candidate was rejected: about the song only.
+        val SONG_REJECTED =
+            SONG.copy(rejections = listOf(Rejection("Sundown (album)", "an album, not a song", Scope.SONG)))
+
+        /** The results that say something about an artist, by what they hold, with their source. */
+        val ABOUT_ARTISTS: Map<String, Pair<SourceResult, SourceId>> =
+            mapOf(
+                "artist line" to
+                    (
+                        SourceResult(
+                            Outcome.ArtistArticle,
+                            listOf(draft(SourceId.LASTFM, Scope.ARTIST, "Bio.")),
+                            Duration.ZERO,
+                        ) to SourceId.LASTFM
+                    ),
+                "unverified artist line" to
+                    (
+                        SourceResult(
+                            Outcome.None,
+                            emptyList(),
+                            Duration.ZERO,
+                            unverified = listOf(draft(SourceId.LASTFM, Scope.ARTIST, "Bio.")),
+                        ) to SourceId.LASTFM
+                    ),
+                "genres" to
+                    (
+                        SourceResult(
+                            Outcome.None,
+                            emptyList(),
+                            Duration.ZERO,
+                            genres = listOf(GenreLabel("folk", "folk", 1, "Folk", "folk")),
+                        ) to SourceId.LASTFM
+                    ),
+                // Last.fm's artist is another MusicBrainz artist's: a rejection and nothing else.
+                "lastfm rejection only" to
+                    (
+                        SourceResult(
+                            Outcome.Rejected("a different MusicBrainz artist"),
+                            emptyList(),
+                            Duration.ZERO,
+                            rejections = listOf(Rejection("Jessiah", "a different MusicBrainz artist", Scope.ARTIST)),
+                        ) to SourceId.LASTFM
+                    ),
+                "musicbrainz ids" to
+                    (
+                        SourceResult(
+                            Outcome.SongArticle,
+                            listOf(draft(SourceId.MUSICBRAINZ, Scope.SONG, "Released in 1974.")),
+                            Duration.ZERO,
+                            labelArtists = listOf("mbid-gordon"),
+                        ) to SourceId.MUSICBRAINZ
+                    ),
+                // The song article accepted, the artist article rejected.
+                "wikipedia mixed" to
+                    (
+                        SONG.copy(
+                            rejections =
+                                listOf(
+                                    Rejection("Sundown (album)", "an album, not a song", Scope.SONG),
+                                    Rejection("Gordon Lightfoot", "another Gordon Lightfoot", Scope.ARTIST),
+                                ),
+                        ) to SourceId.WIKIPEDIA
+                    ),
+            )
     }
 }

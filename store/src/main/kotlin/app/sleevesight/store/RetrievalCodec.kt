@@ -25,8 +25,10 @@ internal object RetrievalCodec {
      * page it links, by which labels from two sources combine and are credited, and the artists
      * whose MusicBrainz tags give labels (#84). The first release's date (#52) is an optional field
      * that older entries lack: MusicBrainz's extraction version, not this format, makes them misses.
+     * 5: a rejection's scope (#420), without which a verdict on an artist's page would read as one
+     * on the song's, and be kept and read while *Keep what sources said about each artist* is off.
      */
-    const val FORMAT: Int = 4
+    const val FORMAT: Int = 5
 
     private val json = Json { encodeDefaults = false }
 
@@ -34,20 +36,27 @@ internal object RetrievalCodec {
 
     /**
      * Text an encoded result holds only if it says something about an artist ([aboutArtists]): an
-     * artist-level line, or genre labels (from artists' tags). A line's own text cannot hold either,
-     * since its quotation marks are escaped. For deleting such results in the database
-     * (`retrievalDeleteAboutArtists`, #420) without decoding every one.
+     * artist-level line or rejection (both with the artist scope), genre labels (from artists'
+     * tags), or the artists' MusicBrainz ids. A string's own text cannot hold any of them, since its
+     * quotation marks are escaped, and an empty list is not encoded. For deleting such results in
+     * the database (`retrievalDeleteAboutArtists`, #420) without decoding every one.
      */
-    val ARTIST_LINE_MARKER: String = "\"scope\":\"${Scope.ARTIST.key}\""
+    val ARTIST_SCOPE_MARKER: String = "\"scope\":\"${Scope.ARTIST.key}\""
     const val GENRES_MARKER: String = "\"genres\":["
+    const val LABEL_ARTISTS_MARKER: String = "\"labelArtists\":["
 
     /**
      * Whether [result] says something about an artist: an artist-level line ([Scope.ARTIST]), verified
-     * or not, or genre labels, which come from artists' tags. Such a result is kept only while
-     * *Keep what sources said about each artist* is on (#420).
+     * or not; a verdict on an artist's page; genre labels, which come from artists' tags; or the
+     * artists' MusicBrainz ids ([SourceResult.labelArtists]). Such a result is kept only while
+     * *Keep what sources said about each artist* is on (#420), so while it is off MusicBrainz's
+     * result, which names the artists it resolved, is not kept either.
      */
     fun aboutArtists(result: SourceResult): Boolean =
-        (result.evidence + result.unverified).any { it.scope == Scope.ARTIST } || result.genres.isNotEmpty()
+        (result.evidence + result.unverified).any { it.scope == Scope.ARTIST } ||
+            result.rejections.any { it.scope == Scope.ARTIST } ||
+            result.genres.isNotEmpty() ||
+            result.labelArtists.isNotEmpty()
 
     fun encode(result: SourceResult): String =
         json.encodeToString(
@@ -58,7 +67,7 @@ internal object RetrievalCodec {
                 latency = result.latency.toIsoString(),
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
-                rejections = result.rejections.map { RejectionJson(it.subject, it.reason) },
+                rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
                 genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = result.labelArtists,
                 firstReleased = result.firstReleased,
@@ -74,7 +83,14 @@ internal object RetrievalCodec {
                 evidence = stored.evidence.map(::draft),
                 latency = Duration.parseIsoString(stored.latency),
                 unverified = stored.unverified.map(::draft),
-                rejections = stored.rejections.map { Rejection(it.subject, it.reason) },
+                rejections =
+                    stored.rejections.map {
+                        Rejection(
+                            it.subject,
+                            it.reason,
+                            requireNotNull(SCOPES[it.scope]) { "Unknown scope ${it.scope}" },
+                        )
+                    },
                 genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = stored.labelArtists,
                 firstReleased = stored.firstReleased,
@@ -164,5 +180,6 @@ internal object RetrievalCodec {
     private data class RejectionJson(
         val subject: String,
         val reason: String,
+        val scope: String = Scope.SONG.key,
     )
 }

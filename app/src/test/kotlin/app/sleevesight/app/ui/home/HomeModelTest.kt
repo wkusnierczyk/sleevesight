@@ -8,6 +8,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.evidence
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
@@ -159,7 +160,10 @@ class HomeModelTest {
                         SourceId.WEB to
                             done(
                                 Outcome.Rejected("unused"),
-                                rejections = listOf(Rejection("Gordon Lightfoot", "another artist of the name")),
+                                rejections =
+                                    listOf(
+                                        Rejection("Gordon Lightfoot", "another artist of the name", Scope.ARTIST),
+                                    ),
                             ),
                     ),
             )

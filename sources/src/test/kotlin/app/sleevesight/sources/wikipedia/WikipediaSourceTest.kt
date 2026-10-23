@@ -186,7 +186,7 @@ class WikipediaSourceTest {
                 assertTrue(result.outcome is Outcome.Rejected, "track $n: ${result.outcome}")
                 assertEquals(emptyList(), result.evidence)
                 assertTrue(
-                    Rejection("Reem", "“Reem” is a disambiguation page") in result.rejections,
+                    Rejection("Reem", "“Reem” is a disambiguation page", Scope.ARTIST) in result.rejections,
                     "${result.rejections}",
                 )
             }

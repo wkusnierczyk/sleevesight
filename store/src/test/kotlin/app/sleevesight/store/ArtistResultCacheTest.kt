@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -228,7 +229,6 @@ class ArtistResultCacheTest {
 
             store.keep(LASTFM, "a", "v")
             assertNull(store.get(LASTFM, "a"))
-            assertFalse(store.clear(), "a clear that failed says so")
         }
 
     @Test
@@ -243,7 +243,7 @@ class ArtistResultCacheTest {
                         fixture.caches
                     },
                     coroutineContext,
-                    ArtistKeeping { false },
+                    keeping { false },
                 )
 
             store.keep(LASTFM, "a", "v")
@@ -257,7 +257,7 @@ class ArtistResultCacheTest {
     fun `the switch is read at each call`() =
         runBlocking {
             var keeps = false
-            val store = StoreArtistResults({ fixture.caches }, coroutineContext, ArtistKeeping { keeps })
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext, keeping { keeps })
 
             store.keep(LASTFM, "a", "off")
             keeps = true
@@ -282,12 +282,12 @@ class ArtistResultCacheTest {
                 SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO),
             )
 
-            assertTrue(store.clear())
+            assertTrue(keeping { false }.clear())
 
             val stats = fixture.caches.stats()
             assertEquals(0, stats.artistResults.entries)
             assertEquals(0, stats.artists.entries)
-            assertEquals(1, stats.retrieval.entries, "the track-level cache is not the artists'")
+            assertEquals(1, stats.retrieval.entries, "a track result with nothing about an artist stays")
             fixture.assertTotals()
         }
 
@@ -295,12 +295,13 @@ class ArtistResultCacheTest {
     fun `a value being kept when the switch turns off is cleared, never kept after the clear`() =
         runBlocking {
             var keeps = true
-            val store = StoreArtistResults({ fixture.caches }, coroutineContext, ArtistKeeping { keeps })
+            val keeping = keeping { keeps }
+            val store = StoreArtistResults({ fixture.caches }, coroutineContext, keeping)
             // The switch turns off, and its clear is called, while a lookup's value is being written:
             // the clear runs at once up to its first suspension, which is waiting for the write.
             fixture.driver.before("INSERT INTO artist_result") {
                 keeps = false
-                launch(start = CoroutineStart.UNDISPATCHED) { store.clear() }
+                launch(start = CoroutineStart.UNDISPATCHED) { keeping.clear() }
             }
 
             store.keep(LASTFM, "a", "v")
@@ -315,6 +316,8 @@ class ArtistResultCacheTest {
             keeps = true
             assertNull(store.get(LASTFM, "a"))
         }
+
+    private fun keeping(keeps: () -> Boolean) = ArtistKeeping.over({ fixture.caches }, EmptyCoroutineContext, keeps)
 
     private fun track(freshUntil: Instant) =
         SourceResult(Outcome.ArtistArticle, emptyList(), Duration.ZERO, freshUntil = freshUntil)

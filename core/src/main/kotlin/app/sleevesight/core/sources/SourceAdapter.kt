@@ -1,6 +1,7 @@
 package app.sleevesight.core.sources
 
 import app.sleevesight.core.evidence.EvidenceDraft
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
@@ -116,8 +117,14 @@ data class SourceResult(
     val freshUntil: Instant? = null,
 )
 
-/** A candidate that failed the entity check: what it was looked up for, [subject], and why it was rejected. */
+/**
+ * A candidate that failed the entity check: what it was looked up for, [subject], and why it was
+ * rejected. [scope] is what the candidate was about: [Scope.ARTIST] for an artist's page (Last.fm's
+ * artist, the Wikipedia artist article), so a verdict on an artist is kept only as what was said
+ * about the artist is (#420); [Scope.SONG] for the song's.
+ */
 data class Rejection(
     val subject: String,
     val reason: String,
+    val scope: Scope,
 )

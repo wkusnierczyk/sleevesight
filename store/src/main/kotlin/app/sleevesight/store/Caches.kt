@@ -77,15 +77,19 @@ class Caches(
     /**
      * Deletes everything kept about artists, for *Keep what sources said about each artist* switched
      * off (#420): the artist-level results, the artist resolutions, and the retrieval entries that
-     * say something about an artist ([RetrievalCodec.aboutArtists]: an artist-level line, or genre
-     * labels). Returns how many entries it deleted.
+     * say something about an artist ([RetrievalCodec.aboutArtists]), or are in an older encoding,
+     * which cannot say so. Returns how many entries it deleted.
      */
     fun clearArtists(): Long =
         queries.transactionWithResult {
             queries.artistResultDeleteAll().value + queries.artistDeleteAll().value +
+                queries.retrievalPurgeFormat(RetrievalCodec.FORMAT.toLong()).value +
                 queries
-                    .retrievalDeleteAboutArtists(RetrievalCodec.ARTIST_LINE_MARKER, RetrievalCodec.GENRES_MARKER)
-                    .value
+                    .retrievalDeleteAboutArtists(
+                        RetrievalCodec.ARTIST_SCOPE_MARKER,
+                        RetrievalCodec.GENRES_MARKER,
+                        RetrievalCodec.LABEL_ARTISTS_MARKER,
+                    ).value
         }
 
     // Rows holding a source tag the app no longer knows, as the adapter's source or among the

@@ -50,6 +50,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
@@ -422,7 +423,10 @@ class SourcesFoldScreenTest {
             mapOf(
                 SourceId.MUSICBRAINZ to done(evidence = mb),
                 SourceId.WIKIPEDIA to
-                    done(unverified = unverified, rejections = listOf(Rejection("Sundown (film)", "a film"))),
+                    done(
+                        unverified = unverified,
+                        rejections = listOf(Rejection("Sundown (film)", "a film", Scope.SONG)),
+                    ),
             )
         show(state(track(sources = sources, evidence = EvidenceSet.of(mb, JvmHasher)))) {
             assertEquals(0, compose.onAllNodesWithText(text(R.string.home_unverified)).fetchSemanticsNodes().size)

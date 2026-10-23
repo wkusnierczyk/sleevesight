@@ -129,7 +129,8 @@ class AppGraph(
      * *Keep what sources said about each artist* (#420), as last read (off until the first read),
      * for the artist-level cache and the retrieval cache alike.
      */
-    private val artistKeeping = ArtistKeeping { latestSettings.value?.keepArtistResults == true }
+    private val artistKeeping =
+        ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
 
     /**
      * What the sources give for an artist, in the caches' artist-level table (#238), only while
@@ -354,7 +355,7 @@ class AppGraph(
                 .distinctUntilChanged()
                 .collect { keeps ->
                     // One that fails is tried again at the next lookup while the switch is off.
-                    if (!keeps && !artistResults.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                    if (!keeps && !artistKeeping.clear()) Log.w(TAG, "The artist cache could not be cleared")
                 }
         }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
