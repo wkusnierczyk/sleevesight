@@ -72,7 +72,7 @@ internal class MessageStream {
             }
 
             "error" -> {
-                end(CompletionEvent.Error(event.error?.type?.let(::kindOfType) ?: AiErrorKind.SERVER))
+                end(CompletionEvent.Error(event.error?.let(::kindOf) ?: AiErrorKind.SERVER))
             }
 
             else -> {
