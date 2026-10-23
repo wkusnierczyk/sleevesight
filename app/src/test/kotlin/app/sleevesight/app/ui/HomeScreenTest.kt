@@ -157,12 +157,13 @@ class HomeScreenTest {
             }
         }
 
-    // A narrow phone at twice the font size: the logo's box gives way to the cogwheel, which keeps
-    // its whole target on screen (with the name's text, wider than the row at this size, it was
-    // squeezed off). Native graphics, as for the text it held before the logo (#383).
+    // A very narrow screen at twice the font size: the logo (about 147 dp with its padding, in dp,
+    // not scaled with the font) and the cogwheel's 48 dp do not fit in 160 dp, so the logo's box
+    // gives way and the logo shrinks to fit (`linePlace`), and the cogwheel keeps its whole target
+    // on screen. Native graphics, as when the header held the name's text (#445).
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Config(qualifiers = "w240dp-h640dp", fontScale = 2f)
+    @Config(qualifiers = "w160dp-h640dp", fontScale = 2f)
     fun atALargeFontTheCogwheelKeepsItsTarget() =
         show {
             val min = with(compose.density) { 48.dp.toPx() }

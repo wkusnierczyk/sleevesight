@@ -106,6 +106,26 @@ class IntroTimelineTest {
     }
 
     @Test
+    fun theOneLineLogoFillsItsHeightAndShrinksToFitANarrowBox() {
+        // Wide enough: as tall as the box.
+        val wide = linePlace(Size(400f, 40f))
+        near("full height", 40f / LineBox.height, wide.scale)
+        // Narrower than the logo at that height: as wide as the box, centred in its height.
+        val box = Size(100f, 40f)
+        assertTrue(box.width < box.height * LineBox.width / LineBox.height)
+        val narrow = linePlace(box)
+        near("fits the width", box.width / LineBox.width, narrow.scale)
+
+        fun Place.of(p: Offset) = at + p * scale
+        val topLeft = narrow.of(Offset(LineBox.LEFT, LineBox.TOP))
+        val bottomRight = narrow.of(Offset(LineBox.right, LineBox.bottom))
+        near("from the left", 0f, topLeft.x)
+        near("to the right", box.width, bottomRight.x)
+        near("centred", box.height - bottomRight.y, topLeft.y)
+        assertTrue("inside: $topLeft, $bottomRight", topLeft.y >= 0f && bottomRight.y <= box.height)
+    }
+
+    @Test
     fun theOneLineLogoReadsAsOneWord() {
         // "sight"'s s (from -16.9) starts just after Sleeve's last e (to 44.99), no further apart
         // than letters within a word, and the record's top is the h's, its foot the g's.

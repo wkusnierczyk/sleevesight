@@ -5,8 +5,13 @@ import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -19,8 +24,10 @@ import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.idleUntil
 import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -112,6 +119,39 @@ class LogoIntroTest {
     }
 
     @Test
+    fun aSystemKeyEndsTheIntroAndStillDoesItsOwnWork() {
+        for (code in listOf(KeyEvent.KEYCODE_VOLUME_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_TAB)) {
+            val intro = LogoIntro(IntroVariant.C)
+            var passed = false
+            val focus = FocusRequester()
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    activity.setContent {
+                        // What holds the focus beneath, as the screen does, seeing what gets past.
+                        Box(Modifier.endsOnKeys(intro)) {
+                            Box(
+                                Modifier
+                                    .focusRequester(focus)
+                                    .onKeyEvent {
+                                        passed = true
+                                        false
+                                    }.focusable(),
+                            )
+                        }
+                    }
+                }
+                frame()
+                scenario.onActivity { focus.requestFocus() }
+                frame()
+                scenario.onActivity { it.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code)) }
+                assertTrue("$code ends the intro", intro.finished)
+                // Volume and media keys go on; a key for the screen does not.
+                assertEquals("$code passed on", code != KeyEvent.KEYCODE_TAB, passed)
+            }
+        }
+    }
+
+    @Test
     fun theScreenBeneathIsOutOfAccessibilitysReachWhileTheIntroPlays() {
         // The first-run screen, as at a first start.
         val title = app.getString(R.string.first_run_leaves_title)
@@ -171,8 +211,12 @@ class LogoIntroTest {
 
     @Test
     fun theSettingOffPlaysNoIntro() {
-        // As left by an earlier process whose settings had it off.
+        // Off in the settings, and so in the mirror an earlier process left. Both, and the settings'
+        // first read awaited: with the mirror alone, the first read of settings that say on (the
+        // default) could land before the activity starts and turn the mirror back on.
         LastIntro(app).value = false
+        runBlocking { app.graph.settings.update { it.copy(introAtStart = false) } }
+        idleUntil("the setting read") { !app.graph.introAtStart.value }
         ActivityScenario.launch<MainActivity>(fromLauncher()).use { assertFalse(playing()) }
     }
 

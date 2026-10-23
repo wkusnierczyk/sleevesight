@@ -137,16 +137,20 @@ fun LogoIntroOverlay(
 private const val NANOS_PER_MS = 1_000_000f
 
 /**
- * While [intro] plays, any key but Back (which the intro's own Back handler takes) ends it and
- * goes no further: the screen it would act on is behind the intro. On an ancestor of the screen
- * and of the intro, it sees every key before whatever holds the focus.
+ * While [intro] plays, any key but Back (which the intro's own Back handler takes) ends it. A key
+ * for the screen goes no further, since the screen it would act on is behind the intro; a system
+ * key (volume, a headset's or the phone's media keys) goes on to do its own work, so turning the
+ * music down during the intro still does. On an ancestor of the screen and of the intro, it sees
+ * every key before whatever holds the focus.
  */
 fun Modifier.endsOnKeys(intro: LogoIntro?): Modifier =
     if (intro == null) {
         this
     } else {
         onPreviewKeyEvent { event ->
-            (!intro.finished && event.key != Key.Back).also { if (it) intro.skip() }
+            val ends = !intro.finished && event.key != Key.Back
+            if (ends) intro.skip()
+            ends && !event.nativeKeyEvent.isSystem
         }
     }
 

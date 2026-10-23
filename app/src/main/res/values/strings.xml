@@ -157,7 +157,7 @@
     <string name="settings_font_system">System font</string>
     <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
-    <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap skips it. It never plays while your phone’s Remove animations is on.</string>
+    <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations is on.</string>
     <string name="settings_section_keys">API keys</string>
     <string name="settings_keys_hint">Your API keys, stored encrypted on this phone. Each is sent only to its own service.</string>
     <string name="settings_scan_keys">Scan keys</string>
