@@ -309,6 +309,12 @@ class AnthropicProviderTest {
             )
             val limited = AnthropicProvider(ReplayNetClient { ok(body(cases[1]), 400) })
             assertEquals(ModelList.Failed(AiErrorKind.BILLING), limited.models(key))
+            // An `error` event mid-stream is read the same way.
+            val event = """{"type":"error","error":{"type":"invalid_request_error","message":"${cases[1]}"}}"""
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)),
+                events { ok(sse(event)) }.first,
+            )
         }
 
     @Test
