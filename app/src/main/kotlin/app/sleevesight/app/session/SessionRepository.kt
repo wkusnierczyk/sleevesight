@@ -42,8 +42,29 @@ import kotlin.time.Duration.Companion.seconds
  * **Players to follow** come from [followed], package names: in the app, the settings'
  * `SettingsStore.followedPlayers`, which `AppGraph` hands it (#126); with none given, `Settings`'
  * default (Spotify). Sessions of other players are dropped, and each newly seen one is logged as
- * ignored; no callback is registered on them. A player with several sessions is followed through
- * the first, the one the system ranks highest.
+ * ignored. A player with several sessions is followed through the first, the one the system ranks
+ * highest.
+ *
+ * **Phone calls are never read** (#435): a session whose package is a call's (`Settings.isCall`:
+ * telecom, the dialers) or that marks itself a call ([PlayerSession.marksCall]) is dropped whatever
+ * [followed] says, before anything of it is read, and is never one of the [seenPlayers]. Every
+ * read of a session goes through its [CallGate], one getter at a time, every report is admitted
+ * only while the session is not a call, and a settle checks again as it runs, since Android need
+ * not report a change of usage: a followed session that turns into a call forgets what it held
+ * and is not shown. A session seen as a call is ignored while Android marks it and for a [SETTLE]
+ * after its first handling with the mark off ([afterCall]); then it is read afresh, through the
+ * gate, as any player's, followed or probed. The mark is honoured from when Android reports it:
+ * what a session reported before it was marked is treated as any player's. The limit: an app you
+ * follow that also makes calls (not the phone app, which is never read) may show leftover caller
+ * details as a track for a moment after a call, and a call Sleevesight did not see (after a
+ * restart, or while notification access is off) is read like any player's once Android no longer
+ * marks it. A VoIP call in an ordinary media session (usage media) is not recognised.
+ *
+ * **Players seen** ([seenPlayers]), for *Players to follow*, are those whose session has reported
+ * music, a title and an artist ([SessionMapping.reportsMusic]): a followed player's from its own
+ * callback; another's, until it has, from a callback that reads only its metadata, for that test,
+ * and is removed once the player has passed it or its session ends. Nothing else of an unfollowed
+ * player's session is read, nothing of its metadata is kept, and a player seen has nothing more read.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
  * else the first followed session: the system lists the most recently active first.
@@ -145,7 +166,10 @@ class SessionRepository(
      */
     val art: StateFlow<Bitmap?> = artState.asStateFlow()
 
-    /** The players with an active session since the process started, followed or not: for *Players to follow*. */
+    /**
+     * The players whose session has reported music since the process started, followed or not;
+     * never a call: for *Players to follow* (#435).
+     */
     val seenPlayers: StateFlow<Set<String>> = seenState.asStateFlow()
 
     /**
@@ -153,13 +177,26 @@ class SessionRepository(
      * screen's player row; null when there is no such player or it names none. Read when asked,
      * on the main thread: it asks the player's session, so it is not published with every state.
      */
-    fun playerActivity(): PendingIntent? = lastShown?.session?.sessionActivity
+    fun playerActivity(): PendingIntent? =
+        lastShown
+            ?.takeIf { it.gate.key !in afterCall }
+            ?.let { shown -> shown.gate.read(shown::asCall) { it.sessionActivity } }
 
     private var gate: Job? = null
     private var listening = false
     private var followedPlayers: Set<String> = emptySet()
     private var ignored: Set<String> = emptySet()
     private val attached = LinkedHashMap<Any, Attached>()
+    private val probes = HashMap<Any, Probe>()
+
+    /**
+     * The sessions seen as a call and not read again since, by key, each with the wait that reads
+     * it again ([readAgain]) once a [SETTLE] has passed from its first handling with the mark off;
+     * null while it is still marked, or not handled since. Such a session is not shown, and nothing
+     * it reports is taken. An entry goes when the session is read again, is destroyed, or leaves
+     * the list.
+     */
+    private val afterCall = HashMap<Any, Job?>()
     private var artSources: List<ArtSource> = emptyList()
     private var artJob: Job? = null
     private var lastShown: Attached? = null
@@ -198,6 +235,10 @@ class SessionRepository(
         }
         attached.values.forEach { it.release() }
         attached.clear()
+        probes.values.forEach { it.release() }
+        probes.clear()
+        afterCall.values.forEach { it?.cancel() }
+        afterCall.clear()
         ignored = emptySet()
         publish()
         // Not replayed to a collector after the next start; `publish` has cleared `lastShown`.
@@ -208,25 +249,156 @@ class SessionRepository(
     private fun onSessionsChanged(active: List<PlayerSession>) {
         // A list dispatched before the listener was removed may arrive after it.
         if (!listening) return
-        seenState.update { it + active.map(PlayerSession::player) }
-        val ignoredNow = active.map(PlayerSession::player).filterNot { it in followedPlayers }.toSet()
-        (ignoredNow - ignored).forEach { Log.i(TAG, "Ignored: the media session of $it, a player not followed") }
+        // A call is dropped before anything of it is read, whatever the settings say.
+        val (calls, readable) = active.partition { CallGate(it).isCall }
+        calls.forEach { markCall(it.key) }
+        // A session gone from the list needs no wait.
+        val listed = active.map(PlayerSession::key).toSet()
+        afterCall.keys.filter { it !in listed }.forEach { afterCall.remove(it)?.cancel() }
+        val ignoredNow =
+            active
+                .filterNot { it in readable && it.player in followedPlayers }
+                .map(PlayerSession::player)
+                .toSet()
+        (ignoredNow - ignored).forEach {
+            Log.i(TAG, "Ignored: the media session of $it, a player not followed or a call")
+        }
         ignored = ignoredNow
+        watchForMusic(readable)
 
-        val wanted = active.filter { it.player in followedPlayers }.distinctBy(PlayerSession::player)
+        val wanted = readable.filter { it.player in followedPlayers }.distinctBy(PlayerSession::player)
         val keys = wanted.map(PlayerSession::key).toSet()
-        attached.values.filter { it.session.key !in keys }.forEach { it.release() }
+        attached.values.filter { it.gate.key !in keys }.forEach { it.release() }
         val next = wanted.associateBy(PlayerSession::key) { attached[it.key] ?: Attached(it) }
         attached.clear()
         attached.putAll(next)
         publish()
     }
 
+    /**
+     * Notes which players not followed report music ([seenPlayers]), through a [Probe] on each
+     * session of a player not seen yet: its metadata is read once as the probe is registered, and
+     * then only as the player reports it, until the player is seen. A player already seen has
+     * nothing of it read. A followed player's own callback notes it ([Attached]).
+     */
+    private fun watchForMusic(readable: List<PlayerSession>) {
+        val unseen = readable.filter { it.player !in followedPlayers && it.player !in seenState.value }
+        val keys = unseen.map(PlayerSession::key).toSet()
+        probes.values.filter { it.gate.key !in keys }.forEach { it.release() }
+        probes.keys.retainAll(keys)
+        for (session in unseen) {
+            // Another session of the same player may have just passed.
+            if (session.key in probes || session.player in seenState.value) continue
+            val probe = Probe(session)
+            probes[session.key] = probe
+            probe.check()
+        }
+    }
+
+    /** Adds [player] to [seenPlayers] and removes every probe on its sessions. */
+    private fun markSeen(player: String) {
+        seenState.update { it + player }
+        val done = probes.filterValues { it.gate.player == player }
+        done.values.forEach { it.release() }
+        probes.keys.removeAll(done.keys)
+    }
+
+    /**
+     * A session not followed that has not reported music yet: a callback that reads its metadata
+     * only to tell whether it is music ([SessionMapping.reportsMusic]), keeps nothing of it, and is
+     * removed once its player is seen ([markSeen]), its session leaves the list, or it ends. A
+     * session that marks a call ([PlayerSession.marksCall]) has its metadata unread while it is one
+     * and during the wait after it ([afterCall]); then it is checked afresh.
+     */
+    private inner class Probe(
+        session: PlayerSession,
+    ) {
+        val gate = CallGate(session)
+
+        private val callback =
+            object : MediaController.Callback() {
+                override fun onMetadataChanged(metadata: MediaMetadata?) {
+                    if (probes[gate.key] !== this@Probe) return
+                    if (gate.isCall) {
+                        markCall(gate.key)
+                    } else if (!waitingAfterCall(gate.key) && SessionMapping.reportsMusic(metadata)) {
+                        markSeen(gate.player)
+                    }
+                }
+
+                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
+                    if (probes[gate.key] !== this@Probe) return
+                    if (gate.isCall) markCall(gate.key) else waitingAfterCall(gate.key)
+                }
+
+                override fun onSessionDestroyed() {
+                    if (probes[gate.key] === this@Probe) drop()
+                }
+            }
+
+        init {
+            gate.register(callback)
+        }
+
+        /**
+         * The first read, once registered and listed, so music reported in between reaches the
+         * callback or this read; and the read once the wait after a call is over. A session that is
+         * a call by now, or still in that wait, is not read.
+         */
+        fun check() {
+            if (waitingAfterCall(gate.key)) return
+            val music = gate.read({ markCall(gate.key) }) { SessionMapping.reportsMusic(it.metadata) }
+            if (music == true) markSeen(gate.player)
+        }
+
+        fun release() {
+            gate.unregister(callback)
+        }
+
+        /** Releases this probe and forgets it, with any wait after a call. */
+        private fun drop() {
+            release()
+            probes.remove(gate.key)
+            afterCall.remove(gate.key)?.cancel()
+        }
+    }
+
+    /** Notes that the session [key] is a call now: it is ignored, and any wait to read it again stops. */
+    private fun markCall(key: Any) {
+        afterCall.put(key, null)?.cancel()
+    }
+
+    /**
+     * Whether the session [key], seen as a call and now handled with the mark off, is still to be
+     * ignored: always, until it is read again. The first such handling starts the wait, a [SETTLE],
+     * after which it is read afresh ([readAgain]). False for a session not seen as a call.
+     */
+    private fun waitingAfterCall(key: Any): Boolean {
+        if (key !in afterCall) return false
+        if (afterCall[key] == null) {
+            afterCall[key] =
+                scope.launch {
+                    delay(SETTLE)
+                    readAgain(key)
+                }
+        }
+        return true
+    }
+
+    /** Ends the wait after a call: the session [key] is read afresh, as a followed player or a probe. */
+    private fun readAgain(key: Any) {
+        afterCall.remove(key)
+        attached[key]?.readAgain()
+        probes[key]?.check()
+    }
+
     /** Publishes the shown player's state; [settled] is the session whose settle triggered it, if one did. */
     private fun publish(settled: Attached? = null) {
-        val shown = attached.values.firstOrNull { SessionMapping.isActive(it.state) } ?: attached.values.firstOrNull()
+        // A session seen as a call is not shown until it is read again ([afterCall]).
+        val eligible = attached.values.filter { it.gate.key !in afterCall }
+        val shown = eligible.firstOrNull { SessionMapping.isActive(it.state) } ?: eligible.firstOrNull()
         playbackState.value =
-            shown?.let { SessionMapping.playbackInfo(it.session.player, it.state) } ?: PlaybackInfo.NONE
+            shown?.let { SessionMapping.playbackInfo(it.gate.player, it.state) } ?: PlaybackInfo.NONE
         queueState.value = shown?.let { SessionMapping.queue(it.queue, it.queueTitle) }
         // A player that becomes the one shown because it started a new track has not settled
         // yet: its track is still the one before. The track shown stays until it settles.
@@ -334,14 +506,22 @@ class SessionRepository(
      * is capped at [MAX_SETTLE], but the cap never falls within [SETTLE] of a report that changed
      * the title or the queue item, which may be the first half of such a pair, until
      * [LONGEST_BURST] has passed since the burst's first report.
+     *
+     * **Calls.** Everything of the session goes through its [CallGate]: each report is admitted, and
+     * each read made, only while the session is not a call, checked just before (and, for a read,
+     * just after) it; a settle checks again when it runs. A session found to be a call is cleared
+     * ([asCall]) and shows nothing.
      */
     private inner class Attached(
-        val session: PlayerSession,
+        session: PlayerSession,
     ) {
+        val gate = CallGate(session)
+
         val callback =
             object : MediaController.Callback() {
                 override fun onMetadataChanged(metadata: MediaMetadata?) {
                     ifAttached {
+                        if (SessionMapping.reportsMusic(metadata)) markSeen(gate.player)
                         val title = SessionMapping.title(metadata)
                         val previousTitle = SessionMapping.title(this@Attached.metadata)
                         beginReport(newTitle = title != null && title != previousTitle)
@@ -359,7 +539,7 @@ class SessionRepository(
                         )
                         if (item != null) stateItem = item
                         this@Attached.state = state
-                        remember(SessionMapping.playbackInfo(session.player, state))
+                        remember(SessionMapping.playbackInfo(gate.player, state))
                         settleLater()
                     }
                 }
@@ -372,24 +552,26 @@ class SessionRepository(
                     ifAttached { queueTitle = title }
                 }
 
+                // Not relied on: Android need not report a change of usage (Android 16 does not
+                // for a local session); every report and settle checks the gate anyway.
+                override fun onAudioInfoChanged(info: MediaController.PlaybackInfo) {
+                    if (attached[gate.key] !== this@Attached) return
+                    if (gate.isCall) asCall() else waitingAfterCall(gate.key)
+                }
+
                 override fun onSessionDestroyed() {
-                    ifAttached {
-                        release()
-                        attached.remove(session.key)
-                    }
+                    if (attached[gate.key] !== this@Attached) return
+                    release()
+                    attached.remove(gate.key)
+                    afterCall.remove(gate.key)?.cancel()
+                    publish()
                 }
             }
 
-        init {
-            // Registered before the first reads: a change in between then reaches the callback, or
-            // the reads, rather than being lost until the next one.
-            session.register(callback)
-        }
-
-        var metadata: MediaMetadata? = session.metadata
-        var state: PlaybackState? = session.playbackState
-        var queue: List<MediaSession.QueueItem>? = session.queue
-        var queueTitle: CharSequence? = session.queueTitle
+        var metadata: MediaMetadata? = null
+        var state: PlaybackState? = null
+        var queue: List<MediaSession.QueueItem>? = null
+        var queueTitle: CharSequence? = null
 
         /** The track last settled, and the metadata it was mapped from (for its art). */
         var track: NowPlaying? = null
@@ -413,7 +595,7 @@ class SessionRepository(
         private var staleItem: Long? = null
 
         /** The last queue item a playback state named; a state with no item (−1) leaves it. */
-        private var stateItem: Long? = SessionMapping.activeItem(state)
+        private var stateItem: Long? = null
 
         /**
          * When the reports now settling began, and the playback state just before them: from the
@@ -450,14 +632,101 @@ class SessionRepository(
         private var settling: Job? = null
 
         init {
+            // Registered before the first reads: a change in between then reaches the callback, or
+            // the reads, rather than being lost until the next one. A session that has become a
+            // call meanwhile is read no further.
+            gate.register(callback)
+            // A session in its wait after a call is read once the wait is over.
+            if (!waitingAfterCall(gate.key)) readFirst()
+            stateItem = SessionMapping.activeItem(state)
             // The first track is settled at once: after process death the playing track is shown
             // without waiting.
             settle()
+            if (SessionMapping.reportsMusic(metadata)) markSeen(gate.player)
         }
 
         fun release() {
             settling?.cancel()
-            session.unregister(callback)
+            gate.unregister(callback)
+        }
+
+        /**
+         * The first reads, each through the gate, in turn: the metadata, the playback state, the
+         * queue and its title. Once one finds a call, none after it runs, and the session is cleared.
+         */
+        @Suppress("UNCHECKED_CAST") // Each value is cast back to the type its own getter returned.
+        private fun readFirst() {
+            val getters: List<(PlayerSession) -> Any?> =
+                listOf({ it.metadata }, { it.playbackState }, { it.queue }, { it.queueTitle })
+            var call = false
+            val values = mutableListOf<Any?>()
+            for (getter in getters) {
+                values += gate.read({ call = true }, getter)
+                if (call) break
+            }
+            if (call) {
+                clear()
+            } else {
+                // In the getters' order.
+                val read = values.iterator()
+                metadata = read.next() as MediaMetadata?
+                state = read.next() as PlaybackState?
+                queue = read.next() as List<MediaSession.QueueItem>?
+                queueTitle = read.next() as CharSequence?
+            }
+        }
+
+        /**
+         * The wait after a call is over ([afterCall]): reads the session afresh, every report
+         * through the gate as at the start ([readFirst]), so a player that plays is shown at once,
+         * with its state and queue.
+         */
+        fun readAgain() {
+            readFirst()
+            stateItem = SessionMapping.activeItem(state)
+            settle()
+            if (SessionMapping.reportsMusic(metadata)) markSeen(gate.player)
+            publish()
+        }
+
+        /**
+         * The session is a call ([CallGate.isCall]): forgets everything it held ([clear]) and
+         * publishes, so it shows no track or state, and another followed player is shown.
+         */
+        fun asCall() {
+            clear()
+            publish()
+        }
+
+        /**
+         * Forgets everything the session held: its reports (metadata, playback state, queue), the
+         * track settled and any settle pending, and the states and items kept for skip detection.
+         * Nothing held then can become a track once the call ends: a track is mapped again only
+         * from what the player reports after it.
+         */
+        private fun clear() {
+            markCall(gate.key)
+            settling?.cancel()
+            settling = null
+            pending = false
+            metadata = null
+            state = null
+            queue = null
+            queueTitle = null
+            track = null
+            trackMetadata = null
+            change = null
+            stateItem = null
+            knownItem = null
+            knownItemTitle = null
+            staleItem = null
+            recentStates.clear()
+            changeAt = null
+            movedBackAt = null
+            beforeBurst = null
+            beforeMovedBack = null
+            statesBeforeBurst = emptyList()
+            statesBeforeMovedBack = emptyList()
         }
 
         /**
@@ -472,7 +741,7 @@ class SessionRepository(
         ) {
             val changesTrack = newTitle || newItem
             val now = clock()
-            val before = SessionMapping.playbackInfo(session.player, state)
+            val before = SessionMapping.playbackInfo(gate.player, state)
             if (!pending) {
                 pending = true
                 burstFirst = now
@@ -531,6 +800,10 @@ class SessionRepository(
         }
 
         private fun settleNow() {
+            // A session that became a call while its reports settled (Android need not say so)
+            // is cleared, not mapped.
+            if (gate.isCall) return asCall()
+            if (waitingAfterCall(gate.key)) return
             settling?.cancel()
             settle()
             publish(this)
@@ -543,7 +816,7 @@ class SessionRepository(
          */
         private fun settle() {
             val previous = track
-            val now = SessionMapping.nowPlaying(session.player, metadata, item(previous))
+            val now = SessionMapping.nowPlaying(gate.player, metadata, item(previous))
             track = now
             trackMetadata = metadata
             val changed = previous != null && now != null && !TrackIdentity.same(previous, now)
@@ -577,11 +850,18 @@ class SessionRepository(
             }
         }
 
-        /** Applies [change] and republishes, unless this session was dropped meanwhile (a late callback). */
+        /**
+         * Applies [change] and republishes, unless this session was dropped meanwhile (a late
+         * callback), or is a call now: then the report is not looked at, and the session is cleared;
+         * or is in its wait after a call ([waitingAfterCall]): then the report is ignored.
+         */
         private inline fun ifAttached(change: () -> Unit) {
-            if (attached[session.key] !== this) return
-            change()
-            publish()
+            if (attached[gate.key] !== this) return
+            if (gate.isCall) return asCall()
+            if (!waitingAfterCall(gate.key)) {
+                change()
+                publish()
+            }
         }
     }
 
@@ -626,5 +906,35 @@ class SessionRepository(
         val DEFAULT_FOLLOWED: Set<String> = Settings().followedPlayers.filterValues { it }.keys
 
         private const val TAG = "Sleevesight"
+    }
+}
+
+/**
+ * The one way the repository reads a session it registers on (#435): a call's metadata (the
+ * caller), queue or state is never read. [read] checks [isCall] just before and just after its
+ * read, and on a call runs the clearing it is given and returns null; the session itself is
+ * reachable only through it, so no new path can bypass the check.
+ */
+private class CallGate(
+    private val session: PlayerSession,
+) {
+    val key: Any get() = session.key
+    val player: String get() = session.player
+
+    /** Whether the session is a call now: by its package (`Settings.isCall`) or by its own mark. */
+    val isCall: Boolean get() = Settings.isCall(session.player) || session.marksCall
+
+    fun register(callback: MediaController.Callback) = session.register(callback)
+
+    fun unregister(callback: MediaController.Callback) = session.unregister(callback)
+
+    /** [read] of the session, unless it is a call before or after it: then [onCall], and null. */
+    fun <T> read(
+        onCall: () -> Unit,
+        read: (PlayerSession) -> T,
+    ): T? {
+        val value = if (isCall) null else read(session)
+        // A call before the read is one after it too: [onCall] runs once either way.
+        return if (isCall) null.also { onCall() } else value
     }
 }

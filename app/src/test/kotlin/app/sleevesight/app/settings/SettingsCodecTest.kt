@@ -20,6 +20,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -356,6 +357,57 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun aPhoneCallSwitchedOnInAnOlderFileIsIgnored() {
+        // An older version listed telecom like any player, and it was switched on (#435).
+        val read =
+            SettingsCodec.read(
+                mutablePreferencesOf(
+                    stringSetPreferencesKey("players.on") to setOf(TELECOM, OTHER_PLAYER),
+                    stringSetPreferencesKey("players.off") to setOf("com.google.android.dialer"),
+                ),
+            )
+        assertEquals(mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true), read.followedPlayers)
+        assertFalse(read.follows(TELECOM))
+    }
+
+    @Test
+    fun pruningDropsPlayersListedOffAndCallsButKeepsChoices() {
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("players.on") to setOf(TELECOM, OTHER_PLAYER),
+                stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY, "com.example.video"),
+            )
+        SettingsCodec.prunePlayers(prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                // Switched on: kept, so the choice is not undone.
+                stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                // Listed by default and switched off: dropping it would switch it back on.
+                stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY),
+            ),
+            prefs,
+        )
+    }
+
+    @Test
+    fun pruningNeverTurnsAPlayerInBothKeysOn() {
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                stringSetPreferencesKey("players.off") to setOf(OTHER_PLAYER),
+            )
+        SettingsCodec.prunePlayers(prefs)
+        assertFalse(SettingsCodec.read(prefs).follows(OTHER_PLAYER))
+    }
+
+    @Test
+    fun pruningWithNothingToDropLeavesNoKeys() {
+        val prefs = mutablePreferencesOf(stringSetPreferencesKey("players.off") to setOf("com.example.video"))
+        SettingsCodec.prunePlayers(prefs)
+        assertEquals(mutablePreferencesOf(), prefs)
+    }
+
+    @Test
     fun aSourceSwitchIsStoredOnlyAsTheUsersOverride() {
         val prefs = mutablePreferencesOf()
         val chosen = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL - SourceSwitch.LASTFM
@@ -516,5 +568,6 @@ class SettingsCodecTest {
 
     private companion object {
         const val OTHER_PLAYER = "com.example.player"
+        const val TELECOM = "com.android.server.telecom"
     }
 }

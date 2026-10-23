@@ -186,6 +186,14 @@ class SettingsTest {
     }
 
     @Test
+    fun `a phone call is never followed, even switched on`() {
+        val telecom = "com.android.server.telecom"
+        assertTrue(Settings.isCall(telecom))
+        assertFalse(defaults.copy(followedPlayers = mapOf(telecom to true)).follows(telecom))
+        assertFalse(Settings.isCall(Settings.SPOTIFY))
+    }
+
+    @Test
     fun `cache lifetimes follow D9`() {
         assertEquals(30.days, defaults.cacheLifetimes[SourceId.MUSICBRAINZ])
         assertEquals(30.days, defaults.cacheLifetimes[SourceId.WIKIDATA])
