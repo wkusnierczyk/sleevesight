@@ -15,14 +15,13 @@ This page gives the picture: what Sleevesight is made of, what talks to what, an
 
 ## In short
 
-Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code as the insight is written. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts and no ads, and no telemetry, crash reporting or analytics of its own. Nothing you play, and nothing the app sends, reaches its developer.
+Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code once the reply is complete. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts and no ads, and no telemetry, crash reporting or analytics of its own; if any is added, it will never carry your data. Nothing you play, and nothing the app sends, reaches its developer.
 
 ## The parts
 
 ```mermaid
 flowchart LR
   Player["Music player"] -- "media session" --> Session["Session layer"]
-  Session -- "transport controls" --> Player
   Session --> Norm["Normalizer"]
   Norm --> Res["Entity resolution"]
   Norm --> Adapters["Source adapters"]
@@ -42,7 +41,7 @@ flowchart LR
 
 ### The session layer
 
-Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Write insights automatically*, and offers the player's own controls (play, pause, next) where the player advertises them.
+Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Write insights automatically*. Playing, pausing and skipping from the app come in Phase 2; today a tap on the player's name opens the player.
 
 ### The pipeline
 
