@@ -106,10 +106,6 @@ class ServiceTermsTest {
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
-    private companion object {
-        const val SESSION_END = "The end of the keyboard session"
-    }
-
     /** Whether a node's click action is named [label], as a screen reader announces it. */
     private fun hasClickLabel(label: String) =
         SemanticsMatcher("click labelled \"$label\"") { it.config.getOrNull(SemanticsActions.OnClick)?.label == label }
@@ -194,4 +190,8 @@ class ServiceTermsTest {
 
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
     private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
+
+    private companion object {
+        const val SESSION_END = "The end of the keyboard session"
+    }
 }
