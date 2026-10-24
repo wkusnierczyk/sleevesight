@@ -177,6 +177,19 @@ figure.side .sq{background:#fff}
 .loop .r2-rec{animation:r2-shrink 7s infinite}
 @keyframes rv-loop{0%{opacity:0}5%,88%{opacity:1}96%,100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.loop *{animation:none!important}}
+/* Colours: the mark in each colourway, on its own ground whatever the page's scheme, then the
+   colourway's swatches. A colourway sets the variables the words and the record read (`#words`,
+   `#lp`). */
+.cw{display:grid;place-items:center;aspect-ratio:2/1;border:1px solid var(--line);border-radius:16px}
+.cw svg{width:58%;height:auto;overflow:visible}
+.cw-light{background:#fff;--tile-ink:#141a22;--sight:#cc212d;--rim:#1f2328;--core:none;--groove:inline}
+.cw-dark{background:#000;--tile-ink:#fff;--sight:#f0443a;--rim:#8b949e;--core:inline;--groove:none}
+.swatches{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.swatches li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;align-items:start}
+.swatches i{grid-row:span 2;width:44px;height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px var(--line)}
+.swatches b{font-family:var(--f-ui);font-weight:600;font-size:16.5px}
+.swatches code{margin-left:8px;color:var(--muted)}
+.swatches span{font-size:15.5px;color:var(--muted);line-height:1.45}
 ol.refs{margin:0;padding-left:1.4em;font-size:15.5px;color:var(--muted)}
 ol.refs li{margin:0 0 4px}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
@@ -318,6 +331,7 @@ document.documentElement.classList.add('js');
       <li><a href="#introduction">Introduction</a></li>
       <li><a href="#fonts">Fonts</a></li>
       <li><a href="#record">Record</a></li>
+      <li><a href="#colours">Colours</a></li>
     </ul>
   </nav>
 </div></div></header>
@@ -458,15 +472,15 @@ document.documentElement.classList.add('js');
   <div class="trio">
     <figure>
       <div class="sq"><svg viewBox="0 0 300 300" role="img" aria-label="A record pulled halfway out of its sleeve, to the right"><defs><linearGradient id="sl-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><use href="#lp" x="102" y="66" width="168" height="168"/><rect x="34" y="72" width="156" height="156" rx="2" fill="#000" opacity=".22"/><svg x="30" y="68" width="156" height="156" viewBox="0 0 100 100"><rect width="100" height="100" fill="url(#sl-art)"/><g fill="hsl(225 70% 66%)"><circle cx="12" cy="12" r="5.9"/><circle cx="12" cy="31" r="7.6"/><circle cx="12" cy="50" r="4.2"/><circle cx="12" cy="69" r="5.9"/><circle cx="12" cy="88" r="4.2"/><circle cx="31" cy="12" r="5.9"/><circle cx="31" cy="31" r="4.2"/><circle cx="31" cy="50" r="5.9"/><circle cx="31" cy="69" r="7.6"/><circle cx="31" cy="88" r="4.2"/><circle cx="50" cy="12" r="7.6"/><circle cx="50" cy="31" r="4.2"/><circle cx="50" cy="50" r="5.9"/><circle cx="50" cy="69" r="7.6"/><circle cx="50" cy="88" r="7.6"/><circle cx="69" cy="12" r="7.6"/><circle cx="69" cy="31" r="7.6"/><circle cx="69" cy="50" r="4.2"/><circle cx="69" cy="69" r="2.5"/><circle cx="69" cy="88" r="5.9"/><circle cx="88" cy="12" r="2.5"/><circle cx="88" cy="31" r="5.9"/><circle cx="88" cy="50" r="7.6"/><circle cx="88" cy="69" r="7.6"/><circle cx="88" cy="88" r="7.6"/></g></svg></svg></div>
-      <figcaption>The record, halfway out of its sleeve. The sleeve is intro A's: a cover the app's simulator generates.</figcaption>
+      <figcaption>A record, half way out of its sleeve. The original proposal for Sleevesight's logo.</figcaption>
     </figure>
     <figure>
       <div class="sq a-ground"><img src="../assets/logo/sleeve-to-eye.svg" alt="A record slides out of its sleeve, an eye forms around it and blinks, the record turns twice, and the sleeve comes back"></div>
-      <figcaption>Intro A, of the first logo: the record slides out of its sleeve and an eye forms around it.</figcaption>
+      <figcaption>A sleeve sliding to the side, revealing the record, which then turns into the iris of a stylised eye. The original proposal for Sleevesight's animated intro.</figcaption>
     </figure>
     <figure>
       <div class="sq loop"><svg viewBox="-119.5 -82.76 292 160" role="img" aria-label="The tile slides left off the record behind it; the record shrinks beside sight, and the tile fades, leaving the mark"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div>
-      <figcaption>R2, one of the product page's intros: the tile is the sleeve, and the record comes out of it into the mark.</figcaption>
+      <figcaption>A simplified sleeve bearing the app's name as stacked text, sliding to the side, revealing the record. One of the current animated intros.</figcaption>
     </figure>
   </div>
 
@@ -480,6 +494,28 @@ document.documentElement.classList.add('js');
     <li><a href="https://www.npr.org/2023/03/10/1162568704/vinyl-outsells-cds-first-time-since-1987-records">Vinyl records outsell CDs for the first time since 1987</a>, NPR, 10 March 2023, on the RIAA's report for 2022.</li>
     <li>The photos: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">"Barnyard Hop", Parlophone</a>, Auckland War Memorial Museum, CC BY 2.0; <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Columbia ML 4001</a>, Sigmundg, CC BY-SA 4.0. Both from Wikimedia Commons, cropped to the record.</li>
   </ol>
+</section>
+
+<section id="colours" aria-labelledby="colours-h">
+  <h2 id="colours-h">Colours</h2>
+  <p>The logo's colours are few: white and black, the greys of the record, and two reds, for the label and for "sight". It comes in two colourways, light, on white, and dark, on black, and each colour below belongs to one or both.</p>
+  <div class="pair">
+    <figure>
+      <div class="cw cw-light" role="img" aria-label="The logo in its light colourway, on white"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div>
+      <figcaption>Light, on white.</figcaption>
+      <ul class="swatches"><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>The ground; the print on the label, and the hole. The print is 5.4:1 on the label red.</span></li><li><i style="background:#141a22"></i><div><b>Ink</b><code>#141a22</code></div><span>"Sleeve". 17.5:1 on white.</span></li><li><i style="background:#1f2328"></i><div><b>Rim</b><code>#1f2328</code></div><span>The disc. 15.8:1 on white.</span></li><li><i style="background:#57606a"></i><div><b>Groove</b><code>#57606a</code></div><span>The ring of groove on the disc. 6.4:1 on white, 2.5:1 on the rim.</span></li><li><i style="background:#cf222e"></i><div><b>Label red</b><code>#cf222e</code></div><span>The label. 5.4:1 on white.</span></li><li><i style="background:#cc212d"></i><div><b>Sight red</b><code>#cc212d</code></div><span>"sight". 5.5:1 on white.</span></li></ul>
+    </figure>
+    <figure>
+      <div class="cw cw-dark" role="img" aria-label="The logo in its dark colourway, on black"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div>
+      <figcaption>Dark, on black.</figcaption>
+      <ul class="swatches"><li><i style="background:#000000"></i><div><b>Black</b><code>#000000</code></div><span>The ground.</span></li><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>"Sleeve"; the print on the label, and the hole. 21:1 on black.</span></li><li><i style="background:#8b949e"></i><div><b>Rim on dark</b><code>#8b949e</code></div><span>The disc's rim, in grey, so that the record shows on black. 6.8:1 on black.</span></li><li><i style="background:#1f2328"></i><div><b>Core</b><code>#1f2328</code></div><span>The disc inside the rim, where the light colourway has the ring of groove.</span></li><li><i style="background:#cf222e"></i><div><b>Label red</b><code>#cf222e</code></div><span>The label, as on light. 3.9:1 on black.</span></li><li><i style="background:#f0443a"></i><div><b>Red on dark</b><code>#f0443a</code></div><span>"sight", lighter than on white, to read on black. 5.6:1 on black.</span></li></ul>
+    </figure>
+  </div>
+  <p>The ratios are each colour's contrast against what it sits on, by the measure of the Web Content Accessibility Guidelines, which ask 4.5:1 of text and 3:1 of large text and graphics, and exempt logos. The logo meets them where it can: the dark colourway's rim and red are lighter than the light one's for that reason.</p>
+  <p>The two reds differ by a shade. The sight red is a little darker than the label red so that "sight" reached 4.5:1 on the product page's grey ground (4.6:1, against the label red's 4.48:1). On white both pass, so they could become one red.</p>
+
+  <h3>Not brand colours</h3>
+  <p>Some colours on the site and in the app are the product's, not the brand's: the product page's grey ground, which is due to become white; the app's backgrounds, which vary; and its coloured chips, for genres and for sources. They may change without the logo changing.</p>
 </section>
 </main>
 
