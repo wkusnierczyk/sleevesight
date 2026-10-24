@@ -44,16 +44,15 @@ layout: null
 @font-face{font-family:"Sleevesight Mono";src:url(assets/fonts/RobotoMono-page.woff2) format("woff2");
   font-weight:500;font-display:swap}
 :root{
-  --bg:#fff; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
-  --accent:#3346c9; --on-accent:#ffffff;
-  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
+  --bg:#fff; --surface:#fafbfc; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
+  --accent:#3346c9;
+  --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3;
   --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
   --f-mono:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
   --h:28;
-  --s-c1:hsl(var(--h) 28% 95%); --s-c2:hsl(var(--h) 24% 91%); --s-c3:hsl(var(--h) 22% 87%);
-  --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
-  --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
+  --s-c1:hsl(var(--h) 28% 95%); --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%);
+  --s-onv:hsl(var(--h) 10% 34%); --s-pri:hsl(var(--h) 52% 36%);
   --cite-ink:#ffffff;
   --sight:#cf222e;
   --track:var(--sight);
@@ -61,12 +60,11 @@ layout: null
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0d1015; --surface:#151920; --sunken:#10141a; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
-  --accent:#8e9cff; --on-accent:#0e1116;
-  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6; --ok:#5fc48a;
-  --s-c1:hsl(var(--h) 14% 12%); --s-c2:hsl(var(--h) 14% 16%); --s-c3:hsl(var(--h) 13% 21%);
-  --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%); --s-onv:hsl(var(--h) 10% 70%);
-  --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
+  --bg:#0d1015; --surface:#151920; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
+  --accent:#8e9cff;
+  --src-w:#9fb0c6; --src-l:#ff7d72; --src-g:#e3a948; --src-mb:#c39be6;
+  --s-c1:hsl(var(--h) 14% 12%); --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%);
+  --s-onv:hsl(var(--h) 10% 70%); --s-pri:hsl(var(--h) 70% 80%);
   --cite-ink:#0e1116;
   --track:#f0443a;
   --trace:#d1a66a;
@@ -337,6 +335,9 @@ document.documentElement.classList.add('js');
       again = nav && (nav.type === 'reload' || nav.type === 'back_forward');
   if (again || location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
   root.classList.add('sl-wait');
+  // The second script's `start()` takes the wait off; should it fail or never run, the page shows
+  // after three seconds all the same, without the intro.
+  setTimeout(function () { root.classList.remove('sl-wait'); }, 3000);
 })();
 </script>
 </head>
@@ -524,7 +525,12 @@ document.documentElement.classList.add('js');
   function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
   measure();
   onScroll();
-  addEventListener('resize', measure);
+  // At most once a frame: `measure()` forces a layout, and `resize` can come more often than frames
+  // (synthetic events, some engines).
+  var measuring = 0;
+  addEventListener('resize', function () {
+    if (!measuring) measuring = requestAnimationFrame(function () { measuring = 0; measure(); });
+  });
   // The menu's width changes when the page's font arrives (`font-display: swap`), after the first layout.
   if (document.fonts) document.fonts.ready.then(measure);
   addEventListener('scroll', onScroll, {passive: true});
