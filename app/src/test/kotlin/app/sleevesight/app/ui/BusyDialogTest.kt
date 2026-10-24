@@ -49,7 +49,7 @@ import org.robolectric.shadows.ShadowDialog
 
 /**
  * The settings dialogs that save or remove keys, while their work runs (#242): a second tap in the
- * same frame, before a recomposition can disable the button, starts nothing more, and the dialog
+ * same frame, before a recomposition can disable the button, starts nothing more, and a removal
  * cannot be cancelled or dismissed. Each holds its write open on a gated [FlakyDataStore].
  */
 @RunWith(RobolectricTestRunner::class)
