@@ -25,7 +25,8 @@
     <string name="home_progress">Playback position</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
-    <string name="home_released">Released %1$s</string>
+    <!-- The album, then the year of the first release: "Rubber Soul, 1965". -->
+    <string name="home_album_year">%1$s, %2$s</string>
 
     <!-- Genre labels. -->
     <string name="home_genres">Genres of the artists</string>

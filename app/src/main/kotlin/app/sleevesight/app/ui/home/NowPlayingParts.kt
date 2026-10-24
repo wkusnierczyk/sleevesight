@@ -50,10 +50,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
@@ -206,9 +209,11 @@ private fun Progress(
 }
 
 /**
- * The song's title, then each artist, then the album, then the year of the first release, when
- * MusicBrainz gave one. The title is as normalized, with the source work and the variant it
- * named under it; the artists are the credited ones, featured artists included.
+ * The song's title, large and bold, then each artist, then the album in italics, followed by the
+ * year of the first release when MusicBrainz gave one (#438). The title is as normalized, with the
+ * source work and the variant it named under it; the artists are the credited ones, featured
+ * artists included. The album and the year are one text, so a screen reader reads them as one
+ * line; with no album reported, the year stands alone, and with neither, the line says so.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -218,21 +223,43 @@ internal fun KeyData(
     year: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(normalized.title.ifEmpty { header.title }, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            normalized.title.ifEmpty { header.title },
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
         val about =
             listOfNotNull(normalized.from?.let { stringResource(R.string.home_title_from, it) }, normalized.variant)
         if (about.isNotEmpty()) Small(about.joinToString(" · "))
         val artists = normalized.artists.ifEmpty { listOf(header.artists).filter(String::isNotBlank) }
         FlowRow {
             artists.forEachIndexed { i, artist ->
-                Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.titleMedium)
+                Text(if (i < artists.lastIndex) "$artist, " else artist, style = MaterialTheme.typography.bodyLarge)
             }
         }
-        Text(
-            header.album?.takeIf(String::isNotBlank) ?: stringResource(R.string.home_album_none),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        year?.let { Small(stringResource(R.string.home_released, it)) }
+        Text(albumLine(header.album?.takeIf(String::isNotBlank), year), style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** The album in italics and the year after it, either alone, or "Album not reported" with neither. */
+@Composable
+private fun albumLine(
+    album: String?,
+    year: String?,
+): AnnotatedString {
+    val text =
+        if (album != null && year != null) {
+            stringResource(R.string.home_album_year, album, year)
+        } else {
+            album ?: year ?: stringResource(R.string.home_album_none)
+        }
+    return buildAnnotatedString {
+        append(text)
+        // The album's own words, wherever the format puts them.
+        if (album != null) {
+            val start = text.indexOf(album)
+            if (start >= 0) addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, start + album.length)
+        }
     }
 }
 

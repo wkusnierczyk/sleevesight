@@ -296,7 +296,7 @@ When the app is opened from the launcher with no screen to restore (not a return
 
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
 2. **Album art**, which opens the album in the player. Playback progress under it.
-3. **Key data.** Song title, then artists (each one separately), then album, then "Released YYYY" on its own line.
+3. **Key data** (#438). Song title, larger and bold; then the artists (each one separately), smaller and regular; then the album at the artists' size, in italics, followed by a comma and the year of first release: *Rubber Soul*, 1965. No album reported: the year alone, or "Album not reported" with no year either. No year: the album alone. The album and the year are one line to a screen reader.
 4. **Genre labels.** Colored, tappable chips. A tap opens the genre's detail content, except on a label only MusicBrainz gives (D12, *Genre labels*).
 5. **Key insights.** The grounded insight with citation chips.
 6. **Sounds like.** Similar artists as tappable chips.
