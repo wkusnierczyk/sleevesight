@@ -2,30 +2,9 @@
 # The tester brief for the closed test on Google Play (#158), at `/docs/tester/alpha/`: linked from
 # the invitation. Written from the build in the test, its first-run screen and settings, and the
 # privacy policy (`privacy.md`); a change to what testers install, see or send changes it too.
-layout: default
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
-logo: linear
 ---
-
-<!-- The product page's type (`index.html`): Roboto Slab for the running text, Roboto Flex for the
-     headings, Roboto Mono for code, from the page's own cut-down copies (`assets/fonts/make_page_font.py`),
-     which hold printable ASCII, Latin-1 and the common punctuation, so this page's text needs no
-     rebuild while it stays within them. -->
-<style>
-@font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
-  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
-@font-face{font-family:"Sleevesight Slab";src:url({{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}) format("woff2");
-  font-weight:350 700;font-display:swap}
-@font-face{font-family:"Sleevesight Mono";src:url({{ '/assets/fonts/RobotoMono-page.woff2' | relative_url }}) format("woff2");
-  font-weight:500;font-display:swap}
-.markdown-body{font-family:"Sleevesight Slab",ui-serif,Georgia,serif;font-weight:350;font-size:18px;line-height:1.55}
-.markdown-body strong,.markdown-body b{font-weight:700}
-.markdown-body h1,.markdown-body h2,.markdown-body h3{font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:700;letter-spacing:-.01em}
-.markdown-body h1{font-stretch:90%}
-.markdown-body h2,.markdown-body h3{font-stretch:92%}
-.markdown-body code{font-family:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;font-weight:500}
-</style>
 
 # Testing Sleevesight
 
@@ -33,7 +12,7 @@ Thank you for testing Sleevesight. This page says what the app is, how to instal
 
 ## What Sleevesight is
 
-An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation before showing it. The [product page](https://sleevesight.app/) shows what a card looks like.
+An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation once the reply is complete, and marks a sentence that cites nothing. The [product page](https://sleevesight.app/) shows what a card looks like.
 
 The app runs no server and has no accounts: nothing you play reaches its developer. That also means we learn little unless you tell us: Google Play gives us only aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. That is why your reports matter.
 
@@ -48,8 +27,8 @@ The app runs no server and has no accounts: nothing you play reaches its develop
 1. **The first-run screen** says what the app reads, what leaves the phone and to whom, and links the privacy policy.
 2. **Notification access.** Android lets an app read what a player is playing only through notification access. Under the text, tap *Open notification access*, turn on Sleevesight in the settings that open, and come back. A player tells Android what it is playing (the track, artists, album, cover and position) in a *media session*, and Android shows a media session only to apps with notification access. Sleevesight reads the players' media sessions, not the notifications: it does not receive the audio, or your other notifications, such as messages or other apps' alerts. Once access is on, the screen offers *Continue*.
 3. **Players.** Spotify is followed by default. More players appear under *Players to follow* in Settings, by name and switched off, once any of them has played music (a track with a title and an artist) while Sleevesight has notification access turned on; switch those players on to follow them as well. Most video apps, which report no artist, and calls from the phone app are not listed.
-4. **Sources.** MusicBrainz and Wikipedia need no key and are turned on by default. Last.fm and the Exa web search need your own keys; without them they find nothing, which is fine for the test. If you want to enable them, create API keys at their respective API consoles, and add them in Settings under *API keys*. To enter several keys at once, open [sleevesight.app/api-keys](https://sleevesight.app/api-keys) on a computer: it turns them into one QR code, which *Scan keys*, under *API keys*, reads. The page sends nothing anywhere.
-5. **The AI service.** Under *AI service*, switch on one service (Anthropic, OpenAI or Google); services are exclusive and at most one can be enabled at a time. Save the corresponding API key under *API keys*; until you do, the app shows the sources but writes no insight. You can use your own key, or the key we give you (below).
+4. **Sources.** MusicBrainz and Wikipedia need no key and are turned on by default. Last.fm and the Exa web search need your own keys; without them they find nothing, which is fine for the test. If you want to enable them, create API keys at their respective API consoles, and save each in its key row, under its switch in Settings. To enter several keys at once, open [sleevesight.app/api-keys](https://sleevesight.app/api-keys) on a computer: it turns them into one QR code, which *Scan keys*, under *API keys*, reads. The page sends nothing anywhere.
+5. **The AI service.** Under *AI service*, switch on one service (Anthropic, OpenAI or Google); services are exclusive and at most one can be enabled at a time. Save its API key in the key row under its switch; until you do, the app shows the sources but writes no insight. You can use your own key, or the key we give you (below).
 
 ## The key we give you
 
@@ -57,12 +36,12 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 - **Saving it.** In Settings, under *API keys*, tap *Scan keys* and point the camera at the code. The app lists what it found, by the key's last four characters; *Save* saves it. Then switch on *Anthropic* under *AI service*. The app asks for the camera only while you scan, and no frame is stored on the device.
 - **What it means for privacy.** With our key, your track's title, artists and album, and what the sources found, go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
-- **Cost.** Each insight is a paid call. *Write insights automatically*, on by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: the card says *The insight could not be written*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in.
+- **Cost.** Each insight is a paid call (now and then two). *Write insights automatically*, on by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: the card says *The insight could not be written*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in.
 - **The key we give you is yours only.** Please do not share it. We can see each key's use, and can turn one off without touching the others.
 
 ## Using Sleevesight
 
-- **Play music in Spotify** (or another player you follow), then open Sleevesight. The home screen follows the track: the cover, the title and artists, the genre labels, and under *Highlights* the key insights.
+- **Play music in Spotify** (or another player you follow), then open Sleevesight. The home screen follows the track: the cover, the title and artists, the genre labels, and under *Why it's interesting* the insight.
 - **Write insight.** Nothing is written until your first tap on *Write insight*. After that, under the default *Write insights automatically: On every track change*, a new insight is written for each new track as it starts, until Android closes the app in the background, often days later; after that, the next track waits for a tap on *Write insight* again. *When I skip* writes only the tracks you skip to; *Never: only when I tap Write* writes only when you tap.
 - **Skip detection.** Under *When I skip*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Pause automatic writing after*); the card then asks for a tap.
