@@ -152,14 +152,17 @@ class MusicBrainzResolutionTest {
         }
 
     @Test
-    fun `the search sends the normalized title and the primary artist, and never asks for tags or genres`() =
+    fun `the search sends the title and primary artist, no genres, tags only on the recording`() =
         runTest {
             resolve(RegressionCase.VERSION_SUFFIX.tracks.single())
             val search = net.sent.first()
             assertEquals("recording:\"Fisherman's Blues\" AND artist:\"The Waterboys\"", search.query["query"])
             for (request in net.sent) {
-                val inc = request.query["inc"].orEmpty()
-                assertFalse("tags" in inc || "genres" in inc, inc)
+                val inc = request.query["inc"].orEmpty().split('+')
+                assertFalse("genres" in inc, request.url)
+                // The recording's tags give the track's genre labels (#439); no other lookup asks for tags.
+                val recording = request.url.startsWith("${MusicBrainzClient.BASE}/recording/")
+                assertEquals(recording, "tags" in inc, request.url)
             }
         }
 

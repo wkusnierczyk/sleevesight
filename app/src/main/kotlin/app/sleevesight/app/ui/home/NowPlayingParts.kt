@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -33,15 +32,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -50,22 +46,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
-import app.sleevesight.core.genres.LabelSource
-import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
-import app.sleevesight.core.pipeline.TrackState
-import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -236,99 +222,6 @@ internal fun KeyData(
     }
 }
 
-/**
- * The genre labels, in their families' hues, said to be the artists'. A tap on one shows where it
- * came from: each label source, linking the artist's page there, with MusicBrainz's licence
- * (D12); a label only MusicBrainz gives opens nothing more. The genre cards are Phase 2.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun Genres(
-    track: TrackState?,
-    settings: Settings?,
-) {
-    if (track == null || !track.gathered) return
-    val labels = track.genres
-    var open by remember(labels) { mutableStateOf<TrackLabel?>(null) }
-    val off = settings != null && LabelSource.entries.none { settings.givesLabels(it) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        when {
-            labels.isNotEmpty() -> Small(stringResource(R.string.home_genres))
-            off -> Small(stringResource(R.string.home_genres_off))
-            else -> Small(stringResource(R.string.home_genres_none))
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (label in labels) {
-                GenreChip(label, selected = open == label) {
-                    open =
-                        if (open ==
-                            label
-                        ) {
-                            null
-                        } else {
-                            label
-                        }
-                }
-            }
-        }
-        open?.let { Credits(it) }
-    }
-}
-
-@Composable
-private fun GenreChip(
-    label: TrackLabel,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < HALF
-    val hue = label.genre.hue.toFloat()
-    val container = Color.hsl(hue, CHIP_SATURATION, if (dark) DARK_CONTAINER else LIGHT_CONTAINER)
-    val content = Color.hsl(hue, CHIP_SATURATION, if (dark) DARK_CONTENT else LIGHT_CONTENT)
-    val shape = RoundedCornerShape(16.dp)
-    Text(
-        label.genre.label,
-        style = MaterialTheme.typography.labelLarge,
-        color = content,
-        modifier =
-            Modifier
-                .testTag(GENRE_PREFIX + label.genre.identity)
-                .minimumInteractiveComponentSize()
-                .clip(shape)
-                .background(container, shape)
-                .selectable(selected = selected, role = Role.Button, onClick = onClick)
-                .then(if (selected) Modifier.background(content.copy(alpha = SELECTED_ALPHA), shape) else Modifier)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
-}
-
-@Composable
-private fun Credits(label: TrackLabel) {
-    val linkStyle = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
-    val licence = stringResource(R.string.home_genre_licence)
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Small(stringResource(R.string.home_genre_from, label.genre.label))
-        for (credit in label.credits) {
-            val text =
-                buildAnnotatedString {
-                    val url = credit.url
-                    if (url !=
-                        null
-                    ) {
-                        withLink(LinkAnnotation.Url(url, linkStyle)) { append(credit.source.credit) }
-                    } else {
-                        append(credit.source.credit)
-                    }
-                    credit.source.licenceUrl?.let {
-                        append(" · ")
-                        withLink(LinkAnnotation.Url(it, linkStyle)) { append(licence) }
-                    }
-                }
-            Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
 @Composable
 private fun Small(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -337,16 +230,6 @@ private fun Small(text: String) {
 /** The test tag of the player row. */
 const val PLAYER_TAG: String = "player"
 
-/** The test tag of a genre label, before its identity. */
-const val GENRE_PREFIX: String = "genre:"
-
 private val ART_WIDTH = 360.dp
 private val TICK = 1.seconds
 private const val TAG = "Sleevesight"
-private const val HALF = 0.5f
-private const val CHIP_SATURATION = 0.5f
-private const val LIGHT_CONTAINER = 0.88f
-private const val LIGHT_CONTENT = 0.22f
-private const val DARK_CONTAINER = 0.26f
-private const val DARK_CONTENT = 0.86f
-private const val SELECTED_ALPHA = 0.16f

@@ -15,6 +15,7 @@ import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.CompletableDeferred
@@ -58,7 +59,12 @@ class PreparationTest {
     private val musicBrainz =
         Ahead(
             FakeAdapter(SourceId.MUSICBRAINZ) { _, _ ->
-                SourceResult(Outcome.SongArticle, emptyList(), Duration.ZERO, labelArtists = listOf("artist-1"))
+                SourceResult(
+                    Outcome.SongArticle,
+                    emptyList(),
+                    Duration.ZERO,
+                    labelArtists = listOf(ResolvedArtist("Artist 1", "artist-1")),
+                )
             },
         )
     private val lastFm = FakeAdapter(SourceId.LASTFM)

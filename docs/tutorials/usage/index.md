@@ -60,11 +60,13 @@ A new track shows at once, with its sources and insight to come.
 
 ### Genre labels
 
-Under the track, the coloured labels are the artists' genres, at most five, each in its genre family's colour. They come from the artists' tags at Last.fm and at MusicBrainz, kept only when they name a genre in a fixed list. With both on, Last.fm's labels come first and MusicBrainz's fill the rest; a label both give is shown once.
+Under the track come its genre labels: the tags Last.fm and MusicBrainz give the track, its artists and its album, kept only when they name a genre in a fixed list. With both on, Last.fm's labels come first on each level and MusicBrainz's fill the rest, five at most a level; a label both give is shown once.
 
-A tap on a label shows where it came from: *… comes from the artist's tags on:*, then each source, linked to the artist's page there, and for MusicBrainz a link to its licence. A second tap closes it. Which sources give labels is set under [*Genre labels*]({{ '/docs/tutorials/settings/' | relative_url }}).
+Folded, *Genres ▸* shows the labels of the most specific level found: the track's, else the album's, else the artists'. A tap unfolds it, *Genres ▾*, to a table with a row for each level that has labels: *Track*, one *Artist* row per artist, its name before its labels, and *Album*. When only one level has labels, they show on their own, with no fold. A screen reader says whether the fold is folded or unfolded, and reads each row of the table as one.
 
-When there are none, the line above the labels says why: *No genre labels for these artists in your sources.*, or *Genre labels are off in Settings.*
+A tap on a label shows where it came from: *… comes from the track's tags on:* (or the album's, or the artist's, named when the track has several), then each source, linked to its page there, and for MusicBrainz a link to its licence. A second tap closes it. Which sources give labels is set under [*Genre labels*]({{ '/docs/tutorials/settings/' | relative_url }}).
+
+When there are none, it says *None found.*, or *Genre labels are off in Settings.*
 
 ### The insight
 
@@ -111,14 +113,14 @@ A chip of a source with lines shows or hides those lines. That only changes what
 
 **The list.** Under the chips come the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own headings, come *Found, but not verified, so not cited*, lines from matches that could not be checked against the track, which are shown but never given to the insight, and *Rejected matches*, each with its source and the reason it was rejected.
 
-**Folded and unfolded.** The list starts folded: the heading, the chips, and *show >* with how many entries it holds ("12 entries, folded"). It unfolds 8 entries at a time:
+**Folded and unfolded.** The list starts folded: the heading, the chips, and *show ▸* with how many entries it holds ("12 entries, folded"). It unfolds 8 entries at a time:
 
-- *show >* unfolds the first 8;
-- *more…* the next 8, and *show all >>* the rest, while entries remain;
+- *show ▸* unfolds the first 8;
+- *more…* the next 8, and *show all ▸▸* the rest, while entries remain;
 - *… less* goes back to the first 8, once past them;
-- *< hide*, above the list and under it, folds it again.
+- *hide ▾*, above the list and under it, folds it again.
 
-While the list is folded, a chip unfolds it to its source's first line instead of hiding the lines. A citation tapped in the insight unfolds the list as far as its line. When the chips hide every line, the count says so, and *show >* shows them again.
+While the list is folded, a chip unfolds it to its source's first line instead of hiding the lines. A citation tapped in the insight unfolds the list as far as its line. When the chips hide every line, the count says so, and *show ▸* shows them again.
 
 Each new track's list starts folded, so the insight is what you see first. With [*Keep Sources as you left them*]({{ '/docs/tutorials/settings/' | relative_url }}) on, it stays as you left it on the track before. Either way, the fold is kept through a rotation and when Android restores the screen, not when the app starts afresh.
 

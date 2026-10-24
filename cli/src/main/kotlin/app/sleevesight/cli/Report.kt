@@ -2,6 +2,9 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.model.outcomeKey
@@ -36,7 +39,8 @@ class Diagnostics(
  * Everything a report shows. [tracklist] names the tracklist run (`--tracklist`), null for the
  * fixture playlist; [allowModel] is the run's *Model's own knowledge* switch, which decides the
  * prompts [ArtistFacts] rebuilds; [passes] is how many times the tracks ran (`--repeat`), each pass
- * in [results] in turn.
+ * in [results] in turn. [musicBrainzTrackLabels] counts the results whose MusicBrainz recording tags
+ * would give the track labels (#439): a count, since the tags are not listed.
  */
 @Suppress("LongParameterList") // Everything one report shows, each its own part of it.
 class RunSummary(
@@ -47,6 +51,7 @@ class RunSummary(
     val allowModel: Boolean = false,
     val results: List<TrackResult>,
     val passes: Int = 1,
+    val musicBrainzTrackLabels: Int = 0,
     val gate: List<Criterion>,
     val diagnostics: Diagnostics,
 )
@@ -60,10 +65,11 @@ class RunSummary(
  * with their article links, MusicBrainz's and Wikidata's templated facts (CC0), Last.fm's lines with
  * their links. Never an Exa snippet: web results are shown as counts and URLs only (Exa's terms,
  * §4.2(a)), and an insight written from web lines is marked as one not to commit or post until
- * Exa's terms are confirmed. MusicBrainz tags are not fetched, so none is listed: the app takes
- * them as genre labels (D12, #84), but this report lists each track's labels, and a list of them
- * would be CC BY-NC-SA 3.0 to commit or post (`architecture.md`, *Conditions*), so the CLI keeps
- * them off, and has no recordings of them either.
+ * Exa's terms are confirmed. No MusicBrainz tag is listed: the app takes them as genre labels (D12,
+ * #84), but this report lists each track's labels, and a list of them would be CC BY-NC-SA 3.0 to
+ * commit or post (`architecture.md`, *Conditions*), so the CLI keeps them off as a label source,
+ * and has no recordings of them either. The artists' are not fetched; the recording's come with its
+ * lookup (#439), and are counted only ([RunSummary.musicBrainzTrackLabels]).
  */
 class Report(
     private val run: RunSummary,
@@ -144,11 +150,36 @@ class Report(
                     ?.lines
                     ?.size ?: 0
             }
-        val labelled = run.results.count { it.state.genres.isNotEmpty() }
+        val labelled = run.results.count { !it.state.genres.isEmpty }
         appendLine()
         appendLine(
             "Per track: ${lines.sum()} cited lines in all (${lines.minOrNull() ?: 0} to ${lines.maxOrNull() ?: 0}); " +
                 "$labelled of ${run.results.size} tracks have genre labels.",
+        )
+        appendLine()
+        levels()
+    }
+
+    // The tracks with labels of each level, by source (#439): whether the track's and album's pay off.
+    private fun StringBuilder.levels() {
+        val of = run.results.size
+
+        fun count(
+            level: GenreLevel,
+            source: LabelSource,
+        ): Int =
+            run.results.count { result ->
+                result.state.genres.rows.any { row ->
+                    row.level == level && row.labels.any { label -> label.credits.any { it.source == source } }
+                }
+            }
+        appendLine("| Genre labels | Last.fm | MusicBrainz |")
+        appendLine("|---|---|---|")
+        val track = count(GenreLevel.TRACK, LabelSource.LASTFM)
+        appendLine("| Track | $track of $of | ${run.musicBrainzTrackLabels} of $of (counted, not shown) |")
+        appendLine("| Artist | ${count(GenreLevel.ARTIST, LabelSource.LASTFM)} of $of | not asked |")
+        appendLine(
+            "| Album | ${count(GenreLevel.ALBUM, LabelSource.LASTFM)} of $of | none: it takes a request of its own |",
         )
         appendLine()
     }
@@ -279,7 +310,8 @@ class Report(
             "Web search results are shown as counts and URLs only: Exa's terms (§4.2(a)) forbid copying or " +
                 "publishing what its service returns without its written permission, so no snippet is quoted " +
                 "here, and an insight written from web lines is marked not to be committed or posted. " +
-                "MusicBrainz tags are not fetched (CC BY-NC-SA 3.0; D12): genre labels come from Last.fm alone."
+                "No MusicBrainz tag is listed (CC BY-NC-SA 3.0; D12): its artists' tags are not fetched, and the " +
+                "recording's, which come with its lookup, are only counted; the genre labels listed are Last.fm's."
 
         fun name(source: SourceId): String =
             when (source) {
@@ -383,10 +415,22 @@ private class TrackSection(
             rejections()
             evidence()
             appendLine()
-            appendLine("Genre labels: ${state.genres.joinToString(", ") { it.genre.label }.ifEmpty { "none" }}.")
+            appendLine("Genre labels: ${labels(state.genres)}.")
             appendLine()
             insight()
         }
+
+    // Each row of the genres: `Track: Folk; Artist (Gordon Lightfoot): Folk, Country`.
+    private fun labels(genres: TrackGenres): String =
+        genres.rows
+            .joinToString("; ") { row ->
+                val level =
+                    row.level.name
+                        .lowercase()
+                        .replaceFirstChar(Char::uppercase)
+                val name = row.artist?.let { " ($it)" }.orEmpty()
+                "$level$name: ${row.labels.joinToString(", ") { it.genre.label }}"
+            }.ifEmpty { "none" }
 
     private fun StringBuilder.sources() {
         appendLine("| Source | Outcome | Cited | Unverified | Latency | Cached |")

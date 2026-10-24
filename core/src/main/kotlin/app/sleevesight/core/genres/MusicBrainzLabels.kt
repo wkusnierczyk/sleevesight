@@ -4,15 +4,10 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.json.Json
+import app.sleevesight.core.sources.ResolvedArtist
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
-import kotlin.time.Instant
 
 /**
  * An artist's MusicBrainz tags (`inc=tags` on the artist), most voted first: `MusicBrainzClient`
@@ -25,103 +20,44 @@ fun interface ArtistTags {
 }
 
 /**
- * The genre labels from the MusicBrainz tags of a track's artists (D12, revised; #84): each
- * artist's tags, in credit order, through the [vocabulary], at most [GenreVocabulary.MAX_LABELS],
- * each genre once; each label links its artist's MusicBrainz page. The pipeline asks for them after
- * the evidence is assembled, for the artists MusicBrainz resolved (`SourceResult.labelArtists`), so
- * the insight never waits for them.
+ * The genre labels from MusicBrainz's tags (D12, revised; #84): each credited artist's tags, in
+ * credit order, through the [vocabulary], at most [GenreVocabulary.MAX_LABELS] an artist, each
+ * linking its artist's MusicBrainz page; and the recording's tags ([recordingLabels], #439), which
+ * the resolution's recording lookup brings with no request of its own. The pipeline asks for the
+ * artists' after the evidence is assembled, for the artists MusicBrainz resolved
+ * (`SourceResult.labelArtists`), so the insight never waits for them. MusicBrainz's release tags
+ * would take a request of their own, so it gives no album labels.
  *
- * Tags are artist-level, so an artist's are kept by MusicBrainz id: a second track by the same
- * artist asks nothing. In [artists], the artist cache (#238, [PART]), for MusicBrainz's lifetime
- * (D9), so they are not asked again after a restart either. With no artist cache (one that does
- * not persist, [ArtistResults.persists]: the CLI without a cache, tests), in memory instead, for
- * [lifetime], at most [capacity] artists, the least recently used dropped first; never both, so
- * tags are not kept in memory past the cache's lifetime. A failed request is not kept, so the next
- * track by the artist asks again, and gives that artist no labels meanwhile; nothing else follows
- * from it, since the labels are no evidence. An artist MusicBrainz does not know is kept as having
- * no tags.
+ * Tags are artist-level, so an artist's are kept by MusicBrainz id ([KeptTags], under [PART]): a
+ * second track by the same artist asks nothing. A failed request gives that artist no labels
+ * meanwhile; nothing else follows from it, since the labels are no evidence.
  */
 class MusicBrainzLabels(
     private val tags: ArtistTags,
     private val vocabulary: GenreVocabulary,
-    private val clock: Clock = Clock.System,
-    private val lifetime: Duration = DEFAULT_LIFETIME,
-    private val capacity: Int = DEFAULT_CAPACITY,
-    private val artists: ArtistResults = ArtistResults.None,
+    clock: Clock = Clock.System,
+    lifetime: Duration = DEFAULT_LIFETIME,
+    capacity: Int = DEFAULT_CAPACITY,
+    artists: ArtistResults = ArtistResults.None,
 ) {
-    private class Kept(
-        val tags: List<String>,
-        val at: Instant,
-    )
+    private val kept = KeptTags(PART, artists, clock, lifetime, capacity)
 
-    private val mutex = Mutex()
-
-    // Insertion-ordered; an entry is moved to the end when used, so the first is the least recent.
-    private val kept = LinkedHashMap<String, Kept>()
-
-    /** The labels from the tags of [artists], MusicBrainz ids in credit order; none for one whose request failed. */
-    suspend fun labels(artists: List<String>): List<GenreLabel> =
+    /**
+     * The labels from the tags of [artists], the credited artists MusicBrainz resolved, in credit
+     * order, each label naming its artist; none for one whose request failed.
+     */
+    suspend fun labels(artists: List<ResolvedArtist>): List<GenreLabel> =
         artists
-            .distinct()
-            .flatMap { mbid -> vocabulary.labelsFor(tagsOf(mbid).orEmpty(), artistPage(mbid)) }
-            .distinctBy { it.identity }
-            .take(GenreVocabulary.MAX_LABELS)
-
-    // The artist's tags, kept or asked for; null when the request failed.
-    private suspend fun tagsOf(mbid: String): List<String>? =
-        if (artists.persists) stored(mbid) ?: asked(mbid) else cached(mbid) ?: asked(mbid)
-
-    // The tags MusicBrainz gives, kept; null when the request failed.
-    private suspend fun asked(mbid: String): List<String>? =
-        when (val answer = tags.artistTags(mbid)) {
-            is Lookup.Found -> answer.value.also { keepTags(mbid, it) }
-            Lookup.NotFound -> emptyList<String>().also { keepTags(mbid, it) }
-            is Lookup.Failed -> null
-        }
-
-    // What the artist cache keeps for [mbid]; null for none, or a value that cannot be read.
-    private suspend fun stored(mbid: String): List<String>? {
-        val part = artists.get(PART, mbid)
-        return try {
-            part?.let { json.decodeFromString(TAGS, it.value) }
-        } catch (_: IllegalArgumentException) {
-            null
-        }
-    }
-
-    // In the artist cache, or in memory without one.
-    private suspend fun keepTags(
-        mbid: String,
-        found: List<String>,
-    ) {
-        if (artists.persists) {
-            artists.keep(PART, mbid, json.encodeToString(TAGS, found))
-        } else {
-            keep(mbid, found)
-        }
-    }
-
-    @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
-    private suspend fun cached(mbid: String): List<String>? =
-        mutex.withLock {
-            val entry = kept.remove(mbid)
-            if (entry == null || clock.now() - entry.at >= lifetime) {
-                null
-            } else {
-                kept[mbid] = entry
-                entry.tags
+            .mapNotNull { artist -> artist.mbid?.let { artist.name to it } }
+            .distinctBy { it.second }
+            .flatMap { (name, mbid) ->
+                val found = kept.tagsOf(mbid) { tags.artistTags(mbid) }.orEmpty()
+                vocabulary.labelsFor(found, artistPage(mbid), GenreLevel.ARTIST, name)
             }
-        }
 
-    @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
-    private suspend fun keep(
-        mbid: String,
-        found: List<String>,
-    ) = mutex.withLock {
-        kept.remove(mbid)
-        kept[mbid] = Kept(found, clock.now())
-        while (kept.size > capacity) kept.remove(kept.keys.first())
-    }
+    /** The labels from the recording's tags ([RecordingTags]), each linking its MusicBrainz page. */
+    fun recordingLabels(recording: RecordingTags): List<GenreLabel> =
+        vocabulary.labelsFor(recording.tags, recordingPage(recording.mbid), GenreLevel.TRACK)
 
     companion object {
         /** As long as MusicBrainz's retrieval lifetime (D9): tags change no faster than its other data. */
@@ -137,10 +73,21 @@ class MusicBrainzLabels(
          */
         val PART: ArtistPart = ArtistPart("musicbrainz.tags", 1, 1, setOf(SourceId.MUSICBRAINZ))
 
-        private val json = Json
-        private val TAGS = ListSerializer(String.serializer())
-
         /** The artist's page on MusicBrainz, which a label from its tags links. */
         fun artistPage(mbid: String): String = "https://musicbrainz.org/artist/$mbid"
+
+        /** The recording's page on MusicBrainz, which a label from its tags links. */
+        fun recordingPage(mbid: String): String = "https://musicbrainz.org/recording/$mbid"
     }
 }
+
+/**
+ * The accepted recording's MusicBrainz tags (#439), most voted first, those with no net vote up
+ * left out: CC BY-NC-SA 3.0, for genre labels only and never in a prompt. The resolution's
+ * recording lookup brings them (`inc=tags`), and MusicBrainz's result carries them
+ * (`SourceResult.recordingTags`), kept with it in the retrieval cache.
+ */
+data class RecordingTags(
+    val mbid: String,
+    val tags: List<String>,
+)

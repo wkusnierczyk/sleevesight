@@ -3,9 +3,12 @@ package app.sleevesight.store
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.GenreLevel
+import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Rejection
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -27,9 +30,11 @@ internal object RetrievalCodec {
      * that older entries lack: MusicBrainz's extraction version, not this format, makes them misses.
      * 5: a rejection's scope (#420). 6: whether the result is about the track alone
      * ([SourceResult.trackOnly], #420), without which an entry cannot say whether it may be kept
-     * while *Keep what sources said about each artist* is off.
+     * while *Keep what sources said about each artist* is off. 7: each artist's genre label names its
+     * artist, the artists whose MusicBrainz tags give labels are kept by name too, and MusicBrainz's
+     * result holds the recording's tags (#439); a label no longer keeps a hue.
      */
-    const val FORMAT: Int = 6
+    const val FORMAT: Int = 7
 
     private val json = Json { encodeDefaults = false }
 
@@ -60,8 +65,9 @@ internal object RetrievalCodec {
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
                 rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
-                genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
-                labelArtists = result.labelArtists,
+                genres = result.genres.map { GenreJson(it.tag, it.family, it.label, it.identity, it.url, it.artist) },
+                labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
+                recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
                 firstReleased = result.firstReleased,
                 trackOnly = result.trackOnly,
             ),
@@ -84,8 +90,13 @@ internal object RetrievalCodec {
                             requireNotNull(SCOPES[it.scope]) { "Unknown scope ${it.scope}" },
                         )
                     },
-                genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
-                labelArtists = stored.labelArtists,
+                // Kept results hold the artists' labels only: the track's and album's are asked apart.
+                genres =
+                    stored.genres.map {
+                        GenreLabel(it.tag, it.family, it.label, it.identity, it.url, GenreLevel.ARTIST, it.artist)
+                    },
+                labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
+                recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
                 firstReleased = stored.firstReleased,
                 trackOnly = stored.trackOnly,
             )
@@ -147,7 +158,8 @@ internal object RetrievalCodec {
         val unverified: List<DraftJson> = emptyList(),
         val rejections: List<RejectionJson> = emptyList(),
         val genres: List<GenreJson> = emptyList(),
-        val labelArtists: List<String> = emptyList(),
+        val labelArtists: List<LabelArtistJson> = emptyList(),
+        val recordingTags: RecordingTagsJson? = null,
         val firstReleased: String? = null,
         val trackOnly: Boolean = false,
     )
@@ -156,10 +168,22 @@ internal object RetrievalCodec {
     private data class GenreJson(
         val tag: String,
         val family: String,
-        val hue: Int,
         val label: String,
         val identity: String,
         val url: String? = null,
+        val artist: String? = null,
+    )
+
+    @Serializable
+    private data class LabelArtistJson(
+        val name: String,
+        val mbid: String?,
+    )
+
+    @Serializable
+    private data class RecordingTagsJson(
+        val mbid: String,
+        val tags: List<String>,
     )
 
     @Serializable

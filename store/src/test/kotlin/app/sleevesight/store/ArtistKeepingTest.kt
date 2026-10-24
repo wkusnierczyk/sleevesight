@@ -10,6 +10,7 @@ import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.CompletableDeferred
@@ -424,7 +425,7 @@ class ArtistKeepingTest {
                             Outcome.None,
                             emptyList(),
                             Duration.ZERO,
-                            genres = listOf(GenreLabel("folk", "folk", 1, "Folk", "folk")),
+                            genres = listOf(GenreLabel("folk", "folk", "Folk", "folk")),
                         ) to SourceId.LASTFM
                     ),
                 // Last.fm's artist is another MusicBrainz artist's: a rejection and nothing else.
@@ -443,7 +444,7 @@ class ArtistKeepingTest {
                             Outcome.SongArticle,
                             listOf(draft(SourceId.MUSICBRAINZ, Scope.SONG, "Released in 1974.")),
                             Duration.ZERO,
-                            labelArtists = listOf("mbid-gordon"),
+                            labelArtists = listOf(ResolvedArtist("Gordon Lightfoot", "mbid-gordon")),
                         ) to SourceId.MUSICBRAINZ
                     ),
                 // Last.fm does not know the artist: an empty result, a verdict on the artist all the same.

@@ -34,7 +34,6 @@ class GenreVocabularyTest {
     fun `tags outside the vocabulary are dropped and the order is the source's`() {
         val labels = vocabulary.labelsFor(listOf("folk", "singer-songwriter", "70s", "canadian", "acoustic"))
         assertEquals(listOf("Folk", "Singer-Songwriter", "Acoustic"), labels.map { it.label })
-        assertEquals(listOf(135, 135, 135), labels.map { it.hue })
         assertEquals(listOf("folk", "folk", "folk"), labels.map { it.family })
     }
 

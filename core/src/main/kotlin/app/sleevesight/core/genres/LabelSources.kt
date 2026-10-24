@@ -32,7 +32,7 @@ enum class LabelSource(
     ),
 }
 
-/** A label source that gave a label, with the page of the artist whose tags gave it ([GenreLabel.url]). */
+/** A label source that gave a label, with the page whose tags gave it ([GenreLabel.url]). */
 data class LabelCredit(
     val source: LabelSource,
     val url: String?,
@@ -47,16 +47,19 @@ data class TrackLabel(
     val credits: List<LabelCredit>,
 ) {
     /**
-     * Whether it may open AI-written genre card content: not for a label only MusicBrainz gives
-     * (D12). Such a label is display-only, opening its MusicBrainz link and credit, so its tags
-     * never reach a prompt (`design/design.md`, *Genre labels*), unless #101 decides otherwise; a
-     * label another source also gives opens it.
+     * Whether it may open AI-written genre card content: an artist's label (as before the track's
+     * and album's labels came, #439) that a source other than MusicBrainz gives. A label only
+     * MusicBrainz gives (D12) is display-only, opening its MusicBrainz link and credit, so its tags
+     * never reach a prompt (`design/design.md`, *Genre labels*); the track's and the album's open
+     * none either. Both unless #101 decides otherwise.
      */
-    val opensCard: Boolean get() = credits.any { it.source != LabelSource.MUSICBRAINZ }
+    val opensCard: Boolean
+        get() = genre.level == GenreLevel.ARTIST && credits.any { it.source != LabelSource.MUSICBRAINZ }
 }
 
 /**
- * How the labels of several sources combine (#84): every source's labels, Last.fm's first, each in
+ * How the labels of several sources combine (#84), on one row of a track's genres ([combineGenres],
+ * #439): every source's labels, Last.fm's first, each in
  * its source's order, at most [GenreVocabulary.MAX_LABELS]. A label another source already gave
  * (the same [GenreLabel.identity]) is not shown twice: it credits both, also when the cap has left
  * no room for a new one.
