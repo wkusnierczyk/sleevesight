@@ -124,7 +124,7 @@ Each new track's list starts folded, so the insight is what you see first. With 
 
 ## Writing an insight
 
-Each insight written is one call to your AI service, on your own API key, and the service bills you for it. So the app never makes a call twice for one track without a tap from you, and the buttons below say when a tap is a new call.
+Each insight written is a call to your AI service (now and then two, below), on your own API key, and the service bills you for it. A call that failed or was stopped is never made again without a tap from you, and the buttons below say when a tap is a new call. One case makes a second call on its own: to keep the prompt short, the first call may leave out lines about the artist, and if the service then answers that it has nothing to write from, the app asks once more at once, with every line, so that you get an insight rather than none. Each of the two calls is billed.
 
 ```mermaid
 flowchart TD
@@ -142,7 +142,7 @@ flowchart TD
 
 ### *Write insight*
 
-*Write insight* writes the insight for the track on screen, from the sources shown under it: one call. It is offered with *Tap Write insight to have it written from the sources below.* when the insight is not written on its own (see [Automatic writing](#automatic-writing)). Until the sources have answered, the insight says *Gathering evidence…*, and Write is not offered yet.
+*Write insight* writes the insight for the track on screen, from the sources shown under it: one call, or two in the case above. It is offered with *Tap Write insight to have it written from the sources below.* when the insight is not written on its own (see [Automatic writing](#automatic-writing)). Until the sources have answered, the insight says *Gathering evidence…*, and Write is not offered yet.
 
 ### *Stop*
 
@@ -156,12 +156,12 @@ After a call that was stopped or failed, the card offers *Write insight* again, 
 
 An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. The card then keeps the insight written earlier, with *Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.* and *Rewrite*. Under it, *Sources* shows the lines that insight cites, found when it was written.
 
-Nothing is written again unless you tap *Rewrite*, which is one call. If the rewrite fails, the card says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
+Nothing is written again unless you tap *Rewrite*, which is one call, or two in the case above. If the rewrite fails, the card says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
 
 ### What costs nothing
 
-- **A track played again.** When a track you played before comes back and the sources find the same evidence, the insight written then is shown again, marked *kept from before*, with no call.
-- **Nothing to write from.** When the sources give nothing to write an insight from, the card says *The sources give nothing to write an insight from.*, and no call is made. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
+- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *The model's own knowledge* are as they were, the insight written then is shown again, marked *kept from before*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, oldest first, once they pass the cache's size limit.
+- **Nothing to write from.** When the sources give nothing to write an insight from, the card says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
 - **The next track.** The track next in the player's queue is looked up ahead (by default, at MusicBrainz), so its sources come sooner when it plays. No insight is written ahead.
 
 ### Automatic writing
@@ -188,7 +188,7 @@ What there is:
 - **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), [*Start a new session after a break of*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends, and *Clear history*, which deletes the tracks played and the track changes together, once you confirm.
 - **The diagnostics screen**, under the developer settings, which lists the track changes recorded, with what skip detection learns from them, and can export them to a file you choose.
 
-The history is left out of Android's backup and is never sent anywhere.
+The history is left out of Android's backup, and the app never sends it anywhere; only an export you make from the diagnostics screen takes a copy of the track changes off the app.
 
 ## Players
 
