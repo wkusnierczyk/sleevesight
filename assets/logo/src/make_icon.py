@@ -16,10 +16,10 @@ Usage, from the repository root:
     python3 assets/logo/src/make_icon.py                                  # the icon, in place
     python3 assets/logo/src/make_icon.py --label plain --out <directory>  # the plain-label variant
 
-`--label plain` draws the label without its marks (as the favicon does in a tab), for a later comparison of
-the two, such as a store listing experiment; `--out` writes every file under another directory, at
-the same relative paths, leaving the committed ones as they are (with `--label plain` it must name
-one, so the variant never overwrites the icon in use). Needs `rsvg-convert` (librsvg;
+`--label plain` draws the label without its marks (as the favicon does in a tab), for a later
+comparison of the two, such as a store listing experiment; `--out` writes every file under another
+directory, at the same relative paths, leaving the committed ones as they are (with `--label plain`
+it must name one, so the variant never overwrites the icon in use). Needs `rsvg-convert` (librsvg;
 2.61.4) and ImageMagick 7 (`magick`; 7.1.2), both from Homebrew on a Mac (`brew install librsvg
 imagemagick`). Another version of the renderer may give a slightly different PNG.
 
