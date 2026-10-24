@@ -62,7 +62,7 @@ Opening the row lists the service's models as the service itself reports them fo
 
 ### What it costs
 
-Each insight written is one paid call on your key. What a call costs is set by the service's price for the model you choose: the fixed instructions, the track and its evidence go in, and a few sentences come out, more with a higher reasoning effort, which the services bill as output. Check your service's pricing page for the model you use. How many calls are made is up to the [Insights](#insights) settings: by default one for every track you play while the app is on screen, and none while it is not.
+Each insight written is a paid call on your key, now and then two (the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when). What a call costs is set by the service's price for the model you choose: the fixed instructions, the track and its evidence go in, and a few sentences come out, more with a higher reasoning effort, which the services bill as output. Check your service's pricing page for the model you use. How many calls are made is up to the [Insights](#insights) settings: by default one for every track you play while the app is on screen, and none while it is not.
 
 ## Players to follow
 
@@ -99,7 +99,7 @@ Discogs, as a further source, is planned for a later phase and not in the app ye
 
 When an insight is written, and what is looked up ahead.
 
-- ***Write insights*** (**default: on**). *Off: no AI calls at all. The evidence is still shown.* The master switch: with it off, the rest of this section has no effect, and its rows cannot be changed.
+- ***Write insights*** (**default: on**). *Off: no AI calls at all. The evidence is still shown.* The master switch: with it off, nothing is written, and the rows about writing (*Write insights automatically*, *Pause automatic writing after*, *Crossfade*) cannot be changed. *Prepare the next track* still can, and still looks the next track up at MusicBrainz ahead of its play while it is set to *Evidence*.
 - ***Write insights automatically*** (**default: *On every track change***). *Each insight written is a paid call on your AI service key.*
   - *On every track change*: an insight is written as each track starts, with its lookups mostly done ahead.
   - *When I skip*: only when you skip a track, which the app tells from a natural end by watching the playback (see *Crossfade*).
@@ -179,6 +179,8 @@ If a saved key can no longer be read, as after the phone's Keystore is reset, it
 ## About
 
 - ***Credits***: *The data sources, the font and the icons, with their licences.* Sleevesight is free software, under the GNU General Public License, version 3. The credits list each data source with what the app takes from it and its licence (MusicBrainz under CC0, its tags under CC BY-NC-SA 3.0, Wikipedia under CC BY-SA 4.0, Wikidata under CC0, Last.fm and Exa under their terms), the app's font, Roboto, under the SIL Open Font License 1.1, and its icons, Material Symbols, under the Apache License 2.0.
+- ***How to use Sleevesight***: opens the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) in your browser.
+- ***Every setting explained***: opens this page in your browser.
 - ***Privacy policy***: opens the [privacy policy]({{ '/privacy.html' | relative_url }}) in your browser. Its row shows the address, to type in where no browser opens.
 
 ## Developer
