@@ -519,7 +519,8 @@ document.documentElement.classList.add('js');
       <li><a href="#logo">Logo</a></li>
       <li><a href="#intros">Intros</a></li>
       <li><a href="#icons">Icons</a></li>
-      <li><a href="#feature">Feature graphic</a></li>
+      <li><a href="#feature">Banner</a></li>
+      <li><a href="#preview">Preview</a></li>
       <li><a href="#merch">Merchandise</a></li>
     </ul>
   </nav>
@@ -780,8 +781,11 @@ document.documentElement.classList.add('js');
   <p>The feature graphic is the banner of the app's Google Play listing, 1024 &times; 500 pixels. Play shows it at the head of the listing, as the cover of a preview video, and in its collections and ads, where it may crop the edges.</p>
   <p>It is the label's red, with "Sleeve" in white over "sight" in the ink, the tagline "Insights on what's playing" under them, and the record beside "sight", large, running off the right and bottom edges, so that only the record is lost where Play crops.</p>
   <figure class="fg-fig"><img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline Insights on what's playing under them, and a large record beside sight, cut off by the right and bottom edges"><figcaption>The feature graphic, as on Google Play.</figcaption></figure>
-  <h3 id="preview">Link preview</h3>
-  <p>The product page's link preview, its <code>og:image</code>, is what a chat or a social network shows with a link to the page: 1200 &times; 630 pixels, the shape most of them crop to. It is the stacked logo on the same red, "Sleeve" in white over "sight" in the ink, with the tagline under it, kept inside the middle square, so a service that crops the preview to a square thumbnail still shows the whole logo. The red stands apart from a chat's light and dark backgrounds alike, where white or black would merge with one of them (<code>assets/logo/src/make_og_image.py</code>).</p>
+</section>
+
+<section id="preview" aria-labelledby="preview-h">
+  <h2 id="preview-h">Link preview</h2>
+  <p>The product page's link preview, its <code>og:image</code>, is what a chat or a social network shows with a link to the page: 1200 &times; 630 pixels, the shape most of them crop to. It is the stacked logo on the label's red, as the feature graphic is, "Sleeve" in white over "sight" in the ink, with the tagline under it, kept inside the middle square, so a service that crops the preview to a square thumbnail still shows the whole logo. The red stands apart from a chat's light and dark backgrounds alike, where white or black would merge with one of them (<code>assets/logo/src/make_og_image.py</code>).</p>
   <figure class="fg-fig"><img src="../assets/og-image.svg" width="1200" height="630" loading="lazy" alt="On red: the stacked logo, Sleeve in white over sight in ink beside the record, and the tagline Insights on what's playing under it"><figcaption>The link preview, as the product page gives it.</figcaption></figure>
 </section>
 
