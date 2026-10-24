@@ -2,10 +2,12 @@ package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.MusicBrainzLabels
+import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
+import app.sleevesight.core.resolution.MbRecordingDetail
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
@@ -19,8 +21,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * `MusicBrainzClient.artistTags`, the one call that asks for tags (`inc=tags`), the genre labels
- * from them, and the adapter's naming of the artists they are asked for (#84). The answers are
+ * `MusicBrainzClient.artistTags` and the recording's lookup, the calls that ask for tags
+ * (`inc=tags`), the genre labels from them, and the adapter's naming of the artists they are asked
+ * for (#84) and its carrying of the recording's (#439). The answers are
  * written for the test in the shape of MusicBrainz's: its tags are CC BY-NC-SA 3.0, and none is
  * committed.
  */
@@ -61,9 +64,27 @@ class MusicBrainzTagsTest {
     fun `the adapter names the resolved artists for the labels, and asks for no tags itself`() =
         runTest {
             val result = MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED))
-            assertEquals(listOf("mb-a"), result.labelArtists)
+            assertEquals(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")), result.labelArtists)
             assertTrue(result.genres.isEmpty())
-            assertEquals(3, MusicBrainzSource().extractionVersion)
+            assertEquals(null, result.recordingTags)
+            assertEquals(4, MusicBrainzSource().extractionVersion)
+        }
+
+    @Test
+    fun `the recording's lookup brings its tags, which the adapter carries for the track's labels, never as lines`() =
+        runTest {
+            val net = ReplayNetClient.ok(RECORDING)
+            val detail = assertIs<Lookup.Found<MbRecordingDetail>>(MusicBrainzClient(net).recording("rec")).value
+            assertEquals(listOf("folk", "soft rock"), detail.tags)
+            assertEquals("artist-credits+work-rels+artist-rels+url-rels+tags", net.sent.single().query["inc"])
+
+            val result =
+                MusicBrainzSource().lookup(
+                    TRACK,
+                    CompletableDeferred(RESOLVED.copy(recordingTags = detail.tags)),
+                )
+            assertEquals(RecordingTags("rec", listOf("folk", "soft rock")), result.recordingTags)
+            assertTrue(result.evidence.none { "folk" in it.text.lowercase() || "soft rock" in it.text.lowercase() })
         }
 
     @Test
@@ -78,12 +99,17 @@ class MusicBrainzTagsTest {
     fun `the client's tags give the labels, linking the artist's page, never as lines`() =
         runTest {
             val labels = MusicBrainzLabels(MusicBrainzClient(ReplayNetClient.ok(ARTIST)), vocabulary)
-            val found = labels.labels(listOf("mb-a"))
+            val found = labels.labels(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")))
             assertEquals(listOf("Folk", "Country"), found.map { it.label })
             assertEquals(listOf(MusicBrainzLabels.artistPage("mb-a")), found.map { it.url }.distinct())
         }
 
     private companion object {
+        // Written for the test in the recording lookup's shape; not MusicBrainz's data.
+        const val RECORDING =
+            """{"id":"rec","title":"Sundown","artist-credit":[],"relations":[],"tags":[
+              {"name":"soft rock","count":1},{"name":"folk","count":3},{"name":"bad","count":0}]}"""
+
         val TRACK =
             NormalizedTrack(
                 "Sundown",

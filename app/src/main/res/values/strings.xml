@@ -9,7 +9,7 @@
     <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Last.fm gets the artists’ names only, Wikidata only identifiers, and the album name goes to none of them. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata gets only identifiers. For the genre labels, Last.fm also gets the album name, the only source that does. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
@@ -108,7 +108,7 @@
     <string name="settings_source_model_summary">At most one claim from what the model knows, marked unverified</string>
 
     <string name="settings_section_labels">Genre labels</string>
-    <string name="settings_labels_hint">Where the colored genre labels come from: the artists’ tags at each source, kept only when they name a genre. With both on, Last.fm’s come first. Web search gives no tags.</string>
+    <string name="settings_labels_hint">Where the genre labels come from: the tags each source gives the track, its artists and its album, kept only when they name a genre. With both on, Last.fm’s come first. Web search gives no tags.</string>
     <string name="settings_labels_source_off">Off under “Where to look”</string>
     <string name="settings_labels_needs_key">Needs your Last.fm API key, under “Where to look”</string>
     <string name="settings_labels_key_unreadable">Your Last.fm API key can no longer be read; see it under “Where to look”</string>
@@ -217,6 +217,10 @@
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
+    <string name="settings_usage_page">How to use Sleevesight</string>
+    <string name="settings_usage_page_summary">Each part of the app explained: the home screen, the insight and its sources, writing, and what happens when something fails. Opens in your browser.</string>
+    <string name="settings_settings_page">Every setting explained</string>
+    <string name="settings_settings_page_summary">What each setting does, its default and why, and what changing it sends or keeps. Opens in your browser.</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_summary">What leaves the phone, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
     <string name="settings_section_developer">Developer</string>

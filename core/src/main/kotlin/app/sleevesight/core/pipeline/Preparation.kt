@@ -30,7 +30,8 @@ import kotlin.time.Duration.Companion.seconds
  *   (`RememberedMusicBrainz`, in the app); the playing track's run resolves again, with its length;
  * - the adapters that prepare ahead ([SourceAdapter.preparesAhead]): MusicBrainz's lines, which
  *   send nothing and name the resolved artists;
- * - MusicBrainz's genre labels for those artists, kept by `MusicBrainzLabels`.
+ * - MusicBrainz's genre labels for those artists, kept by `MusicBrainzLabels`; not Last.fm's for
+ *   the track and album (#439), which a queue item without the album could give only in part.
  *
  * Nothing is published, nothing goes to the retrieval or synthesis cache, and no insight is
  * written: a card written from a queue item would be kept under a key the playing track never
@@ -55,7 +56,13 @@ internal class Preparation(
     suspend fun run() {
         if (!settings.isEnabled(SourceId.MUSICBRAINZ) || track.title.isBlank() || track.primary.isBlank()) return
         val results = lookUp()
-        val artists = results.firstNotNullOfOrNull { it.labelArtists.takeIf(List<String>::isNotEmpty) }.orEmpty()
+        val artists =
+            results
+                .firstNotNullOfOrNull {
+                    it.labelArtists.takeIf { artists ->
+                        artists.isNotEmpty()
+                    }
+                }.orEmpty()
         val labels = parts.musicBrainzLabels?.takeIf { settings.givesLabels(LabelSource.MUSICBRAINZ) }
         if (labels == null || artists.isEmpty()) return
         control.await(RunStep.LABELS)

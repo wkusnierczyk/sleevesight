@@ -2,7 +2,7 @@ package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
@@ -20,10 +20,11 @@ import app.sleevesight.core.synthesis.GroundedText
  * @property resolution what MusicBrainz resolved, once it has (null before, and when every source
  *   was served from the cache, so nothing needed it).
  * @property evidence the cited evidence, with ids and fingerprint, once every source has landed.
- * @property genres the artists' genre labels, from the label sources switched on, combined
- *   ([app.sleevesight.core.genres.combineLabels]): Last.fm's with the evidence, once every source
- *   has landed; MusicBrainz's join later, when the tags of the artists it resolved arrive, which
- *   the insight does not wait for (`design/architecture.md`, *Evidence*).
+ * @property genres the genre labels of the track, its artists and its album, from the label
+ *   sources switched on, a row per level ([app.sleevesight.core.genres.combineGenres], #439):
+ *   Last.fm's artists' and MusicBrainz's recording's with the evidence, once every source has
+ *   landed; MusicBrainz's artists' and Last.fm's track's and album's join later, as their requests
+ *   answer, which the insight does not wait for (`design/architecture.md`, *Evidence*).
  */
 data class TrackState(
     val nowPlaying: NowPlaying,
@@ -31,7 +32,7 @@ data class TrackState(
     val sources: Map<SourceId, SourceState>,
     val resolution: Resolution? = null,
     val evidence: EvidenceSet? = null,
-    val genres: List<TrackLabel> = emptyList(),
+    val genres: TrackGenres = TrackGenres(),
     val insight: InsightState = InsightState.Idle(canWrite = false),
 ) {
     /** Whether every source has landed. */

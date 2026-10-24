@@ -200,7 +200,12 @@ class RecordingResolver(
         val link = detail.works.firstOrNull()
         val work = link?.let { (musicBrainz.work(it.mbid) as? Lookup.Found)?.value }
         val withRecording =
-            base.copy(artists = artists, credits = recordingCredits, wikidataIds = detail.wikidataIds)
+            base.copy(
+                artists = artists,
+                credits = recordingCredits,
+                wikidataIds = detail.wikidataIds,
+                recordingTags = detail.tags,
+            )
         return if (link == null || work == null) {
             withRecording.copy(work = link?.let { ResolvedWork(it.mbid, it.title) }, cover = link?.cover ?: false)
         } else {

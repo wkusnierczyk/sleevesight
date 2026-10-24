@@ -8,7 +8,7 @@ gate run found resolution errors (`RecordedTracks` in `:sources`' tests).
 
 | Directory | Source | Licence of the content |
 |---|---|---|
-| `musicbrainz/` | MusicBrainz web service, `https://musicbrainz.org/ws/2` | Core data, CC0 ([Data License](https://musicbrainz.org/doc/About/Data_License)). Requested without `inc=tags` or `inc=genres`; the `tags` and `genres` fields a search returns unasked (supplementary data, CC BY-NC-SA 3.0) are removed when recording, and nothing else is changed |
+| `musicbrainz/` | MusicBrainz web service, `https://musicbrainz.org/ws/2` | Core data, CC0 ([Data License](https://musicbrainz.org/doc/About/Data_License)). Requested without `inc=genres`, and without `inc=tags` but on a recording's lookup, which asks for its tags for the track's genre labels (#439); the `tags` and `genres` fields (supplementary data, CC BY-NC-SA 3.0), asked for or returned unasked, are removed when recording, and nothing else is changed |
 | `wikidata/` | Wikidata action API, `https://www.wikidata.org/w/api.php` | CC0 ([Wikidata licensing](https://www.wikidata.org/wiki/Wikidata:Licensing)); stored as received |
 | `wikipedia/` | English Wikipedia action API, `https://en.wikipedia.org/w/api.php` | Article text: Wikipedia contributors, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); each response holds the article titles, so the articles and their histories, which credit the authors, can be found at `https://en.wikipedia.org/wiki/<title>`. Stored as received |
 

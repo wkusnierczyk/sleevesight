@@ -3,6 +3,7 @@ package app.sleevesight.core.sources
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -83,13 +84,18 @@ val SourceAdapter.tag: String get() = id.tag
  * *Sources* section can show them.
  *
  * [genres] are the genre labels the source gives the track's artists (`design/architecture.md`,
- * *Genre labels*): Last.fm's tags through the vocabulary, from a verified or unverified match only;
- * empty for a source that gives none. They are never evidence, so never in a prompt.
+ * *Genre labels*), each naming its artist ([GenreLabel.artist]): Last.fm's artist tags through the
+ * vocabulary, from a verified or unverified match only; empty for a source that gives none. They
+ * are never evidence, so never in a prompt. The track's and the album's labels (#439) are not
+ * here: Last.fm's are asked for after the evidence, by the album too, which the retrieval cache's
+ * key does not hold.
  *
- * [labelArtists] are the MusicBrainz ids of the credited artists whose tags give MusicBrainz's
- * genre labels (#84): MusicBrainz's result holds the resolved artists, kept with it in the
- * retrieval cache, so a cached track gets its labels too. The pipeline asks for their tags after
- * the evidence is assembled, so the insight does not wait for them.
+ * [labelArtists] are the credited artists, with their MusicBrainz ids, whose tags give
+ * MusicBrainz's genre labels (#84): MusicBrainz's result holds the resolved artists, kept with it
+ * in the retrieval cache, so a cached track gets its labels too. The pipeline asks for their tags
+ * after the evidence is assembled, so the insight does not wait for them. [recordingTags] are the
+ * accepted recording's tags (#439), which the resolution's recording lookup brought, for the
+ * track's labels; kept the same way, and never in a line.
  *
  * [firstReleased] is the date of the recording's first release, as MusicBrainz's resolution gives
  * it (`Resolution.firstReleaseDate`), on MusicBrainz's result only: kept with it in the retrieval
@@ -119,7 +125,8 @@ data class SourceResult(
     val rejections: List<Rejection> = emptyList(),
     val genres: List<GenreLabel> = emptyList(),
     val provisional: Boolean = false,
-    val labelArtists: List<String> = emptyList(),
+    val labelArtists: List<ResolvedArtist> = emptyList(),
+    val recordingTags: RecordingTags? = null,
     val firstReleased: String? = null,
     val freshUntil: Instant? = null,
     val trackOnly: Boolean = false,

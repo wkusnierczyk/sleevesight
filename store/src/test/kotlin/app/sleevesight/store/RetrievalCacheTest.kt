@@ -3,12 +3,14 @@ package app.sleevesight.store
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
+import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
+import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.Deferred
@@ -382,14 +384,19 @@ class RetrievalCacheTest {
                     GenreLabel(
                         "folk rock",
                         "folk",
-                        135,
                         "Folk Rock",
                         "folkrock",
                         "https://www.last.fm/music/Gordon+Lightfoot",
+                        artist = "Gordon Lightfoot",
                     ),
-                    GenreLabel("folk", "folk", 135, "Folk", "folk"),
+                    GenreLabel("folk", "folk", "Folk", "folk"),
                 ),
-            labelArtists = listOf("mb-gl", "mb-other"),
+            labelArtists =
+                listOf(
+                    ResolvedArtist("Gordon Lightfoot", "mb-gl"),
+                    ResolvedArtist("Terry Clements", "mb-other"),
+                ),
+            recordingTags = RecordingTags("mb-sundown", listOf("folk rock", "soft rock")),
             firstReleased = "1974-01-01",
         )
     }

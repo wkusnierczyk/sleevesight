@@ -41,6 +41,9 @@ import app.sleevesight.core.model.Outcome
  *   performers), in MusicBrainz's order, for the templated evidence (D1).
  * @property wikidataIds Wikidata items MusicBrainz links to the recording and its work, for the
  *   Wikipedia identity check (step 5), the recording's first.
+ * @property recordingTags the accepted recording's MusicBrainz tags
+ *   ([app.sleevesight.core.resolution.MbRecordingDetail.tags], #439), for the track's genre labels
+ *   only: no line templates them, and no prompt holds them.
  * @property failure why MusicBrainz could not be asked, when [outcome] is [Outcome.Unreachable]:
  *   the failed lookup's kind as the client names it (`RateLimited`, `Offline`, `Server`,
  *   `status 400`, …), never a URL or a value; for the diagnostics only (#191). Null otherwise.
@@ -58,6 +61,7 @@ data class Resolution(
     val earliest: Boolean = false,
     val credits: List<Credit> = emptyList(),
     val wikidataIds: List<String> = emptyList(),
+    val recordingTags: List<String> = emptyList(),
     val failure: String? = null,
 ) {
     /**
