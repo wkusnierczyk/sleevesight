@@ -195,15 +195,17 @@ figure.side .sq{background:#fff}
    script the switch is hidden and the marks stay on white. */
 .logos{--tile-bg:#fff;--tile-edge:var(--line);--m-bg:#fff;--m-ink:#141a22;--m-red:#cf222e;--eye-fill:none;--eye-stroke:#1f2328;--rim:#1f2328;--core:none;--groove:inline;--tile-ink:#141a22;--sight:#cf222e}
 .logos.dark{--tile-bg:#000;--tile-edge:#ffffff40;--m-bg:#000;--m-ink:#e5e8ee;--m-red:#cf222e;--eye-fill:#fff;--eye-stroke:#8b949e;--rim:#8b949e;--core:inline;--groove:none;--tile-ink:#e5e8ee;--sight:#cf222e}
-/* The switch rides in a rail at the top of the two sections it serves: it sits beside the Logo
-   heading, stays at the top of the window while either section is in view (sticky, in a rail of no
-   height), and leaves with them, either way. In the right margin where the window has one, else at
-   the right of the column, over the content. */
+/* Each switch rides in a rail at the top of the sections it serves (the Logo and Intros, and the
+   Merchandise): it sits beside the first heading, stays at the top of the window while they are in
+   view (sticky), and leaves with them, either way. In the right margin where the window has one, else at
+   the right of the column, over the content. The switch is sticky in a track of no width down the
+   column's right edge, from level with the first heading to the end of the sections, so it stops,
+   whole, where they end. */
 .logos{position:relative}
-.rail{position:sticky;top:24px;height:0;z-index:5}
-.theme{position:absolute;top:56px;right:0;display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;background:var(--bg);box-shadow:0 4px 14px -8px rgba(0,0,0,.35)}
+.track{position:absolute;top:56px;bottom:0;right:0;width:0;z-index:5}
+.theme{position:sticky;top:80px;width:max-content;transform:translateX(-100%);display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;background:var(--bg);box-shadow:0 4px 14px -8px rgba(0,0,0,.35)}
 @media (min-width:1240px){
-  .theme{right:auto;left:calc(100% + 28px);flex-direction:column;border-radius:20px}
+  .theme{transform:none;margin-left:28px;flex-direction:column;border-radius:20px}
 }
 .theme button{font:inherit;font-family:var(--f-ui);font-size:15px;border:0;border-radius:999px;padding:5px 16px;background:none;color:var(--muted);cursor:pointer}
 .theme button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
@@ -245,6 +247,26 @@ html:not(.js) .theme{display:none}
 .run .r2-bg{animation:r2-bg 7s both}
 .run .r2-rec{animation:r2-shrink 7s both}
 @keyframes env{0%,90%{opacity:1}100%{opacity:0}}
+/* The feature graphic, as it is: its own red ground, whatever the switch. */
+.fg-fig{margin:20px 0 0}
+.fg-fig img{display:block;width:100%;height:auto;border-radius:12px}
+.fg-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+/* Merchandise: mock-ups on a grey table, the shirt and the sticker white in the light colourway and
+   black in the dark. The prints are sized in the shirt's width (`cqw`). */
+.logos{--shirt:#fafafa;--seam:#e2e2e2;--table:linear-gradient(#e9ecef,#d3d8de)}
+.logos.dark{--shirt:#111;--seam:#262626;--table:linear-gradient(#262b33,#14181d)}
+.lpane.merch{background:var(--table);padding:24px 16px}
+.shirt{position:relative;width:min(100%,300px);aspect-ratio:300/320;container-type:inline-size}
+.shirt svg.tee{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 10px 18px #0003)}
+.shirt .print{position:absolute;left:50%;top:30%;transform:translateX(-50%)}
+.print.p8b svg{display:block;width:34cqw;height:auto;overflow:visible}
+.print.p4k .mark{font-size:9cqw}
+.sticker{display:grid;place-items:center;background:var(--m-bg);box-shadow:0 0 0 7px #fff,0 6px 14px 4px #0003}
+.sticker.tile{padding:22px 26px;border-radius:26px}
+.sticker.tile svg{display:block;width:150px;height:auto;overflow:visible}
+.sticker.round{width:150px;height:150px;border-radius:50%}
+.sticker.round svg{width:110px;height:110px}
+.logos:not(.dark) .sticker{box-shadow:0 0 0 1px #0000000f,0 6px 14px 2px #0002}
 /* From intro to header: a page in small, 16:10, its header (the logo and a menu) and a few lines for
    its content. The script plays each intro in its splash (`.ts-splash`), centred, at a size measured
    from the stage, flies it onto the header's logo (`--fx`, `--fy`, `--fs`, as the page's own script
@@ -414,7 +436,7 @@ document.documentElement.classList.add('js');
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><g id="w-sleeve" class="t-ink"><path id="w-sleeve-1" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59Z"/><path id="w-sleeve-2" d="M-18.87 -10.02H-16.44V-37.26H-18.87Z"/><path id="w-sleeve-3" d="M-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67Z"/><path id="w-sleeve-4" d="M1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67Z"/><path id="w-sleeve-5" d="M16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69Z"/><path id="w-sleeve-6" d="M31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/></g><g id="w-sight" class="t-red"><path id="w-sight-1" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44Z"/><path id="w-sight-2" d="M-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01Z"/><path id="w-sight-3" d="M4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82Z"/><path id="w-sight-4" d="M22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1Z"/><path id="w-sight-5" d="M36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></g><symbol id="eye" viewBox="0 0 32 32"><path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round" style="fill:var(--eye-fill);stroke:var(--eye-stroke)"/><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><g id="w-sleeve" class="t-ink"><path id="w-sleeve-1" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59Z"/><path id="w-sleeve-2" d="M-18.87 -10.02H-16.44V-37.26H-18.87Z"/><path id="w-sleeve-3" d="M-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67Z"/><path id="w-sleeve-4" d="M1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67Z"/><path id="w-sleeve-5" d="M16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69Z"/><path id="w-sleeve-6" d="M31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/></g><g id="w-sight" class="t-red"><path id="w-sight-1" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44Z"/><path id="w-sight-2" d="M-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01Z"/><path id="w-sight-3" d="M4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82Z"/><path id="w-sight-4" d="M22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1Z"/><path id="w-sight-5" d="M36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></g><symbol id="tee" viewBox="0 0 300 320"><path d="M104 18 C122 36 178 36 196 18 L262 44 L296 112 L252 132 L238 104 L238 304 C180 312 120 312 62 304 L62 104 L48 132 L4 112 L38 44 Z" style="fill:var(--shirt)"/><path d="M104 18 C122 36 178 36 196 18" fill="none" style="stroke:var(--seam)" stroke-width="5"/><path d="M62 104 L62 150 M238 104 L238 150" fill="none" style="stroke:var(--seam)" stroke-width="1.2" opacity=".6"/></symbol><symbol id="eye" viewBox="0 0 32 32"><path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round" style="fill:var(--eye-fill);stroke:var(--eye-stroke)"/><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
 <div class="splash sp-c" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-54.9 -113.84 256 256"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div>
 <div class="splash sp-d" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
 <div class="splash sp-f" aria-hidden="true"><div class="fly"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div>
@@ -438,6 +460,8 @@ document.documentElement.classList.add('js');
       <li><a href="#colours">Colours</a></li>
       <li><a href="#logo">Logo</a></li>
       <li><a href="#intros">Intros</a></li>
+      <li><a href="#feature">Feature graphic</a></li>
+      <li><a href="#merch">Merchandise</a></li>
     </ul>
   </nav>
 </div></div></header>
@@ -624,7 +648,7 @@ document.documentElement.classList.add('js');
 </section>
 
 <div class="logos">
-<div class="rail"><div class="theme" role="group" aria-label="Backgrounds for the logos and the intros"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div></div>
+<div class="track"><div class="theme" role="group" aria-label="Backgrounds for the logos and the intros"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div></div>
 <section id="logo" aria-labelledby="logo-h">
   <h2 id="logo-h">Logo</h2>
   <p>The logo is the name and the record. It has had two designs: the original, in which the record is the iris of an eye, and the current one, in which the record stands beside the name on its own.</p>
@@ -662,6 +686,32 @@ document.documentElement.classList.add('js');
       <div class="ts-splash"><div class="fly"></div></div>
     </div>
   </figure>
+</section>
+</div>
+
+<section id="feature" aria-labelledby="feature-h">
+  <h2 id="feature-h">Feature graphic</h2>
+  <p>The feature graphic is the banner of the app's Google Play listing, 1024 &times; 500 pixels. Play shows it at the head of the listing, as the cover of a preview video, and in its collections and ads, where it may crop the edges.</p>
+  <p>It is the label's red, with "Sleeve" in white over "sight" in the ink, the tagline "Insights on what's playing" under them, and the record beside "sight", large, running off the right and bottom edges, so that only the record is lost where Play crops. It is built from the logo's own sources by <code>assets/logo/src/make_feature_graphic.py</code>, as the PNG that Play takes and an SVG.</p>
+  <figure class="fg-fig"><img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline Insights on what's playing under them, and a large record beside sight, cut off by the right and bottom edges"><figcaption>The feature graphic, as on Google Play (<code>listing/graphics/feature-graphic.png</code>).</figcaption></figure>
+</section>
+
+<div class="logos">
+<div class="track"><div class="theme" role="group" aria-label="Backgrounds for the merchandise"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div></div>
+<section id="merch" aria-labelledby="merch-h">
+  <h2 id="merch-h">Merchandise</h2>
+  <p>Merchandise is planned for once the app gains traction. Until then, a few designs, as mock-ups rather than print-ready art: a white shirt or sticker in the light colourway, a black one in the dark.</p>
+  <h3>T-shirts</h3>
+  <div class="marks two">
+    <figure><div class="lpane merch" role="img" aria-label="A T-shirt with the stacked logo, the words and the record"><div class="shirt"><svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg><div class="print p8b"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>A T-shirt: the stacked logo, the words and the record, on the chest.</figcaption></figure>
+    <figure><div class="lpane merch" role="img" aria-label="A T-shirt with the original stacked logo, the words and the eye"><div class="shirt"><svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg><div class="print p4k"><span class="mark"><span class="st"><span class="b">Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div></div></div><figcaption>A T-shirt: the original stacked logo, the words and the eye, on the chest.</figcaption></figure>
+  </div>
+  <h3>Stickers</h3>
+  <p>Die-cut, with a white edge.</p>
+  <div class="marks two">
+    <figure><div class="lpane merch" role="img" aria-label="A sticker with the stacked logo"><span class="sticker tile"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></div><figcaption>The stacked logo, on a rounded rectangle.</figcaption></figure>
+    <figure><div class="lpane merch" role="img" aria-label="A round sticker with the eye"><span class="sticker round"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>The eye of the original logo, on a round sticker.</figcaption></figure>
+  </div>
 </section>
 </div>
 </main>
@@ -883,13 +933,15 @@ document.documentElement.classList.add('js');
   brand.addEventListener('click', play);
 })();
 
-// The switch: white or black behind every logo and intro.
+// The switches, one for the logos and intros and one for the merchandise: white or black behind
+// every one of them, both switches set together.
 (function () {
-  var logos = document.querySelector('.logos'), buttons = logos.querySelectorAll('.theme button');
+  var all = document.querySelectorAll('.logos'), buttons = document.querySelectorAll('.logos .theme button');
   buttons.forEach(function (b) {
     b.addEventListener('click', function () {
-      logos.classList.toggle('dark', b.getAttribute('data-theme') === 'dark');
-      buttons.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+      var dark = b.getAttribute('data-theme') === 'dark';
+      all.forEach(function (l) { l.classList.toggle('dark', dark); });
+      buttons.forEach(function (o) { o.setAttribute('aria-pressed', String((o.getAttribute('data-theme') === 'dark') === dark)); });
     });
   });
 })();
