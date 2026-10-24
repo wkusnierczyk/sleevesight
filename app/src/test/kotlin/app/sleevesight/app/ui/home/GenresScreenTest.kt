@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -122,6 +123,14 @@ class GenresScreenTest {
             assertEquals(listOf("Baroque Pop", "Ballad"), chips(GenreLevel.TRACK))
             assertEquals(emptyList<String>(), chips(GenreLevel.ARTIST))
             assertEquals(text(R.string.home_genres_collapsed), stateOfFold())
+            assertEquals(
+                Role.Button,
+                compose
+                    .onNodeWithTag(GENRES_FOLD_TAG)
+                    .fetchSemanticsNode()
+                    .config
+                    .getOrNull(SemanticsProperties.Role),
+            )
 
             compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
             compose.waitForIdle()
@@ -189,7 +198,7 @@ class GenresScreenTest {
             compose.onNodeWithTag(GENRE_PREFIX + "track:baroquepop").assertIsSelected()
             compose.onNodeWithTag(GENRE_PREFIX + "album:folkrock").performClick()
             compose.onNodeWithText(text(R.string.home_genre_from_album, "Folk Rock")).assertExists()
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").performClick()
             compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
 
             // Folded, an artist's chip is not shown, nor its credits.
@@ -206,7 +215,7 @@ class GenresScreenTest {
                 it.setContent { Genres(track().copy(genres = genres.value), Settings()) }
             }
             scenario.onActivity {
-                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").performClick()
                 genres.value =
                     TrackGenres(
                         listOf(
@@ -217,14 +226,14 @@ class GenresScreenTest {
                         ),
                     )
                 compose.waitForIdle()
-                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").assertIsSelected()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").assertIsSelected()
                 compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
 
                 // The album's labels land: folded, they would hide the open artist chip, so the
                 // table shows, until the listener folds it.
                 genres.value = TrackGenres(genres.value.rows + album)
                 compose.waitForIdle()
-                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").assertIsSelected()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").assertIsSelected()
                 compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
                 compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
                 compose.waitForIdle()
@@ -243,7 +252,7 @@ class GenresScreenTest {
                 it.setContent { Genres(two.copy(genres = TrackGenres(listOf(beatles))), Settings()) }
             }
             scenario.onActivity {
-                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:The Beatles:rock").performClick()
                 compose.onNodeWithText(text(R.string.home_genre_from_named, "Rock", "The Beatles")).assertExists()
             }
         }
@@ -253,7 +262,7 @@ class GenresScreenTest {
     fun aLabelOnlyMusicBrainzGivesShowsItsLicence() {
         val folk = label("folk", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
         show(TrackGenres(listOf(GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(folk))))) {
-            val chip = compose.onNodeWithTag(GENRE_PREFIX + "artist:folk")
+            val chip = compose.onNodeWithTag(GENRE_PREFIX + "artist:Gordon Lightfoot:folk")
             chip.assertIsNotSelected().performClick()
             chip.assertIsSelected()
             compose.onNodeWithText(LabelSource.MUSICBRAINZ.credit, substring = true).assertExists()

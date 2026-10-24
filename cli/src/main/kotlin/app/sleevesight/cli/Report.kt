@@ -310,7 +310,8 @@ class Report(
             "Web search results are shown as counts and URLs only: Exa's terms (§4.2(a)) forbid copying or " +
                 "publishing what its service returns without its written permission, so no snippet is quoted " +
                 "here, and an insight written from web lines is marked not to be committed or posted. " +
-                "MusicBrainz tags are not fetched (CC BY-NC-SA 3.0; D12): genre labels come from Last.fm alone."
+                "No MusicBrainz tag is listed (CC BY-NC-SA 3.0; D12): its artists' tags are not fetched, and the " +
+                "recording's, which come with its lookup, are only counted; the genre labels listed are Last.fm's."
 
         fun name(source: SourceId): String =
             when (source) {

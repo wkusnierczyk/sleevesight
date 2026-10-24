@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.LinkAnnotation
@@ -117,7 +116,6 @@ private fun Fold(
                 .clearAndSetSemantics {
                     contentDescription = name
                     stateDescription = state
-                    role = Role.Button
                 }.wrapContentHeight(Alignment.CenterVertically)
                 .padding(horizontal = 4.dp),
     )
@@ -237,11 +235,8 @@ private fun GenreChip(
         color = content,
         modifier =
             Modifier
-                .testTag(
-                    GENRE_PREFIX +
-                        placed.row.level.name
-                            .lowercase() + ":" + placed.label.genre.identity,
-                ).minimumInteractiveComponentSize()
+                .testTag(tagOf(placed))
+                .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(fill, shape)
                 .selectable(selected = selected, role = Role.Button, onClick = onClick)
@@ -315,8 +310,21 @@ private fun Small(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-/** The test tag of a genre label, before its level (`track`, `artist`, `album`), a colon and its identity. */
+/**
+ * The test tag of a genre label, before its level (`track`, `artist`, `album`), a colon, for an
+ * artist's the artist and a colon, and its identity: `genre:artist:The Beatles:rock`.
+ */
 const val GENRE_PREFIX: String = "genre:"
+
+private fun tagOf(placed: PlacedLabel): String {
+    val artist =
+        placed.row.artist
+            ?.let { "$it:" }
+            .orEmpty()
+    return GENRE_PREFIX +
+        placed.row.level.name
+            .lowercase() + ":" + artist + placed.label.genre.identity
+}
 
 /** The test tag of the genres' fold control. */
 const val GENRES_FOLD_TAG: String = "genres-fold"
