@@ -63,7 +63,7 @@ The graphic is the label's red, with "Sleeve" over "sight" as the logo sets them
 python3 assets/logo/src/make_feature_graphic.py RobotoFlex.ttf
 ```
 
-With `--design all`, it also rebuilds the other designs tried for the graphic, which the [brand sheet](brand.html) shows beside it, in `assets/logo/feature-graphic/`.
+With `--design all`, it also rebuilds the other designs tried for the graphic, kept in `assets/logo/feature-graphic/`; the [brand sheet](brand.html) shows the one in use.
 
 Play Console asks for alt text with the graphic, at most 140 characters. Play's advice: "Don't use "photo of" or "image of"; screen readers already provide this information." It is: *The Sleevesight logo on red: the words Sleeve and sight beside a large vinyl record, and the tagline Insights on what's playing*.
 

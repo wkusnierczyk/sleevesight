@@ -3,7 +3,7 @@
 All 1024 x 500, built from the logo's sources: the words are the tile's outlines (`tile.json`,
 written by `make_tile.py`); the record is the brand sheet's drawing (`<symbol id="lp">` in
 `design/brand.html`); the colours, other than white, are the sheet's light and dark colourways
-(`.lt` and `.dk`, and its `--page-muted` for a tagline in grey); the tagline "Insights on what's
+(`.lt` and `.dk`, and its `--muted` for a tagline in grey); the tagline "Insights on what's
 playing" is outlined here from Roboto Flex. So every SVG renders without a font.
 
   d2              The one on Google Play: on the label's red (`.lt`'s `--red`), "Sleeve" white over
@@ -80,7 +80,7 @@ def css_vars(text):
 
 def brand_sheet():
     """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, as make_icon.py reads it,
-    and each colourway's variables, name to value: `lt` and `dk`, each with the page's `--page-muted`
+    and each colourway's variables, name to value: `lt` and `dk`, each with the page's `--muted`
     of its scheme added as `muted`."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
     sym = re.search(r'<symbol\b[^>]*\bid=(["\'])lp\1.*?</symbol>', page, re.S)
@@ -93,9 +93,9 @@ def brand_sheet():
         sys.exit('design/brand.html: no ' + ', '.join(missing))
     schemes = {'lt': css_vars(rules['lt'].group(1)), 'dk': css_vars(rules['dk'].group(1))}
     for scheme, rule, where in (('lt', 'page', ':root'), ('dk', 'page-dark', ':root in the dark media query')):
-        muted = css_vars(rules[rule].group(1)).get('page-muted')
+        muted = css_vars(rules[rule].group(1)).get('muted')
         if not muted:
-            sys.exit(f'design/brand.html: {where} sets no --page-muted')
+            sys.exit(f'design/brand.html: {where} sets no --muted')
         schemes[scheme]['muted'] = muted
     try:
         symbol = ElementTree.fromstring(sym.group(0))

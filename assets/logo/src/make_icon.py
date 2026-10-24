@@ -8,17 +8,18 @@ Writes, from the one drawing:
 - assets/logo/icon.svg, the icon as Google Play shows it, a full-bleed square (Play rounds the
   corners and adds the shadow itself), and listing/graphics/icon-512.png, its 512 px PNG for the
   listing: 32-bit (RGBA, every pixel opaque), as Play asks
-  (developer.android.com/distribute/google-play/resources/icon-design-specifications).
+  (developer.android.com/distribute/google-play/resources/icon-design-specifications);
+- assets/favicon.svg, the site's favicon: the record alone, filling its square, with no ground.
 
 Usage, from the repository root:
 
     python3 assets/logo/src/make_icon.py                                  # the icon, in place
     python3 assets/logo/src/make_icon.py --label plain --out <directory>  # the plain-label variant
 
-`--label plain` draws the label without its marks (as the favicon does), for a later comparison of
-the two, such as a store listing experiment; `--out` writes every file under another directory, at
-the same relative paths, leaving the committed ones as they are (with `--label plain` it must name
-one, so the variant never overwrites the icon in use). Needs `rsvg-convert` (librsvg;
+`--label plain` draws the label without its marks (as the favicon does at tab sizes), for a later
+comparison of the two, such as a store listing experiment; `--out` writes every file under another
+directory, at the same relative paths, leaving the committed ones as they are (with `--label plain`
+it must name one, so the variant never overwrites the icon in use). Needs `rsvg-convert` (librsvg;
 2.61.4) and ImageMagick 7 (`magick`; 7.1.2), both from Homebrew on a Mac (`brew install librsvg
 imagemagick`). Another version of the renderer may give a slightly different PNG.
 
@@ -30,6 +31,15 @@ missing, or if the symbol, read as XML, holds an element or an attribute it does
 again after a change to the record or to those colours. The ground is one colour, not one for light
 and one for dark: launchers draw an app's icon the same way whatever the system's theme (themed
 icons apart), and the dark record on white stands out on a light wallpaper and a dark one alike.
+
+The favicon is the record in both colourways, as the brand sheet draws it: `.lt`'s on a light tab bar,
+and `.dk`'s where the browser asks for dark (`prefers-color-scheme`): the rim grey, the core shown
+and the groove hidden, as `.dk` sets `--rim`, `--core` and `--groove`, so the grey rim stands apart
+from a dark tab bar. The label's two marks are drawn only where the favicon is drawn larger than
+32 px (`max-width: 32px` hides them): at 16 px they blur into a smudge on the label, where the plain
+label stays a clean red dot, and a browser draws a tab's icon at 32 px or less, so tabs show the plain
+label, and larger uses (bookmarks, shortcuts) the marks. Seen in renders at 16, 32 and 48 px, light
+and dark (#400).
 
 An adaptive icon is a 108 dp square, which the launcher cuts to its own shape (a circle, a squircle,
 a rounded square) inside the middle 72 dp; a circle of 66 dp about the centre is always shown. The
@@ -72,25 +82,26 @@ def css_vars(text):
 
 
 def brand_sheet():
-    """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, and the `.lt` colourway's
-    variables."""
+    """From `design/brand.html`: the <symbol id="lp"> element, parsed as XML, and the `.lt` and `.dk`
+    colourways' variables."""
     page = open(os.path.join(root, 'design', 'brand.html')).read()
     sym = re.search(r'<symbol\b[^>]*\bid=(["\'])lp\1.*?</symbol>', page, re.S)
     lt = re.search(r'^\.lt\{(.*?)\}', page, re.S | re.M)
-    if not sym or not lt:
+    dk = re.search(r'^\.dk\{(.*?)\}', page, re.S | re.M)
+    if not sym or not lt or not dk:
         sys.exit('design/brand.html: no ' + ' and no '.join(
-            what for what, m in (('<symbol id="lp">', sym), ('.lt rule', lt)) if not m))
+            what for what, m in (('<symbol id="lp">', sym), ('.lt rule', lt), ('.dk rule', dk)) if not m))
     try:
         symbol = ElementTree.fromstring(sym.group(0))
     except ElementTree.ParseError as e:
         sys.exit(f'design/brand.html: <symbol id="lp"> is not well-formed XML ({e}); the script reads it as XML')
-    return symbol, css_vars(lt.group(1))
+    return symbol, css_vars(lt.group(1)), css_vars(dk.group(1))
 
 
-def need(var, *names):
+def need(var, *names, scheme='lt'):
     missing = [name for name in names if not var.get(name)]
     if missing:
-        sys.exit('design/brand.html: .lt sets no ' + ', '.join('--' + name for name in missing))
+        sys.exit(f'design/brand.html: .{scheme} sets no ' + ', '.join('--' + name for name in missing))
     return [var[name] for name in names]
 
 
@@ -147,6 +158,8 @@ def parts(symbol, var):
                 sys.exit(f'design/brand.html: <symbol id="lp">: the groove is filled ({attrs["fill"]!r}); the icon '
                          'draws it as a stroke alone')
             value, = need(var, name)
+            if name == 'core':
+                roles['core-shape'] = attrs
             if prop == 'display' and value == 'none':
                 continue
             if prop == 'fill':
@@ -167,7 +180,7 @@ def parts(symbol, var):
         sys.exit('design/brand.html: <symbol id="lp"> should hold two plain circles, the label and the hole; '
                  f'it holds {len(circles)}')
     roles['label'], roles['hole'] = sorted(circles, key=lambda c: -float(c['r']))
-    missing = [r for r in ('rim', 'groove') if r not in roles] + ([] if roles['marks'] else ['marks'])
+    missing = [r for r in ('rim', 'groove', 'core-shape') if r not in roles] + ([] if roles['marks'] else ['marks'])
     if missing:
         sys.exit('design/brand.html: <symbol id="lp"> has no ' + ', '.join(missing))
     return roles
@@ -245,7 +258,31 @@ def vector(paths, place):
             + ''.join(path(p) for p in paths) + '    </group>\n</vector>\n')
 
 
-def build(roles, ground, out):
+def favicon(roles, dark):
+    """The favicon's SVG: the record in the light colourway, with the dark one's changes under
+    `prefers-color-scheme: dark`, and the label's marks only above 32 px."""
+    rim, groove, label, hole, marks, core = (
+        roles[k] for k in ('rim', 'groove', 'label', 'hole', 'marks', 'core-shape'))
+    dark_rim, dark_core, dark_groove = need(dark, 'rim', 'core', 'groove', scheme='dk')
+    on_dark = [f'.rim{{fill:{dark_rim}}}'] + (['.core{display:inline}'] if dark_core != 'none' else []) \
+        + (['.groove{display:none}'] if dark_groove == 'none' else [])
+    c = lambda e: f'cx="{e["cx"]}" cy="{e["cy"]}" r="{e["r"]}"'
+    return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 16 16">\n'
+            '<!-- Generated by assets/logo/src/make_icon.py, which says why it is drawn so; edit that. -->\n'
+            '<style>\n  .core { display: none }\n'
+            '  @media (prefers-color-scheme: dark) { ' + ' '.join(on_dark) + ' }\n'
+            '  @media (max-width: 32px) { .mark { display: none } }\n</style>\n'
+            f'<circle class="rim" {c(rim)} fill="{rim["fill"]}"/>\n'
+            f'<circle class="core" {c(core)} fill="{core["fill"]}"/>\n'
+            f'<circle class="groove" {c(groove)} fill="none" stroke="{groove["stroke"]}" '
+            f'stroke-width="{groove["stroke-width"]}"/>\n'
+            f'<circle {c(label)} fill="{label["fill"]}"/>\n'
+            + ''.join(f'<path class="mark" d="{m["d"]}" fill="none" stroke="{m["stroke"]}" '
+                      f'stroke-width="{m["stroke-width"]}" stroke-linecap="round"/>\n' for m in marks)
+            + f'<circle {c(hole)} fill="{hole["fill"]}"/>\n</svg>\n')
+
+
+def build(roles, ground, out, dark):
     """Every text file, by its path under `out`, and the paths of the Play icon's SVG and PNG."""
     rim, groove, label, hole, marks = (roles[k] for k in ('rim', 'groove', 'label', 'hole', 'marks'))
     gr, gw = float(groove['r']), float(groove['stroke-width'])
@@ -286,6 +323,7 @@ def build(roles, ground, out):
         + [f'<path fill="none" stroke="{m["stroke"]}" stroke-width="{m["stroke-width"]}" stroke-linecap="round" '
            f'd="{m["d"]}"/>' for m in marks]
         + [f'<path fill="{hole["fill"]}" d="{circle(hole)}"/>'])
+    files[os.path.join(out, 'assets', 'favicon.svg')] = favicon(roles, dark)
     svg = os.path.join(out, 'assets', 'logo', 'icon.svg')
     files[svg] = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {PLAY} {PLAY}" width="{PLAY}" height="{PLAY}">'
                   '<!-- Generated by src/make_icon.py, which says why it is drawn so. -->'
@@ -304,7 +342,7 @@ def main():
                if not shutil.which(tool)]
     if missing:
         sys.exit('needs ' + ' and '.join(missing) + '; nothing written')
-    symbol, var = brand_sheet()
+    symbol, var, dark = brand_sheet()
     roles = parts(symbol, var)
     if args.label == 'plain':
         roles['marks'] = []
@@ -313,7 +351,7 @@ def main():
     if args.label == 'plain' and os.path.exists(out) and os.path.samefile(out, root):
         sys.exit('--label plain writes the variant, not the icon in use: give --out <directory> other than '
                  'the repository root; nothing written')
-    files, svg, png = build(roles, ground, out)
+    files, svg, png = build(roles, ground, out, dark)
     # Everything is made in a temporary directory and moved into place only once the PNG is done, so
     # a failed step leaves the files as they were.
     with tempfile.TemporaryDirectory() as tmp:

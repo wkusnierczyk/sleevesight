@@ -127,4 +127,4 @@ pbpaste | ./gradlew -q --console=plain :cli:run --args="keys-qr --anthropic-from
 
 ## License
 
-[GPL-3.0](LICENSE).
+[GPL-3.0](LICENSE), except the two photos in `assets/brand/`, each under its own licence ([listed there](https://github.com/wkusnierczyk/sleevesight/tree/main/assets/brand)).
