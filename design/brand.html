@@ -59,8 +59,9 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
    small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
    logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
-   the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
-   with the page's Flex). */
+   the menu stacks below 990 px, a little above where the script's own test stacks it (a window about
+   957 px wide, with the page's Flex); a menu entry added or renamed moves that width, so measure it
+   again. */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
 /* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
@@ -72,7 +73,7 @@ nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
 .sl-stack nav.top a{display:block;padding:3px 0}
-@media (max-width:506px){
+@media (max-width:990px){
   html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
   html:not(.js) nav.top ul{flex-direction:column;gap:0}
   html:not(.js) nav.top a{display:block;padding:3px 0}
@@ -276,7 +277,7 @@ html:not(.js) .theme{display:none}
 .sz{display:grid;justify-items:center;gap:8px;color:var(--ink)}
 .sz svg{display:block;width:auto;overflow:visible}
 @media (max-width:880px){.icons{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* The feature graphic, as it is: its own red ground, whatever the switch. */
+/* The feature graphic and the link preview, as they are: their own red ground, whatever the switch. */
 .fg-fig{margin:20px 0 0}
 .fg-fig img{display:block;width:100%;height:auto;border-radius:12px}
 .fg-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
