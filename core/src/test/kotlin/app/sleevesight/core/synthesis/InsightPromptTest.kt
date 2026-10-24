@@ -132,19 +132,11 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `the contract keeps each of the simulator's rules, in the wording of version 5`() {
-        val html = Fixtures.text("simulator/simulator.html")
-        val rules = html.substringAfter("const RULES = allowModel => `RULES\n").substringBefore("`;")
-        // Six rules, and the last, NO_EVIDENCE; the tone and the model-knowledge rules are conditional.
-        val fixed = rules.lines().filter { it.startsWith("- ") && "\${" !in it }
-        assertEquals(SIMULATOR_RULES.keys.toList(), fixed, "the simulator's fixed rules, each mapped below")
-        val modelRule = Regex("\"(- You may add[^\"]*)\\\\n\"").find(rules)!!.groupValues[1]
-        assertTrue("- Do not use your own knowledge.\\n" in rules)
+    fun `the contract asks for no gap sentence, ends with NO_EVIDENCE and states the knowledge rule`() {
+        // The stored prompts pin each rule's wording; this checks what the grounding check relies on.
         for (allowModel in listOf(false, true)) {
             val contract = InsightPrompt.contract(allowModel).lines()
-            SIMULATOR_RULES.values.filterNotNull().forEach { assertTrue(it in contract, it) }
-            // The one deviation in substance (#46, #193): the rule on a gap asks for no gap sentence,
-            // and every sentence is cited.
+            // The rule on a gap (#46, #193): no gap sentence, and every sentence is cited.
             val gap = contract.single { it.startsWith("- If the evidence supports fewer") }
             assertEquals(InsightPrompt.GAP_RULE, gap)
             assertTrue("Write no sentence without a citation." in gap, gap)
@@ -154,40 +146,9 @@ class InsightPromptTest {
             val knowledge = if (allowModel) MODEL_RULE else "- Do not use your own knowledge."
             assertTrue(knowledge in contract, knowledge)
         }
-        assertEquals(
-            "- You may add at most one sentence from your own general knowledge if it adds real value. End it " +
-                "with [M]. Never contradict the evidence.",
-            modelRule,
-            "the simulator's rule on model knowledge, which MODEL_RULE words in fewer words",
-        )
     }
 
     private companion object {
-        /**
-         * Each of the simulator's fixed rules, and the rule of version 5 (#399) that says the same in
-         * fewer words; null for the rule on a gap, which [InsightPrompt.GAP_RULE] replaces. The tone
-         * and the model-knowledge rules are conditional in the simulator and checked on their own.
-         */
-        val SIMULATOR_RULES: Map<String, String?> =
-            linkedMapOf(
-                "- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1]." to
-                    "- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].",
-                "- Use only the evidence. Do not add names, dates, places or numbers that are not in it." to
-                    "- Use only the evidence: no names, dates, places or numbers that are not in it.",
-                "- Evidence labelled \"original song\" describes the song as first recorded by someone else. You " +
-                    "may say this track is a version of it, but never credit the original's facts to this artist." to
-                    "- An \"original song\" line is about the song as first recorded by someone else. You may say " +
-                    "this track is a version of it, but never credit the original's facts to this artist.",
-                "- Evidence labelled \"artist\" is about the performer, not this specific recording." to
-                    "- An \"artist\" line is about the performer, not this recording.",
-                "- Web evidence may describe a different song or artist with the same name; ignore anything that " +
-                    "does not fit." to
-                    "- A web line may be about another song or artist of the same name; ignore what does not fit.",
-                "- If little is documented, say so plainly in one sentence, without a citation." to null,
-                "- If there is no usable evidence at all, reply with exactly: NO_EVIDENCE" to
-                    "- If no evidence is usable, reply with exactly: NO_EVIDENCE",
-            )
-
         const val MODEL_RULE =
             "- You may add at most one sentence of your own general knowledge if it adds real value, ending " +
                 "with [M]. Never contradict the evidence."

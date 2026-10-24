@@ -1,5 +1,5 @@
 {
-  "about": "Sleevesight genre vocabulary: the tags that become genre labels, by family, with the family hue (design/design.md, Genre labels). Taken from GENRE_FAMILIES in design/simulator.html; a test checks the two agree. labels overrides the default label, the tag in title case. synonyms groups spellings of one genre beyond punctuation and spacing, which give one label.",
+  "about": "Sleevesight genre vocabulary: the tags that become genre labels, by family, with the family hue (design/design.md, Genre labels). First taken from GENRE_FAMILIES in design/simulator.html. labels overrides the default label, the tag in title case. synonyms groups spellings of one genre beyond punctuation and spacing, which give one label.",
   "families": [
     { "id": "folk", "hue": 135, "tags": ["folk", "singer-songwriter", "celtic", "acoustic", "country", "country folk", "indie folk", "folk rock", "celtic rock"] },
     { "id": "rock", "hue": 8, "tags": ["rock", "classic rock", "alternative", "alternative rock", "indie", "indie rock", "hard rock", "heavy metal", "metal", "garage rock", "stoner rock", "punk", "punk rock", "post-punk", "new wave", "gothic", "goth", "britpop", "surf rock", "surf", "british invasion", "blues rock", "rock francais"] },

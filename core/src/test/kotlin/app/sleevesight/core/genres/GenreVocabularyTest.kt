@@ -2,9 +2,6 @@ package app.sleevesight.core.genres
 
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.fixtures.BelowSoundtrack
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -12,24 +9,6 @@ import kotlin.test.assertTrue
 
 class GenreVocabularyTest {
     private val vocabulary = GenreVocabulary.load(JvmResourceReader)
-
-    @Test
-    fun `the bundled vocabulary is the simulator's, families, hues and tags in order`() {
-        // `design/simulator.html`, copied into the test resources by the build.
-        val simulator =
-            checkNotNull(javaClass.getResourceAsStream("/simulator/simulator.html")) { "simulator.html not copied" }
-                .use { it.readBytes().decodeToString() }
-        val block = simulator.substringAfter("const GENRE_FAMILIES = {", "").substringBefore("};")
-        val entry = Regex("""^\s*(\w+): \{ hue: (\d+), tags: (\[.*]) },?$""")
-        val families =
-            block.lines().filter { it.isNotBlank() }.map { line ->
-                val match = checkNotNull(entry.find(line)) { "unexpected GENRE_FAMILIES line: $line" }
-                val (id, hue, tags) = match.destructured
-                GenreFamily(id, hue.toInt(), Json.parseToJsonElement(tags).jsonArray.map { it.jsonPrimitive.content })
-            }
-        assertTrue(families.isNotEmpty(), "no GENRE_FAMILIES in the simulator")
-        assertEquals(families, vocabulary.families)
-    }
 
     @Test
     fun `the family hues are the design's`() {

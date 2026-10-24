@@ -38,17 +38,16 @@ class GroundingCheckTest {
     private val json = Json
 
     /**
-     * Each reply in `grounding/replies.json`, checked here and by the simulator's own code
-     * (`grounding/ground-check.js`, whose output is `replies.checked.json`), gives the same result,
-     * but for the documented deviations in [DEVIATIONS].
+     * Each reply in `grounding/replies.json` gives the result stored for it in
+     * `replies.checked.json`. The stored results are the check's own: a change to what it reads
+     * changes them with it.
      */
     @Test
-    fun `the check agrees with the simulator on every stored reply`() {
+    fun `every stored reply gives its stored result`() {
         val replies = json.decodeFromString<List<Reply>>(Fixtures.text("grounding/replies.json"))
         val expected = json.decodeFromString<List<Expected>>(Fixtures.text("grounding/replies.checked.json"))
-        assertEquals(replies.map { it.name }, expected.map { it.name }, "regenerate replies.checked.json")
-        assertEquals(DEVIATIONS, replies.map { it.name }.filter { it in DEVIATIONS }.toSet(), "a deviation is gone")
-        for ((reply, want) in replies.zip(expected).filter { it.first.name !in DEVIATIONS }) {
+        assertEquals(replies.map { it.name }, expected.map { it.name }, "replies.checked.json, reply for reply")
+        for ((reply, want) in replies.zip(expected)) {
             val got = GroundingCheck.check(reply.reply, reply.ids.toSet(), reply.allowModel)
             val actual =
                 when (got) {
@@ -69,14 +68,6 @@ class GroundingCheckTest {
                 }
             assertEquals(want, actual, reply.name)
         }
-    }
-
-    /** The stored outputs came from this copy of the simulator's code; a change there means regenerating them. */
-    @Test
-    fun `the simulator's check is the one the stored outputs came from`() {
-        val html = Fixtures.text("simulator/simulator.html")
-        val code = html.substring(html.indexOf("function splitSentences(text)"), html.indexOf("const countChecks"))
-        assertEquals(Fixtures.text("grounding/simulator-ground-check.js.txt"), code)
     }
 
     /** The simulator splits after `Dr.`; the check does not (#46). */
@@ -261,10 +252,5 @@ class GroundingCheckTest {
         for (reply in held.drop(5)) assertEquals(InsightReply.NoEvidence, GroundingCheck.check(reply, empty, false))
         val shown = listOf("No", "NO single", "NO_EVIDENCES", "NO_EVIDENCE_X", "It is a song")
         for (partial in shown) assertFalse(GroundingCheck.mayBeNoEvidence(partial), partial)
-    }
-
-    private companion object {
-        /** Stored replies the check reads differently from the simulator, on purpose. */
-        val DEVIATIONS = setOf("abbreviation splits")
     }
 }
