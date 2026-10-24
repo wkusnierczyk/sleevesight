@@ -38,6 +38,7 @@ import app.sleevesight.app.keyboard.SessionLedger
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
@@ -171,9 +172,10 @@ internal fun KeyDialog(
 }
 
 /**
- * The key dialog's body: who gets the key [id], the field showing [typed] masked, *Scan QR code*
- * and *Type on a computer*, or the [keyboard] session running instead, and what [failed], if
- * anything; the field and the scans are off while [busy].
+ * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
+ * service's terms with a link to them (#409), the field showing [typed] masked, *Scan QR code* and
+ * *Type on a computer*, or the [keyboard] session running instead, and what [failed], if anything;
+ * the field and the scans are off while [busy].
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongParameterList") // What the body shows, and what it hears.
@@ -187,11 +189,18 @@ private fun KeyEntry(
     keyboard: (@Composable () -> Unit)?,
     onScan: (ScanFor) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(
             stringResource(R.string.settings_key_hint, stringResource(keyRecipient(id))),
             style = MaterialTheme.typography.bodyMedium,
         )
+        serviceTerms(id)?.let { terms ->
+            Text(stringResource(terms.note), style = MaterialTheme.typography.bodyMedium)
+            WebLink(terms.url)
+        }
         OutlinedTextField(
             value = typed,
             onValueChange = onType,
