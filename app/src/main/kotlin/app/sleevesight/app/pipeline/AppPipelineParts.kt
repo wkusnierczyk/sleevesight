@@ -48,6 +48,7 @@ class AppPipelineParts(
             ai = settings.aiProvider?.let { wiring.aiProviders[it] }?.let { p -> keys.ai?.let { AiAccess(p, it) } },
             cache = cache(),
             musicBrainzLabels = wiring.musicBrainzLabels,
+            lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),
             sessionFacts = sessionFacts,
         )
 }

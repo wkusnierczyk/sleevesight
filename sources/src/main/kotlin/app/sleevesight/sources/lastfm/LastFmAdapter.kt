@@ -3,6 +3,7 @@ package app.sleevesight.sources.lastfm
 import app.sleevesight.core.Secret
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
@@ -32,8 +33,9 @@ import kotlin.time.TimeSource
  * Last.fm (`design/design.md`, *Source adapters*, *Genre labels*): per credited artist, the
  * listeners, tags and similar artists, templated, and up to three bio sentences, verbatim and
  * attributed (D1; the bios are CC BY-SA). All lines are about the artist ([Scope.ARTIST]); Last.fm
- * is not asked about the recording. Genre labels come from the artist's top tags through
- * [vocabulary].
+ * is not asked about the recording. Each artist's genre labels come from its top tags through
+ * [vocabulary]; the track's and album's, from their own tags, are asked for apart, after the
+ * evidence (`LastFmTags`, #439).
  *
  * Per D4 each credited artist is looked up by name at once (`artist.getInfo` and
  * `artist.getTopTags`, with `autocorrect=1`), and the [Resolution] is awaited only to judge the
@@ -128,11 +130,8 @@ class LastFmAdapter(
                             )
                         }
                     },
-                genres =
-                    answers
-                        .flatMap { it.genres }
-                        .distinctBy { it.identity }
-                        .take(GenreVocabulary.MAX_LABELS),
+                // Each artist's own, naming it, for its row of the genres (#439).
+                genres = answers.flatMap { it.genres },
                 provisional = answers.any { it.provisional },
                 freshUntil = judged.mapNotNull { it.freshUntil }.minOrNull(),
             )
@@ -208,6 +207,8 @@ class LastFmAdapter(
                         vocabulary.labelsFor(
                             genreTags(artist, fetched.topTags),
                             artist.url,
+                            GenreLevel.ARTIST,
+                            credited,
                         )
                     } else {
                         emptyList()

@@ -6,9 +6,11 @@ import kotlinx.serialization.json.Json
 
 /**
  * The fixed genre vocabulary (`design/design.md`, *Genre labels*): the tags that become genre
- * labels, each in a family with a fixed hue. Tags outside it (places, decades, "seen live", noise)
- * are dropped. It is source-agnostic: Last.fm's artist tags go through it, and from Phase 1.0
- * MusicBrainz's (D12, #84; [MusicBrainzLabels]), whose labels [combineLabels] joins to Last.fm's.
+ * labels, each in a family (with a hue, for the genre cards; the labels themselves are drawn
+ * plain, #439). Tags outside it (places, decades, "seen live", noise) are dropped. It is
+ * source-agnostic: Last.fm's tags go through it, and from Phase 1.0 MusicBrainz's (D12, #84;
+ * [MusicBrainzLabels]), whose labels [combineLabels] joins to Last.fm's; the track's, the artists'
+ * and the album's alike (#439; [GenreLevel]).
  *
  * The data is the resource [RESOURCE], first taken from the simulator's `GENRE_FAMILIES`.
  */
@@ -55,11 +57,15 @@ class GenreVocabulary(
      * [MAX_LABELS]: each tag lowercased and trimmed, kept if it is in the vocabulary, once per
      * [identity]: two spellings of one genre (`hip-hop` and `hip hop`, `r&b` and `rnb`) give one
      * label, the first. As the simulator's `genresFrom`, except for that. [url] is the page the tags
-     * are from (the artist's, at the source), for the label's credit; null when there is none.
+     * are from (the track's, artist's or album's, at the source), for the label's credit; null when
+     * there is none. [level] is what the tags were given to, and [artist] the credited artist they
+     * describe, for an artist's ([GenreLabel.artist]).
      */
     fun labelsFor(
         tags: List<String>,
         url: String? = null,
+        level: GenreLevel = GenreLevel.ARTIST,
+        artist: String? = null,
     ): List<GenreLabel> {
         val seen = mutableSetOf<String>()
         return tags
@@ -70,7 +76,7 @@ class GenreVocabulary(
             .filter { (_, _, identity) -> seen.add(identity) }
             .take(MAX_LABELS)
             .map { (tag, family, identity) ->
-                GenreLabel(tag, family.id, family.hue, labelOverrides[tag] ?: titleCase(tag), identity, url)
+                GenreLabel(tag, family.id, labelOverrides[tag] ?: titleCase(tag), identity, url, level, artist)
             }.toList()
     }
 
@@ -115,7 +121,7 @@ class GenreVocabulary(
     }
 }
 
-/** A family of genres, which gives its labels their [hue] (0 to 359). */
+/** A family of genres, with its [hue] (0 to 359), for the genre cards; labels are not drawn in it (#439). */
 data class GenreFamily(
     val id: String,
     val hue: Int,
@@ -123,21 +129,24 @@ data class GenreFamily(
 )
 
 /**
- * A genre label: the vocabulary [tag] it came from, its [family] and [hue], and the [label] shown.
- * Labels are artist-level: they come from the artist's tags, not the recording's.
+ * A genre label: the vocabulary [tag] it came from, its [family], and the [label] shown.
  *
  * @property identity the genre it stands for ([GenreVocabulary.identity]), by which labels from two
  *   sources, or two artists, are the same label (`hip-hop` and `hip hop`).
- * @property url the page of the artist whose tags gave it, at the source (Last.fm's artist page,
- *   MusicBrainz's), which the label links for its credit; null when the source gave none.
+ * @property url the page whose tags gave it, at the source (the track's, artist's or album's, on
+ *   Last.fm or MusicBrainz), which the label links for its credit; null when the source gave none.
+ * @property level what the tags were given to: the track, an artist or the album (#439).
+ * @property artist for an artist's label, the credited artist, as the track names it, whose tags
+ *   gave it; null for the track's and the album's.
  */
 data class GenreLabel(
     val tag: String,
     val family: String,
-    val hue: Int,
     val label: String,
     val identity: String,
     val url: String? = null,
+    val level: GenreLevel = GenreLevel.ARTIST,
+    val artist: String? = null,
 )
 
 @Serializable

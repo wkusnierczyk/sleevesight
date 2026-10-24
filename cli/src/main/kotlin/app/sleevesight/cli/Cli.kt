@@ -2,6 +2,7 @@ package app.sleevesight.cli
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import app.sleevesight.core.Secret
+import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
@@ -14,6 +15,7 @@ import app.sleevesight.core.pipeline.Pipeline
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.PipelineParts
+import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.platform.JvmResourceReader
@@ -152,6 +154,7 @@ class Cli(
                     allowModel = allowModel,
                     results = results,
                     passes = options.repeat,
+                    musicBrainzTrackLabels = results.count { labelledByMusicBrainz(it, vocabulary) },
                     gate = gate,
                     diagnostics =
                         Diagnostics(
@@ -195,6 +198,7 @@ class Cli(
                             hasher = JvmHasher,
                             ai = ai,
                             cache = cache,
+                            lastFmLabels = lastFmLabels,
                             sessionFacts = ListeningSessionFacts { pass.toLong() },
                         ),
                     ) { settings }
@@ -227,6 +231,12 @@ class Cli(
                 lastFm(),
                 web(),
             )
+
+        private val vocabulary by lazy { GenreVocabulary.load(JvmResourceReader) }
+
+        // Last.fm's track and album labels (#439), with Last.fm itself: live, on its key.
+        private val lastFmLabels =
+            keys.lastFm?.takeIf { options.mode == Mode.LIVE }?.let(wiring::lastFmLabels)
 
         private fun lastFm(): Pair<SourceStatus, SourceAdapter?> {
             val key = keys.lastFm
@@ -346,4 +356,13 @@ internal class FreshCards(
     private val cache: PipelineCache,
 ) : PipelineCache by cache {
     override suspend fun card(key: CardKey): String? = null
+}
+
+// Whether MusicBrainz's recording tags (#439) would label the track: counted, never listed (`Report`).
+private fun labelledByMusicBrainz(
+    result: TrackResult,
+    vocabulary: GenreVocabulary,
+): Boolean {
+    val done = result.state.sources[SourceId.MUSICBRAINZ] as? SourceState.Done
+    return done?.result?.recordingTags?.let { vocabulary.labelsFor(it.tags).isNotEmpty() } == true
 }

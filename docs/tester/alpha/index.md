@@ -89,7 +89,7 @@ Send reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, i
 
 In brief: requests go from your phone straight to each service, none through a server of ours.
 
-- **To the sources you switch on:** the title and artists of the playing track (Last.fm gets only the artists, and Wikidata only identifiers, never a name). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
+- **To the sources you switch on:** the title and artists of the playing track (Wikidata gets only identifiers, never a name; for the genre labels, Last.fm also gets the album name, the only source that does). When a title names a film or show, as in "Main Theme (from *Some Film*)", Exa also gets that name. By default, the next track in the player's queue also goes to MusicBrainz, ahead of its play.
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.

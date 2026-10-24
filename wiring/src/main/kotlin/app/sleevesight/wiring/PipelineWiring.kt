@@ -7,6 +7,7 @@ import app.sleevesight.core.ResourceReader
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.genres.GenreVocabulary
+import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.AccentFolder
@@ -24,6 +25,7 @@ import app.sleevesight.net.NetClient
 import app.sleevesight.sources.art.ArtFetcher
 import app.sleevesight.sources.art.ArtResult
 import app.sleevesight.sources.lastfm.LastFmAdapter
+import app.sleevesight.sources.lastfm.LastFmTags
 import app.sleevesight.sources.musicbrainz.MusicBrainzClient
 import app.sleevesight.sources.musicbrainz.MusicBrainzSource
 import app.sleevesight.sources.web.ExaWebSearch
@@ -33,7 +35,7 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
 
 /**
  * The pipeline's network side, built on one client (architecture, *Modules*): the source
- * adapters, the resolver, MusicBrainz's genre labels, the AI providers and the art fetch, each
+ * adapters, the resolver, MusicBrainz's and Last.fm's genre labels, the AI providers and the art fetch, each
  * handed out as a `:core` type or a plain function, so `:app` uses them without naming a `:net`
  * type. Nothing here sends a request of its own; the client is private, and no member takes or
  * returns a `:net` type, which `:app` could not compile against.
@@ -86,6 +88,13 @@ class PipelineWiring internal constructor(
     val musicBrainzLabels: MusicBrainzLabels by lazy {
         MusicBrainzLabels(MusicBrainzClient(net), vocabulary, artists = artists)
     }
+
+    /**
+     * Last.fm's genre labels for the track and its album (#439), on the user's [key], for
+     * `PipelineParts.lastFmLabels`; an album's tags are kept in the artist cache, or, without one,
+     * in memory for as long as this lives, a new key making a new one.
+     */
+    fun lastFmLabels(key: Secret): LastFmLabels = LastFmLabels(LastFmTags(net, key), vocabulary, artists = artists)
 
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
