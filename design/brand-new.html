@@ -262,17 +262,25 @@ html:not(.js) .theme{display:none}
 .shirt .print{position:absolute;left:50%;top:30%;transform:translateX(-50%)}
 .print.p8b svg{display:block;width:34cqw;height:auto;overflow:visible}
 .print.p4k .mark{font-size:9cqw}
-.sticker{display:grid;place-items:center;background:var(--m-bg);box-shadow:0 0 0 7px #fff,0 6px 14px 4px #0003}
-.sticker.tile{padding:22px 26px;border-radius:26px}
-.sticker.tile svg{display:block;width:150px;height:auto;overflow:visible}
-/* The sticker panes are alike, whatever is on them. */
-.lpane.merch.stk{aspect-ratio:16/10;padding:16px}
-.sticker.round{width:170px;height:170px;border-radius:50%;align-content:center;gap:0}
-/* The eye cropped to its ink, as wide as the address and centred over it. */
-.sticker.round svg{width:112px;height:auto;aspect-ratio:31/15;display:block;margin:0 auto 12px;overflow:visible}
+/* Stickers: each design on three shapes, die-cut with a white edge 7 px wide: the edge is the
+   sticker's outer shape in white, the face the same shape 14 px smaller on top of it. The squircle is
+   a superellipse (|x|^4 + |y|^4 = 1), clipped from a path; the shadow is a filter, so it follows the
+   clip. All the panes are alike, whatever is on them. */
+.lpane.merch.stk{aspect-ratio:4/3;padding:12px}
+.sticker{position:relative;width:194px;height:194px;filter:drop-shadow(0 6px 10px #0003)}
+.sticker .edge,.sticker .face{position:absolute;display:grid;place-items:center;align-content:center}
+.sticker .edge{inset:0;background:#fff}
+.sticker .face{inset:7px;background:var(--m-bg)}
+.sticker.sq .edge{border-radius:42.7px}.sticker.sq .face{border-radius:35.7px}
+.sticker.round .edge,.sticker.round .face{border-radius:50%}
+.sticker.sqc .edge{clip-path:path("M194.0 97.0 L193.9 121.8 L193.6 132.0 L193.1 139.8 L192.3 146.3 L191.4 152.0 L190.2 157.0 L188.9 161.5 L187.3 165.6 L185.4 169.3 L183.4 172.7 L181.1 175.8 L178.6 178.6 L175.8 181.1 L172.7 183.4 L169.3 185.4 L165.6 187.3 L161.5 188.9 L157.0 190.2 L152.0 191.4 L146.3 192.3 L139.8 193.1 L132.0 193.6 L121.8 193.9 L97.0 194.0 L72.2 193.9 L62.0 193.6 L54.2 193.1 L47.7 192.3 L42.0 191.4 L37.0 190.2 L32.5 188.9 L28.4 187.3 L24.7 185.4 L21.3 183.4 L18.2 181.1 L15.4 178.6 L12.9 175.8 L10.6 172.7 L8.6 169.3 L6.7 165.6 L5.1 161.5 L3.8 157.0 L2.6 152.0 L1.7 146.3 L0.9 139.8 L0.4 132.0 L0.1 121.8 L0.0 97.0 L0.1 72.2 L0.4 62.0 L0.9 54.2 L1.7 47.7 L2.6 42.0 L3.8 37.0 L5.1 32.5 L6.7 28.4 L8.6 24.7 L10.6 21.3 L12.9 18.2 L15.4 15.4 L18.2 12.9 L21.3 10.6 L24.7 8.6 L28.4 6.7 L32.5 5.1 L37.0 3.8 L42.0 2.6 L47.7 1.7 L54.2 0.9 L62.0 0.4 L72.2 0.1 L97.0 0.0 L121.8 0.1 L132.0 0.4 L139.8 0.9 L146.3 1.7 L152.0 2.6 L157.0 3.8 L161.5 5.1 L165.6 6.7 L169.3 8.6 L172.7 10.6 L175.8 12.9 L178.6 15.4 L181.1 18.2 L183.4 21.3 L185.4 24.7 L187.3 28.4 L188.9 32.5 L190.2 37.0 L191.4 42.0 L192.3 47.7 L193.1 54.2 L193.6 62.0 L193.9 72.2 Z")}
+.sticker.sqc .face{clip-path:path("M180.0 90.0 L179.9 113.0 L179.6 122.5 L179.1 129.8 L178.5 135.8 L177.6 141.0 L176.5 145.7 L175.2 149.9 L173.8 153.6 L172.1 157.1 L170.2 160.2 L168.0 163.1 L165.7 165.7 L163.1 168.0 L160.2 170.2 L157.1 172.1 L153.6 173.8 L149.9 175.2 L145.7 176.5 L141.0 177.6 L135.8 178.5 L129.8 179.1 L122.5 179.6 L113.0 179.9 L90.0 180.0 L67.0 179.9 L57.5 179.6 L50.2 179.1 L44.2 178.5 L39.0 177.6 L34.3 176.5 L30.1 175.2 L26.4 173.8 L22.9 172.1 L19.8 170.2 L16.9 168.0 L14.3 165.7 L12.0 163.1 L9.8 160.2 L7.9 157.1 L6.2 153.6 L4.8 149.9 L3.5 145.7 L2.4 141.0 L1.5 135.8 L0.9 129.8 L0.4 122.5 L0.1 113.0 L0.0 90.0 L0.1 67.0 L0.4 57.5 L0.9 50.2 L1.5 44.2 L2.4 39.0 L3.5 34.3 L4.8 30.1 L6.2 26.4 L7.9 22.9 L9.8 19.8 L12.0 16.9 L14.3 14.3 L16.9 12.0 L19.8 9.8 L22.9 7.9 L26.4 6.2 L30.1 4.8 L34.3 3.5 L39.0 2.4 L44.2 1.5 L50.2 0.9 L57.5 0.4 L67.0 0.1 L90.0 0.0 L113.0 0.1 L122.5 0.4 L129.8 0.9 L135.8 1.5 L141.0 2.4 L145.7 3.5 L149.9 4.8 L153.6 6.2 L157.1 7.9 L160.2 9.8 L163.1 12.0 L165.7 14.3 L168.0 16.9 L170.2 19.8 L172.1 22.9 L173.8 26.4 L175.2 30.1 L176.5 34.3 L177.6 39.0 L178.5 44.2 L179.1 50.2 L179.6 57.5 L179.9 67.0 Z")}
+.sticker .face svg.m8b{display:block;width:140px;height:auto;overflow:visible}
+/* The eye cropped to its ink, centred over the address. */
+.sticker .face svg.eye{width:112px;height:auto;aspect-ratio:31/15;display:block;margin:0 auto 12px;overflow:visible}
 .sticker .addr{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-size:19px;letter-spacing:-.01em;line-height:1;color:var(--m-ink)}
 .sticker .addr .red{color:var(--m-red)}
-.logos:not(.dark) .sticker{box-shadow:0 0 0 1px #0000000f,0 6px 14px 2px #0002}
+.marks.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 /* From intro to header: a page in small, 16:10, its header (the logo and a menu) and a few lines for
    its content. The script plays each intro in its splash (`.ts-splash`), centred, at a size measured
    from the stage, flies it onto the header's logo (`--fx`, `--fy`, `--fs`, as the page's own script
@@ -420,11 +428,11 @@ footer p{margin:0 0 4px}
 @keyframes r2-slide{0%,8%{transform:translateX(140px);animation-timing-function:cubic-bezier(.45,0,.2,1)}30%,100%{transform:none}}
 @keyframes r2-bg{0%,38%{opacity:1}54%,100%{opacity:0}}
 @keyframes r2-shrink{0%,36%{transform:translate(-126.12px,-51.55px) scale(3.6405);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
-@media (max-width:880px){.marks.four{grid-template-columns:repeat(2,minmax(0,1fr))}.trio{grid-template-columns:minmax(0,1fr)}.story{grid-template-columns:minmax(0,1fr)}figure.side{max-width:360px}}
+@media (max-width:880px){.marks.four,.marks.three{grid-template-columns:repeat(2,minmax(0,1fr))}.trio{grid-template-columns:minmax(0,1fr)}.story{grid-template-columns:minmax(0,1fr)}figure.side{max-width:360px}}
 @media (max-width:560px){
   body{font-size:17px}
   section{padding:36px 0}
-  .faces,.samples,.pair,.trio,.story,.marks.two{grid-template-columns:minmax(0,1fr)}
+  .faces,.samples,.pair,.trio,.story,.marks.two,.marks.three{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 <script>
@@ -713,10 +721,9 @@ document.documentElement.classList.add('js');
     <figure><div class="lpane merch" role="img" aria-label="A T-shirt with the original stacked logo, the words and the eye"><div class="shirt"><svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg><div class="print p4k"><span class="mark"><span class="st"><span class="b">Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div></div></div><figcaption>A T-shirt: the original stacked logo, the words and the eye, on the chest.</figcaption></figure>
   </div>
   <h3>Stickers</h3>
-  <p>Die-cut, with a white edge.</p>
-  <div class="marks two">
-    <figure><div class="lpane merch stk" role="img" aria-label="A sticker with the stacked logo"><span class="sticker tile"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></div><figcaption>The stacked logo, on a rounded rectangle.</figcaption></figure>
-    <figure><div class="lpane merch stk" role="img" aria-label="A round sticker with the eye, and sleevesight.app under it"><span class="sticker round"><svg viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></div><figcaption>The eye of the original logo, with the site's address, on a round sticker.</figcaption></figure>
+  <p>Die-cut, with a white edge: two designs, each on a rounded square, a squircle and a circle.</p>
+  <div class="marks three">
+    <figure><div class="lpane merch stk" role="img" aria-label="A rounded square sticker with the stacked logo"><span class="sticker sq"><span class="edge"></span><span class="face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, rounded square.</figcaption></figure><figure><div class="lpane merch stk" role="img" aria-label="A squircle sticker with the stacked logo"><span class="sticker sqc"><span class="edge"></span><span class="face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, squircle.</figcaption></figure><figure><div class="lpane merch stk" role="img" aria-label="A round sticker with the stacked logo"><span class="sticker round"><span class="edge"></span><span class="face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, round.</figcaption></figure><figure><div class="lpane merch stk" role="img" aria-label="A rounded square sticker with the eye, with sleevesight.app under it"><span class="sticker sq"><span class="edge"></span><span class="face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, rounded square.</figcaption></figure><figure><div class="lpane merch stk" role="img" aria-label="A squircle sticker with the eye, with sleevesight.app under it"><span class="sticker sqc"><span class="edge"></span><span class="face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, squircle.</figcaption></figure><figure><div class="lpane merch stk" role="img" aria-label="A round sticker with the eye, with sleevesight.app under it"><span class="sticker round"><span class="edge"></span><span class="face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, round.</figcaption></figure>
   </div>
 </section>
 </div>
