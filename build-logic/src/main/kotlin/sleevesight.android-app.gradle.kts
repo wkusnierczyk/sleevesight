@@ -1,16 +1,20 @@
 // An Android application: SDK levels from the architecture (D10), Java 17, Compose,
 // kotlinx.serialization (Navigation Compose's type-safe routes are serializable), and the shared
-// checks, plus `checkManifest` on each variant's merged manifest and `checkApkClasses` on each
-// variant's APK (in `check`). The release build is shrunk by R8 and signed with the upload key when
-// the environment names one (`design/release.md`).
+// checks, plus `checkManifest` on each variant's merged manifest and `checkApkClasses` and
+// `checkApkNotices` on each variant's APK (in `check`). Each variant's assets get the list of the
+// libraries it ships, with their licences (`listLibraryLicences`, #488). The release build is shrunk
+// by R8 and signed with the upload key when the environment names one (`design/release.md`).
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.HasUnitTest
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import sleevesight.checks.CheckApkClasses
+import sleevesight.checks.CheckApkNotices
 import sleevesight.checks.CheckDependencies
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
+import sleevesight.checks.ListLibraryLicences
 import sleevesight.checks.networkModules
 import sleevesight.release.UploadSigning
 
@@ -73,6 +77,8 @@ val checkModuleGraph = tasks.register("checkModuleGraph") { group = "verificatio
 // install: R8 renames most of the release build's classes, and it fails on a missing class itself.
 val checkApkClasses = tasks.register("checkApkClasses") { group = "verification" }
 tasks.named("check") { dependsOn(checkApkClasses) }
+val checkApkNotices = tasks.register("checkApkNotices") { group = "verification" }
+tasks.named("check") { dependsOn(checkApkNotices) }
 
 androidComponents {
     onVariants { variant ->
@@ -136,5 +142,56 @@ androidComponents {
                 prefix = "Lapp/sleevesight/"
             }
         checkApkClasses.configure { dependsOn(apkClasses) }
+
+        // The licence POMs: the shipped modules' POMs, and level by level their parents', since a
+        // POM may leave its licence to its parent. Each level is one configuration, so a parent
+        // two modules name at different versions resolves to one of them, and the other module's
+        // licence is then not found: the list fails on it rather than guessing.
+        val pomLevels =
+            (0 until ListLibraryLicences.POM_LEVELS).fold(listOf<NamedDomainObjectProvider<out Configuration>>()) { levels, level ->
+                val coordinates =
+                    levels.lastOrNull()
+                        ?.flatMap { it.incoming.artifacts.resolvedArtifacts }
+                        ?.map { poms -> ListLibraryLicences.parentsOf(poms.map { it.file.readText() }) }
+                        ?: CheckDependencies.modulesOf(runtimeRoot)
+                levels +
+                    configurations.resolvable("${variant.name}LicencePoms$level") {
+                        isTransitive = false
+                        val poms = coordinates.map { all -> all.map { project.dependencies.create("$it@pom") } }
+                        (this as Configuration).dependencies.addAllLater(poms)
+                    }
+            }
+        // The modules' own jars and AARs, unprocessed, for their LICENSE and NOTICE files.
+        val shippedArtifacts =
+            variant.runtimeConfiguration.incoming.artifactView {
+                componentFilter { it is ModuleComponentIdentifier }
+            }.artifacts.resolvedArtifacts
+        val libraryLicences =
+            tasks.register<ListLibraryLicences>("listLibraryLicences$suffix") {
+                group = "verification"
+                description = "Lists the shipped libraries with their licences for the credits; fails on a missing notice."
+                modules = CheckDependencies.modulesOf(runtimeRoot)
+                poms.from(pomLevels)
+                artifactModules =
+                    shippedArtifacts.map { all ->
+                        all.map { artifact ->
+                            val id = artifact.id.componentIdentifier as ModuleComponentIdentifier
+                            "${id.group}:${id.module}:${id.version}\t${artifact.file.path}"
+                        }
+                    }
+                artifactFiles.from(shippedArtifacts.map { all -> all.map { it.file } })
+                noticeTable = rootProject.layout.projectDirectory.file("config/licence-notices.txt")
+                noticeDirectory = layout.projectDirectory.dir("src/main/assets/licences")
+                outputDirectory = layout.buildDirectory.dir("generated/licences/${variant.name}")
+            }
+        variant.sources.assets?.addGeneratedSourceDirectory(libraryLicences, ListLibraryLicences::outputDirectory)
+
+        val apkNotices =
+            tasks.register<CheckApkNotices>("checkApkNotices$suffix") {
+                group = "verification"
+                description = "Fails when the APK lacks its list of libraries or a notice the list names."
+                apkDirectory = variant.artifacts.get(SingleArtifact.APK)
+            }
+        checkApkNotices.configure { dependsOn(apkNotices) }
     }
 }

@@ -1,0 +1,19 @@
+# The notice each shipped library needs beyond the Apache License's text (#488), read by
+# `listLibraryLicences`, which writes the in-app list of libraries (`assets/licences/libraries.txt`)
+# from it and from the libraries' own POMs.
+#
+# A library whose POM names only the Apache License 2.0 needs no line: the license's text ships
+# (`assets/licences/apache-2.0.txt`). Any other licence needs one, since MIT and BSD ask that the
+# copyright and permission notice go with every copy, as does an Apache-2.0 library that carries a
+# NOTICE file (Apache-2.0, 4(d)). The build fails on a shipped library with neither, on a line
+# that matches no shipped library, on a licence other than the POM's, and on a notice that lacks
+# the licence's text, a copyright line, or the copyright lines and NOTICE file the library ships.
+#
+# An entry matches as in `dependency-allowlist.txt`: its group exactly, `group.*` its subgroups as
+# well, and `group:name` that one module. The notice is a file in `app/src/main/assets/licences/`;
+# the name, the rest of the line, is the library's name in the credits.
+#
+# module                                                      licence       notice                     name
+org.slf4j:slf4j-api                                           MIT           mit-slf4j.txt              SLF4J API
+com.materialkolor                                             MIT           mit-materialkolor.txt      materialkolor
+androidx.datastore:datastore-preferences-external-protobuf    BSD-3-Clause  bsd-3-clause-protobuf.txt  Protocol Buffers, in DataStore
