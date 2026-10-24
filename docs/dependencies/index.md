@@ -31,12 +31,13 @@ The release build is shrunk by R8, which drops the code nothing calls; being on 
 
 ## Licences and GPL-3.0
 
-Sleevesight is under the [GNU General Public License, version 3](https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE). Every shipped library is under a permissive licence, each of which lets its code be combined into a GPL-3.0 program and the whole distributed under the GPL:
+Sleevesight is under the [GNU General Public License, version 3](https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE). Every shipped library is under a permissive licence, but for one data file inside OkHttp under the MPL-2.0, a file-level copyleft licence; each of them lets its code be combined into a GPL-3.0 program and the whole distributed under the GPL:
 
 - **Apache-2.0**, the licence of almost everything below. The Free Software Foundation counts it compatible with GPL version 3 (not with version 2, because of its patent terms). It asks that each copy carry the licence and the NOTICE file the library's distribution has, if it has one.
 - **MIT**, which asks only that its copyright and permission notice go with each copy.
 - **BSD-3-Clause**, which asks the same and adds that the authors' names are not used to endorse the product.
 - **MPL-2.0**, for one file of data inside OkHttp, the Public Suffix List. It asks that recipients learn the file's licence and where its source is, and allows the file to be distributed in a larger work under the GPL (its section 3.3).
+- **Unicode-3.0**, for Unicode's IDNA mapping table, which OkHttp compiles into its code to read international host names. It asks that its copyright and permission notice go with each copy, as MIT does.
 
 The credits screen in the app (*Credits*, under *About* in *Settings*) lists the libraries too: by Maven group those under the Apache License alone, and by name each notice that goes further, with each licence's text in full. The build writes that list from the libraries' POMs and [`config/licence-notices.txt`](https://github.com/wkusnierczyk/sleevesight/blob/main/config/licence-notices.txt), and fails when a shipped library's licence needs a notice the app does not carry ([#488](https://github.com/wkusnierczyk/sleevesight/issues/488)).
 
@@ -56,7 +57,7 @@ Chosen against: Moshi for JSON, since kotlinx.serialization uses no reflection a
 
 - **Groups:** `io.ktor`, `com.squareup.okhttp3`, `com.squareup.okio`, `org.slf4j`
 - **Where:** `:net`; Okio also under DataStore in `:app`.
-- **Licence:** Apache-2.0; SLF4J's API, MIT; the Public Suffix List in OkHttp's Android artifact, MPL-2.0.
+- **Licence:** Apache-2.0; SLF4J's API, MIT; the Public Suffix List in OkHttp's Android artifact, MPL-2.0; Unicode's IDNA mapping table compiled into OkHttp, Unicode-3.0.
 
 Ktor's HTTP client, on OkHttp as its engine, makes every request the app sends: to the sources, the AI services and, for players that give their cover only as a web address, the cover's server. Only `:net` may depend on it. It takes Ktor as an `implementation` dependency, so the modules above it see `:net`'s own types and never Ktor's; the module graph (`config/module-graph.properties`), Detekt's rules and a check of the compiled classes stop any other module from reaching an HTTP client. Okio is OkHttp's I/O library.
 

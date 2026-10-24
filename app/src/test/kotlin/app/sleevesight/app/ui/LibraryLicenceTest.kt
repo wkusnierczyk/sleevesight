@@ -66,6 +66,7 @@ class LibraryLicenceTest {
                 "mit-materialkolor.txt",
                 "mit-slf4j.txt",
                 "mpl-2.0-publicsuffix.txt",
+                "unicode-3.0-idna.txt",
             ),
             notices.keys,
         )
@@ -89,8 +90,6 @@ class LibraryLicenceTest {
     fun theCreditsShowEachLibraryWithItsLicence() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
-            // The list is read off the main thread.
-            waitForText("SLF4J API")
             compose.onNodeWithText(text(R.string.credits_libraries_apache)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("SLF4J API").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("org.slf4j:slf4j-api").performScrollTo().assertIsDisplayed()
@@ -224,8 +223,14 @@ class LibraryLicenceTest {
         assertEquals(emptyList<LibraryNotice>(), libraryNotices(null))
         // Each licence the build knows has its name.
         assertEquals(
-            listOf("Apache License 2.0", "MIT License", "BSD 3-Clause License", "Mozilla Public License 2.0"),
-            listOf("Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0").map(::licenceName),
+            listOf(
+                "Apache License 2.0",
+                "MIT License",
+                "BSD 3-Clause License",
+                "Mozilla Public License 2.0",
+                "Unicode License v3",
+            ),
+            listOf("Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0", "Unicode-3.0").map(::licenceName),
         )
     }
 }

@@ -17,6 +17,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipInputStream
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
@@ -50,9 +51,12 @@ abstract class ListLibraryLicences : DefaultTask() {
     @get:Input
     abstract val modules: ListProperty<String>
 
-    /** The modules' POMs and their parents' (`sleevesight.android-app`, *licence POMs*). */
+    /**
+     * The modules' POMs and their parents' (`sleevesight.android-app`, *licence POMs*), by name too,
+     * since a POM's version may be its file name's.
+     */
     @get:InputFiles
-    @get:PathSensitive(PathSensitivity.NONE)
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
     abstract val poms: ConfigurableFileCollection
 
     /** The modules' jars and AARs, read for LICENSE and NOTICE files. */
@@ -161,17 +165,19 @@ abstract class ListLibraryLicences : DefaultTask() {
         const val MIT = "MIT"
         const val BSD_3 = "BSD-3-Clause"
         const val MPL_2 = "MPL-2.0"
+        const val UNICODE_3 = "Unicode-3.0"
 
         private val NONE = Bundled(emptyList(), emptyList())
 
         /** The licences whose whole text the build holds a notice to, in `resources/sleevesight/licences/`. */
-        private val TEXTS = setOf(APACHE, MIT, BSD_3, MPL_2)
+        private val TEXTS = setOf(APACHE, MIT, BSD_3, MPL_2, UNICODE_3)
 
         /** [licence]'s reference text as a pattern over [normalise]d text (the placeholders in its README). */
-        private val patterns = mutableMapOf<String, Regex>()
+        // Shared by the variants' tasks, which may run at once.
+        private val patterns = ConcurrentHashMap<String, Regex>()
 
         private fun pattern(licence: String): Regex =
-            patterns.getOrPut(licence) {
+            patterns.computeIfAbsent(licence) {
                 val text =
                     checkNotNull(ListLibraryLicences::class.java.getResource("/sleevesight/licences/$licence.txt")) {
                         "No reference text for $licence"
@@ -214,6 +220,8 @@ abstract class ListLibraryLicences : DefaultTask() {
                 "mpl-2.0" to MPL_2,
                 "mozilla public license 2.0" to MPL_2,
                 "mozilla public license, version 2.0" to MPL_2,
+                "unicode-3.0" to UNICODE_3,
+                "unicode license v3" to UNICODE_3,
             )
 
         /** The licences the build knows, by their URLs, without scheme, `www.`, extension or final slash. */
@@ -226,6 +234,7 @@ abstract class ListLibraryLicences : DefaultTask() {
                 "opensource.org/licenses/bsd-3-clause" to BSD_3,
                 "opensource.org/license/bsd-3-clause" to BSD_3,
                 "mozilla.org/mpl/2.0" to MPL_2,
+                "unicode.org/license" to UNICODE_3,
             )
 
         /** A copyright line: `Copyright`, then `(c)`, `©` or a year; not a licence's "copyright notice". */

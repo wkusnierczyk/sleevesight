@@ -2,7 +2,7 @@
 
 The texts `listLibraryLicences` holds each notice to (`ListLibraryLicences.kt`, #488): a notice must
 contain its licence's whole text here, whitespace, typographic quotes and rules of `=` or `-` aside.
-They are the bodies of SPDX's texts (https://github.com/spdx/license-list-data, `text/<id>.txt`),
+They are the bodies of SPDX's texts (MIT, BSD-3-Clause, Apache-2.0, MPL-2.0, Unicode-3.0) (https://github.com/spdx/license-list-data, `text/<id>.txt`),
 from the grant to the end, without the title and the copyright line, which vary. Where licences in
 use vary in their wording, the text has a placeholder:
 

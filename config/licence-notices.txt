@@ -40,3 +40,4 @@ com.google.zxing:core                                         Apache-2.0    apac
 # Third-party code or data inside the library, under its own licence.
 org.jetbrains.kotlin:kotlin-stdlib                            BSD-3-Clause  bsd-3-clause-threetenbp.txt              ThreeTen backport, in Kotlin's standard library
 com.squareup.okhttp3:okhttp-android                           MPL-2.0       mpl-2.0-publicsuffix.txt                 Public Suffix List, in OkHttp
+com.squareup.okhttp3:okhttp-android                           Unicode-3.0   unicode-3.0-idna.txt                     IDNA mapping table, in OkHttp

@@ -154,6 +154,7 @@ private val LICENCE_NAMES =
         "MIT" to "MIT License",
         "BSD-3-Clause" to "BSD 3-Clause License",
         "MPL-2.0" to "Mozilla Public License 2.0",
+        "Unicode-3.0" to "Unicode License v3",
     )
 
 internal fun licenceName(spdx: String): String = LICENCE_NAMES[spdx] ?: spdx
