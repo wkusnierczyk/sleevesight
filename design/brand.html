@@ -4,745 +4,965 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight brand sheet</title>
-<meta name="description" content="Sleevesight's logo designs, colours and type, with mock-ups of how they might look printed.">
+<meta name="description" content="Sleevesight's brand: its fonts, the record, colours, logo, intros, feature graphic and merchandise.">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
-<!-- The brand sheet: the leading logo designs and their intros, the other marks they come from,
-     two reveals of the record mark, the store's feature graphics, the colours and type, and mock-ups
-     of shirts and stickers. A design reference, not linked from the product page. Hand-written;
-     nothing generates it (the feature graphics it shows are files, from `make_feature_graphic.py`).
-     Like the product page, it loads nothing from another site: the one web font, Roboto Flex, is a
-     copy cut down to what this page uses (`assets/fonts/make_sheet_font.py`), so text added here in
-     new characters needs that copy remade. -->
+<!-- The brand sheet: the brand's fonts, the record and its story, the colours, the logo, the intros,
+     the feature graphic and merchandise. A design reference, linked from the site's footer (*Fonts*).
+     Its frame is the product page's (`index.html`): the same header, with the stacked logo and the
+     menu, the same intros, played on the first visit, and the same three fonts, Roboto Flex for
+     titles and labels, Roboto Slab for the running text and Roboto Mono for code, each a cut-down
+     copy served from this site (`assets/fonts/make_page_font.py`, which reads this page too), so
+     text added here in new characters needs the copies remade. Its ground is white. It keeps
+     nothing in the browser. The logo's generators read its colourways (`.lt`, `.dk`) and its record
+     (the symbol `lp`) from here (`assets/logo/src/`). -->
+<!-- Fetched at once rather than when the style sheet asks for it, so the text swaps to it sooner. -->
+<link rel="preload" href="../assets/fonts/RobotoFlex-page.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/RobotoSlab-page.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:"Roboto Flex";src:url(../assets/fonts/RobotoFlex-sheet.woff) format("woff");
-  font-weight:400 700;font-stretch:87.5% 100%;font-display:swap}
-:root{--f-ui:"Roboto Flex",system-ui,-apple-system,"Segoe UI",sans-serif;--label:#cf222e;
-  --page:#f6f7f9;--page-ink:#141a22;--page-muted:#596473;--card:#fff;--card-line:#0000001a}
-@media (prefers-color-scheme: dark){:root{--page:#080a0d;--page-ink:#e5e8ee;--page-muted:#96a0ad;--card:#12161c;--card-line:#ffffff1a}}
-.lt{--bg:#e8ebef;--ink:#141a22;--red:#cf222e;--eye-fill:none;--eye-stroke:#1f2328;--rim:#1f2328;--core:none;--groove:inline;
-  --tile-bg:#fff;--tile-ink:#141a22;--tile-edge:transparent}
-.dk{--bg:#0d1015;--ink:#e5e8ee;--red:#f0443a;--eye-fill:#fff;--eye-stroke:#8b949e;--rim:#8b949e;--core:inline;--groove:none;
-  --tile-bg:#000;--tile-ink:#fff;--tile-edge:#ffffff26}
-/* Printed: on a white shirt the light colourway, on a black shirt the dark one, but with pure white type. */
-.on-white{--ink:#141a22}
-.on-black{--ink:#fff}
+/* Names of their own, so an installed Roboto never stands in for them. */
+@font-face{font-family:"Sleevesight Flex";src:url(../assets/fonts/RobotoFlex-page.woff2) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%;font-display:swap}
+@font-face{font-family:"Sleevesight Slab";src:url(../assets/fonts/RobotoSlab-page.woff2) format("woff2");
+  font-weight:350 700;font-display:swap}
+@font-face{font-family:"Sleevesight Mono";src:url(../assets/fonts/RobotoMono-page.woff2) format("woff2");
+  font-weight:500;font-display:swap}
+:root{
+  --bg:#fff; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
+  --accent:#3346c9; --on-accent:#ffffff;
+  --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
+  --f-mono:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --sight:#cf222e;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d1015; --surface:#151920; --sunken:#10141a; --ink:#e5e8ee; --muted:#96a0ad; --line:#29303a;
+  --accent:#8e9cff; --on-accent:#0e1116;
+  --sight:#cf222e;
+  color-scheme:dark}}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--page);color:var(--page-ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
-.page{max-width:1160px;margin:0 auto;padding:8px 16px 72px}
-header.sheet{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:32px 0 8px;border-bottom:1px solid var(--card-line)}
-header.sheet h1{margin:0;font-size:30px;font-stretch:88%;letter-spacing:-.015em}
-header.sheet p{margin:0;color:var(--page-muted)}
-.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--card-line);font-size:13.5px;color:var(--page-muted)}
-.foot a{color:inherit}
-h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--page-muted);margin:44px 0 14px}
-.lead{margin:-6px 0 16px;color:var(--page-muted);max-width:62em}
-/* A long path in a lead breaks anywhere rather than run past a phone's width. */
-.lead code{overflow-wrap:anywhere}
-.card{background:var(--card);border:1px solid var(--card-line);border-radius:14px;overflow:hidden}
-.card .cap{display:flex;gap:10px;align-items:baseline;padding:10px 14px}
-.card .cap b{font-family:ui-monospace,Menlo,monospace;color:var(--page-muted);font-weight:600}
-.card .cap span{color:var(--page-muted);font-size:13.5px}
-.duo{display:grid;grid-template-columns:1fr 1fr}
-.pane{background:var(--bg);padding:28px 20px;display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap;min-width:0}
-@media (max-width:700px){.duo{grid-template-columns:1fr}}
-.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:16px}
-/* A card in a row stretches to the tallest card beside it; its panels grow with it, so the panels in a
-   row end together (the marks stay centred in them). */
-.grid2>.card{display:flex;flex-direction:column}
-.grid2>.card>.duo{flex:1}
-/* The feature graphics: the files `make_feature_graphic.py` writes, each with its own ground, so they
-   are shown as they are, not redrawn in the pane's colourway. */
-.fg img{display:block;width:100%;height:auto;border-top:1px solid var(--card-line)}
-/* A card as tall as its image: stretched to a taller card beside it, it would show its own ground
-   under the image. */
-.grid2.fg{align-items:start}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
+/* Titles, labels, the header and the skip link in Flex; the running text in Slab (body). Before the
+   rules below, so their own weights win; the containers reset Slab's text weight to Flex's regular. */
+h1,h2,h3{font-family:var(--f-ui)}
+header.top,figcaption,.skip{font-family:var(--f-ui);font-weight:400}
+a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:20}
+.skip:focus{top:12px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+/* The header. At the top of the page it is large. Scrolled down, it stays at the top of the window,
+   small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
+   logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
+   hidden until the top. Without the script, the header is large and scrolls away with the page, and
+   the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
+   with the page's Flex). */
+header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
+.brand{display:flex;align-items:center;flex:none;text-decoration:none}
+/* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
+   tall as "sight". The svg is the words' ink box, 69 units tall, and 72 px tall at the top of the
+   page. */
+.brand>svg{display:block;flex:none;width:133.84px;height:72px;overflow:visible}
+@media (max-width:370px){.brand>svg{width:107.82px;height:58px}}
+nav.top{flex:none}
+.sl-stack header.top .row{flex-direction:column;align-items:flex-start}
+.sl-stack nav.top ul{flex-direction:column;gap:0}
+.sl-stack nav.top a{display:block;padding:3px 0}
+@media (max-width:506px){
+  html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
+  html:not(.js) nav.top ul{flex-direction:column;gap:0}
+  html:not(.js) nav.top a{display:block;padding:3px 0}
+}
+.js{scroll-padding-top:80px}
+.js header.top .bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg);border-bottom:1px solid transparent}
+.sl-compact header.top .bar{border-bottom-color:var(--line);box-shadow:0 8px 18px -14px rgba(0,0,0,.45)}
+.sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
+.sl-compact .brand>svg{width:66.92px;height:36px}
+.sl-compact nav.top ul{font-size:15px;gap:4px 18px}
+.sl-compact.sl-stack header.top .row{flex-direction:row}
+.sl-compact.sl-stack nav.top{display:none}
+@media (prefers-reduced-motion: no-preference){
+  header.top .bar{transition:border-color .25s,box-shadow .25s}
+  header.top .row{transition:padding .25s ease}
+  .brand>svg{transition:width .25s ease,height .25s ease}
+  nav.top ul{transition:font-size .25s ease}
+}
+.sl-still *{transition:none!important}
+/* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
+   so they need no font; "Sleeve" in ink, white on dark as on the brand sheet's black tile, and "sight"
+   in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to `#w-sight-5`), so an
+   intro can show or turn each letter on its own. The tile, in the intros only: white on light, black
+   with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
+   variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
+   grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
+:root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
+@media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
+.t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
+.t-ink{fill:var(--tile-ink)}
+.t-red{fill:var(--sight)}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
+nav.top a{color:var(--muted);text-decoration:none}
+nav.top a:hover{color:var(--ink);text-decoration:underline}
 
-/* The marks, as in the variants page. */
-.mark{display:inline-flex;align-items:center;gap:.45em;font-size:40px;line-height:1.1;font-weight:700;font-stretch:88%;letter-spacing:-.015em;color:var(--ink);white-space:nowrap}
+section{padding:48px 0;border-top:1px solid var(--line)}
+section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
+section p{max-width:44em}
+section h3{margin:40px 0 12px;font-size:22px;line-height:1.25;font-weight:600}
+code{font-family:var(--f-mono);font-weight:500;font-size:.86em}
+/* Fonts: a card for each face, its name set in itself; then the uses, as a table; then the
+   examples, each a stage with its caption under it. */
+.faces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:20px}
+.face{border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--surface);display:flex;flex-direction:column}
+.face .spec{margin:0;font-size:46px;line-height:1.1}
+.face .abc{margin:6px 0 14px;font-size:17px;line-height:1.4;color:var(--muted);overflow-wrap:anywhere}
+.face h4{margin:0 0 8px;font-family:var(--f-ui);font-size:19px;font-weight:600}
+.face p{margin:0 0 10px;font-size:16.5px}
+.face .meta{margin:auto 0 0;padding-top:8px;font-size:15px;color:var(--muted)}
+.f-flex{font-family:var(--f-ui);font-weight:400}
+.f-slab{font-family:var(--f-text);font-weight:350}
+.f-mono{font-family:var(--f-mono);font-weight:500}
+table.uses{border-collapse:collapse;width:100%;font-size:16.5px}
+.uses th,.uses td{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line)}
+.uses th{font-family:var(--f-ui);font-weight:600;font-size:15px;color:var(--muted)}
+.uses td:first-child{white-space:nowrap}
+.samples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:20px 0 0}
+.samples figure{margin:0;display:flex;flex-direction:column}
+.stage{flex:1;display:flex;align-items:center;border:1px solid var(--line);border-radius:16px;padding:28px 24px;min-width:0;overflow:hidden}
+.samples figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+/* The linear logo, as on the tester brief (`_includes/logo-linear.html`): the stacked mark's type,
+   with the record trailing, aligned as in the stacked mark. */
+.linear{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-variation-settings:"opsz" 52.64;font-size:clamp(32px,8vw,48px);line-height:1.2;letter-spacing:-.015em;white-space:nowrap;color:var(--tile-ink)}
+.linear .sight{color:var(--sight)}
+.linear svg{width:.935em;height:.935em;vertical-align:-.211em;margin-left:.267em}
+.s-head{margin:0;font-family:var(--f-ui);font-size:clamp(30px,4.6vw,44px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em}
+.s-para{margin:0;font-size:18px}
+pre.s-code{margin:0;font-family:var(--f-mono);font-weight:500;font-size:14px;line-height:1.6;white-space:pre;overflow-x:auto}
+.stage.code{background:var(--sunken)}
+/* The record: the mark's parts, numbered, beside a real record; the history beside the first LP; the
+   sleeve, drawn and in two intros. Each figure is a square stage, as tall as it is wide. */
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:20px 0 0}
+.pair figure,.trio figure,figure.side{margin:0}
+.pair figcaption,.trio figcaption,figure.side figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+.sq{aspect-ratio:1;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid;place-items:center;background:var(--bg)}
+.sq>svg,.sq>img{display:block;width:100%;height:100%}
+.sq>img{object-fit:cover}
+.parts{margin:20px 0 0;padding-left:1.4em;max-width:44em}
+.parts li{margin:0 0 6px}
+.parts b{font-family:var(--f-ui);font-weight:600}
+/* The numbered parts: leaders and badges over the record, in its units. */
+.callouts line{stroke:var(--ink);stroke-width:.07}
+.callouts line.halo{stroke:var(--bg);stroke-width:.24}
+.callouts circle.pt{fill:var(--ink)}
+.callouts circle.badge{fill:var(--ink)}
+.callouts text{fill:var(--bg);font-family:var(--f-ui);font-weight:600;font-size:1.05px;text-anchor:middle;dominant-baseline:central}
+.story{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);gap:20px 32px;align-items:start}
+.story p:first-child{margin-top:0}
+figure.side .sq{background:#fff}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:20px 0 0}
+/* Intro A's svg paints its own ground where the record hides behind the sleeve: #fafbfc on light,
+   #0d1015 on dark; the stage takes the same. */
+.sq.a-ground{background:#fafbfc}
+@media (prefers-color-scheme: dark){.sq.a-ground{background:#0d1015}}
+/* R2, looped every 7 s as on the old brand sheet: the product page's moves (`.r2-*`), repeated, with
+   a fade in and out. On light the tile is white, so it takes an edge, to show on the white stage. At
+   rest (reduced motion) it shows its end, the mark. */
+.loop{--tile-edge:var(--line)}
+.loop svg{width:88%;height:auto;overflow:visible}
+.loop .rv-all{animation:rv-loop 7s infinite}
+.loop .r2-pan{animation:r2-pan 7s infinite}
+.loop .r2-tile{animation:r2-slide 7s infinite}
+.loop .r2-bg{opacity:0;animation:r2-bg 7s infinite}
+.loop .r2-rec{animation:r2-shrink 7s infinite}
+@keyframes rv-loop{0%{opacity:0}5%,88%{opacity:1}96%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){.loop *{animation:none!important}}
+/* Colours: the mark in each colourway, on its own ground whatever the page's scheme, then the
+   colourway's swatches. A colourway sets the variables the words and the record read (`#words`,
+   `#lp`). */
+.cw{display:grid;place-items:center;aspect-ratio:2/1;border:1px solid var(--line);border-radius:16px}
+.cw svg{width:58%;height:auto;overflow:visible}
+/* The two colourways, light and dark: every pane that shows the logo, an intro or merchandise takes
+   one of them as a class, and the switch flips it. The logo's generators read them too, with the
+   record's symbol, `lp`, below (`assets/logo/src/make_icon.py`, `make_feature_graphic.py`), so
+   each rule stays one line of plain values, starting the line. */
+.lt{--bg:#fff;--ink:#141a22;--red:#cf222e;--sight:#cf222e;--tile-ink:#141a22;--tile-bg:#fff;--tile-edge:#d2d8e0;--rim:#1f2328;--core:none;--groove:inline;--eye-fill:none;--eye-stroke:#1f2328;--shirt:#fafafa;--seam:#e2e2e2}
+.dk{--bg:#000;--ink:#e5e8ee;--red:#cf222e;--sight:#cf222e;--tile-ink:#e5e8ee;--tile-bg:#000;--tile-edge:#ffffff40;--rim:#8b949e;--core:inline;--groove:none;--eye-fill:#fff;--eye-stroke:#8b949e;--shirt:#111;--seam:#262626}
+.cw{background:var(--bg)}
+.swatches{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.swatches li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;align-items:start}
+.swatches i{grid-row:span 2;width:44px;height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px var(--line)}
+.swatches b{font-family:var(--f-ui);font-weight:600;font-size:16.5px}
+.swatches code{margin-left:8px;color:var(--muted)}
+.swatches span{font-size:15.5px;color:var(--muted);line-height:1.45}
+/* Logo: every mark on its own ground, white by default; the switch (`.theme`) flips the whole
+   section to black, setting the variables the words, the record and the eye read. Without the
+   script the switch is hidden and the marks stay on white. */
+/* Each switch rides in a rail at the top of the sections it serves (the Logo and Intros, and the
+   Merchandise): it sits beside the first heading, stays at the top of the window while they are in
+   view (sticky), and leaves with them, either way. In the right margin where the window has one, else at
+   the right of the column, over the content. The switch is sticky in a track of no width down the
+   column's right edge, from level with the first heading to the end of the sections, so it stops,
+   whole, where they end. */
+.logos{position:relative}
+.track{position:absolute;top:56px;bottom:0;right:0;width:0;z-index:5}
+.theme{position:sticky;top:80px;width:max-content;transform:translateX(-100%);display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;background:var(--bg);box-shadow:0 4px 14px -8px rgba(0,0,0,.35)}
+@media (min-width:1240px){
+  .theme{transform:none;margin-left:28px;flex-direction:column;border-radius:20px}
+}
+.theme button{font:inherit;font-family:var(--f-ui);font-size:15px;border:0;border-radius:999px;padding:5px 16px;background:none;color:var(--muted);cursor:pointer}
+.theme button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.theme button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+html:not(.js) .theme{display:none}
+/* The intros, looped by the script (`.run`, put back at the end of each turn), on the product page's
+   timings, without the flight to the header. At rest (no script, or reduced motion) each shows its
+   end, the mark. */
+.demo{aspect-ratio:1;padding:0;position:relative}
+.demo .env,.demo .dz{position:absolute;inset:0;display:grid;place-items:center}
+.demo .dz{inset:auto;position:relative}
+.demo .dz svg{display:block;width:100%;height:auto;overflow:visible}
+.demo .dz-c,.demo .dz-d,.demo .dz-f{aspect-ratio:1}
+.demo .dz .spin{width:100%;height:100%}
+.demo .r1-rec,.demo .r1-roll,.demo .r1-wipe,.demo .r2-pan,.demo .r2-tile,.demo .r2-bg,.demo .r2-rec,.demo .rv-all{animation:none}
+.demo .r2-bg{opacity:0}
+.c-turn,.d-turn{transform-box:view-box}
+.c-turn{transform-origin:73.1px 14.16px}
+.d-turn{transform-origin:0 0}
+.demo .sp-f-orbit,.dz-f .orbit{transform-box:view-box;transform-origin:0 0}
+.dz-h .turn{transform-box:view-box}
+.d-rec{transform-box:fill-box;transform-origin:center}
+.run .env{animation:env var(--p) linear both}
+.run .dz-c,.run .dz-d,.run .dz-f,.run .dz-g,.run .dz-h,.run .dz-i{animation:tl-in 700ms ease-out both}
+.run .c-turn,.run .d-turn{animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+.run .dz-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) 3300ms both}
+.run .d-rec{animation:d-rec 700ms cubic-bezier(.2,0,.2,1) 4200ms both}
+.run .dz-f .orbit{animation:lg-turn 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+.run .dz-g .key{animation:tl-in 1ms var(--at) both}
+.run .dz-h .turn{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1) var(--at) both}
+.run .dz-i .i-sleeve{animation:i-sleeve 1150ms cubic-bezier(.45,0,.55,1) 900ms both}
+.run .dz-i .i-sight{animation:i-sight 1150ms cubic-bezier(.45,0,.55,1) 1750ms both}
+.run .dz-r1 .rv-all,.run .dz-r2 .rv-all{animation:rv-all 7s both}
+.run .r1-rec{animation:r1-turn 7s both}
+.run .r1-roll{animation:r1-roll 7s both,r1-show 7s both}
+.run .r1-wipe{animation:r1-roll 7s both}
+.run .r2-pan{animation:r2-pan 7s both}
+.run .r2-tile{animation:r2-slide 7s both}
+.run .r2-bg{animation:r2-bg 7s both}
+.run .r2-rec{animation:r2-shrink 7s both}
+@keyframes env{0%,90%{opacity:1}100%{opacity:0}}
+/* The feature graphic, as it is: its own red ground, whatever the switch. */
+.fg-fig{margin:20px 0 0}
+.fg-fig img{display:block;width:100%;height:auto;border-radius:12px}
+.fg-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+/* Merchandise: mock-ups on a light grey table, the same in both colourways; the shirt and the sticker
+   are white in the light colourway and black in the dark. The prints are sized in the shirt's width
+   (`cqw`). */
+.lpane.merch{background:linear-gradient(#e9ecef,#d3d8de);padding:24px 16px}
+.shirt{position:relative;width:min(100%,300px);aspect-ratio:300/320;container-type:inline-size}
+.shirt svg.tee{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 10px 18px #0003)}
+.shirt .print{position:absolute;left:50%;top:30%;transform:translateX(-50%)}
+.print.p8b svg{display:block;width:34cqw;height:auto;overflow:visible}
+/* The eye over the address, as on the sticker, at the shirt's scale. */
+.print.peye{display:grid;justify-items:center}
+.print.peye svg{display:block;width:28cqw;height:auto;aspect-ratio:31/15;overflow:visible;margin-bottom:3cqw}
+.print.peye .addr{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-size:4.75cqw;letter-spacing:-.01em;line-height:1;white-space:nowrap;color:var(--ink)}
+.print.peye .addr .red{color:var(--red)}
+/* Stickers: each design on three shapes, die-cut with a white edge 7 px wide. Each is one shape,
+   180 px across, drawn twice in an svg: in white with a white stroke 14 px wide, which is the edge,
+   and in the colourway's ground on top, which is the face; so the edge is even, and the face follows
+   the outline, on every shape. The squircle is a superellipse (|x|^4 + |y|^4 = 1). The shadow is a
+   filter, so it follows the shape. All the panes are alike, whatever is on them. */
+.lpane.merch.stk{aspect-ratio:4/3;padding:12px}
+.sticker{position:relative;width:194px;height:194px;filter:drop-shadow(0 6px 10px #0003)}
+.sticker svg.stk-shape{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.sticker .stk-edge{fill:#fff;stroke:#fff;stroke-width:14;stroke-linejoin:round}
+.sticker .stk-bg{fill:var(--bg)}
+.sticker .stk-face{position:absolute;inset:7px;display:grid;place-items:center;align-content:center}
+.sticker .stk-face svg.m8b{display:block;width:140px;height:auto;overflow:visible}
+/* The eye cropped to its ink, centred over the address. */
+.sticker .stk-face svg.eye{width:112px;height:auto;aspect-ratio:31/15;display:block;margin:0 auto 12px;overflow:visible}
+.sticker .addr{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-size:19px;letter-spacing:-.01em;line-height:1;color:var(--ink)}
+.sticker .addr .red{color:var(--red)}
+.marks.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* From intro to header: a page in small, 16:10, its header (the logo and a menu) and a few lines for
+   its content. The script plays each intro in its splash (`.ts-splash`), centred, at a size measured
+   from the stage, flies it onto the header's logo (`--fx`, `--fy`, `--fs`, as the page's own script
+   measures them), and at the landing swaps it for the header's logo and fades the page in. */
+.ts-fig{margin:20px 0 0}
+.tstage{position:relative;aspect-ratio:16/10;padding:0;display:block;overflow:hidden}
+.ts-hdr{position:absolute;left:4%;right:4%;top:5%;height:13%;display:flex;align-items:center;justify-content:space-between}
+.ts-brand{all:unset;cursor:pointer;height:100%;display:block}
+.ts-brand:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
+.ts-brand svg{display:block;height:100%;width:auto;aspect-ratio:128.27/69;overflow:visible}
+.ts-brand .lp-disc{transform-box:fill-box;transform-origin:center}
+.ts-nav{display:flex;gap:6%;width:34%;justify-content:flex-end}
+.ts-nav i{display:block;width:22%;height:6px;border-radius:3px;background:var(--ink);opacity:.35}
+.ts-ghost{position:absolute;left:4%;right:4%;top:32%;display:grid;gap:14px}
+.ts-ghost i{display:block;height:8px;border-radius:4px;background:var(--ink);opacity:.14}
+.ts-ghost i:nth-child(1){width:46%;height:18px;opacity:.5}.ts-ghost i:nth-child(2){width:72%}.ts-ghost i:nth-child(3){width:64%}.ts-ghost i:nth-child(4){width:38%}
+.ts-splash{position:absolute;left:var(--sx);top:var(--sy);display:none;pointer-events:none}
+.ts-splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0}
+.ts-splash .dz{width:100%;height:100%}
+.ts-splash .dz svg{display:block;width:100%;height:100%;overflow:visible}
+.tstage.intro .ts-splash{display:block}
+.tstage.intro .ts-brand,.tstage.intro .ts-nav,.tstage.intro .ts-ghost{opacity:0}
+.tstage.intro .fly{animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
+.ts-nav,.ts-ghost,.ts-brand{transition:opacity 450ms ease-out}
+.tstage.intro .ts-brand{transition:none}
+.tstage.out .ts-brand,.tstage.out .ts-nav,.tstage.out .ts-ghost{opacity:0;transition:opacity 400ms}
+/* D's record turns in beside "sight" once the words have landed. */
+.tstage.d:not(.intro):not(.drec) .ts-brand .lp-disc{opacity:0}
+.tstage.drec .ts-brand .lp-disc{animation:d-rec 700ms cubic-bezier(.2,0,.2,1) both}
+@media (prefers-reduced-motion: no-preference){
+  .tstage:not(.intro) .ts-brand:hover .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
+}
+.marks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:20px;margin:20px 0 0}
+.marks.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* The original marks: a row for each layout, a column for each style. */
+.marks.four{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 14px}
+.marks.four .lpane{padding:24px 8px;min-height:130px}
+.marks.four .mark{font-size:24px}
+.marks figure{margin:0}
+.marks figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
+.lpane{background:var(--bg);border:1px solid var(--line);border-radius:16px;display:grid;place-items:center;padding:28px 16px;min-height:160px;overflow:hidden}
+@media (prefers-reduced-motion: no-preference){.lpane{transition:background-color .25s}}
+.lpane svg.stacked{width:min(100%,200px);height:auto;overflow:visible}
+/* The eye marks, as on the old brand sheet: live type, Roboto Flex at 88% width, the eye beside it. */
+.mark{display:inline-flex;align-items:center;gap:.45em;font-family:var(--f-ui);font-size:30px;line-height:1.1;font-weight:400;font-stretch:88%;letter-spacing:-.015em;color:var(--ink);white-space:nowrap}
 .mark svg{width:1.8em;height:1.8em;flex:none;display:block}
-.w{display:inline-flex;align-items:baseline}
-.n{font-weight:400}.b{font-weight:700}.red{color:var(--red)}
-.stack{display:flex;flex-direction:column;font-size:.8em;line-height:.9}
-.stack.right{align-items:flex-end}
-.tile-mark{width:3.6em;aspect-ratio:1;border-radius:.8em;display:grid;place-items:center;background:var(--tile-bg);color:var(--tile-ink);box-shadow:inset 0 0 0 1px var(--tile-edge);flex:none}
-.tile-mark .stack{font-size:.94em}
-/* 7a, for marketing: the eye over the address, as wide as the address. The eye's svg is cropped to
-   its ink (x .5-31.5, y 8.5-23.5 of 32, the outline's stroke included); the script below sets its
-   width to the address's ink width and shifts the address so the two inks share a centre line. */
-.mark .vert{display:inline-flex;flex-direction:column;align-items:center;gap:.32em}
-.mark .vert svg{width:6.6em;height:auto;aspect-ratio:31/15}
-.no-tile{--tile-bg:transparent;--tile-edge:transparent}
-/* 8a and 8b: the 6c words, outlined, with the record on the side they align to. The svg's viewBox is
-   the words' 69-unit ink with a unit to spare above and below; at 1.47em, the stacked text's height
-   at .8em (37.6 units to the em), the words come out at 69/71 of that. The words are off the tile, so
-   they take the page's ink: through the variable, since a selector cannot reach into a <use>. */
-.mark svg.lp-mark{width:auto;height:1.47em;--tile-ink:var(--ink)}
-/* 8b, turning: the whole mark turns as one about the record's centre, (73.10, 14.16) in the words'
-   units. The svg is a square centred there, 256 units a side, with room for the words' sweep (122
-   units from the centre to the far corner of "Sleeve"), and the svg itself turns, about its own
-   centre. The turn is intro B's: twice, in 2 s, with the same easing. */
-.turn-pane{background:var(--bg);display:grid;place-items:center;padding:12px;overflow:hidden;min-width:0}
-.turn-pane svg{display:block;width:min(100%,300px);height:auto;aspect-ratio:1;--tile-ink:var(--ink);animation:lp-turn 5s infinite}
-@keyframes lp-turn{0%,20%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}60%,100%{transform:rotate(720deg)}}
-@media (prefers-reduced-motion: reduce){.turn-pane svg{animation:none}}
-/* The reveals, looped every 7 s, each ending on the 8b mark. Each svg is in the words' units. At rest
-   (reduced motion) each shows its end: the animations give the start, the elements' own values the end.
-   R1: the record rolls in from beyond the pane's left edge to its place in 8b, two and a quarter turns
-   over its own circumference (2.25 × 2π × 17.58 = 248.53 units), so it rolls without slipping. "sight"
-   is clipped at the record's centre, so it shows from behind the record as it passes. The roll, its turn
-   and the clip share one easing, so they stay in step. The viewBox is centred on 8b's ink. The svg does
-   not clip, the pane does. The record starts 101 units left of the svg, less what the pane leaves beside
-   it, so from 22 units beyond the pane's edge (the panes stacked at their widest, a window 700px wide: 80
-   units beside the svg) to 96 (the svg filling the pane at its full 340px, a window 398px wide stacked or
-   762px side by side); in two columns of cards (windows 1088px and wider) it is 93 to 94, over a third of
-   the roll's distance.
-   R1 has no tile, so its words take the page's ink. */
-.rv-pane{background:var(--bg);display:grid;place-items:center;padding:20px 12px;overflow:hidden;min-width:0}
-.rv-pane svg{display:block;width:min(100%,340px);height:auto}
-.rv-pane svg.r1{overflow:visible;--tile-ink:var(--ink)}
-.rv-all{animation:rv-all 7s infinite}
-.r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s infinite}
-.r1-roll,.r1-wipe{animation:r1-roll 7s infinite}
-@keyframes rv-all{0%{opacity:0}5%,88%{opacity:1}96%,100%{opacity:0}}
+.mark .st{display:flex;flex-direction:column;align-items:flex-end;font-size:.8em;line-height:.9}
+.mark .b{font-weight:700}
+.mark .red{color:var(--red)}
+ol.refs{margin:0;padding-left:1.4em;font-size:15.5px;color:var(--muted)}
+ol.refs li{margin:0 0 4px}
+footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
+footer p{margin:0 0 4px}
+
+/* The intro (`.sl-intro`): set by the scripts when motion is allowed and the address has no `#`. As
+   it starts, the address gains a bare `#` (the top of the page), so a reload skips it; so does a link
+   copied from the address bar after it. One of those below, picked at random (`data-logo`); no address
+   picks one. Each plays large in the middle of the window (`.splash`) and ends on the 8b mark, which then
+   shrinks onto the header's (`--fx`, `--fy`, `--fs`, measured by the script), where the header's own
+   logo takes over at `--land` and the rest of the page fades in. Scrolling, a key or a click ends the
+   intro at once. A click on the logo plays one again where the page is (`replay()`).
+   - C (`.sp-c`): the mark fades in (0-0.7 s), turns twice about the record's centre (0.9-2.9 s), and
+     shrinks onto the header (3.3-3.95 s).
+   - D (`.sp-d`): the tile, on C's timings, turning about the dot of the i; the tile fades as it flies,
+     so the words land on the page, and the record then turns in beside "sight", growing as it fades
+     in (4.2-4.9 s).
+   - F (`.sp-f`): the mark fades in, and the record circles the words once about the dot of the i, the
+     words staying still (0.9-2.9 s), on C's timings; the splash is a square centred on the dot, with
+     room for the record's path (92.04 units from the dot at the farthest).
+   - G (`.sp-g`): the record fades in alone, where it sits in the mark, and the words are typed in
+     beside it, a letter at a time (`--at`, 0.9-2.68 s): an uneven beat, 120-210 ms between letters,
+     and 360 ms between the lines, as for a return; no caret. Then the flight, on C's timings.
+   - H (`.sp-h`): the mark fades in, and each e of "Sleeve" turns once about the centre of its ink, as
+     the record does on hover (`lg-turn`, 900 ms), one after the other from the left, each 600 ms after
+     the one before (0.9-3 s). Then the flight, on C's timings.
+   - I (`.sp-i`): the record fades in where it sits in the mark, with the words to its right,
+     left-aligned with each other, as far from it as "sight" is in the mark (10 units). Each word then
+     slides left into its place, on C's turning easing: "Sleeve" (0.9-2.05 s), then "sight" (1.75-2.9 s),
+     starting before "Sleeve" lands and passing behind the record, which is drawn over it. Then the
+     flight, on C's timings.
+   - R1 (`.sp-r1`): "Sleeve" fades in, and the record rolls in under it from the left, two and a
+     quarter turns over its own circumference (2.25 × 2 × pi × 17.58 = 248.53 units), uncovering "sight"
+     (0.7-3.15 s), fading in as it starts, since a wide window would otherwise show it waiting; then
+     the flight (3.4-4.05 s).
+   - R2 (`.sp-r2`): the tile slides left off the record behind it (0.56-2.1 s); the record shrinks into
+     its place beside "sight" and the tile fades, leaving the words (2.52-3.92 s); then the flight
+     (4.1-4.75 s).
+   The reveals' timelines are the brand sheet's, played once. Hovering over or focusing the logo
+   (`.play`) spins the record once in place. Nothing moves under "reduce motion". */
+:root{--fly:3300ms;--land:3950ms}
+[data-logo="r1"]{--fly:3400ms;--land:4050ms}
+[data-logo="r2"]{--fly:4100ms;--land:4750ms}
+.brand .lp-disc{transform-box:fill-box;transform-origin:center}
+.splash{display:none}
+.sl-intro .splash{position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none}
+.sl-intro[data-logo="c"] .sp-c,.sl-intro[data-logo="d"] .sp-d,.sl-intro[data-logo="f"] .sp-f,
+.sl-intro[data-logo="g"] .sp-g,.sl-intro[data-logo="h"] .sp-h,.sl-intro[data-logo="i"] .sp-i{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
+.sl-intro[data-logo="r1"] .sp-r1,.sl-intro[data-logo="r2"] .sp-r2{display:block;animation:sl-gone 1ms var(--land) forwards}
+.splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
+.splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+.splash svg{display:block;width:100%;height:100%;overflow:visible}
+/* The record's path is about the dot, the origin of the words' units. */
+.sp-f .orbit{transform-box:view-box;transform-origin:0 0;animation:lg-turn 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
+/* G's letters each show at their key's moment. H's e's each turn about the centre of their ink (set
+   on each <use> in the words' units, `transform-box: view-box`), on the hover's spin (`lg-turn`,
+   900 ms). */
+.sp-g .key{animation:tl-in 1ms var(--at) both}
+.sp-h .turn{transform-box:view-box;animation:lg-turn 900ms cubic-bezier(.45,0,.55,1) var(--at) both}
+/* I's words slide in from where they start, right of the record, each by its own distance in the
+   words' units. */
+.sp-i .i-sleeve{animation:i-sleeve 1150ms cubic-bezier(.45,0,.55,1) 900ms both}
+.sp-i .i-sight{animation:i-sight 1150ms cubic-bezier(.45,0,.55,1) 1750ms both}
+.sp-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
+.splash .rv-all{animation:rv-all 7s both}
+.r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s both}
+.r1-roll{animation:r1-roll 7s both,r1-show 7s both}
+.r1-wipe{animation:r1-roll 7s both}
+.r2-pan{animation:r2-pan 7s both}
+.r2-tile{animation:r2-slide 7s both}
+.r2-bg{animation:r2-bg 7s both}
+.r2-rec{animation:r2-shrink 7s both}
+.sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
+.sl-intro .brand>svg{animation:sl-hold var(--land)}
+.sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out var(--land) both}
+.sl-intro[data-logo="d"] .brand .lp-disc{animation:d-rec 700ms cubic-bezier(.2,0,.2,1) calc(var(--land) + 250ms) both}
+@media (prefers-reduced-motion: no-preference){
+  .brand.play .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
+}
+@keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
+@keyframes sl-gone{from,to{visibility:hidden;opacity:0}}
+@keyframes sl-hold{from,to{opacity:0}}
+@keyframes sl-arrive{from{opacity:0}}
+@keyframes tl-in{from{opacity:0}}
+@keyframes tl-bare{to{opacity:0}}
+@keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
+@keyframes lg-turn{to{transform:rotate(360deg)}}
+@keyframes i-sleeve{from{transform:translateX(138.27px)}}
+@keyframes i-sight{from{transform:translateX(117.58px)}}
+@keyframes d-rec{from{opacity:0;transform:rotate(-360deg) scale(.6)}to{opacity:1;transform:none}}
+@keyframes rv-all{0%{opacity:0}5%,100%{opacity:1}}
 @keyframes r1-roll{0%,10%{transform:translateX(-248.53px);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
 @keyframes r1-turn{0%,10%{transform:rotate(-810deg);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
-/* R2: the tile is the sleeve. It slides left by 140 units, revealing the record behind it, 64 units in
-   radius (the tile's half side is 71.5) and centred where the tile was; the record then shrinks into its
-   place in 8b (scale 64/17.58 about the origin, the centre (73.10, 14.16) mapped to (140, 0)), and the
-   tile's background fades, leaving the words where they were on it. The words start in the tile's ink
-   and end in the page's (on dark, #fff and #e5e8ee), changing as the background fades; `--r2-ink` is
-   registered so that it changes smoothly rather than in one step. */
-@property --r2-ink{syntax:"<color>";inherits:true;initial-value:transparent}
-.r2-tile{--r2-ink:var(--ink);animation:r2-slide 7s infinite,r2-ink 7s infinite}
-.r2-tile use{--tile-ink:var(--r2-ink)}
-.r2-bg{opacity:0;animation:r2-bg 7s infinite}
-.r2-rec{animation:r2-shrink 7s infinite}
-/* Both end on 8b centred in the pane, as R1 does: the scene (the tile and the record side by side, -72
-   to 204) is centred once the tile has slid off the record, offset 39.5 units left of where it ends
-   (8b's centre is 26.55), and moves right as the record shrinks. */
-.r2-pan{animation:r2-pan 7s infinite}
+@keyframes r1-show{0%,10%{opacity:0}20%,100%{opacity:1}}
 @keyframes r2-pan{0%,36%{transform:translateX(-39.5px);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
 @keyframes r2-slide{0%,8%{transform:translateX(140px);animation-timing-function:cubic-bezier(.45,0,.2,1)}30%,100%{transform:none}}
 @keyframes r2-bg{0%,38%{opacity:1}54%,100%{opacity:0}}
-@keyframes r2-ink{0%,38%{--r2-ink:var(--tile-ink)}54%,100%{--r2-ink:var(--ink)}}
 @keyframes r2-shrink{0%,36%{transform:translate(-126.12px,-51.55px) scale(3.6405);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
-@media (prefers-reduced-motion: reduce){.rv-pane *{animation:none!important}}
-/* The tilted shirts: the mark turned 40° clockwise, as if caught mid-turn. The svgs size themselves;
-   the print's font size does not apply. */
-.mark svg.tilt{height:auto;--tile-ink:var(--ink)}
-.s-p{font-size:30px}.s-xl{font-size:56px}.s-l{font-size:40px}.s-m{font-size:24px}.s-s{font-size:14px}.s-xs{font-size:9px}
-
-/* Colours */
-.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.sw{border:1px solid var(--card-line);border-radius:12px;overflow:hidden;background:var(--card)}
-.sw i{display:block;height:84px}
-.sw div{padding:8px 12px;font-size:13px}
-.sw div b{display:block;font-size:14px}
-.sw code{font-family:ui-monospace,Menlo,monospace;color:var(--page-muted)}
-
-/* Type */
-.type{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px}
-.type .card{padding:18px 20px}
-.type .spec{font-size:13px;color:var(--page-muted);margin-top:8px}
-.big{font-size:44px;font-stretch:88%;letter-spacing:-.015em;line-height:1.05}
-
-/* Leading designs */
-.lead2{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:16px}
-.lead2 .card{display:flex;flex-direction:column}
-.lead2 .body{padding:4px 18px 18px}
-.lead2 h3{margin:4px 0 2px;font-size:22px;font-stretch:88%;letter-spacing:-.015em}
-.lead2 ol,.lead2 ul{margin:6px 0 0;padding-left:1.3em}
-.lead2 li{margin:2px 0}
-.lead2 .muted{color:var(--page-muted);font-size:13.5px}
-/* The intros' positions are percentages of a 16:10 stage, so the ratio is the content box's: with the
-   borders inside it, heights came out 2px short of the widths' scale, and a landing a fraction off. */
-.stage2{position:relative;box-sizing:content-box;aspect-ratio:16/10;background:var(--bg);overflow:hidden;border-top:1px solid var(--card-line);border-bottom:1px solid var(--card-line)}
-.stage2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-/* The *Leading designs* stages and A's header panes show the product pages, whose "sight"
-   on light is `--sight`, #cc212d, a shade darker than the label red the other marks use. */
-.stage2.lt,.lead2 .card:first-child .pane.lt{--red:#cc212d}
-.stage2 .tl{position:absolute;left:35.417%;top:26.667%;width:29.167%;aspect-ratio:1;transform-origin:0 0;animation:b-fly 7s infinite}
-.stage2 .tl .spin{width:100%;height:100%;animation:b-spin 7s infinite}
-.stage2 .tl svg{display:block;width:100%;height:100%;overflow:visible}
-.stage2 .tl rect{fill:var(--tile-bg);stroke:var(--tile-edge);animation:b-bare 7s infinite}
-.stage2 .hdr{position:absolute;left:4.167%;top:4.667%;height:10%;aspect-ratio:1.2045;opacity:0;animation:b-land 7s infinite}
-.stage2 .ghost{position:absolute;left:4.167%;right:4.167%;top:24%;display:grid;gap:5%;opacity:0;animation:b-page 7s infinite}
-.stage2 .ghost i{display:block;height:7px;border-radius:4px;background:var(--ink);opacity:.14}
-.stage2 .ghost i:nth-child(1){width:46%;height:14px;opacity:.5}.stage2 .ghost i:nth-child(2){width:62%}.stage2 .ghost i:nth-child(3){width:54%}
-.stage2 .nav{position:absolute;right:4.167%;top:8%;display:flex;gap:10px;opacity:0;animation:b-page 7s infinite}
-.stage2 .nav i{display:block;width:34px;height:6px;border-radius:3px;background:var(--ink);opacity:.35}
-.t-ink{fill:var(--tile-ink)}.t-red{fill:var(--red)}
-/* B's intro, looped every 7 s: the page's timings (fade 0-.7 s, turns .9-2.9 s, flight 3.3-3.95 s,
-   the page 3.95-4.4 s), then a hold and a fade back to the start. */
-@keyframes b-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-117.829%,-57.932%) scale(0.4472)}}
-@keyframes b-spin{0%{opacity:0;transform:rotate(0)}10%{opacity:1}12.86%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}41.43%{transform:rotate(720deg)}56.4%{opacity:1}56.43%,100%{opacity:0;transform:rotate(720deg)}}
-@keyframes b-bare{0%,47.14%{opacity:1;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{opacity:0}}
-@keyframes b-land{0%,56.4%{opacity:0}56.43%,92%{opacity:1}100%{opacity:0}}
-@keyframes b-page{0%,56.43%{opacity:0}62.86%,92%{opacity:1}100%{opacity:0}}
-/* C's intro, on B's timings and with B's turn and fade (`b-spin`), but turning the 8b mark about the
-   record's centre, as the turning card under *Marks with the record* does: a square svg, 256 units a
-   side, centred on the record, 90% of the stage's height, turning about its own centre. Its flight
-   lands the words' ink on the header's, which is B's size (69 units to 10% of the stage's height), so
-   the swap at 56.43% does not show. */
-.stage2 .tc{position:absolute;left:21.875%;top:5%;width:56.25%;aspect-ratio:1;transform-origin:0 0;animation:c-fly 7s infinite}
-.stage2 .tc svg{display:block;width:100%;height:100%;--tile-ink:var(--ink);animation:b-spin 7s infinite}
-.stage2 .hdr.c{aspect-ratio:128.27/69;--tile-ink:var(--ink)}
-@keyframes c-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-34.269%,-12.702%) scale(.41224)}}
-/* D and E: B's and C's intros, each ending on the other's header, so a phone and a desktop end on one
-   mark. D flies B's tile into a header that is C's (the words land where B's do, since both headers
-   start at the words' ink), and the record then joins: it turns in once, growing as it fades in
-   (60-70%, as the page arrives). E flies C's mark into C's header, and the record then turns out once,
-   shrinking as it fades, leaving B's words. The record turns about its own centre: it is placed by its
-   group, since a <use>'s x and y fall outside `fill-box`. At rest (reduced motion) each shows its end. */
-.stage2 .rec{transform-box:fill-box;transform-origin:center}
-.stage2 .rec.d{animation:d-rec 7s infinite}
-.stage2 .rec.e{opacity:0;animation:e-rec 7s infinite}
-@keyframes d-rec{0%,60%{opacity:0;transform:rotate(-360deg) scale(.6);animation-timing-function:cubic-bezier(.2,0,.2,1)}70%,100%{opacity:1;transform:none}}
-/* F's intro, on B's timings, with C's mark and header, but only the record moving: it circles the
-   words once about the dot of the i (`f-orbit`, in the turns' slot), the words staying still. The svg
-   is a square, 188 units a side, centred on the dot, with room for the record's path (92.04 units from
-   the dot at the farthest), at C's scale (256 units to 90% of the stage's height), so the dot is at the
-   stage's centre. The svg fades as B's and C's do (`f-fade`, `b-spin` without its turn). */
-.stage2 .tf{position:absolute;left:29.3457%;top:16.9531%;width:41.3086%;aspect-ratio:1;transform-origin:0 0;animation:f-fly 7s infinite}
-.stage2 .tf svg{display:block;width:100%;height:100%;overflow:visible;--tile-ink:var(--ink);animation:f-fade 7s infinite}
-.stage2 .tf .orbit{transform-box:view-box;transform-origin:0 0;animation:f-orbit 7s infinite}
-@keyframes f-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-73.322%,-31.031%) scale(.41224)}}
-@keyframes f-fade{0%{opacity:0}10%,56.4%{opacity:1}56.43%,100%{opacity:0}}
-@keyframes f-orbit{0%,12.86%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}41.43%,100%{transform:rotate(360deg)}}
-/* G's and H's intros, on B's timings, with C's mark and header. The svg is the header's box, the
-   mark's ink (128.27 by 69 units), at C's scale, centred on the stage, and fades as F's does. G's
-   letters each show at their key's moment (`--at`, the page's): each loops on 7 s, shifted to start
-   at its moment, so it shows from then to past the flight and is hidden again before the next
-   fade-in. H's e's each turn once about the centre of their ink, 0.9 s on the hover's easing, from
-   their moment. */
-.stage2 .tg,.stage2 .th{position:absolute;left:35.9078%;top:37.8711%;width:28.1843%;aspect-ratio:128.27/69;transform-origin:0 0;animation:g-fly 7s infinite}
-.stage2 .tg svg,.stage2 .th svg{display:block;width:100%;height:100%;overflow:visible;--tile-ink:var(--ink);animation:f-fade 7s infinite}
-.stage2 .tg .key{animation:g-key 7s step-end calc(var(--at) - 7s) infinite}
-.stage2 .th .turn{transform-box:view-box;animation:h-turn 7s calc(var(--at) - 900ms) infinite}
-@keyframes g-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-112.619%,-136.88%) scale(.41224)}}
-@keyframes g-key{0%{opacity:1}50%,100%{opacity:0}}
-@keyframes h-turn{0%,12.86%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}25.71%,100%{transform:rotate(360deg)}}
-/* I's intro, on B's timings, with C's mark and header. The svg is the mark's ink widened to the right,
-   past where "Sleeve" starts (221.38 by 69 units, so it is centred on the record horizontally), at
-   C's scale, centred on the stage, and fades as F's does. Each word slides left into its place, by
-   its distance in the words' units, at the page's moments: "Sleeve" 0.9-2.05 s, "sight" 1.75-2.9 s,
-   behind the record, which is drawn over it. */
-.stage2 .ti{position:absolute;left:25.6785%;top:37.8711%;width:48.6431%;aspect-ratio:221.38/69;transform-origin:0 0;animation:i-fly 7s infinite}
-.stage2 .ti svg{display:block;width:100%;height:100%;overflow:visible;--tile-ink:var(--ink);animation:f-fade 7s infinite}
-.stage2 .ti .i-sleeve{animation:i-sleeve 7s infinite}
-.stage2 .ti .i-sight{animation:i-sight 7s infinite}
-@keyframes i-fly{0%,47.14%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}56.43%,100%{transform:translate(-44.223%,-136.88%) scale(.41224)}}
-@keyframes i-sleeve{0%,12.86%{transform:translateX(138.27px);animation-timing-function:cubic-bezier(.45,0,.55,1)}29.29%,100%{transform:none}}
-@keyframes i-sight{0%,25%{transform:translateX(117.58px);animation-timing-function:cubic-bezier(.45,0,.55,1)}41.43%,100%{transform:none}}
-@keyframes e-rec{0%,60%{opacity:1;transform:none;animation-timing-function:cubic-bezier(.6,0,.8,1)}70%,100%{opacity:0;transform:rotate(360deg) scale(.6)}}
-/* A's intro, looped every 14 s: the 2026-10-20 product page's timings (the animated logo's 10 s, the flight
-   9.4-10.05 s, the sleeve out, the eye and the name in, one blink at 11.35 s, the page 10.05-10.5 s),
-   then a hold and a fade back to the start. */
-.stage2.a{container-type:inline-size}
-.stage2 .ea{position:absolute;left:35%;top:26%;width:30%;aspect-ratio:1;transform-origin:0 0;animation:a-fly 14s infinite}
-.stage2 .ea>svg,.stage2 .ah>svg{display:block;width:100%;height:100%;overflow:visible}
-.stage2 .a-lid,.stage2 .a-disc,.stage2 .ah-lid{transform-box:view-box;transform-origin:16px 16px}
-.stage2 .a-eyeline{fill:var(--eye-fill);stroke:var(--eye-stroke)}
-.stage2 .a-shut{stroke:var(--eye-stroke);opacity:0}
-.stage2 .a-rim{fill:var(--rim)}.stage2 .a-core{display:var(--core)}.stage2 .a-groove{display:var(--groove)}
-.stage2 .a-bg{fill:var(--bg)}
-.stage2 .ea .a-sleeve{animation:a-sleeve 14s infinite}
-.stage2 .ea .a-eyes{animation:a-eye 14s infinite linear}
-.stage2 .ea .a-lid{animation:a-blink 14s infinite}
-.stage2 .ea .a-shut{animation:a-shut 14s infinite steps(1,end)}
-.stage2 .ea .a-disc{animation:a-spin 14s infinite}
-.stage2 .ah{position:absolute;left:4.167%;top:4.667%;height:10%;display:flex;align-items:center;gap:1.5625cqw;font-size:3.472cqw;line-height:1.1;font-weight:700;font-stretch:88%;letter-spacing:-.015em;color:var(--ink);white-space:nowrap;animation:a-land 14s infinite}
-.stage2 .ah>svg{width:6.25cqw;height:6.25cqw;flex:none}
-.stage2 .ah .a-sleeve{animation:a-out 14s infinite}
-.stage2 .ah .a-eyes,.stage2 .ah .a-name{animation:a-in 14s infinite}
-.stage2 .ah .ah-lid{animation:a-hblink 14s infinite}
-.stage2 .ah .a-shut{animation:a-hshut 14s infinite steps(1,end)}
-.stage2.a .ghost,.stage2.a .nav{animation-name:a-page;animation-duration:14s}
-.stage2.a .ghost{top:22%}
-@keyframes a-fly{0%{opacity:0;transform:none}2.143%{opacity:1}67.143%{transform:none;animation-timing-function:cubic-bezier(.3,0,.2,1)}71.785%{opacity:1}71.786%,100%{transform:translate(-102.778%,-44.444%) scale(.20833);opacity:0}}
-@keyframes a-sleeve{0%,5.714%{transform:translateX(0);animation-timing-function:cubic-bezier(.45,0,.2,1)}12.143%,20%{transform:translateX(-8.2px);animation-timing-function:cubic-bezier(.55,0,1,.45)}27.143%,60%{transform:translateX(-42.2px);animation-timing-function:cubic-bezier(0,.55,.45,1)}67.143%,100%{transform:translateX(0)}}
-@keyframes a-eye{0%,12.857%{opacity:0}16.429%,61.429%{opacity:1}66.429%,100%{opacity:0}}
-@keyframes a-blink{0%,31.429%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}32.143%,32.429%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}33.429%,50.714%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}51.429%,51.714%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}52.714%,100%{transform:scaleY(1)}}
-@keyframes a-shut{0%{opacity:0}32%{opacity:1}32.629%{opacity:0}51.286%{opacity:1}51.914%{opacity:0}}
-@keyframes a-spin{0%,35%{transform:rotate(0);animation-timing-function:cubic-bezier(.45,0,.55,1)}49.286%,100%{transform:rotate(720deg)}}
-@keyframes a-land{0%,71.779%{opacity:0}71.786%,92%{opacity:1}100%{opacity:0}}
-@keyframes a-out{0%,71.786%{opacity:1;transform:translateX(0);animation-timing-function:cubic-bezier(.4,0,.6,1)}73.5%{opacity:1;animation-timing-function:cubic-bezier(.4,0,.6,1)}76.071%,100%{opacity:0;transform:translateX(-50px)}}
-@keyframes a-in{0%,75.357%{opacity:0;animation-timing-function:ease-out}78.214%,100%{opacity:1}}
-@keyframes a-hblink{0%,81.071%{transform:scaleY(1);animation-timing-function:cubic-bezier(.5,0,1,1)}81.786%,82.071%{transform:scaleY(.02);animation-timing-function:cubic-bezier(0,0,.4,1)}83.071%,100%{transform:scaleY(1)}}
-@keyframes a-hshut{0%{opacity:0}81.643%{opacity:1}82.271%{opacity:0}}
-@keyframes a-page{0%,71.786%{opacity:0;animation-timing-function:ease-out}75%,92%{opacity:1}100%{opacity:0}}
-@media (prefers-reduced-motion: reduce){.stage2 *{animation:none!important}.stage2 .tl,.stage2 .tc,.stage2 .tf,.stage2 .tg,.stage2 .th,.stage2 .ti,.stage2 .ea,.stage2 .ah .a-sleeve{display:none}.stage2 .hdr,.stage2 .ah,.stage2 .ghost,.stage2 .nav{opacity:1}}
-
-/* Merch */
-.merch{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
-.shirt{position:relative;aspect-ratio:300/320;width:100%}
-.shirt svg.tee{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 10px 18px #0003)}
-.shirt .print{position:absolute;left:50%;top:31%;transform:translateX(-50%)}
-/* The tilted marks are taller than the other chest prints: placed higher, so they sit on the chest
-   rather than below it. */
-.shirt .print.high{top:22%}
-/* Small, high on the chest, on the left as seen. */
-.shirt .print.ul{left:34%;top:23%}
-.merch .card .cap{justify-content:space-between}
-.merch .stage,.shirts .stage{background:linear-gradient(#dfe3e8,#c9ced5);padding:18px 16px 6px}
-@media (prefers-color-scheme: dark){.merch .stage,.shirts .stage{background:linear-gradient(#20252d,#171b21)}}
-/* The shirts: one card per design, showing the white tee or the black one. The switch above them sets
-   every card; each card's own switch then flips that card alone. Both tees are drawn, one over the
-   other, and the hidden one fades out. */
-.shirts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px}
-/* Each card spans two of the grid's rows, its header and its stage, and shares them with the cards
-   beside it (subgrid), so a caption that wraps makes every header in its row taller and the shirts
-   still line up. The space between rows of cards is the cards' own margin, and the last row's
-   margin is the space above the Stickers card. */
-.shirts .card{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:0;margin-bottom:16px}
-@media (max-width:900px){.shirts{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:600px){.shirts{grid-template-columns:minmax(0,1fr)}}
-.shirts .cap{justify-content:space-between;align-items:center}
-.shirts .cap>span{display:flex;gap:10px;align-items:baseline;min-width:0}
-.shirts .cap small{color:var(--page-muted);font-size:13.5px}
-.shirts .layers{display:grid;width:260px;margin:0 auto}
-.shirts .shirt{grid-area:1/1;width:260px;transition:opacity .3s ease}
-.shirts .card:not(.black) .shirt.on-black-tee,.shirts .card.black .shirt.on-white-tee{opacity:0;visibility:hidden;transition:opacity .3s ease,visibility 0s .3s}
-@media (prefers-reduced-motion: reduce){.shirts .shirt{transition:none!important}}
-.seg{display:inline-flex;border:1px solid var(--card-line);border-radius:999px;padding:2px;gap:2px;flex:none}
-.seg button{font:inherit;font-size:13px;border:0;background:none;color:var(--page-muted);padding:3px 10px;border-radius:999px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--page-ink);color:var(--page)}
-.seg button:focus-visible{outline:2px solid var(--red,#cf222e);outline-offset:1px}
-.seg.small button{font-size:12px;padding:2px 8px}
-.shirt-bar{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:14px;color:var(--page-muted)}
-.shirt-bar[hidden]{display:none}
-noscript .lead{margin-top:16px}
-.sticker-row{display:flex;gap:22px;align-items:center;justify-content:center;flex-wrap:wrap}
-.sticker{filter:drop-shadow(0 4px 8px #0004)}
-.sticker .tile-mark{box-shadow:0 0 0 .14em #fff,inset 0 0 0 1px var(--tile-edge)}
-.round{width:3.9em;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:var(--tile-bg);box-shadow:0 0 0 .14em #fff}
-.round svg{width:2.4em;height:2.4em}
+@media (max-width:880px){.marks.four,.marks.three{grid-template-columns:repeat(2,minmax(0,1fr))}.trio{grid-template-columns:minmax(0,1fr)}.story{grid-template-columns:minmax(0,1fr)}figure.side{max-width:360px}}
+@media (max-width:560px){
+  body{font-size:17px}
+  section{padding:36px 0}
+  .faces,.samples,.pair,.trio,.story,.marks.two,.marks.three{grid-template-columns:minmax(0,1fr)}
+}
 </style>
+<script>
+document.documentElement.classList.add('js');
+// Set before the first paint: the intro (`data-logo`), and its wait, so the page never shows before
+// the intro starts.
+(function () {
+  var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'];
+  root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
+  // `location.hash` is empty for a bare `#`, so the address is read whole.
+  if (location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  root.classList.add('sl-wait');
+})();
+</script>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <!-- The record. Scripts read this symbol and the colourways' variables (`.lt`, and `.dk` for the
-       feature graphic): assets/logo/src/make_icon.py (the app icon) and
-       assets/logo/src/make_feature_graphic.py (Play's feature graphic). After an edit to the symbol or
-       to those colours, run them again. -->
-  <symbol id="lp" viewBox="8 8 16 16">
-    <circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>
-    <circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/>
-    <circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/>
-    <circle cx="16" cy="16" r="3" fill="#cf222e"/>
-    <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
-    <path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
-    <circle cx="16" cy="16" r=".9" fill="#fff"/>
-  </symbol>
-  <symbol id="eye" viewBox="0 0 32 32">
-    <path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round" style="fill:var(--eye-fill);stroke:var(--eye-stroke)"/>
-    <circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/>
-    <circle cx="16" cy="16" r="5.7" fill="#1f2328" style="display:var(--core)"/>
-    <circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/>
-    <circle cx="16" cy="16" r="3" fill="#cf222e"/>
-    <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
-    <path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
-    <circle cx="16" cy="16" r=".9" fill="#fff"/>
-  </symbol>
-  <defs><g id="words"><g id="w-sleeve" class="t-ink"><path id="w-sleeve-1" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59Z"/><path id="w-sleeve-2" d="M-18.87 -10.02H-16.44V-37.26H-18.87Z"/><path id="w-sleeve-3" d="M-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67Z"/><path id="w-sleeve-4" d="M1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67Z"/><path id="w-sleeve-5" d="M16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69Z"/><path id="w-sleeve-6" d="M31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/></g><g id="w-sight" class="t-red"><path id="w-sight-1" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44Z"/><path id="w-sight-2" d="M-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01Z"/><path id="w-sight-3" d="M4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82Z"/><path id="w-sight-4" d="M22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1Z"/><path id="w-sight-5" d="M36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></g></defs>
-  <symbol id="tee" viewBox="0 0 300 320">
-    <path d="M104 18 C122 36 178 36 196 18 L262 44 L296 112 L252 132 L238 104 L238 304 C180 312 120 312 62 304 L62 104 L48 132 L4 112 L38 44 Z" style="fill:var(--shirt)"/>
-    <path d="M104 18 C122 36 178 36 196 18" fill="none" style="stroke:var(--seam)" stroke-width="5"/>
-    <path d="M62 104 L62 150 M238 104 L238 150" fill="none" style="stroke:var(--seam)" stroke-width="1.2" opacity=".6"/>
-  </symbol>
-</svg>
+<a class="skip" href="#main">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><g id="w-sleeve" class="t-ink"><path id="w-sleeve-1" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59Z"/><path id="w-sleeve-2" d="M-18.87 -10.02H-16.44V-37.26H-18.87Z"/><path id="w-sleeve-3" d="M-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67Z"/><path id="w-sleeve-4" d="M1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67Z"/><path id="w-sleeve-5" d="M16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69Z"/><path id="w-sleeve-6" d="M31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/></g><g id="w-sight" class="t-red"><path id="w-sight-1" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44Z"/><path id="w-sight-2" d="M-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01Z"/><path id="w-sight-3" d="M4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82Z"/><path id="w-sight-4" d="M22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1Z"/><path id="w-sight-5" d="M36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></g><symbol id="tee" viewBox="0 0 300 320"><path d="M104 18 C122 36 178 36 196 18 L262 44 L296 112 L252 132 L238 104 L238 304 C180 312 120 312 62 304 L62 104 L48 132 L4 112 L38 44 Z" style="fill:var(--shirt)"/><path d="M104 18 C122 36 178 36 196 18" fill="none" style="stroke:var(--seam)" stroke-width="5"/><path d="M62 104 L62 150 M238 104 L238 150" fill="none" style="stroke:var(--seam)" stroke-width="1.2" opacity=".6"/></symbol><symbol id="eye" viewBox="0 0 32 32"><path d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round" style="fill:var(--eye-fill);stroke:var(--eye-stroke)"/><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
+<div class="splash sp-c" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-54.9 -113.84 256 256"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div>
+<div class="splash sp-d" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
+<div class="splash sp-f" aria-hidden="true"><div class="fly"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div>
+<div class="splash sp-g" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div>
+<div class="splash sp-h" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div>
+<div class="splash sp-i" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div>
+<!-- R1's "sight" is clipped at the record's centre, so it shows from behind the record as it passes. -->
+<div class="splash sp-r1" aria-hidden="true"><div class="fly"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div>
+<div class="splash sp-r2" aria-hidden="true"><div class="fly"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div>
+<header class="top"><div class="bar"><div class="row wrap">
+  <!-- `#`: the top of this page, without a reload, where motion is reduced or the script is off;
+       otherwise the script makes it a button that plays the intro again (`replay()`). -->
+  <a class="brand" href="#" aria-label="Sleevesight, top of the page">
+    <svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg>
+  </a>
+  <nav class="top" aria-label="Site">
+    <ul>
+      <li><a href="#introduction">Introduction</a></li>
+      <li><a href="#fonts">Fonts</a></li>
+      <li><a href="#record">Record</a></li>
+      <li><a href="#colours">Colours</a></li>
+      <li><a href="#logo">Logo</a></li>
+      <li><a href="#intros">Intros</a></li>
+      <li><a href="#feature">Feature graphic</a></li>
+      <li><a href="#merch">Merchandise</a></li>
+    </ul>
+  </nav>
+</div></div></header>
+<div class="wrap">
 
-<div class="page">
-  <header class="sheet">
-    <h1>Sleevesight brand sheet</h1>
-    <p>Draft · 2026-10-20</p>
-  </header>
-  <noscript><p class="lead">The marks, swatches and mock-ups on this page are drawn by its script, which is off.</p></noscript>
+<main id="main">
+<section id="introduction" aria-labelledby="introduction-h">
+  <h2 id="introduction-h">Introduction</h2>
+</section>
 
-  <h2>Leading designs</h2>
-  <p class="lead">Designs, each a header logo with its own intro, all kept so testers can compare them. The product page plays C's intro, D's, F's, G's, H's, I's, or one of the two reveals below (R1, R2), picked at random on each visit, and all of them end on C's header (<a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>). A and B are on the page's copy from before that, <a href="product-page-2026-10-20.html?logo=a"><code>product-page-2026-10-20.html</code></a>, with C, by its own switch. D and E are B's and C's intros, each ending on the other's header, so that a phone and a desktop can end on one mark; E is on this sheet only. Everything below them is the wider palette they come from.</p>
-  <div class="lead2">
-    <div class="card"><div class="cap"><b>A</b><span>The eye · 2c · on the product page's copy of 2026-10-20, by its switch</span></div>
-      <div class="stage2 lt a" role="img" aria-label="Intro A: a record slides out of its sleeve, the eye forms around it, blinks, the record turns twice, the sleeve comes back and shrinks into the header, where the eye and the name appear"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <div class="ah"><svg viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="ah-clip"><path class="ah-lid" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="a-eyes"><path class="a-eyeline ah-lid" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g><g clip-path="url(#ah-clip)"><g class="a-hdisc"><circle class="a-rim" cx="16" cy="16" r="7.5"/><circle class="a-core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="a-groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g><g class="a-eyes"><path class="a-shut" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="a-sleeve"><rect x="8.05" y="8.2" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.8" y="7.8" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="ah-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#ah-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg><span class="a-name">Sleeve<span class="n red">sight</span></span></div>
-        <div class="ea"><svg viewBox="0 0 32 32" aria-hidden="true"><defs><clipPath id="a-clip"><path class="a-lid" d="M1.5 16 Q16 -.25 30.5 16 Q16 32.25 1.5 16 Z"/></clipPath></defs><g class="a-eyes"><path class="a-eyeline a-lid" d="M1.5 16 Q16 3 30.5 16 Q16 29 1.5 16 Z" stroke-width="2" stroke-linejoin="round"/></g><g clip-path="url(#a-clip)"><g class="a-disc"><circle class="a-rim" cx="16" cy="16" r="7.5"/><circle class="a-core" cx="16" cy="16" r="5.7" fill="#1f2328"/><circle class="a-groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></g></g><path class="a-shut" d="M1.5 16 H30.5" stroke-width="2" stroke-linecap="round" fill="none"/><g class="a-sleeve"><rect class="a-bg" x="-192.2" y="-2" width="200" height="36"/><rect x="8.05" y="8.2" width="16.4" height="16.4" rx=".25" fill="#000" opacity=".22"/><svg x="7.8" y="7.8" width="16.4" height="16.4" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="a-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><rect width="100" height="100" fill="url(#a-art)"/><circle cx="12" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="12" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="12" cy="69" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="12" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="12" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="31" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="31" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="31" cy="88" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="31" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="50" cy="50" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="50" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="50" cy="88" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="12" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="31" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="69" cy="50" r="4.2" fill="hsl(225 70% 66%)"/><circle cx="69" cy="69" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="69" cy="88" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="12" r="2.5" fill="hsl(225 70% 66%)"/><circle cx="88" cy="31" r="5.9" fill="hsl(225 70% 66%)"/><circle cx="88" cy="50" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="69" r="7.6" fill="hsl(225 70% 66%)"/><circle cx="88" cy="88" r="7.6" fill="hsl(225 70% 66%)"/></svg></g></svg></div></div>
-      <div class="body">
-        <h3>The eye and the record</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">Header: the eye, with "Sleeve" bold in ink and "sight" regular in red beside it.</p>
-        <b>Intro</b> (about 11.6 s; the page is in at 10.5 s)
-        <ol>
-          <li>Large in the middle of the window: a record slides out of its sleeve and the eye forms around it.</li>
-          <li>The eye blinks, the record turns twice, and the eye blinks again.</li>
-          <li>The sleeve comes back as the eye fades, and the logo shrinks into the header.</li>
-          <li>There the sleeve slides away, the eye and the name appear, and the eye blinks once.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">Hover: the eye blinks. See it at <a href="product-page-2026-10-20.html?logo=a">product-page-2026-10-20.html?logo=a</a>. Video: <code>assets/logo/sleeve-to-eye-light.mp4</code>.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>B</b><span>The text tile · 6c · on the product page's copy of 2026-10-20 (narrow windows; <a href="https://github.com/wkusnierczyk/sleevesight/issues/263">#263</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro B: the tile fades in, turns twice about the dot, and shrinks into the header, leaving the words on the page"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr" viewBox="-37.59 -37.26 83.11 69" aria-hidden="true"><use href="#words"/></svg>
-        <div class="tl"><div class="spin"><svg viewBox="-72 -72 144 144" aria-hidden="true"><rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
-      <div class="body">
-        <h3>The text tile</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The tile: "Sleeve" over "sight", Roboto Flex regular at 88% width, outlined; the dot of the i at its exact centre. Header: the words alone, on the page.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The tile fades in, large, in the middle of the window.</li>
-          <li>It turns twice about the dot, as the record does in the eye (2 s, the same easing).</li>
-          <li>It shrinks into the header's top left, the tile fading as it goes, so the words land on the page.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">Hover: the words turn once about the dot. See it at <a href="product-page-2026-10-20.html?logo=b">product-page-2026-10-20.html?logo=b</a>. Art: <code>assets/logo/tile-light.svg</code>, <code>tile-dark.svg</code>.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>C</b><span>The record · 8b · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>; <a href="https://github.com/wkusnierczyk/sleevesight/issues/307">#307</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro C: the words and the record fade in, turn twice about the centre of the record, and shrink into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
-        <div class="tc"><svg viewBox="-54.90 -113.84 256 256" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg></div></div>
-      <div class="body">
-        <h3>The words and the record</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The 8b mark: the 6c words, "sight" red, with the record beside them, as tall as "sight" and centred on it. Header: the same mark.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The mark fades in, large, in the middle of the window, the record at its centre.</li>
-          <li>It turns twice about the record, the words going round with it (2 s, B's easing).</li>
-          <li>It shrinks into the header's top left.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">On B's timings, so the two compare side by side. Hover: the record spins once, in place.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>D</b><span>B's intro, C's header · the record joins on landing · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>; <a href="https://github.com/wkusnierczyk/sleevesight/issues/317">#317</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro D: the tile fades in, turns twice about the dot, and shrinks into the header, leaving the words, and the record turns in beside them"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="rec d" href="#lp" width="37.5" height="37.5"/></g></svg>
-        <div class="tl"><div class="spin"><svg viewBox="-72 -72 144 144" aria-hidden="true"><rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
-      <div class="body">
-        <h3>The tile, then the record</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">Header: the 8b mark, as C's. On the product page at every width, one of the intros that all end on this header, so a phone ends on the same mark as a desktop, and on the record the favicon shows.</p>
-        <b>Intro</b> (about 4.9 s)
-        <ol>
-          <li>The tile fades in, large, in the middle of the window.</li>
-          <li>It turns twice about the dot.</li>
-          <li>It shrinks into the header's top left, the tile fading as it goes, so the words land on the page.</li>
-          <li>The rest of the page fades in, and the record turns in beside "sight", growing as it fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">B's intro and C's header, on B's timings, with the record's entrance after them.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>E</b><span>C's intro, B's header · the record leaves on landing (<a href="https://github.com/wkusnierczyk/sleevesight/issues/317">#317</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro E: the words and the record fade in, turn twice about the centre of the record, and shrink into the header, where the record turns out and leaves the words"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="rec e" href="#lp" width="37.5" height="37.5"/></g></svg>
-        <div class="tc"><svg viewBox="-54.90 -113.84 256 256" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg></div></div>
-      <div class="body">
-        <h3>The record, then the words</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">Header: the words alone, as B's. For wide windows in place of C, so a desktop ends on the same mark as a phone.</p>
-        <b>Intro</b> (about 4.9 s)
-        <ol>
-          <li>The mark fades in, large, in the middle of the window, the record at its centre.</li>
-          <li>It turns twice about the record, the words going round with it.</li>
-          <li>It shrinks into the header's top left.</li>
-          <li>The rest of the page fades in, and the record turns out, shrinking as it fades, leaving the words.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">C's intro and B's header, on B's timings, with the record's exit after them.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>F</b><span>The record circles the words · C's header · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/364">#364</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro F: the words and the record fade in, the record circles the words once about the dot of the i, and the mark shrinks into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
-        <div class="tf"><svg viewBox="-94 -94 188 188" aria-hidden="true"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></g></svg></div></div>
-      <div class="body">
-        <h3>The record goes round</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The 8b mark, as C's; the dot of the i, its pivot, at the centre of the window. Header: the same mark.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The mark fades in, large, in the middle of the window, the dot of the i at its centre.</li>
-          <li>The record circles the words once, clockwise, about the dot, and comes back to its place beside "sight"; the words stay still (2 s, B's easing).</li>
-          <li>The mark shrinks into the header's top left.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>G</b><span>The words typed after the record · C's header · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/380">#380</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro G: the record fades in alone, the words are typed in beside it a letter at a time, and the mark shrinks into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
-        <div class="tg"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div>
-      <div class="body">
-        <h3>The record, then the words typed</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The 8b mark, as C's, its ink centred in the window. Header: the same mark.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The record fades in alone, large, where it sits in the mark.</li>
-          <li>The words are typed in beside it, a letter at a time, on an uneven beat, with a longer pause between "Sleeve" and "sight", as for a return; no caret (0.9-2.7 s).</li>
-          <li>The mark shrinks into the header's top left.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>H</b><span>The e's spin like the record · C's header · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/380">#380</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro H: the words and the record fade in, each e of Sleeve turns once about its own centre, one after the other, and the mark shrinks into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
-        <div class="th"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div>
-      <div class="body">
-        <h3>The e's turn</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The 8b mark, as C's, its ink centred in the window. Header: the same mark.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The mark fades in, large, in the middle of the window.</li>
-          <li>Each e of "Sleeve" turns once about the centre of its ink, as the record does on hover (0.9 s, its easing), one after the other from the left, each 0.6 s after the one before (0.9-3 s).</li>
-          <li>The mark shrinks into the header's top left.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
-      </div></div>
-    <div class="card"><div class="cap"><b>I</b><span>The words slide in past the record · C's header · on the product page, one of its intros (<a href="https://github.com/wkusnierczyk/sleevesight/issues/387">#387</a>)</span></div>
-      <div class="stage2 lt" role="img" aria-label="Intro I: the record fades in with the words to its right, Sleeve slides left into its place, then sight, passing behind the record, and the mark shrinks into the header"><div class="nav"><i></i><i></i><i></i><i></i></div><div class="ghost"><i></i><i></i><i></i></div>
-        <svg class="hdr c" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>
-        <div class="ti"><svg viewBox="-37.59 -37.26 221.38 69" aria-hidden="true"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div>
-      <div class="body">
-        <h3>The words slide in</h3>
-        <div class="duo" style="margin:10px -18px 8px"><div class="pane lt" style="padding:18px"></div><div class="pane dk" style="padding:18px"></div></div>
-        <p class="muted" style="margin:0 0 6px">The 8b mark, as C's, the record midway across the window. Header: the same mark.</p>
-        <b>Intro</b> (about 4.4 s)
-        <ol>
-          <li>The record fades in, large, where it sits in the mark, with the words to its right, left-aligned with each other.</li>
-          <li>"Sleeve" slides left into its place (0.9-2.05 s), then "sight", starting before "Sleeve" lands and passing behind the record (1.75-2.9 s).</li>
-          <li>The mark shrinks into the header's top left.</li>
-          <li>The rest of the page fades in.</li>
-        </ol>
-        <p class="muted" style="margin:8px 0 0">On B's timings, as C. Hover: the record spins once, in place.</p>
-      </div></div>
-  </div>
-  <p class="lead" style="margin-top:14px"><b>For the testers:</b> which appeals more, and does B's turn read as anything? It borrows the record's spin without the record, so for someone who never played an LP or a CD it has to work as a plain flourish. C turns with the record in it: does that read better? (D or E, settled in <a href="https://github.com/wkusnierczyk/sleevesight/issues/328">#328</a>: on the product page, a phone and a desktop end on one mark, with the record.)</p>
+<section id="fonts" aria-labelledby="fonts-h">
+  <h2 id="fonts-h">Fonts</h2>
+  <p>Sleevesight is set in Roboto: the logo, this site and the app all take their type from the one family.</p>
 
-  <h2>Marks with the eye</h2>
-  <p class="lead">With the eye. The bold "Sleeve" carries the eye's weight; "sight" is regular, in ink or in the record label's red. The horizontal mark is for headers and narrow bands, the stacked one where there is height to spare.</p>
-  <div id="primary" class="grid2"></div>
+  <h3>Roboto</h3>
+  <p>Roboto is Google's own typeface. Christian Robertson drew it at Google, and it first shipped in 2011, as <a href="https://en.wikipedia.org/wiki/Roboto">the system font of Android 4.0</a>, Ice Cream Sandwich, in place of Droid Sans, which had been made for the coarse screens of the first Android phones. The first release had mixed reviews; one critic called it <a href="https://typographica.org/on-typography/roboto-typeface-is-a-four-headed-frankenstein/">a "four-headed Frankenfont"</a>, its parents a Helvetica-like grotesque and a humanist sans like Frutiger or Myriad, with touches of Univers and DIN. In 2014, for Android 5.0, Lollipop, and Google's new Material Design, <a href="https://en.wikipedia.org/wiki/Roboto#History">it was redrawn</a>: slightly wider and rounder, with round dots on the i and j in place of square ones, a straight leg on the R, and new Thin, Medium and Black weights. It has been the type of Material Design, and of much of Google's own software, ever since.</p>
+  <p>Google <a href="https://github.com/google/fonts/blob/main/ofl/roboto/DESCRIPTION.en_us.html">describes it as having a "dual nature"</a>: a mechanical skeleton and largely geometric forms, but friendly, open curves, and letters left at their natural widths rather than forced into a rigid rhythm, which reads more like a humanist or serif type than most grotesques do. It has grown into <a href="https://en.wikipedia.org/wiki/Roboto#Variations">a superfamily</a>: Roboto Condensed, Roboto Slab (2013), Roboto Mono (2015), and in 2022 Roboto Serif and Roboto Flex.</p>
 
-  <h2>Marks with the record</h2>
-  <p class="lead">The 6c words, regular, "sight" red, right-aligned, with the record beside them on the side they align to: the record from the eye logo, without the eye. In 8a the record runs from the x-height of "Sleeve" to the baseline of "sight"; in 8b it is as tall as "sight", and centred on it. Turning, 8b goes round as one piece about the record's centre, as the record turns in the eye.</p>
-  <div id="record" class="grid2"></div>
-
-  <h2 id="linear">Linear mark</h2>
-  <p class="lead">For a page with no menu (first on the tester brief, <code>_includes/logo-linear.html</code>): "Sleevesight" on one line, in the type of the 6c words: Roboto Flex regular at 88% width and the optical size 52.64 (pinned), tracking −1.5%; "sight" red, the record trailing. The record is aligned as in 8b: from the top of the "h" to the foot of the "g", centred on them, 0.266 em after the "t". At that instance, in Roboto Flex's units (2048 to the em), "h" rises to 1484 and "g" falls to −431, so the record is 0.935 em across, its foot 0.211 em under the baseline. In light, "sight" is the product page's <code>#cc212d</code>. The header holds it at the top of the page as it scrolls, at the same size; unlike the product page's header, it does not shrink.</p>
-  <div class="grid2"><div class="card lt" style="--red:#cc212d;background:var(--bg);padding:28px 24px"><span style="font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-variation-settings:&quot;opsz&quot; 52.64;font-size:clamp(30px,11vw,52px);white-space:nowrap;line-height:1.2;letter-spacing:-.015em;color:var(--ink)">Sleeve<span class="red">sight</span><svg viewBox="0.5 0.5 15 15" aria-hidden="true" style="width:.935em;height:.935em;vertical-align:-.211em;margin-left:.267em"><use href="#lp" width="16" height="16"/></svg></span></div><div class="card dk" style="background:var(--bg);padding:28px 24px"><span style="font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-variation-settings:&quot;opsz&quot; 52.64;font-size:clamp(30px,11vw,52px);white-space:nowrap;line-height:1.2;letter-spacing:-.015em;color:var(--ink)">Sleeve<span class="red">sight</span><svg viewBox="0.5 0.5 15 15" aria-hidden="true" style="width:.935em;height:.935em;vertical-align:-.211em;margin-left:.267em"><use href="#lp" width="16" height="16"/></svg></span></div></div>
-
-  <h2>Reveals</h2>
-  <p class="lead">Two ways of arriving at the 8b mark, for a splash, a video's end card or an intro; both are among the product page's intros, played once and then shrunk into its header. In R1 the record rolls in under "Sleeve" and uncovers "sight"; in R2 the tile is the sleeve, and the record comes out of it.</p>
-  <div id="reveals" class="grid2"></div>
-
-  <h2>Feature graphic</h2>
-  <p class="lead">The banner of the Google Play listing, 1024 × 500, shown as a preview video's cover and in Play's collections and ads, which may crop its edges. D2 is the feature graphic: the one on Google Play (<code>listing/graphics/feature-graphic.png</code>), and for now the one to use wherever a single hero graphic is needed. The others are alternative designs, kept in <code>assets/logo/feature-graphic/</code>. All are built by <code>assets/logo/src/make_feature_graphic.py</code> from the words, the record and the colours on this page, the tagline outlined, so none needs a font.</p>
-  <div class="grid2 fg">
-    <div class="card"><div class="cap"><b>D2</b><span>The feature graphic, on Google Play · on red, the record beside "sight"</span></div>
-      <img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline under them, and a large record beside sight, cut off by the edges"></div>
-    <div class="card"><div class="cap"><b>A2</b><span>Alternative · the 8b mark on light, the tagline lined up with "sight"</span></div>
-      <img src="../assets/logo/feature-graphic/a2-mark-light.svg" width="1024" height="500" loading="lazy" alt="On light grey: the 8b mark, Sleeve over a red sight with the record beside it, and the tagline in grey under them"></div>
-    <div class="card"><div class="cap"><b>B2</b><span>Alternative · the 8b mark on dark</span></div>
-      <img src="../assets/logo/feature-graphic/b2-mark-dark.svg" width="1024" height="500" loading="lazy" alt="On near-black: the 8b mark in its dark colours, and the tagline in grey under it"></div>
-    <div class="card"><div class="cap"><b>C</b><span>Alternative · the tile as the sleeve, the record halfway out, as in R2 · light</span></div>
-      <img src="../assets/logo/feature-graphic/c-sleeve-light.svg" width="1024" height="500" loading="lazy" alt="On light grey: the white text tile with a record coming out of it to the right, and the tagline under them"></div>
-    <div class="card"><div class="cap"><b>C</b><span>Alternative · the tile as the sleeve · dark</span></div>
-      <img src="../assets/logo/feature-graphic/c-sleeve-dark.svg" width="1024" height="500" loading="lazy" alt="On near-black: the black text tile with a record coming out of it to the right, and the tagline under them"></div>
+  <h3>The three faces</h3>
+  <p>Sleevesight uses three members of the family. What each is, and what it was made for:</p>
+  <div class="faces">
+    <div class="face">
+      <p class="spec f-flex">Flex</p>
+      <p class="abc f-flex">Aa Bb Gg Rr 0123</p>
+      <h4>Roboto Flex</h4>
+      <p>A variable Roboto, <a href="https://m3.material.io/blog/roboto-flex">made for Google by Font Bureau and released in 2022</a>. One file moves along <a href="https://github.com/google/fonts/tree/main/ofl/robotoflex">thirteen axes</a>: weight, width, slant, grade and optical size, and eight parametric ones (stroke thicknesses, counter width, and the heights of capitals, lowercase, ascenders, descenders and figures).</p>
+      <p>Made so that one family can run from small interface text to large display type, the optical size reshaping each letter for the size it is set at.</p>
+      <p class="meta"><a href="../assets/fonts/OFL.txt">SIL Open Font License 1.1</a> · <a href="https://github.com/google/fonts/tree/main/ofl/robotoflex">google/fonts</a></p>
+    </div>
+    <div class="face">
+      <p class="spec f-slab">Slab</p>
+      <p class="abc f-slab">Aa Bb Gg Rr 0123</p>
+      <h4>Roboto Slab</h4>
+      <p>Roboto with slab serifs: the same skeleton and proportions, with square serifs added. Released in 2013, it was <a href="https://en.wikipedia.org/wiki/Roboto#Roboto_Slab">Google Keep's font until 2018</a>, and <a href="https://github.com/google/fonts/blob/main/apache/robotoslab/DESCRIPTION.en_us.html">gained a variable weight axis in 2019</a>.</p>
+      <p>The serifs give text a firmer, more even line than the sans, for longer reading and for editorial headings.</p>
+      <p class="meta"><a href="../assets/fonts/LICENSE-RobotoSlab.txt">Apache License 2.0</a> · <a href="https://github.com/google/fonts/tree/main/apache/robotoslab">google/fonts</a></p>
+    </div>
+    <div class="face">
+      <p class="spec f-mono">Mono</p>
+      <p class="abc f-mono">{ } ( ) 0O 1lI</p>
+      <h4>Roboto Mono</h4>
+      <p>A monospaced Roboto, <a href="https://en.wikipedia.org/wiki/Roboto#Roboto_Mono">released in 2015</a>. It <a href="https://github.com/google/fonts/blob/main/ofl/robotomono/DESCRIPTION.en_us.html">changes forms where a fixed width needs it</a>: the narrow I, l and i gain serifs, the round C and O take the straighter sides of Roboto Condensed.</p>
+      <p>Made for source code: 1, l and I, and 0 and O, are easy to tell apart, braces have sharper points than parentheses, and periods and commas are enlarged.</p>
+      <p class="meta"><a href="../assets/fonts/OFL-RobotoMono.txt">SIL Open Font License 1.1</a> · <a href="https://github.com/google/fonts/tree/main/ofl/robotomono">google/fonts</a></p>
+    </div>
   </div>
 
-  <h2>For marketing</h2>
-  <p class="lead">The eye over the address, for posters, ads and merch, where the point is to send people to the site. Regular weight throughout, "app" in red; the eye as wide as the address, the two centred on one line.</p>
-  <div id="marketing" class="grid2"></div>
+  <h3>Where they come from</h3>
+  <p>All three come from Google Fonts, taken as variable fonts from its own repository, <a href="https://github.com/google/fonts">github.com/google/fonts</a>. Sleevesight pages do not link to Google Fonts: a script in this repository, <code>assets/fonts/make_page_font.py</code>, fixes each font's unused axes and cuts it down to the characters the pages use, and the copies it makes are served from this site with the pages. Nothing is fetched from Google, or from anywhere else, when a page loads, so a visit sends nothing to Google for its fonts.</p>
+  <p>The app carries its own Roboto, regular and medium, inside it, so it downloads nothing either. Its <em>Font</em> setting can switch to the phone's system font.</p>
 
-  <h2>Text tiles</h2>
-  <p class="lead">No eye: the two words, right-aligned, on a rounded square. For avatars, app stores' secondary art, stickers and prints. White tile on light, black tile on dark.</p>
-  <div id="tiles" class="grid2"></div>
+  <h3>How we use them</h3>
+  <table class="uses">
+    <thead><tr><th scope="col">Face</th><th scope="col">For</th><th scope="col">Set at</th></tr></thead>
+    <tbody>
+      <tr><td class="f-flex">Roboto Flex</td><td>Headings, labels, the menu; the words of the logo</td><td>400 to 700, width 88% to 100%; the logo's words at 400, width 88%, optical size 52.64, drawn as outlines, so they need no font</td></tr>
+      <tr><td class="f-slab">Roboto Slab</td><td>Running text</td><td>350, bold at 700</td></tr>
+      <tr><td class="f-mono">Roboto Mono</td><td>Code; the source chips on the product page</td><td>500</td></tr>
+      <tr><td>Roboto</td><td>The app</td><td>Regular and medium</td></tr>
+    </tbody>
+  </table>
 
-  <h2>Sizes</h2>
-  <p class="lead">From a shirt print down to a favicon-sized tile. The words stay readable down to a tile of about 50px; at 32px the tile is a shape rather than words. The favicon (<code>assets/favicon.svg</code>) is the record alone, without the eye: at tab size the eye's corners would take most of its width.</p>
-  <div class="card"><div class="duo" id="sizes"></div></div>
-
-  <h2>Colours</h2>
-  <div class="swatches" id="swatches"></div>
-
-  <h2>Type</h2>
-  <div class="type">
-    <div class="card"><div class="big"><b>Sleeve</b><span style="font-weight:400">sight</span></div>
-      <div class="spec">Roboto Flex · 700 and 400 · width 88% · tracking −1.5%</div></div>
-    <div class="card"><div class="big" style="font-weight:400;font-stretch:100%;letter-spacing:0">Aa Bb 0123</div>
-      <div class="spec">Roboto Flex 400, normal width, for body text · Roboto Mono for citations and code</div></div>
+  <h3>Examples</h3>
+  <div class="samples">
+    <figure>
+      <div class="stage"><span class="linear" role="img" aria-label="Sleevesight">Sleeve<span class="sight">sight</span><svg viewBox="0.5 0.5 15 15" aria-hidden="true"><use href="#lp" width="16" height="16"/></svg></span></div>
+      <figcaption>The linear logo: Roboto Flex 400, width 88%, optical size 52.64, tracking -1.5%; the record trailing.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><p class="s-head">Insights on what's playing</p></div>
+      <figcaption>A heading, the product page's title: Roboto Flex 700, width 90%, tracking -2%.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage"><p class="s-para">Sleevesight knows what your music player is playing and shows short, <strong>sourced</strong> insights about the artist, the song and the album, each with a link to where it came from.</p></div>
+      <figcaption>A paragraph: Roboto Slab 350 at 18 px, bold at 700.</figcaption>
+    </figure>
+    <figure>
+      <div class="stage code"><pre class="s-code">@font-face {
+  font-family: "Sleevesight Slab";
+  src: url(RobotoSlab-page.woff2)
+       format("woff2");
+  font-weight: 350 700;
+}</pre></div>
+      <figcaption>A code block: Roboto Mono 500; the rule that loads this page's Slab.</figcaption>
+    </figure>
   </div>
 
-  <h2>Printed</h2>
-  <p class="lead">Mock-ups, not print-ready art. On black, the type is pure white and the red is the lighter <code>#f0443a</code>; the eye is white with a grey rim, as on the site in dark mode.</p>
-  <div class="shirt-bar" hidden><span id="tee-all">All shirts</span><span class="seg" role="group" aria-labelledby="tee-all"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span></div>
-  <div class="shirts" id="merch"></div>
-  <div class="card"><div class="cap"><b>Stickers</b><span>Die-cut with a white edge</span></div>
-    <div class="merch stage" style="display:block;padding:28px 16px"><div class="sticker-row" id="stickers"></div></div></div>
-  <footer class="foot"><a href="https://sleevesight.app/">Sleevesight</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/design/brand.html">This page's source</a> · Roboto Flex under the <a href="../assets/fonts/OFL.txt">SIL Open Font License</a></footer>
+  <h3>Sources</h3>
+  <ol class="refs">
+    <li><a href="https://en.wikipedia.org/wiki/Roboto">Roboto</a>, Wikipedia.</li>
+    <li>Stephen Coles, <a href="https://typographica.org/on-typography/roboto-typeface-is-a-four-headed-frankenstein/">Roboto Is Was a Four-headed Frankenfont</a>, Typographica, 19 October 2011.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/ofl/roboto/DESCRIPTION.en_us.html">Roboto</a>, Google Fonts' description.</li>
+    <li><a href="https://m3.material.io/blog/roboto-flex">Roboto Flex now on Google Fonts</a>, Material Design blog, 5 May 2022.</li>
+    <li><a href="https://github.com/google/fonts/tree/main/ofl/robotoflex">Roboto Flex</a>, Google Fonts' repository: the font and its axes.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/apache/robotoslab/DESCRIPTION.en_us.html">Roboto Slab</a>, Google Fonts' description.</li>
+    <li><a href="https://github.com/google/fonts/blob/main/ofl/robotomono/DESCRIPTION.en_us.html">Roboto Mono</a>, Google Fonts' description.</li>
+  </ol>
+</section>
+
+<section id="record" aria-labelledby="record-h">
+  <h2 id="record-h">Record</h2>
+  <p>The mark's record is a vinyl LP seen from above, drawn in a few shapes: a black disc, a red paper label at its centre, two lines of print on the label, and the hole for the turntable's spindle. It stands for the music that is playing; "sight", beside it, for what the app tells you about it.</p>
+  <div class="pair">
+    <figure>
+      <div class="sq"><svg viewBox="2 2 28 28" role="img" aria-label="The record mark, its parts numbered 1 to 6"><use href="#lp" x="8" y="8" width="16" height="16"/><g class="callouts"><line class="halo" x1="11.33" y1="11.33" x2="8.2" y2="8.2"/><line x1="11.33" y1="11.33" x2="8.2" y2="8.2"/><circle class="pt" cx="11.33" cy="11.33" r=".16"/><line class="halo" x1="10.93" y1="17.85" x2="5.7" y2="19.8"/><line x1="10.93" y1="17.85" x2="5.7" y2="19.8"/><circle class="pt" cx="10.93" cy="17.85" r=".16"/><line class="halo" x1="18.13" y1="17.49" x2="25.0" y2="22.3"/><line x1="18.13" y1="17.49" x2="25.0" y2="22.3"/><circle class="pt" cx="18.13" cy="17.49" r=".16"/><line class="halo" x1="17.2" y1="14.5" x2="21.5" y2="6.5"/><line x1="17.2" y1="14.5" x2="21.5" y2="6.5"/><circle class="pt" cx="17.2" cy="14.5" r=".16"/><line class="halo" x1="16.6" y1="18.05" x2="18.85" y2="26.6"/><line x1="16.6" y1="18.05" x2="18.85" y2="26.6"/><circle class="pt" cx="16.6" cy="18.05" r=".16"/><line class="halo" x1="16.0" y1="16.0" x2="26.6" y2="13.2"/><line x1="16.0" y1="16.0" x2="26.6" y2="13.2"/><circle class="pt" cx="16.0" cy="16.0" r=".16"/><circle class="badge" cx="8.2" cy="8.2" r=".85"/><text x="8.2" y="8.2">1</text><circle class="badge" cx="5.7" cy="19.8" r=".85"/><text x="5.7" y="19.8">2</text><circle class="badge" cx="25.0" cy="22.3" r=".85"/><text x="25.0" y="22.3">3</text><circle class="badge" cx="21.5" cy="6.5" r=".85"/><text x="21.5" y="6.5">4</text><circle class="badge" cx="18.85" cy="26.6" r=".85"/><text x="18.85" y="26.6">5</text><circle class="badge" cx="26.6" cy="13.2" r=".85"/><text x="26.6" y="13.2">6</text></g></svg></div>
+      <figcaption>The record of the mark, its parts numbered.</figcaption>
+    </figure>
+    <figure>
+      <div class="sq"><img src="../assets/brand/parlophone-barnyard-hop.jpg" width="960" height="960" loading="lazy" alt="A black 78 rpm record with a red Parlophone label: the maker's name arched over the hole, the title, Barnyard Hop, in a line below it"></div>
+      <figcaption>The real thing: "Barnyard Hop", sung by Bonnie Lou, a Parlophone 78 pressed in New Zealand. Photo: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">Auckland War Memorial Museum</a>, <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>.</figcaption>
+    </figure>
+  </div>
+  <ol class="parts">
+    <li><b>The disc.</b> Black vinyl. The mark's rim is the record's edge.</li>
+    <li><b>The grooves.</b> One spiral, played from the edge inwards; the mark keeps one ring of it.</li>
+    <li><b>The label.</b> Paper, printed and pressed into the centre, often in the maker's colour: Parlophone's here is red, as Columbia's albums' were from 1953. The mark's red is the label's.</li>
+    <li><b>The arc.</b> The print arched over the hole: on a real label, the maker's name.</li>
+    <li><b>The line.</b> The print in a line below the hole: the title, the artist, the catalogue number.</li>
+    <li><b>The hole.</b> Where the spindle goes; the record turns about it, as the mark's record does when the logo is hovered.</li>
+  </ol>
+
+  <h3>A short story of the record</h3>
+  <div class="story">
+    <div>
+      <p>Sound was first recorded on a cylinder, by <a href="https://en.wikipedia.org/wiki/Phonograph_record#Early_development">Thomas Edison's phonograph of 1877</a>. In the 1880s Emile Berliner pressed it flat, as a disc that could be copied by the thousand, and for half a century records were <a href="https://en.wikipedia.org/wiki/LP_record#Predecessors">brittle shellac turning at 78 rpm</a>, under five minutes to a side.</p>
+      <p>On 21 June 1948, at the Waldorf-Astoria in New York, <a href="https://en.wikipedia.org/wiki/LP_record#Development_of_the_LP">Columbia unveiled the long-playing record</a>: vinyl in place of shellac, finer grooves, "microgrooves", and 33 1/3 turns a minute, for over twenty minutes a side. A team at CBS Laboratories under Peter Goldmark had worked on it since 1939. Its first twelve-inch album, ML 4001, was Mendelssohn's Violin Concerto, played by Nathan Milstein with the New York Philharmonic under Bruno Walter. RCA Victor answered in 1949 with <a href="https://en.wikipedia.org/wiki/LP_record#Competing_formats">the seven-inch 45</a>, and the two settled into the album and the single; <a href="https://en.wikipedia.org/wiki/Phonograph_record#Stereophonic_sound">stereo</a> followed in 1957.</p>
+      <p>The compact disc, from 1982, <a href="https://en.wikipedia.org/wiki/Phonograph_record#Popularity_and_current_status">outsold the record by 1988</a>, and by the early 1990s the record had left the mainstream. Then it came back. From the late 2000s it grew year on year, and in 2022, for the first time since 1987, <a href="https://www.npr.org/2023/03/10/1162568704/vinyl-outsells-cds-first-time-since-1987-records">vinyl albums outsold CDs in the United States</a>, some 41 million against 33 million.</p>
+    </div>
+    <figure class="side">
+      <div class="sq"><img src="../assets/brand/columbia-ml-4001.jpg" width="750" height="750" loading="lazy" alt="A twelve-inch black LP with a blue Columbia Masterworks label, ML 4001, lying on its white inner sleeve"></div>
+      <figcaption>Columbia ML 4001 (1948), the first twelve-inch LP. Photo: <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Sigmundg</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Out of the sleeve</h3>
+  <p>A record lives in a sleeve, and is pulled out of it to be played. The sleeve was for long plain paper; <a href="https://en.wikipedia.org/wiki/Album_cover#Early_history">in 1938 Columbia hired Alex Steinweiss as its first art director</a>, who is credited with inventing cover art, and from then on the sleeve carried pictures on its front, and on its back <a href="https://en.wikipedia.org/wiki/Liner_notes">the liner notes</a>: who played, where and when it was recorded, the story behind the music, read while the record played.</p>
+  <p>Sleevesight is named for that: the record pulled from its sleeve, and the sight of what the sleeve told you. Music on a phone comes without one; the app gives back what its back would have said. Two of the intros show the sleeve:</p>
+  <div class="trio">
+    <figure>
+      <div class="sq"><svg viewBox="0 0 300 300" role="img" aria-label="A record pulled halfway out of its sleeve, to the right"><defs><linearGradient id="sl-art" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(158 55% 32%)"/><stop offset="1" stop-color="hsl(193 50% 13%)"/></linearGradient></defs><use href="#lp" x="102" y="66" width="168" height="168"/><rect x="34" y="72" width="156" height="156" rx="2" fill="#000" opacity=".22"/><svg x="30" y="68" width="156" height="156" viewBox="0 0 100 100"><rect width="100" height="100" fill="url(#sl-art)"/><g fill="hsl(225 70% 66%)"><circle cx="12" cy="12" r="5.9"/><circle cx="12" cy="31" r="7.6"/><circle cx="12" cy="50" r="4.2"/><circle cx="12" cy="69" r="5.9"/><circle cx="12" cy="88" r="4.2"/><circle cx="31" cy="12" r="5.9"/><circle cx="31" cy="31" r="4.2"/><circle cx="31" cy="50" r="5.9"/><circle cx="31" cy="69" r="7.6"/><circle cx="31" cy="88" r="4.2"/><circle cx="50" cy="12" r="7.6"/><circle cx="50" cy="31" r="4.2"/><circle cx="50" cy="50" r="5.9"/><circle cx="50" cy="69" r="7.6"/><circle cx="50" cy="88" r="7.6"/><circle cx="69" cy="12" r="7.6"/><circle cx="69" cy="31" r="7.6"/><circle cx="69" cy="50" r="4.2"/><circle cx="69" cy="69" r="2.5"/><circle cx="69" cy="88" r="5.9"/><circle cx="88" cy="12" r="2.5"/><circle cx="88" cy="31" r="5.9"/><circle cx="88" cy="50" r="7.6"/><circle cx="88" cy="69" r="7.6"/><circle cx="88" cy="88" r="7.6"/></g></svg></svg></div>
+      <figcaption>A record, half way out of its sleeve. The original proposal for Sleevesight's logo.</figcaption>
+    </figure>
+    <figure>
+      <div class="sq a-ground"><img src="../assets/logo/sleeve-to-eye.svg" alt="A record slides out of its sleeve, an eye forms around it and blinks, the record turns twice, and the sleeve comes back"></div>
+      <figcaption>A sleeve sliding to the side, revealing the record, which then turns into the iris of a stylised eye. The original proposal for Sleevesight's animated intro.</figcaption>
+    </figure>
+    <figure>
+      <div class="sq loop"><svg viewBox="-119.5 -82.76 292 160" role="img" aria-label="The tile slides left off the record behind it; the record shrinks beside sight, and the tile fades, leaving the mark"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div>
+      <figcaption>A simplified sleeve bearing the app's name as stacked text, sliding to the side, revealing the record. One of the current animated intros.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Sources</h3>
+  <ol class="refs">
+    <li><a href="https://en.wikipedia.org/wiki/Phonograph_record">Phonograph record</a>, Wikipedia.</li>
+    <li><a href="https://en.wikipedia.org/wiki/LP_record">LP record</a>, Wikipedia.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Album_cover">Album cover</a>, Wikipedia.</li>
+    <li><a href="https://en.wikipedia.org/wiki/Liner_notes">Liner notes</a>, Wikipedia.</li>
+    <li><a href="https://www.bsnpubs.com/columbia/columbiastory.html">Columbia Label Overview</a>, Both Sides Now: Columbia's labels, red on its albums from 1953.</li>
+    <li><a href="https://www.npr.org/2023/03/10/1162568704/vinyl-outsells-cds-first-time-since-1987-records">Vinyl records outsell CDs for the first time since 1987</a>, NPR, 10 March 2023, on the RIAA's report for 2022.</li>
+    <li>The photos: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">"Barnyard Hop", Parlophone</a>, Auckland War Memorial Museum, CC BY 2.0; <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Columbia ML 4001</a>, Sigmundg, CC BY-SA 4.0. Both from Wikimedia Commons, cropped to the record.</li>
+  </ol>
+</section>
+
+
+
+<section id="colours" aria-labelledby="colours-h">
+  <h2 id="colours-h">Colours</h2>
+  <p>The logo's colours are few: white and black, the greys of the record, and one red, for the label and for "sight". It comes in two colourways, light, on white, and dark, on black, and each colour below belongs to one or both.</p>
+  <div class="pair">
+    <figure>
+      <div class="cw lt" role="img" aria-label="The logo in its light colourway, on white"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div>
+      <figcaption>Light, on white.</figcaption>
+      <ul class="swatches"><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>The ground; the print on the label, and the hole. The print is 5.4:1 on the label red.</span></li><li><i style="background:#141a22"></i><div><b>Ink</b><code>#141a22</code></div><span>"Sleeve". 17.5:1 on white.</span></li><li><i style="background:#1f2328"></i><div><b>Rim</b><code>#1f2328</code></div><span>The disc. 15.8:1 on white.</span></li><li><i style="background:#57606a"></i><div><b>Groove</b><code>#57606a</code></div><span>The ring of groove on the disc. 6.4:1 on white, 2.5:1 on the rim.</span></li><li><i style="background:#cf222e"></i><div><b>Red</b><code>#cf222e</code></div><span>The label, and "sight". 5.4:1 on white.</span></li></ul>
+    </figure>
+    <figure>
+      <div class="cw dk" role="img" aria-label="The logo in its dark colourway, on black"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div>
+      <figcaption>Dark, on black.</figcaption>
+      <ul class="swatches"><li><i style="background:#000000"></i><div><b>Black</b><code>#000000</code></div><span>The ground, and the disc inside the rim.</span></li><li><i style="background:#e5e8ee"></i><div><b>Ink on dark</b><code>#e5e8ee</code></div><span>"Sleeve". 17.1:1 on black, as the ink is 17.5:1 on white: a light ink, as far from white as the ink is from black.</span></li><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>The print on the label, and the hole, as on light.</span></li><li><i style="background:#8b949e"></i><div><b>Rim on dark</b><code>#8b949e</code></div><span>The disc's rim, a grey ring, so that the record shows on black. 6.8:1 on black.</span></li><li><i style="background:#cf222e"></i><div><b>Red</b><code>#cf222e</code></div><span>The label, and "sight", as on light. 3.9:1 on black.</span></li></ul>
+    </figure>
+  </div>
+  <p>The ratios are each colour's contrast against what it sits on, by the measure of the Web Content Accessibility Guidelines, which ask 4.5:1 of text and 3:1 of large text and graphics, and exempt logos. The dark colourway's rim is grey rather than black, so that the record shows on black.</p>
+  <p>One red serves the label and "sight", on white and on black. On white the label's red is 5.4:1, and on black 3.9:1, enough for type the size of the logo's.</p>
+</section>
+
+<div class="logos">
+<div class="track"><div class="theme" role="group" aria-label="Backgrounds for the logos and the intros"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div></div>
+<section id="logo" aria-labelledby="logo-h">
+  <h2 id="logo-h">Logo</h2>
+  <p>The logo is the name and the record. It has had two designs: the original, in which the record is the iris of an eye, and the current one, in which the record stands beside the name on its own.</p>
+
+  <h3>The current logo</h3>
+  <p>Two layouts of one design: the name in Roboto Flex regular at 88% width, "sight" in red, and the record on the right.</p>
+  <div class="marks two">
+    <figure><div class="lt lpane"><svg class="stacked" viewBox="-37.59 -37.26 128.27 69" role="img" aria-label="The stacked logo"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div><figcaption>Stacked, for the website: "Sleeve" over "sight", aligned right, with the record beside "sight" and as tall as it. The product page's header.</figcaption></figure>
+    <figure><div class="lt lpane"><span class="linear" role="img" aria-label="The linear logo">Sleeve<span class="sight">sight</span><svg viewBox="0.5 0.5 15 15" aria-hidden="true"><use href="#lp" width="16" height="16"/></svg></span></div><figcaption>Linear, for the app: "Sleevesight" on one line, with the record after it, from the top of the "h" (the ascender) to the foot of the "g" (the descender).</figcaption></figure>
+  </div>
+
+  <h3>The original logo, archived</h3>
+  <p>An eye whose iris is the record, beside the name. Two layouts, linear, with the eye before the name, and stacked, with the eye after it; each in four styles: "Sleeve" regular or bold, "sight" in the ink or in red.</p>
+  <div class="marks four">
+    <figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, "Sleeve" bold, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, "sight" red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, "Sleeve" bold, "sight" red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, one colour"><span class="st"><span>Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, "Sleeve" bold, one colour"><span class="st"><span class="b">Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, "sight" red"><span class="st"><span>Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, "Sleeve" bold, "sight" red"><span class="st"><span class="b">Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, "sight" red.</figcaption></figure>
+  </div>
+</section>
+
+<section id="intros" aria-labelledby="intros-h">
+  <h2 id="intros-h">Intros</h2>
+  <p>The intros are a playful way to liven up the pages: the logo arrives with a small move of its own rather than simply being there. The product page opens with one of these, picked at random on each visit; each ends on the stacked logo, which then shrinks into the page's header. Here they play on their own, over and over, without that last move.</p>
+  <div class="marks four">
+    <figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in and turns twice about the record."><div class="env"><div class="dz dz-c" style="width:85.33%"><svg viewBox="-54.9 -113.84 256 256"><g class="c-turn"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in and turns twice about the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:6500ms" role="img" aria-label="The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside "sight"."><div class="env"><div class="dz dz-d" style="width:62.67%"><svg viewBox="-94 -94 188 188"><g class="d-turn"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g><g transform="translate(54.35 -4.59)"><use class="d-rec" href="#lp" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and the record circles the words once about the dot of the i."><div class="env"><div class="dz dz-f" style="width:62.67%"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in, and the record circles the words once about the dot of the i.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in alone, and the words are typed in beside it, a letter at a time."><div class="env"><div class="dz dz-g" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div></div><figcaption>The record fades in alone, and the words are typed in beside it, a letter at a time.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and each e of "Sleeve" turns once, one after the other."><div class="env"><div class="dz dz-h" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div><figcaption>The mark fades in, and each e of "Sleeve" turns once, one after the other.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in with the words to its right; "Sleeve" slides into its place, then "sight", passing behind the record."><div class="env"><div class="dz dz-i" style="width:73.79%"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div></div><figcaption>The record fades in with the words to its right; "Sleeve" slides into its place, then "sight", passing behind the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4800ms" role="img" aria-label=""Sleeve" fades in, and the record rolls in under it, uncovering "sight"."><div class="env"><div class="dz dz-r1" style="width:55.33%"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="dz-r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#dz-r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div></div><figcaption>"Sleeve" fades in, and the record rolls in under it, uncovering "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:5600ms" role="img" aria-label="The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark."><div class="env"><div class="dz dz-r2" style="width:97.33%"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div></div><figcaption>The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark.</figcaption></figure>
+  </div>
+
+  <h3>From intro to header</h3>
+  <p>The intro plays when the page first loads. One of the intros, chosen at random, plays large in the middle of the window, then shrinks into the header, where the logo stays, and the rest of the page fades in around it.</p>
+  <p>It plays only on that first load. As it starts, the page's address gains a bare "#", which means the top of the page, so a reload, or a link copied from the address bar, shows the page at once. Nothing is stored in the browser: the address itself carries it.</p>
+  <p>A click or a tap on the logo in the header plays an intro again, and hovering over the logo spins the record once. Where the device asks for reduced motion, nothing moves.</p>
+  <p>The example below shows the page simplified to a few lines. Unlike the page, it plays the intros in turn, one after another, rather than at random. Hover over its logo to spin the record; click it to move on to the next intro.</p>
+  <figure class="ts-fig">
+    <div class="lt lpane tstage" role="img" aria-label="A simplified page: an intro plays in the middle and shrinks into the header, and the page fades in; then the next intro">
+      <div class="ts-hdr"><button type="button" class="ts-brand" aria-label="Play the next intro"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg></button><div class="ts-nav"><i></i><i></i><i></i></div></div>
+      <div class="ts-ghost"><i></i><i></i><i></i><i></i></div>
+      <div class="ts-splash"><div class="fly"></div></div>
+    </div>
+  </figure>
+</section>
 </div>
 
+<section id="feature" aria-labelledby="feature-h">
+  <h2 id="feature-h">Feature graphic</h2>
+  <p>The feature graphic is the banner of the app's Google Play listing, 1024 &times; 500 pixels. Play shows it at the head of the listing, as the cover of a preview video, and in its collections and ads, where it may crop the edges.</p>
+  <p>It is the label's red, with "Sleeve" in white over "sight" in the ink, the tagline "Insights on what's playing" under them, and the record beside "sight", large, running off the right and bottom edges, so that only the record is lost where Play crops.</p>
+  <figure class="fg-fig"><img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline Insights on what's playing under them, and a large record beside sight, cut off by the right and bottom edges"><figcaption>The feature graphic, as on Google Play.</figcaption></figure>
+</section>
+
+<div class="logos">
+<div class="track"><div class="theme" role="group" aria-label="Backgrounds for the merchandise"><button type="button" data-theme="light" aria-pressed="true">Light</button><button type="button" data-theme="dark" aria-pressed="false">Dark</button></div></div>
+<section id="merch" aria-labelledby="merch-h">
+  <h2 id="merch-h">Merchandise</h2>
+  <p>Merchandise is planned for once the app gains traction. Until then, a few designs, as mock-ups rather than print-ready art: a white shirt or sticker in the light colourway, a black one in the dark.</p>
+  <h3>T-shirts</h3>
+  <div class="marks two">
+    <figure><div class="lt lpane merch" role="img" aria-label="A T-shirt with the stacked logo, the words and the record"><div class="shirt"><svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg><div class="print p8b"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>A T-shirt: the stacked logo, the words and the record, on the chest.</figcaption></figure>
+    <figure><div class="lt lpane merch" role="img" aria-label="A T-shirt with the eye, and sleevesight.app under it"><div class="shirt"><svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg><div class="print peye"><svg viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></div></div></div><figcaption>A T-shirt: the eye, with the site's address under it, as on the sticker, on the chest.</figcaption></figure>
+  </div>
+  <h3>Stickers</h3>
+  <p>Die-cut, with a white edge: two designs, each on a rounded square, a squircle and a circle.</p>
+  <div class="marks three">
+    <figure><div class="lt lpane merch stk" role="img" aria-label="A rounded square sticker with the stacked logo"><span class="sticker rsq"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><rect class="stk-edge" x="0" y="0" width="180" height="180" rx="35.7"/><rect class="stk-bg" x="0" y="0" width="180" height="180" rx="35.7"/></svg><span class="stk-face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, rounded square.</figcaption></figure><figure><div class="lt lpane merch stk" role="img" aria-label="A squircle sticker with the stacked logo"><span class="sticker sqc"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><path class="stk-edge" d="M180.0 90.0 L179.9 113.0 L179.6 122.5 L179.1 129.8 L178.5 135.8 L177.6 141.0 L176.5 145.7 L175.2 149.9 L173.8 153.6 L172.1 157.1 L170.2 160.2 L168.0 163.1 L165.7 165.7 L163.1 168.0 L160.2 170.2 L157.1 172.1 L153.6 173.8 L149.9 175.2 L145.7 176.5 L141.0 177.6 L135.8 178.5 L129.8 179.1 L122.5 179.6 L113.0 179.9 L90.0 180.0 L67.0 179.9 L57.5 179.6 L50.2 179.1 L44.2 178.5 L39.0 177.6 L34.3 176.5 L30.1 175.2 L26.4 173.8 L22.9 172.1 L19.8 170.2 L16.9 168.0 L14.3 165.7 L12.0 163.1 L9.8 160.2 L7.9 157.1 L6.2 153.6 L4.8 149.9 L3.5 145.7 L2.4 141.0 L1.5 135.8 L0.9 129.8 L0.4 122.5 L0.1 113.0 L0.0 90.0 L0.1 67.0 L0.4 57.5 L0.9 50.2 L1.5 44.2 L2.4 39.0 L3.5 34.3 L4.8 30.1 L6.2 26.4 L7.9 22.9 L9.8 19.8 L12.0 16.9 L14.3 14.3 L16.9 12.0 L19.8 9.8 L22.9 7.9 L26.4 6.2 L30.1 4.8 L34.3 3.5 L39.0 2.4 L44.2 1.5 L50.2 0.9 L57.5 0.4 L67.0 0.1 L90.0 0.0 L113.0 0.1 L122.5 0.4 L129.8 0.9 L135.8 1.5 L141.0 2.4 L145.7 3.5 L149.9 4.8 L153.6 6.2 L157.1 7.9 L160.2 9.8 L163.1 12.0 L165.7 14.3 L168.0 16.9 L170.2 19.8 L172.1 22.9 L173.8 26.4 L175.2 30.1 L176.5 34.3 L177.6 39.0 L178.5 44.2 L179.1 50.2 L179.6 57.5 L179.9 67.0 Z"/><path class="stk-bg" d="M180.0 90.0 L179.9 113.0 L179.6 122.5 L179.1 129.8 L178.5 135.8 L177.6 141.0 L176.5 145.7 L175.2 149.9 L173.8 153.6 L172.1 157.1 L170.2 160.2 L168.0 163.1 L165.7 165.7 L163.1 168.0 L160.2 170.2 L157.1 172.1 L153.6 173.8 L149.9 175.2 L145.7 176.5 L141.0 177.6 L135.8 178.5 L129.8 179.1 L122.5 179.6 L113.0 179.9 L90.0 180.0 L67.0 179.9 L57.5 179.6 L50.2 179.1 L44.2 178.5 L39.0 177.6 L34.3 176.5 L30.1 175.2 L26.4 173.8 L22.9 172.1 L19.8 170.2 L16.9 168.0 L14.3 165.7 L12.0 163.1 L9.8 160.2 L7.9 157.1 L6.2 153.6 L4.8 149.9 L3.5 145.7 L2.4 141.0 L1.5 135.8 L0.9 129.8 L0.4 122.5 L0.1 113.0 L0.0 90.0 L0.1 67.0 L0.4 57.5 L0.9 50.2 L1.5 44.2 L2.4 39.0 L3.5 34.3 L4.8 30.1 L6.2 26.4 L7.9 22.9 L9.8 19.8 L12.0 16.9 L14.3 14.3 L16.9 12.0 L19.8 9.8 L22.9 7.9 L26.4 6.2 L30.1 4.8 L34.3 3.5 L39.0 2.4 L44.2 1.5 L50.2 0.9 L57.5 0.4 L67.0 0.1 L90.0 0.0 L113.0 0.1 L122.5 0.4 L129.8 0.9 L135.8 1.5 L141.0 2.4 L145.7 3.5 L149.9 4.8 L153.6 6.2 L157.1 7.9 L160.2 9.8 L163.1 12.0 L165.7 14.3 L168.0 16.9 L170.2 19.8 L172.1 22.9 L173.8 26.4 L175.2 30.1 L176.5 34.3 L177.6 39.0 L178.5 44.2 L179.1 50.2 L179.6 57.5 L179.9 67.0 Z"/></svg><span class="stk-face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, squircle.</figcaption></figure><figure><div class="lt lpane merch stk" role="img" aria-label="A round sticker with the stacked logo"><span class="sticker round"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><circle class="stk-edge" cx="90" cy="90" r="90"/><circle class="stk-bg" cx="90" cy="90" r="90"/></svg><span class="stk-face"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></span></div><figcaption>The stacked logo, round.</figcaption></figure><figure><div class="lt lpane merch stk" role="img" aria-label="A rounded square sticker with the eye, with sleevesight.app under it"><span class="sticker rsq"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><rect class="stk-edge" x="0" y="0" width="180" height="180" rx="35.7"/><rect class="stk-bg" x="0" y="0" width="180" height="180" rx="35.7"/></svg><span class="stk-face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, rounded square.</figcaption></figure><figure><div class="lt lpane merch stk" role="img" aria-label="A squircle sticker with the eye, with sleevesight.app under it"><span class="sticker sqc"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><path class="stk-edge" d="M180.0 90.0 L179.9 113.0 L179.6 122.5 L179.1 129.8 L178.5 135.8 L177.6 141.0 L176.5 145.7 L175.2 149.9 L173.8 153.6 L172.1 157.1 L170.2 160.2 L168.0 163.1 L165.7 165.7 L163.1 168.0 L160.2 170.2 L157.1 172.1 L153.6 173.8 L149.9 175.2 L145.7 176.5 L141.0 177.6 L135.8 178.5 L129.8 179.1 L122.5 179.6 L113.0 179.9 L90.0 180.0 L67.0 179.9 L57.5 179.6 L50.2 179.1 L44.2 178.5 L39.0 177.6 L34.3 176.5 L30.1 175.2 L26.4 173.8 L22.9 172.1 L19.8 170.2 L16.9 168.0 L14.3 165.7 L12.0 163.1 L9.8 160.2 L7.9 157.1 L6.2 153.6 L4.8 149.9 L3.5 145.7 L2.4 141.0 L1.5 135.8 L0.9 129.8 L0.4 122.5 L0.1 113.0 L0.0 90.0 L0.1 67.0 L0.4 57.5 L0.9 50.2 L1.5 44.2 L2.4 39.0 L3.5 34.3 L4.8 30.1 L6.2 26.4 L7.9 22.9 L9.8 19.8 L12.0 16.9 L14.3 14.3 L16.9 12.0 L19.8 9.8 L22.9 7.9 L26.4 6.2 L30.1 4.8 L34.3 3.5 L39.0 2.4 L44.2 1.5 L50.2 0.9 L57.5 0.4 L67.0 0.1 L90.0 0.0 L113.0 0.1 L122.5 0.4 L129.8 0.9 L135.8 1.5 L141.0 2.4 L145.7 3.5 L149.9 4.8 L153.6 6.2 L157.1 7.9 L160.2 9.8 L163.1 12.0 L165.7 14.3 L168.0 16.9 L170.2 19.8 L172.1 22.9 L173.8 26.4 L175.2 30.1 L176.5 34.3 L177.6 39.0 L178.5 44.2 L179.1 50.2 L179.6 57.5 L179.9 67.0 Z"/><path class="stk-bg" d="M180.0 90.0 L179.9 113.0 L179.6 122.5 L179.1 129.8 L178.5 135.8 L177.6 141.0 L176.5 145.7 L175.2 149.9 L173.8 153.6 L172.1 157.1 L170.2 160.2 L168.0 163.1 L165.7 165.7 L163.1 168.0 L160.2 170.2 L157.1 172.1 L153.6 173.8 L149.9 175.2 L145.7 176.5 L141.0 177.6 L135.8 178.5 L129.8 179.1 L122.5 179.6 L113.0 179.9 L90.0 180.0 L67.0 179.9 L57.5 179.6 L50.2 179.1 L44.2 178.5 L39.0 177.6 L34.3 176.5 L30.1 175.2 L26.4 173.8 L22.9 172.1 L19.8 170.2 L16.9 168.0 L14.3 165.7 L12.0 163.1 L9.8 160.2 L7.9 157.1 L6.2 153.6 L4.8 149.9 L3.5 145.7 L2.4 141.0 L1.5 135.8 L0.9 129.8 L0.4 122.5 L0.1 113.0 L0.0 90.0 L0.1 67.0 L0.4 57.5 L0.9 50.2 L1.5 44.2 L2.4 39.0 L3.5 34.3 L4.8 30.1 L6.2 26.4 L7.9 22.9 L9.8 19.8 L12.0 16.9 L14.3 14.3 L16.9 12.0 L19.8 9.8 L22.9 7.9 L26.4 6.2 L30.1 4.8 L34.3 3.5 L39.0 2.4 L44.2 1.5 L50.2 0.9 L57.5 0.4 L67.0 0.1 L90.0 0.0 L113.0 0.1 L122.5 0.4 L129.8 0.9 L135.8 1.5 L141.0 2.4 L145.7 3.5 L149.9 4.8 L153.6 6.2 L157.1 7.9 L160.2 9.8 L163.1 12.0 L165.7 14.3 L168.0 16.9 L170.2 19.8 L172.1 22.9 L173.8 26.4 L175.2 30.1 L176.5 34.3 L177.6 39.0 L178.5 44.2 L179.1 50.2 L179.6 57.5 L179.9 67.0 Z"/></svg><span class="stk-face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, squircle.</figcaption></figure><figure><div class="lt lpane merch stk" role="img" aria-label="A round sticker with the eye, with sleevesight.app under it"><span class="sticker round"><svg class="stk-shape" viewBox="-7 -7 194 194" aria-hidden="true"><circle class="stk-edge" cx="90" cy="90" r="90"/><circle class="stk-bg" cx="90" cy="90" r="90"/></svg><span class="stk-face"><svg class="eye" viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></span></div><figcaption>The eye, with the address, round.</figcaption></figure>
+  </div>
+</section>
+</div>
+</main>
+
+<footer>
+  <p>Sleevesight is open source under the <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">GPL-3.0</a>.</p>
+  <p>This site sets no cookies and loads nothing from anywhere else.</p>
+</footer>
+</div>
 <script>
-const E = '<svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg>';
-const T = inner => `<span class="tile-mark"><span class="w stack right n">${inner}</span></span>`;
-const M = {
-  '8a': '<svg class="lp-mark" viewBox="-38.59 -38.26 146.62 71.00" aria-hidden="true"><use href="#words"/><use href="#lp" x="53.80" y="-29.41" width="54.94" height="54.94"/></svg>',
-  '8b': '<svg class="lp-mark" viewBox="-38.59 -38.26 130.27 71.00" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg>',
-  '7a': '<span class="vert"><svg viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="w n">sleevesight.<span class="red">app</span></span></span>',
-  '2c': E + '<span class="w">Sleeve<span class="n red">sight</span></span>',
-  '4e': '<span class="w stack right"><span>Sleeve</span><span class="n">sight</span></span>' + E,
-  '4k': '<span class="w stack right"><span>Sleeve</span><span class="n red">sight</span></span>' + E,
-  '6a': T('<span>Sleeve</span><span>sight</span>'),
-  '6b': T('<span class="b">Sleeve</span><span>sight</span>'),
-  '6c': T('<span>Sleeve</span><span class="red">sight</span>'),
-  '6d': T('<span class="b">Sleeve</span><span class="red">sight</span>'),
-};
-const mark = (k, size = 's-l', extra = '') => `<span class="mark ${size} ${extra}">${M[k]}</span>`;
-const card = (tag, note, body) => `<div class="card"><div class="cap"><b>${tag}</b><span>${note}</span></div>${body}</div>`;
-const duo = (k, size) => `<div class="duo"><div class="pane lt">${mark(k, size)}</div><div class="pane dk">${mark(k, size)}</div></div>`;
+(function () {
+  var root = document.documentElement, header = document.querySelector('header.top'), bar = header.querySelector('.bar'),
+      row = bar.querySelector('.row'), brand = row.querySelector('.brand'), mark = brand.querySelector('svg'),
+      nav = row.querySelector('nav');
+  // Lays out the large header, as it is at the top of the page, without animating it: whether the menu
+  // fits on one line beside the logo, and the height the header keeps in the page while it is small.
+  function measure() {
+    var compact = root.classList.contains('sl-compact');
+    root.classList.add('sl-still');
+    root.classList.remove('sl-compact', 'sl-stack');
+    var room = row.clientWidth - parseFloat(getComputedStyle(row).paddingLeft) * 2;
+    root.classList.toggle('sl-stack', brand.offsetWidth + 24 + nav.offsetWidth > room);
+    header.style.height = bar.offsetHeight + 'px';
+    root.classList.toggle('sl-compact', compact);
+    void bar.offsetHeight;
+    root.classList.remove('sl-still');
+  }
+  function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
+  measure();
+  onScroll();
+  addEventListener('resize', measure);
+  // The menu's width changes when the page's font arrives (`font-display: swap`), after the first layout.
+  if (document.fonts) document.fonts.ready.then(measure);
+  addEventListener('scroll', onScroll, {passive: true});
 
-const tileB = '<svg viewBox="-72 -72 144 144" style="width:144px;height:144px;display:block" aria-hidden="true"><rect x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke" style="fill:var(--tile-bg);stroke:var(--tile-edge)"/><use href="#words"/></svg>';
-const wordsB = '<svg class="lp-mark" viewBox="-38.59 -38.26 85.11 71" aria-hidden="true"><use href="#words"/></svg>';
-// The panes, two to a card, A to I: A's the eye; B's the tile; C's, D's, F's, G's, H's and I's the 8b
-// mark; E's the words alone, on the page.
-const heads = ['2c', 'tile', '8b', '8b', 'words', '8b', '8b', '8b', '8b'];
-document.querySelectorAll('.lead2 .pane').forEach((p, i) => {
-  const h = heads[Math.floor(i / 2)];
-  p.innerHTML = h === 'tile' ? tileB : h === 'words' ? `<span class="mark s-l">${wordsB}</span>` : mark(h, h === '2c' ? 's-p' : 's-l');
-});
-document.getElementById('primary').innerHTML = [
-  ['2c', 'Horizontal · bold ink + regular red'],
-  ['4e', 'Stacked · one colour'],
-  ['4k', 'Stacked · sight red'],
-].map(([k, n]) => card(k, n, duo(k, k === '2c' ? 's-p' : 's-l'))).join('');
+  // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
+  // key (a screen reader's cursor), so either ends the intro too.
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'],
+      moving = matchMedia('(prefers-reduced-motion: no-preference)'), v;
+  function end() {
+    stops.forEach(function (e) { removeEventListener(e, stop); });
+    root.classList.remove('sl-intro');
+  }
+  // A held key's repeats (Enter or Space on the logo) do not end the intro it started.
+  function stop(e) { if (!(e.type === 'keydown' && e.repeat)) end(); }
+  function listen() { stops.forEach(function (e) { addEventListener(e, stop, {passive: true}); }); }
+  // The intro ends with its last move: D's record turning in, the others' page arriving.
+  function last(e) { if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
+  brand.addEventListener('animationend', last);
+  document.querySelector('main').addEventListener('animationend', last);
+  // Each splash's svg in the words' units: its viewBox's left, top, width and height. C's is a square of
+  // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
+  // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
+  // 188 centred on the dot, with room for the record's path; G's and H's are the header's box, the
+  // mark's ink, since nothing in them leaves it; I's is the mark's ink widened to the right, to 183.79,
+  // past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record horizontally,
+  // and the record stays still midway across the window; R1's and R2's are the brand sheet's reveals.
+  var boxes = {c: [-54.9, -113.84, 256, 256], d: [-72, -72, 144, 144], f: [-94, -94, 188, 188],
+               g: [-37.59, -37.26, 128.27, 69], h: [-37.59, -37.26, 128.27, 69],
+               i: [-37.59, -37.26, 221.38, 69],
+               r1: [-56.4, -45.76, 166, 86], r2: [-119.5, -82.76, 292, 160]};
+  function start() {
+    // The splash is centred in the window, at most 300/144 px to the unit (D's tile 300 px across), less
+    // where the window is too small for it. The header's logo is the words' ink box, from -37.59, -37.26
+    // and 69 tall, so the splash lands where the header's logo sits in it.
+    v = root.getAttribute('data-logo');
+    var b = boxes[v], m = mark.getBoundingClientRect(), u = m.height / 69,
+        k = v === 'd' ? Math.min(300, innerWidth * .62, innerHeight * .45) / 144
+                      : Math.min(300 / 144, innerWidth * .95 / b[2], innerHeight * .9 / b[3]),
+        w = b[2] * k, h = b[3] * k, x = (innerWidth - w) / 2, y = (innerHeight - h) / 2;
+    root.style.setProperty('--sb', w + 'px');
+    root.style.setProperty('--sbh', h + 'px');
+    root.style.setProperty('--sx', x + 'px');
+    root.style.setProperty('--sy', y + 'px');
+    root.style.setProperty('--fx', m.left + (b[0] + 37.59) * u - x + 'px');
+    root.style.setProperty('--fy', m.top + (b[1] + 37.26) * u - y + 'px');
+    root.style.setProperty('--fs', u / k);
+    root.classList.remove('sl-wait');
+    root.classList.add('sl-intro');
+    if (location.href.indexOf('#') === -1) history.replaceState(null, '', location.href + '#');
+  }
+  if (root.classList.contains('sl-wait')) {
+    start();
+    listen();
+  }
 
-document.getElementById('record').innerHTML = [
-  ['8a', 'The record from the x-height of "Sleeve" to the baseline of "sight"'],
-  ['8b', 'The record as tall as "sight"'],
-].map(([k, n]) => card(k, n, duo(k, 's-l'))).join('') +
-  card('8b', 'Turning about the record: the words go round with it',
-    `<div class="duo" role="img" aria-label="The 8b mark turning twice about the centre of the record, the words going round with it">${['lt', 'dk'].map(c =>
-      `<div class="turn-pane ${c}"><svg viewBox="-54.90 -113.84 256 256" aria-hidden="true"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></svg></div>`).join('')}</div>`);
-
-// The reveals. R1's clip is per pane, since an id is the document's.
-const rec8b = cls => `<g transform="translate(54.35 -4.59)"><use class="${cls}" href="#lp" width="37.5" height="37.5"/></g>`;
-const reveal = (tag, note, label, svg) => card(tag, note,
-  `<div class="duo" role="img" aria-label="${label.replace(/"/g, '&quot;')}">${['lt', 'dk'].map(c => `<div class="rv-pane ${c}">${svg(c)}</div>`).join('')}</div>`);
-document.getElementById('reveals').innerHTML =
-  reveal('R1', 'The record rolls in under "Sleeve", uncovering "sight"',
-    'Reveal R1: "Sleeve" alone; the record rolls in under it from the left, uncovering "sight" as it passes, and stops beside it',
-    c => `<svg class="r1" viewBox="-56.4 -45.76 166 86" aria-hidden="true"><defs><clipPath id="r1-clip-${c}"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs>
-      <g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip-${c})"/><g class="r1-roll">${rec8b('r1-rec')}</g></g></svg>`) +
-  reveal('R2', 'The tile slides off the record, as a sleeve',
-    'Reveal R2: the tile slides left, revealing the record behind it; the record shrinks beside "sight" and the tile fades, leaving the 8b mark',
-    () => `<svg viewBox="-119.5 -82.76 292 160" aria-hidden="true"><g class="rv-all"><g class="r2-pan"><g class="r2-rec">${rec8b('')}</g>
-      <g class="r2-tile"><rect class="r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke" style="fill:var(--tile-bg);stroke:var(--tile-edge)"/><use href="#words"/></g></g></g></svg>`);
-
-document.getElementById('marketing').innerHTML = card('7a', 'Eye over the address · regular · app red', duo('7a', 's-m'));
-
-document.getElementById('tiles').innerHTML = [
-  ['6a', 'Regular · one colour'], ['6b', 'Bold Sleeve · one colour'],
-  ['6c', 'Regular · sight red'], ['6d', 'Bold Sleeve · sight red'],
-].map(([k, n]) => card(k, n, duo(k, 's-l'))).join('');
-
-const sizes = k => ['s-xl', 's-l', 's-m', 's-s', 's-xs'].map(s => mark(k, s)).join('');
-document.getElementById('sizes').innerHTML =
-  `<div class="pane lt" style="flex-direction:column;align-items:flex-start;gap:18px">
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${sizes('6d')}</div>
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${sizes('6c')}</div>
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${['s-l', 's-m', 's-s'].map(s => mark('2c', s)).join('')}</div></div>
-   <div class="pane dk" style="flex-direction:column;align-items:flex-start;gap:18px">
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${sizes('6d')}</div>
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${sizes('6c')}</div>
-     <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">${['s-l', 's-m', 's-s'].map(s => mark('4k', s)).join('')}</div></div>`;
-
-document.getElementById('swatches').innerHTML = [
-  ['Ink', '#141a22', 'Type on light'],
-  ['Label red', '#cf222e', 'The record label; "sight" in the tile and in print'],
-  ['Sight red', '#cc212d', '"sight" in the product page\'s header, on Paper (4.6:1; the label red is 4.48:1)'],
-  ['Red on dark', '#f0443a', '"sight" on dark (5.1:1 on Night)'],
-  ['Paper', '#e8ebef', 'Light background'],
-  ['Night', '#0d1015', 'Dark background'],
-  ['Rim', '#1f2328', 'The eye and the record on light'],
-  ['Rim on dark', '#8b949e', 'The eye\'s outline on dark'],
-  ['Sleeve art', 'linear-gradient(135deg,hsl(158 55% 32%),hsl(193 50% 13%))', 'The sleeve the record slides out of', 'hsl(158 55% 32%) → hsl(193 50% 13%)'],
-  ['Sleeve dots', 'hsl(225 70% 66%)', 'The dots on the sleeve art'],
-].map(([n, c, use, label]) => `<div class="sw"><i style="background:${c}"></i><div><b>${n}</b><code>${label || c}</code><br>${use}</div></div>`).join('');
-
-// The shirts: one card per design, with both tees drawn and one shown. Each print is in px for a
-// 260px-wide shirt, so the shirts keep that width.
-// The tilted marks: the words alone (no tile), turned 40° about the dot, (0, 0), as intro B turns; 8b
-// turned about the record's centre, as intro C turns. Each viewBox is the turned ink, measured on a
-// render, with a unit to spare, and each is drawn at 1px a unit.
-M['6c-tilt'] = `<svg class="tilt" viewBox="-27.5 -50.75 78.5 99.25" style="width:78.5px" aria-hidden="true"><use href="#words" transform="rotate(40)"/></svg>`;
-M['8b-tilt'] = `<svg class="tilt" viewBox="-1.25 -94.5 93 127.25" style="width:93px" aria-hidden="true"><g transform="rotate(40 73.1 14.16)">
-  <use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.50" height="37.50"/></g></svg>`;
-const tee = (which, colour, seam, cls, k, size) => `<div class="shirt on-${which}-tee" style="--shirt:${colour};--seam:${seam}">
-     <svg class="tee" viewBox="0 0 300 320" aria-hidden="true"><use href="#tee"/></svg>
-     <div class="print ${cls}">${mark(k, size)}</div></div>`;
-const seg = (label, cls = '') => `<span class="seg ${cls}" role="group" aria-label="${label}"><button type="button" data-tee="white" aria-pressed="true">White</button><button type="button" data-tee="black" aria-pressed="false">Black</button></span>`;
-const merch = document.getElementById('merch');
-merch.innerHTML = [
-  ['2c', 'Horizontal, chest', 's-s', ''],
-  ['4k', 'Stacked, chest', 's-m', ''],
-  ['6c', 'The words alone, chest', 's-m', 'no-tile'],
-  ['6c', 'The words alone, small, upper left', 's-s', 'no-tile ul'],
-  ['7a', 'The eye over the address, chest', 's-s', ''],
-  ['8b', 'With the record, chest', 's-m', ''],
-  ['6c-tilt', 'The words alone, tilted, chest', 's-m', 'high'],
-  ['8b-tilt', 'With the record, tilted, chest', 's-m', 'high'],
-].map(([k, note, size, extra]) => {
-  const tag = k.replace('-tilt', '');
-  return `<div class="card"><div class="cap"><span><b>${tag}</b><small>${note}</small></span>${seg(`${tag}, ${note}: shirt colour`, 'small')}</div>
-  <div class="stage"><div class="layers">${tee('white', '#fafafa', '#e2e2e2', `lt on-white ${extra}`, k, size)}${tee('black', '#111', '#262626', `dk on-black ${extra}`, k, size)}</div></div></div>`;
-}).join('');
-const setTee = (card, which) => {
-  card.classList.toggle('black', which === 'black');
-  card.querySelectorAll('.cap .seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.tee === which));
-};
-// The switch above the shirts shows the colour they all share, or neither when they differ.
-const bar = document.querySelector('.shirt-bar');
-const syncAll = () => {
-  const cards = [...merch.querySelectorAll('.card')], black = cards.filter(c => c.classList.contains('black')).length;
-  const all = black === 0 ? 'white' : black === cards.length ? 'black' : null;
-  bar.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.tee === all));
-};
-merch.addEventListener('click', e => {
-  const b = e.target.closest('.seg button'); if (b) { setTee(b.closest('.card'), b.dataset.tee); syncAll(); }
-});
-bar.addEventListener('click', e => {
-  const b = e.target.closest('.seg button'); if (!b) return;
-  merch.querySelectorAll('.card').forEach(c => setTee(c, b.dataset.tee));
-  syncAll();
-});
-bar.hidden = false;
-
-document.getElementById('stickers').innerHTML =
-  `<span class="sticker lt">${mark('6d', 's-l')}</span>
-   <span class="sticker dk">${mark('6b', 's-l')}</span>
-   <span class="sticker dk" style="font-size:40px"><span class="round">${E}</span></span>
-   <span class="sticker lt" style="font-size:40px"><span class="round">${E}</span></span>`;
-
-// 7a: the eye as wide as the address's ink. A text box includes the side bearings of its first and
-// last letters, so they are measured on a canvas in the same font and taken off; the address then
-// moves by half their difference, so its ink is centred under the eye. Lengths are read against the
-// eye's own box at its CSS width of 6.6em and set in em, so they hold at every size the mark is shown.
-function fitVert() {
-  const c = document.createElement('canvas').getContext('2d');
-  c.font = '400 100px "Roboto Flex"'; c.fontStretch = 'semi-condensed';
-  const s = c.measureText('s'), p = c.measureText('p');
-  const bl = s.actualBoundingBoxLeft / 100, br = (p.actualBoundingBoxRight - p.width) / 100;  // in em; negative: ink inside the box
-  document.querySelectorAll('.vert').forEach(v => {
-    const svg = v.querySelector('svg'), w = v.querySelector('.w');
-    svg.style.width = ''; w.style.transform = '';
-    const em = svg.getBoundingClientRect().width / 6.6;
-    const width = w.getBoundingClientRect().width / em + bl + br;
-    svg.style.width = width + 'em';
-    w.style.transform = `translateX(${(bl - br) / 2}em)`;
+  // The replay: a click on the logo, a step up from the hover's spin. It plays an intro picked afresh,
+  // as on a new visit, where the page is: the splash flies to the header's logo as it is, small when
+  // scrolled down, and the page fades back in at the same place. The header's transitions are settled
+  // first (`.sl-still`), so a click just after a scroll measures the logo where it ends up. Reading the
+  // layout between taking the class off and putting it back restarts the animations. The stops listen
+  // from the next frame on, so that nothing of the click or key that started the replay can end it.
+  function replay() {
+    end();
+    brand.classList.remove('play');
+    var all = Object.keys(boxes);
+    root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
+    root.classList.add('sl-still');
+    void bar.offsetHeight;
+    start();
+    root.classList.remove('sl-still');
+    requestAnimationFrame(listen);
+  }
+  // Where motion is allowed, the logo is a button that plays the intro, named so, and Space presses it
+  // as well as Enter. Under "reduce motion" it is the link to the top of the page, as without the
+  // script; it follows the setting if that changes. A click with a modifier, or another button, keeps
+  // the link's own behaviour (a new tab, say).
+  function role() {
+    if (moving.matches) {
+      brand.setAttribute('role', 'button');
+      brand.setAttribute('aria-label', 'Sleevesight, play the intro');
+    } else {
+      brand.removeAttribute('role');
+      brand.setAttribute('aria-label', 'Sleevesight, top of the page');
+    }
+  }
+  role();
+  if (moving.addEventListener) moving.addEventListener('change', role);
+  brand.addEventListener('click', function (e) {
+    if (!moving.matches || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    replay();
   });
-}
-document.fonts.ready.then(fitVert);
+  // Space's repeats are cancelled too, or a held Space would scroll the page.
+  brand.addEventListener('keydown', function (e) {
+    if (!moving.matches || e.key !== ' ') return;
+    e.preventDefault();
+    if (!e.repeat) replay();
+  });
+
+  function play() {
+    if (!moving.matches || root.classList.contains('sl-intro')) return;
+    brand.classList.add('play');
+  }
+  brand.addEventListener('pointerenter', play);
+  brand.addEventListener('focus', play);
+  brand.addEventListener('animationend', function (e) {
+    if (e.animationName === 'lg-turn') brand.classList.remove('play');
+  });
+})();
+
+// The intros, each looped: its animations restart every period (`--p`), while it is on screen and
+// motion is allowed. Taking the class off and reading the layout before putting it back restarts them.
+(function () {
+  if (!matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  document.querySelectorAll('.demo').forEach(function (d) {
+    var period = parseFloat(d.style.getPropertyValue('--p')), timer = null;
+    function turn() {
+      d.classList.remove('run');
+      void d.offsetWidth;
+      d.classList.add('run');
+      timer = setTimeout(turn, period);
+    }
+    new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { if (!timer) turn(); }
+      else { clearTimeout(timer); timer = null; d.classList.remove('run'); }
+    }).observe(d);
+  });
+})();
+
+// From intro to header: the intros in turn, each flown onto the stage's header as the page's own
+// script does (`start()` above), then the page, a hold, and the next. The stage's splash takes each
+// intro's drawing from its card above. It runs while the stage is on screen.
+(function () {
+  var stage = document.querySelector('.tstage');
+  if (!stage || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var order = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'],
+      times = {r1: [3400, 4050], r2: [4100, 4750]},
+      fly = stage.querySelector('.ts-splash .fly'),
+      brand = stage.querySelector('.ts-brand'), mark = brand.querySelector('svg'),
+      n = 0, timers = [], visible = false;
+  function later(f, ms) { timers.push(setTimeout(f, ms)); }
+  function clear() { timers.forEach(clearTimeout); timers = []; }
+  function play() {
+    clear();
+    var k = order[n % order.length];
+    n++;
+    var src = document.querySelector('.demo .dz-' + k + ' svg').cloneNode(true);
+    // R1's clip needs an id of its own here too.
+    src.querySelectorAll('[id]').forEach(function (e) { e.id = 'ts-' + e.id; });
+    src.querySelectorAll('[clip-path]').forEach(function (e) {
+      e.setAttribute('clip-path', e.getAttribute('clip-path').replace('url(#', 'url(#ts-'));
+    });
+    fly.innerHTML = '<div class="dz dz-' + k + '"></div>';
+    fly.firstChild.appendChild(src);
+    ['intro', 'out', 'run', 'd', 'drec'].forEach(function (c) { stage.classList.remove(c); });
+    void stage.offsetWidth;
+    // The splash: centred, at most twice the header's scale, and within 95% of the stage's width
+    // and 90% of its height; its flight lands the words' ink on the header's logo.
+    // Measured from the stage's padding box, where the splash is placed: inside its border.
+    var vb = src.viewBox.baseVal, b = stage.getBoundingClientRect(), m = mark.getBoundingClientRect(),
+        r = {left: b.left + stage.clientLeft, top: b.top + stage.clientTop, width: stage.clientWidth, height: stage.clientHeight},
+        u = m.height / 69, k2 = Math.min(2 * u, r.width * .95 / vb.width, r.height * .9 / vb.height),
+        w = vb.width * k2, h = vb.height * k2, x = (r.width - w) / 2, y = (r.height - h) / 2,
+        t = times[k] || [3300, 3950];
+    stage.style.setProperty('--sb', w + 'px');
+    stage.style.setProperty('--sbh', h + 'px');
+    stage.style.setProperty('--sx', x + 'px');
+    stage.style.setProperty('--sy', y + 'px');
+    stage.style.setProperty('--fx', m.left - r.left + (vb.x + 37.59) * u - x + 'px');
+    stage.style.setProperty('--fy', m.top - r.top + (vb.y + 37.26) * u - y + 'px');
+    stage.style.setProperty('--fs', u / k2);
+    stage.style.setProperty('--fly', t[0] + 'ms');
+    stage.classList.add('intro', 'run');
+    if (k === 'd') stage.classList.add('d');
+    later(function () {
+      stage.classList.remove('intro', 'run');
+      if (k === 'd') later(function () { stage.classList.add('drec'); }, 250);
+    }, t[1]);
+    later(function () { stage.classList.add('out'); }, t[1] + 3000);
+    later(function () { if (visible) play(); }, t[1] + 3450);
+  }
+  new IntersectionObserver(function (es) {
+    var was = visible;
+    visible = es[0].isIntersecting;
+    if (visible && !was) play();
+    if (!visible) clear();
+  }).observe(stage);
+  brand.addEventListener('click', play);
+})();
+
+// The switches, one for the logos and intros and one for the merchandise: white or black behind
+// every one of them, both switches set together.
+(function () {
+  var panes = document.querySelectorAll('.logos .lpane'), buttons = document.querySelectorAll('.logos .theme button');
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var dark = b.getAttribute('data-theme') === 'dark';
+      panes.forEach(function (p) { p.classList.toggle('dk', dark); p.classList.toggle('lt', !dark); });
+      buttons.forEach(function (o) { o.setAttribute('aria-pressed', String((o.getAttribute('data-theme') === 'dark') === dark)); });
+    });
+  });
+})();
 </script>
 </body>
 </html>
