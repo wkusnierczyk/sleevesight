@@ -95,8 +95,8 @@ nav.top{flex:none}
 /* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
    so they need no font; "Sleeve" in ink, white on dark as on the brand sheet's black tile, and "sight"
    in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to `#w-sight-5`), so an
-   intro can show or turn each letter on its own. The tile, in the intros only: white on light, black
-   with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
+   intro can show or turn each letter on its own. The tile, in the intros only: white with a faint
+   edge on light, since the page is white too, and black with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
    variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
    grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
 :root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
@@ -168,9 +168,8 @@ figure.side .sq{background:#fff}
 .sq.a-ground{background:#fafbfc}
 @media (prefers-color-scheme: dark){.sq.a-ground{background:#0d1015}}
 /* R2, looped every 7 s as on the old brand sheet: the product page's moves (`.r2-*`), repeated, with
-   a fade in and out. On light the tile is white, so it takes an edge, to show on the white stage. At
+   a fade in and out. The tile takes its faint edge from the page, as in the header. At
    rest (reduced motion) it shows its end, the mark. */
-.loop{--tile-edge:var(--line)}
 .loop svg{width:88%;height:auto;overflow:visible}
 .loop .rv-all{animation:rv-loop 7s infinite}
 .loop .r2-pan{animation:r2-pan 7s infinite}
@@ -315,10 +314,16 @@ html:not(.js) .theme{display:none}
 .ts-fig{margin:20px 0 0}
 .lpane.tstage{position:relative;aspect-ratio:16/10;padding:0;display:block;overflow:hidden}
 .ts-hdr{position:absolute;left:4%;right:4%;top:5%;height:13%;display:flex;align-items:center;justify-content:space-between}
-.ts-brand{all:unset;cursor:pointer;height:100%;display:block}
-.ts-brand:disabled{cursor:default}
+/* The header's logo is part of the picture, hidden from screen readers; a pointer can spin its
+   record and click it on, and the button under the page does the same for every input. Nothing
+   that takes focus is ever hidden. */
+.ts-brand{cursor:pointer;height:100%;display:block}
 .ts-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
-.ts-brand:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
+.ts-ctl{margin:10px 0 0}
+.ts-next{font:inherit;font-family:var(--f-ui);font-size:15px;border:1px solid var(--line);border-radius:999px;padding:5px 16px;background:var(--bg);color:var(--ink);cursor:pointer}
+.ts-next:disabled{opacity:.5;cursor:default}
+.ts-next:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+html:not(.js) .ts-ctl{display:none}
 .ts-brand svg{display:block;height:100%;width:auto;aspect-ratio:128.27/69;overflow:visible}
 .ts-brand .lp-disc{transform-box:fill-box;transform-origin:center}
 .ts-nav{display:flex;gap:6%;width:34%;justify-content:flex-end}
@@ -335,8 +340,6 @@ html:not(.js) .theme{display:none}
 .tstage.intro .fly{animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .ts-nav,.ts-ghost,.ts-brand{transition:opacity 450ms ease-out}
 .tstage.intro .ts-brand{transition:none}
-/* Played from the button with the keyboard, the header keeps it, and its focus ring, in sight. */
-.tstage.intro .ts-brand:focus-visible{opacity:1}
 .tstage.out .ts-brand,.tstage.out .ts-nav,.tstage.out .ts-ghost{opacity:0;transition:opacity 400ms}
 /* D's record turns in beside "sight" once the words have landed. */
 .tstage.d:not(.intro):not(.drec) .ts-brand .lp-disc{opacity:0}
@@ -730,13 +733,14 @@ document.documentElement.classList.add('js');
   <p>The intro plays when the page first loads. One of the intros, chosen at random, plays large in the middle of the window, then shrinks into the header, where the logo stays, and the rest of the page fades in around it.</p>
   <p>It plays only on that first load. A reload, or a return to the page with Back or Forward, shows the page at once: the page reads how it was reached, so nothing is stored in the browser and the address stays as it was. A link to a section of the page skips the intro too.</p>
   <p>A click or a tap on the logo in the header plays an intro again, and hovering over the logo spins the record once. Where the device asks for reduced motion, nothing moves.</p>
-  <p>The example below shows the page simplified to a few lines. Unlike the page, it plays the intros in turn, one after another, rather than at random. Hover over its logo to spin the record; click it to move on to the next intro.</p>
+  <p>The example below shows the page simplified to a few lines. Unlike the page, it plays the intros in turn, one after another, rather than at random. Hover over its logo to spin the record; click the logo, or the button under the page, to move on to the next intro.</p>
   <figure class="ts-fig">
     <div class="lt lpane tstage">
-      <div class="ts-hdr"><button type="button" class="ts-brand" aria-label="Play the next intro" disabled><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg></button><div class="ts-nav" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <div class="ts-hdr"><div class="ts-brand" aria-hidden="true"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg></div><div class="ts-nav" aria-hidden="true"><i></i><i></i><i></i></div></div>
       <div class="ts-ghost" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="ts-splash" aria-hidden="true"><div class="fly"></div></div>
     </div>
+    <p class="ts-ctl"><button type="button" class="ts-next" disabled>Next intro</button></p>
     <figcaption>A simplified page: an intro plays in the middle and shrinks into the header, and the page fades in; then the next intro.</figcaption>
   </figure>
 </section>
@@ -965,20 +969,12 @@ document.documentElement.classList.add('js');
       times = {r1: [3400, 4050], r2: [4100, 4750]},
       fly = stage.querySelector('.ts-splash .fly'),
       brand = stage.querySelector('.ts-brand'), mark = brand.querySelector('svg'),
+      button = stage.parentNode.querySelector('.ts-next'),
       n = 0, timers = [], visible = false;
   function later(f, ms) { timers.push(setTimeout(f, ms)); }
   function clear() { timers.forEach(clearTimeout); timers = []; }
-  // While the logo is hidden (the intro, the fade out), the button is out of the tab order; once the
-  // logo has landed it is back. The example holds on the landed page while the button has focus, so
-  // a keyboard user is never left on an invisible control, and moves on once focus leaves it.
-  function hide(hidden) { brand.tabIndex = hidden ? -1 : 0; }
   function next() {
-    if (document.activeElement === brand) {
-      brand.addEventListener('blur', function () { if (visible && moving.matches) later(next, 1500); }, {once: true});
-      return;
-    }
     stage.classList.add('out');
-    hide(true);
     later(function () { if (visible) play(); }, 450);
   }
   function play() {
@@ -1013,23 +1009,19 @@ document.documentElement.classList.add('js');
     stage.style.setProperty('--fly', t[0] + 'ms');
     stage.classList.add('intro', 'run');
     if (k === 'd') stage.classList.add('d');
-    // Played from the button, the intro keeps the button in the tab order, as focus is on it.
-    if (document.activeElement !== brand) hide(true);
     later(function () {
       stage.classList.remove('intro', 'run');
-      hide(false);
       if (k === 'd') later(function () { stage.classList.add('drec'); }, 250);
     }, t[1]);
     later(next, t[1] + 3000);
   }
-  // Stopped, it shows the page with the header's logo, and its button is disabled.
+  // Stopped, it shows the page with the header's logo, and the button is disabled.
   function stop() {
     clear();
     ['intro', 'out', 'run', 'd', 'drec'].forEach(function (c) { stage.classList.remove(c); });
-    hide(false);
   }
   function update(was) {
-    brand.disabled = !moving.matches;
+    button.disabled = !moving.matches;
     if (visible && moving.matches) { if (!was || !timers.length) play(); } else stop();
   }
   new IntersectionObserver(function (es) {
@@ -1038,8 +1030,9 @@ document.documentElement.classList.add('js');
     update(was);
   }).observe(stage);
   if (moving.addEventListener) moving.addEventListener('change', function () { update(false); });
-  brand.disabled = !moving.matches;
-  brand.addEventListener('click', play);
+  button.disabled = !moving.matches;
+  button.addEventListener('click', play);
+  brand.addEventListener('click', function () { if (moving.matches) play(); });
 })();
 
 // The switches, one for the logos and intros and one for the merchandise: white or black behind
