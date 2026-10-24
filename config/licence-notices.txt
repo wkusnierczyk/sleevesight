@@ -1,19 +1,41 @@
-# The notice each shipped library needs beyond the Apache License's text (#488), read by
+# The notices the shipped libraries need beyond the Apache License's text (#488), read by
 # `listLibraryLicences`, which writes the in-app list of libraries (`assets/licences/libraries.txt`)
 # from it and from the libraries' own POMs.
 #
-# A library whose POM names only the Apache License 2.0 needs no line: the license's text ships
-# (`assets/licences/apache-2.0.txt`). Any other licence needs one, since MIT and BSD ask that the
-# copyright and permission notice go with every copy, as does an Apache-2.0 library that carries a
-# NOTICE file (Apache-2.0, 4(d)). The build fails on a shipped library with neither, on a line
-# that matches no shipped library, on a licence other than the POM's, and on a notice that lacks
-# the licence's text, a copyright line, or the copyright lines and NOTICE file the library ships.
+# A library whose POM names only the Apache License 2.0 takes the license's text
+# (`assets/licences/apache-2.0.txt`). A library needs a line here when its POM names another licence
+# (MIT and BSD ask that the copyright and permission notice go with every copy), when its jar or AAR
+# carries a NOTICE file (Apache-2.0, 4(d)), and when its AAR brings assets into the APK. The build
+# finds those. A line may also add what it cannot find, so each is reviewed: the NOTICE file of a
+# library's upstream distribution that its jar leaves out, and the licence of third-party code or
+# data inside a library, from the library's own licence documents. The build fails on a library
+# with no line it needs, on a line that matches nothing, and on a notice that lacks a part of its
+# licence's text, a copyright line (but for the MPL), or the library's own copyright lines.
 #
 # An entry matches as in `dependency-allowlist.txt`: its group exactly, `group.*` its subgroups as
-# well, and `group:name` that one module. The notice is a file in `app/src/main/assets/licences/`;
-# the name, the rest of the line, is the library's name in the credits.
+# well, and `group:name` that one module; `group:prefix*` also matches each module of the group
+# whose name starts with the prefix. The licence is that of what the notice covers. The notice is a
+# file in `app/src/main/assets/licences/`; the name, the rest of the line, titles it in the credits.
 #
-# module                                                      licence       notice                     name
-org.slf4j:slf4j-api                                           MIT           mit-slf4j.txt              SLF4J API
-com.materialkolor                                             MIT           mit-materialkolor.txt      materialkolor
-androidx.datastore:datastore-preferences-external-protobuf    BSD-3-Clause  bsd-3-clause-protobuf.txt  Protocol Buffers, in DataStore
+# Checked and needing no line (2026-10-25): Kotlin's `license/NOTICE.txt` is for the compiler's
+# distribution; the GWT and Guava code in Kotlin's standard library is Apache-2.0 with no NOTICE
+# file, and its Boost code (BSL-1.0) asks nothing of binaries; emoji2's `libs/repackaged.jar` is
+# FlatBuffers, Apache-2.0 with no NOTICE file. Ktor, OkHttp, Okio, SQLDelight, Guava, JSpecify,
+# Poko and the JetBrains annotations have no NOTICE file at the versions shipped.
+#
+# module                                                      licence       notice                                   name
+#
+# The POM's licence is not Apache-2.0.
+org.slf4j:slf4j-api                                           MIT           mit-slf4j.txt                            SLF4J API
+com.materialkolor                                             MIT           mit-materialkolor.txt                    materialkolor
+androidx.datastore:datastore-preferences-external-protobuf    BSD-3-Clause  bsd-3-clause-protobuf.txt                Protocol Buffers, in DataStore
+#
+# The upstream distribution has a NOTICE file that the jar leaves out.
+org.jetbrains.kotlinx:kotlinx-coroutines-*                    Apache-2.0    apache-notice-kotlinx-coroutines.txt     kotlinx.coroutines
+org.jetbrains.kotlinx:kotlinx-serialization-*                 Apache-2.0    apache-notice-kotlinx-serialization.txt  kotlinx.serialization
+org.jetbrains.kotlinx:kotlinx-io-*                            Apache-2.0    apache-notice-kotlinx-io.txt             kotlinx-io
+com.google.zxing:core                                         Apache-2.0    apache-notice-zxing.txt                  ZXing
+#
+# Third-party code or data inside the library, under its own licence.
+org.jetbrains.kotlin:kotlin-stdlib                            BSD-3-Clause  bsd-3-clause-threetenbp.txt              ThreeTen backport, in Kotlin's standard library
+com.squareup.okhttp3:okhttp-android                           MPL-2.0       mpl-2.0-publicsuffix.txt                 Public Suffix List, in OkHttp

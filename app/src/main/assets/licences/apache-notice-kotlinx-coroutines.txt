@@ -1,0 +1,15 @@
+kotlinx.coroutines, its NOTICE file (https://github.com/Kotlin/kotlinx.coroutines)
+
+kotlinx.coroutines is licensed under the Apache License, Version 2.0, whose text is in the app too
+(apache-2.0.txt). Its distribution includes the NOTICE file below, which section 4(d) of that
+license asks to go with every copy; it is copied from license/NOTICE.txt at 1.11.0.
+
+
+=========================================================================
+==  NOTICE file corresponding to the section 4 d of                    ==
+==  the Apache License, Version 2.0,                                   ==
+==  in this case for the kotlinx.coroutines library.                   ==
+=========================================================================
+
+kotlinx.coroutines library.
+Copyright 2016-2025 JetBrains s.r.o and contributors

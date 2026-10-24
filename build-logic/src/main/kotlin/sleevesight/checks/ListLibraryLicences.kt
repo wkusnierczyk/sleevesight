@@ -28,11 +28,17 @@ import org.w3c.dom.Element
  *
  * A library's licence is the one its POM names, or, when the POM names none, its parent POM's. A
  * library under the Apache License 2.0 alone takes the license's text (`apache-2.0.txt`); any other
- * licence, and an Apache-2.0 library that carries a NOTICE file, needs a line in
- * `config/licence-notices.txt` naming its notice. The build fails on a licence it does not know, on
- * a library with no line it needs, on a line that matches no shipped library or gives another
- * licence than the POM, and on a notice without the licence's text, without a copyright line, or
- * without the copyright lines of the library's own LICENSE file or the text of its NOTICE file.
+ * licence needs a line in `config/licence-notices.txt` naming its notice. So does a library whose
+ * jar or AAR carries a NOTICE file, or whose AAR brings assets into the APK, which may be under
+ * terms of their own (OkHttp's Public Suffix List). A line may add a notice the POM cannot show: an
+ * upstream NOTICE file the jar leaves out, or the licence of third-party code inside the library.
+ *
+ * The build fails on a licence it does not know, on a library with no line it needs, on a line that
+ * matches no shipped library, and on a notice without each part of its licence's text (or, for an
+ * Apache NOTICE, the license's own text in `apache-2.0.txt`), without a copyright line, or without
+ * the copyright lines of the library's own LICENSE file or the text of its NOTICE file. What sits
+ * outside the artifacts, an upstream NOTICE file or third-party code a library's sources name, it
+ * cannot see: those lines are reviewed by hand.
  *
  * The notices are assets, not the libraries' own `META-INF` files: the Android Gradle plugin's
  * default packaging excludes drop `META-INF/LICENSE.txt` (SLF4J's) from the APK, and the BSD text
@@ -80,14 +86,16 @@ abstract class ListLibraryLicences : DefaultTask() {
             artifactModules.get()
                 .map { it.split('\t', limit = 2) }
                 .groupBy({ it[0] }, { bundledFiles(File(it[1])) })
-                .mapValues { (_, all) -> Bundled(all.flatMap { it.licenses }, all.flatMap { it.notices }) }
+                .mapValues { (_, all) ->
+                    Bundled(all.flatMap { it.licenses }, all.flatMap { it.notices }, all.flatMap { it.assets })
+                }
         val table = parseNoticeTable(noticeTable.get().asFile.readText())
         val directory = noticeDirectory.get().asFile
         val result =
             libraries(
                 modules = modules.get(),
                 licences = { licencesOf(it, pomsByModule) },
-                bundled = { bundled[it] ?: Bundled(emptyList(), emptyList()) },
+                bundled = { bundled[it] ?: NONE },
                 table = table,
                 notice = { name -> File(directory, name).takeIf { it.isFile }?.readText() },
             )
@@ -113,10 +121,11 @@ abstract class ListLibraryLicences : DefaultTask() {
         val licences: List<PomLicence>,
     )
 
-    /** The texts of the LICENSE and NOTICE files in a module's artifacts. */
+    /** The texts of the LICENSE and NOTICE files in a module's artifacts, and its AARs' assets. */
     data class Bundled(
         val licenses: List<String>,
         val notices: List<String>,
+        val assets: List<String> = emptyList(),
     )
 
     /** A line of `licence-notices.txt`. */
@@ -148,15 +157,78 @@ abstract class ListLibraryLicences : DefaultTask() {
         /** How many POMs up from a module its licence is looked for: the module's and three parents. */
         const val POM_LEVELS = 4
 
-        /** Words each licence's text has, so a notice holds the licence, not only its name. */
+        const val MIT = "MIT"
+        const val BSD_3 = "BSD-3-Clause"
+        const val MPL_2 = "MPL-2.0"
+
+        private val NONE = Bundled(emptyList(), emptyList())
+
+        /**
+         * A sentence of each part of each licence's text: the grant, every condition and the
+         * disclaimer. A notice must hold them all, whitespace aside, so it holds the licence, not
+         * only its name.
+         */
         private val TEXTS =
             mapOf(
-                "MIT" to listOf("Permission is hereby granted, free of charge, to any person obtaining a copy"),
-                "BSD-3-Clause" to
+                APACHE to
                     listOf(
-                        "Redistributions in binary form must reproduce the above copyright notice",
-                        "Neither the name of",
+                        "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION",
+                        "2. Grant of Copyright License.",
+                        "4. Redistribution.",
+                        "7. Disclaimer of Warranty.",
+                        "END OF TERMS AND CONDITIONS",
                     ),
+                MIT to
+                    listOf(
+                        "Permission is hereby granted, free of charge, to any person obtaining a copy",
+                        "The above copyright notice and this permission notice shall be included in all copies",
+                        "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND",
+                    ),
+                BSD_3 to
+                    listOf(
+                        "Redistribution and use in source and binary forms, with or without modification, are permitted",
+                        "Redistributions of source code must retain the above copyright notice",
+                        "Redistributions in binary form must reproduce the above copyright notice",
+                        "may be used to endorse or promote products derived from this software without specific prior written permission",
+                        "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
+                    ),
+                MPL_2 to
+                    listOf(
+                        "Mozilla Public License Version 2.0",
+                        "3.2. Distribution of Executable Form",
+                        "6. Disclaimer of Warranty",
+                        "Exhibit A - Source Code Form License Notice",
+                    ),
+            )
+
+        /** The licences the build knows, by their names in POMs, lower case, `the ` and spaces aside. */
+        private val NAMES =
+            mapOf(
+                "apache software license, version 2.0" to APACHE,
+                "apache license, version 2.0" to APACHE,
+                "apache license 2.0" to APACHE,
+                "apache-2.0" to APACHE,
+                "apache 2.0" to APACHE,
+                "mit" to MIT,
+                "mit license" to MIT,
+                "bsd-3-clause" to BSD_3,
+                "bsd 3-clause license" to BSD_3,
+                "new bsd license" to BSD_3,
+                "mpl-2.0" to MPL_2,
+                "mozilla public license 2.0" to MPL_2,
+                "mozilla public license, version 2.0" to MPL_2,
+            )
+
+        /** The licences the build knows, by their URLs, without scheme, `www.`, extension or final slash. */
+        private val URLS =
+            mapOf(
+                "apache.org/licenses/license-2.0" to APACHE,
+                "opensource.org/licenses/apache-2.0" to APACHE,
+                "opensource.org/licenses/mit" to MIT,
+                "opensource.org/license/mit" to MIT,
+                "opensource.org/licenses/bsd-3-clause" to BSD_3,
+                "opensource.org/license/bsd-3-clause" to BSD_3,
+                "mozilla.org/mpl/2.0" to MPL_2,
             )
 
         private val COPYRIGHT = Regex("""^\s*Copyright\b.*$""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
@@ -164,20 +236,27 @@ abstract class ListLibraryLicences : DefaultTask() {
         /** The Apache License's own appendix, which shows how to apply it, and other templates. */
         private val TEMPLATE = Regex("""\[yyyy]|<year>|\{yyyy}""", RegexOption.IGNORE_CASE)
 
-        private val LICENSE_FILE = Regex("""^(LICEN[CS]E|COPYING)([._-].*)?$""", RegexOption.IGNORE_CASE)
-        private val NOTICE_FILE = Regex("""^NOTICE([._-].*)?$""", RegexOption.IGNORE_CASE)
+        /** `LICENSE`, `LICENSE-MIT.txt`, `NOTICE.md` and the like; not `License.class`. */
+        private val LICENSE_FILE = Regex("""^(LICEN[CS]E|COPYING)([-_][\w-]*)?(\.(txt|md|html))?$""", RegexOption.IGNORE_CASE)
+        private val NOTICE_FILE = Regex("""^NOTICE([-_][\w-]*)?(\.(txt|md|html))?$""", RegexOption.IGNORE_CASE)
 
-        /** The SPDX identifier of a POM's licence, for the licences the build knows; null for others. */
+        /**
+         * The SPDX identifier of a POM's licence, for the licences the build knows; null for others.
+         * The name and the URL must each be one the build knows, or be blank or unknown while the
+         * other is known, and not name different licences: `MIT-0` or `BSD-3-Clause-Clear` is not MIT
+         * or BSD-3-Clause.
+         */
         fun spdx(licence: PomLicence): String? {
-            val name = licence.name.lowercase().trim()
-            val url = licence.url.lowercase()
-            return when {
-                "apache.org/licenses/license-2.0" in url || Regex("""apache.*2\.0""").containsMatchIn(name) -> APACHE
-                name == "mit" || "mit license" in name || Regex("""opensource\.org/licenses?/mit""").containsMatchIn(url) -> "MIT"
-                "bsd-3-clause" in name || "bsd 3-clause" in name || "new bsd" in name ||
-                    "opensource.org/licenses/bsd-3-clause" in url -> "BSD-3-Clause"
-                else -> null
-            }
+            val name = licence.name.lowercase().trim().removePrefix("the ").replace(Regex("\\s+"), " ")
+            val url =
+                licence.url.lowercase().trim()
+                    .replace(Regex("^https?://"), "")
+                    .removePrefix("www.")
+                    .removeSuffix("/")
+                    .replace(Regex("\\.(txt|html|php)$"), "")
+            val byName = NAMES[name]
+            val byUrl = URLS[url]
+            return if (byName != null && byUrl != null && byName != byUrl) null else byName ?: byUrl
         }
 
         /**
@@ -245,7 +324,21 @@ abstract class ListLibraryLicences : DefaultTask() {
                     Entry(parts[0], parts[1], parts[2], parts[3])
                 }
 
-        /** Each library with its licence and notice, and what is wrong, one line each. */
+        /**
+         * [entry] (a line's module) matches [module] (`group:name:version`) as in the dependency
+         * allowlist, or, written `group:prefix*`, every module of the group whose name starts so.
+         */
+        fun entryMatches(
+            entry: String,
+            module: String,
+        ): Boolean =
+            if (':' in entry && entry.endsWith("*")) {
+                module.substringBeforeLast(':').startsWith(entry.removeSuffix("*"))
+            } else {
+                CheckDependencies.moduleMatches(entry, module)
+            }
+
+        /** Each library with its licence and notices, one row per notice, and what is wrong, one line each. */
         @Suppress("CyclomaticComplexMethod", "LongMethod") // One pass over the rules the KDoc lists.
         fun libraries(
             modules: List<String>,
@@ -256,69 +349,94 @@ abstract class ListLibraryLicences : DefaultTask() {
         ): Result {
             val problems = mutableListOf<String>()
             val used = mutableSetOf<Entry>()
-            val libraries =
-                modules.mapNotNull { module ->
-                    val pomLicences = licences(module)
-                    if (pomLicences == null) {
-                        problems += "$module: no licence in its POM or its parents'"
-                        return@mapNotNull null
-                    }
-                    val ids = pomLicences.map { spdx(it) }
-                    if (null in ids) {
-                        val unknown = pomLicences.filter { spdx(it) == null }.joinToString { "${it.name} <${it.url}>" }
-                        problems += "$module: a licence the build does not know: $unknown; review it and add it to the check"
-                        return@mapNotNull null
-                    }
-                    val others = ids.filterNotNull().distinct().filter { it != APACHE }
-                    val files = bundled(module)
-                    val entry = table.firstOrNull { CheckDependencies.moduleMatches(it.module, module) }
-                    entry?.let { used += it }
-                    when {
-                        others.size > 1 -> {
-                            problems += "$module: more than one licence besides Apache-2.0 (${others.joinToString()}); review it"
-                            null
-                        }
-                        entry == null && (others.isNotEmpty() || files.notices.isNotEmpty()) -> {
-                            val why = others.singleOrNull() ?: "Apache-2.0 with a NOTICE file"
-                            problems += "$module: $why, with no line in licence-notices.txt naming its notice"
-                            null
-                        }
-                        entry == null -> Library(module, APACHE, APACHE_NOTICE, "")
-                        else -> {
-                            val licence = others.singleOrNull() ?: APACHE
-                            if (entry.licence != licence) {
-                                problems += "$module: licence-notices.txt says ${entry.licence}, its POM $licence"
-                            } else if (licence == APACHE && files.notices.isEmpty()) {
-                                problems += "$module: Apache-2.0 with no NOTICE file needs no line in licence-notices.txt"
-                            }
-                            problems += noticeProblems(module, entry, licence, files, notice(entry.notice))
-                            Library(module, licence, entry.notice, entry.name)
-                        }
-                    }
+            val libraries = mutableListOf<Library>()
+            for (module in modules) {
+                val pomLicences = licences(module)
+                if (pomLicences == null) {
+                    problems += "$module: no licence in its POM or its parents'"
+                    continue
                 }
+                val ids = pomLicences.map { spdx(it) }
+                if (null in ids) {
+                    val unknown = pomLicences.filter { spdx(it) == null }.joinToString { "${it.name} <${it.url}>" }
+                    problems += "$module: a licence the build does not know: $unknown; review it and add it to the check"
+                    continue
+                }
+                val others = ids.filterNotNull().distinct().filter { it != APACHE }
+                if (others.size > 1) {
+                    problems += "$module: more than one licence besides Apache-2.0 (${others.joinToString()}); review it"
+                    continue
+                }
+                val files = bundled(module)
+                val lines = table.filter { entryMatches(it.module, module) }
+                used += lines
+                lines.groupBy { it.notice }.filterValues { it.size > 1 }.keys.forEach {
+                    problems += "$module: more than one line names $it"
+                }
+                val own = others.singleOrNull()
+                val ownLines = if (own == null) emptyList() else lines.filter { it.licence == own }
+                when {
+                    own == null -> libraries += Library(module, APACHE, APACHE_NOTICE, "")
+                    ownLines.isEmpty() -> problems += "$module: $own, with no line in licence-notices.txt naming its notice"
+                    ownLines.size > 1 -> problems += "$module: more than one line gives its licence, $own"
+                    else -> libraries += ownLines.single().let { Library(module, own, it.notice, it.name) }
+                }
+                if (lines.isEmpty() && files.notices.isNotEmpty()) {
+                    problems += "$module: carries a NOTICE file, with no line in licence-notices.txt naming its notice"
+                }
+                if (lines.isEmpty() && files.assets.isNotEmpty()) {
+                    problems += "$module: brings assets into the APK (${files.assets.joinToString()}); " +
+                        "review their licence and add a line naming the notice they need"
+                }
+                val texts = lines.associateWith { notice(it.notice) }
+                val held = { n: String -> texts.values.any { it != null && flatten(n) in flatten(it) } }
+                if (lines.isNotEmpty() && !files.notices.all(held)) {
+                    problems += "$module: no notice of its lines holds the text of its NOTICE file"
+                }
+                for (line in lines - ownLines.toSet()) libraries += Library(module, line.licence, line.notice, line.name)
+                for (line in lines) {
+                    problems += noticeProblems(module, line, texts[line], if (line in ownLines) files.licenses else emptyList())
+                }
+            }
             problems += (table - used).map { "licence-notices.txt: ${it.module} matches no shipped library" }
-            return Result(libraries, problems)
+            notice(APACHE_NOTICE).let { text ->
+                if (text == null) {
+                    problems += "$APACHE_NOTICE is not in assets/licences"
+                } else {
+                    problems += missingText(APACHE, text).map { "$APACHE_NOTICE lacks the Apache-2.0 text (\"$it\")" }
+                }
+            }
+            return Result(libraries.distinct(), problems.distinct())
         }
 
+        /** The sentences of [licence]'s text that [text] lacks. */
+        private fun missingText(
+            licence: String,
+            text: String,
+        ): List<String> = TEXTS[licence].orEmpty().filterNot { flatten(it) in flatten(text) }
+
+        /**
+         * What is wrong with [line]'s notice, [text]: its licence's text (an Apache NOTICE's is
+         * `apache-2.0.txt`, checked once), a copyright line (the MPL asks for none), and the copyright
+         * lines of the library's own LICENSE files, [licenses], for the line of the library's licence.
+         */
         private fun noticeProblems(
             module: String,
-            entry: Entry,
-            licence: String,
-            files: Bundled,
+            line: Entry,
             text: String?,
+            licenses: List<String>,
         ): List<String> {
-            if (text == null) return listOf("$module: its notice, ${entry.notice}, is not in assets/licences")
-            val flat = flatten(text)
+            if (line.licence !in TEXTS) {
+                return listOf("$module: licence-notices.txt gives ${line.licence}, a licence the build does not know")
+            }
+            if (text == null) return listOf("$module: its notice, ${line.notice}, is not in assets/licences")
             val problems = mutableListOf<String>()
-            TEXTS[licence].orEmpty().filterNot { flatten(it) in flat }.forEach {
-                problems += "$module: ${entry.notice} lacks the $licence text (\"$it\")"
+            if (line.licence != APACHE) {
+                missingText(line.licence, text).forEach { problems += "$module: ${line.notice} lacks the ${line.licence} text (\"$it\")" }
             }
-            if (COPYRIGHT.findAll(text).none()) problems += "$module: ${entry.notice} has no copyright line"
-            copyrightLines(files.licenses).filterNot { flatten(it) in flat }.forEach {
-                problems += "$module: ${entry.notice} lacks the library's own \"$it\""
-            }
-            files.notices.filterNot { flatten(it) in flat }.forEach { _ ->
-                problems += "$module: ${entry.notice} lacks the text of the library's NOTICE file"
+            if (line.licence != MPL_2 && COPYRIGHT.findAll(text).none()) problems += "$module: ${line.notice} has no copyright line"
+            copyrightLines(licenses).filterNot { flatten(it) in flatten(text) }.forEach {
+                problems += "$module: ${line.notice} lacks the library's own \"$it\""
             }
             return problems
         }
@@ -329,33 +447,41 @@ abstract class ListLibraryLicences : DefaultTask() {
                 .filterNot { TEMPLATE.containsMatchIn(it) }
                 .distinct()
 
-        /** The LICENSE and NOTICE files in a jar or AAR (and the `classes.jar` in an AAR). */
+        /**
+         * The LICENSE and NOTICE files in a jar or AAR, and in the jars inside it (an AAR's
+         * `classes.jar` and the jars in its `libs`), and an AAR's assets, which the APK takes as they are.
+         */
         fun bundledFiles(artifact: File): Bundled =
             if (artifact.extension in setOf("jar", "aar")) {
-                artifact.inputStream().use { bundledFiles(it) }
+                artifact.inputStream().use { bundledFiles(it, aar = artifact.extension == "aar") }
             } else {
-                Bundled(emptyList(), emptyList())
+                NONE
             }
 
-        private fun bundledFiles(stream: InputStream): Bundled {
+        private fun bundledFiles(
+            stream: InputStream,
+            aar: Boolean,
+        ): Bundled {
             val licenses = mutableListOf<String>()
             val notices = mutableListOf<String>()
+            val assets = mutableListOf<String>()
             val zip = ZipInputStream(stream)
             while (true) {
                 val entry = zip.nextEntry ?: break
                 if (entry.isDirectory) continue
                 val base = entry.name.substringAfterLast('/')
                 when {
-                    entry.name == "classes.jar" ->
-                        bundledFiles(zip.readBytes().inputStream()).let {
+                    entry.name.endsWith(".jar") ->
+                        bundledFiles(zip.readBytes().inputStream(), aar = false).let {
                             licenses += it.licenses
                             notices += it.notices
                         }
+                    aar && entry.name.startsWith("assets/") -> assets += entry.name
                     NOTICE_FILE.matches(base) -> notices += zip.readBytes().decodeToString()
                     LICENSE_FILE.matches(base) -> licenses += zip.readBytes().decodeToString()
                 }
             }
-            return Bundled(licenses, notices)
+            return Bundled(licenses, notices, assets)
         }
 
         /** The asset: a comment, then `module, licence, notice, name` separated by tabs. */

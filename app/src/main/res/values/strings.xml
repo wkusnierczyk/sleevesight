@@ -310,4 +310,6 @@
     <string name="credits_libraries_apache">Under the Apache License 2.0</string>
     <string name="credits_show_licence">Show the licence</string>
     <string name="credits_hide_licence">Hide the licence</string>
+    <string name="credits_licence_shown">Licence shown</string>
+    <string name="credits_licence_hidden">Licence hidden</string>
 </resources>

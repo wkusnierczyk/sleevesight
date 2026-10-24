@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
@@ -35,17 +36,42 @@ class LibraryLicenceTest {
 
     private fun text(id: Int) = app.getString(id)
 
+    private fun waitForText(
+        text: String,
+        substring: Boolean = false,
+    ) = compose.waitUntil(conditionDescription = text, timeoutMillis = 5_000) {
+        compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
+    }
+
     @Test
     fun theListOfLibrariesShipsWithEachNotice() {
         val notices = libraryNotices(asset(LIBRARIES)).associateBy { it.notice }
         assertEquals(
-            setOf("apache-2.0.txt", "mit-slf4j.txt", "mit-materialkolor.txt", "bsd-3-clause-protobuf.txt"),
+            setOf(
+                "apache-2.0.txt",
+                "apache-notice-kotlinx-coroutines.txt",
+                "apache-notice-kotlinx-io.txt",
+                "apache-notice-kotlinx-serialization.txt",
+                "apache-notice-zxing.txt",
+                "bsd-3-clause-protobuf.txt",
+                "bsd-3-clause-threetenbp.txt",
+                "mit-materialkolor.txt",
+                "mit-slf4j.txt",
+                "mpl-2.0-publicsuffix.txt",
+            ),
             notices.keys,
         )
         assertEquals(listOf("org.slf4j:slf4j-api"), notices.getValue("mit-slf4j.txt").libraries)
         assertEquals("BSD-3-Clause", notices.getValue("bsd-3-clause-protobuf.txt").licence)
+        assertEquals(
+            listOf("com.squareup.okhttp3:okhttp-android"),
+            notices.getValue("mpl-2.0-publicsuffix.txt").libraries,
+        )
         assertTrue("androidx.compose.ui" in notices.getValue("apache-2.0.txt").libraries)
-        for (notice in notices.keys) assertTrue(notice, asset("licences/$notice").contains("Copyright"))
+        for (notice in notices.keys - "mpl-2.0-publicsuffix.txt") {
+            assertTrue(notice, asset("licences/$notice").contains("Copyright"))
+        }
+        assertTrue(asset("licences/mpl-2.0-publicsuffix.txt").contains("Mozilla Public License Version 2.0"))
         assertTrue(asset("licences/mit-slf4j.txt").contains("Copyright (c) 2004-2023 QOS.ch"))
         assertTrue(asset("licences/bsd-3-clause-protobuf.txt").contains("Copyright 2008 Google Inc."))
         assertTrue(asset("licences/mit-materialkolor.txt").contains("Copyright (c) 2025 Jordon de Hoog"))
@@ -55,21 +81,68 @@ class LibraryLicenceTest {
     fun theCreditsShowEachLibraryWithItsLicence() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
+            // The list is read off the main thread.
+            waitForText("SLF4J API")
             compose.onNodeWithText(text(R.string.credits_libraries_apache)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("SLF4J API").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("org.slf4j:slf4j-api").performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("BSD 3-Clause License").performScrollTo().assertIsDisplayed()
-
-            // The SLF4J API's link, the last of four: the Apache License's, then by name.
             compose
-                .onAllNodesWithText(text(R.string.credits_show_licence))[3]
+                .onAllNodesWithText("BSD 3-Clause License")
+                .onFirst()
+                .performScrollTo()
+                .assertIsDisplayed()
+
+            // The SLF4J API's link: the Apache License's comes first, then the others by name.
+            val slf4j =
+                libraryNotices(asset(LIBRARIES)).indexOfFirst { it.notice == "mit-slf4j.txt" }
+            compose
+                .onAllNodesWithText(text(R.string.credits_show_licence))[slf4j]
                 .performScrollTo()
                 .performFirstLinkClick()
+            waitForText("Copyright (c) 2004-2023 QOS.ch", substring = true)
             compose
                 .onNodeWithText("Copyright (c) 2004-2023 QOS.ch", substring = true)
                 .performScrollTo()
                 .assertIsDisplayed()
         }
+    }
+
+    @Test
+    fun theLicencesAreReflowedForANarrowScreen() {
+        val text =
+            listOf(
+                "SLF4J API, by QOS.ch",
+                "",
+                "   Permission is hereby granted, free  of charge, to any person",
+                "   obtaining a copy",
+                "",
+                "   1. Definitions.",
+                "      \"License\" shall mean the terms",
+                "      (a) You must give",
+                "      any other recipients",
+                "    * Redistributions of source code must retain",
+                "copyright notice.",
+                "=====",
+                "==  NOTICE file  ==",
+                "=====",
+                "kotlinx.coroutines library.",
+            ).joinToString("\n")
+        assertEquals(
+            listOf(
+                "SLF4J API, by QOS.ch",
+                "",
+                "Permission is hereby granted, free of charge, to any person obtaining a copy",
+                "",
+                "1. Definitions. \"License\" shall mean the terms",
+                "(a) You must give any other recipients",
+                "* Redistributions of source code must retain copyright notice.",
+                "=====",
+                "== NOTICE file ==",
+                "=====",
+                "kotlinx.coroutines library.",
+            ).joinToString("\n"),
+            reflow(text),
+        )
     }
 
     @Test

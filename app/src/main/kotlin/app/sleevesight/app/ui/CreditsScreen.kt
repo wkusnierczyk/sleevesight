@@ -14,17 +14,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.genres.LabelSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
@@ -44,8 +47,11 @@ import java.io.IOException
 @Composable
 fun CreditsScreen() {
     val assets = LocalContext.current.assets
-    val read = { name: String -> readAsset { assets.open(name).bufferedReader().use { it.readText() } } }
-    val libraries = remember { libraryNotices(read(LIBRARIES)) }
+    // Off the main thread: the list and the Apache License are about 12 KB each.
+    val read: suspend (String) -> String? = { name ->
+        withContext(Dispatchers.IO) { readAsset { assets.open(name).bufferedReader().use { it.readText() } } }
+    }
+    val libraries by produceState(emptyList<LibraryNotice>()) { value = libraryNotices(read(LIBRARIES)) }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -195,10 +201,35 @@ private fun readAsset(read: () -> String): String? =
         null
     }
 
+/**
+ * [text] reflowed for a narrow screen, since the licences are wrapped at about 78 columns: the lines
+ * of each paragraph joined, except a line that starts a list item, such as `(a)`, `4.` or `*`, and
+ * the rules and boxes of `=` and `-` some NOTICE files are drawn with, which stay lines of their own.
+ * Runs of spaces become one, and indentation goes. The asset itself stays as it is.
+ */
+internal fun reflow(text: String): String =
+    text.split(Regex("\n[ \t]*\n")).filter { it.isNotBlank() }.joinToString("\n\n") { paragraph ->
+        val lines = mutableListOf<String>()
+        for (line in paragraph.lines().map { it.trim().replace(Regex(" {2,}"), " ") }.filter { it.isNotEmpty() }) {
+            if (lines.isEmpty() || OWN_LINE.containsMatchIn(line) || RULE.containsMatchIn(lines.last())) {
+                lines += line
+            } else {
+                lines[lines.lastIndex] = lines.last() + " " + line
+            }
+        }
+        lines.joinToString("\n")
+    }
+
+/** A list item's start, or a line of a rule or box. */
+private val OWN_LINE = Regex("""^([-*•] |\(?[0-9a-z]{1,3}[.)] |[=-]{2})""")
+
+/** A line of a rule or box, which the next line does not join. */
+private val RULE = Regex("""^[=-]{2}""")
+
 @Composable
 private fun LibraryEntry(
     library: LibraryNotice,
-    read: (String) -> String?,
+    read: suspend (String) -> String?,
 ) {
     Text(
         library.name ?: stringResource(R.string.credits_libraries_apache),
@@ -212,15 +243,17 @@ private fun LibraryEntry(
     // A link, as the other licences are, not a button: in non-touch mode the screen's first button
     // takes the initial focus, and the screen would open scrolled down to it.
     val toggle = stringResource(if (open) R.string.credits_hide_licence else R.string.credits_show_licence)
+    val state = stringResource(if (open) R.string.credits_licence_shown else R.string.credits_licence_hidden)
     Text(
         buildAnnotatedString {
             withLink(LinkAnnotation.Clickable(library.notice, linkStyles()) { open = !open }) { append(toggle) }
         },
         style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.semantics { stateDescription = state },
     )
     if (open) {
-        val text = remember(library.notice) { read(library.notice) }
-        text?.let { Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+        val text by produceState<String?>(null, library.notice) { value = read(library.notice)?.let(::reflow) }
+        text?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
