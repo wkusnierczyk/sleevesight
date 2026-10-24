@@ -13,13 +13,19 @@ import app.sleevesight.core.ai.ModelList
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.StopReason
 import app.sleevesight.core.ai.Usage
+import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetError
 import app.sleevesight.net.NetMethod
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
 import app.sleevesight.net.NetResult
+import app.sleevesight.net.RetryPolicy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -27,9 +33,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // currentTime, advanceTimeBy, runCurrent
 class AnthropicProviderTest {
     private val key = Secret("sk-ant-test-key")
     private val request =
@@ -42,8 +51,44 @@ class AnthropicProviderTest {
         answer: (NetRequest) -> NetResult<NetResponse>,
     ): Pair<List<CompletionEvent>, ReplayNetClient> {
         val net = ReplayNetClient(answer)
-        return AnthropicProvider(net).stream(request, key).toList() to net
+        return provider(net).stream(request, key).toList() to net
     }
+
+    /** A provider whose clock stands at [NOW]. */
+    private fun provider(net: NetClient) = AnthropicProvider(net, RetryPolicy(), clock = clock)
+
+    private val clock =
+        object : Clock {
+            override fun now(): Instant = NOW
+        }
+
+    private fun response(
+        status: Int,
+        body: String,
+        headers: Map<String, List<String>> = emptyMap(),
+    ): NetResult<NetResponse> = NetResult.Success(NetResponse(status, headers, body.encodeToByteArray()))
+
+    /** An error of [type], with [details] when given, as an error body or an `error` event has it. */
+    private fun wireError(
+        type: String,
+        message: String,
+        details: String? = null,
+    ): String = """{"type":"$type","message":"$message"""" + (details?.let { ""","details":$it""" } ?: "") + "}"
+
+    private fun errorBody(error: String) = """{"type":"error","error":$error,"request_id":"req_x"}"""
+
+    /** A 429 `rate_limit_error`, as Anthropic sends one for a rate limit. */
+    private val rateLimit = errorBody(wireError("rate_limit_error", "Number of request tokens has exceeded a limit"))
+
+    /** The error of the tier's spend cap reached, as Anthropic's rate limits page gives it. */
+    private val spendCapError =
+        wireError(
+            "rate_limit_error",
+            "You have reached your API usage limits: your organization has crossed its monthly API usage " +
+                "threshold, set based on your organization's API tier. " +
+                "You will regain access on 2026-09-01 at 00:00 UTC.",
+            """{"error_code":"enforced_spend_limit_reached"}""",
+        )
 
     private fun sse(vararg events: String): String = events.joinToString("") { "data: $it\n\n" }
 
@@ -96,7 +141,7 @@ class AnthropicProviderTest {
     fun `an effort goes in output_config, and none leaves the model's default`() =
         runTest {
             val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
-            AnthropicProvider(net).stream(request.copy(effort = ReasoningEffort.LOW), key).toList()
+            provider(net).stream(request.copy(effort = ReasoningEffort.LOW), key).toList()
 
             val body =
                 Json
@@ -116,7 +161,7 @@ class AnthropicProviderTest {
             val sent =
                 ReasoningEffort.entries.associateWith { effort ->
                     val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
-                    AnthropicProvider(net).stream(request.copy(effort = effort), key).toList()
+                    provider(net).stream(request.copy(effort = effort), key).toList()
                     Json
                         .parseToJsonElement(
                             net.requests
@@ -141,7 +186,7 @@ class AnthropicProviderTest {
         runTest {
             val net = ReplayNetClient { ok(recorded("anthropic/messages-stream.sse")) }
             val older = request.copy(model = "claude-haiku-4-5", effort = ReasoningEffort.LOW)
-            AnthropicProvider(net).stream(older, key).toList()
+            provider(net).stream(older, key).toList()
 
             val body =
                 Json
@@ -307,7 +352,7 @@ class AnthropicProviderTest {
                 listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.INVALID_REQUEST)),
                 events { ok(malformed, 400) }.first,
             )
-            val limited = AnthropicProvider(ReplayNetClient { ok(body(cases[1]), 400) })
+            val limited = provider(ReplayNetClient { ok(body(cases[1]), 400) })
             assertEquals(ModelList.Failed(AiErrorKind.BILLING), limited.models(key))
             // An `error` event mid-stream is read the same way.
             val event = """{"type":"error","error":{"type":"invalid_request_error","message":"${cases[1]}"}}"""
@@ -318,10 +363,113 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `the tier's spend cap reached is billing at once, though its type is a rate limit's`() =
+        runTest {
+            // The documented response carries no `retry-after`.
+            val capped = response(429, errorBody(spendCapError))
+            val started = currentTime
+            val (events, net) = events { capped }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)), events)
+            assertEquals(1, net.requests.size)
+            assertEquals(0, currentTime - started)
+            assertEquals(ModelList.Failed(AiErrorKind.BILLING), provider(ReplayNetClient { capped }).models(key))
+            // An `error` event mid-stream is read the same way.
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.BILLING)),
+                events { ok(sse("""{"type":"error","error":$spendCapError}""")) }.first,
+            )
+            // Another error code on a rate limit's type stays a rate limit.
+            val other = errorBody(wireError("rate_limit_error", "m", """{"error_code":"something_else"}"""))
+            val wait = mapOf("retry-after" to listOf("60"))
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 60.seconds)),
+                events { response(429, other, wait) }.first,
+            )
+        }
+
+    @Test
+    fun `a rate limit passed on as a response keeps its retry-after`() =
+        runTest {
+            val wait = mapOf("retry-after" to listOf("20"))
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 20.seconds)),
+                events { response(429, rateLimit, wait) }.first,
+            )
+            // A 429 whose body says nothing is a rate limit too.
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 20.seconds)),
+                events { response(429, "", wait) }.first,
+            )
+            assertEquals(
+                ModelList.Failed(AiErrorKind.RATE_LIMITED),
+                provider(ReplayNetClient { response(429, rateLimit) }).models(key),
+            )
+        }
+
+    @Test
+    fun `a rate limit within the cap is sent once more after its retry-after, a date included`() =
+        runTest {
+            for ((retryAfter, wait) in listOf("3" to 3.seconds, "Wed, 21 Oct 2026 12:00:07 GMT" to 7.seconds)) {
+                val limited = response(429, rateLimit, mapOf("retry-after" to listOf(retryAfter)))
+                var calls = 0
+                val started = currentTime
+                val (events, net) =
+                    events {
+                        calls++
+                        if (calls == 1) limited else ok(recorded("anthropic/messages-stream.sse"))
+                    }
+                assertIs<CompletionEvent.Done>(events.last(), retryAfter)
+                assertEquals(2, net.requests.size)
+                assertEquals(net.requests[0].body!!.text, net.requests[1].body!!.text)
+                assertEquals(wait.inWholeMilliseconds, currentTime - started, retryAfter)
+            }
+        }
+
+    @Test
+    fun `a rate limit is sent again once only, and not at all past the cap or on another status`() =
+        runTest {
+            val (again, twice) = events { response(429, rateLimit) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), again)
+            assertEquals(2, twice.requests.size)
+
+            val (late, once) = events { response(429, rateLimit, mapOf("retry-after" to listOf("60"))) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED, 60.seconds)), late)
+            assertEquals(1, once.requests.size)
+
+            // A rate limit's type on another status: not a refusal before it was acted on.
+            val (other, alone) = events { response(400, rateLimit) }
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)), other)
+            assertEquals(1, alone.requests.size)
+        }
+
+    @Test
+    fun `a cancel while a rate limit is waited out sends nothing more`() =
+        runTest {
+            val net = ReplayNetClient { response(429, rateLimit, mapOf("retry-after" to listOf("5"))) }
+            val collecting = launch { provider(net).stream(request, key).toList() }
+            advanceTimeBy(1_000)
+            runCurrent()
+            assertEquals(1, net.requests.size)
+            // Still waiting out the `retry-after`, not ended.
+            assertTrue(collecting.isActive)
+            collecting.cancel()
+            advanceTimeBy(10_000)
+            runCurrent()
+            assertTrue(collecting.isCompleted)
+            assertEquals(1, net.requests.size)
+        }
+
+    @Test
+    fun `its host's policy has a 429 passed on, so the body can say why`() {
+        assertTrue(AnthropicProvider.HOST_POLICY.passOn429)
+        assertEquals("https://${AnthropicProvider.HOST}", AnthropicProvider.BASE_URL)
+    }
+
+    @Test
     fun `the connection lost after the message began leaves an incomplete reply`() =
         runTest {
             val net =
-                object : app.sleevesight.net.NetClient {
+                object : NetClient {
                     override suspend fun send(request: NetRequest): NetResult<NetResponse> = error("not used")
 
                     override suspend fun stream(
@@ -337,7 +485,7 @@ class AnthropicProviderTest {
 
                     override fun close() = Unit
                 }
-            val events = AnthropicProvider(net).stream(request, key).toList()
+            val events = provider(net).stream(request, key).toList()
             assertEquals(listOf(CompletionEvent.Delta("Half"), CompletionEvent.Error(AiErrorKind.INCOMPLETE)), events)
         }
 
@@ -345,7 +493,7 @@ class AnthropicProviderTest {
     fun `a collector that stops early cancels the stream`() =
         runTest {
             val first =
-                AnthropicProvider(
+                provider(
                     ReplayNetClient {
                         ok(recorded("anthropic/messages-stream.sse"))
                     },
@@ -370,7 +518,7 @@ class AnthropicProviderTest {
                         ),
                     )
                 }
-            val listed = assertIs<ModelList.Listed>(AnthropicProvider(net).models(key)).models
+            val listed = assertIs<ModelList.Listed>(provider(net).models(key)).models
 
             assertEquals(14, listed.size)
             assertEquals(
@@ -389,7 +537,7 @@ class AnthropicProviderTest {
     @Test
     fun `a model list that fails says why`() =
         runTest {
-            val provider = { answer: NetResult<NetResponse> -> AnthropicProvider(ReplayNetClient { answer }) }
+            val provider = { answer: NetResult<NetResponse> -> provider(ReplayNetClient { answer }) }
             assertEquals(
                 ModelList.Failed(AiErrorKind.UNAUTHORIZED),
                 provider(failure(NetError.Unauthorized(401))).models(key),
@@ -400,4 +548,8 @@ class AnthropicProviderTest {
                 provider(ok("""{"type":"error","error":{"type":"invalid_request_error"}}""", 400)).models(key),
             )
         }
+
+    private companion object {
+        val NOW: Instant = Instant.parse("2026-10-21T12:00:00Z")
+    }
 }
