@@ -27,10 +27,12 @@ class AnthropicLiveTest {
         assumeTrue(key != null, "$KEY_VARIABLE is not set")
         val secret = Secret(key!!)
         val model = Settings(aiProvider = app.sleevesight.core.model.ProviderId.ANTHROPIC).model!!
+        val hosts = mapOf(AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY)
+        val config = NetConfig(appVersion = "0.0.0-live-test", hosts = hosts)
         // Real time and a real network: not `runTest`, whose virtual clock would skip the timeouts.
         runBlocking {
-            NetClient(NetConfig(appVersion = "0.0.0-live-test")).use { net ->
-                val provider = AnthropicProvider(net)
+            NetClient(config).use { net ->
+                val provider = AnthropicProvider(net, config.retry)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
                 assertTrue(models.any { it.id == model }, "the default model $model is not listed")
                 val events =

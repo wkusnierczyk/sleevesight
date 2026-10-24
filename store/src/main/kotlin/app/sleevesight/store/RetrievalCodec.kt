@@ -25,12 +25,30 @@ internal object RetrievalCodec {
      * page it links, by which labels from two sources combine and are credited, and the artists
      * whose MusicBrainz tags give labels (#84). The first release's date (#52) is an optional field
      * that older entries lack: MusicBrainz's extraction version, not this format, makes them misses.
+     * 5: a rejection's scope (#420). 6: whether the result is about the track alone
+     * ([SourceResult.trackOnly], #420), without which an entry cannot say whether it may be kept
+     * while *Keep what sources said about each artist* is off.
      */
-    const val FORMAT: Int = 4
+    const val FORMAT: Int = 6
 
     private val json = Json { encodeDefaults = false }
 
     private val SCOPES: Map<String, Scope> = Scope.entries.associateBy { it.key }
+
+    /**
+     * Text an encoded result holds only if it is about the track alone ([SourceResult.trackOnly]):
+     * the field is not encoded when false, and a string's own text cannot hold it, since its
+     * quotation marks are escaped. For deleting every other entry in the database
+     * (`retrievalDeleteAboutArtists`, #420) without decoding each.
+     */
+    const val TRACK_ONLY_MARKER: String = "\"trackOnly\":true"
+
+    /**
+     * Whether [result] may say something about an artist: unless its adapter marked it as about
+     * the track alone ([SourceResult.trackOnly]), it is taken to (#420). Such a result is kept only
+     * while *Keep what sources said about each artist* is on.
+     */
+    fun aboutArtists(result: SourceResult): Boolean = !result.trackOnly
 
     fun encode(result: SourceResult): String =
         json.encodeToString(
@@ -41,10 +59,11 @@ internal object RetrievalCodec {
                 latency = result.latency.toIsoString(),
                 evidence = result.evidence.map(::draftJson),
                 unverified = result.unverified.map(::draftJson),
-                rejections = result.rejections.map { RejectionJson(it.subject, it.reason) },
+                rejections = result.rejections.map { RejectionJson(it.subject, it.reason, it.scope.key) },
                 genres = result.genres.map { GenreJson(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = result.labelArtists,
                 firstReleased = result.firstReleased,
+                trackOnly = result.trackOnly,
             ),
         )
 
@@ -57,10 +76,18 @@ internal object RetrievalCodec {
                 evidence = stored.evidence.map(::draft),
                 latency = Duration.parseIsoString(stored.latency),
                 unverified = stored.unverified.map(::draft),
-                rejections = stored.rejections.map { Rejection(it.subject, it.reason) },
+                rejections =
+                    stored.rejections.map {
+                        Rejection(
+                            it.subject,
+                            it.reason,
+                            requireNotNull(SCOPES[it.scope]) { "Unknown scope ${it.scope}" },
+                        )
+                    },
                 genres = stored.genres.map { GenreLabel(it.tag, it.family, it.hue, it.label, it.identity, it.url) },
                 labelArtists = stored.labelArtists,
                 firstReleased = stored.firstReleased,
+                trackOnly = stored.trackOnly,
             )
         } catch (_: IllegalArgumentException) {
             // `SerializationException` is one too.
@@ -122,6 +149,7 @@ internal object RetrievalCodec {
         val genres: List<GenreJson> = emptyList(),
         val labelArtists: List<String> = emptyList(),
         val firstReleased: String? = null,
+        val trackOnly: Boolean = false,
     )
 
     @Serializable
@@ -147,5 +175,6 @@ internal object RetrievalCodec {
     private data class RejectionJson(
         val subject: String,
         val reason: String,
+        val scope: String = Scope.SONG.key,
     )
 }

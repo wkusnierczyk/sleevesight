@@ -73,9 +73,11 @@ class SettingsStore(
     /**
      * Records a player the session layer has seen, so *Players to follow* shows a switch for it,
      * off: a new player is followed only once the user switches it on. A player already listed
-     * keeps its switch.
+     * keeps its switch. The session layer names only players that reported music (#435); a phone
+     * call's package ([Settings.isCall]) is never listed, whoever names it.
      */
     suspend fun playerSeen(packageName: String) {
+        if (Settings.isCall(packageName)) return
         update { s ->
             val players = s.followedPlayers
             if (packageName in players) s else s.copy(followedPlayers = players + (packageName to false))

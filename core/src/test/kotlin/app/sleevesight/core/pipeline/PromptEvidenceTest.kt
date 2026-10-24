@@ -48,6 +48,20 @@ class PromptEvidenceTest {
     }
 
     @Test
+    fun `a fact fetched again with other typography is still left out, one with other words is not`() {
+        // With the artist cache off (#420), the next track's artist lines are fetched afresh.
+        val cited = setOf(ArtistFact.of(set(formed).lines.single()))
+        val retyped = line(SourceId.WIKIPEDIA, "The  band formed in 1960", Scope.ARTIST)
+        val curly = line(SourceId.WIKIDATA, "The band\u2019s label is Parlophone.", Scope.ARTIST)
+        val labelCited = setOf(ArtistFact.of(set(label).lines.single()))
+        val edited = line(SourceId.WIKIPEDIA, "The band formed in 1961.", Scope.ARTIST)
+
+        assertEquals(listOf("MB1"), sent(set(song(1), retyped), cited))
+        assertEquals(listOf("MB1"), sent(set(song(1), curly), labelCited))
+        assertEquals(listOf("MB1", "W1"), sent(set(song(1), edited), cited))
+    }
+
+    @Test
     fun `when leaving lines out would leave nothing to narrate, the whole evidence is sent`() {
         val evidence = set(formed, release)
 

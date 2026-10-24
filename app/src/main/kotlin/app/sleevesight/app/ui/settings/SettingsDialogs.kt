@@ -112,6 +112,8 @@ internal fun KeyDialog(
 
     // Runs [action], which returns what to say of its failure, or null when it succeeded.
     fun run(action: suspend () -> Int?) {
+        // `enabled` takes effect only after a recomposition, so two taps in one frame both reach here.
+        if (busy) return
         busy = true
         failed = null
         scope.launch {
@@ -240,7 +242,8 @@ internal class Confirmation(
 /**
  * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
  * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
- * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed.
+ * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
+ * second tap does not run it again.
  */
 @Composable
 internal fun ConfirmDialog(
@@ -269,6 +272,8 @@ internal fun ConfirmDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    // As in [KeyDialog]: a second tap in the same frame finds the button still enabled.
+                    if (busy) return@TextButton
                     busy = true
                     failed = false
                     scope.launch {

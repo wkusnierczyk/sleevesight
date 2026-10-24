@@ -90,8 +90,8 @@ class PipelineWiring internal constructor(
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
         mapOf(
-            ProviderId.ANTHROPIC to AnthropicProvider(net),
             // The clients' retries, as `HostPolicies.netConfig` gives them to `net`.
+            ProviderId.ANTHROPIC to AnthropicProvider(net, HostPolicies.RETRY),
             ProviderId.OPENAI to OpenAiProvider(net, HostPolicies.RETRY),
             ProviderId.GOOGLE to GoogleProvider(net, HostPolicies.RETRY),
         )

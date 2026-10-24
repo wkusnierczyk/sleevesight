@@ -28,9 +28,9 @@ import app.sleevesight.core.genres.LabelSource
 
 /**
  * The credits (architecture, *UI*, *Licensing*): each data source the app uses, with its licence
- * and attribution, and then the font it bundles, Roboto (#377). MusicBrainz is listed with both its
- * licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a genre label source
- * (D12, #84).
+ * and attribution, then the font it bundles, Roboto (#377), and then its icons' set, Material
+ * Symbols. MusicBrainz is listed with both its licences, CC0 for its core data and CC BY-NC-SA 3.0
+ * for its tags, which are a genre label source (D12, #84).
  */
 @Composable
 fun CreditsScreen() {
@@ -47,6 +47,7 @@ fun CreditsScreen() {
             Text(stringResource(R.string.credits_intro), style = MaterialTheme.typography.bodyLarge)
             for (credit in CREDITS) CreditEntry(credit)
             CreditEntry(FONT_CREDIT)
+            CreditEntry(ICON_CREDIT)
         }
     }
 }
@@ -94,6 +95,18 @@ internal val FONT_CREDIT: Credit =
         R.string.credits_roboto,
         R.string.credits_roboto_text,
         Licence("SIL Open Font License 1.1", "https://openfontlicense.org"),
+    )
+
+/**
+ * Material Symbols, Google's icons, whose outlines the `ic_*` symbols in `res/drawable` other than
+ * the launcher's are (the cogwheel, #445, among them), under the Apache License 2.0; the licence's
+ * text is in the app too (`assets/licences/apache-2.0.txt`).
+ */
+internal val ICON_CREDIT: Credit =
+    Credit(
+        R.string.credits_material_symbols,
+        R.string.credits_material_symbols_text,
+        Licence("Apache License 2.0", "https://www.apache.org/licenses/LICENSE-2.0"),
     )
 
 @Composable

@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class SessionFactsTest {
     private val formed = ArtistFact(SourceId.WIKIPEDIA, "The band formed in 1960.")
@@ -82,6 +83,24 @@ class SessionFactsTest {
 
             assertEquals(setOf(formed), facts.citedByOthers("band|three"))
         }
+
+    @Test
+    fun `facts match by source and folded text, not by text to the character`() {
+        assertEquals(formed, ArtistFact(SourceId.WIKIPEDIA, "the band formed\u00A0in 1960"))
+        assertEquals(
+            formed.hashCode(),
+            ArtistFact(SourceId.WIKIPEDIA, " The band  formed in 1960. ").hashCode(),
+        )
+        assertEquals(label, ArtistFact(SourceId.WIKIDATA, "The band\u2019s label is Parlophone."))
+        // Thin, hair and narrow no-break spaces, as Wikipedia uses.
+        assertEquals(formed, ArtistFact(SourceId.WIKIPEDIA, "The band\u2009formed\u200Ain\u202F1960."))
+        assertEquals(
+            ArtistFact(SourceId.WIKIPEDIA, "Formed in 1960 \u2013 1961."),
+            ArtistFact(SourceId.WIKIPEDIA, "Formed in 1960 - 1961."),
+        )
+        assertNotEquals(formed, ArtistFact(SourceId.WIKIDATA, formed.text), "another source")
+        assertNotEquals(formed, ArtistFact(SourceId.WIKIPEDIA, "The band formed in 1961."), "other words")
+    }
 
     @Test
     fun `none keeps nothing`() =

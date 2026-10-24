@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.TestStores
 import app.sleevesight.core.ai.ReasoningEffort
@@ -72,6 +73,41 @@ class SettingsStoreTest {
             stores.close()
             val after = store().settings.first()
             assertEquals(read.copy(lookUpInBackground = true), after)
+        }
+
+    @Test
+    fun anOlderListOfPlayersIsPrunedOnceAndAPhoneCallIsNeverFollowed() =
+        runBlocking {
+            // As an older version left it: telecom listed and switched on, a video app listed off.
+            stores.open("settings").edit { prefs ->
+                prefs[stringSetPreferencesKey("players.on")] = setOf(TELECOM, OTHER_PLAYER)
+                prefs[stringSetPreferencesKey("players.off")] = setOf(VIDEO_APP)
+            }
+            stores.close()
+
+            val store = SettingsStore(stores.open("settings", listOf(PrunePlayersMigration)))
+            assertEquals(setOf(Settings.SPOTIFY, OTHER_PLAYER), store.followedPlayers.first())
+            assertEquals(
+                mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true),
+                store.settings.first().followedPlayers,
+            )
+
+            // Listed again once it reports music; the next start does not prune it again.
+            store.playerSeen(VIDEO_APP)
+            stores.close()
+            val again = SettingsStore(stores.open("settings", listOf(PrunePlayersMigration)))
+            assertEquals(
+                mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true, VIDEO_APP to false),
+                again.settings.first().followedPlayers,
+            )
+        }
+
+    @Test
+    fun aPhoneCallIsNeverListed() =
+        runBlocking {
+            val store = store()
+            store.playerSeen(TELECOM)
+            assertEquals(mapOf(Settings.SPOTIFY to true), store.settings.first().followedPlayers)
         }
 
     @Test
@@ -211,5 +247,7 @@ class SettingsStoreTest {
 
     private companion object {
         const val OTHER_PLAYER = "com.example.player"
+        const val VIDEO_APP = "com.example.video"
+        const val TELECOM = "com.android.server.telecom"
     }
 }

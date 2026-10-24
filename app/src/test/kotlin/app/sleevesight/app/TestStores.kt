@@ -1,5 +1,6 @@
 package app.sleevesight.app
 
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -33,11 +34,15 @@ class TestStores(
 
     fun file(name: String): File = File(dir, "$name.preferences_pb")
 
-    fun open(name: String): DataStore<Preferences> {
+    fun open(
+        name: String,
+        migrations: List<DataMigration<Preferences>> = emptyList(),
+    ): DataStore<Preferences> {
         val job = Job()
         jobs += job
         return PreferenceDataStoreFactory.create(
             corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+            migrations = migrations,
             scope = CoroutineScope(Dispatchers.IO + job),
             produceFile = { file(name) },
         )

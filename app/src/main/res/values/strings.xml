@@ -6,7 +6,7 @@
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
-    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It notes which players have a media session, to list them in its settings; from the players you follow (Spotify by default) it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, and it never touches the audio.</string>
+    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow; from the players you follow (Spotify by default) it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
     <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Last.fm gets the artists’ names only, Wikidata only identifiers, and the album name goes to none of them. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
@@ -87,7 +87,7 @@
     <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
 
     <string name="settings_section_players">Players to follow</string>
-    <string name="settings_players_hint">Sleevesight reads only the players switched on here. A player is listed once it has played.</string>
+    <string name="settings_players_hint">Sleevesight follows only the players switched on here. Other players are only checked for music, a track with a title and an artist, to be listed here; nothing of them is kept or sent. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
 
     <string name="settings_section_sources">Where to look</string>
     <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and each web search engine need your own.</string>
@@ -138,6 +138,8 @@
     <string name="settings_cache_wikipedia">Wikipedia</string>
     <string name="settings_cache_wikidata">Wikidata</string>
     <string name="settings_cache_web">Web search</string>
+    <string name="settings_keep_artists">Keep what sources said about each artist</string>
+    <string name="settings_keep_artists_summary">Off: nothing MusicBrainz, Wikipedia or Last.fm say about an artist is kept, so each track’s artists are looked up again, and their names go to the sources you switch on with every track. Of a track’s findings, only the web search’s findings (pages about the recording, which may name or describe its artists) and those of a lookup that found no artist to look up are kept, so a track played before is looked up again at MusicBrainz (its match held in memory for half an hour only), Wikipedia and Last.fm, unless it has no credited artist, and lookups are slower and more requests go out. On: what they say about each artist you play stays on this phone for as long as its sources’ findings, so fewer requests leave it; each track’s own lookups still send its artists’ names. Turning this off deletes what was kept.</string>
     <string name="settings_section_history">History</string>
     <string name="settings_history_hint">The tracks Sleevesight has seen play, and the track changes it learns your skips from. Kept only on this phone.</string>
     <string name="settings_keep_history">Keep history for</string>
@@ -156,6 +158,8 @@
     <string name="settings_font_app">App font (Roboto)</string>
     <string name="settings_font_system">System font</string>
     <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
+    <string name="settings_intro">Logo intro at start</string>
+    <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
     <string name="settings_section_keys">API keys</string>
     <string name="settings_keys_hint">Your API keys, stored encrypted on this phone. Each is sent only to its own service.</string>
     <string name="settings_scan_keys">Scan keys</string>
@@ -206,7 +210,7 @@
     <string name="settings_remove_all_keys_title">Remove all API keys?</string>
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
-    <string name="settings_credits_value">The data sources and the font, with their licences</string>
+    <string name="settings_credits_value">The data sources, the font and the icons, with their licences</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_summary">What leaves the phone, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
     <string name="settings_section_developer">Developer</string>
@@ -276,9 +280,9 @@
         <item quantity="other">%d hours</item>
     </plurals>
 
-    <!-- Credits: each data source, and the font, with its licence and attribution (architecture, Licensing). -->
+    <!-- Credits: each data source, the font and the icons, with its licence and attribution (architecture, Licensing). -->
     <string name="credits_title">Credits</string>
-    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, and its text is set in this font, each under its own terms.</string>
+    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, its text is set in this font, and its icons come from this set, each under its own terms.</string>
     <string name="credits_musicbrainz">MusicBrainz</string>
     <string name="credits_musicbrainz_text">Recordings, releases, artists, credits and dates, from MusicBrainz.</string>
     <string name="credits_musicbrainz_tags">MusicBrainz tags</string>
@@ -293,4 +297,6 @@
     <string name="credits_exa_text">Web search results, under Exa’s terms of service.</string>
     <string name="credits_roboto">Roboto</string>
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
+    <string name="credits_material_symbols">Material Symbols</string>
+    <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>
 </resources>

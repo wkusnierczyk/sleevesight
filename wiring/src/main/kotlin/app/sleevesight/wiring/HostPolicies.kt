@@ -1,5 +1,6 @@
 package app.sleevesight.wiring
 
+import app.sleevesight.ai.anthropic.AnthropicProvider
 import app.sleevesight.ai.google.GoogleProvider
 import app.sleevesight.ai.openai.OpenAiProvider
 import app.sleevesight.net.HostPolicy
@@ -11,9 +12,9 @@ import app.sleevesight.sources.web.ExaWebSearch
  * The one list of host policies (architecture, *Networking*): each adapter's and provider's own
  * rate limit, under its host. A host's limit is in force only once it is in `NetConfig.hosts`, so an
  * adapter or provider with a stated limit adds its policy here, and both processes get it through
- * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's; OpenAI's and
- * Google's have no interval, only their 429 passed on (`OpenAiProvider.HOST_POLICY`,
- * `GoogleProvider.HOST_POLICY`). The other hosts state no figure for a client
+ * [netConfig]. `:net`'s defaults hold MusicBrainz's; Exa's is the web search adapter's; Anthropic's,
+ * OpenAI's and Google's have no interval, only their 429 passed on (`AnthropicProvider.HOST_POLICY`,
+ * `OpenAiProvider.HOST_POLICY`, `GoogleProvider.HOST_POLICY`). The other hosts state no figure for a client
  * ([NetConfig.DEFAULT_HOSTS] says why).
  *
  * Nothing finds a new adapter's policy for this list: there is no registry of them to check it
@@ -27,12 +28,13 @@ object HostPolicies {
     val ALL: Map<String, HostPolicy> =
         NetConfig.DEFAULT_HOSTS +
             (ExaWebSearch.HOST to ExaWebSearch.HOST_POLICY) +
+            (AnthropicProvider.HOST to AnthropicProvider.HOST_POLICY) +
             (OpenAiProvider.HOST to OpenAiProvider.HOST_POLICY) +
             (GoogleProvider.HOST to GoogleProvider.HOST_POLICY)
 
     /**
      * The retries of the process's client, which a provider that retries a response itself
-     * (`OpenAiProvider` and `GoogleProvider`, for a 429 passed on) takes too, so both wait alike.
+     * (`AnthropicProvider`, `OpenAiProvider` and `GoogleProvider`, for a 429 passed on) takes too, so both wait alike.
      */
     val RETRY: RetryPolicy = RetryPolicy()
 
