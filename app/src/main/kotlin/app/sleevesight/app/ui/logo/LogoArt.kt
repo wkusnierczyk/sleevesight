@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.vector.PathParser
  * The logo's colours, the product page's (`index.html`): the words' ink and the red of "sight"
  * (`--tile-ink`, `--sight`), the record's (`#lp`: its rim, and on dark a black core in place of the
  * groove, so the grey rim meets black), and the tile the intros D and R2 show (`--tile-bg`,
- * `--tile-edge`).
+ * `--tile-edge`), except the light tile's faint edge, which the page has for its white ground.
  */
 @Immutable
 internal data class LogoColors(
@@ -36,7 +36,7 @@ internal data class LogoColors(
         val Light =
             LogoColors(
                 ink = Color(0xFF141A22),
-                sight = Color(0xFFCC212D),
+                sight = Color(0xFFCF222E),
                 rim = Color(0xFF1F2328),
                 dark = false,
                 tile = Color.White,
@@ -45,7 +45,7 @@ internal data class LogoColors(
         val Dark =
             LogoColors(
                 ink = Color.White,
-                sight = Color(0xFFF0443A),
+                sight = Color(0xFFCF222E),
                 rim = Color(0xFF8B949E),
                 dark = true,
                 tile = Color.Black,

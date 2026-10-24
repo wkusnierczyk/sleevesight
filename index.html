@@ -25,7 +25,11 @@ layout: null
      and Roboto Mono for the citation chips; each is a cut-down copy served from this site
      (`assets/fonts/make_page_font.py`), so text added here in new characters needs the Flex and
      Slab copies remade (Mono holds ASCII, for the chips). It keeps nothing in the browser.
-     The palette is the simulator's (`design/simulator.html`), so the page and the app share one look.
+     The palette is the simulator's (`design/simulator.html`), so the page and the app share one look,
+     but for the light ground: white here, where the simulator's is grey. "sight" is in the record
+     label's red (`--sight`, `#cf222e`) in light and dark, so the logo has one red: 5.36:1 on white,
+     and 3.56:1 on the dark ground, where the logo's large type carries it (WCAG's contrast minimum
+     exempts logos).
      The page as it was before its redesign (#328), with its other logos, is
      `design/product-page-2026-10-20.html`. -->
 <!-- Fetched at once rather than when the style sheet asks for it, so the text swaps to it sooner. -->
@@ -40,7 +44,7 @@ layout: null
 @font-face{font-family:"Sleevesight Mono";src:url(assets/fonts/RobotoMono-page.woff2) format("woff2");
   font-weight:500;font-display:swap}
 :root{
-  --bg:#e8ebef; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
+  --bg:#fff; --surface:#fafbfc; --sunken:#f0f2f5; --ink:#141a22; --muted:#596473; --line:#d2d8e0;
   --accent:#3346c9; --on-accent:#ffffff;
   --src-w:#46586e; --src-l:#c0362c; --src-g:#8a560e; --src-mb:#7a4ba3; --ok:#2c7a4b;
   --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -51,7 +55,8 @@ layout: null
   --s-bg:hsl(var(--h) 30% 98%); --s-on:hsl(var(--h) 18% 11%); --s-onv:hsl(var(--h) 10% 34%);
   --s-out:hsl(var(--h) 12% 78%); --s-pri:hsl(var(--h) 52% 36%); --s-pc:hsl(var(--h) 62% 89%); --s-onpc:hsl(var(--h) 62% 17%);
   --cite-ink:#ffffff;
-  --sight:#cc212d;
+  --sight:#cf222e;
+  --track:var(--sight);
   --trace:#7d5a2c;
   color-scheme:light;
 }
@@ -63,7 +68,7 @@ layout: null
   --s-bg:hsl(var(--h) 14% 8%); --s-on:hsl(var(--h) 22% 91%); --s-onv:hsl(var(--h) 10% 70%);
   --s-out:hsl(var(--h) 10% 30%); --s-pri:hsl(var(--h) 70% 80%); --s-pc:hsl(var(--h) 34% 26%); --s-onpc:hsl(var(--h) 62% 89%);
   --cite-ink:#0e1116;
-  --sight:#f0443a;
+  --track:#f0443a;
   --trace:#d1a66a;
   color-scheme:dark}}
 *,*::before,*::after{box-sizing:border-box}
@@ -120,11 +125,12 @@ nav.top{flex:none}
 /* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
    so they need no font; "Sleeve" in ink, white on dark as on the brand sheet's black tile, and "sight"
    in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to `#w-sight-5`), so an
-   intro can show or turn each letter on its own. The tile, in the intros only: white on light, black
-   with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
-   variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
+   intro can show or turn each letter on its own. The tile, in the intros only: white with a faint
+   edge on light, since the page is white too, and black with a faint edge on dark. The record (`#lp`)
+   is the eye logo's disc in its colours, set through variables, since a selector cannot reach into a
+   <use>. On dark, the record's rim takes the outline's
    grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
-:root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
+:root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#fff;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
 .t-ink{fill:var(--tile-ink)}
@@ -164,12 +170,13 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works and You choose: three columns of text, without boxes, each headed as Privacy's leads
    (19px, semibold). In How it works: the verb, in its colour; what the step does; then a short
-   statement, bold, at the foot of the column, so the three line up. The colours: Track the
-   wordmark's red (`--sight`, close to Last.fm's chip in light), Trace an earth ochre (browner than
-   web search's amber, in its hue), Tell the accent blue. */
+   statement, bold, at the foot of the column, so the three line up. The colours: Track (`--track`)
+   the wordmark's red (`--sight`, close to Last.fm's chip) in light, and a lighter red in dark, where
+   the wordmark's is too dark for text this size (3.56:1); Trace an earth ochre (browner than web
+   search's amber, in its hue); Tell the accent blue. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
 .steps h3,.tiles h3{margin:0 0 12px;font-size:19px;font-weight:600}
-.steps .track h3{color:var(--sight)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
+.steps .track h3{color:var(--track)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
 .steps li{display:flex;flex-direction:column}
 .steps li>div{flex:1;display:flex;flex-direction:column;gap:8px}
