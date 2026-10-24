@@ -98,7 +98,7 @@ nav.top{flex:none}
    variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
    grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
 :root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
-@media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#fff;--rim:#8b949e;--core:inline;--groove:none}}
+@media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
 .t-ink{fill:var(--tile-ink)}
 .t-red{fill:var(--sight)}
@@ -183,7 +183,7 @@ figure.side .sq{background:#fff}
 .cw{display:grid;place-items:center;aspect-ratio:2/1;border:1px solid var(--line);border-radius:16px}
 .cw svg{width:58%;height:auto;overflow:visible}
 .cw-light{background:#fff;--tile-ink:#141a22;--sight:#cf222e;--rim:#1f2328;--core:none;--groove:inline}
-.cw-dark{background:#000;--tile-ink:#fff;--sight:#cf222e;--rim:#8b949e;--core:inline;--groove:none}
+.cw-dark{background:#000;--tile-ink:#e5e8ee;--sight:#cf222e;--rim:#8b949e;--core:inline;--groove:none}
 .swatches{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
 .swatches li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;align-items:start}
 .swatches i{grid-row:span 2;width:44px;height:44px;border-radius:10px;box-shadow:inset 0 0 0 1px var(--line)}
@@ -194,7 +194,7 @@ figure.side .sq{background:#fff}
    section to black, setting the variables the words, the record and the eye read. Without the
    script the switch is hidden and the marks stay on white. */
 .logos{--tile-bg:#fff;--tile-edge:var(--line);--m-bg:#fff;--m-ink:#141a22;--m-red:#cf222e;--eye-fill:none;--eye-stroke:#1f2328;--rim:#1f2328;--core:none;--groove:inline;--tile-ink:#141a22;--sight:#cf222e}
-.logos.dark{--tile-bg:#000;--tile-edge:#ffffff40;--m-bg:#000;--m-ink:#fff;--m-red:#cf222e;--eye-fill:#fff;--eye-stroke:#8b949e;--rim:#8b949e;--core:inline;--groove:none;--tile-ink:#fff;--sight:#cf222e}
+.logos.dark{--tile-bg:#000;--tile-edge:#ffffff40;--m-bg:#000;--m-ink:#e5e8ee;--m-red:#cf222e;--eye-fill:#fff;--eye-stroke:#8b949e;--rim:#8b949e;--core:inline;--groove:none;--tile-ink:#e5e8ee;--sight:#cf222e}
 /* The switch rides in a rail at the top of the two sections it serves: it sits beside the Logo
    heading, stays at the top of the window while either section is in view (sticky, in a rail of no
    height), and leaves with them, either way. In the right margin where the window has one, else at
@@ -584,7 +584,7 @@ document.documentElement.classList.add('js');
     <figure>
       <div class="cw cw-dark" role="img" aria-label="The logo in its dark colourway, on black"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></div>
       <figcaption>Dark, on black.</figcaption>
-      <ul class="swatches"><li><i style="background:#000000"></i><div><b>Black</b><code>#000000</code></div><span>The ground.</span></li><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>"Sleeve"; the print on the label, and the hole. 21:1 on black.</span></li><li><i style="background:#8b949e"></i><div><b>Rim on dark</b><code>#8b949e</code></div><span>The disc's rim, in grey, so that the record shows on black. 6.8:1 on black.</span></li><li><i style="background:#1f2328"></i><div><b>Core</b><code>#1f2328</code></div><span>The disc inside the rim, where the light colourway has the ring of groove.</span></li><li><i style="background:#cf222e"></i><div><b>Red</b><code>#cf222e</code></div><span>The label, and "sight", as on light. 3.9:1 on black.</span></li></ul>
+      <ul class="swatches"><li><i style="background:#000000"></i><div><b>Black</b><code>#000000</code></div><span>The ground.</span></li><li><i style="background:#e5e8ee"></i><div><b>Ink on dark</b><code>#e5e8ee</code></div><span>"Sleeve". 17.1:1 on black, as the ink is 17.5:1 on white: a light ink, as far from white as the ink is from black.</span></li><li><i style="background:#ffffff"></i><div><b>White</b><code>#ffffff</code></div><span>The print on the label, and the hole, as on light.</span></li><li><i style="background:#8b949e"></i><div><b>Rim on dark</b><code>#8b949e</code></div><span>The disc's rim, in grey, so that the record shows on black. 6.8:1 on black.</span></li><li><i style="background:#1f2328"></i><div><b>Core</b><code>#1f2328</code></div><span>The disc inside the rim, where the light colourway has the ring of groove.</span></li><li><i style="background:#cf222e"></i><div><b>Red</b><code>#cf222e</code></div><span>The label, and "sight", as on light. 3.9:1 on black.</span></li></ul>
     </figure>
   </div>
   <p>The ratios are each colour's contrast against what it sits on, by the measure of the Web Content Accessibility Guidelines, which ask 4.5:1 of text and 3:1 of large text and graphics, and exempt logos. The dark colourway's rim is grey rather than black, so that the record shows on black.</p>
