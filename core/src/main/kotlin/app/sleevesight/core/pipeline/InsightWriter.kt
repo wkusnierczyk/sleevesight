@@ -22,7 +22,8 @@ import kotlin.time.TimeMark
  * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release. The prompt
  * leaves out artist-level lines the insight should not dwell on (#239, [PromptEvidence]): all of
  * them for a track with enough of its own, else those other tracks' insights in the listening
- * session cited ([SessionFacts]). A fresh reply is checked against what its prompt held, a card from
+ * session cited ([SessionFacts]); and the player's release line when a line about the song names
+ * the release (#424). A fresh reply is checked against what its prompt held, a card from
  * the cache against the whole evidence (see `finish`); both cite the whole evidence's ids.
  */
 internal class InsightWriter(
@@ -125,10 +126,10 @@ internal class InsightWriter(
         } while (again)
     }
 
-    // A call, from the evidence less the artist-level lines the insight should not dwell on (#239),
-    // each line keeping its id, or from the [whole] of it once the run fell back to it. The card's key
-    // keeps the whole evidence's fingerprint, so a track played again finds its card, whatever the
-    // session cited.
+    // A call, from the evidence less the artist-level lines the insight should not dwell on (#239)
+    // and a release line another line restates (#424), each line keeping its id, or from the
+    // [whole] of it once the run fell back to it. The card's key keeps the whole evidence's
+    // fingerprint, so a track played again finds its card, whatever the session cited.
     private suspend fun stream(
         ai: AiAccess,
         model: String,
@@ -136,7 +137,11 @@ internal class InsightWriter(
         control: RunControl,
     ): InsightState {
         val given =
-            if (whole) evidence else PromptEvidence.of(evidence, parts.sessionFacts.citedByOthers(key), parts.hasher)
+            if (whole) {
+                evidence
+            } else {
+                PromptEvidence.of(evidence, nowPlaying.album, parts.sessionFacts.citedByOthers(key), parts.hasher)
+            }
         val sent = Prompted(evidence, given)
         val prompt = InsightPrompt.build(nowPlaying, track, sent.evidence, allowModel)
         val request = CompletionRequest(model, prompt, effort = settings.effort(ai.provider.id))

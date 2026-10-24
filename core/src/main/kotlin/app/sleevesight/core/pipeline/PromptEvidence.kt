@@ -1,8 +1,10 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.SourceId
 
 /**
  * The evidence an insight's prompt is written from (#239, `design/design.md`, *Synthesis*): the
@@ -27,6 +29,15 @@ import app.sleevesight.core.evidence.Scope
  * web search off, so how insights use the artist lines on tracks whose own lines are mostly web
  * results was not measured. With web search on, most tracks reach [ENOUGH_OF_ITS_OWN].
  *
+ * The player's own release line (`P`, [SourceId.PLAYER]) is left out too when a line about the song
+ * names that release ([restatesRelease], #424): MusicBrainz's "first released ..., on the album
+ * “Sundown”", say. On thinly documented tracks the model padded the insight with a sentence citing
+ * the `P` line alone ("This recording is on that same "Sundown" release [P1]"), cited and true but
+ * telling nothing the line before it had not; with no `P` line there is nothing to restate. Where no
+ * line about the song names the release, as on a compilation or a soundtrack, the `P` line stays,
+ * and a sentence citing it tells the listener where this recording comes from. The release stays in
+ * the prompt's track block either way.
+ *
  * Which lines are left out depends on the session, so the synthesis cache keys a card by the whole
  * evidence's fingerprint, not the one sent: a track played again finds the card it was given.
  */
@@ -40,20 +51,78 @@ object PromptEvidence {
     /** The scopes of lines about the track itself, not its artist or the player's release. */
     val TRACK_SCOPES: Set<Scope> = setOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.WEB)
 
-    /** What to send of [evidence], given the facts [citedByOthers] cited in the session. */
+    /**
+     * What to send of [evidence], given the facts [citedByOthers] cited in the session and the
+     * [release] the player reports (`NowPlaying.album`, the `P` line's), null when it reports none.
+     */
     fun of(
         evidence: EvidenceSet,
+        release: String?,
         citedByOthers: Set<ArtistFact>,
         hasher: Hasher,
     ): EvidenceSet {
         val own = evidence.lines.count { it.scope in TRACK_SCOPES }
+        val restated = restatesRelease(evidence, release)
         val sent =
             if (own >= ENOUGH_OF_ITS_OWN) {
-                evidence.without(hasher) { it.scope == Scope.ARTIST }
+                evidence.without(hasher) { it.scope == Scope.ARTIST || restated(it) }
             } else {
-                evidence.without(hasher) { it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers }
+                evidence.without(hasher) {
+                    (it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers) || restated(it)
+                }
             }
         // Decided on the retrieved lines alone: the artists' report does not matter with model knowledge off.
         return if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent
     }
+
+    /**
+     * Which lines of [evidence] only restate the player's [release]: its `P` line, when a line about
+     * the song ([Scope.SONG], from a source other than the player) names the release. A line names
+     * it when it holds the release's name, or the name less one closing bracketed part (the player's
+     * "Rubber Soul (Remastered)" is MusicBrainz's “Rubber Soul”), as a whole: case, spacing,
+     * quotation marks, apostrophes and dashes folded as an [ArtistFact]'s are, and no letter or digit
+     * right before or after it. Lines about an original song, the artist or a web page do not count:
+     * they may name another recording's release. The cost: a release whose name is a common word
+     * ("Love") is taken as named by a song line that uses the word, and its `P` line goes; the
+     * prompt's track block still gives the release, uncitable.
+     */
+    internal fun restatesRelease(
+        evidence: EvidenceSet,
+        release: String?,
+    ): (EvidenceLine) -> Boolean {
+        val names = release?.let(::releaseNames).orEmpty()
+        val named =
+            names.isNotEmpty() &&
+                evidence.lines.any { line ->
+                    line.scope == Scope.SONG && line.source != SourceId.PLAYER && names.any { holds(line.text, it) }
+                }
+        return { line -> named && line.source == SourceId.PLAYER }
+    }
+
+    // The release's name and the name less one closing bracketed part, folded; none blank.
+    private fun releaseNames(release: String): Set<String> =
+        listOf(release, release.replace(CLOSING_BRACKETS, ""))
+            .map { ArtistFact.matchKey(it) }
+            .filter { it.isNotEmpty() }
+            .toSet()
+
+    // Whether [text], folded, holds [name] with no letter or digit right before or after it.
+    private fun holds(
+        text: String,
+        name: String,
+    ): Boolean {
+        val folded = ArtistFact.matchKey(text)
+        var from = folded.indexOf(name)
+        while (from >= 0) {
+            val end = from + name.length
+            val before = from == 0 || !folded[from - 1].isLetterOrDigit()
+            val after = end == folded.length || !folded[end].isLetterOrDigit()
+            if (before && after) return true
+            from = folded.indexOf(name, from + 1)
+        }
+        return false
+    }
+
+    // One closing `(…)` or `[…]` part, and the white space before it.
+    private val CLOSING_BRACKETS = Regex("""\s*[(\[][^()\[\]]*[)\]]\s*$""")
 }
