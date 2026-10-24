@@ -1,11 +1,13 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.ai.Usage
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceResult
@@ -106,7 +108,9 @@ sealed interface InsightState {
      * of the track's out (#239), as the check read it: a citation outside them is `unknown`, and its
      * chip shows and reads as one of no line, though the track has that line. Null when the prompt
      * held every line, and for a card from the cache, which is kept only when it cites none outside
-     * them (`InsightWriter.finish`).
+     * them (`InsightWriter.finish`). [writtenBy] is the prompt version, AI service, model and
+     * effort of the card's key, the call's or the cached card's, which a problem report names
+     * (#390); null only where no pipeline wrote it (a test's fixture).
      */
     data class Written(
         val grounded: GroundedText,
@@ -114,6 +118,7 @@ sealed interface InsightState {
         val usage: Usage? = null,
         val complete: Boolean = true,
         val held: Set<String>? = null,
+        val writtenBy: WrittenBy? = null,
     ) : InsightState
 
     /**
@@ -131,3 +136,15 @@ sealed interface InsightState {
     /** The user stopped the call before its reply ended: nothing is kept, and Write may be offered again. */
     data object Stopped : InsightState
 }
+
+/**
+ * What a written insight was written with, from its card's key ([CardKey]): the insight prompt's
+ * [promptVersion], the AI service ([provider]) and its [model], and the reasoning [effort] asked
+ * for, null for the service's default.
+ */
+data class WrittenBy(
+    val promptVersion: Int,
+    val provider: ProviderId,
+    val model: String,
+    val effort: ReasoningEffort?,
+)
