@@ -4,12 +4,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.PRIVACY_POLICY_SHOWN
+import app.sleevesight.app.ui.SETTINGS_PAGE_URL
+import app.sleevesight.app.ui.USAGE_PAGE_URL
 import app.sleevesight.app.ui.rememberOpenPrivacyPolicy
+import app.sleevesight.app.ui.rememberOpenSitePage
+import app.sleevesight.app.ui.shownAddress
 
 /**
- * The way to the credits, and the privacy policy on the site, with where the app stands under the
- * GDPR and the EU AI Act (#295), opened in the browser. Its row shows the address, so it can be
- * typed in where no browser opens ([rememberOpenPrivacyPolicy]).
+ * The way to the credits; the usage and settings pages on the site (#415, #416); and the privacy
+ * policy on the site, with where the app stands under the GDPR and the EU AI Act (#295). The pages
+ * open in the browser, and each row shows its address, so it can be typed in where no browser opens
+ * ([rememberOpenSitePage]).
  */
 @Composable
 internal fun AboutSection(openCredits: () -> Unit) {
@@ -19,6 +24,18 @@ internal fun AboutSection(openCredits: () -> Unit) {
         title = stringResource(R.string.credits_title),
         value = stringResource(R.string.settings_credits_value),
         onClick = openCredits,
+    )
+    ValueRow(
+        title = stringResource(R.string.settings_usage_page),
+        value = shownAddress(USAGE_PAGE_URL),
+        summary = stringResource(R.string.settings_usage_page_summary),
+        onClick = rememberOpenSitePage(USAGE_PAGE_URL),
+    )
+    ValueRow(
+        title = stringResource(R.string.settings_settings_page),
+        value = shownAddress(SETTINGS_PAGE_URL),
+        summary = stringResource(R.string.settings_settings_page_summary),
+        onClick = rememberOpenSitePage(SETTINGS_PAGE_URL),
     )
     ValueRow(
         title = stringResource(R.string.settings_privacy),
