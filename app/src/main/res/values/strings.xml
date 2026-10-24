@@ -186,7 +186,7 @@
     <string name="setup_nothing">Nothing in this code can be saved.</string>
     <string name="setup_failed">Not saved: %1$s. The phone’s key store or storage failed. Try again.</string>
     <string name="setup_not_a_setup_title">Not a setup code</string>
-    <string name="setup_not_a_setup">This QR code is not a Sleevesight setup code. One is made on a computer with the command-line tool’s keys-qr: never with an online QR generator, which would receive the keys.</string>
+    <string name="setup_not_a_setup">This QR code is not a Sleevesight setup code. One is made on a computer at sleevesight.app/api-keys: never with an online QR generator, which would receive the keys.</string>
     <string name="setup_unsupported_title">A newer setup code</string>
     <string name="setup_unsupported">This setup code is of a later version (%1$s) than this app reads. Update Sleevesight, then scan it again.</string>
     <string name="setup_scan_again">Scan again</string>
