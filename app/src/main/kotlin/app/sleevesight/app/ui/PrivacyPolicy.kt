@@ -49,7 +49,7 @@ internal fun rememberOpenPrivacyPolicy(): () -> Unit = rememberOpenUrl(PRIVACY_P
 /**
  * [url], shown without its scheme and styled as the credits' links are, opening the page when
  * tapped: a clickable text, the whole of it the link, with at least the minimum touch target, and
- * an action a screen reader names (`privacy_policy_open`).
+ * an action a screen reader names (`link_open`).
  */
 @Composable
 internal fun WebLink(
@@ -64,7 +64,7 @@ internal fun WebLink(
         textDecoration = TextDecoration.Underline,
         modifier =
             modifier
-                .clickable(onClickLabel = stringResource(R.string.privacy_policy_open), onClick = open)
+                .clickable(onClickLabel = stringResource(R.string.link_open), onClick = open)
                 .minimumInteractiveComponentSize(),
     )
 }

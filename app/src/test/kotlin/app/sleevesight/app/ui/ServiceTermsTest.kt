@@ -2,7 +2,12 @@ package app.sleevesight.app.ui
 
 import android.content.Intent
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -21,10 +26,12 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.keyName
@@ -70,6 +77,7 @@ class ServiceTermsTest {
 
     private fun show(
         scanner: QrScanner = { _, _ -> },
+        keyboard: ComputerKeyboard = { _, _, _ -> },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -82,7 +90,7 @@ class ServiceTermsTest {
                         { CompletableDeferred(true) },
                         saves,
                         scanner = scanner,
-                        keyboard = { _, _, _ -> },
+                        keyboard = keyboard,
                     ) { it }
                 }
             }
@@ -97,6 +105,10 @@ class ServiceTermsTest {
         }
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
+
+    private companion object {
+        const val SESSION_END = "The end of the keyboard session"
+    }
 
     /** Whether a node's click action is named [label], as a screen reader announces it. */
     private fun hasClickLabel(label: String) =
@@ -125,7 +137,7 @@ class ServiceTermsTest {
                 compose
                     .onNodeWithText(address)
                     .performScrollTo()
-                    .assert(hasClickLabel(text(R.string.privacy_policy_open)))
+                    .assert(hasClickLabel(text(R.string.link_open)))
                     .assertHeightIsAtLeast(48.dp)
                     .performClick()
 
@@ -136,6 +148,17 @@ class ServiceTermsTest {
             }
         }
     }
+
+    @Test
+    fun withATypeOnAComputerSessionRunningTheTermsAndTheSessionScrollIntoView() =
+        show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = tall) {
+            compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            waitForText(SESSION_END)
+            compose.onNodeWithText(SESSION_END).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("ai.google.dev/gemini-api/terms").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.settings_terms_google)).performScrollTo().assertIsDisplayed()
+        }
 
     @Test
     fun aSourcesKeyDialogTellsNoServicesTerms() =
@@ -160,6 +183,14 @@ class ServiceTermsTest {
             waitForText(text(R.string.setup_title))
             assertEquals(false, shown(text(R.string.setup_terms)))
         }
+
+    /** A keyboard session taller than the screen, ending in a line of text, [SESSION_END]. */
+    private val tall: ComputerKeyboard = { _, _, _ ->
+        Column {
+            Box(Modifier.height(1_200.dp))
+            Text(SESSION_END)
+        }
+    }
 
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
     private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
