@@ -335,6 +335,8 @@ html:not(.js) .theme{display:none}
 .tstage.intro .fly{animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
 .ts-nav,.ts-ghost,.ts-brand{transition:opacity 450ms ease-out}
 .tstage.intro .ts-brand{transition:none}
+/* Played from the button with the keyboard, the header keeps it, and its focus ring, in sight. */
+.tstage.intro .ts-brand:focus-visible{opacity:1}
 .tstage.out .ts-brand,.tstage.out .ts-nav,.tstage.out .ts-ghost{opacity:0;transition:opacity 400ms}
 /* D's record turns in beside "sight" once the words have landed. */
 .tstage.d:not(.intro):not(.drec) .ts-brand .lp-disc{opacity:0}
@@ -627,7 +629,7 @@ document.documentElement.classList.add('js');
   <ol class="parts">
     <li><b>The disc.</b> Black vinyl. The mark's rim is the record's edge.</li>
     <li><b>The grooves.</b> One spiral, played from the edge inwards; the mark keeps one ring of it.</li>
-    <li><b>The label.</b> Paper, printed and pressed into the centre, often in the maker's colour: Parlophone's here is red, as the labels of Columbia's twelve-inch popular albums were from 1953. The mark's red is the label's.</li>
+    <li><b>The label.</b> Paper, printed and pressed into the centre, often in the maker's colour: Parlophone's here is red, as the labels of Columbia's twelve-inch popular albums were from mid-1953. The mark's red is the label's.</li>
     <li><b>The arc.</b> The print arched over the hole: on a real label, the maker's name.</li>
     <li><b>The line.</b> The print in a line below the hole: the title, the artist, the catalogue number.</li>
     <li><b>The hole.</b> Where the spindle goes; the record turns about it, as the mark's record does when the logo is hovered.</li>
@@ -966,6 +968,19 @@ document.documentElement.classList.add('js');
       n = 0, timers = [], visible = false;
   function later(f, ms) { timers.push(setTimeout(f, ms)); }
   function clear() { timers.forEach(clearTimeout); timers = []; }
+  // While the logo is hidden (the intro, the fade out), the button is out of the tab order; once the
+  // logo has landed it is back. The example holds on the landed page while the button has focus, so
+  // a keyboard user is never left on an invisible control, and moves on once focus leaves it.
+  function hide(hidden) { brand.tabIndex = hidden ? -1 : 0; }
+  function next() {
+    if (document.activeElement === brand) {
+      brand.addEventListener('blur', function () { if (visible && moving.matches) later(next, 1500); }, {once: true});
+      return;
+    }
+    stage.classList.add('out');
+    hide(true);
+    later(function () { if (visible) play(); }, 450);
+  }
   function play() {
     clear();
     var k = order[n % order.length];
@@ -998,17 +1013,20 @@ document.documentElement.classList.add('js');
     stage.style.setProperty('--fly', t[0] + 'ms');
     stage.classList.add('intro', 'run');
     if (k === 'd') stage.classList.add('d');
+    // Played from the button, the intro keeps the button in the tab order, as focus is on it.
+    if (document.activeElement !== brand) hide(true);
     later(function () {
       stage.classList.remove('intro', 'run');
+      hide(false);
       if (k === 'd') later(function () { stage.classList.add('drec'); }, 250);
     }, t[1]);
-    later(function () { stage.classList.add('out'); }, t[1] + 3000);
-    later(function () { if (visible) play(); }, t[1] + 3450);
+    later(next, t[1] + 3000);
   }
   // Stopped, it shows the page with the header's logo, and its button is disabled.
   function stop() {
     clear();
     ['intro', 'out', 'run', 'd', 'drec'].forEach(function (c) { stage.classList.remove(c); });
+    hide(false);
   }
   function update(was) {
     brand.disabled = !moving.matches;
