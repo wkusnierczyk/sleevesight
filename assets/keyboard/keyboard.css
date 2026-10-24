@@ -1,6 +1,6 @@
 /* The keyboard page (#394), in the product page's palette (`index.html`), on system fonts. */
 :root {
-  --bg: #e8ebef; --surface: #fafbfc; --ink: #141a22; --muted: #596473; --line: #d2d8e0;
+  --bg: #fff; --surface: #fafbfc; --ink: #141a22; --muted: #596473; --line: #d2d8e0;
   --accent: #3346c9; --on-accent: #ffffff; --ok: #2c7a4b; --error: #c0362c;
   color-scheme: light;
 }
