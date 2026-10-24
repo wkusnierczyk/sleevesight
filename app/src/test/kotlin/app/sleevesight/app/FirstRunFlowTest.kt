@@ -57,7 +57,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class FirstRunFlowTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -244,7 +243,7 @@ class FirstRunFlowTest {
     fun accessGrantedBeforeTheFirstRunStillShowsTheFirstRunScreen() {
         setAccess(granted = true)
         launch().use {
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
         }
@@ -276,7 +275,7 @@ class FirstRunFlowTest {
     fun aDeepLinkToHomeDoesNotSkipTheFirstRunScreen() {
         setAccess(granted = true)
         launchDeepLinkedToHome().use { scenario ->
-            compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+            compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
 
             // Dropped before the navigation graph read them.
             var left = emptyList<String>()

@@ -43,7 +43,7 @@ import kotlin.math.abs
  * `SLEEVESIGHT_PICTURES` names a directory, for looking at.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36], qualifiers = "w411dp-h891dp-420dpi")
+@Config(qualifiers = "w411dp-h891dp-420dpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LogoPicturesTest {
     @get:Rule

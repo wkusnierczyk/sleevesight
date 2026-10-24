@@ -14,7 +14,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -27,7 +26,6 @@ import kotlin.time.Instant
  * clock reads [base] plus it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 @OptIn(ExperimentalCoroutinesApi::class) // `getCompleted`, to read a result that must be there.
 internal class HistoryRetentionTest : HistoryRecorderFixture() {
     private val lifetime = MutableStateFlow<Duration?>(Settings.DEFAULT_HISTORY_LIFETIME)

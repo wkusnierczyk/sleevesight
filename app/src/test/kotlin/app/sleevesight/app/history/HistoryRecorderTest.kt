@@ -25,7 +25,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import java.io.IOException
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
@@ -37,7 +36,6 @@ import kotlin.time.Duration.Companion.seconds
  * skip detection*, D15). The history's rows for each sequence are in [HistoryRecorderSequencesTest].
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class HistoryRecorderTest : HistoryRecorderFixture() {
     @Test
     fun aTrackChangeIsRecordedWithItsFeatures() {

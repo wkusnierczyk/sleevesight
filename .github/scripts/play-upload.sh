@@ -17,6 +17,16 @@ fi
 package=$1 bundle=$2 version=$3 track=$4 notes=$5 status=$6
 : "${PLAY_ACCESS_TOKEN:?PLAY_ACCESS_TOKEN is not set}"
 
+# Checked before the edit is opened, so a mistyped `PLAY_RELEASE_STATUS` stops the run here rather
+# than at Play's refusal after the upload.
+case "$status" in
+  completed | draft) ;;
+  *)
+    echo "::error::Release status '$status' is neither completed nor draft (PLAY_RELEASE_STATUS, design/release.md)"
+    exit 2
+    ;;
+esac
+
 # Play's listing language, which the notes are written in.
 language=en-US
 

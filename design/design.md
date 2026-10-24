@@ -364,8 +364,9 @@ Source switches decide what the model may use. The filter chips in the Sources s
 ## Privacy and security
 
 - What leaves the phone, and to whom. The first-run screen says this plainly.
-  - To the enabled sources: the normalized title and artists, for the playing track; Last.fm gets the artists only, and Wikidata only identifiers from MusicBrainz or Wikipedia. The album name goes to none of them. With *Prepare the next track* set to *Evidence* (D13, the default), the title and artists of the next one in the player's queue also go to MusicBrainz where enabled.
+  - To the enabled sources: the normalized title and artists, for the playing track; Last.fm gets the artists only, and Wikidata only identifiers from MusicBrainz or Wikipedia. The album name goes to none of them. With *Prepare the next track* set to *Evidence* (D13, the default), the title and artists of the next track in the player's queue also go to MusicBrainz where enabled.
   - To the chosen AI provider: the title and artists, as the player reports them and as normalized; the album name as the player reports it; and the evidence retrieved from the sources. This is for the playing track only: the next one is not written ahead (D13, #20). Once the user's style (D14) is built, each prompt will also carry it, including any free text they wrote, and everything that says what leaves the phone will say so.
+  - Each API key, only to the service it belongs to, with each request to it.
   - To Spotify, once a build offers connecting a Spotify account (Phase 3) and only if one is connected: requests for the playlist or album being played, made with the user's own token.
   - To the server a cover's web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.
 

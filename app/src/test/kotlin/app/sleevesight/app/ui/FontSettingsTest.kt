@@ -50,11 +50,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** *Font* (#377): Roboto, bundled, by default; the system font as a setting. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class FontSettingsTest {
     @get:Rule
     val compose = createEmptyComposeRule()
