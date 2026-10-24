@@ -35,7 +35,7 @@
     <string name="home_genre_licence">licence</string>
 
     <!-- The insight. -->
-    <string name="home_insight_title">Why it’s interesting</string>
+    <string name="home_insight_title">Key insights</string>
     <string name="home_write">Write insight</string>
     <string name="home_rewrite">Rewrite</string>
     <string name="home_insight_gathering">Gathering evidence…</string>

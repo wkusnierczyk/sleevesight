@@ -68,7 +68,7 @@ When there are none, the line above the labels says why: *No genre labels for th
 
 ### The insight
 
-*Why it's interesting* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
+*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
 
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 
