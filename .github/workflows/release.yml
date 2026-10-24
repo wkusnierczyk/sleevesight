@@ -26,14 +26,17 @@ jobs:
       contents: read
       id-token: write
     steps:
+      # No token kept in `.git/config`: nothing after the checkout pushes, and the repository is
+      # public, so the fetch below needs none.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      # A release is built from `main`: a tag on any other commit stops here. A guard against
-      # mistakes: the check is in the tagged commit's own workflow, so the creation ruleset and the
-      # environment's approval are what stop a tag elsewhere. The branch is named in full, so a tag
-      # called `origin/main` cannot stand in for it.
+      # A release is built from `main`: a tag on a commit that is not on `main` stops here. A guard
+      # against mistakes: the check is in the tagged commit's own workflow, so the creation ruleset
+      # and the environment's approval are what stop a tag elsewhere. The branch is named in full, so
+      # a tag called `origin/main` cannot stand in for it.
       - name: Tagged commit on main
         run: |
           git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
