@@ -16,7 +16,7 @@ code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wr
 .field label { display: block; font-weight: 600; }
 .field input {
   font: 16px/1.4 ui-monospace, "SFMono-Regular", Menlo, monospace; width: 100%; box-sizing: border-box;
-  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);
+  padding: 10px 12px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--sunken); color: var(--ink);
 }
 /* Masked without a password field, which a browser would offer to save. */
 .field input.masked { -webkit-text-security: disc; }

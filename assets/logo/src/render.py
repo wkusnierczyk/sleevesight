@@ -19,7 +19,7 @@ FPS = int(sys.argv[3]) if len(sys.argv) > 3 else 60
 STILL = float(sys.argv[4]) if len(sys.argv) > 4 else None
 W, H = 1920, 1080
 
-BG = {'light': '#fafbfc', 'dark': '#0d1015'}[theme]
+BG = {'light': '#fff', 'dark': '#000'}[theme]
 EYE_FILL, EYE_STROKE = {'light': ('none', '#1f2328'), 'dark': ('#ffffff', '#8b949e')}[theme]
 SHADOW = {'light': .22, 'dark': .55}[theme]
 # On dark, the record's rim merges with the eye's outline, and the groove gives way to a wider black

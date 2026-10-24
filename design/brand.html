@@ -165,10 +165,10 @@ pre.s-code{margin:0;font-family:var(--f-mono);font-weight:500;font-size:14px;lin
 .story p:first-child{margin-top:0}
 figure.side .sq{background:#fff}
 .trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:20px 0 0}
-/* Intro A's svg paints its own ground where the record hides behind the sleeve: #fafbfc on light,
-   #0d1015 on dark; the stage takes the same. */
-.sq.a-ground{background:#fafbfc}
-@media (prefers-color-scheme: dark){.sq.a-ground{background:#0d1015}}
+/* Intro A's svg paints its own ground where the record hides behind the sleeve, the logo's: white
+   on light, black on dark; the stage takes the same. */
+.sq.a-ground{background:#fff}
+@media (prefers-color-scheme: dark){.sq.a-ground{background:#000}}
 /* R2, looped every 7 s as on the old brand sheet: the product page's moves (`.r2-*`), repeated, with
    a fade in and out. The tile takes its faint edge from the page, as in the header. At
    rest (reduced motion) it shows its end, the mark. */

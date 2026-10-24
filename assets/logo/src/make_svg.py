@@ -37,7 +37,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" role="img" aria
      the eye forms around it, blinks, the record turns twice, the eye blinks again, and the sleeve
      comes back. A {END:g} s loop. -->
 <style>
-  .bg {{ fill: #fafbfc }}
+  .bg {{ fill: #fff }}
   .eye {{ fill: none; stroke: #1f2328 }}
   .core {{ display: none }}
   .shut {{ stroke: #1f2328 }}
@@ -46,7 +46,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" role="img" aria
      (.core), so the grey meets the black directly. The disc is drawn only on dark: on light, its edge
      would darken the rim's antialiased edge where the lids clip it. */
   @media (prefers-color-scheme: dark) {{
-    .bg {{ fill: #0d1015 }}
+    .bg {{ fill: #000 }}
     .eye {{ fill: #ffffff; stroke: #8b949e }}
     .rim {{ fill: #8b949e }}
     .groove {{ display: none }}
