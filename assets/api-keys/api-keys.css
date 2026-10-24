@@ -6,7 +6,8 @@ code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wr
 }
 .drop.over { border-color: var(--accent); }
 .hint, .report { color: var(--muted); }
-/* After `.report`, which would otherwise take the colour of `keyboard.css`'s `.error`. */
+/* The report's errors in the error colour, which `.report`'s muted colour overrides otherwise
+   (`keyboard.css`'s `.error` is as specific, and comes earlier). */
 .report.error { color: var(--error); }
 /* Kept in the accessibility tree while empty (no `display: none`), so that its first report is
    announced. */
