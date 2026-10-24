@@ -9,13 +9,13 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 23 October 2026.
+Last updated: 24 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight). Near the end, it says where Sleevesight stands under the EU's data protection law, [the GDPR](#the-gdpr), and its law on artificial intelligence, [the AI Act](#the-eu-ai-act).
 
 ## In short
 
-Sleevesight has no server, no accounts, no telemetry, no crash reporting of its own, no analytics and no ads: nothing you play, and nothing the app sends, reaches its developer. To write about the song you are playing, the app sends the track's names from your phone straight to the sources you switch on and to the AI service you choose, using your own API keys. Google Play's data safety section counts that as data the app collects, since it leaves the phone. Everything else stays on your phone.
+Sleevesight has no server, no accounts and no ads, and no telemetry, crash reporting or analytics of its own; if any is added, it will never carry your data. Nothing you play, and nothing the app sends, reaches its developer. To write about the song you are playing, the app sends the track's names from your phone straight to the sources you switch on and to the AI service you choose, using your own API keys. Google Play's data safety section counts that as data the app collects, since it leaves the phone. Everything else stays on your phone.
 
 ## What the app reads on the phone
 
