@@ -5,7 +5,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import app.sleevesight.app.R
@@ -17,14 +19,25 @@ import app.sleevesight.app.R
 internal const val PRIVACY_POLICY_URL = "https://sleevesight.app/privacy.html"
 
 /** [PRIVACY_POLICY_URL] as it is shown: the address without its scheme. */
-internal val PRIVACY_POLICY_SHOWN: String = shownAddress(PRIVACY_POLICY_URL)
+internal val PRIVACY_POLICY_SHOWN: String = PRIVACY_POLICY_URL.removePrefix("https://")
 
 /**
  * Opens [PRIVACY_POLICY_URL] in the browser. Where no app opens web pages, nothing happens; the
  * address is shown wherever the policy is offered, so it can be typed in elsewhere.
  */
 @Composable
-internal fun rememberOpenPrivacyPolicy(): () -> Unit = rememberOpenSitePage(PRIVACY_POLICY_URL)
+internal fun rememberOpenPrivacyPolicy(): () -> Unit {
+    val uriHandler = LocalUriHandler.current
+    return remember(uriHandler) {
+        {
+            try {
+                uriHandler.openUri(PRIVACY_POLICY_URL)
+            } catch (_: IllegalArgumentException) {
+                // No app opens web pages: the address is on the screen.
+            }
+        }
+    }
+}
 
 /**
  * [PRIVACY_POLICY_SHOWN], styled as the credits' links are, opening the policy when tapped: a

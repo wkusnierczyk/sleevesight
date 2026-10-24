@@ -14,7 +14,7 @@ import app.sleevesight.app.ui.shownAddress
  * The way to the credits; the usage and settings pages on the site (#415, #416); and the privacy
  * policy on the site, with where the app stands under the GDPR and the EU AI Act (#295). The pages
  * open in the browser, and each row shows its address, so it can be typed in where no browser opens
- * ([rememberOpenSitePage]).
+ * ([rememberOpenSitePage], [rememberOpenPrivacyPolicy]).
  */
 @Composable
 internal fun AboutSection(openCredits: () -> Unit) {
