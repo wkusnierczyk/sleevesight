@@ -265,8 +265,13 @@ html:not(.js) .theme{display:none}
 .sticker{display:grid;place-items:center;background:var(--m-bg);box-shadow:0 0 0 7px #fff,0 6px 14px 4px #0003}
 .sticker.tile{padding:22px 26px;border-radius:26px}
 .sticker.tile svg{display:block;width:150px;height:auto;overflow:visible}
-.sticker.round{width:150px;height:150px;border-radius:50%}
-.sticker.round svg{width:110px;height:110px}
+/* The sticker panes are alike, whatever is on them. */
+.lpane.merch.stk{aspect-ratio:16/10;padding:16px}
+.sticker.round{width:170px;height:170px;border-radius:50%;align-content:center;gap:0}
+/* The eye cropped to its ink, as wide as the address and centred over it. */
+.sticker.round svg{width:112px;height:auto;aspect-ratio:31/15;display:block;margin:0 auto 12px;overflow:visible}
+.sticker .addr{font-family:var(--f-ui);font-weight:400;font-stretch:88%;font-size:19px;letter-spacing:-.01em;line-height:1;color:var(--m-ink)}
+.sticker .addr .red{color:var(--m-red)}
 .logos:not(.dark) .sticker{box-shadow:0 0 0 1px #0000000f,0 6px 14px 2px #0002}
 /* From intro to header: a page in small, 16:10, its header (the logo and a menu) and a few lines for
    its content. The script plays each intro in its splash (`.ts-splash`), centred, at a size measured
@@ -710,8 +715,8 @@ document.documentElement.classList.add('js');
   <h3>Stickers</h3>
   <p>Die-cut, with a white edge.</p>
   <div class="marks two">
-    <figure><div class="lpane merch" role="img" aria-label="A sticker with the stacked logo"><span class="sticker tile"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></div><figcaption>The stacked logo, on a rounded rectangle.</figcaption></figure>
-    <figure><div class="lpane merch" role="img" aria-label="A round sticker with the eye"><span class="sticker round"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>The eye of the original logo, on a round sticker.</figcaption></figure>
+    <figure><div class="lpane merch stk" role="img" aria-label="A sticker with the stacked logo"><span class="sticker tile"><svg class="m8b" viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></svg></span></div><figcaption>The stacked logo, on a rounded rectangle.</figcaption></figure>
+    <figure><div class="lpane merch stk" role="img" aria-label="A round sticker with the eye, and sleevesight.app under it"><span class="sticker round"><svg viewBox="0.5 8.5 31 15" aria-hidden="true"><use href="#eye" width="32" height="32"/></svg><span class="addr">sleevesight.<span class="red">app</span></span></span></div><figcaption>The eye of the original logo, with the site's address, on a round sticker.</figcaption></figure>
   </div>
 </section>
 </div>
