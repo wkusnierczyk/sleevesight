@@ -87,7 +87,8 @@ fun SleevesightNavHost(
             if (firstRun.acknowledged) {
                 HomeScreen(
                     accessGranted = granted,
-                    onOpenFirstRun = { navController.navigate(FirstRun) },
+                    // Single top: a double tap opens it once, so one Continue comes back.
+                    onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
                     onOpenSettings = { navController.navigate(SettingsPage) },
                     pipeline = pipeline,
                 )
@@ -100,7 +101,8 @@ fun SleevesightNavHost(
                 SettingsLinks(
                     openCredits = { navController.navigate(CreditsPage) },
                     openDiagnostics = { navController.navigate(DiagnosticsPage) },
-                    openWhatLeaves = { navController.navigate(FirstRun) },
+                    // Single top, as from Home.
+                    openWhatLeaves = { navController.navigate(FirstRun) { launchSingleTop = true } },
                 )
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
