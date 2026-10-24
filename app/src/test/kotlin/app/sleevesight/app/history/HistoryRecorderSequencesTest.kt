@@ -14,7 +14,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -24,7 +23,6 @@ import kotlin.time.Duration.Companion.seconds
  * last report of a burst.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class HistoryRecorderSequencesTest(
     private val name: String,
     private val steps: Steps,

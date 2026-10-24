@@ -23,7 +23,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -35,7 +34,6 @@ import kotlin.time.Duration.Companion.minutes
  * screen that asked does meanwhile. The writes are held at [gate] until a test lets them run.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 @OptIn(ExperimentalCoroutinesApi::class) // `getCompleted`, to read a result that must be there.
 internal class HistoryRecorderQueueTest : HistoryRecorderFixture() {
     private val gate = Gate()
@@ -162,7 +160,6 @@ internal class HistoryRecorderQueueTest : HistoryRecorderFixture() {
 
 /** Before the settings are first read, nothing is written: the first start waits for the user's gap. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class HistoryRecorderFirstReadTest : HistoryRecorderFixture() {
     override val settingsRead = false
 

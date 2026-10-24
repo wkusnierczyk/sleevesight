@@ -8,7 +8,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -17,7 +16,6 @@ import kotlin.time.Duration.Companion.seconds
  * and the playback states before it (D15, #49).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class SessionChangeStatesTest : SessionRepositoryFixture() {
     private val sundownPlaying = metadata(durationMs = 225_000)
 

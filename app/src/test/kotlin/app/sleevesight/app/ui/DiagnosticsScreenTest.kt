@@ -41,7 +41,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.CountDownLatch
 import kotlin.time.Duration
@@ -51,7 +50,6 @@ import kotlin.time.Instant
 
 /** The diagnostics screen (#54): the events, the track changes a page at a time, what is learned. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class DiagnosticsScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()

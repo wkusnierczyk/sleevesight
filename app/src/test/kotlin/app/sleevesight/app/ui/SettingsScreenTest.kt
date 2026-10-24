@@ -70,7 +70,6 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 import java.io.IOException
 import java.security.ProviderException
 import java.util.concurrent.CountDownLatch
@@ -79,7 +78,6 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class SettingsScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()

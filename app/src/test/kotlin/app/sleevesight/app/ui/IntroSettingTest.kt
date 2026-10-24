@@ -36,11 +36,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** *Logo intro at start* (#383): on by default, a switch under *Appearance*, kept for a cold start. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class IntroSettingTest {
     @get:Rule
     val compose = createEmptyComposeRule()

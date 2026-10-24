@@ -16,11 +16,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** A `cache.db` a newer version left is rebuilt, not a failure at every query (#238). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class RebuiltOnDowngradeTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
 

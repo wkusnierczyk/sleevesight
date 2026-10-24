@@ -10,12 +10,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 import org.robolectric.shadows.PlaybackInfoBuilder
 
 /** [ControllerSession.marksCall]: a call is a session whose audio is for voice communication (#435). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class ControllerSessionTest {
     private val app = ApplicationProvider.getApplicationContext<android.app.Application>()
 

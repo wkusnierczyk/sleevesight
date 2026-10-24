@@ -313,7 +313,7 @@ private fun EvidenceRow(
 /**
  * The tags' column: as wide as the widest of [tags] as [Tag] draws them. Summed in pixels, as the
  * padding is laid out (each side rounded on its own): at 420 dpi, 4 dp is 10.5 px, so 8 dp rounded
- * once is a pixel short of the padding's 22 (review of #271).
+ * once is a pixel short of the padding's 22 (#270).
  */
 @Composable
 private fun tagColumnWidth(tags: List<String>): Dp {
@@ -337,7 +337,8 @@ private fun Tag(
             text,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
-            // Never wrapped, should the column still come out short: a pixel of alignment at worst.
+            // Never wrapped, should the column still come out short: the box is fixed, so the last
+            // glyph would lose a pixel to the clip at worst.
             softWrap = false,
             maxLines = 1,
             modifier =

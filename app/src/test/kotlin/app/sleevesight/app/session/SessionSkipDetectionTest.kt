@@ -12,7 +12,6 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -21,7 +20,6 @@ import kotlin.time.Duration.Companion.seconds
  * cause carried to the pipeline with its track ([SessionRepository.trackChanges]).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class SessionSkipDetectionTest : SessionRepositoryFixture() {
     private fun spotify(): FakeSession {
         val spotify = FakeSession(SPOTIFY, metadata = metadata(durationMs = LENGTH_MS))
