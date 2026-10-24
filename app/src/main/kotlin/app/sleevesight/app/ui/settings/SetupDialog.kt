@@ -97,6 +97,8 @@ private fun ConfirmSetupDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    // As in [KeyDialog]: a second tap in the same frame finds the button still enabled.
+                    if (busy) return@TextButton
                     busy = true
                     scope.launch {
                         // After a failure, only the keys not yet saved are saved again.
