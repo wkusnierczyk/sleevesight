@@ -87,12 +87,14 @@ internal class TrackRun(
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
-    private val labels = TrackLabels(parts.musicBrainzLabels, settings, key, this)
+    private val labels =
+        TrackLabels(parts.musicBrainzLabels, parts.lastFmLabels, settings, key, this, parts.normalizer::foldForKey)
 
     /**
      * Gathers the evidence, then the insight: written at once when [control] decides so; else,
-     * when it waits for a tap, once the user taps Write; else not at all. MusicBrainz's genre labels
-     * are asked for beside the insight, after the evidence, so it does not wait for them; the run
+     * when it waits for a tap, once the user taps Write; else not at all. The genre labels that take
+     * requests (MusicBrainz's artists', Last.fm's track's and album's) are asked for beside the
+     * insight, after the evidence, so it does not wait for them; the run
      * ends when both have. Each step that sends requests starts once [control] grants it.
      */
     suspend fun run(): TrackState {
@@ -107,7 +109,7 @@ internal class TrackRun(
                 launch {
                     control.await(RunStep.LABELS)
                     try {
-                        labels.addMusicBrainz(state.value)
+                        labels.addLater(state.value)
                     } finally {
                         control.ended(RunStep.LABELS)
                     }

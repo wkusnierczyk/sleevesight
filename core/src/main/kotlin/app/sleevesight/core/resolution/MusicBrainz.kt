@@ -4,7 +4,9 @@ package app.sleevesight.core.resolution
  * What resolution asks MusicBrainz (`design/architecture.md`, *Entity resolution*): `:core` holds
  * the scoring and decisions over this interface, and `:sources` implements it over `:net`
  * (`MusicBrainzClient`). The types are the parts of MusicBrainz's answers resolution uses, nothing
- * more; tags and genres are never among them (`architecture.md`, *MusicBrainz tags and genres*).
+ * more, and genres are never among them. The one exception is the recording's tags
+ * ([MbRecordingDetail.tags], #439), which ride on its lookup for the track's genre labels, and
+ * which resolution passes on without reading (`architecture.md`, *MusicBrainz tags and genres*).
  */
 interface MusicBrainzLookup {
     /** Recordings matching [title] by [artist], as MusicBrainz's search ranks them. */
@@ -13,7 +15,7 @@ interface MusicBrainzLookup {
         artist: String,
     ): Lookup<List<MbRecording>>
 
-    /** The recording [mbid], with its work, artist and URL relationships. */
+    /** The recording [mbid], with its work, artist and URL relationships, and its tags. */
     suspend fun recording(mbid: String): Lookup<MbRecordingDetail>
 
     /** The work [mbid], with its writers, URL relationships and recordings. */
@@ -118,7 +120,12 @@ data class MbWorkLink(
     val cover: Boolean,
 )
 
-/** A recording looked up by id, with its relationships. */
+/**
+ * A recording looked up by id, with its relationships.
+ *
+ * @property tags its tags, most voted first, those with no net vote up left out (#439): CC BY-NC-SA
+ *   3.0, for the track's genre labels only, never in a line or a prompt.
+ */
 data class MbRecordingDetail(
     val mbid: String,
     val title: String,
@@ -127,6 +134,7 @@ data class MbRecordingDetail(
     val works: List<MbWorkLink>,
     val artistRelations: List<MbArtistRelation>,
     val wikidataIds: List<String>,
+    val tags: List<String> = emptyList(),
 )
 
 /**

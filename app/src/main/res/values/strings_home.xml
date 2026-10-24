@@ -28,11 +28,30 @@
     <!-- The album, then the year of the first release: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
 
-    <!-- Genre labels. -->
-    <string name="home_genres">Genres of the artists</string>
-    <string name="home_genres_none">No genre labels for these artists in your sources.</string>
+    <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
+    <string name="home_genres">Genres</string>
+    <string name="home_genres_none">None found.</string>
     <string name="home_genres_off">Genre labels are off in Settings.</string>
+    <!-- The disclosure triangles of the genres' and the sources' folds: folded, unfolded. -->
+    <string name="home_fold_folded">▸</string>
+    <string name="home_fold_unfolded">▾</string>
+    <!-- The fold's state, as a screen reader says it. -->
+    <string name="home_genres_collapsed">collapsed</string>
+    <string name="home_genres_expanded">expanded</string>
+    <string name="home_genres_track">Track</string>
+    <string name="home_genres_artist_row">Artist</string>
+    <string name="home_genres_album">Album</string>
+    <!-- An artist's row: its name before its genres; %1$s is the artist. -->
+    <string name="home_genres_artist">%1$s:</string>
+    <!-- A row as a screen reader says it: %1$s the row's name, %2$s its genres. -->
+    <string name="home_genres_row_words">%1$s: %2$s</string>
+    <!-- An artist's row as a screen reader says it: %1$s the row's name, %2$s the artist, %3$s the genres. -->
+    <string name="home_genres_row_artist_words">%1$s, %2$s: %3$s</string>
+    <string name="home_genre_from_track">%1$s comes from the track’s tags on:</string>
     <string name="home_genre_from">%1$s comes from the artist’s tags on:</string>
+    <!-- With several credited artists: %1$s the genre, %2$s the artist whose tags gave it. -->
+    <string name="home_genre_from_named">%1$s comes from %2$s’s tags on:</string>
+    <string name="home_genre_from_album">%1$s comes from the album’s tags on:</string>
     <string name="home_genre_licence">licence</string>
 
     <!-- The insight. -->
@@ -105,13 +124,13 @@
     <string name="home_source_lines_hidden">lines hidden</string>
     <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
     <!-- The fold of the list of sources: each control as drawn, and as a screen reader says it. -->
-    <string name="home_sources_show">show &gt;</string>
+    <string name="home_sources_show">show ▸</string>
     <string name="home_sources_show_words">Show sources</string>
-    <string name="home_sources_hide">&lt; hide</string>
+    <string name="home_sources_hide">hide ▾</string>
     <string name="home_sources_hide_words">Hide sources</string>
     <string name="home_sources_more">more…</string>
     <string name="home_sources_more_words">Show more sources</string>
-    <string name="home_sources_all">show all &gt;&gt;</string>
+    <string name="home_sources_all">show all ▸▸</string>
     <string name="home_sources_all_words">Show all sources</string>
     <string name="home_sources_less">… less</string>
     <string name="home_sources_less_words">Show fewer sources</string>

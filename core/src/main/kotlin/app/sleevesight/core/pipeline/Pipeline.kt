@@ -3,6 +3,7 @@ package app.sleevesight.core.pipeline
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.evidence.Hasher
+import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
@@ -52,11 +53,13 @@ class AiAccess(
 /**
  * What the pipeline is built from: the stages it joins. [adapters] holds one adapter per source.
  * [musicBrainzLabels] gives MusicBrainz's genre labels (#84), asked for after the evidence; without
- * it (the CLI), MusicBrainz gives none. [sessionFacts] holds the artist facts the listening
- * session's insights cited (#239), which a later track's prompt leaves out (`PromptEvidence`); it
- * outlives a rebuild of the parts, so the app passes the same one to each.
+ * it (the CLI), MusicBrainz gives none. [lastFmLabels] gives Last.fm's for the track and its album
+ * (#439), likewise, made on the user's Last.fm key; without it, Last.fm gives its artists' only.
+ * [sessionFacts] holds the artist facts the listening session's insights cited (#239), which a
+ * later track's prompt leaves out (`PromptEvidence`); it outlives a rebuild of the parts, so the
+ * app passes the same one to each.
  */
-@Suppress("LongParameterList") // Eight independent stages; the last four are optional.
+@Suppress("LongParameterList") // Nine independent stages; the last five are optional.
 class PipelineParts(
     val normalizer: Normalizer,
     val adapters: List<SourceAdapter>,
@@ -65,6 +68,7 @@ class PipelineParts(
     val ai: AiAccess? = null,
     val cache: PipelineCache = PipelineCache.None,
     val musicBrainzLabels: MusicBrainzLabels? = null,
+    val lastFmLabels: LastFmLabels? = null,
     val sessionFacts: SessionFacts = SessionFacts.None,
 ) {
     init {

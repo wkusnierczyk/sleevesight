@@ -17,8 +17,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -51,10 +49,6 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.evidence.EvidenceSet
-import app.sleevesight.core.genres.GenreLabel
-import app.sleevesight.core.genres.LabelCredit
-import app.sleevesight.core.genres.LabelSource
-import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -687,23 +681,6 @@ class NowPlayingScreenTest {
             unfold()
             val wikipedia = text(R.string.settings_source_wikipedia)
             compose.onNodeWithText(text(R.string.home_rejected, wikipedia, "a different Sundown")).assertExists()
-        }
-    }
-
-    @Test
-    fun aGenreLabelShowsItsSourcesWithMusicBrainzsLicence() {
-        val folk = GenreLabel("folk", "folk", 135, "Folk", "folk")
-        val label =
-            TrackLabel(
-                folk,
-                listOf(LabelCredit(LabelSource.MUSICBRAINZ, "https://musicbrainz.org/artist/1")),
-            )
-        show(state(PipelineView(track().copy(genres = listOf(label))))) {
-            compose.onNodeWithText(text(R.string.home_genres)).assertExists()
-            val chip = compose.onNodeWithTag(GENRE_PREFIX + "folk").performScrollTo()
-            chip.assertIsNotSelected().performClick()
-            chip.assertIsSelected()
-            compose.onNodeWithText(LabelSource.MUSICBRAINZ.credit, substring = true).assertExists()
         }
     }
 

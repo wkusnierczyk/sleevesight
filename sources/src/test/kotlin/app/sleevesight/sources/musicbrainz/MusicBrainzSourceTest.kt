@@ -29,7 +29,7 @@ class MusicBrainzSourceTest {
     fun `a result naming the artists, or rejecting a recording by another, is about the artists`() =
         runTest {
             val resolved = lookup(Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", "mbid-gordon"))))
-            assertEquals(listOf("mbid-gordon"), resolved.labelArtists)
+            assertEquals(listOf(ResolvedArtist("Gordon Lightfoot", "mbid-gordon")), resolved.labelArtists)
             assertFalse(resolved.trackOnly)
             assertFalse(lookup(Resolution(artists = listOf(ResolvedArtist("Gordon Lightfoot", null)))).trackOnly)
             val namesakes = Outcome.Rejected("several MusicBrainz artists named Reem have a matching recording")

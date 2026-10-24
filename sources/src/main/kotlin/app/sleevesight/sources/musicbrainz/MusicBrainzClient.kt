@@ -30,10 +30,12 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * The MusicBrainz web service (`/ws/2`, JSON), keyless, through the one [NetClient], whose host
  * policy keeps it to one request a second and names the app in the User-Agent, as MusicBrainz
- * requires. Resolution asks for core data (CC0) only: never `inc=genres`, and the tags a search
- * returns anyway are not read. The one call for tags is [artistTags] (`inc=tags` on an artist),
- * behind the MusicBrainz genre labels (D12, #84): tags are CC BY-NC-SA 3.0, used for labels only and
- * never sent in a prompt (`design/architecture.md`, *MusicBrainz tags and genres (#9)*).
+ * requires. Resolution asks for core data (CC0), never `inc=genres`, and the tags a search returns
+ * anyway are not read. Tags are asked for in two places, behind the MusicBrainz genre labels (D12,
+ * #84): [artistTags] (`inc=tags` on an artist), and the recording's lookup ([recording], `inc=tags`
+ * among its others, #439), which gives the track's with no request of its own. Tags are CC BY-NC-SA
+ * 3.0, used for labels only and never sent in a prompt (`design/architecture.md`, *MusicBrainz tags
+ * and genres (#9)*).
  *
  * Duration matching happens in `:core`, after the search, so the player's duration never leaves
  * the phone (R4).
@@ -82,6 +84,7 @@ class MusicBrainzClient(
                         },
                 artistRelations = artistRelations(relations),
                 wikidataIds = wikidataIds(relations),
+                tags = tags(json),
             )
         }
     }
@@ -132,19 +135,14 @@ class MusicBrainzClient(
 
     /**
      * The artist's tags, most voted first (ties by name, so the order is the same for the same
-     * answer), those with no net vote up left out. Only the tags are read, not the artist.
+     * answer), those with no net vote up left out ([tags]). Only the tags are read, not the artist.
      */
     override suspend fun artistTags(mbid: String): Lookup<List<String>> {
         val request = NetRequest("$BASE/artist/$mbid", query = mapOf("inc" to "tags", "fmt" to "json"))
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             json.required("id")
-            json
-                .array("tags")
-                .mapNotNull { tag -> tag.string("name")?.let { name -> name to (tag.int("count") ?: 0) } }
-                .filter { (_, count) -> count > 0 }
-                .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
-                .map { it.first }
+            tags(json)
         }
     }
 
@@ -165,7 +163,8 @@ class MusicBrainzClient(
          */
         const val SEARCH_LIMIT: Int = 100
 
-        const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels"
+        /** With `tags`, for the track's genre labels (#439), which only [MbRecordingDetail.tags] holds. */
+        const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels+tags"
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
 
@@ -195,6 +194,15 @@ class MusicBrainzClient(
                     },
                 score = json.int("score") ?: 0,
             )
+
+        // An entity's tags, most voted first, ties by name, those with no net vote up left out.
+        private fun tags(json: JsonElement): List<String> =
+            json
+                .array("tags")
+                .mapNotNull { tag -> tag.string("name")?.let { name -> name to (tag.int("count") ?: 0) } }
+                .filter { (_, count) -> count > 0 }
+                .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+                .map { it.first }
 
         private fun credits(json: JsonElement): List<MbCredit> =
             json.array("artist-credit").mapNotNull { credit ->

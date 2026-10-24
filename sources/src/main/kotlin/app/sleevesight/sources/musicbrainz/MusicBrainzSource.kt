@@ -1,5 +1,6 @@
 package app.sleevesight.sources.musicbrainz
 
+import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
@@ -18,8 +19,10 @@ import kotlin.time.TimeSource
  * templates its lines ([MusicBrainzEvidence]). Its latency is the wait.
  *
  * Its result also names the resolved artists ([SourceResult.labelArtists]), whose tags give
- * MusicBrainz's genre labels (#84); it asks for no tags itself. The pipeline does, after the
- * evidence, so the insight never waits for them and the tags never reach a line. It also keeps the
+ * MusicBrainz's genre labels (#84), and carries the recording's tags the resolution brought
+ * ([SourceResult.recordingTags], #439), for the track's; it asks for no tags itself. The pipeline
+ * asks for the artists', after the evidence, so the insight never waits for them; no tag reaches a
+ * line. It also keeps the
  * date of the first release ([SourceResult.firstReleased]), for a track later served from the cache.
  */
 class MusicBrainzSource(
@@ -30,7 +33,8 @@ class MusicBrainzSource(
 
     /**
      * 2: the result names the resolved artists, for the genre labels (#84). 3: and the date of the
-     * first release, for the home screen's year (#52).
+     * first release, for the home screen's year (#52). 4: the artists by name too, and the
+     * recording's tags, for the genre rows (#439).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION
 
@@ -47,7 +51,11 @@ class MusicBrainzSource(
             outcome = resolved.outcome,
             evidence = MusicBrainzEvidence.lines(resolved, clock.now()),
             latency = start.elapsedNow(),
-            labelArtists = resolved.artists.mapNotNull { it.mbid }.distinct(),
+            labelArtists = resolved.artists.filter { it.mbid != null }.distinctBy { it.mbid },
+            recordingTags =
+                resolved.recordingMbid?.takeIf { resolved.recordingTags.isNotEmpty() }?.let {
+                    RecordingTags(it, resolved.recordingTags)
+                },
             firstReleased = resolved.firstReleaseDate,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
@@ -56,4 +64,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 3
+private const val EXTRACTION_VERSION = 4

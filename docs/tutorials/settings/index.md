@@ -88,9 +88,9 @@ Discogs, as a further source, is planned for a later phase and not in the app ye
 
 ## Genre labels
 
-*Where the colored genre labels come from: the artists' tags at each source, kept only when they name a genre.* Each source of labels is a switch. **Default: both on**, Last.fm and MusicBrainz.
+*Where the genre labels come from: the tags each source gives the track, its artists and its album, kept only when they name a genre. With both on, Last.fm's come first. Web search gives no tags.* Each source of labels is a switch. **Default: both on**, Last.fm and MusicBrainz.
 
-- **With both on**, Last.fm's labels come first and MusicBrainz's fill the rest, five at most, and a label both give is shown once, crediting both.
+- **With both on**, Last.fm's labels come first on each level (the track, each artist, the album) and MusicBrainz's fill the rest, five at most a level, and a label both give is shown once, crediting both.
 - **A source gives labels only while it is on under *Where to look***, since the tags come with its lookup: until then its switch shows off, cannot be changed, and says *Off under "Where to look"*. Last.fm also needs its key: without one it says *Needs your Last.fm API key, under "Where to look"*.
 - **MusicBrainz's tags** are by its contributors under [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/). They are used for labels only, never sent to the AI service, and each label from them credits and links MusicBrainz. They are on by default because MusicBrainz needs no key, and a new user, who has no Last.fm key, would otherwise get no labels at all. Whether they stay on by default in the Google Play release depends on MetaBrainz's answer about how its tags may be used ([#100](https://github.com/wkusnierczyk/sleevesight/issues/100)).
 - Web search gives no tags.
