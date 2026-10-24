@@ -26,12 +26,12 @@ imagemagick`). Another version of the renderer may give a slightly different PNG
 The drawing is read from `design/brand.html`, as make_feature_graphic.py reads it: the record is its
 `<symbol id="lp">` (the rim, the black core, the groove, the label, the label's two marks and the
 spindle hole, in a 16-unit box at 8..24), in the light colourway, `.lt` (`--rim`, `--core` and
-`--groove`), and the ground is that colourway's `--tile-bg`; the favicon's dark scheme takes the dark
-colourway's rim, `.dk`'s `--rim`. The script stops if any of it is
-missing, or if the symbol, read as XML, holds an element or an attribute it does not know. Run it
-again after a change to the record or to those colours. The ground is one colour, not one for light
-and one for dark: launchers draw an app's icon the same way whatever the system's theme (themed
-icons apart), and the dark record on white stands out on a light wallpaper and a dark one alike.
+`--groove`), and the ground is that colourway's `--tile-bg`; the favicon's dark scheme takes the
+dark colourway's rim, `.dk`'s `--rim`. The script stops if any of it is missing, or if the symbol,
+read as XML, holds an element or an attribute it does not know. Run it again after a change to the
+record or to those colours. The ground is one colour, not one for light and one for dark: launchers
+draw an app's icon the same way whatever the system's theme (themed icons apart), and the dark
+record on white stands out on a light wallpaper and a dark one alike.
 
 An adaptive icon is a 108 dp square, which the launcher cuts to its own shape (a circle, a squircle,
 a rounded square) inside the middle 72 dp; a circle of 66 dp about the centre is always shown. The
@@ -46,24 +46,24 @@ the spindle hole, white in colour, are cut out of the label. A vector drawable c
 cut-outs are outlines filled even-odd: the groove's as a ring, each mark's as the outline of its
 round-capped stroke.
 
-The favicon is the record alone, without the eye or a ground: at tab size the eye's corners took most
-of the width, so the record alone, filling the square, reads better. In a dark scheme, the rim takes
-the dark colourway's grey, to stand apart from a dark tab bar, and a disc of the core's black inside
-it leaves the grey as a thin outer ring, thinner than the black band, so that it reads as a record
-rather than a target. That is why it is not the dark colourway's own record, whose core (`r` 5.7)
-leaves a band of grey as wide as the black, and no groove: the favicon's core is larger, and the
-groove stays, drawn on the black. The ring is 1.2 units (core `r` 6.3) where the SVG is drawn at
-32 px or less, and 0.9 (core 6.6) where it is drawn larger. Chrome draws a tab icon at 32 px whatever
-the display scale, so there it gets the 1.2 ring, about a pixel wide in a 16 px tab icon on a 1x
-screen, where 0.9 blurs; a browser that ignores the size query (`max-width: 32px`) shows 0.9. The
-core is drawn only in a dark scheme: on light, its edge would darken the rim's antialiased edge.
+The favicon is the record alone, without the eye or a ground: at tab size the eye's corners took
+most of the width, so the record alone, filling the square, reads better. In a dark scheme, the rim
+takes the dark colourway's grey, to stand apart from a dark tab bar, and a disc of the core's black
+inside it leaves the grey as a thin outer ring, thinner than the black band, so that it reads as a
+record rather than a target. That is why it is not the dark colourway's own record, whose core (`r`
+5.7) leaves a band of grey as wide as the black, and no groove: the favicon's core is larger, and
+the groove stays, drawn on the black. The ring is 1.2 units (core `r` 6.3) where the SVG is drawn at
+32 px or less, and 0.9 (core 6.6) where it is drawn larger. Chrome draws a tab icon at 32 px
+whatever the display scale, so there it gets the 1.2 ring, about a pixel wide in a 16 px tab icon on
+a 1x screen, where 0.9 blurs; a browser that ignores the size query (`max-width: 32px`) shows 0.9.
+The core is drawn only in a dark scheme: on light, its edge would darken the rim's antialiased edge.
 
-The label's marks are drawn only where the favicon is drawn wider than 32 px, by the same query: in a
-tab they are left out. Rendered at 16 px (from Chrome's 32), each mark is under a pixel wide, and they
-blur the red label to pink and the white spindle hole into it, the one detail that makes the shape a
-record at that size; at 32 px they read, but a tab cannot tell a 32 px screen from a 16 px one by the
-query. So a tab shows the plain label, and a bookmark or a page that draws the favicon larger shows
-the marks, as the app icon has them.
+The label's marks are drawn only where the favicon is drawn wider than 32 px, by the same query: in
+a tab they are left out. Rendered at 16 px (from Chrome's 32), each mark is under a pixel wide, and
+they blur the red label to pink and the white spindle hole into it, the one detail that makes the
+shape a record at that size; at 32 px they read, but a tab cannot tell a 32 px screen from a 16 px
+one by the query. So a tab shows the plain label, and a bookmark or a page that draws the favicon
+larger shows the marks, as the app icon has them.
 """
 import argparse
 import math
