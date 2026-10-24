@@ -219,7 +219,7 @@ html:not(.js) .theme{display:none}
 /* The intros, looped by the script (`.run`, put back at the end of each turn), on the product page's
    timings, without the flight to the header. At rest (no script, or reduced motion) each shows its
    end, the mark. */
-.demo{aspect-ratio:1;padding:0;position:relative}
+.lpane.demo{aspect-ratio:1;padding:0;position:relative}
 .demo .env,.demo .dz{position:absolute;inset:0;display:grid;place-items:center}
 .demo .dz{inset:auto;position:relative}
 .demo .dz svg{display:block;width:100%;height:auto;overflow:visible}
@@ -230,7 +230,7 @@ html:not(.js) .theme{display:none}
 .c-turn,.d-turn{transform-box:view-box}
 .c-turn{transform-origin:73.1px 14.16px}
 .d-turn{transform-origin:0 0}
-.demo .sp-f-orbit,.dz-f .orbit{transform-box:view-box;transform-origin:0 0}
+.dz-f .orbit{transform-box:view-box;transform-origin:0 0}
 .dz-h .turn{transform-box:view-box}
 .d-rec{transform-box:fill-box;transform-origin:center}
 .run .env{animation:env var(--p) linear both}
@@ -313,9 +313,11 @@ html:not(.js) .theme{display:none}
    from the stage, flies it onto the header's logo (`--fx`, `--fy`, `--fs`, as the page's own script
    measures them), and at the landing swaps it for the header's logo and fades the page in. */
 .ts-fig{margin:20px 0 0}
-.tstage{position:relative;aspect-ratio:16/10;padding:0;display:block;overflow:hidden}
+.lpane.tstage{position:relative;aspect-ratio:16/10;padding:0;display:block;overflow:hidden}
 .ts-hdr{position:absolute;left:4%;right:4%;top:5%;height:13%;display:flex;align-items:center;justify-content:space-between}
 .ts-brand{all:unset;cursor:pointer;height:100%;display:block}
+.ts-brand:disabled{cursor:default}
+.ts-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
 .ts-brand:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
 .ts-brand svg{display:block;height:100%;width:auto;aspect-ratio:128.27/69;overflow:visible}
 .ts-brand .lp-disc{transform-box:fill-box;transform-origin:center}
@@ -525,7 +527,7 @@ document.documentElement.classList.add('js');
   <p>Sleevesight is set in Roboto: the logo, this site and the app all take their type from the one family.</p>
 
   <h3>Roboto</h3>
-  <p>Roboto is Google's own typeface. Christian Robertson drew it at Google, and it first shipped in 2011, as <a href="https://en.wikipedia.org/wiki/Roboto">the system font of Android 4.0</a>, Ice Cream Sandwich, in place of Droid Sans, which had been made for the coarse screens of the first Android phones. The first release had mixed reviews; one critic called it <a href="https://typographica.org/on-typography/roboto-typeface-is-a-four-headed-frankenstein/">a "four-headed Frankenfont"</a>, its parents a Helvetica-like grotesque and a humanist sans like Frutiger or Myriad, with touches of Univers and DIN. In 2014, for Android 5.0, Lollipop, and Google's new Material Design, <a href="https://en.wikipedia.org/wiki/Roboto#History">it was redrawn</a>: slightly wider and rounder, with round dots on the i and j in place of square ones, a straight leg on the R, and new Thin, Medium and Black weights. It has been the type of Material Design, and of much of Google's own software, ever since.</p>
+  <p>Roboto is Google's own typeface. Christian Robertson drew it at Google, and it first shipped in 2011, as <a href="https://en.wikipedia.org/wiki/Roboto">the system font of Android 4.0</a>, Ice Cream Sandwich, in place of Droid Sans, which had been made for the coarse screens of the first Android phones. The first release had mixed reviews; one critic called it <a href="https://typographica.org/on-typography/roboto-typeface-is-a-four-headed-frankenstein/">a "four-headed Frankenfont"</a>, its parents a Helvetica-like grotesque and a humanist sans like Frutiger or Myriad, with touches of Univers and DIN. In 2014, for Android 5.0, Lollipop, and Google's new Material Design, <a href="https://en.wikipedia.org/wiki/Roboto#History">it was redrawn</a>: slightly wider and rounder, with round dots on the i and j in place of square ones, and a straight leg on the R. It has been the type of Material Design, and of much of Google's own software, ever since.</p>
   <p>Google <a href="https://github.com/google/fonts/blob/main/ofl/roboto/DESCRIPTION.en_us.html">describes it as having a "dual nature"</a>: a mechanical skeleton and largely geometric forms, but friendly, open curves, and letters left at their natural widths rather than forced into a rigid rhythm, which reads more like a humanist or serif type than most grotesques do. It has grown into <a href="https://en.wikipedia.org/wiki/Roboto#Variations">a superfamily</a>: Roboto Condensed, Roboto Slab (2013), Roboto Mono (2015), and in 2022 Roboto Serif and Roboto Flex.</p>
 
   <h3>The three faces</h3>
@@ -619,13 +621,13 @@ document.documentElement.classList.add('js');
     </figure>
     <figure>
       <div class="sq"><img src="../assets/brand/parlophone-barnyard-hop.jpg" width="960" height="960" loading="lazy" alt="A black 78 rpm record with a red Parlophone label: the maker's name arched over the hole, the title, Barnyard Hop, in a line below it"></div>
-      <figcaption>The real thing: "Barnyard Hop", sung by Bonnie Lou, a Parlophone 78 pressed in New Zealand. Photo: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">Auckland War Memorial Museum</a>, <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>.</figcaption>
+      <figcaption>The real thing: "Barnyard Hop", sung by Bonnie Lou, a Parlophone 78 pressed in New Zealand. Photo, cropped: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">Auckland War Memorial Museum</a>, <a href="https://creativecommons.org/licenses/by/2.0/">CC BY 2.0</a>.</figcaption>
     </figure>
   </div>
   <ol class="parts">
     <li><b>The disc.</b> Black vinyl. The mark's rim is the record's edge.</li>
     <li><b>The grooves.</b> One spiral, played from the edge inwards; the mark keeps one ring of it.</li>
-    <li><b>The label.</b> Paper, printed and pressed into the centre, often in the maker's colour: Parlophone's here is red, as Columbia's albums' were from 1953. The mark's red is the label's.</li>
+    <li><b>The label.</b> Paper, printed and pressed into the centre, often in the maker's colour: Parlophone's here is red, as the labels of Columbia's twelve-inch popular albums were from 1953. The mark's red is the label's.</li>
     <li><b>The arc.</b> The print arched over the hole: on a real label, the maker's name.</li>
     <li><b>The line.</b> The print in a line below the hole: the title, the artist, the catalogue number.</li>
     <li><b>The hole.</b> Where the spindle goes; the record turns about it, as the mark's record does when the logo is hovered.</li>
@@ -634,13 +636,13 @@ document.documentElement.classList.add('js');
   <h3>A short story of the record</h3>
   <div class="story">
     <div>
-      <p>Sound was first recorded on a cylinder, by <a href="https://en.wikipedia.org/wiki/Phonograph_record#Early_development">Thomas Edison's phonograph of 1877</a>. In the 1880s Emile Berliner pressed it flat, as a disc that could be copied by the thousand, and for half a century records were <a href="https://en.wikipedia.org/wiki/LP_record#Predecessors">brittle shellac turning at 78 rpm</a>, under five minutes to a side.</p>
+      <p><a href="https://en.wikipedia.org/wiki/Phonograph_record#Early_development">Thomas Edison's phonograph of 1877</a> was the first machine that could both record sound and play it back, on a cylinder. In the 1880s Emile Berliner pressed it flat, as a disc that could be copied by the thousand, and for half a century records were <a href="https://en.wikipedia.org/wiki/LP_record#Predecessors">brittle shellac turning at 78 rpm</a>, under five minutes to a side.</p>
       <p>On 21 June 1948, at the Waldorf-Astoria in New York, <a href="https://en.wikipedia.org/wiki/LP_record#Development_of_the_LP">Columbia unveiled the long-playing record</a>: vinyl in place of shellac, finer grooves, "microgrooves", and 33 1/3 turns a minute, for over twenty minutes a side. A team at CBS Laboratories under Peter Goldmark had worked on it since 1939. Its first twelve-inch album, ML 4001, was Mendelssohn's Violin Concerto, played by Nathan Milstein with the New York Philharmonic under Bruno Walter. RCA Victor answered in 1949 with <a href="https://en.wikipedia.org/wiki/LP_record#Competing_formats">the seven-inch 45</a>, and the two settled into the album and the single; <a href="https://en.wikipedia.org/wiki/Phonograph_record#Stereophonic_sound">stereo</a> followed in 1957.</p>
       <p>The compact disc, from 1982, <a href="https://en.wikipedia.org/wiki/Phonograph_record#Popularity_and_current_status">outsold the record by 1988</a>, and by the early 1990s the record had left the mainstream. Then it came back. From the late 2000s it grew year on year, and in 2022, for the first time since 1987, <a href="https://www.npr.org/2023/03/10/1162568704/vinyl-outsells-cds-first-time-since-1987-records">vinyl albums outsold CDs in the United States</a>, some 41 million against 33 million.</p>
     </div>
     <figure class="side">
       <div class="sq"><img src="../assets/brand/columbia-ml-4001.jpg" width="750" height="750" loading="lazy" alt="A twelve-inch black LP with a blue Columbia Masterworks label, ML 4001, lying on its white inner sleeve"></div>
-      <figcaption>Columbia ML 4001 (1948), the first twelve-inch LP. Photo: <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Sigmundg</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</figcaption>
+      <figcaption>Columbia ML 4001 (1948), the first twelve-inch LP. Photo, cropped: <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Sigmundg</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</figcaption>
     </figure>
   </div>
 
@@ -668,7 +670,7 @@ document.documentElement.classList.add('js');
     <li><a href="https://en.wikipedia.org/wiki/LP_record">LP record</a>, Wikipedia.</li>
     <li><a href="https://en.wikipedia.org/wiki/Album_cover">Album cover</a>, Wikipedia.</li>
     <li><a href="https://en.wikipedia.org/wiki/Liner_notes">Liner notes</a>, Wikipedia.</li>
-    <li><a href="https://www.bsnpubs.com/columbia/columbiastory.html">Columbia Label Overview</a>, Both Sides Now: Columbia's labels, red on its albums from 1953.</li>
+    <li><a href="https://www.bsnpubs.com/columbia/columbiastory.html">Columbia Label Overview</a>, Both Sides Now: Columbia's labels, red on its twelve-inch popular albums from mid-1953.</li>
     <li><a href="https://www.npr.org/2023/03/10/1162568704/vinyl-outsells-cds-first-time-since-1987-records">Vinyl records outsell CDs for the first time since 1987</a>, NPR, 10 March 2023, on the RIAA's report for 2022.</li>
     <li>The photos: <a href="https://commons.wikimedia.org/wiki/File:Record,_Sound_(%22Barnyard_Hop%22_Parlophone_Vinyl_Record)_(48708914632).jpg">"Barnyard Hop", Parlophone</a>, Auckland War Memorial Museum, CC BY 2.0; <a href="https://commons.wikimedia.org/wiki/File:Columbia_ML4001_plate.png">Columbia ML 4001</a>, Sigmundg, CC BY-SA 4.0. Both from Wikimedia Commons, cropped to the record.</li>
   </ol>
@@ -711,7 +713,7 @@ document.documentElement.classList.add('js');
   <h3>The original logo, archived</h3>
   <p>An eye whose iris is the record, beside the name. Two layouts, linear, with the eye before the name, and stacked, with the eye after it; each in four styles: "Sleeve" regular or bold, "sight" in the ink or in red.</p>
   <div class="marks four">
-    <figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, "Sleeve" bold, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, "sight" red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, "Sleeve" bold, "sight" red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, one colour"><span class="st"><span>Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, "Sleeve" bold, one colour"><span class="st"><span class="b">Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, "sight" red"><span class="st"><span>Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, "Sleeve" bold, "sight" red"><span class="st"><span class="b">Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, "sight" red.</figcaption></figure>
+    <figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, “Sleeve” bold, one colour"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span>sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, regular, “sight” red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span>Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, linear, “Sleeve” bold, “sight” red"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg><span><span class="b">Sleeve</span><span class="red">sight</span></span></span></div><figcaption>Linear, "Sleeve" bold, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, one colour"><span class="st"><span>Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, “Sleeve” bold, one colour"><span class="st"><span class="b">Sleeve</span><span>sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, one colour.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, regular, “sight” red"><span class="st"><span>Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, regular, "sight" red.</figcaption></figure><figure><div class="lt lpane"><span class="mark" role="img" aria-label="The original logo, stacked, “Sleeve” bold, “sight” red"><span class="st"><span class="b">Sleeve</span><span class="red">sight</span></span><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#eye"/></svg></span></div><figcaption>Stacked, "Sleeve" bold, "sight" red.</figcaption></figure>
   </div>
 </section>
 
@@ -719,7 +721,7 @@ document.documentElement.classList.add('js');
   <h2 id="intros-h">Intros</h2>
   <p>The intros are a playful way to liven up the pages: the logo arrives with a small move of its own rather than simply being there. The product page opens with one of these, picked at random on each visit; each ends on the stacked logo, which then shrinks into the page's header. Here they play on their own, over and over, without that last move.</p>
   <div class="marks four">
-    <figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in and turns twice about the record."><div class="env"><div class="dz dz-c" style="width:85.33%"><svg viewBox="-54.9 -113.84 256 256"><g class="c-turn"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in and turns twice about the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:6500ms" role="img" aria-label="The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside "sight"."><div class="env"><div class="dz dz-d" style="width:62.67%"><svg viewBox="-94 -94 188 188"><g class="d-turn"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g><g transform="translate(54.35 -4.59)"><use class="d-rec" href="#lp" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and the record circles the words once about the dot of the i."><div class="env"><div class="dz dz-f" style="width:62.67%"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in, and the record circles the words once about the dot of the i.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in alone, and the words are typed in beside it, a letter at a time."><div class="env"><div class="dz dz-g" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div></div><figcaption>The record fades in alone, and the words are typed in beside it, a letter at a time.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and each e of "Sleeve" turns once, one after the other."><div class="env"><div class="dz dz-h" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div><figcaption>The mark fades in, and each e of "Sleeve" turns once, one after the other.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in with the words to its right; "Sleeve" slides into its place, then "sight", passing behind the record."><div class="env"><div class="dz dz-i" style="width:73.79%"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div></div><figcaption>The record fades in with the words to its right; "Sleeve" slides into its place, then "sight", passing behind the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4800ms" role="img" aria-label=""Sleeve" fades in, and the record rolls in under it, uncovering "sight"."><div class="env"><div class="dz dz-r1" style="width:55.33%"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="dz-r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#dz-r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div></div><figcaption>"Sleeve" fades in, and the record rolls in under it, uncovering "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:5600ms" role="img" aria-label="The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark."><div class="env"><div class="dz dz-r2" style="width:97.33%"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div></div><figcaption>The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark.</figcaption></figure>
+    <figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in and turns twice about the record."><div class="env"><div class="dz dz-c" style="width:85.33%"><svg viewBox="-54.9 -113.84 256 256"><g class="c-turn"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in and turns twice about the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:6500ms" role="img" aria-label="The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside “sight”."><div class="env"><div class="dz dz-d" style="width:62.67%"><svg viewBox="-94 -94 188 188"><g class="d-turn"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g><g transform="translate(54.35 -4.59)"><use class="d-rec" href="#lp" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The text tile turns twice about the dot of the i; the tile fades, leaving the words, and the record turns in beside "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and the record circles the words once about the dot of the i."><div class="env"><div class="dz dz-f" style="width:62.67%"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div></div><figcaption>The mark fades in, and the record circles the words once about the dot of the i.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in alone, and the words are typed in beside it, a letter at a time."><div class="env"><div class="dz dz-g" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div></div><figcaption>The record fades in alone, and the words are typed in beside it, a letter at a time.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The mark fades in, and each e of “Sleeve” turns once, one after the other."><div class="env"><div class="dz dz-h" style="width:42.76%"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div><figcaption>The mark fades in, and each e of "Sleeve" turns once, one after the other.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4500ms" role="img" aria-label="The record fades in with the words to its right; “Sleeve” slides into its place, then “sight”, passing behind the record."><div class="env"><div class="dz dz-i" style="width:73.79%"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div></div><figcaption>The record fades in with the words to its right; "Sleeve" slides into its place, then "sight", passing behind the record.</figcaption></figure><figure><div class="lt lpane demo" style="--p:4800ms" role="img" aria-label="“Sleeve” fades in, and the record rolls in under it, uncovering “sight”."><div class="env"><div class="dz dz-r1" style="width:55.33%"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="dz-r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#dz-r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div></div><figcaption>"Sleeve" fades in, and the record rolls in under it, uncovering "sight".</figcaption></figure><figure><div class="lt lpane demo" style="--p:5600ms" role="img" aria-label="The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark."><div class="env"><div class="dz dz-r2" style="width:97.33%"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div></div><figcaption>The tile slides off the record behind it, as a sleeve; the record shrinks into its place, and the tile fades, leaving the mark.</figcaption></figure>
   </div>
 
   <h3>From intro to header</h3>
@@ -728,11 +730,12 @@ document.documentElement.classList.add('js');
   <p>A click or a tap on the logo in the header plays an intro again, and hovering over the logo spins the record once. Where the device asks for reduced motion, nothing moves.</p>
   <p>The example below shows the page simplified to a few lines. Unlike the page, it plays the intros in turn, one after another, rather than at random. Hover over its logo to spin the record; click it to move on to the next intro.</p>
   <figure class="ts-fig">
-    <div class="lt lpane tstage" role="img" aria-label="A simplified page: an intro plays in the middle and shrinks into the header, and the page fades in; then the next intro">
-      <div class="ts-hdr"><button type="button" class="ts-brand" aria-label="Play the next intro"><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg></button><div class="ts-nav"><i></i><i></i><i></i></div></div>
-      <div class="ts-ghost"><i></i><i></i><i></i><i></i></div>
-      <div class="ts-splash"><div class="fly"></div></div>
+    <div class="lt lpane tstage">
+      <div class="ts-hdr"><button type="button" class="ts-brand" aria-label="Play the next intro" disabled><svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg></button><div class="ts-nav" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <div class="ts-ghost" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="ts-splash" aria-hidden="true"><div class="fly"></div></div>
     </div>
+    <figcaption>A simplified page: an intro plays in the middle and shrinks into the header, and the page fades in; then the next intro.</figcaption>
   </figure>
 </section>
 </div>
@@ -828,9 +831,15 @@ document.documentElement.classList.add('js');
   function stop(e) { if (!(e.type === 'keydown' && e.repeat)) end(); }
   function listen() { stops.forEach(function (e) { addEventListener(e, stop, {passive: true}); }); }
   // The intro ends with its last move: D's record turning in, the others' page arriving.
-  function last(e) { if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
+  // On this page, unlike the product page, `main` holds the intros' demos, whose `d-rec` bubbles up
+  // too: only the header's record and `main` itself end the intro.
+  function last(e) {
+    if (e.target !== main && e.target !== brand.querySelector('.lp-disc')) return;
+    if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end();
+  }
+  var main = document.querySelector('main');
   brand.addEventListener('animationend', last);
-  document.querySelector('main').addEventListener('animationend', last);
+  main.addEventListener('animationend', last);
   // Each splash's svg in the words' units: its viewBox's left, top, width and height. C's is a square of
   // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
   // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
@@ -925,20 +934,22 @@ document.documentElement.classList.add('js');
 
 // The intros, each looped: its animations restart every period (`--p`), while it is on screen and
 // motion is allowed. Taking the class off and reading the layout before putting it back restarts them.
+// When "reduce motion" is turned on, each stops and shows its end; turned off, each starts again
+// if it is on screen.
 (function () {
-  if (!matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var moving = matchMedia('(prefers-reduced-motion: no-preference)');
   document.querySelectorAll('.demo').forEach(function (d) {
-    var period = parseFloat(d.style.getPropertyValue('--p')), timer = null;
+    var period = parseFloat(d.style.getPropertyValue('--p')), timer = null, seen = false;
     function turn() {
       d.classList.remove('run');
       void d.offsetWidth;
       d.classList.add('run');
       timer = setTimeout(turn, period);
     }
-    new IntersectionObserver(function (es) {
-      if (es[0].isIntersecting) { if (!timer) turn(); }
-      else { clearTimeout(timer); timer = null; d.classList.remove('run'); }
-    }).observe(d);
+    function stop() { clearTimeout(timer); timer = null; d.classList.remove('run'); }
+    function update() { if (seen && moving.matches) { if (!timer) turn(); } else stop(); }
+    new IntersectionObserver(function (es) { seen = es[0].isIntersecting; update(); }).observe(d);
+    if (moving.addEventListener) moving.addEventListener('change', update);
   });
 })();
 
@@ -946,8 +957,8 @@ document.documentElement.classList.add('js');
 // script does (`start()` above), then the page, a hold, and the next. The stage's splash takes each
 // intro's drawing from its card above. It runs while the stage is on screen.
 (function () {
-  var stage = document.querySelector('.tstage');
-  if (!stage || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  var stage = document.querySelector('.tstage'), moving = matchMedia('(prefers-reduced-motion: no-preference)');
+  if (!stage) return;
   var order = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'],
       times = {r1: [3400, 4050], r2: [4100, 4750]},
       fly = stage.querySelector('.ts-splash .fly'),
@@ -994,12 +1005,22 @@ document.documentElement.classList.add('js');
     later(function () { stage.classList.add('out'); }, t[1] + 3000);
     later(function () { if (visible) play(); }, t[1] + 3450);
   }
+  // Stopped, it shows the page with the header's logo, and its button is disabled.
+  function stop() {
+    clear();
+    ['intro', 'out', 'run', 'd', 'drec'].forEach(function (c) { stage.classList.remove(c); });
+  }
+  function update(was) {
+    brand.disabled = !moving.matches;
+    if (visible && moving.matches) { if (!was || !timers.length) play(); } else stop();
+  }
   new IntersectionObserver(function (es) {
     var was = visible;
     visible = es[0].isIntersecting;
-    if (visible && !was) play();
-    if (!visible) clear();
+    update(was);
   }).observe(stage);
+  if (moving.addEventListener) moving.addEventListener('change', function () { update(false); });
+  brand.disabled = !moving.matches;
   brand.addEventListener('click', play);
 })();
 
