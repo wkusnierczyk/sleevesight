@@ -18,8 +18,8 @@
     <string name="first_run_stays_title">What stays on the phone</string>
     <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself. The length and cover of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
-    <!-- What a screen reader says a tap on the privacy policy's address does. -->
-    <string name="privacy_policy_open">Open in your browser</string>
+    <!-- What a screen reader says a tap on a web address shown as a link does (the privacy policy's, an AI service's terms). -->
+    <string name="link_open">Open in your browser</string>
     <string name="first_run_privacy">The privacy policy says more, with where Sleevesight stands under the GDPR and the EU AI Act:</string>
 
     <string name="access_off">Notification access is off.</string>
@@ -59,6 +59,11 @@
     <string name="settings_key_recipient_exa">Exa</string>
     <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again.</string>
     <string name="settings_key_field">Key</string>
+    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. -->
+    <string name="settings_terms_anthropic">Using this key means agreeing to Anthropic’s Commercial Terms of Service. They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
+    <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
+    <string name="settings_terms_google">Using this key means agreeing to Google’s Gemini API terms. They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
+    <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>
     <string name="settings_key_remove">Remove the %1$s</string>

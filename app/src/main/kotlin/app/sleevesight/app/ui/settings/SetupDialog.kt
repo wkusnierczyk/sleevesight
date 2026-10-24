@@ -119,7 +119,8 @@ private fun ConfirmSetupDialog(
 
 /**
  * What the setup code [setup] holds: its [keys] in their services' shape, each by its last four
- * characters and whether it replaces a key stored ([secrets]); the keys refused; the names unknown;
+ * characters and whether it replaces a key stored ([secrets]), with, for an AI service's key, where
+ * its terms are told (#409); the keys refused; the names unknown;
  * the lines unreadable; and the keys that could not be saved ([unsaved]).
  */
 @Composable
@@ -135,6 +136,7 @@ private fun SetupList(
     ) {
         val style = MaterialTheme.typography.bodyMedium
         Text(stringResource(R.string.setup_explained), style = style)
+        if (keys.keys.any { serviceTerms(it) != null }) Text(stringResource(R.string.setup_terms), style = style)
         for ((id, key) in keys) {
             val stored = (secrets[id] ?: SecretState.ABSENT) != SecretState.ABSENT
             val line = if (stored) R.string.setup_replaces else R.string.setup_new

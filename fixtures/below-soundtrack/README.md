@@ -3,9 +3,8 @@
 The playlist "Below Soundtrack Netflix" with frozen lookups, the fixture of the pipeline's tests
 and of the `:cli` (`design/design.md`, *Test fixtures*; `design/architecture.md`, *Testing*).
 
-The three data files are the simulator's JSON blocks, plus a final newline. `design/simulator.html` still embeds
-its own copy, so it runs from a single file; a test in `:core` fails if the two disagree, so a
-change to one is made to both.
+The three data files were the simulator's JSON blocks, plus a final newline. They are the source
+now: `design/simulator.html` still embeds its own copy, but nothing keeps the two in step.
 
 | File | Simulator block | Holds |
 |---|---|---|
@@ -17,6 +16,6 @@ JVM tests read them through the loader in `:core`'s test fixtures, `BelowSoundtr
 `testImplementation(testFixtures(project(":core")))`. The design's regression cases are listed by
 track in `RegressionCase`, for the tests that cover them to name.
 
-`normalized.json` is derived, not from the simulator's data: the simulator's own `normalize` run
-over every playlist entry by `normalized.js` (the command is in its header), as the expected
-output of the `:core` normalizer's tests. Regenerate it when the simulator's normalizer changes.
+`normalized.json` is the expected output of the `:core` normalizer's tests over every playlist
+entry, first taken from the simulator's own `normalize`. It is the normalizer's now: a change to
+what the normalizer does on purpose changes it with it.

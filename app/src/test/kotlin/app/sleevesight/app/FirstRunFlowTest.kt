@@ -154,7 +154,7 @@ class FirstRunFlowTest {
             compose
                 .onNodeWithText(PRIVACY_POLICY_SHOWN)
                 .performScrollTo()
-                .assert(hasClickLabel(text(R.string.privacy_policy_open)))
+                .assert(hasClickLabel(text(R.string.link_open)))
                 .assertHeightIsAtLeast(48.dp)
                 .performClick()
 

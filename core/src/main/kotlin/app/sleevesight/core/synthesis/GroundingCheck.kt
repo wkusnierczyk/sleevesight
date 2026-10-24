@@ -81,7 +81,7 @@ sealed interface InsightReply {
  * its `NO_EVIDENCE` test, rule for rule but for three deviations: an abbreviation does not end a
  * sentence, a stop inside closing quotes and before citations does ([splitSentences]; #46, #423),
  * and prompt version 2's fixed sentence for a gap, [GAP_SENTENCE], is a hedge (#46). The tests
- * compare it with the simulator's own code on the same replies (`core/src/test/resources/grounding/`).
+ * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable

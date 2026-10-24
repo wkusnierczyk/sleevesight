@@ -19,10 +19,3 @@ dependencies {
     testFixturesApi(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlinx.coroutines.test)
 }
-
-// The simulator embeds the same fixtures; a test checks that the two agree.
-tasks.named<ProcessResources>("processTestResources") {
-    from(rootProject.layout.projectDirectory.file("design/simulator.html")) {
-        into("simulator")
-    }
-}

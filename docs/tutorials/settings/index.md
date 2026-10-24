@@ -36,7 +36,7 @@ The AI service writes the insights: a few sentences about the playing track, eac
 
 ### The API key
 
-Each service's key row (*Anthropic API key*, *OpenAI API key*, *Google Gemini API key*) shows *Not set*, *Saved*, or *Saved, but it can no longer be read*; a saved key is never shown again. Tapping the row opens the key's dialog. How to get a key, enter it and remove it is under [Entering a key](#entering-a-key); where it is stored, under [Where the keys are kept](#where-the-keys-are-kept).
+Each service's key row (*Anthropic API key*, *OpenAI API key*, *Google Gemini API key*) shows *Not set*, *Saved*, or *Saved, but it can no longer be read*; a saved key is never shown again. Tapping the row opens the key's dialog, which also says, in a line with a link to them, what the service's terms require: Anthropic's set no minimum age and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it; OpenAI's are for businesses and developers, and let minors use the API only with a parent's or guardian's consent; Google's require you to be 18 or older, and are for professional or business purposes, not for consumer use. Using the key means agreeing to them. The [privacy policy]({{ '/privacy.html#children-and-the-ai-services-own-terms' | relative_url }}) quotes them. How to get a key, enter it and remove it is under [Entering a key](#entering-a-key); where it is stored, under [Where the keys are kept](#where-the-keys-are-kept).
 
 - **Anthropic:** create a key in the [Claude Console](https://platform.claude.com/settings/keys).
 - **OpenAI:** create a key on the [OpenAI platform](https://platform.openai.com/api-keys).
@@ -165,7 +165,7 @@ A saved key's row has a delete button that removes that key once you confirm; so
 *Scan keys*, under *API keys*, reads a setup code holding several keys, and saves them together.
 
 1. On a computer, open [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Give it your keys file (`NAME=value` lines, such as `SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…`), chosen or dropped onto the page, or paste the keys one per service. It checks each against its service's form, leaves out and names those that fail, and draws one QR code of the rest, listing each key by its last four characters. The page is allowed no network request and stores nothing: the keys are kept only while the tab is open, and *Clear* removes them.
-2. On the phone, tap *Scan keys* and point the camera at the code.
+2. On the phone, tap *Scan keys* and point the camera at the code. When the code holds an AI service's key, the list adds that using it means agreeing to that service's terms, which its key dialog states.
 3. Before anything is saved, the app lists what it found (*Save these keys?*), each key by its last four characters, says which would replace a key already saved, and names the keys refused and any names this version does not know. *Save* saves them.
 
 Never make such a code with an online QR generator: it would receive your keys. A code that is not a Sleevesight setup code is refused, and one from a newer version of the page asks you to update the app.

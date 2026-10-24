@@ -134,9 +134,15 @@ The EU's AI Act ([Regulation (EU) 2024/1689](https://eur-lex.europa.eu/eli/reg/2
 
 **Text published on matters of public interest (Article 50(4)).** This is a duty of deployers who publish such text, which is not how the app is used.
 
-## Children
+## Children, and the AI services' own terms
 
-Sleevesight is not directed at children under 13.
+Sleevesight is not directed at children under 13, and sets no minimum age of its own beyond that. It works without any AI service, and switches none on by default. An AI service is used on your own key, under your own agreement with its provider, and using it means agreeing to that provider's terms, which may set a minimum age or limit the use they allow. Each service's key dialog in the settings says what its terms require, and links to them. As checked on 24 October 2026:
+
+- **Anthropic:** its [Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms) (effective 17 June 2025) cover use of its API keys. They set no minimum age, and say that "Services under these Terms are not for consumer use"; Anthropic's [help centre](https://support.claude.com/en/articles/8987200) adds that "individuals and hobbyists are welcome to use the Claude API", under those terms.
+- **OpenAI:** its [Services Agreement](https://openai.com/policies/services-agreement/) (effective 1 January 2026) applies to its APIs "for customers who are businesses and developers", and its customer agrees not to "allow minors to use OpenAI Services without consent from their parent or guardian". It sets no age of its own.
+- **Google:** its [Gemini API terms](https://ai.google.dev/gemini-api/terms) (effective 23 March 2026) say: "You must be 18 years of age or older to use the APIs", and that the Gemini API "is for developers building with Google AI models for professional or business purposes, not for consumer use".
+
+Terms change; the provider's page is the one that counts.
 
 ## Changes to this policy
 
