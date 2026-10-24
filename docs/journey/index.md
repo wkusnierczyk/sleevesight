@@ -19,7 +19,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 ## 1. Installing, and the first-run screen
 
-**Installing.** Sleevesight is in a closed test on Google Play; it is not yet listed in the store for everyone. Testers join by invitation, and [Testing Sleevesight]({{ '/docs/tester/alpha/' | relative_url }}) says how to opt in and install. Only a copy installed from Google Play takes part in the test and gets its updates.
+**Installing.** Sleevesight is not yet listed on Google Play for everyone. Its builds go to Play's internal test track, and a closed test, which testers join by invitation, comes next; [Testing Sleevesight]({{ '/docs/tester/alpha/' | relative_url }}) says how to opt in and install once it starts. Only a copy installed from Google Play takes part in the test and gets its updates.
 
 **The first-run screen.** Opened for the first time, Sleevesight shows one screen before anything else, and reads, builds or sends nothing until you continue past it. It says, under three headings:
 
@@ -76,7 +76,7 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 - *Web search*, with the *Exa* engine: likewise on by default, and searching only once your Exa API key is saved.
 - *The model's own knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
 
-**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers); a source switched off receives nothing. Under *Genre labels* you choose whose artist tags give the coloured genre labels. With *Prepare the next track* set to *Evidence*, as it is by default, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; *Off* sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
+**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genre labels* you choose whose artist tags give the coloured genre labels. With *Prepare the next track* set to *Evidence*, as it is by default, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; *Off* sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
 
 <!-- screenshot: Settings, "Where to look", with the defaults: MusicBrainz and Wikipedia on, Last.fm and Exa without keys, the model's own knowledge off, from app version … -->
 
@@ -112,7 +112,7 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 
 **While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Pause automatic writing after* (5 track changes by default) stops one forgotten tap from paying for days: past that many track changes away, the card says *Automatic writing paused* and waits for a tap on *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
 
-**Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call. When the sources now find something different, or you have since switched to another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
+**Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model and effort are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key, switch a web search engine or choose another AI service and the sources then find something different, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
 
 **The history.** Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default) and *Start a new session after a break of* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*).
 
