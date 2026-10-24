@@ -122,23 +122,12 @@ function update() {
   holds.replaceChildren(...lines);
 }
 
-// The report's next text, set a moment after it is emptied, so that the same text again is
-// announced again.
-let reporting = null;
-
+// Sets the file report at once. The same report again (the same file read twice) ends in a
+// no-break space, or loses it, so that it is still a change, which the live region announces.
 function report(text, error = false) {
   const line = $('file-report');
-  clearTimeout(reporting);
-  // Held at its height while the next text waits, so the fields below do not move.
-  line.style.minHeight = text === '' ? '' : `${line.offsetHeight}px`;
-  line.className = `report${error ? ' error' : ''}${text === '' ? ' idle' : ''}`;
-  line.textContent = '';
-  if (text !== '') {
-    reporting = setTimeout(() => {
-      line.textContent = text;
-      line.style.minHeight = '';
-    }, 100);
-  }
+  line.className = error ? 'report error' : 'report';
+  line.textContent = text !== '' && line.textContent === text ? `${text}\u00a0` : text;
 }
 
 // Fills the fields with the keys in [file], in place of what they held, and says what was left out.
