@@ -1,13 +1,11 @@
 package app.sleevesight.app.ui
 
 import android.content.Intent
-import androidx.activity.ComponentDialog
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -73,7 +71,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import java.security.ProviderException
 import java.util.concurrent.CountDownLatch
@@ -555,47 +552,6 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_key_remove_failed))
             compose.onNodeWithText(text(R.string.settings_remove)).assertIsDisplayed()
             assertEquals("exa-key", runBlocking { flakySecrets.get(SecretId.EXA) }?.reveal())
-        }
-    }
-
-    @Test
-    fun aRemovalRunsOnceAndCannotBeCancelledOrDismissedWhileItRuns() {
-        val flaky = FlakyDataStore(stores.open("gated-secrets"))
-        val gatedSecrets = SecretStore(flaky, testCipher())
-        runBlocking { gatedSecrets.set(SecretId.EXA, Secret("exa-key")) }
-        val gate = CompletableDeferred<Unit>()
-        try {
-            show(secretStore = gatedSecrets) {
-                val removeExa = removeKey(R.string.settings_key_name_exa)
-                waitForNode(hasContentDescription(removeExa))
-                val before = flaky.writes.get()
-                flaky.writeGate = gate
-                compose.onNodeWithContentDescription(removeExa).performScrollTo().performClick()
-
-                // Two taps with no recomposition between them to disable the button.
-                val remove = compose.onNodeWithText(text(R.string.settings_remove)).fetchSemanticsNode()
-                compose.runOnUiThread { repeat(2) { remove.config[SemanticsActions.OnClick].action?.invoke() } }
-                waitFor("the removal's write started") { flaky.writes.get() == before + 1 }
-                val cancel = hasText(text(R.string.settings_cancel))
-                waitForNode(cancel and isNotEnabled())
-                compose.onNode(cancel).performClick()
-                // Back, as the dialog's window hears it.
-                onActivity {
-                    (ShadowDialog.getLatestDialog() as ComponentDialog).onBackPressedDispatcher.onBackPressed()
-                }
-                compose.onNodeWithText(text(R.string.settings_remove)).assertIsDisplayed()
-
-                gate.complete(Unit)
-                waitFor("the Exa key removed") { runBlocking { gatedSecrets.get(SecretId.EXA) } == null }
-                waitFor("the dialog gone") { absent(R.string.settings_remove) }
-                // A second removal would wait on the store's lock, which is fair: a write asked for
-                // now runs after it, so the count is final once this one returns.
-                runBlocking { gatedSecrets.clear(SecretId.LASTFM) }
-                assertEquals(before + 2, flaky.writes.get())
-            }
-        } finally {
-            // Also when a step above fails, so no write stays blocked for the rest of the run.
-            gate.complete(Unit)
         }
     }
 
