@@ -6,8 +6,9 @@ code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wr
 }
 .drop.over { border-color: var(--accent); }
 .hint, .report { color: var(--muted); }
-/* Kept in the accessibility tree while empty, so that its first report is announced. */
-.report:empty { margin: 0; }
+/* Kept in the accessibility tree while empty, so that its first report is announced; collapsed
+   only when no report is waiting to be shown (`idle`), so the fields do not jump meanwhile. */
+.report.idle:empty { margin: 0; }
 .fields { margin-top: 12px; display: grid; gap: 12px; }
 .field label { display: block; font-weight: 600; }
 .field input {

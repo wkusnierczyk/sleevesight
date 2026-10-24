@@ -29,7 +29,7 @@ const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 // Unknown names are shown only when they start `SLEEVESIGHT_` (a key's name mistyped) or end
 // `_API_KEY` (a key named as another tool has it). Others are only counted: a line of base64 from a
-// file chosen by mistake looks like a name, and may be a secret, but holds no `_`.
+// file chosen by mistake looks like a name, and may be a secret, but will hardly start or end so.
 const SHOWN = /^SLEEVESIGHT_|_API_KEY$/;
 
 const TOKEN = /^[A-Za-z0-9_-]+$/;

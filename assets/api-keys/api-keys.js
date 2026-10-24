@@ -129,11 +129,14 @@ let reporting = null;
 function report(text, error = false) {
   const line = $('file-report');
   clearTimeout(reporting);
-  line.className = error ? 'report error' : 'report';
+  // Held at its height while the next text waits, so the fields below do not move.
+  line.style.minHeight = text === '' ? '' : `${line.offsetHeight}px`;
+  line.className = `report${error ? ' error' : ''}${text === '' ? ' idle' : ''}`;
   line.textContent = '';
   if (text !== '') {
     reporting = setTimeout(() => {
       line.textContent = text;
+      line.style.minHeight = '';
     }, 100);
   }
 }
@@ -166,9 +169,9 @@ async function load(file) {
     said.push(`Not a key Sleevesight uses, left out: ${names}.`);
   }
   if (others > 0) said.push(`${others} other name${others > 1 ? 's' : ''} left out.`);
-  if (keys.size === 0 && unknown.length + others > 0) {
-    said.push('Sleevesight’s names are SLEEVESIGHT_ANTHROPIC_API_KEY, SLEEVESIGHT_OPENAI_API_KEY, '
-      + 'SLEEVESIGHT_GOOGLE_API_KEY, SLEEVESIGHT_EXA_API_KEY and SLEEVESIGHT_LASTFM_API_KEY.');
+  if (keys.size + repeated.length + empty.length === 0 && unknown.length + others > 0) {
+    const names = SERVICES.map((s) => s.variable);
+    said.push(`Sleevesight’s names are ${names.slice(0, -1).join(', ')} and ${names.at(-1)}.`);
   }
   if (unreadable > 0) said.push(`${unreadable} line${unreadable > 1 ? 's' : ''} not of the form NAME=value, left out.`);
   report(said.join(' '));
