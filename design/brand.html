@@ -92,13 +92,15 @@ nav.top{flex:none}
   nav.top ul{transition:font-size .25s ease}
 }
 .sl-still *{transition:none!important}
-/* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
-   so they need no font; "Sleeve" in ink, white on dark as on the brand sheet's black tile, and "sight"
-   in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to `#w-sight-5`), so an
-   intro can show or turn each letter on its own. The tile, in the intros only: white with a faint
-   edge on light, since the page is white too, and black with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
-   variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
-   grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
+/* The words (`#words`): outlined from Roboto Flex 400 at 88% width
+   (`assets/logo/src/make_tile.py`), so they need no font; "Sleeve" in ink (`--tile-ink`, the page's
+   `--ink` in light and dark), and "sight" in `--sight`. Each word is a group of paths, one to a
+   letter (`#w-sleeve-1` to `#w-sight-5`), so an intro can show or turn each letter on its own. The
+   tile, in the intros only: white with a faint edge on light, since the page is white too, and
+   black with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set
+   through variables, since a selector cannot reach into a <use>. On dark, the record's rim takes
+   the outline's grey, and the groove gives way to a wider black disc, so the grey meets the black
+   directly. */
 :root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
@@ -317,7 +319,9 @@ html:not(.js) .theme{display:none}
 /* The header's logo is part of the picture, hidden from screen readers; a pointer can spin its
    record and click it on, and the button under the page does the same for every input. Nothing
    that takes focus is ever hidden. */
-.ts-brand{cursor:pointer;height:100%;display:block}
+.ts-brand{height:100%;display:block}
+/* Clickable only while it shows, and only where the example plays. */
+.tstage.intro .ts-brand,.tstage.out .ts-brand{pointer-events:none}
 .ts-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
 .ts-ctl{margin:10px 0 0}
 .ts-next{font:inherit;font-family:var(--f-ui);font-size:15px;border:1px solid var(--line);border-radius:999px;padding:5px 16px;background:var(--bg);color:var(--ink);cursor:pointer}
@@ -345,6 +349,7 @@ html:not(.js) .ts-ctl{display:none}
 .tstage.d:not(.intro):not(.drec) .ts-brand .lp-disc{opacity:0}
 .tstage.drec .ts-brand .lp-disc{animation:d-rec 700ms cubic-bezier(.2,0,.2,1) both}
 @media (prefers-reduced-motion: no-preference){
+  .ts-brand{cursor:pointer}
   .tstage:not(.intro) .ts-brand:hover .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
 }
 .marks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:20px;margin:20px 0 0}
