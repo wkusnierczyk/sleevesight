@@ -37,7 +37,7 @@ Sleevesight is under the [GNU General Public License, version 3](https://github.
 - **MIT**, which asks only that its copyright and permission notice go with each copy.
 - **BSD-3-Clause**, which asks the same and adds that the authors' names are not used to endorse the product.
 
-The credits screen in the app (*Settings* → *About* → *Credits*) lists the data sources, the font and the icons, not the libraries.
+The credits screen in the app (*Credits*, under *About* in *Settings*) lists the data sources, the font and the icons, not the libraries.
 
 ## Shipped libraries
 
@@ -79,9 +79,9 @@ Chosen against: Room, since SQLDelight has a plain JVM driver as well as Android
 - **Where:** `:app`.
 - **Licence:** Apache-2.0, except `datastore-preferences-external-protobuf`, a repackaged copy of Protocol Buffers, which its POM gives as BSD-3-Clause.
 
-Two Preferences DataStore files: `settings`, which holds only the settings moved off their defaults, and `secrets`, which holds the API keys, each sealed with AES-GCM under a key held in the Android Keystore. The Keystore is part of Android, not a library. Neither file is backed up or transferred to another phone.
+Preferences DataStore files hold the settings (only those moved off their defaults), the API keys (each sealed with AES-GCM under a key held in the Android Keystore) and what skip detection has learned. The Keystore is part of Android, not a library. None of them is backed up or transferred to another phone.
 
-Limits as used here: DataStore reads only asynchronously, so the two values the app reads synchronously as it starts stay in `SharedPreferences`: whether the first-run screen was acknowledged, and a copy of the *Font* setting.
+Limits as used here: DataStore reads only asynchronously, so the few values the app reads synchronously as it starts, such as whether the first-run screen was acknowledged and copies of the *Font* and *Logo intro at start* settings, stay in `SharedPreferences`.
 
 Chosen against: Jetpack Security's `EncryptedSharedPreferences`, which is deprecated.
 
