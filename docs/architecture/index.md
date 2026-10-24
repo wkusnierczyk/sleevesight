@@ -15,7 +15,7 @@ This page gives the picture: what Sleevesight is made of, what talks to what, an
 
 ## In short
 
-Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code before showing it. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts, no telemetry, no crash reporting of its own, no analytics and no ads: nothing you play, and nothing the app sends, reaches its developer.
+Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code as the insight is written. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts and no ads, and no telemetry, crash reporting or analytics of its own. Nothing you play, and nothing the app sends, reaches its developer.
 
 ## The parts
 
