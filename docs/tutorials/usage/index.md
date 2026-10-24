@@ -160,7 +160,7 @@ Nothing is written again unless you tap *Rewrite*, which is one call, or two in 
 
 ### What costs nothing
 
-- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *The model's own knowledge* are as they were, the insight written then is shown again, marked *kept from before*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, oldest first, once they pass the cache's size limit.
+- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *The model's own knowledge* are as they were, the insight written then is shown again, marked *kept from before*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, least recently shown first, once they pass the cache's size limit.
 - **Nothing to write from.** When the sources give nothing to write an insight from, the card says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
 - **The next track.** The track next in the player's queue is looked up ahead (by default, at MusicBrainz), so its sources come sooner when it plays. No insight is written ahead.
 
