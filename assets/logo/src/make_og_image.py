@@ -108,7 +108,7 @@ def write(built, out):
         for src, dst in moves:
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.move(src, dst)
-            print(os.path.relpath(dst))
+            print(os.path.relpath(dst) if out else os.path.relpath(dst, root))
 
 
 def main():
