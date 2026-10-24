@@ -662,7 +662,8 @@ class NowPlayingScreenTest {
                     node.positionInRoot.y to node.positionInRoot.y + node.size.height
                 }
             // On one row, or the centres below would differ for another reason: chips of one row
-            // overlap in height, however they are aligned, and the next row starts below them all.
+            // overlap in height (none is shorter than half the row), and the next row starts below
+            // them all.
             assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
             val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
             assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
