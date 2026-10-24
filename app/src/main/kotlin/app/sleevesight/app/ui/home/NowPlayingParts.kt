@@ -253,9 +253,14 @@ private fun albumLine(
     val line = if (year != null) stringResource(R.string.home_album_year, ALBUM_MARK, year) else ALBUM_MARK
     val at = line.indexOf(ALBUM_MARK)
     return buildAnnotatedString {
-        append(line, 0, at)
-        withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(album) }
-        append(line, at + ALBUM_MARK.length, line.length)
+        // A format that leaves the album out is shown as it is, rather than failing.
+        if (at < 0) {
+            append(line)
+        } else {
+            append(line, 0, at)
+            withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(album) }
+            append(line, at + ALBUM_MARK.length, line.length)
+        }
     }
 }
 
