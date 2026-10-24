@@ -44,7 +44,7 @@ internal data class LogoColors(
             )
         val Dark =
             LogoColors(
-                ink = Color.White,
+                ink = Color(0xFFE5E8EE),
                 sight = Color(0xFFCF222E),
                 rim = Color(0xFF8B949E),
                 dark = true,
@@ -179,6 +179,6 @@ private const val LINE_HALF = .9f
 private const val LINE_Y = 2.05f
 private const val TILE_HALF = 71.5f
 private const val TILE_CORNER = 31.5f
-private val CORE_COLOR = Color(0xFF1F2328)
+private val CORE_COLOR = Color.Black
 private val GROOVE_COLOR = Color(0xFF57606A)
 private val LABEL_COLOR = Color(0xFFCF222E)

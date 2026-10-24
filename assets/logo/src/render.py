@@ -26,7 +26,7 @@ SHADOW = {'light': .22, 'dark': .55}[theme]
 # disc. The disc is drawn only on dark: on light, its edge would darken the rim's antialiased edge.
 RIM = {'light': '#1f2328', 'dark': '#8b949e'}[theme]
 MIDDLE = {'light': '<circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>',
-          'dark': '<circle cx="16" cy="16" r="5.7" fill="#1f2328"/>'}[theme]
+          'dark': '<circle cx="16" cy="16" r="5.7" fill="#000"/>'}[theme]
 
 # ---- easing ----
 def bezier(x1, y1, x2, y2):

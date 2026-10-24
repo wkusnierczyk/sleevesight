@@ -27,7 +27,7 @@ AXES = {'wght': 400, 'wdth': 88, 'opsz': 52.64}
 SIZE = 37.6              # the text's size in the 144-unit tile (40 px * .94, as on the brand sheet)
 PITCH = .9 * SIZE        # line height .9
 TRACK = -.015 * SIZE     # letter spacing -.015em, between letters only
-COLORS = {'light': ('#fff', 'none', '#141a22', '#cf222e'), 'dark': ('#000', '#ffffff26', '#fff', '#cf222e')}
+COLORS = {'light': ('#fff', 'none', '#141a22', '#cf222e'), 'dark': ('#000', '#ffffff26', '#e5e8ee', '#cf222e')}
 
 src = sys.argv[1]
 hbfont = hb.Font(hb.Face(hb.Blob.from_file_path(src)))

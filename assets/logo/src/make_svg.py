@@ -88,7 +88,7 @@ svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb}" role="img" aria
 </g>
 <g clip-path="url(#eyeclip)"><g class="disc">
   <circle class="rim" cx="16" cy="16" r="7.5" fill="#1f2328"/>
-  <circle class="core" cx="16" cy="16" r="5.7" fill="#1f2328"/>
+  <circle class="core" cx="16" cy="16" r="5.7" fill="#000"/>
   <circle class="groove" cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8"/>
   <circle cx="16" cy="16" r="3" fill="#cf222e"/>
   <path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/>
