@@ -1,6 +1,7 @@
 package app.sleevesight.sources.musicbrainz
 
 import app.sleevesight.core.model.NormalizedTrack
+import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.resolution.MusicBrainzEvidence
 import app.sleevesight.core.sources.Resolution
@@ -48,6 +49,9 @@ class MusicBrainzSource(
             latency = start.elapsedNow(),
             labelArtists = resolved.artists.mapNotNull { it.mbid }.distinct(),
             firstReleased = resolved.firstReleaseDate,
+            // No recording and no artist: a result that names an artist, or rejects a recording by
+            // another one, is about the artists (#420).
+            trackOnly = resolved.outcome == Outcome.None && resolved.artists.isEmpty() && resolved.artistCredit == null,
         )
     }
 }

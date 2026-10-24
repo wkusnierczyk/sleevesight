@@ -30,7 +30,8 @@ import kotlin.time.Duration.Companion.seconds
  * @property aiEfforts the reasoning effort each provider was set to, where null is the provider's
  *   own default (no effort sent); a provider not in it uses its scale's default ([EFFORT_SCALES]).
  *   Read [effort]; set with [withEffort].
- * @property followedPlayers one switch per player seen, by package name; see [follows].
+ * @property followedPlayers one switch per player whose session reported music, by package name;
+ *   never a phone call's ([isCall]). See [follows].
  * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
@@ -45,8 +46,27 @@ import kotlin.time.Duration.Companion.seconds
  *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
+ * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
+ *   sources said about an artist (Last.fm's answers and tags, the Wikipedia artist article and its
+ *   Wikidata facts, MusicBrainz's tags) is kept on the phone: per artist, for the next track by the
+ *   artist, and in each track's kept findings. Off by default, for new installs and for those
+ *   upgraded from a version that kept it unasked: kept together, it amounts to a record of the
+ *   artists heard, which a user should choose to keep. Off, none of it is kept (nor the sources'
+ *   verdicts on artists' pages, nor the artists' MusicBrainz ids), each track's artists are looked
+ *   up again, and of a track's findings only the web search's findings (pages about the recording,
+ *   which may name or describe its artists) and those of a lookup that found no artist to look up
+ *   are kept (`SourceResult.trackOnly`), so a track played before is looked up again at MusicBrainz
+ *   (its match held in memory for half an hour only), Wikipedia and Last.fm, unless it has no
+ *   credited artist; and what was kept is deleted. What stays is the record of which tracks were
+ *   played (the history, the track cache's keys) and the insights written, which may retell some of
+ *   it. On, it is kept for its sources' lifetimes ([cacheLifetimes]), so fewer requests about
+ *   artists leave the phone; each track's own lookups still send its artists' names. Either way
+ *   MusicBrainz's answers, its artist searches included, are held in memory for half an hour
+ *   (`RememberedMusicBrainz`), for the track about to play, and never stored. It covers the artist
+ *   resolutions kept for [artistCacheLifetime] too.
  * @property artistCacheLifetime how long a credited artist's MusicBrainz id, or the finding that it
- *   has none or several, is kept (architecture, *Cache and history*: "long, months").
+ *   has none or several, is kept (architecture, *Cache and history*: "long, months"), while
+ *   [keepArtistResults] is on.
  * @property cacheSizeLimit the most the caches may hold, in bytes of keys and values; past it the
  *   least recently used entries are evicted. See [DEFAULT_CACHE_SIZE_LIMIT].
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
@@ -65,6 +85,10 @@ import kotlin.time.Duration.Companion.seconds
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
+ * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
+ *   while it is not open (not a return to it), plays one of the logo's intros before showing its
+ *   screen. On by default: it is a few seconds, and a tap, Back or any key ends it; it never plays
+ *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
  */
 data class Settings(
     val layout: Layout = Layout.SEPARATE_PAGES,
@@ -82,6 +106,7 @@ data class Settings(
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
+    val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
     val cacheSizeLimit: Long = DEFAULT_CACHE_SIZE_LIMIT,
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
@@ -89,6 +114,7 @@ data class Settings(
     val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
     val font: FontChoice = FontChoice.APP_FONT,
+    val introAtStart: Boolean = true,
 ) {
     init {
         require(cacheSizeLimit >= 0) { "The cache size limit must not be negative, was $cacheSizeLimit" }
@@ -101,8 +127,11 @@ data class Settings(
         }
     }
 
-    /** Whether events from [player] (a package name) are followed; a player not yet seen is not. */
-    fun follows(player: String): Boolean = followedPlayers[player] ?: false
+    /**
+     * Whether events from [player] (a package name) are followed; a player not yet seen is not, and
+     * a phone call's ([isCall]) never is, whatever its switch.
+     */
+    fun follows(player: String): Boolean = !isCall(player) && followedPlayers[player] ?: false
 
     /** [provider]'s model: the one it was set to, or its default ([DEFAULT_MODELS]), or none. */
     fun model(provider: ProviderId): String? = aiModels[provider] ?: DEFAULT_MODELS[provider]
@@ -169,6 +198,29 @@ data class Settings(
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
+
+        /**
+         * The packages whose media sessions are phone calls (#435): Android's telecom service, the
+         * telephony process, and the dialers and in-call screens of AOSP, Google and Samsung. A
+         * call's session may carry the caller's name or number as its title, which must never be
+         * looked up or sent to an AI service, so these are never listed, recorded or followed,
+         * whatever a settings file says. Not a setting: calls are not what the app is for. A call
+         * from another app (a VoIP app) is told by its session instead (the session layer's
+         * `PlayerSession.marksCall`).
+         */
+        val CALL_PACKAGES: Set<String> =
+            setOf(
+                "com.android.server.telecom",
+                "com.android.phone",
+                "com.android.dialer",
+                "com.android.incallui",
+                "com.google.android.dialer",
+                "com.samsung.android.dialer",
+                "com.samsung.android.incallui",
+            )
+
+        /** Whether [player] (a package name) is one whose sessions are phone calls: [CALL_PACKAGES]. */
+        fun isCall(player: String): Boolean = player in CALL_PACKAGES
 
         /**
          * Each provider's default model: its cheapest current text model. The key and its bill are

@@ -120,7 +120,13 @@ class LastFmAdapter(
                 unverified = unverified,
                 rejections =
                     answers.mapNotNull { answer ->
-                        (answer.match as? LastFmMatch.Rejected)?.let { Rejection(answer.credited, it.reason) }
+                        (answer.match as? LastFmMatch.Rejected)?.let {
+                            Rejection(
+                                answer.credited,
+                                it.reason,
+                                Scope.ARTIST,
+                            )
+                        }
                     },
                 genres =
                     answers

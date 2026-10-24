@@ -1,16 +1,20 @@
 package app.sleevesight.app.session
 
 import android.graphics.Bitmap
+import android.media.AudioAttributes
 import android.media.MediaDescription
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import org.robolectric.shadows.PlaybackInfoBuilder
 
 /** Builders and fakes for the session-layer tests. */
 internal object Sessions {
     const val SPOTIFY = "com.spotify.music"
     const val YOUTUBE_MUSIC = "com.google.android.apps.youtube.music"
+    const val VIDEO_APP = "com.example.video"
+    const val TELECOM = "com.android.server.telecom"
 
     @Suppress("LongParameterList") // One parameter per metadata key the tests set.
     fun metadata(
@@ -76,16 +80,45 @@ internal object Sessions {
 }
 
 /** A player's session whose changes the test makes, calling the registered callbacks as the system would. */
+@Suppress("LongParameterList") // One parameter per thing a session publishes.
 internal class FakeSession(
     override val player: String,
-    override var metadata: MediaMetadata? = Sessions.metadata(),
-    override var playbackState: PlaybackState? = Sessions.state(),
-    override var queue: List<MediaSession.QueueItem>? = null,
-    override var queueTitle: CharSequence? = null,
-    override var sessionActivity: android.app.PendingIntent? = null,
+    metadata: MediaMetadata? = Sessions.metadata(),
+    playbackState: PlaybackState? = Sessions.state(),
+    queue: List<MediaSession.QueueItem>? = null,
+    queueTitle: CharSequence? = null,
+    sessionActivity: android.app.PendingIntent? = null,
+    override var marksCall: Boolean = false,
 ) : PlayerSession {
     override val key: Any = Any()
     val callbacks = mutableListOf<MediaController.Callback>()
+
+    /** How often the session layer has read [metadata]. */
+    var metadataReads = 0
+        private set
+
+    /** How often the session layer has read anything the player reports: metadata, state, queue, its screen. */
+    var reads = 0
+        private set
+
+    override var metadata: MediaMetadata? = metadata
+        get() {
+            metadataReads++
+            reads++
+            onMetadataRead()
+            return field
+        }
+    override var playbackState: PlaybackState? = playbackState
+        get() = field.also { reads++ }
+    override var queue: List<MediaSession.QueueItem>? = queue
+        get() = field.also { reads++ }
+    override var queueTitle: CharSequence? = queueTitle
+        get() = field.also { reads++ }
+    override var sessionActivity: android.app.PendingIntent? = sessionActivity
+        get() = field.also { reads++ }
+
+    /** Runs as [metadata] is read, before its value is returned: a change the player makes at that moment. */
+    var onMetadataRead: () -> Unit = {}
 
     /** Runs as a callback is registered: a change the player makes at that moment, before any is heard. */
     var onRegister: () -> Unit = {}
@@ -119,6 +152,28 @@ internal class FakeSession(
             it.onQueueChanged(items)
             it.onQueueTitleChanged(title)
         }
+    }
+
+    fun sendQueueItems(items: List<MediaSession.QueueItem>) {
+        queue = items
+        callbacks.toList().forEach { it.onQueueChanged(items) }
+    }
+
+    fun sendQueueTitle(title: String) {
+        queueTitle = title
+        callbacks.toList().forEach { it.onQueueTitleChanged(title) }
+    }
+
+    /** Turns the session into a call, or back ([marksCall]), as its audio attributes would. */
+    fun call(on: Boolean) {
+        marksCall = on
+        val usage = if (on) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_MEDIA
+        val info =
+            PlaybackInfoBuilder
+                .newBuilder()
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(usage).build())
+                .build()
+        callbacks.toList().forEach { it.onAudioInfoChanged(info) }
     }
 
     fun destroy() = callbacks.toList().forEach { it.onSessionDestroyed() }

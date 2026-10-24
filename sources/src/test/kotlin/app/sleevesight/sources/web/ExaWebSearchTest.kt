@@ -113,6 +113,7 @@ class ExaWebSearchTest {
         runTest {
             val (result, _) = lookUp(1, "01-sundown")
             assertEquals(Outcome.SongArticle, result.outcome)
+            assertTrue(result.trackOnly, "web pages about the song: kept with the artist cache off too (#420)")
             assertLines(
                 "01-sundown",
                 listOf(
@@ -188,6 +189,7 @@ class ExaWebSearchTest {
             val (result, _) = lookUp(77, "77-forever-young")
             assertEquals(Outcome.Rejected(ExaWebSearch.REJECTED), result.outcome)
             assertTrue(result.evidence.isEmpty())
+            assertTrue(result.trackOnly, "a rejection of pages about the recording is about the track (#420)")
         }
 
     @Test
@@ -245,6 +247,7 @@ class ExaWebSearchTest {
                 assertEquals(Outcome.None, result.outcome)
                 assertTrue(result.evidence.isEmpty())
                 assertTrue(net.sent.isEmpty(), "sent a request for artists \"$artists\"")
+                assertTrue(result.trackOnly, "nothing asked, nothing about the artists (#420)")
             }
         }
 
@@ -256,6 +259,7 @@ class ExaWebSearchTest {
                     .lookup(track(23), CompletableDeferred(Resolution.NONE))
             assertEquals(Outcome.None, result.outcome)
             assertTrue(result.evidence.isEmpty())
+            assertTrue(result.trackOnly, "#420")
         }
 
     @Test

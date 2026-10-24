@@ -17,8 +17,8 @@ import app.sleevesight.core.synthesis.InsightPrompt
  * which artist facts the insight restates from the ones before it.
  *
  * An artist-level line's id is its position among the track's lines (`W3` on one track may be
- * `W2` on the next), so lines are matched across tracks as [ArtistFact]s, by source and text, which
- * the artist-level cache (#238) keeps the same from one track to the next. An insight *restates* an
+ * `W2` on the next), so lines are matched across tracks as [ArtistFact]s, by source and folded
+ * text (`ArtistFact.matchKey`). An insight *restates* an
  * artist fact when it cites a line that an earlier insight of the run cited too; the measure sees
  * citations, not prose, so a fact restated from a differently worded line, or uncited, is not
  * counted.

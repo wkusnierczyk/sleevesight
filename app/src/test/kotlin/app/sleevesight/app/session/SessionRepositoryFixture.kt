@@ -67,6 +67,15 @@ internal abstract class SessionRepositoryFixture {
     /** Lets the settle window pass. */
     protected fun settle() = scheduler.advanceUntilIdle()
 
+    /**
+     * Lets [SessionRepository.SETTLE] pass in virtual time: a session seen as a call is read afresh
+     * that long after it is first handled with the mark off.
+     */
+    protected fun waitOutTheCall() {
+        scheduler.advanceTimeBy(SessionRepository.SETTLE.inWholeMilliseconds)
+        scheduler.runCurrent()
+    }
+
     protected fun FakeSession.settled(metadata: android.media.MediaMetadata) {
         send(metadata)
         settle()

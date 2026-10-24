@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.database.SQLException
 import android.net.ConnectivityManager
 import android.util.Log
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -36,6 +37,8 @@ import app.sleevesight.app.session.SystemActiveSessions
 import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
+import app.sleevesight.app.settings.LastIntro
+import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
@@ -47,6 +50,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
 import app.sleevesight.store.StoreArtistResults
@@ -96,7 +100,7 @@ class AppGraph(
     val firstRun = FirstRunAcknowledgement(appContext)
 
     /** The user's settings. DataStore allows one instance per file in a process, so only here. */
-    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE))
+    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)))
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))
@@ -124,19 +128,49 @@ class AppGraph(
             .onEach { lastFont.value = it }
             .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
 
+    /** *Logo intro at start* as last read, for a new process's decision before its first frame. */
+    private val lastIntro = LastIntro(appContext)
+
+    /**
+     * *Logo intro at start* (#383): the stored choice, held for the process, and before the
+     * settings' first read in a new process, the one last read ([LastIntro]), which is what a cold
+     * start goes by, since it decides before its first frame.
+     */
+    val introAtStart: StateFlow<Boolean> =
+        settings.settings
+            .map { it.introAtStart }
+            .distinctUntilChanged()
+            .onEach { lastIntro.value = it }
+            .stateIn(mainScope, SharingStarted.Eagerly, lastIntro.value)
+
+    /**
+     * *Keep what sources said about each artist* (#420), as last read (off until the first read),
+     * for the artist-level cache and the retrieval cache alike.
+     */
+    private val artistKeeping =
+        ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
+
+    /**
+     * What the sources give for an artist, in the caches' artist-level table (#238), only while
+     * [artistKeeping] is on. It opens the database only at its first query, a lookup's, after the
+     * first-run acknowledgement. What was kept, there and in the retrieval cache, is deleted whenever
+     * the switch reads off (`init`), at start too, so an install upgraded from a version that kept it
+     * unasked keeps nothing.
+     */
+    private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping)
+
     /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
      * keeps (#132): made once, since the rate limiters belong to the client. It sends nothing of
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
-     * What the sources give for an artist goes in the caches' artist-level table (#238), which
-     * opens the database only at its first query, a lookup's, after the first-run acknowledgement.
+     * What the sources give for an artist goes in the caches' artist-level table ([artistResults]).
      */
     private val wiring =
         appPipelineWiring(
             BuildConfig.VERSION_NAME,
             JvmAccentFolder,
             JvmResourceReader,
-            StoreArtistResults({ caches }, Dispatchers.IO),
+            artistResults,
         )
 
     /**
@@ -283,7 +317,11 @@ class AppGraph(
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
             parts =
-                AppPipelineParts(wiring, normalizer, sessionFacts) { StorePipelineCache(caches, Dispatchers.IO) },
+                AppPipelineParts(
+                    wiring,
+                    normalizer,
+                    sessionFacts,
+                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
@@ -325,6 +363,19 @@ class AppGraph(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // What was kept about artists is deleted whenever *Keep what sources said about each
+        // artist* reads off (#420): when it is turned off, and on start while it is off. The switch
+        // reads off before the clear starts, so a lookup in progress keeps nothing after it.
+        mainScope.launch {
+            latestSettings
+                .filterNotNull()
+                .map { it.keepArtistResults }
+                .distinctUntilChanged()
+                .collect { keeps ->
+                    // One that fails is tried again at the next lookup while the switch is off.
+                    if (!keeps && !artistKeeping.clear()) Log.w(TAG, "The artist cache could not be cleared")
+                }
+        }
         // Expired cache entries are deleted on start, once the first run is acknowledged (the
         // settings are read only then); reads never return them either way.
         mainScope.launch {
@@ -337,13 +388,17 @@ class AppGraph(
         }
     }
 
-    /** A player's name as the phone knows it, else as the design knows it, else its package. */
+    /**
+     * A player's name as the phone knows it, else as the design knows it, else its package. A
+     * player with a launcher icon is visible to the app through the manifest's `<queries>` (#435).
+     */
     fun playerLabel(packageName: String): String {
         val pm = appContext.packageManager
         return try {
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (_: PackageManager.NameNotFoundException) {
-            // Not installed, or not visible to this app (package visibility, Android 11 and later).
+            // Not installed, or not visible to this app (package visibility, Android 11 and later):
+            // a player with no launcher icon.
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
@@ -362,13 +417,16 @@ class AppGraph(
          * A Preferences DataStore in the app's own files (`files/datastore/`), which the backup and
          * transfer rules exclude with everything else. A file DataStore cannot parse is replaced by
          * an empty one: the settings return to their defaults, the keys read as not set.
+         * [migrations] run before the first read, as DataStore runs them.
          */
         fun preferences(
             context: Context,
             name: String,
+            migrations: List<DataMigration<Preferences>> = emptyList(),
         ): DataStore<Preferences> =
             PreferenceDataStoreFactory.create(
                 corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+                migrations = migrations,
                 produceFile = { context.preferencesDataStoreFile(name) },
             )
     }

@@ -20,6 +20,7 @@ import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,6 +74,7 @@ class SettingsCodecTest {
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
+                keepArtistResults = true,
                 artistCacheLifetime = 30.days,
                 cacheSizeLimit = 10_000_000,
                 historyLifetime = 7.days,
@@ -80,8 +82,30 @@ class SettingsCodecTest {
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
                 font = FontChoice.SYSTEM_FONT,
+                introAtStart = false,
             )
         assertEquals(changed, roundTrip(changed))
+    }
+
+    @Test
+    fun keepingArtistResultsIsOffByDefaultAndForAnInstallFromBefore() {
+        assertEquals(false, Settings().keepArtistResults)
+        // As stored before the setting existed (#420), when the artist cache was kept unasked.
+        val before =
+            mutablePreferencesOf(
+                booleanPreferencesKey("lookups.background") to true,
+                longPreferencesKey("cache.artist_lifetime_ms") to 30.days.inWholeMilliseconds,
+            )
+        assertEquals(false, SettingsCodec.read(before).keepArtistResults)
+    }
+
+    @Test
+    fun keepingArtistResultsOnIsStored() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(keepArtistResults = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("cache.keep_artist_results") to true), prefs)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned off again, it is the default and has no key", prefs.asMap().isEmpty())
     }
 
     @Test
@@ -102,6 +126,20 @@ class SettingsCodecTest {
     fun aFontThisVersionDoesNotKnowReadsAsTheAppFont() {
         val prefs = mutablePreferencesOf(stringPreferencesKey("display.font") to "SERIF")
         assertEquals(FontChoice.APP_FONT, SettingsCodec.read(prefs).font)
+    }
+
+    @Test
+    fun aSettingsFileWithoutTheIntroPlaysIt() {
+        // As stored before the setting existed (#383): other settings, and no intro.
+        val prefs = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertTrue(SettingsCodec.read(prefs).introAtStart)
+    }
+
+    @Test
+    fun theIntroSwitchedOffIsStoredUnderItsKey() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(introAtStart = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("display.intro") to false), prefs)
     }
 
     @Test
@@ -319,6 +357,57 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun aPhoneCallSwitchedOnInAnOlderFileIsIgnored() {
+        // An older version listed telecom like any player, and it was switched on (#435).
+        val read =
+            SettingsCodec.read(
+                mutablePreferencesOf(
+                    stringSetPreferencesKey("players.on") to setOf(TELECOM, OTHER_PLAYER),
+                    stringSetPreferencesKey("players.off") to setOf("com.google.android.dialer"),
+                ),
+            )
+        assertEquals(mapOf(Settings.SPOTIFY to true, OTHER_PLAYER to true), read.followedPlayers)
+        assertFalse(read.follows(TELECOM))
+    }
+
+    @Test
+    fun pruningDropsPlayersListedOffAndCallsButKeepsChoices() {
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("players.on") to setOf(TELECOM, OTHER_PLAYER),
+                stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY, "com.example.video"),
+            )
+        SettingsCodec.prunePlayers(prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                // Switched on: kept, so the choice is not undone.
+                stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                // Listed by default and switched off: dropping it would switch it back on.
+                stringSetPreferencesKey("players.off") to setOf(Settings.SPOTIFY),
+            ),
+            prefs,
+        )
+    }
+
+    @Test
+    fun pruningNeverTurnsAPlayerInBothKeysOn() {
+        val prefs =
+            mutablePreferencesOf(
+                stringSetPreferencesKey("players.on") to setOf(OTHER_PLAYER),
+                stringSetPreferencesKey("players.off") to setOf(OTHER_PLAYER),
+            )
+        SettingsCodec.prunePlayers(prefs)
+        assertFalse(SettingsCodec.read(prefs).follows(OTHER_PLAYER))
+    }
+
+    @Test
+    fun pruningWithNothingToDropLeavesNoKeys() {
+        val prefs = mutablePreferencesOf(stringSetPreferencesKey("players.off") to setOf("com.example.video"))
+        SettingsCodec.prunePlayers(prefs)
+        assertEquals(mutablePreferencesOf(), prefs)
+    }
+
+    @Test
     fun aSourceSwitchIsStoredOnlyAsTheUsersOverride() {
         val prefs = mutablePreferencesOf()
         val chosen = Settings.DEFAULT_SOURCES + SourceSwitch.MODEL - SourceSwitch.LASTFM
@@ -479,5 +568,6 @@ class SettingsCodecTest {
 
     private companion object {
         const val OTHER_PLAYER = "com.example.player"
+        const val TELECOM = "com.android.server.telecom"
     }
 }

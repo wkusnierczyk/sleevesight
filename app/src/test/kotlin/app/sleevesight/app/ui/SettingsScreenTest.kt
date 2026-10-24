@@ -37,6 +37,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.now
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -134,7 +135,7 @@ class SettingsScreenTest {
      * store, and `waitForIdle` does not wait for DataStore's threads: after a wait on [current], a
      * step that reads the screen waits for the screen too ([waitForNode], [waitForText]).
      */
-    private fun current(store: SettingsStore = settings): Settings = runBlocking { store.settings.first() }
+    private fun current(store: SettingsStore = settings): Settings = store.now()
 
     /** Waits for [condition]; a timeout names [what]. */
     private fun waitFor(
@@ -146,6 +147,18 @@ class SettingsScreenTest {
         waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
+
+    @Test
+    fun keepingWhatSourcesSaidAboutArtistsIsOffUntilSwitchedOn() =
+        show {
+            val title = text(R.string.settings_keep_artists)
+            compose.onNodeWithText(title).performScrollTo().assertIsOff()
+            compose.onNodeWithText(text(R.string.settings_keep_artists_summary)).assertIsDisplayed()
+
+            compose.onNodeWithText(title).performClick()
+            waitFor("keeping artist results stored on") { current().keepArtistResults }
+            waitForNode(hasText(title) and isOn())
+        }
 
     @Test
     fun aSwitchIsSavedAtOnce() =

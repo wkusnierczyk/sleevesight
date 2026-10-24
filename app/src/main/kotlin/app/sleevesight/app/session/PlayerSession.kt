@@ -3,6 +3,7 @@ package app.sleevesight.app.session
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
@@ -29,6 +30,12 @@ interface PlayerSession {
 
     /** The player's own screen for this session, when it names one: the home screen's player row opens it. */
     val sessionActivity: PendingIntent? get() = null
+
+    /**
+     * Whether the session says it is a call: its audio is for voice communication (#435). A call
+     * from a dialer is told by its package as well (`Settings.isCall`), whatever this says.
+     */
+    val marksCall: Boolean get() = false
 
     /** Registers [callback] for this session's changes, delivered on the main thread. */
     fun register(callback: MediaController.Callback)
@@ -58,6 +65,20 @@ class ControllerSession(
     override val queue: List<MediaSession.QueueItem>? get() = controller.queue
     override val queueTitle: CharSequence? get() = controller.queueTitle
     override val sessionActivity: PendingIntent? get() = controller.sessionActivity
+
+    // Most players leave the attributes at their default (media); a VoIP app's call session sets
+    // voice communication, which is the one mark of a call Android gives a session.
+    // Annotated non-null, yet null from a Robolectric controller: read as possibly absent.
+    override val marksCall: Boolean
+        get() {
+            val info: MediaController.PlaybackInfo? = controller.playbackInfo
+            return info?.audioAttributes?.usage in CALL_USAGES
+        }
+
+    private companion object {
+        val CALL_USAGES =
+            setOf(AudioAttributes.USAGE_VOICE_COMMUNICATION, AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
+    }
 
     override fun register(callback: MediaController.Callback) {
         controller.registerCallback(callback, Handler(Looper.getMainLooper()))
