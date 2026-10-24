@@ -259,6 +259,74 @@ class PipelineLabelsTest {
         }
 
     @Test
+    fun `a superseded track's Last fm track and album requests are cancelled, and give the next track nothing`() =
+        runTest {
+            val asked = mutableListOf<String>()
+            var cancelled = 0
+            val slow =
+                object : ReleaseTags {
+                    suspend fun slowly(what: String): Lookup<List<String>> {
+                        asked += what
+                        try {
+                            delay(10.seconds)
+                        } catch (e: CancellationException) {
+                            cancelled++
+                            throw e
+                        }
+                        return Lookup.Found(listOf("soft rock"))
+                    }
+
+                    override suspend fun trackTags(
+                        artist: String,
+                        title: String,
+                    ) = slowly("track $title")
+
+                    override suspend fun albumTags(
+                        artist: String,
+                        album: String,
+                    ) = slowly("album $album")
+
+                    override fun trackPage(
+                        artist: String,
+                        title: String,
+                    ) = null
+
+                    override fun albumPage(
+                        artist: String,
+                        album: String,
+                    ) = null
+                }
+            val pipeline =
+                Pipeline(
+                    PipelineParts(
+                        normalizer = Normalizer(JvmAccentFolder),
+                        adapters = listOf(musicBrainz(), lastFm()),
+                        resolver = FakeResolver(),
+                        hasher = JvmHasher,
+                        musicBrainzLabels = musicBrainzLabels,
+                        lastFmLabels = LastFmLabels(slow, vocabulary),
+                    ),
+                    PipelineTime(timeSource = testTimeSource),
+                ) { settings }
+            val changes = MutableStateFlow<TrackChange?>(TrackChange(sundown))
+            backgroundScope.launch { pipeline.follow(changes) }
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            assertEquals(listOf("track Sundown", "album Sundown"), asked)
+
+            changes.value = TrackChange(carefree)
+            advanceTimeBy(Pipeline.DEBOUNCE + 1.seconds)
+            assertEquals(2, cancelled)
+            assertEquals(listOf("track Sundown", "album Sundown", "track Carefree Highway"), asked)
+
+            advanceTimeBy(10.seconds)
+            val state = pipeline.state.value!!
+            assertEquals("Carefree Highway", state.normalized.title)
+            // Carefree Highway has no album: its track's label only, none of Sundown's album.
+            assertEquals(listOf(GenreLevel.TRACK, GenreLevel.ARTIST), state.genres.levels)
+            assertEquals(2, cancelled)
+        }
+
+    @Test
     fun `labels switched off give none from a filled cache, and ask for no tags`() =
         runTest {
             val cache = MemoryCache()

@@ -219,6 +219,32 @@ class GenresScreenTest {
                 compose.waitForIdle()
                 compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").assertIsSelected()
                 compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
+
+                // The album's labels land: folded, they would hide the open artist chip, so the
+                // table shows, until the listener folds it.
+                genres.value = TrackGenres(genres.value.rows + album)
+                compose.waitForIdle()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").assertIsSelected()
+                compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
+                compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
+                compose.waitForIdle()
+                compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertDoesNotExist()
+                assertEquals(listOf("Folk Rock", "Pop"), chips(GenreLevel.ALBUM))
+                assertEquals(emptyList<String>(), chips(GenreLevel.ARTIST))
+            }
+        }
+    }
+
+    @Test
+    fun withSeveralArtistsALabelsCreditsNameItsArtist() {
+        val two = track(HomeFixtures.sundown.copy(artists = "The Beatles, Billy Preston"))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent { Genres(two.copy(genres = TrackGenres(listOf(beatles))), Settings()) }
+            }
+            scenario.onActivity {
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
+                compose.onNodeWithText(text(R.string.home_genre_from_named, "Rock", "The Beatles")).assertExists()
             }
         }
     }

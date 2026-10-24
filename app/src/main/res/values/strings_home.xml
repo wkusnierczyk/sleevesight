@@ -48,6 +48,8 @@
     <string name="home_genres_row_artist_words">%1$s, %2$s: %3$s</string>
     <string name="home_genre_from_track">%1$s comes from the track’s tags on:</string>
     <string name="home_genre_from">%1$s comes from the artist’s tags on:</string>
+    <!-- With several credited artists: %1$s the genre, %2$s the artist whose tags gave it. -->
+    <string name="home_genre_from_named">%1$s comes from %2$s’s tags on:</string>
     <string name="home_genre_from_album">%1$s comes from the album’s tags on:</string>
     <string name="home_genre_licence">licence</string>
 

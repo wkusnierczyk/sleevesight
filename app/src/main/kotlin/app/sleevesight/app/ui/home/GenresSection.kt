@@ -72,24 +72,26 @@ internal fun Genres(
     // artist and genre, so it outlasts labels that land later, and the fold.
     var unfolded by rememberSaveable(track.normalized.lookupKey) { mutableStateOf(false) }
     var selected by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
-    val table = unfolded && !genres.oneLevel
-    val shown = if (table) genres.rows.flatMap { row -> row.labels.map { PlacedLabel(row, it) } } else genres.folded
-    // A selection whose chip is not shown (folded away) shows no credits.
-    val open = shown.firstOrNull { it.key == selected }
+    val view = GenresView(genres, unfolded, selected)
+    val open = view.open
     val off = settings != null && LabelSource.entries.none { settings.givesLabels(it) }
     val select = { label: PlacedLabel -> selected = if (open?.key == label.key) null else label.key }
+    val fold = {
+        unfolded = false
+        if (view.folded.none { it.key == selected }) selected = null
+    }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when {
             genres.isEmpty && off -> Small(stringResource(R.string.home_genres_off))
             genres.isEmpty -> Small(stringResource(R.string.home_genres_none))
-            genres.oneLevel -> Chips(genres.folded, open, select)
-            unfolded -> {
-                Fold(unfolded = true) { unfolded = false }
+            genres.oneLevel -> Chips(view.folded, open, select)
+            view.table -> {
+                Fold(unfolded = true, toggle = fold)
                 Table(genres, open, select)
             }
-            else -> Chips(genres.folded, open, select) { Fold(unfolded = false) { unfolded = true } }
+            else -> Chips(view.folded, open, select) { Fold(unfolded = false) { unfolded = true } }
         }
-        open?.let { Credits(it) }
+        open?.let { Credits(it, several = track.normalized.artists.size > 1) }
     }
 }
 
@@ -248,7 +250,10 @@ private fun GenreChip(
 }
 
 @Composable
-private fun Credits(placed: PlacedLabel) {
+private fun Credits(
+    placed: PlacedLabel,
+    several: Boolean,
+) {
     val linkStyle = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
     val licence = stringResource(R.string.home_genre_licence)
     val label = placed.label
@@ -258,8 +263,13 @@ private fun Credits(placed: PlacedLabel) {
             GenreLevel.ARTIST -> R.string.home_genre_from
             GenreLevel.ALBUM -> R.string.home_genre_from_album
         }
+    // With several credited artists, an artist's label names whose tags gave it.
+    val artist = placed.row.artist?.takeIf { several }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Small(stringResource(from, label.genre.label))
+        Small(
+            artist?.let { stringResource(R.string.home_genre_from_named, label.genre.label, it) }
+                ?: stringResource(from, label.genre.label),
+        )
         for (credit in label.credits) {
             val text =
                 buildAnnotatedString {
@@ -277,6 +287,24 @@ private fun Credits(placed: PlacedLabel) {
             Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+/**
+ * What the genres show: the [table] or the [folded] chips, and the chip whose credits are [open].
+ * A selected chip that a later level would fold away (Last.fm's album tags landing under an
+ * artist's chip the listener opened) keeps the table showing, until the listener folds it; a
+ * selection whose chip is not shown (the listener folded it away) shows no credits.
+ */
+private class GenresView(
+    genres: TrackGenres,
+    unfolded: Boolean,
+    selected: String?,
+) {
+    val folded: List<PlacedLabel> = genres.folded
+    private val every = genres.rows.flatMap { row -> row.labels.map { PlacedLabel(row, it) } }
+    private val kept = selected != null && folded.none { it.key == selected } && every.any { it.key == selected }
+    val table: Boolean = (unfolded || kept) && !genres.oneLevel
+    val open: PlacedLabel? = (if (table) every else folded).firstOrNull { it.key == selected }
 }
 
 // What a selection is kept by: the chip's level, artist and genre, not its row's other labels.
