@@ -29,7 +29,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 At the bottom, a link opens the privacy policy in your browser.
 
-**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the phone*, at the bottom of the home screen.
+**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings.
 
 <!-- screenshot: the first-run screen, top, under the app's name: the intro and "What it reads", from app version … -->
 

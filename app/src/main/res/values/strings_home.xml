@@ -4,7 +4,7 @@
     <string name="home_placeholder">Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
-    <string name="home_what_leaves">What leaves the phone</string>
+    <string name="home_what_leaves">What leaves the device?</string>
     <!-- The header's cogwheel: what a screen reader says, and its tooltip. -->
     <string name="home_settings">Settings</string>
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->

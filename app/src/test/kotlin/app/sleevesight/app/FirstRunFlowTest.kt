@@ -421,6 +421,32 @@ class FirstRunFlowTest {
     }
 
     @Test
+    fun theSettingsOpenWhatLeavesTheDeviceAtItsTopAndContinueComesBack() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.setInTouchMode(true)
+        try {
+            launch().use {
+                compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
+                compose.waitUntil(5_000) {
+                    compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
+                }
+                compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().performClick()
+                // At the top, as from Home: the app's name and the heading, unscrolled.
+                compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+                // Back on the settings, not Home.
+                compose.onNodeWithText(text(R.string.settings_what_leaves)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.home_placeholder)).assertDoesNotExist()
+            }
+        } finally {
+            instrumentation.setInTouchMode(false)
+        }
+    }
+
+    @Test
     fun theCreditsSendTheUserToTheFirstRunScreenUntilItIsAcknowledged() {
         acknowledgeFirstRun()
         setAccess(granted = true)

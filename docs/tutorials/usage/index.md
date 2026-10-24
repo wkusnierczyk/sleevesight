@@ -41,7 +41,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The cogwheel**, at the right, opens the settings.
 
-At the bottom of the home screen, *What leaves the phone* opens the first-run screen again, to reread it.
+At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too.
 
 ### The playing track
 
