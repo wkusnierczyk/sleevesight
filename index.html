@@ -122,14 +122,15 @@ nav.top{flex:none}
   nav.top ul{transition:font-size .25s ease}
 }
 .sl-still *{transition:none!important}
-/* The words (`#words`): outlined from Roboto Flex 400 at 88% width (`assets/logo/src/make_tile.py`),
-   so they need no font; "Sleeve" in ink (`--tile-ink`, the page's `--ink` in light and dark), and
-   "sight" in `--sight`. Each word is a group of paths, one to a letter (`#w-sleeve-1` to
-   `#w-sight-5`), so an intro can show or turn each letter on its own. The tile, in the intros only: white with a faint
-   edge on light, since the page is white too, and black with a faint edge on dark. The record (`#lp`)
-   is the eye logo's disc in its colours, set through variables, since a selector cannot reach into a
-   <use>. On dark, the record's rim takes the outline's
-   grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
+/* The words (`#words`): outlined from Roboto Flex 400 at 88% width
+   (`assets/logo/src/make_tile.py`), so they need no font; "Sleeve" in ink (`--tile-ink`, the page's
+   `--ink` in light and dark), and "sight" in `--sight`. Each word is a group of paths, one to a
+   letter (`#w-sleeve-1` to `#w-sight-5`), so an intro can show or turn each letter on its own. The
+   tile, in the intros only: white with a faint edge on light, since the page is white too, and
+   black with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set
+   through variables, since a selector cannot reach into a <use>. On dark, the record's rim takes
+   the outline's grey, and the groove gives way to a wider black disc, so the grey meets the black
+   directly. */
 :root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}

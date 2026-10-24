@@ -174,7 +174,8 @@ class LogoPicturesTest {
     fun r2sTileStaysGoneAsTheMarkFlies() {
         // R2's tile has faded by 3.78 s; the flight starts at 4.1 s, and lands at 4.75 s. The record's
         // core, inside its rim, is the tile's black too, so the black is weighed against the rim: the
-        // core is about 1.4 times the rim's ring in area, and the tile, had it stayed, about 50 times.
+        // core's black, around the red label, is about as large as the rim's ring, and the tile, had
+        // it stayed, about 50 times.
         val colors = LogoColors.Dark
         for (t in listOf(4150L, 4300L, 4500L)) {
             val intro = LogoIntro(IntroVariant.R2).apply { elapsed = t.toFloat() }
