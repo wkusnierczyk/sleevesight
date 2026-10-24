@@ -122,10 +122,20 @@ function update() {
   holds.replaceChildren(...lines);
 }
 
+// The report's next text, set a moment after it is emptied, so that the same text again is
+// announced again.
+let reporting = null;
+
 function report(text, error = false) {
   const line = $('file-report');
+  clearTimeout(reporting);
   line.className = error ? 'report error' : 'report';
-  line.textContent = text;
+  line.textContent = '';
+  if (text !== '') {
+    reporting = setTimeout(() => {
+      line.textContent = text;
+    }, 100);
+  }
 }
 
 // Fills the fields with the keys in [file], in place of what they held, and says what was left out.
@@ -156,6 +166,10 @@ async function load(file) {
     said.push(`Not a key Sleevesight uses, left out: ${names}.`);
   }
   if (others > 0) said.push(`${others} other name${others > 1 ? 's' : ''} left out.`);
+  if (keys.size === 0 && unknown.length + others > 0) {
+    said.push('Sleevesight’s names are SLEEVESIGHT_ANTHROPIC_API_KEY, SLEEVESIGHT_OPENAI_API_KEY, '
+      + 'SLEEVESIGHT_GOOGLE_API_KEY, SLEEVESIGHT_EXA_API_KEY and SLEEVESIGHT_LASTFM_API_KEY.');
+  }
   if (unreadable > 0) said.push(`${unreadable} line${unreadable > 1 ? 's' : ''} not of the form NAME=value, left out.`);
   report(said.join(' '));
   update();
@@ -205,7 +219,9 @@ const holdFile = (event) => {
 window.addEventListener('dragover', holdFile);
 window.addEventListener('drop', holdFile);
 // Emptied as the page is left, so that no browser offers to save a key, where it masks the fields
-// as passwords, and none is restored on coming back.
+// as passwords, and none is restored on coming back: before a navigation starts, and again as the
+// page is hidden (also into the back-forward cache, which `beforeunload` does not see).
+window.addEventListener('beforeunload', clear);
 window.addEventListener('pagehide', clear);
 $('show').addEventListener('change', () => show($('show').checked));
 $('clear').addEventListener('click', clear);

@@ -27,9 +27,10 @@ export const SHOWN_NAME = 40;
 // What a variable's name looks like; anything else before an `=` is a line not read.
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-// Unknown names are shown only with this prefix, as a key's name mistyped. Others are only counted:
-// a line of base64 from a file chosen by mistake looks like a name, and may be a secret.
-const OURS = 'SLEEVESIGHT_';
+// Unknown names are shown only when they start `SLEEVESIGHT_` (a key's name mistyped) or end
+// `_API_KEY` (a key named as another tool has it). Others are only counted: a line of base64 from a
+// file chosen by mistake looks like a name, and may be a secret, but holds no `_`.
+const SHOWN = /^SLEEVESIGHT_|_API_KEY$/;
 
 const TOKEN = /^[A-Za-z0-9_-]+$/;
 const GOOGLE_TOKEN = /^[A-Za-z0-9._-]+$/;
@@ -75,8 +76,8 @@ export function write(keys) {
  * blank lines skipped, as the CLI reads it. A key is named by its variable or by its name in the
  * code; an empty value is no key, as the CLI has it. Gives the [keys] found, by service code, the
  * services named more than once with a value ([repeated]), which none of their values is taken
- * from, those named with no value ([empty]), the unknown names that start `SLEEVESIGHT_`
- * ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
+ * from, those named with no value ([empty]), the unknown names that start `SLEEVESIGHT_` or end
+ * `_API_KEY` ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
  * lines were not `NAME=value` ([unreadable]).
  */
 export function readFile(text) {
@@ -95,10 +96,10 @@ export function readFile(text) {
       unreadable++;
       continue;
     }
-    const value = unquoted(line.slice(at + 1).trim());
+    const value = unquoted(line.slice(at + 1).trim()).trim();
     const service = SERVICES.find((s) => s.variable === name || s.code === name);
     if (service === undefined) {
-      if (name.startsWith(OURS)) unknown.push(name.slice(0, SHOWN_NAME));
+      if (SHOWN.test(name)) unknown.push(name.slice(0, SHOWN_NAME));
       else others++;
     } else if (value === '') {
       empty.add(service.code);
