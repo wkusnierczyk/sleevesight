@@ -1,12 +1,14 @@
 {% comment %}
   The Primer theme's `_layouts/default.html`, from `jekyll-theme-primer` 0.6.0 (the version the
   `github-pages` gem pins; MIT, Copyright (c) 2016-2017 GitHub, Inc., its licence in
-  `_layouts/LICENSE-primer.md`), with two changes: AnchorJS 4.1.0 (MIT, Bryan Braun, its licence in
+  `_layouts/LICENSE-primer.md`), with three changes: AnchorJS 4.1.0 (MIT, Bryan Braun, its licence in
   `assets/js/LICENSE-anchor-js.txt`), which adds links to the headings, is served from this site
   (`assets/js/anchor.min.js`, the same file, so the same integrity hash) instead of from cdnjs, so
   a visit sends nothing to a third party for it (#295); and a page that sets `logo: linear` is
-  headed by the linear logo (`_includes/logo-linear.html`) in place of the site's title (#158).
-  Keep it in step with the theme's layout.
+  headed by the linear logo (`_includes/logo-linear.html`) in place of the site's title (#158); and
+  its footer is the line every page of the site carries, the licence, the page's source (its file,
+  or the one it renders, `source_path`) and the brand sheet's *Fonts*, in place of the theme's
+  "This site is open source. Improve this page." (#454). Keep it in step with the theme's layout.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -31,7 +33,9 @@
 
       {% if site.github.private != true and site.github.license %}
       <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
-        This site is open source. {% github_edit_link "Improve this page" %}.
+        <a href="{{ site.github.repository_url }}/blob/main/LICENSE">Open source (GPL-3.0)</a> ·
+        <a href="{{ site.github.repository_url }}/blob/main/{{ page.source_path | default: page.path }}">This page's source</a> ·
+        <a href="{{ "/design/brand.html#fonts" | relative_url }}">Fonts</a>
       </div>
       {% endif %}
     </div>

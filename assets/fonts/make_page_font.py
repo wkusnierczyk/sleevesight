@@ -1,23 +1,25 @@
-"""Cut the product page's fonts (`index.html`) down to what it uses, as `Roboto*-page.woff2`.
+"""Cut the site's standalone pages' fonts down to what they use, as `Roboto*-page.woff2`: the product
+page (`index.html`) and the brand sheet (`design/brand.html`), which share them.
 
-The page sets its titles, labels and the app's text (the hero phone and the example boxes) in Roboto
-Flex, its own running text in Roboto Slab, and the citation chips in Roboto Mono. It loads nothing
-from another site, so it carries its own copy of each, as the brand sheet does (`make_sheet_font.py`).
-Without them, the page took whatever Roboto the visitor had installed: on a machine with only Roboto
-Bold, every weight rendered bold. Each copy keeps
-  - the axes the page varies (see `FONTS`), every other axis fixed at its default. Flex: weight
+The product page sets its titles, labels and the app's text (the hero phone and the example boxes)
+in Roboto Flex, its own running text in Roboto Slab, and the citation chips in Roboto Mono; the
+brand sheet sets its titles in Flex, its text in Slab and its code in Mono. Neither page loads
+anything from another site, so they carry their own copy of each. Without them, the product page
+took whatever Roboto the visitor had installed: on a machine with only Roboto Bold, every weight
+rendered bold. Each copy keeps
+  - the axes the pages vary (see `FONTS`), every other axis fixed at its default. Flex: weight
     400-700, width 88-100% (the headings are at 88-92%), and optical size over its whole range, which
     the browser sets from the font size; its slant is fixed too, so italic text (`<i>` and `.chat .by`)
     is slanted by the browser. Slab: weight 350-700 (the text is at 350, bold at 700). Mono: the one
-    weight the chips use, 500;
-  - the characters in the page (every one in the file, markup and script included, so text the
+    weight the chips and the code use, 500;
+  - the characters in the pages (every one in the files, markup and script included, so text the
     scripts write is covered), plus printable ASCII, Latin-1 and the common punctuation (dashes,
-    curly quotes, the ellipsis), so ordinary edits need no rebuild. Mono, used only for the chips'
-    source letters and numbers, keeps printable ASCII alone, and the chips' labels (the text of each
-    `class="cite …"` element) are checked against it.
-Text added to the page in a character outside that set falls back to the next font in the stack,
-so after such an edit, run this again for Flex and Slab. A character a font itself lacks, such as the
-check mark ✓, falls back all the same; the script names any the page uses.
+    curly quotes, the ellipsis), so ordinary edits need no rebuild. Mono, used for the chips' source
+    letters and numbers and the brand sheet's code, keeps printable ASCII alone, and the chips'
+    labels (the text of each `class="cite …"` element) are checked against it.
+Text added to a page in a character outside that set falls back to the next font in the stack, so
+after such an edit, run this again for Flex and Slab. A character a font itself lacks, such as the
+check mark ✓, falls back all the same; the script names any the pages use.
 
 Usage, from the repository root, with fontTools and Brotli installed (`pip install fonttools brotli`):
     python3 assets/fonts/make_page_font.py flex RobotoFlex.ttf
@@ -38,7 +40,7 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 
-PAGES = ['index.html']
+PAGES = ['index.html', 'design/brand.html']
 ASCII = set(range(0x20, 0x7f))
 EXTRA = ASCII | set(range(0xa0, 0x100)) | set(range(0x2010, 0x2027))
 FONTS = {
