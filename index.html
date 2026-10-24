@@ -56,7 +56,8 @@ layout: null
   --cite-ink:#ffffff;
   --sight:#cf222e;
   --track:var(--sight);
-  --trace:#7d5a2c;
+  --trace:#856800;
+  --tell:#2c7a4b;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
@@ -67,7 +68,8 @@ layout: null
   --s-onv:hsl(var(--h) 10% 70%); --s-pri:hsl(var(--h) 70% 80%);
   --cite-ink:#0e1116;
   --track:#f0443a;
-  --trace:#d1a66a;
+  --trace:#e9c84a;
+  --tell:#5fc48a;
   color-scheme:dark}}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -169,13 +171,17 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-weight:700;font-stretch:92%;letter-spacing:-.01em}
 /* How it works and You choose: three columns of text, without boxes, each headed as Privacy's leads
    (19px, semibold). In How it works: the verb, in its colour; what the step does; then a short
-   statement, bold, at the foot of the column, so the three line up. The colours: Track (`--track`)
-   the wordmark's red (`--sight`, close to Last.fm's chip) in light, and a lighter red in dark, where
-   the wordmark's is too dark for text this size (3.56:1); Trace an earth ochre (browner than web
-   search's amber, in its hue); Tell the accent blue. */
+   statement, bold, at the foot of the column, so the three line up. The colours are a traffic
+   light, read top to bottom: Track red, waiting for a track to start; Trace amber, getting ready as
+   the sources are looked up; Tell green, go, the insight is shown. Track (`--track`) is the
+   wordmark's red (`--sight`, close to Last.fm's chip) in light, and a lighter red in dark, where the
+   wordmark's is too dark for text this size (3.56:1). Trace's amber (`--trace`) is yellower than
+   web search's (`--src-g`), so a header does not read as a citation; a yellow would be unreadable on
+   white. Tell's green (`--tell`) is the simulator's `--ok`. Each is at least 5:1 on its ground, and
+   each step is named by its verb, so the colours carry nothing alone. */
 .steps,.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 32px}
 .steps h3,.tiles h3{margin:0 0 12px;font-size:19px;font-weight:600}
-.steps .track h3{color:var(--track)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--accent)}
+.steps .track h3{color:var(--track)} .steps .trace h3{color:var(--trace)} .steps .tell h3{color:var(--tell)}
 .steps p,.tiles p{margin:0;font-size:17px;color:var(--ink)}
 .steps li{display:flex;flex-direction:column}
 .steps li>div{flex:1;display:flex;flex-direction:column;gap:8px}
