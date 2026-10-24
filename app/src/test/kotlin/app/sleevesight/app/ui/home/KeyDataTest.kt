@@ -39,32 +39,35 @@ class KeyDataTest {
         }
     }
 
+    /** The words of [line]'s text in italics. */
+    private fun italics(line: String): List<String> {
+        val text =
+            compose
+                .onNodeWithText(line)
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Text]
+                .single()
+        return text.spanStyles
+            .filter { it.item.fontStyle == FontStyle.Italic }
+            .map { text.text.substring(it.start, it.end) }
+    }
+
     @Test
     fun theYearFollowsTheAlbumInItalicsOnOneLine() =
         show(sundown, "1974") {
             // One text, so a screen reader reads the album and the year as one line.
-            val text =
-                compose
-                    .onNodeWithText("Sundown, 1974")
-                    .fetchSemanticsNode()
-                    .config[SemanticsProperties.Text]
-                    .single()
-            val italic = text.spanStyles.single { it.item.fontStyle == FontStyle.Italic }
-            assertEquals("Sundown", text.text.substring(italic.start, italic.end))
+            assertEquals(listOf("Sundown"), italics("Sundown, 1974"))
             assertEquals(0, compose.onAllNodesWithText("Released", substring = true).fetchSemanticsNodes().size)
         }
 
     @Test
     fun withNoYearTheAlbumStandsAlone() =
-        show(sundown, null) {
-            // The title, and the album of the same name.
-            assertEquals(2, compose.onAllNodesWithText("Sundown").fetchSemanticsNodes().size)
-        }
+        show(sundown.copy(album = "Gord's Gold"), null) { assertEquals(listOf("Gord's Gold"), italics("Gord's Gold")) }
 
     @Test
     fun withNoAlbumTheYearStandsAlone() =
         show(sundown.copy(album = null), "1974") {
-            compose.onNodeWithText("1974").assertExists()
+            assertEquals(emptyList<String>(), italics("1974"))
             compose.onNodeWithText(app.getString(R.string.home_album_none)).assertDoesNotExist()
         }
 

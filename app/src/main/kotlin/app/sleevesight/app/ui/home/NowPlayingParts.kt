@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.session.PlaybackInfo
@@ -247,19 +248,14 @@ private fun albumLine(
     album: String?,
     year: String?,
 ): AnnotatedString {
-    val text =
-        if (album != null && year != null) {
-            stringResource(R.string.home_album_year, album, year)
-        } else {
-            album ?: year ?: stringResource(R.string.home_album_none)
-        }
+    if (album == null) return AnnotatedString(year ?: stringResource(R.string.home_album_none))
+    // A mark in the album's place says where the format puts it, whatever the album and year hold.
+    val line = if (year != null) stringResource(R.string.home_album_year, ALBUM_MARK, year) else ALBUM_MARK
+    val at = line.indexOf(ALBUM_MARK)
     return buildAnnotatedString {
-        append(text)
-        // The album's own words, wherever the format puts them.
-        if (album != null) {
-            val start = text.indexOf(album)
-            if (start >= 0) addStyle(SpanStyle(fontStyle = FontStyle.Italic), start, start + album.length)
-        }
+        append(line, 0, at)
+        withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(album) }
+        append(line, at + ALBUM_MARK.length, line.length)
     }
 }
 
@@ -370,6 +366,7 @@ const val GENRE_PREFIX: String = "genre:"
 private val ART_WIDTH = 360.dp
 private val TICK = 1.seconds
 private const val TAG = "Sleevesight"
+private const val ALBUM_MARK = "\u0000"
 private const val HALF = 0.5f
 private const val CHIP_SATURATION = 0.5f
 private const val LIGHT_CONTAINER = 0.88f
