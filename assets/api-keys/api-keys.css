@@ -1,0 +1,30 @@
+/* The API keys page (#436), on the keyboard page's style sheet (`keyboard.css`). */
+code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wrap: anywhere; }
+.drop {
+  margin-top: 12px; padding: 16px; border: 2px dashed var(--line); border-radius: 12px;
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+}
+.drop.over { border-color: var(--accent); }
+.hint, .report { color: var(--muted); }
+/* The report's errors in the error colour, which `.report`'s muted colour overrides otherwise
+   (`keyboard.css`'s `.error` is as specific, and comes earlier). */
+.report.error { color: var(--error); }
+/* Kept in the accessibility tree while empty (no `display: none`), so that its first report is
+   announced. */
+.report:empty { margin: 0; }
+.fields { margin-top: 12px; display: grid; gap: 12px; }
+.field label { display: block; font-weight: 600; }
+.field input {
+  font: 16px/1.4 ui-monospace, "SFMono-Regular", Menlo, monospace; width: 100%; box-sizing: border-box;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink);
+}
+/* Masked without a password field, which a browser would offer to save. */
+.field input.masked { -webkit-text-security: disc; }
+.field input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.field p { margin: 4px 0 0; font-size: 15px; }
+/* Large enough to scan from a laptop's screen: 5 pixels a module, the width set by the script, up
+   to the page's width (`keyboard.css`), which holds a code of five keys of ordinary length (version
+   16, 445 pixels with the quiet zone); from about version 22, a module is smaller. */
+.code { width: auto; }
+#holds ul { margin: 4px 0 0; padding-left: 1.2em; }
+#holds li { margin: 0; }

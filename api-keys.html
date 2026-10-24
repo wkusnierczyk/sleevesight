@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- API keys to a setup code (#436), for the app's Scan keys. The page connects to nothing: it
+     fetches only its own scripts and style sheets, and the policy below forbids any other request,
+     so the browser's network panel shows that nothing is sent. The keys stay in the page's memory,
+     never in storage, and go only into the QR code drawn here. No front matter, so the site copies
+     it as it is. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Sleevesight API keys</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/keyboard/keyboard.css">
+<link rel="stylesheet" href="assets/api-keys/api-keys.css">
+<script type="module" src="assets/api-keys/api-keys.js"></script>
+</head>
+<body>
+<main>
+  <h1>API keys to a QR code</h1>
+  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>API keys</b>, <b>Scan keys</b>.</p>
+
+  <ol>
+    <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>; lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.
+      <div id="drop" class="drop">
+        <label class="file">Keys file <input id="file" type="file" aria-describedby="file-report"></label>
+        <span class="hint">or drop it here</span>
+      </div>
+      <p id="file-report" class="report" role="status" aria-live="polite"></p>
+      <div id="fields" class="fields"></div>
+      <p><label class="show"><input id="show" type="checkbox"> Show the keys</label></p>
+    </li>
+    <li>Scan the code with <b>Scan keys</b>. The phone lists what it found, each key by its last four characters, before it saves anything.
+      <div id="code" class="code" hidden></div>
+      <p id="holds" role="status" aria-live="polite">No key yet.</p>
+    </li>
+    <li>Once the phone has saved them, choose <b>Clear</b>, or close this tab.
+      <p><button id="clear" type="button">Clear</button></p>
+    </li>
+  </ol>
+
+  <p class="note">Nothing leaves your computer. The page is allowed no network request, uses no code from elsewhere and stores nothing: the keys are kept only while the tab is open, and the code is drawn here. Never make such a code with an online QR generator: it would receive your keys. The QR code is the keys: do not leave it on screen, or take a photo or screenshot of it.</p>
+</main>
+</body>
+</html>
