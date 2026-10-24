@@ -9,11 +9,9 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** The now-playing screen's colours from the art. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class ArtColorsTest {
     private fun art(color: Int) = Bitmap.createBitmap(400, 400, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
 

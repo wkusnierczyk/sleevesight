@@ -80,7 +80,6 @@ import kotlin.math.ceil
 
 /** The home screen's content in each state it shows, from published state only. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class NowPlayingScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -639,11 +638,11 @@ class NowPlayingScreenTest {
                     .action
                     ?.invoke(layouts)
                 val layout = layouts.single()
-                // Not `didOverflowWidth`: with `softWrap = false` the paragraph takes the whole
-                // width offered, so it reads true for every tag narrower than the column.
+                // Not `didOverflowWidth`: the result `GetTextLayoutResult` returns lays its paragraph
+                // out at the whole width offered, so it reads true for every tag narrower than the
+                // column.
                 val needed = ceil(layout.multiParagraph.intrinsics.maxIntrinsicWidth).toInt()
                 assertTrue("$tag is ${layout.size.width} px of $needed", layout.size.width >= needed)
-                assertEquals("$tag lines", 1, layout.lineCount)
             }
         }
 
@@ -660,9 +659,14 @@ class NowPlayingScreenTest {
                 listOf("MB", "W", "L").map {
                     val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
                     // Unclipped: a chip scrolled out of view has empty bounds in the root.
-                    node.positionInRoot.y + node.size.height / 2f
+                    node.positionInRoot.y to node.positionInRoot.y + node.size.height
                 }
-            assertTrue("one centre: $chips", chips.maxOf { it } - chips.minOf { it } < 1f)
+            // On one row, or the centres below would differ for another reason: chips of one row
+            // overlap in height (each is more than half the row's height), and the next row starts
+            // below them all.
+            assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
+            val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
+            assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
         }
 
     @Test

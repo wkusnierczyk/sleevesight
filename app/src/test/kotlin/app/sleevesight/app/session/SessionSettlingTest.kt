@@ -13,13 +13,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /** How a session's reports settle into tracks and track changes (`design/architecture.md`, *Session layer*). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class SessionSettlingTest : SessionRepositoryFixture() {
     /**
      * YouTube Music stopped in the background (no item), then moved on: its new state (item 5)

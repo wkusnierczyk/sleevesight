@@ -29,11 +29,9 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** *Diagnostics*, the developer setting, and the way to the diagnostics screen behind it (#54). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class DeveloperSettingsTest {
     @get:Rule
     val compose = createEmptyComposeRule()

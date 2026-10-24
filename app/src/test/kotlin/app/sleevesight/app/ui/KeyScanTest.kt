@@ -47,14 +47,12 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * Entering keys by QR code on the settings screen (#268), with a scanner that needs no camera, and
  * by typing on a computer (#394), with a keyboard that needs no Bluetooth.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class KeyScanTest {
     @get:Rule
     val compose = createEmptyComposeRule()

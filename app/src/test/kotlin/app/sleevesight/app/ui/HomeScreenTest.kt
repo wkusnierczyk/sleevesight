@@ -42,7 +42,6 @@ import org.robolectric.annotation.GraphicsMode
  * (animated, or at once with the phone's animations off), and the cogwheel opens the settings.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class HomeScreenTest {
     // On the phone, Compose's window recomposer sets its motion duration scale from the animator
     // duration scale (*Remove animations*); the test rule's recomposer does not read that setting,

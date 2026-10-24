@@ -10,7 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.xmlpull.v1.XmlPullParser
 
 /**
@@ -21,7 +20,6 @@ import org.xmlpull.v1.XmlPullParser
  * the record of track changes (#49), in the app's `databases/`.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class BackupRulesTest {
     private val app = ApplicationProvider.getApplicationContext<Context>()
 

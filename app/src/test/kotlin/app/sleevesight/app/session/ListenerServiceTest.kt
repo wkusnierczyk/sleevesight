@@ -18,11 +18,9 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 
 /** The listener service and the system's sessions, through the app graph as the app wires them. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class ListenerServiceTest {
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private val manager = app.getSystemService(MediaSessionManager::class.java)

@@ -84,8 +84,9 @@ jobs:
       # Robolectric downloads its Android runtime (about 150 MB) from Maven Central into `~/.m2`, which
       # `setup-gradle` does not cache. Keyed on the Robolectric version (`libs.versions.toml`) and
       # its configuration file: a new key downloads afresh, so old runtimes do not pile up in the
-      # cache. The SDK it runs is set by each test's `@Config(sdk = …)`, outside the key: a new SDK
-      # alone is downloaded on each run until the key next changes, slower but never wrong.
+      # cache. The SDK the tests run on is set in that file, so a new one changes the key; an SDK
+      # that a test sets for itself (`@Config(sdk = …)`) is outside the key: one new SDK alone is
+      # downloaded on each run until the key next changes, slower but never wrong.
       - uses: actions/cache@v6
         if: steps.changes.outputs.build == 'true'
         with:

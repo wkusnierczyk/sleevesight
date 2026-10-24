@@ -67,11 +67,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** The *Sources* list's fold (#269): each state, the moves between them, and what unfolds it. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class SourcesFoldScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()

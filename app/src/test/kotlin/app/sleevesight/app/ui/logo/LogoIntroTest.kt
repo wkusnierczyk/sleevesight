@@ -40,7 +40,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 
 /**
  * The logo's intro (#383): played when the app is opened from the launcher while it is not open,
@@ -49,7 +48,6 @@ import org.robolectric.annotation.Config
  * under touch exploration; and it lands on the header's logo.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class LogoIntroTest {
     @get:Rule
     val compose = createEmptyComposeRule()

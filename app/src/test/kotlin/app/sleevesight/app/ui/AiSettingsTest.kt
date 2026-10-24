@@ -57,14 +57,12 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * *AI service* on the settings screen (#227): per provider offered, a switch, its key, its model
  * and its reasoning effort, each named for the provider; a provider switched off keeps them.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class AiSettingsTest {
     @get:Rule
     val compose = createEmptyComposeRule()
