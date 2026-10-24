@@ -12,7 +12,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
-import org.robolectric.annotation.Config
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -28,7 +27,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * except for [Entry.AUDIO_INFO], which flips it through the audio-info callback.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class SessionCallGateTest(
     private val entry: Entry,
     private val timing: Timing,

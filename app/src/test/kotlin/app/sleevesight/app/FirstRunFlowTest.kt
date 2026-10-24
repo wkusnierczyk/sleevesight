@@ -57,7 +57,6 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class FirstRunFlowTest {
     @get:Rule
     val compose = createEmptyComposeRule()

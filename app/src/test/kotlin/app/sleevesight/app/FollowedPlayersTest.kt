@@ -28,11 +28,9 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
-import org.robolectric.annotation.Config
 
 /** *Players to follow* and the session layer, through the app graph as the app wires them (#126). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class FollowedPlayersTest {
     @get:Rule
     val tmp = TemporaryFolder()

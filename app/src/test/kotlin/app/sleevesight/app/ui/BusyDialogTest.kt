@@ -44,7 +44,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 
 /**
@@ -53,7 +52,6 @@ import org.robolectric.shadows.ShadowDialog
  * cannot be cancelled or dismissed. Each holds its write open on a gated [FlakyDataStore].
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class BusyDialogTest {
     @get:Rule
     val compose = createEmptyComposeRule()

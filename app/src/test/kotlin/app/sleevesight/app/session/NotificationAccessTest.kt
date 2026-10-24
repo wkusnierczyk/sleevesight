@@ -15,7 +15,6 @@ import org.robolectric.annotation.Config
 
 /** Whether the app's own listener has notification access, as each Android version can say. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class NotificationAccessTest {
     private val app = ApplicationProvider.getApplicationContext<Application>()
     private val ours = ComponentName(app, SleevesightListenerService::class.java)

@@ -6,11 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /** The icons' licence, the Apache License 2.0, ships with the app, as the font's does (#445). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class IconLicenceTest {
     @Test
     fun theIconsLicenceShipsWithTheApp() {

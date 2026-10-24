@@ -21,12 +21,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLog
 import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 internal class SessionRepositoryTest : SessionRepositoryFixture() {
     private fun ignoredLines() =
         ShadowLog.getLogsForTag("Sleevesight").filter {

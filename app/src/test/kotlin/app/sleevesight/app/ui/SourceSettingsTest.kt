@@ -46,14 +46,12 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * *Where to look*'s web search engines and *Genre labels* on the settings screen: a switch that
  * cannot act shows off, cannot be moved, and says why (#84, #140).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class SourceSettingsTest {
     @get:Rule
     val compose = createEmptyComposeRule()

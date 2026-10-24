@@ -30,7 +30,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -43,7 +42,6 @@ import kotlin.time.Instant
 
 /** What the diagnostics screen reads, and its export (#54). */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class DiagnosticsTest {
     private val jdbc = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).also { HistoryDatabase.Schema.create(it) }
     private val history = SessionHistory(jdbc)

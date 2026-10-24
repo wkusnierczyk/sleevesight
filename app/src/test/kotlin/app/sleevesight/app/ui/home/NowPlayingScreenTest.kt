@@ -80,7 +80,6 @@ import kotlin.math.ceil
 
 /** The home screen's content in each state it shows, from published state only. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
 class NowPlayingScreenTest {
     @get:Rule
     val compose = createEmptyComposeRule()
