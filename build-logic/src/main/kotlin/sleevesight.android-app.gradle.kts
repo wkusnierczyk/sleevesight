@@ -1,14 +1,16 @@
 // An Android application: SDK levels from the architecture (D10), Java 17, Compose,
 // kotlinx.serialization (Navigation Compose's type-safe routes are serializable), and the shared
-// checks, plus `checkManifest` on each variant's merged manifest and `checkApkClasses` on each
-// variant's APK (in `check`). The release build is shrunk by R8 and signed with the upload key when
-// the environment names one (`design/release.md`).
+// checks, plus `checkManifest` on each variant's merged manifest, `checkApkClasses` on each
+// variant's APK (in `check`), and `checkDependencyPage` on the release variant's classpath. The
+// release build is shrunk by R8 and signed with the upload key when the environment names one
+// (`design/release.md`).
 import com.android.build.api.artifact.SingleArtifact
 import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.HasAndroidTest
 import com.android.build.api.variant.HasUnitTest
 import sleevesight.checks.CheckApkClasses
 import sleevesight.checks.CheckDependencies
+import sleevesight.checks.CheckDependencyPage
 import sleevesight.checks.CheckManifest
 import sleevesight.checks.CheckModuleGraph
 import sleevesight.checks.networkModules
@@ -110,6 +112,17 @@ androidComponents {
                 modules = CheckDependencies.modulesOf(runtimeRoot)
             }
         checkDependencies.configure { dependsOn(dependencies) }
+
+        // The page lists what ships, so it is held to the release variant's classpath alone; the
+        // debug APK's extras (Compose's tooling) are not on it.
+        if (variant.name == "release") {
+            tasks.register<CheckDependencyPage>("checkDependencyPage") {
+                group = "verification"
+                description = "Fails when docs/dependencies/index.md and the shipped runtime classpath disagree."
+                page = rootProject.layout.projectDirectory.file("docs/dependencies/index.md")
+                modules = CheckDependencies.modulesOf(runtimeRoot)
+            }
+        }
 
         val graph =
             tasks.register<CheckModuleGraph>("checkModuleGraph$suffix") {

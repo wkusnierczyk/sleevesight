@@ -1,7 +1,9 @@
 ---
 # The README on the site. With `index.html` at `/`, Pages no longer renders `README.md` (its
 # optional front matter skips README files), so this page renders it at `/README.html`, with its
-# links to the `design/` documents pointed at their rendered pages.
+# links to the `design/` documents pointed at their rendered pages. The chips (between the `chips`
+# comments) are left out: their images come from GitHub and shields.io, and the site loads nothing
+# from elsewhere but the diagram script the privacy policy names.
 layout: default
 title: README
 permalink: /README.html
@@ -9,4 +11,9 @@ permalink: /README.html
 source_path: README.md
 ---
 {% capture readme %}{% include_relative README.md %}{% endcapture %}
+{% if readme contains "<!-- chips" and readme contains "<!-- /chips -->" %}
+{% assign before_chips = readme | split: "<!-- chips" | first %}
+{% assign after_chips = readme | split: "<!-- /chips -->" | last %}
+{% assign readme = before_chips | append: after_chips %}
+{% endif %}
 {{ readme | replace: ".md)", ".html)" | markdownify }}
