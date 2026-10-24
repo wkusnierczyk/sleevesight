@@ -11,6 +11,9 @@ permalink: /README.html
 source_path: README.md
 ---
 {% capture readme %}{% include_relative README.md %}{% endcapture %}
+{% if readme contains "<!-- chips" and readme contains "<!-- /chips -->" %}
 {% assign before_chips = readme | split: "<!-- chips" | first %}
 {% assign after_chips = readme | split: "<!-- /chips -->" | last %}
-{{ before_chips | append: after_chips | replace: ".md)", ".html)" | markdownify }}
+{% assign readme = before_chips | append: after_chips %}
+{% endif %}
+{{ readme | replace: ".md)", ".html)" | markdownify }}

@@ -9,7 +9,7 @@
 
 <p align="center"><b>Insights on what's playing.</b></p>
 
-<!-- chips: images from GitHub and shields.io, left out of the site's copy (`readme-page.html`) -->
+<!-- chips: images from GitHub and shields.io, left out of the site's copy, which cuts from here to the closing marker (`readme-page.html`); keep both markers -->
 <p align="center">
   <a href="https://github.com/wkusnierczyk/sleevesight/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/wkusnierczyk/sleevesight/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI on main"></a>
   <a href="https://github.com/wkusnierczyk/sleevesight/actions/workflows/release.yml"><img src="https://github.com/wkusnierczyk/sleevesight/actions/workflows/release.yml/badge.svg" alt="Release"></a>
