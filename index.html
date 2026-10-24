@@ -424,13 +424,15 @@ document.documentElement.classList.add('js');
   <h2 id="next-h">Coming soon: beyond the basics</h2>
   <p class="intro">Read further details for the song, artists, and the album, each with an evidence-based insight. Ask follow-up questions about what is playing, answered by an AI service you enable with your own API key. Export the playlist history, with insights.</p>
   <!-- The boxes were written for the page in #230. Each citation marker in them has a visually hidden
-       ", source" before it, so a screen reader reads "…during the session, source W 1" rather than
+       ", source" before it, so a screen reader reads "…during the session., source W1." rather than
        running the marker into the text (#372), and a hidden full stop after it, so the next sentence
-       is not run into the marker either. Each ends in a no-break space: a hidden span is out of the
-       flow, so a plain space at its end is dropped, a hidden span of only spaces is skipped, and so is
-       the space where a line wraps after a marker; VoiceOver read "sourceW2His" (#468). The chat's
-       speakers have a hidden colon, and its credit line is a grid item of its own, for the same
-       reason. The `.about` text names its markers itself, so has none. -->
+       is not run into the marker either; a marker followed straight by another has no stop, since the
+       next one's comma keeps them apart. Both hidden spans end in a no-break space, because a hidden
+       span is out of the flow and a plain space at its end is dropped. The stop is there because a
+       hidden span of only spaces is skipped, as is the space where a line wraps after a marker;
+       VoiceOver read "sourceW2His" (#468). The chat's speakers have a hidden colon, and its credit
+       line is a grid item of its own, for the same reason. The `.about` text names its markers itself,
+       so has none. -->
   <p class="note">The examples are illustrations, written for this page from the sources named beside them.</p>
   <ul class="examples">
     <li class="ex">
@@ -441,7 +443,7 @@ document.documentElement.classList.add('js');
     <li class="ex">
       <h3 class="vh">Artist</h3>
       <div class="about"><p><b>Who the artist is</b>, and why they matter, for each artist on the track.</p><p>This example insight is based on three lines of Last.fm's biography of the band: <span class="cite L">L1</span>, <span class="cite L">L2</span> and <span class="cite L">L3</span>.</p></div>
-      <div class="box"><p class="label" aria-hidden="true">Artist</p><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="vh">, source&nbsp;</span><span class="cite L">L1</span><span class="vh">.&nbsp;</span><span class="vh">, source&nbsp;</span><span class="cite L">L2</span><span class="vh">.&nbsp;</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="vh">, source&nbsp;</span><span class="cite L">L3</span><span class="vh">.&nbsp;</span></p></div>
+      <div class="box"><p class="label" aria-hidden="true">Artist</p><p class="what">The Beatles</p><p>An English rock band formed in Liverpool in 1960, whose core lineup was John Lennon, Paul McCartney, George Harrison and Ringo Starr.<span class="vh">, source&nbsp;</span><span class="cite L">L1</span><span class="vh">, source&nbsp;</span><span class="cite L">L2</span><span class="vh">.&nbsp;</span> They are widely regarded as one of the most influential acts in popular music, and played a central role in the development of 1960s counterculture.<span class="vh">, source&nbsp;</span><span class="cite L">L3</span><span class="vh">.&nbsp;</span></p></div>
     </li>
     <li class="ex">
       <h3 class="vh">Album</h3>
