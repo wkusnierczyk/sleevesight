@@ -165,10 +165,11 @@ pre.s-code{margin:0;font-family:var(--f-mono);font-weight:500;font-size:14px;lin
 .story p:first-child{margin-top:0}
 figure.side .sq{background:#fff}
 .trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:20px 0 0}
-/* Intro A's svg paints its own ground where the record hides behind the sleeve: #fafbfc on light,
-   #0d1015 on dark; the stage takes the same. */
-.sq.a-ground{background:#fafbfc}
-@media (prefers-color-scheme: dark){.sq.a-ground{background:#0d1015}}
+/* The sleeve trio stands on the logo's ground, white on light and black on dark, since intro A's svg
+   paints that ground itself where the record hides behind the sleeve; the other two take the same,
+   so the three match. */
+.trio .sq{background:#fff}
+@media (prefers-color-scheme: dark){.trio .sq{background:#000}}
 /* R2, looped every 7 s as on the old brand sheet: the product page's moves (`.r2-*`), repeated, with
    a fade in and out. The tile takes its faint edge from the page, as in the header. At
    rest (reduced motion) it shows its end, the mark. */
@@ -665,7 +666,7 @@ document.documentElement.classList.add('js');
       <figcaption>A record, half way out of its sleeve. The original proposal for Sleevesight's logo.</figcaption>
     </figure>
     <figure>
-      <div class="sq a-ground"><img src="../assets/logo/sleeve-to-eye.svg" alt="A record slides out of its sleeve, an eye forms around it and blinks, the record turns twice, and the sleeve comes back"></div>
+      <div class="sq"><img src="../assets/logo/sleeve-to-eye.svg" alt="A record slides out of its sleeve, an eye forms around it and blinks, the record turns twice, and the sleeve comes back"></div>
       <figcaption>A sleeve sliding to the side, revealing the record, which then turns into the iris of a stylised eye. The original proposal for Sleevesight's animated intro.</figcaption>
     </figure>
     <figure>
