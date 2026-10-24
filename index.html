@@ -525,7 +525,8 @@ document.documentElement.classList.add('js');
   function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
   measure();
   onScroll();
-  // At most once a frame: `measure()` forces a layout, and a drag fires many resizes in one.
+  // At most once a frame: `measure()` forces a layout, and `resize` can come more often than frames
+  // (synthetic events, some engines).
   var measuring = 0;
   addEventListener('resize', function () {
     if (!measuring) measuring = requestAnimationFrame(function () { measuring = 0; measure(); });
