@@ -40,6 +40,10 @@ jobs:
       - name: Keyboard vectors current
         run: node assets/keyboard/make_vectors.mjs --check
 
+      # Likewise the API keys page's setup format, key shapes and QR codes (#436).
+      - name: API keys page vectors current
+        run: node assets/api-keys/make_vectors.mjs --check
+
       - name: Changes that need a build
         id: changes
         run: |

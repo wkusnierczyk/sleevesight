@@ -1,18 +1,23 @@
-// A QR code encoder for the keyboard's session code (#394): byte mode, error correction level M,
-// versions 1 to 6 (up to 106 bytes), which is all the code needs (56 bytes, version 4). Written
-// here rather than loaded, so the page fetches nothing from elsewhere; the app's tests read a code
-// it drew with ZXing (`make_vectors.mjs`). Follows ISO/IEC 18004 as Project Nayuki's encoder does.
+// A QR code encoder for the keyboard's session code (#394) and the setup code of API keys (#436):
+// byte mode, error correction level M, versions 1 to 40 (up to 2331 bytes). The session code is
+// 56 bytes (version 4); a setup code of five keys is about 400 (version 15 or so). Written here
+// rather than loaded, so the pages fetch nothing from elsewhere; the app's tests read codes it drew
+// with ZXing (both `make_vectors.mjs`). Follows ISO/IEC 18004 as Project Nayuki's encoder does.
 
-// Per version: [total codewords, blocks, error correction codewords per block], level M.
-const VERSIONS = [null, [26, 1, 10], [44, 1, 16], [70, 1, 26], [100, 2, 18], [134, 2, 24], [172, 4, 16]];
+// Per version, level M: the error correction codewords per block, and the blocks.
+const ECC_PER_BLOCK = [null, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26,
+  28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28];
+const BLOCKS = [null, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25,
+  26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49];
+const LAST_VERSION = 40;
 const LEVEL_M = 0; // Level M's two format bits.
 
 /** The modules of a QR code of [text]: rows of booleans, true dark, without the quiet zone. */
 export function encode(text) {
   const bytes = new TextEncoder().encode(text);
   let version = 1;
-  while (version < VERSIONS.length && dataCapacity(version) < bytes.length + 2) version++;
-  if (version === VERSIONS.length) throw new RangeError('text too long for a QR code here');
+  while (version <= LAST_VERSION && dataCapacity(version) * 8 < 4 + countBits(version) + bytes.length * 8) version++;
+  if (version > LAST_VERSION) throw new RangeError('text too long for a QR code');
   const codewords = withCorrection(version, dataCodewords(version, bytes));
   const size = 17 + 4 * version;
   const base = functionPatterns(version, size);
@@ -27,12 +32,28 @@ export function encode(text) {
   return best.modules;
 }
 
-function dataCapacity(version) {
-  const [total, blocks, ecc] = VERSIONS[version];
-  return total - blocks * ecc;
+// The codewords a version holds, data and error correction: its modules less the function
+// patterns and the format and version areas, in whole bytes.
+function totalCodewords(version) {
+  let modules = (16 * version + 128) * version + 64;
+  if (version >= 2) {
+    const align = Math.floor(version / 7) + 2;
+    modules -= (25 * align - 10) * align - 55;
+    if (version >= 7) modules -= 36;
+  }
+  return Math.floor(modules / 8);
 }
 
-// Mode, count, data, terminator and padding, as codewords. The count is 8 bits up to version 9.
+function dataCapacity(version) {
+  return totalCodewords(version) - BLOCKS[version] * ECC_PER_BLOCK[version];
+}
+
+// The byte count's length in bits: 8 up to version 9, 16 from version 10.
+function countBits(version) {
+  return version <= 9 ? 8 : 16;
+}
+
+// Mode, count, data, terminator and padding, as codewords.
 function dataCodewords(version, bytes) {
   const capacity = dataCapacity(version);
   const bits = [];
@@ -40,7 +61,7 @@ function dataCodewords(version, bytes) {
     for (let i = length - 1; i >= 0; i--) bits.push((value >>> i) & 1);
   };
   put(0b0100, 4);
-  put(bytes.length, 8);
+  put(bytes.length, countBits(version));
   for (const b of bytes) put(b, 8);
   put(0, Math.min(4, capacity * 8 - bits.length));
   put(0, (8 - (bits.length % 8)) % 8);
@@ -50,21 +71,34 @@ function dataCodewords(version, bytes) {
   return out;
 }
 
-// The data split into equal blocks (true of level M up to version 6), each with its error
-// correction, interleaved.
+// The data split into blocks, each with its error correction, interleaved. Where the data does not
+// divide evenly, the last blocks hold one codeword more.
 function withCorrection(version, data) {
-  const [, blocks, ecc] = VERSIONS[version];
-  const length = data.length / blocks;
+  const blocks = BLOCKS[version];
+  const ecc = ECC_PER_BLOCK[version];
+  const short = Math.floor(data.length / blocks);
+  const shortBlocks = blocks - (data.length % blocks);
   const divisor = rsDivisor(ecc);
   const split = [];
-  for (let b = 0; b < blocks; b++) {
-    const block = data.slice(b * length, (b + 1) * length);
+  for (let b = 0, start = 0; b < blocks; b++) {
+    const block = data.slice(start, start + short + (b < shortBlocks ? 0 : 1));
+    start += block.length;
     split.push([block, rsRemainder(block, divisor)]);
   }
   const out = [];
-  for (let i = 0; i < length; i++) for (const [block] of split) out.push(block[i]);
+  for (let i = 0; i <= short; i++) for (const [block] of split) if (i < block.length) out.push(block[i]);
   for (let i = 0; i < ecc; i++) for (const [, correction] of split) out.push(correction[i]);
   return out;
+}
+
+// The centres of the alignment patterns along each axis: none in version 1.
+function alignmentPositions(version, size) {
+  if (version === 1) return [];
+  const count = Math.floor(version / 7) + 2;
+  const step = Math.floor((version * 8 + count * 3 + 5) / (count * 4 - 4)) * 2;
+  const positions = [6];
+  for (let p = size - 7; positions.length < count; p -= step) positions.splice(1, 0, p);
+  return positions;
 }
 
 function gfMultiply(x, y) {
@@ -102,7 +136,8 @@ function rsRemainder(data, divisor) {
   return result;
 }
 
-// The finder, timing and alignment patterns, the dark module, and the format areas reserved.
+// The finder, timing and alignment patterns, the dark module, the version information from
+// version 7, and the format areas reserved.
 function functionPatterns(version, size) {
   const modules = Array.from({ length: size }, () => new Array(size).fill(false));
   const reserved = Array.from({ length: size }, () => new Array(size).fill(false));
@@ -124,10 +159,27 @@ function functionPatterns(version, size) {
       }
     }
   }
-  if (version >= 2) {
-    const c = size - 7;
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) set(c + dx, c + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+  const centres = alignmentPositions(version, size);
+  const last = centres.length - 1;
+  centres.forEach((cy, j) =>
+    centres.forEach((cx, i) => {
+      // Not where a finder pattern is.
+      if ((i === 0 && j === 0) || (i === 0 && j === last) || (i === last && j === 0)) return;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) set(cx + dx, cy + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      }
+    }),
+  );
+  if (version >= 7) {
+    let remainder = version;
+    for (let i = 0; i < 12; i++) remainder = (remainder << 1) ^ ((remainder >>> 11) * 0x1f25);
+    const bits = (version << 12) | remainder;
+    for (let i = 0; i < 18; i++) {
+      const dark = ((bits >>> i) & 1) === 1;
+      const a = size - 11 + (i % 3);
+      const b = Math.floor(i / 3);
+      set(a, b, dark);
+      set(b, a, dark);
     }
   }
   for (let i = 0; i < 9; i++) {
