@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.Secret
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreVocabulary
 import app.sleevesight.core.genres.LabelSource
@@ -19,6 +20,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
@@ -383,6 +385,45 @@ class PipelineLabelsTest {
             settings = settings.copy(labelSources = setOf(LabelSource.MUSICBRAINZ))
             withRelease(tags).run(sundown, write = false)
             assertEquals(emptyList(), tags.asked)
+        }
+
+    @Test
+    fun `a collaborator Last fm shows does not let it ask under a primary artist it rejected`() =
+        runTest {
+            val collaborator =
+                FakeAdapter(SourceId.LASTFM) { _, _ ->
+                    SourceResult(
+                        Outcome.ArtistArticle,
+                        listOf(line(SourceId.LASTFM, "Ian Tyson has 1 listener.")),
+                        Duration.ZERO,
+                        rejections =
+                            listOf(
+                                Rejection("Gordon Lightfoot", "a different MusicBrainz artist", Scope.ARTIST),
+                            ),
+                    )
+                }
+            val tags = FakeReleaseTags()
+            withRelease(tags, adapters = listOf(musicBrainz(), collaborator))
+                .run(nowPlaying("Sundown", "Gordon Lightfoot, Ian Tyson", album = "Sundown"), write = false)
+            assertEquals(emptyList(), tags.asked)
+        }
+
+    @Test
+    fun `an artist's labels kept under another spelling of its key join the credited artist's row`() =
+        runTest {
+            val accented =
+                FakeAdapter(SourceId.MUSICBRAINZ) { _, _ ->
+                    SourceResult(
+                        Outcome.SongArticle,
+                        listOf(line(SourceId.MUSICBRAINZ, "A recording by Gordon Lightfoot.")),
+                        Duration.ZERO,
+                        labelArtists = listOf(ResolvedArtist("GORDON LIGHTFÓOT", MB_ARTIST)),
+                    )
+                }
+            val state = withRelease(FakeReleaseTags(), listOf(accented, lastFm())).run(sundown, write = false)
+            val artists = state.genres.rows.filter { it.level == GenreLevel.ARTIST }
+            assertEquals(listOf("Gordon Lightfoot"), artists.map { it.artist })
+            assertEquals(listOf("Folk", "Singer-Songwriter", "Country"), artists.single().labels.map { it.genre.label })
         }
 
     @Test

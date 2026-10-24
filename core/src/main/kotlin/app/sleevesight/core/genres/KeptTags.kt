@@ -16,9 +16,10 @@ import kotlin.time.Instant
  * Tags a source gave, kept by key so they are not asked again: an artist's MusicBrainz tags
  * ([MusicBrainzLabels]), an album's Last.fm tags ([LastFmLabels]). In [artists], the artist cache
  * (#238), under [part], for its sources' lifetime (D9), so they are not asked again after a restart
- * either. With no artist cache (one that does not persist, [ArtistResults.persists]: the CLI
- * without a cache, tests, or *Keep what sources said about each artist* off, #420), in memory
- * instead, for [lifetime], at most [capacity] keys, the least recently used dropped first; never
+ * either; with *Keep what sources said about each artist* off (#420), that cache keeps and reads
+ * nothing, and nothing is kept in memory in its place, since it still persists. With no artist
+ * cache (one that does not persist, [ArtistResults.persists]: the CLI without a cache, tests), in
+ * memory instead, for [lifetime], at most [capacity] keys, the least recently used dropped first; never
  * both, so tags are not kept in memory past the cache's lifetime. A failed request is not kept, so
  * the next track asks again; a key the source does not know is kept as having no tags.
  */

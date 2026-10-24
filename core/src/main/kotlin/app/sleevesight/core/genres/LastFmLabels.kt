@@ -43,14 +43,19 @@ interface ReleaseTags {
  * the evidence is assembled, as it does MusicBrainz's artist tags, so the insight never waits for
  * them; they are labels only, never evidence.
  *
- * One request each per track. An album's tags are kept by the artist's name and the album's
- * ([KeptTags], under [ALBUM_PART]), so the next track of the album asks nothing about it; the
- * track's are not kept, since the retrieval cache does not see them and a track seldom plays twice
- * soon. A failed request is not kept, and gives no labels meanwhile.
+ * One request each per track. An album's tags are kept by the artist's name and the album's,
+ * each folded as a lookup key is ([fold], `Normalizer.foldForKey`) ([KeptTags], under
+ * [ALBUM_PART]), so the next track of the album asks nothing about it. With *Keep what sources
+ * said about each artist* off (#420, the default), nothing is kept, and each track asks for its
+ * album's tags again. The track's are not kept, since the
+ * retrieval cache does not see them and a track seldom plays twice soon. A failed request is not
+ * kept, and gives no labels meanwhile.
  */
+@Suppress("LongParameterList") // The tags, the vocabulary and the key's folding; the rest defaulted, for tests.
 class LastFmLabels(
     private val tags: ReleaseTags,
     private val vocabulary: GenreVocabulary,
+    private val fold: (String) -> String = { it },
     clock: Clock = Clock.System,
     lifetime: Duration = DEFAULT_LIFETIME,
     capacity: Int = DEFAULT_CAPACITY,
@@ -72,7 +77,7 @@ class LastFmLabels(
         artist: String,
         album: String,
     ): List<GenreLabel> {
-        val found = albums.tagsOf(albumKey(artist, album)) { tags.albumTags(artist, album) }.orEmpty()
+        val found = albums.tagsOf(albumKey(fold(artist), fold(album))) { tags.albumTags(artist, album) }.orEmpty()
         return vocabulary.labelsFor(found, tags.albumPage(artist, album), GenreLevel.ALBUM)
     }
 
@@ -89,10 +94,10 @@ class LastFmLabels(
          */
         val ALBUM_PART: ArtistPart = ArtistPart("lastfm.album.tags", 1, 1, setOf(SourceId.LASTFM))
 
-        /** The artist's name and the album's, as sent, apart by a character neither holds. */
+        /** The artist's name and the album's, each folded, as a track's lookup key joins its parts. */
         internal fun albumKey(
             artist: String,
             album: String,
-        ): String = "$artist\u0000$album"
+        ): String = "$artist|$album"
     }
 }

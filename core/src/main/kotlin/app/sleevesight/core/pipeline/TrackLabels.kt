@@ -1,5 +1,6 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.genres.GenreLabel
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.LastFmLabels
@@ -29,6 +30,7 @@ internal class TrackLabels(
     private val settings: Settings,
     private val key: String,
     private val sink: RunSink,
+    private val fold: (String) -> String,
 ) {
     /** The labels asked for after the evidence, by source, as they land. */
     private val later = MutableStateFlow<Map<LabelSource, List<GenreLabel>>>(emptyMap())
@@ -45,17 +47,33 @@ internal class TrackLabels(
                         LabelSource.MUSICBRAINZ ->
                             result?.recordingTags?.let { musicBrainz?.recordingLabels(it) }.orEmpty()
                     }
-                given + landed[source].orEmpty()
+                credited(given + landed[source].orEmpty(), current.normalized.artists)
             },
             current.normalized.artists,
         )
     }
 
+    // Each artist's label under the name this track credits, by its folded key ([fold]): a result
+    // served from the cache was kept for a spelling of the key's ("Sigur Rós" for "Sigur Ros").
+    private fun credited(
+        labels: List<GenreLabel>,
+        artists: List<String>,
+    ): List<GenreLabel> {
+        val byKey = artists.associateBy(fold)
+        return labels.map { label ->
+            label.artist
+                ?.let { byKey[fold(it)] }
+                ?.takeIf { it != label.artist }
+                ?.let { label.copy(artist = it) } ?: label
+        }
+    }
+
     /**
      * Asks for the labels that come after the evidence, each source's at once, and adds each as it
      * lands: MusicBrainz's for the artists [current]'s MusicBrainz result names; Last.fm's for the
-     * track and its album, once Last.fm's result shows an artist (an artist it rejected or could not
-     * find may be another's of the name, whose track this is not).
+     * track and its album, by the primary artist, once Last.fm's result shows an artist and has not
+     * rejected the primary (an artist it rejected may be another's of the name, whose track this is
+     * not).
      */
     suspend fun addLater(current: TrackState) =
         coroutineScope {
@@ -68,9 +86,15 @@ internal class TrackLabels(
             if (fromMusicBrainz != null) {
                 launch { add(LabelSource.MUSICBRAINZ) { fromMusicBrainz.labels(artists) } }
             }
-            val shown = current.done(SourceId.LASTFM)?.outcome == Outcome.ArtistArticle
-            val fromLastFm = lastFm?.takeIf { shown && settings.givesLabels(LabelSource.LASTFM) }
             val track = current.normalized
+            val fromLastFmResult = current.done(SourceId.LASTFM)
+            val shown =
+                fromLastFmResult?.outcome == Outcome.ArtistArticle &&
+                    fromLastFmResult.rejections.none {
+                        it.scope == Scope.ARTIST &&
+                            fold(it.subject) == fold(track.primary)
+                    }
+            val fromLastFm = lastFm?.takeIf { shown && settings.givesLabels(LabelSource.LASTFM) }
             if (fromLastFm != null && track.primary.isNotBlank()) {
                 launch { add(LabelSource.LASTFM) { fromLastFm.trackLabels(track.primary, track.title) } }
                 current.nowPlaying.album

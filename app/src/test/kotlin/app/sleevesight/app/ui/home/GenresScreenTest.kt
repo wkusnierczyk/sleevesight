@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -140,7 +141,7 @@ class GenresScreenTest {
     }
 
     @Test
-    fun aLevelWithNoLabelsHasNoRowAndFoldedTheAlbumComesBeforeTheArtists() {
+    fun withNoTrackRowFoldedTheAlbumComesBeforeTheArtistsAndUnfoldedARowForEachArtist() {
         val second = row(GenreLevel.ARTIST, "jazz", artist = "Miles Davis")
         show(TrackGenres(listOf(beatles, second, album))) {
             assertEquals(listOf("Folk Rock", "Pop"), chips(GenreLevel.ALBUM))
@@ -183,11 +184,42 @@ class GenresScreenTest {
             chip.assertIsSelected()
             compose.onNodeWithText(text(R.string.home_genre_from_track, "Baroque Pop")).assertExists()
 
+            // The selection survives unfolding.
             compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
+            compose.onNodeWithTag(GENRE_PREFIX + "track:baroquepop").assertIsSelected()
             compose.onNodeWithTag(GENRE_PREFIX + "album:folkrock").performClick()
             compose.onNodeWithText(text(R.string.home_genre_from_album, "Folk Rock")).assertExists()
             compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
             compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
+
+            // Folded, an artist's chip is not shown, nor its credits.
+            compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
+            compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun aSelectionOutlastsLabelsThatLandLater() {
+        val genres = mutableStateOf(TrackGenres(listOf(beatles)))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent { Genres(track().copy(genres = genres.value), Settings()) }
+            }
+            scenario.onActivity {
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").performClick()
+                genres.value =
+                    TrackGenres(
+                        listOf(
+                            beatles.copy(
+                                labels =
+                                    beatles.labels + label("jazz", GenreLevel.ARTIST, "The Beatles"),
+                            ),
+                        ),
+                    )
+                compose.waitForIdle()
+                compose.onNodeWithTag(GENRE_PREFIX + "artist:rock").assertIsSelected()
+                compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertExists()
+            }
         }
     }
 

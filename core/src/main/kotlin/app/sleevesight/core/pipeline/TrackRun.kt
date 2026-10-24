@@ -87,7 +87,8 @@ internal class TrackRun(
         )
 
     private val guard = CacheGuard(parts.cache, key, onEvent)
-    private val labels = TrackLabels(parts.musicBrainzLabels, parts.lastFmLabels, settings, key, this)
+    private val labels =
+        TrackLabels(parts.musicBrainzLabels, parts.lastFmLabels, settings, key, this, parts.normalizer::foldForKey)
 
     /**
      * Gathers the evidence, then the insight: written at once when [control] decides so; else,

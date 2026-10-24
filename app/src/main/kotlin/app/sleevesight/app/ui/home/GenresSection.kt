@@ -19,7 +19,6 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,11 +68,16 @@ internal fun Genres(
 ) {
     if (track == null || !track.gathered) return
     val genres = track.genres
-    var open by remember(genres) { mutableStateOf<PlacedLabel?>(null) }
-    // Folded again on each new track.
+    // Folded again, and nothing selected, on each new track. The selection is kept by its level,
+    // artist and genre, so it outlasts labels that land later, and the fold.
     var unfolded by rememberSaveable(track.normalized.lookupKey) { mutableStateOf(false) }
+    var selected by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
+    val table = unfolded && !genres.oneLevel
+    val shown = if (table) genres.rows.flatMap { row -> row.labels.map { PlacedLabel(row, it) } } else genres.folded
+    // A selection whose chip is not shown (folded away) shows no credits.
+    val open = shown.firstOrNull { it.key == selected }
     val off = settings != null && LabelSource.entries.none { settings.givesLabels(it) }
-    val select = { label: PlacedLabel -> open = if (open == label) null else label }
+    val select = { label: PlacedLabel -> selected = if (open?.key == label.key) null else label.key }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when {
             genres.isEmpty && off -> Small(stringResource(R.string.home_genres_off))
@@ -132,7 +136,7 @@ private fun Chips(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         before?.invoke()
-        for (label in labels) GenreChip(label, selected = open == label) { select(label) }
+        for (label in labels) GenreChip(label, selected = open?.key == label.key) { select(label) }
     }
 }
 
@@ -186,7 +190,7 @@ private fun Table(
                     }
                     for (label in row.labels) {
                         val placed = PlacedLabel(row, label)
-                        GenreChip(placed, selected = open == placed) { select(placed) }
+                        GenreChip(placed, selected = open?.key == placed.key) { select(placed) }
                     }
                 }
             }
@@ -274,6 +278,9 @@ private fun Credits(placed: PlacedLabel) {
         }
     }
 }
+
+// What a selection is kept by: the chip's level, artist and genre, not its row's other labels.
+private val PlacedLabel.key: String get() = "${row.level}|${row.artist.orEmpty()}|${label.genre.identity}"
 
 @Composable
 private fun Small(text: String) {

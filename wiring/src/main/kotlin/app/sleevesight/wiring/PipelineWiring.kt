@@ -11,6 +11,7 @@ import app.sleevesight.core.genres.LastFmLabels
 import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.AccentFolder
+import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.MusicBrainzLookup
@@ -91,10 +92,12 @@ class PipelineWiring internal constructor(
 
     /**
      * Last.fm's genre labels for the track and its album (#439), on the user's [key], for
-     * `PipelineParts.lastFmLabels`; an album's tags are kept in the artist cache, or, without one,
-     * in memory for as long as this lives, a new key making a new one.
+     * `PipelineParts.lastFmLabels`; an album's tags are kept in the artist cache. Without one (the
+     * CLI without a cache), in memory, for as long as the one made lives: each call makes a new one,
+     * as the app's parts do at each build.
      */
-    fun lastFmLabels(key: Secret): LastFmLabels = LastFmLabels(LastFmTags(net, key), vocabulary, artists = artists)
+    fun lastFmLabels(key: Secret): LastFmLabels =
+        LastFmLabels(LastFmTags(net, key), vocabulary, Normalizer(accentFolder)::foldForKey, artists = artists)
 
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
