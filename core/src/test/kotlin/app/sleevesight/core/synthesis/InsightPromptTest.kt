@@ -132,10 +132,10 @@ class InsightPromptTest {
     }
 
     @Test
-    fun `the contract keeps each fixed rule, in the wording of version 5`() {
+    fun `the contract asks for no gap sentence, ends with NO_EVIDENCE and states the knowledge rule`() {
+        // The stored prompts pin each rule's wording; this checks what the grounding check relies on.
         for (allowModel in listOf(false, true)) {
             val contract = InsightPrompt.contract(allowModel).lines()
-            FIXED_RULES.forEach { assertTrue(it in contract, it) }
             // The rule on a gap (#46, #193): no gap sentence, and every sentence is cited.
             val gap = contract.single { it.startsWith("- If the evidence supports fewer") }
             assertEquals(InsightPrompt.GAP_RULE, gap)
@@ -149,17 +149,6 @@ class InsightPromptTest {
     }
 
     private companion object {
-        /** The fixed rules of version 5 (#399), but for the rule on a gap, the last rule and the conditional ones. */
-        val FIXED_RULES =
-            listOf(
-                "- End every factual sentence with the id(s) that support it, like [W1] or [W2][G1].",
-                "- Use only the evidence: no names, dates, places or numbers that are not in it.",
-                "- An \"original song\" line is about the song as first recorded by someone else. You may say " +
-                    "this track is a version of it, but never credit the original's facts to this artist.",
-                "- An \"artist\" line is about the performer, not this recording.",
-                "- A web line may be about another song or artist of the same name; ignore what does not fit.",
-            )
-
         const val MODEL_RULE =
             "- You may add at most one sentence of your own general knowledge if it adds real value, ending " +
                 "with [M]. Never contradict the evidence."
