@@ -13,7 +13,7 @@ Sleevesight is an Android app that shows short, sourced insights about the song 
 ## Using the app
 
 - **[A typical journey]({{ '/docs/journey/' | relative_url }})**: from installing the app to using it day to day, step by step: what each screen asks you to decide, and what follows from it.
-- **[Usage]({{ '/docs/tutorials/usage/' | relative_url }})**: each part of the app in detail: the home screen, the insight and its citations, the sources, *Write* and *Rewrite*, the history, the players, and what happens offline, without a key or when a source fails.
+- **[Usage]({{ '/docs/tutorials/usage/' | relative_url }})**: each part of the app in detail: the home screen, the insight and its citations, the sources, *Write insight* and *Rewrite*, the history, the players, and what happens offline, without a key or when a source fails.
 - **[Settings]({{ '/docs/tutorials/settings/' | relative_url }})**: every setting: what it does, its default and why, and what changing it sends or keeps.
 - **[Privacy policy]({{ '/privacy.html' | relative_url }})**: what leaves the phone, to whom, and where Sleevesight stands under the GDPR and the EU AI Act.
 

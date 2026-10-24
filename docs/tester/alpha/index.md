@@ -12,7 +12,7 @@ Thank you for testing Sleevesight. This page says what the app is, how to instal
 
 ## What Sleevesight is
 
-An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation as the insight is written, and marks a sentence that cites nothing. The [product page](https://sleevesight.app/) shows what a card looks like.
+An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation once the reply is complete, and marks a sentence that cites nothing. The [product page](https://sleevesight.app/) shows what a card looks like.
 
 The app runs no server and has no accounts: nothing you play reaches its developer. That also means we learn little unless you tell us: Google Play gives us only aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. That is why your reports matter.
 
