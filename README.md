@@ -85,13 +85,13 @@ Android only. iOS does not let one app read what another app is playing. Sleeves
 Requires JDK 21 or later (Robolectric's Android 16 runtime, used by the app's tests, needs it) and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`).
 
 ```sh
-./gradlew build                                              # compile, tests, Detekt, ktlint, Android lint
-./gradlew checkDependencies checkManifest checkModuleGraph   # the structural checks
-./gradlew :build-logic:functionalTest                        # the build logic's functional tests (needs Maven Central)
-./gradlew :app:assembleDebug                                 # the debug APK, in app/build/outputs/apk/debug/
+./gradlew build                                                                  # compile, tests, Detekt, ktlint, Android lint
+./gradlew checkDependencies checkDependencyPage checkManifest checkModuleGraph   # the structural checks
+./gradlew :build-logic:functionalTest                                            # the build logic's functional tests (needs Maven Central)
+./gradlew :app:assembleDebug                                                     # the debug APK, in app/build/outputs/apk/debug/
 ```
 
-The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run that builds as a workflow artifact, `sleevesight-debug-apk`. A pull request that changes only documents the build never reads, such as this README or the release notes, skips the build; the list is in `.github/workflows/ci.yml`.
+The structural checks enforce the design's constraints: only allowlisted dependencies (`config/dependency-allowlist.txt`), each shipped one on the [dependencies page](https://sleevesight.app/docs/dependencies/) (`docs/dependencies/index.md`), only allowlisted permissions (`config/permission-allowlist.txt`), and the module boundaries (`config/module-graph.properties`). After changing dependencies, refresh the lockfiles with `./gradlew resolveAndLockAll --write-locks`. CI keeps the debug APK of each run that builds as a workflow artifact, `sleevesight-debug-apk`. A pull request that changes only documents the build never reads, such as this README or the release notes, skips the build; the list is in `.github/workflows/ci.yml`.
 
 In October 2026, on GitHub's standard 4-core Linux runner, a CI run that builds took a minute or a minute and a half when no code had changed and it restored a current build cache. It took 4 to 11 minutes when code had changed or the restored cache was behind `main`, depending on how much of the module graph had to rebuild. In a run that rebuilt nearly everything (about 11 minutes), `./gradlew build` took about 8¾ minutes and the build logic's functional tests about 1¾; setting up the job and restoring the caches, the structural checks, the debug APK and its upload took under a minute together. Within that `build`, the longest stretches were the pipeline modules' compilation, checks and tests (about 3 minutes, in parallel) and compiling and running the app's Robolectric tests (about 2¾ minutes).
 

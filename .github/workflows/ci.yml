@@ -103,9 +103,11 @@ jobs:
         if: steps.changes.outputs.build == 'true'
         run: ./gradlew :build-logic:functionalTest --console=plain
 
+      # `checkDependencyPage` holds the dependencies page (`docs/dependencies/index.md`, #412) to the
+      # release runtime classpath, so that page stays out of the list of files the build never reads.
       - name: Structural checks
         if: steps.changes.outputs.build == 'true'
-        run: ./gradlew checkDependencies checkManifest checkModuleGraph --console=plain
+        run: ./gradlew checkDependencies checkDependencyPage checkManifest checkModuleGraph --console=plain
 
       # `build` has assembled it already; this names the step that makes it.
       - name: Debug APK
