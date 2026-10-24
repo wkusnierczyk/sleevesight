@@ -10,8 +10,7 @@ import kotlinx.serialization.json.Json
  * are dropped. It is source-agnostic: Last.fm's artist tags go through it, and from Phase 1.0
  * MusicBrainz's (D12, #84; [MusicBrainzLabels]), whose labels [combineLabels] joins to Last.fm's.
  *
- * The data is the resource [RESOURCE], taken from the simulator's `GENRE_FAMILIES`; a test checks
- * the two agree.
+ * The data is the resource [RESOURCE], first taken from the simulator's `GENRE_FAMILIES`.
  */
 class GenreVocabulary(
     val families: List<GenreFamily>,

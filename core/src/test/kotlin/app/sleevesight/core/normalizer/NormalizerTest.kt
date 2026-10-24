@@ -117,9 +117,9 @@ class NormalizerTest {
     }
 
     @Test
-    fun `every fixture title normalizes as the simulator does`() {
+    fun `every fixture title normalizes as stored`() {
         val expected = Json.decodeFromString<List<Expected>>(Fixtures.text("below-soundtrack/normalized.json"))
-        // The oracle was run over exactly these entries, in this order.
+        // The stored results cover exactly these entries, in this order.
         assertEquals(
             BelowSoundtrack.tracks.map { Triple(it.n, it.title, it.artist) },
             expected.map { Triple(it.n, it.title, it.artist) },
@@ -130,18 +130,14 @@ class NormalizerTest {
     }
 
     // ASCII-only case matching (no `ſ`, `ı` or Kelvin sign folding), JavaScript whitespace, the
-    // word boundary before `version`: the simulator's output from `normalized.js`.
+    // word boundary before `version`, and the key keeping the dotless `ı` (#72, see `Normalizer`).
     @Test
-    fun `edge cases normalize as the simulator does`() {
+    fun `edge cases normalize as stored`() {
         val expected = Json.decodeFromString<List<Expected>>(resource("/normalizer/edge-cases.normalized.json"))
         val inputs = Json.decodeFromString<List<Input>>(resource("/normalizer/edge-cases.json"))
         assertEquals(inputs.map { it.title to it.artist }, expected.map { it.title to it.artist })
-        // The one documented deviation (#72, see `Normalizer`): the key keeps the dotless `ı`, which
-        // the simulator dropped.
-        val keyDeviations = mapOf(1 to "a|song lıve")
         for (entry in expected) {
-            val want = keyDeviations[entry.n]?.let { entry.normalized.copy(key = it) } ?: entry.normalized
-            assertMatches(want, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
+            assertMatches(entry.normalized, entry.title, entry.artist, "edge case ${entry.n}, ${entry.title}")
         }
         assertEquals("Song - ſingle edit", normalizer.normalize("Song - ſingle edit", "A").title)
     }

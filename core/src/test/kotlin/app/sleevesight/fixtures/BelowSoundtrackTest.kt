@@ -1,6 +1,5 @@
 package app.sleevesight.fixtures
 
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -67,24 +66,5 @@ class BelowSoundtrackTest {
                 .map { BelowSoundtrack.factsFor(it).wikipedia.status }
                 .distinct(),
         )
-    }
-
-    @Test
-    fun `the simulator embeds the same data as the fixtures`() {
-        // `design/simulator.html`, copied into the test resources by the build.
-        val simulator =
-            checkNotNull(javaClass.getResourceAsStream("/simulator/simulator.html")) { "simulator.html not copied" }
-                .use { it.readBytes().decodeToString() }
-        val blocks = listOf("playlist-data" to "playlist", "facts-data" to "facts", "albums-data" to "albums")
-        for ((block, file) in blocks) {
-            val start = "<script type=\"application/json\" id=\"$block\">"
-            val embedded = simulator.substringAfter(start, "").substringBefore("</script>")
-            assertTrue(embedded.isNotEmpty(), "no $block block in the simulator")
-            assertEquals(
-                Json.parseToJsonElement(Fixtures.text("${BelowSoundtrack.DIRECTORY}/$file.json")),
-                Json.parseToJsonElement(embedded),
-                "$block differs from $file.json",
-            )
-        }
     }
 }

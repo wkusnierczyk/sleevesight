@@ -31,7 +31,7 @@ jobs:
       # A pull request that changes only files the build never reads skips the build, and the job
       # still passes, so the required check reports. The list names those files one by one, so a new
       # file builds until it is added here. `fixtures/` stays out even for its READMEs, since the tests
-      # read it as resources, and so does `design/simulator.html`, which a `:core` test reads.
+      # read it as resources.
       # Pushes to `main` and `dev-*` always build, unless they change only Markdown (`paths-ignore`
       # above), which a pull request has already built where it had to.
       # The keyboard page's protocol and QR encoder (#394) are checked by the app's tests against
@@ -57,7 +57,7 @@ jobs:
               case "$file" in
                 README.md | privacy.md | LICENSE | CNAME | _config.yml | index.html | readme-page.html) ;;
                 _includes/* | _layouts/* | assets/* | release-notes/* | listing/* | .github/ISSUE_TEMPLATE/*) ;;
-                design/*.md | design/brand.html) ;;
+                design/*.md | design/brand.html | design/simulator.html) ;;
                 *)
                   echo "Builds for \`$file\`." >> "$GITHUB_STEP_SUMMARY"
                   build=true

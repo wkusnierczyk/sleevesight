@@ -399,7 +399,7 @@ Free text is the user's own input to their own prompt, so it is not untrusted in
 
 ### Genre labels (`:core`)
 
-The simulator's vocabulary and hues, moved to a data file in `:core` (`sleevesight/genre-vocabulary.json` among its resources, read through `ResourceReader`; a test checks it against the simulator's `GENRE_FAMILIES`), applied to the tags of the label sources the user switched on: Last.fm's, and from Phase 1.0 MusicBrainz's ([#84](https://github.com/wkusnierczyk/sleevesight/issues/84); D12, R6; licence: [MusicBrainz tags and genres](#musicbrainz-tags-and-genres-9)). A label source gives labels only while its source is on under *Where to look*, since the tags come with its lookup (`Settings.givesLabels`). As the simulator: tags lowercased and trimmed, kept if in the vocabulary, once each, at most five, in the source's order; two tags that differ only in punctuation or spacing (`hip-hop`, `hip hop`) give one label. Labels are the tag in title case unless the file overrides one (`UK Garage`).
+The simulator's vocabulary and hues, moved to a data file in `:core` (`sleevesight/genre-vocabulary.json` among its resources, read through `ResourceReader`), applied to the tags of the label sources the user switched on: Last.fm's, and from Phase 1.0 MusicBrainz's ([#84](https://github.com/wkusnierczyk/sleevesight/issues/84); D12, R6; licence: [MusicBrainz tags and genres](#musicbrainz-tags-and-genres-9)). A label source gives labels only while its source is on under *Where to look*, since the tags come with its lookup (`Settings.givesLabels`). As the simulator: tags lowercased and trimmed, kept if in the vocabulary, once each, at most five, in the source's order; two tags that differ only in punctuation or spacing (`hip-hop`, `hip hop`) give one label. Labels are the tag in title case unless the file overrides one (`UK Garage`).
 
 How two sources' labels combine (#84, `combineLabels`): Last.fm's first, then MusicBrainz's, each in its source's order, at most five in all; a label both give (the same genre, `hip-hop` and `hip hop` alike) is shown once and credits both, also when the five are already Last.fm's. Last.fm's come first because its top tags are weighed over many listeners' tagging and a label only MusicBrainz gives opens no genre card, so the cap keeps Last.fm's; MusicBrainz's fill the room left. Each label keeps the page of the artist whose tags gave it, per source (`LabelCredit`): MusicBrainz's artist page, with the credit "MusicBrainz contributors, CC BY-NC-SA 3.0" and the licence link (`LabelSource`); `TrackLabel.opensCard` is false for a label only MusicBrainz gives.
 
@@ -684,7 +684,7 @@ GitHub Actions from the first code PR. On every pull request, and every push to 
 3. `checkDependencies`, `checkManifest`, `checkModuleGraph`.
 4. `assembleDebug`, with the APK uploaded as a workflow artifact.
 
-`main` requires the `build` check, so every pull request runs it, Markdown-only ones included: a required check that never reports leaves the pull request unmergeable. `design/simulator.html` is not Markdown, so a change to it does run CI, and a `:core` test checks that its embedded data agrees with the fixtures.
+`main` requires the `build` check, so every pull request runs it, Markdown-only ones included: a required check that never reports leaves the pull request unmergeable.
 
 `build` assembles the release variant too, shrunk by R8, so every pull request runs R8 over the app.
 
