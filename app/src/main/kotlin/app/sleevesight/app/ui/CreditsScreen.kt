@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -33,8 +33,6 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.core.genres.LabelSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
@@ -47,11 +45,11 @@ import java.io.IOException
 @Composable
 fun CreditsScreen() {
     val assets = LocalContext.current.assets
-    // Off the main thread: the list and the Apache License are about 12 KB each.
-    val read: suspend (String) -> String? = { name ->
-        withContext(Dispatchers.IO) { readAsset { assets.open(name).bufferedReader().use { it.readText() } } }
-    }
-    val libraries by produceState(emptyList<LibraryNotice>()) { value = libraryNotices(read(LIBRARIES)) }
+    // Read as the screen composes, not after: a recreated screen restores its scroll position on
+    // its first layout, and content that came later would find it cut to the shorter screen. The
+    // list and the longest licence are about 12 to 17 KB.
+    val read = { name: String -> readAsset { assets.open(name).bufferedReader().use { it.readText() } } }
+    val libraries = remember { libraryNotices(read(LIBRARIES)) }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
@@ -155,6 +153,7 @@ private val LICENCE_NAMES =
         "Apache-2.0" to "Apache License 2.0",
         "MIT" to "MIT License",
         "BSD-3-Clause" to "BSD 3-Clause License",
+        "MPL-2.0" to "Mozilla Public License 2.0",
     )
 
 internal fun licenceName(spdx: String): String = LICENCE_NAMES[spdx] ?: spdx
@@ -229,7 +228,7 @@ private val RULE = Regex("""^[=-]{2}""")
 @Composable
 private fun LibraryEntry(
     library: LibraryNotice,
-    read: suspend (String) -> String?,
+    read: (String) -> String?,
 ) {
     Text(
         library.name ?: stringResource(R.string.credits_libraries_apache),
@@ -252,7 +251,7 @@ private fun LibraryEntry(
         modifier = Modifier.semantics { stateDescription = state },
     )
     if (open) {
-        val text by produceState<String?>(null, library.notice) { value = read(library.notice)?.let(::reflow) }
+        val text = remember(library.notice) { read(library.notice)?.let(::reflow) }
         text?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
 }

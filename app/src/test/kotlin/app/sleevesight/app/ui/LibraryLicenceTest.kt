@@ -1,7 +1,15 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -107,6 +115,55 @@ class LibraryLicenceTest {
         }
     }
 
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does for a recreated activity
+    // (`SourcesFoldScreenTest` does the same).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
+    private fun scrolled() =
+        compose
+            .onNode(hasScrollAction())
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+            .value()
+
+    @Test
+    fun aRecreatedScreenKeepsTheOpenLicenceAndTheReadersPlace() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    if (emitted) {
+                        CompositionLocalProvider(
+                            LocalSaveableStateRegistry provides registry,
+                        ) { CreditsScreen() }
+                    }
+                }
+            }
+            val slf4j = libraryNotices(asset(LIBRARIES)).indexOfFirst { it.notice == "mit-slf4j.txt" }
+            compose
+                .onAllNodesWithText(text(R.string.credits_show_licence))[slf4j]
+                .performScrollTo()
+                .performFirstLinkClick()
+            compose.onNodeWithText("NONINFRINGEMENT", substring = true).performScrollTo()
+            val place = scrolled()
+            assertTrue(place > 0f)
+
+            restore()
+            assertEquals(place, scrolled())
+            compose.onNodeWithText("NONINFRINGEMENT", substring = true).assertIsDisplayed()
+        }
+    }
+
     @Test
     fun theLicencesAreReflowedForANarrowScreen() {
         val text =
@@ -165,5 +222,10 @@ class LibraryLicenceTest {
             libraryNotices(list),
         )
         assertEquals(emptyList<LibraryNotice>(), libraryNotices(null))
+        // Each licence the build knows has its name.
+        assertEquals(
+            listOf("Apache License 2.0", "MIT License", "BSD 3-Clause License", "Mozilla Public License 2.0"),
+            listOf("Apache-2.0", "MIT", "BSD-3-Clause", "MPL-2.0").map(::licenceName),
+        )
     }
 }

@@ -34,8 +34,9 @@ import org.w3c.dom.Element
  * upstream NOTICE file the jar leaves out, or the licence of third-party code inside the library.
  *
  * The build fails on a licence it does not know, on a library with no line it needs, on a line that
- * matches no shipped library, and on a notice without each part of its licence's text (or, for an
- * Apache NOTICE, the license's own text in `apache-2.0.txt`), without a copyright line, or without
+ * matches no shipped library, and on a notice without its licence's whole text, held to SPDX's in
+ * `resources/sleevesight/licences/` (for an Apache NOTICE, `apache-2.0.txt` holds the license's
+ * text), without a copyright line, or without
  * the copyright lines of the library's own LICENSE file or the text of its NOTICE file. What sits
  * outside the artifacts, an upstream NOTICE file or third-party code a library's sources name, it
  * cannot see: those lines are reviewed by hand.
@@ -163,43 +164,39 @@ abstract class ListLibraryLicences : DefaultTask() {
 
         private val NONE = Bundled(emptyList(), emptyList())
 
-        /**
-         * A sentence of each part of each licence's text: the grant, every condition and the
-         * disclaimer. A notice must hold them all, whitespace aside, so it holds the licence, not
-         * only its name.
-         */
-        private val TEXTS =
-            mapOf(
-                APACHE to
-                    listOf(
-                        "TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION",
-                        "2. Grant of Copyright License.",
-                        "4. Redistribution.",
-                        "7. Disclaimer of Warranty.",
-                        "END OF TERMS AND CONDITIONS",
-                    ),
-                MIT to
-                    listOf(
-                        "Permission is hereby granted, free of charge, to any person obtaining a copy",
-                        "The above copyright notice and this permission notice shall be included in all copies",
-                        "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND",
-                    ),
-                BSD_3 to
-                    listOf(
-                        "Redistribution and use in source and binary forms, with or without modification, are permitted",
-                        "Redistributions of source code must retain the above copyright notice",
-                        "Redistributions in binary form must reproduce the above copyright notice",
-                        "may be used to endorse or promote products derived from this software without specific prior written permission",
-                        "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"",
-                    ),
-                MPL_2 to
-                    listOf(
-                        "Mozilla Public License Version 2.0",
-                        "3.2. Distribution of Executable Form",
-                        "6. Disclaimer of Warranty",
-                        "Exhibit A - Source Code Form License Notice",
-                    ),
-            )
+        /** The licences whose whole text the build holds a notice to, in `resources/sleevesight/licences/`. */
+        private val TEXTS = setOf(APACHE, MIT, BSD_3, MPL_2)
+
+        /** [licence]'s reference text as a pattern over [normalise]d text (the placeholders in its README). */
+        private val patterns = mutableMapOf<String, Regex>()
+
+        private fun pattern(licence: String): Regex =
+            patterns.getOrPut(licence) {
+                val text =
+                    checkNotNull(ListLibraryLicences::class.java.getResource("/sleevesight/licences/$licence.txt")) {
+                        "No reference text for $licence"
+                    }.readText()
+                Regex(placeholdersToPattern(normalise(text)))
+            }
+
+        private val PLACEHOLDER = Regex("""\{[^}]*}""")
+
+        private fun placeholdersToPattern(template: String): String {
+            val out = StringBuilder()
+            var at = 0
+            for (match in PLACEHOLDER.findAll(template)) {
+                out.append(Regex.escape(template.substring(at, match.range.first)))
+                out.append(
+                    when (val p = match.value) {
+                        "{*}" -> ".{1,200}?"
+                        "{-}" -> """(?:(?:\d{1,2}\.|\*|-|\([a-z0-9]{1,2}\)) )?"""
+                        else -> p.removeSurrounding("{", "}").split('|').joinToString("|", "(?:", ")") { Regex.escape(it) }
+                    },
+                )
+                at = match.range.last + 1
+            }
+            return out.append(Regex.escape(template.substring(at))).toString()
+        }
 
         /** The licences the build knows, by their names in POMs, lower case, `the ` and spaces aside. */
         private val NAMES =
@@ -231,7 +228,9 @@ abstract class ListLibraryLicences : DefaultTask() {
                 "mozilla.org/mpl/2.0" to MPL_2,
             )
 
-        private val COPYRIGHT = Regex("""^\s*Copyright\b.*$""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
+        /** A copyright line: `Copyright`, then `(c)`, `©` or a year; not a licence's "copyright notice". */
+        private val COPYRIGHT =
+            Regex("""^\s*Copyright\s+(\(c\)|©|\d{4}).*$""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
 
         /** The Apache License's own appendix, which shows how to apply it, and other templates. */
         private val TEMPLATE = Regex("""\[yyyy]|<year>|\{yyyy}""", RegexOption.IGNORE_CASE)
@@ -242,9 +241,9 @@ abstract class ListLibraryLicences : DefaultTask() {
 
         /**
          * The SPDX identifier of a POM's licence, for the licences the build knows; null for others.
-         * The name and the URL must each be one the build knows, or be blank or unknown while the
-         * other is known, and not name different licences: `MIT-0` or `BSD-3-Clause-Clear` is not MIT
-         * or BSD-3-Clause.
+         * A name decides when it is given, and must be one the build knows (`MIT-0` or
+         * `BSD-3-Clause-Clear` is not MIT or BSD-3-Clause); the URL, when given, must not name another
+         * licence. Only a POM with no name is known by its URL.
          */
         fun spdx(licence: PomLicence): String? {
             val name = licence.name.lowercase().trim().removePrefix("the ").replace(Regex("\\s+"), " ")
@@ -256,7 +255,10 @@ abstract class ListLibraryLicences : DefaultTask() {
                     .replace(Regex("\\.(txt|html|php)$"), "")
             val byName = NAMES[name]
             val byUrl = URLS[url]
-            return if (byName != null && byUrl != null && byName != byUrl) null else byName ?: byUrl
+            return when {
+                name.isNotEmpty() -> byName?.takeIf { byUrl == null || byUrl == it }
+                else -> byUrl
+            }
         }
 
         /**
@@ -351,6 +353,8 @@ abstract class ListLibraryLicences : DefaultTask() {
             val used = mutableSetOf<Entry>()
             val libraries = mutableListOf<Library>()
             for (module in modules) {
+                val lines = table.filter { entryMatches(it.module, module) }
+                used += lines
                 val pomLicences = licences(module)
                 if (pomLicences == null) {
                     problems += "$module: no licence in its POM or its parents'"
@@ -368,8 +372,6 @@ abstract class ListLibraryLicences : DefaultTask() {
                     continue
                 }
                 val files = bundled(module)
-                val lines = table.filter { entryMatches(it.module, module) }
-                used += lines
                 lines.groupBy { it.notice }.filterValues { it.size > 1 }.keys.forEach {
                     problems += "$module: more than one line names $it"
                 }
@@ -403,17 +405,28 @@ abstract class ListLibraryLicences : DefaultTask() {
                 if (text == null) {
                     problems += "$APACHE_NOTICE is not in assets/licences"
                 } else {
-                    problems += missingText(APACHE, text).map { "$APACHE_NOTICE lacks the Apache-2.0 text (\"$it\")" }
+                    missingText(APACHE, text)?.let { problems += "$APACHE_NOTICE lacks the Apache-2.0 text: \"$it\"" }
                 }
             }
             return Result(libraries.distinct(), problems.distinct())
         }
 
-        /** The sentences of [licence]'s text that [text] lacks. */
-        private fun missingText(
+        /**
+         * Where [text] departs from [licence]'s whole text: null if it holds it, else the first sentence
+         * of the reference text it lacks, or a note that it holds each sentence but not in order.
+         */
+        fun missingText(
             licence: String,
             text: String,
-        ): List<String> = TEXTS[licence].orEmpty().filterNot { flatten(it) in flatten(text) }
+        ): String? {
+            val flat = normalise(text)
+            if (pattern(licence).containsMatchIn(flat)) return null
+            val reference =
+                normalise(checkNotNull(ListLibraryLicences::class.java.getResource("/sleevesight/licences/$licence.txt")).readText())
+            return reference.split(Regex("""(?<=[.;:])\s+""")).firstOrNull { sentence ->
+                !Regex(placeholdersToPattern(sentence)).containsMatchIn(flat)
+            } ?: "its sentences, but not as the licence has them"
+        }
 
         /**
          * What is wrong with [line]'s notice, [text]: its licence's text (an Apache NOTICE's is
@@ -432,7 +445,7 @@ abstract class ListLibraryLicences : DefaultTask() {
             if (text == null) return listOf("$module: its notice, ${line.notice}, is not in assets/licences")
             val problems = mutableListOf<String>()
             if (line.licence != APACHE) {
-                missingText(line.licence, text).forEach { problems += "$module: ${line.notice} lacks the ${line.licence} text (\"$it\")" }
+                missingText(line.licence, text)?.let { problems += "$module: ${line.notice} lacks the ${line.licence} text: \"$it\"" }
             }
             if (line.licence != MPL_2 && COPYRIGHT.findAll(text).none()) problems += "$module: ${line.notice} has no copyright line"
             copyrightLines(licenses).filterNot { flatten(it) in flatten(text) }.forEach {
@@ -471,12 +484,12 @@ abstract class ListLibraryLicences : DefaultTask() {
                 if (entry.isDirectory) continue
                 val base = entry.name.substringAfterLast('/')
                 when {
-                    entry.name.endsWith(".jar") ->
+                    aar && entry.name.startsWith("assets/") -> assets += entry.name
+                    shipsCode(entry.name, aar) ->
                         bundledFiles(zip.readBytes().inputStream(), aar = false).let {
                             licenses += it.licenses
                             notices += it.notices
                         }
-                    aar && entry.name.startsWith("assets/") -> assets += entry.name
                     NOTICE_FILE.matches(base) -> notices += zip.readBytes().decodeToString()
                     LICENSE_FILE.matches(base) -> licenses += zip.readBytes().decodeToString()
                 }
@@ -484,13 +497,31 @@ abstract class ListLibraryLicences : DefaultTask() {
             return Bundled(licenses, notices, assets)
         }
 
+        /** An AAR's code, `classes.jar` and the jars in its `libs` (not its `lint.jar`); any jar in a jar. */
+        private fun shipsCode(
+            name: String,
+            aar: Boolean,
+        ): Boolean =
+            name.endsWith(".jar") && (!aar || name == "classes.jar" || name.startsWith("libs/"))
+
         /** The asset: a comment, then `module, licence, notice, name` separated by tabs. */
         fun render(libraries: List<Library>): String =
             "# Written by the build (listLibraryLicences) from each library's POM and config/licence-notices.txt.\n" +
                 "# module\tlicence\tnotice\tname\n" +
                 libraries.sortedBy { it.module }.joinToString("") { "${it.module}\t${it.licence}\t${it.notice}\t${it.name}\n" }
 
-        private fun flatten(text: String): String = text.replace(Regex("\\s+"), " ").trim()
+        private fun flatten(text: String): String = normalise(text)
+
+        /** [text] with each run of whitespace one space, typographic quotes straight, and rules of `=` or `-` gone. */
+        private fun normalise(text: String): String =
+            text
+                .replace('\u201c', '"')
+                .replace('\u201d', '"')
+                .replace('\u2018', '\'')
+                .replace('\u2019', '\'')
+                .replace(Regex("""(?m)^\s*[=-]{3,}\s*$"""), "")
+                .replace(Regex("\\s+"), " ")
+                .trim()
 
         private fun Element.child(tag: String): Element? = children(tag).firstOrNull()
 

@@ -9,8 +9,9 @@
 # finds those. A line may also add what it cannot find, so each is reviewed: the NOTICE file of a
 # library's upstream distribution that its jar leaves out, and the licence of third-party code or
 # data inside a library, from the library's own licence documents. The build fails on a library
-# with no line it needs, on a line that matches nothing, and on a notice that lacks a part of its
-# licence's text, a copyright line (but for the MPL), or the library's own copyright lines.
+# with no line it needs, on a line that matches nothing, and on a notice that lacks its licence's
+# whole text (`build-logic/src/main/resources/sleevesight/licences/`), a copyright line (but for the
+# MPL), the library's own copyright lines, or the text of the NOTICE file its jar carries.
 #
 # An entry matches as in `dependency-allowlist.txt`: its group exactly, `group.*` its subgroups as
 # well, and `group:name` that one module; `group:prefix*` also matches each module of the group
