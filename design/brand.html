@@ -99,7 +99,7 @@ nav.top{flex:none}
    with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set through
    variables, since a selector cannot reach into a <use>. On dark, the record's rim takes the outline's
    grey, and the groove gives way to a wider black disc, so the grey meets the black directly. */
-:root{--tile-bg:#fff;--tile-edge:transparent;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
+:root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
 .t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
 .t-ink{fill:var(--tile-ink)}
@@ -188,8 +188,8 @@ figure.side .sq{background:#fff}
    one of them as a class, and the switch flips it. The logo's generators read them too, with the
    record's symbol, `lp`, below (`assets/logo/src/make_icon.py`, `make_feature_graphic.py`), so
    each rule stays one line of plain values, starting the line. */
-.lt{--bg:#fff;--ink:#141a22;--red:#cf222e;--sight:#cf222e;--tile-ink:#141a22;--tile-bg:#fff;--tile-edge:#d2d8e0;--rim:#1f2328;--core:none;--groove:inline;--eye-fill:none;--eye-stroke:#1f2328;--shirt:#fafafa;--seam:#e2e2e2}
-.dk{--bg:#000;--ink:#e5e8ee;--red:#cf222e;--sight:#cf222e;--tile-ink:#e5e8ee;--tile-bg:#000;--tile-edge:#ffffff40;--rim:#8b949e;--core:inline;--groove:none;--eye-fill:#fff;--eye-stroke:#8b949e;--shirt:#111;--seam:#262626}
+.lt{--bg:#fff;--ink:#141a22;--red:#cf222e;--sight:#cf222e;--tile-ink:#141a22;--tile-bg:#fff;--tile-edge:#00000026;--rim:#1f2328;--core:none;--groove:inline;--eye-fill:none;--eye-stroke:#1f2328;--shirt:#fafafa;--seam:#e2e2e2}
+.dk{--bg:#000;--ink:#e5e8ee;--red:#cf222e;--sight:#cf222e;--tile-ink:#e5e8ee;--tile-bg:#000;--tile-edge:#ffffff26;--rim:#8b949e;--core:inline;--groove:none;--eye-fill:#fff;--eye-stroke:#8b949e;--shirt:#111;--seam:#262626}
 .cw{background:var(--bg)}
 .swatches{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
 .swatches li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;align-items:start}
