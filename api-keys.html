@@ -24,12 +24,12 @@
   <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>API keys</b>, <b>Scan keys</b>.</p>
 
   <ol>
-    <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>; lines naming nothing Sleevesight uses are left out.
+    <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>; lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.
       <div id="drop" class="drop">
-        <label class="file">Keys file <input id="file" type="file"></label>
+        <label class="file">Keys file <input id="file" type="file" aria-describedby="file-report"></label>
         <span class="hint">or drop it here</span>
       </div>
-      <p id="file-report" class="report" hidden></p>
+      <p id="file-report" class="report" role="status" aria-live="polite"></p>
       <div id="fields" class="fields"></div>
       <p><label class="show"><input id="show" type="checkbox"> Show the keys</label></p>
     </li>

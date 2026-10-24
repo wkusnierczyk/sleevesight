@@ -51,6 +51,16 @@ const shapes = [
   ['exa', 'abc.defghijklmnopq'],
   ['lastfm', lastfm], ['lastfm', lastfm.toUpperCase()], ['lastfm', lastfm.slice(1)], ['lastfm', `${lastfm.slice(1)}g`],
   ['lastfm', `${lastfm}0`],
+  // Each length bound, either side: n - 1 refused, n taken, the longest taken, one more refused.
+  ...[
+    ['anthropic', 'sk-ant-', 40, 400],
+    ['openai', 'sk-', 40, 400],
+    ['google', 'AIza', 30, 400],
+    ['google', 'AQ.', 30, 400],
+    ['exa', '', 16, 200],
+  ].flatMap(([name, prefix, shortest, longest]) =>
+    [shortest - 1, shortest, longest, longest + 1].map((length) => [name, made(prefix, length)]),
+  ),
 ];
 
 const lines = ['# Made by assets/api-keys/make_vectors.mjs from the page\'s own code (#436); do not edit.'];

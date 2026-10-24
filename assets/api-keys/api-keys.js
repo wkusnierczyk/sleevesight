@@ -14,6 +14,9 @@ const LARGEST_FILE = 64 * 1024;
 /** CSS pixels a module, so that a code of five keys can be scanned from a laptop's screen. */
 const MODULE_PX = 5;
 
+/** The unknown names a report lists; a file of other variables can name hundreds. */
+const SHOWN_UNKNOWN = 10;
+
 const FORMS = {
   anthropic: 'An Anthropic key starts sk-ant- and is 40 to 400 characters long.',
   openai: 'An OpenAI key starts sk- (not sk-ant-, which is Anthropic’s) and is 40 to 400 characters long.',
@@ -28,6 +31,13 @@ const MASKS = CSS.supports('-webkit-text-security', 'disc');
 
 const inputs = new Map();
 const messages = new Map();
+
+// Counts the files read and the clears, so that a file still being read when another is chosen,
+// or when *Clear* is chosen, is dropped once read rather than fill the fields.
+let generation = 0;
+
+// What `#holds` last said, so a live region is not rebuilt, and read out again, at each keystroke.
+let held = null;
 
 function buildFields() {
   for (const { code, label } of SERVICES) {
@@ -80,18 +90,22 @@ function update() {
     }
     inputs.get(code).setAttribute('aria-invalid', problem === null ? 'false' : 'true');
   }
+  const said = JSON.stringify([...keys].map(([name, value]) => [name, ending(value)]).concat(refused));
+  const changed = said !== held;
+  held = said;
   const holds = $('holds');
   const code = $('code');
   if (keys.size === 0) {
     code.hidden = true;
     code.replaceChildren();
-    holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
+    if (changed) holds.textContent = refused.length === 0 ? 'No key yet.' : 'No code: no key has its service’s form.';
     return;
   }
   const { svg, side } = qrSvg(write(keys), 'Setup code of the keys listed below it');
   code.style.width = `${side * MODULE_PX}px`;
   code.replaceChildren(svg);
   code.hidden = false;
+  if (!changed) return;
   const list = document.createElement('ul');
   for (const [name, value] of keys) {
     const item = document.createElement('li');
@@ -108,41 +122,50 @@ function update() {
   holds.replaceChildren(...lines);
 }
 
-// Fills the fields with the keys in [file], and says what was left out.
+function report(text, error = false) {
+  const line = $('file-report');
+  line.className = error ? 'report error' : 'report';
+  line.textContent = text;
+}
+
+// Fills the fields with the keys in [file], in place of what they held, and says what was left out.
 async function load(file) {
-  const report = $('file-report');
-  report.hidden = false;
-  report.className = 'report';
+  const reading = ++generation;
   if (file.size > LARGEST_FILE) {
-    report.textContent = 'Not read: too large to be a keys file.';
-    report.className = 'report error';
+    report('Not read: too large to be a keys file.', true);
     return;
   }
   let text;
   try {
     text = await file.text();
   } catch {
-    report.textContent = 'The file could not be read.';
-    report.className = 'report error';
+    if (reading === generation) report('The file could not be read.', true);
     return;
   }
-  const { keys, repeated, unknown, unreadable } = readFile(text);
-  for (const [code, value] of keys) inputs.get(code).value = value;
+  if (reading !== generation) return;
+  const { keys, repeated, empty, unknown, others, unreadable } = readFile(text);
+  for (const [code, input] of inputs) input.value = keys.get(code) ?? '';
   const said = [
     keys.size === 0 ? 'No key found in the file.' : `From the file: ${[...keys.keys()].map(labelOf).join(', ')}.`,
   ];
   if (repeated.length > 0) said.push(`Named more than once, so not taken: ${repeated.map(labelOf).join(', ')}.`);
-  if (unknown.length > 0) said.push(`Not a key Sleevesight uses, left out: ${unknown.join(', ')}.`);
+  if (empty.length > 0) said.push(`Named with no key: ${empty.map(labelOf).join(', ')}.`);
+  if (unknown.length > 0) {
+    const more = unknown.length - SHOWN_UNKNOWN;
+    const names = unknown.slice(0, SHOWN_UNKNOWN).join(', ') + (more > 0 ? ` and ${more} more` : '');
+    said.push(`Not a key Sleevesight uses, left out: ${names}.`);
+  }
+  if (others > 0) said.push(`${others} other name${others > 1 ? 's' : ''} left out.`);
   if (unreadable > 0) said.push(`${unreadable} line${unreadable > 1 ? 's' : ''} not of the form NAME=value, left out.`);
-  report.textContent = said.join(' ');
+  report(said.join(' '));
   update();
 }
 
 function clear() {
+  generation++;
   for (const input of inputs.values()) input.value = '';
   $('file').value = '';
-  $('file-report').hidden = true;
-  $('file-report').textContent = '';
+  report('');
   $('show').checked = false;
   show(false);
   update();
@@ -174,9 +197,16 @@ drop.addEventListener('drop', (event) => {
   const [file] = event.dataTransfer.files;
   if (file) load(file);
 });
-// A file dropped beside the box is not opened by the browser in place of the page.
-window.addEventListener('dragover', (event) => event.preventDefault());
-window.addEventListener('drop', (event) => event.preventDefault());
+// A file dropped beside the box is not opened by the browser in place of the page; text dragged
+// into a field still is dropped there.
+const holdFile = (event) => {
+  if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+};
+window.addEventListener('dragover', holdFile);
+window.addEventListener('drop', holdFile);
+// Emptied as the page is left, so that no browser offers to save a key, where it masks the fields
+// as passwords, and none is restored on coming back.
+window.addEventListener('pagehide', clear);
 $('show').addEventListener('change', () => show($('show').checked));
 $('clear').addEventListener('click', clear);
 update();

@@ -6,6 +6,7 @@ code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wr
 }
 .drop.over { border-color: var(--accent); }
 .hint, .report { color: var(--muted); }
+.report:empty { display: none; }
 .fields { margin-top: 12px; display: grid; gap: 12px; }
 .field label { display: block; font-weight: 600; }
 .field input {
@@ -16,7 +17,9 @@ code { font: 0.9em ui-monospace, "SFMono-Regular", Menlo, monospace; overflow-wr
 .field input.masked { -webkit-text-security: disc; }
 .field input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .field p { margin: 4px 0 0; font-size: 15px; }
-/* Large enough to scan from a laptop's screen: about 5 pixels a module, the width set by the script. */
+/* Large enough to scan from a laptop's screen: 5 pixels a module, the width set by the script, up
+   to the page's width (`keyboard.css`), which holds a code of five keys of ordinary length (version
+   16, 425 pixels); from about version 22, a module is smaller. */
 .code { width: auto; }
 #holds ul { margin: 4px 0 0; padding-left: 1.2em; }
 #holds li { margin: 0; }

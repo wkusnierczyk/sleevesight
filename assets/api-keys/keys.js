@@ -21,8 +21,15 @@ export const BAD_CHARACTERS = 'BAD_CHARACTERS';
 export const WRONG_SHAPE = 'WRONG_SHAPE';
 export const DUPLICATE = 'DUPLICATE';
 
-/** The longest unknown name shown as given; a longer one is cut, in case it is a key itself. */
-export const SHOWN_NAME = 24;
+/** The longest unknown name shown as given; a longer one is cut. */
+export const SHOWN_NAME = 40;
+
+// What a variable's name looks like; anything else before an `=` is a line not read.
+const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+// Unknown names are shown only with this prefix, as a key's name mistyped. Others are only counted:
+// a line of base64 from a file chosen by mistake looks like a name, and may be a secret.
+const OURS = 'SLEEVESIGHT_';
 
 const TOKEN = /^[A-Za-z0-9_-]+$/;
 const GOOGLE_TOKEN = /^[A-Za-z0-9._-]+$/;
@@ -66,28 +73,35 @@ export function write(keys) {
 /**
  * The keys in [text], a keys file: `NAME=value` lines, `export` and quotes allowed, comments and
  * blank lines skipped, as the CLI reads it. A key is named by its variable or by its name in the
- * code. Gives the [keys] found, by service code, the services named more than once ([repeated]),
- * which none of their values is taken from, the [unknown] names, each cut to [SHOWN_NAME], and how
- * many lines were not `NAME=value` ([unreadable]).
+ * code; an empty value is no key, as the CLI has it. Gives the [keys] found, by service code, the
+ * services named more than once with a value ([repeated]), which none of their values is taken
+ * from, those named with no value ([empty]), the unknown names that start `SLEEVESIGHT_`
+ * ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
+ * lines were not `NAME=value` ([unreadable]).
  */
 export function readFile(text) {
   const keys = new Map();
   const counts = new Map();
+  const empty = new Set();
   const unknown = [];
+  let others = 0;
   let unreadable = 0;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim().replace(/^export /, '').trim();
     if (line === '' || line.startsWith('#')) continue;
     const at = line.indexOf('=');
     const name = at < 0 ? '' : line.slice(0, at).trim();
-    if (name === '') {
+    if (!NAME.test(name)) {
       unreadable++;
       continue;
     }
     const value = unquoted(line.slice(at + 1).trim());
     const service = SERVICES.find((s) => s.variable === name || s.code === name);
     if (service === undefined) {
-      unknown.push(name.slice(0, SHOWN_NAME));
+      if (name.startsWith(OURS)) unknown.push(name.slice(0, SHOWN_NAME));
+      else others++;
+    } else if (value === '') {
+      empty.add(service.code);
     } else {
       keys.set(service.code, value);
       counts.set(service.code, (counts.get(service.code) ?? 0) + 1);
@@ -95,7 +109,9 @@ export function readFile(text) {
   }
   const repeated = [...counts].filter(([, n]) => n > 1).map(([code]) => code);
   for (const code of repeated) keys.delete(code);
-  return { keys, repeated, unknown, unreadable };
+  for (const code of keys.keys()) empty.delete(code);
+  for (const code of repeated) empty.delete(code);
+  return { keys, repeated, empty: [...empty], unknown, others, unreadable };
 }
 
 // Kotlin's `removeSurrounding` for double quotes, then single.
