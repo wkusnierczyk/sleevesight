@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings' sections (#444): each heading's short description, always shown, and its fuller explanation, shown unfolded. -->
+    <string name="settings_section_collapsed">collapsed</string>
+    <string name="settings_section_expanded">expanded</string>
+    <string name="settings_players_short">Music apps Sleevesight follows</string>
+    <string name="settings_players_long">Sleevesight reads what a player says it is playing (track, artist, album). It does not receive the audio or your other notifications. Android grants this with notification access. Switch on the players you want Sleevesight to follow. A player not switched on is only checked for music, a track with a title and an artist, to be listed here; nothing of it is kept or sent. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
+    <string name="settings_sources_short">External services providing information on artists and music.</string>
+    <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
+    <string name="settings_ai_short">Large Language Model (LLM) services</string>
+    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
+    <string name="settings_keys_short">Private API keys enabling external services</string>
+    <string name="settings_keys_long">Sleevesight uses external services that require authentication via API keys, obtained from each service’s own website. Your keys are stored encrypted on this phone, and each is sent only to its own service.</string>
+    <string name="settings_genres_short">Current music genres</string>
+    <string name="settings_genres_long">Sleevesight collects genre information from sources and compiles a short list of representative categories.</string>
+    <string name="settings_insights_short">Generated current track summaries.</string>
+    <string name="settings_insights_long">Sleevesight collects track, artist, and album information from sources and uses AI to generate readable descriptions based on the sourced evidence.</string>
+    <string name="settings_history_short">Listening history, kept on this phone.</string>
+    <string name="settings_history_long">Sleevesight keeps the tracks you play on this phone, to avoid repeating itself within a listening session and to learn which track changes are your skips. Nothing of it leaves the phone.</string>
+    <string name="settings_appearance_short">App customisation</string>
+    <string name="settings_appearance_long">Sleevesight appearance options</string>
+    <string name="settings_about_short">Product and technology information</string>
+    <string name="settings_about_long">Detailed information about the design, implementation, dependencies, licencing, and policies.</string>
+
+    <!-- Links to another app or a site, with the open-in-new symbol; the _of forms are what a screen reader says. -->
+    <string name="settings_open_app">Open the app</string>
+    <string name="settings_open_app_of">Open %1$s</string>
+    <string name="settings_open_website">Open website</string>
+    <string name="settings_open_website_of">Open the %1$s website</string>
+    <string name="settings_open_page">Open %1$s in your browser</string>
+
+    <!-- Sources. -->
+    <string name="settings_source_musicbrainz_summary">An open music encyclopedia: recordings, releases, credits and release dates.</string>
+    <string name="settings_source_wikipedia_summary">Articles on songs, albums and artists, and the facts behind them.</string>
+    <string name="settings_source_lastfm_summary">Listeners’ tags and artist biographies.</string>
+    <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
+    <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
+    <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
+    <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
+
+    <!-- Genres. -->
+    <string name="settings_show_genres">Show genres</string>
+    <string name="settings_show_genres_summary">Off: no genre information is asked for from any source, and the home screen shows no genres.</string>
+    <string name="settings_labels_genres_off">Off while “Show genres” is off</string>
+    <string name="settings_labels_lastfm_summary">Tags added freely by listeners, unmoderated; Sleevesight keeps those that name a genre.</string>
+
+    <!-- Insights. -->
+    <string name="settings_pause_auto_write_after">Stop after</string>
+
+    <!-- Appearance. -->
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_summary">Light or dark. The system’s follows your phone’s dark theme.</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <!-- About. -->
+    <string name="settings_version">Version</string>
+    <!-- The version name and the build number, as 0.1.3 (1003). -->
+    <string name="settings_version_value">%1$s (%2$d)</string>
+    <string name="settings_docs">Documentation</string>
+    <string name="settings_docs_summary">How to use Sleevesight, every setting explained, and how it works and is made.</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_source_code_summary">Sleevesight is free software: its code is on GitHub.</string>
+    <string name="settings_licence">Licence</string>
+    <string name="settings_licence_summary">The GNU General Public License, version 3 (GPL-3.0).</string>
+
+    <!-- Developer mode (#444): seven taps on Version, as Android's build number takes. -->
+    <plurals name="settings_developer_taps_left">
+        <item quantity="one">%d tap from developer mode</item>
+        <item quantity="other">%d taps from developer mode</item>
+    </plurals>
+    <string name="settings_developer_on">Developer mode is on</string>
+    <string name="settings_developer_already_on">Developer mode is already on</string>
+    <string name="settings_developer_mode">Developer mode</string>
+    <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
+</resources>

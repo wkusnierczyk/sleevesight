@@ -1,9 +1,12 @@
 package app.sleevesight.app
 
+import android.app.UiModeManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.SQLException
 import android.net.ConnectivityManager
+import android.os.Build
 import android.util.Log
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
@@ -38,6 +41,7 @@ import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
+import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
@@ -50,6 +54,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -128,6 +133,42 @@ class AppGraph(
             .onEach { lastFont.value = it }
             .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
 
+    /** *Theme* as last read, for a new process's first frames. */
+    private val lastTheme = LastTheme(appContext)
+
+    /**
+     * *Theme* (#444), for the theme, as [font] is: the stored choice, as it changes, held for the
+     * process, and before the settings' first read in a new process, the theme last read
+     * ([LastTheme]). From Android 12 each is also given to the system as the app's night mode
+     * ([nightMode]), so the starting window and the splash screen, which come before any of the
+     * app's code, are drawn as chosen too; below it they follow the system's dark theme.
+     */
+    val theme: StateFlow<ThemeChoice> =
+        settings.settings
+            .map { it.theme }
+            .distinctUntilChanged()
+            .onEach {
+                lastTheme.value = it
+                nightMode(it)
+            }.stateIn(mainScope, SharingStarted.Eagerly, lastTheme.value)
+
+    /**
+     * Gives [theme] to the system as the app's night mode (Android 12 and later), which it keeps
+     * across restarts and applies to the app's configuration: *System* follows the system's dark
+     * theme (`MODE_NIGHT_AUTO`, as AndroidX's own night mode maps it), *Light* and *Dark* are fixed.
+     * Unchanged, it changes nothing; changed, the system restarts the open activity in it.
+     */
+    private fun nightMode(theme: ThemeChoice) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val mode =
+            when (theme) {
+                ThemeChoice.SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
+                ThemeChoice.LIGHT -> UiModeManager.MODE_NIGHT_NO
+                ThemeChoice.DARK -> UiModeManager.MODE_NIGHT_YES
+            }
+        appContext.getSystemService(UiModeManager::class.java)?.setApplicationNightMode(mode)
+    }
+
     /** *Logo intro at start* as last read, for a new process's decision before its first frame. */
     private val lastIntro = LastIntro(appContext)
 
@@ -171,6 +212,8 @@ class AppGraph(
             JvmAccentFolder,
             JvmResourceReader,
             artistResults,
+            // *Show genres* (#444) as last read: on until the first read, which comes before any lookup.
+            genres = { latestSettings.value?.showGenres != false },
         )
 
     /**
@@ -230,7 +273,7 @@ class AppGraph(
     }
 
     /**
-     * The session layer, following the players switched on under *Players to follow*: a switch
+     * The session layer, following the players switched on under *Players*: a switch
      * turned on or off reaches it at once. It waits for the settings' first read before it reads
      * any session, so a player switched off is never followed in between, and follows none while
      * the file cannot be read.
@@ -352,7 +395,7 @@ class AppGraph(
     init {
         // The events, in memory only, off the main thread.
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
-        // Each player the session layer sees appears under *Players to follow*, switched off.
+        // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
@@ -402,6 +445,13 @@ class AppGraph(
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
+
+    /**
+     * The intent that opens a player from its launcher entry, for *Open the app ↗* under its name in
+     * the settings (#444); null for one with none, or not visible to this app.
+     */
+    fun playerLaunchIntent(packageName: String): Intent? =
+        appContext.packageManager.getLaunchIntentForPackage(packageName)
 
     private companion object {
         const val TAG = "Sleevesight"

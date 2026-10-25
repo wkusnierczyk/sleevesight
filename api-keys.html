@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- API keys to a setup code (#436), for the app's Scan keys. The page connects to nothing: it
+<!-- API keys to a setup code (#436), for the app's Load keys. The page connects to nothing: it
      fetches only its own scripts and style sheets, and the policy below forbids any other request,
      so the browser's network panel shows that nothing is sent. The keys stay in the page's memory,
      never in storage, and go only into the QR code drawn here. No front matter, so the site copies
@@ -21,7 +21,7 @@
 <body>
 <main>
   <h1>API keys to a QR code</h1>
-  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>API keys</b>, <b>Scan keys</b>.</p>
+  <p>Put your API keys in one QR code, and save them all in Sleevesight at once: on the phone, <b>Settings</b>, <b>Secrets</b>, <b>Load keys</b>.</p>
 
   <ol>
     <li>Choose your keys file, drop it here, or paste each key in its field. The file has one <code>NAME=value</code> line a key, such as <code>SLEEVESIGHT_ANTHROPIC_API_KEY=sk-ant-…</code>; lines naming nothing Sleevesight uses are left out. A file replaces what is in the fields.
@@ -33,7 +33,7 @@
       <div id="fields" class="fields"></div>
       <p><label class="show"><input id="show" type="checkbox"> Show the keys</label></p>
     </li>
-    <li>Scan the code with <b>Scan keys</b>. The phone lists what it found, each key by its last four characters, before it saves anything.
+    <li>Scan the code with <b>Load keys</b>. The phone lists what it found, each key by its last four characters, before it saves anything.
       <div id="code" class="code" hidden></div>
       <p id="holds" role="status" aria-live="polite">No key yet.</p>
     </li>

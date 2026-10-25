@@ -91,7 +91,7 @@ class ArtistFact(
  * `design/design.md`, *Synthesis*). A track's insight is written without the artist-level lines
  * another track's insight in the session cited, so an album played through does not repeat its
  * artist's facts on every track, and its later prompts are shorter. The listening session is the
- * history's (*Start a new session after a break of*, `Settings.sessionGap`).
+ * history's (*New session idle trigger*, `Settings.sessionGap`).
  */
 interface SessionFacts {
     /** The facts cited in the session now playing by insights of tracks other than [track] (a lookup key). */

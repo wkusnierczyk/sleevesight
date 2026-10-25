@@ -2,4 +2,8 @@
 <resources>
     <!-- The window behind Compose, until the first frame; Compose draws everything else. -->
     <style name="Theme.Sleevesight" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- The window as *Theme* (#444) chooses, light or dark whatever the system is: `MainActivity`
+         sets one of these before its first frame. -->
+    <style name="Theme.Sleevesight.Light" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Sleevesight.Dark" parent="android:Theme.Material.NoActionBar" />
 </resources>

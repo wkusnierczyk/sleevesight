@@ -7,11 +7,11 @@ import kotlin.time.Instant
 
 /**
  * Last.fm's answers for one name, and when they were retrieved; for answers the artist cache kept,
- * when they stop being fresh.
+ * when they stop being fresh. [topTags] is null where they were not asked for (*Show genres* off).
  */
 internal class Fetched(
     val info: LastFmAnswer<LastFmArtist>,
-    val topTags: LastFmAnswer<List<LastFmTag>>,
+    val topTags: LastFmAnswer<List<LastFmTag>>?,
     val retrievedAt: Instant,
     val freshUntil: Instant? = null,
 )
@@ -25,11 +25,18 @@ internal class Fetched(
  * Not kept: a failed request, another error (a rejected key, the rate limit) or an artist whose top
  * tags did not arrive, which a later lookup may get whole. The bio is kept as its quotable
  * sentences ([LastFmArtist.bio]), never the summary.
+ *
+ * Without [genres] (*Show genres* off, #444), the top tags are not asked for, and an artist is kept
+ * without them, marked so: once they are wanted again, it is not served, and is asked for afresh.
  */
 internal class KeptArtists(
     private val artists: ArtistResults,
+    private val genres: Boolean = true,
 ) {
-    /** What is kept for [name], as answers; null for none, or a value that cannot be read. */
+    /**
+     * What is kept for [name], as answers; null for none, a value that cannot be read, or an artist
+     * kept without the top tags that are now wanted.
+     */
     suspend fun get(name: String): Fetched? {
         val part = artists.get(LastFmAdapter.ARTIST_PART, name)
         return part?.let { answers(it.value, it.freshUntil) }
@@ -56,10 +63,17 @@ internal class KeptArtists(
             }
         val at = kept?.let { Instant.parseOrNull(it.retrievedAt) } ?: return null
         val artist = kept.artist
-        return if (artist == null) {
-            Fetched(LastFmAnswer.Error(LastFmJson.NOT_FOUND), LastFmAnswer.Error(LastFmJson.NOT_FOUND), at, freshUntil)
-        } else {
-            Fetched(LastFmAnswer.Found(artist), LastFmAnswer.Found(kept.topTags), at, freshUntil)
+        return when {
+            artist == null -> {
+                val none = LastFmAnswer.Error(LastFmJson.NOT_FOUND)
+                Fetched(none, none, at, freshUntil)
+            }
+
+            kept.withoutTags && genres -> null
+
+            else -> {
+                Fetched(LastFmAnswer.Found(artist), LastFmAnswer.Found(kept.topTags), at, freshUntil)
+            }
         }
     }
 
@@ -69,6 +83,7 @@ internal class KeptArtists(
         val at = fetched.retrievedAt.toString()
         return when {
             info is LastFmAnswer.Found && topTags is LastFmAnswer.Found -> StoredArtist(at, info.value, topTags.value)
+            info is LastFmAnswer.Found && topTags == null -> StoredArtist(at, info.value, withoutTags = true)
             info is LastFmAnswer.Error && info.code == LastFmJson.NOT_FOUND -> StoredArtist(at, null)
             else -> null
         }
@@ -76,13 +91,15 @@ internal class KeptArtists(
 
     /**
      * One name's answers: [artist] with its [topTags], or null for a name Last.fm does not know;
-     * [retrievedAt] in ISO 8601, which its lines keep.
+     * [retrievedAt] in ISO 8601, which its lines keep. [withoutTags] marks an artist whose top tags
+     * were not asked for.
      */
     @Serializable
     private class StoredArtist(
         val retrievedAt: String,
         val artist: LastFmArtist?,
         val topTags: List<LastFmTag> = emptyList(),
+        val withoutTags: Boolean = false,
     )
 
     private companion object {

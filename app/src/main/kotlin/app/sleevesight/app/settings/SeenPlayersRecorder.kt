@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 
 /**
- * Lists each player the session layer has [seen] under *Players to follow*, switched off, through
+ * Lists each player the session layer has [seen] under *Players*, switched off, through
  * [record] ([SettingsStore.playerSeen]), so the user can switch it on. A player already listed keeps
  * its switch: [record] leaves it alone.
  *
@@ -29,7 +29,7 @@ class SeenPlayersRecorder(
                     recorded += player
                 } catch (_: IOException) {
                     // No exception text: an I/O message may name a path; the player is enough.
-                    warn("Could not list $player under Players to follow")
+                    warn("Could not list $player under Players")
                 }
             }
         }

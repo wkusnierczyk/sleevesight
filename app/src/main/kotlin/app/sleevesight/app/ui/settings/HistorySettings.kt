@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -15,8 +16,8 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-// The history's settings (#148): *Keep history for*, *Start a new session after a break of*, and
-// *Clear history*.
+// *History* (#148, #444): *Keep history for*, *New session idle trigger*, how long each source's
+// findings are kept (D9), *Keep what sources said about each artist* (#420), and *Clear history*.
 
 /**
  * The history's lifetimes offered, in days, and *Forever*; a stored one outside them is offered
@@ -38,15 +39,26 @@ private val SESSION_GAP_MINUTES = listOf(10, 20, 30, 60, 120)
 private const val DAYS_IN_YEAR = 365
 private val YEAR = DAYS_IN_YEAR.days
 
+/** The cache lifetimes of the sources with an adapter (D9); Discogs's comes with it. */
+private val SHOWN_LIFETIMES =
+    listOf(
+        SourceId.MUSICBRAINZ to R.string.settings_source_musicbrainz,
+        SourceId.WIKIDATA to R.string.settings_cache_wikidata,
+        SourceId.WIKIPEDIA to R.string.settings_cache_wikipedia,
+        SourceId.LASTFM to R.string.settings_source_lastfm,
+        SourceId.WEB to R.string.settings_cache_web,
+    )
+
+/** The lifetimes offered, which include every default (D9); a stored one outside them is offered too. */
+@Suppress("MagicNumber") // The values are the offer itself.
+private val LIFETIME_DAYS = listOf(1, 3, 7, 14, 30, 90)
+
 @Composable
 internal fun HistorySection(
     settings: Settings,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    SectionHeading(R.string.settings_section_history)
-    Hint(R.string.settings_history_hint)
-
     val lifetime = settings.historyLifetime
     val lifetimes =
         ((HISTORY_DAYS.map { it.days } + listOfNotNull(lifetime)).distinct().sorted() + null)
@@ -73,11 +85,43 @@ internal fun HistorySection(
         )
     }
 
+    LifetimeRows(settings, update, open)
+
+    // A privacy choice (#420), so its title is in the theme's error colour: what is kept per
+    // artist amounts to a list of the artists heard. After the lifetimes it is kept for.
+    SwitchRow(
+        title = stringResource(R.string.settings_keep_artists),
+        summary = stringResource(R.string.settings_keep_artists_summary),
+        checked = settings.keepArtistResults,
+        highlight = true,
+    ) { on -> update { it.copy(keepArtistResults = on) } }
+
     ValueRow(
         title = stringResource(R.string.settings_clear_history),
         value = stringResource(R.string.settings_clear_history_value),
         onClick = { open(SettingsDialog.ClearHistory) },
     )
+}
+
+/** How long each source's findings are kept (D9), a row per source with an adapter. */
+@Composable
+private fun LifetimeRows(
+    settings: Settings,
+    update: Update,
+    open: (SettingsDialog) -> Unit,
+) {
+    Hint(R.string.settings_cache_lifetimes)
+    for ((source, name) in SHOWN_LIFETIMES) {
+        val lifetime = settings.cacheLifetimes[source] ?: continue
+        val options = (LIFETIME_DAYS.map { it.days } + lifetime).distinct().sorted().map { it to daysLabel(it) }
+        ValueRow(title = stringResource(name), value = daysLabel(lifetime), indent = true) {
+            open(
+                SettingsDialog.Choice(name, options, lifetime) { chosen ->
+                    update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) }
+                },
+            )
+        }
+    }
 }
 
 /**

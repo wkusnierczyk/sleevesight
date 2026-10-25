@@ -22,6 +22,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.ui.home.artScheme
 import app.sleevesight.app.ui.settings.SectionHeading
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.SwitchRow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -50,10 +51,12 @@ class PlainAccentsTest {
     @Test
     fun aSectionHeadingIsBoldInTheTextColour() {
         for (dark in listOf(false, true)) {
-            pictures.show(dark, { Column { SectionHeading(R.string.settings_section_about) } }) { scheme ->
-                val style = pictures.styleOf(app.getString(R.string.settings_section_about))
-                assertEquals(FontWeight.Bold, style.fontWeight)
-                assertEquals(scheme.onSurface, style.color)
+            for (unfolded in listOf(false, true)) {
+                pictures.show(dark, { Column { SectionHeading(SettingsSection.ABOUT, unfolded) {} } }) { scheme ->
+                    val style = pictures.styleOf(app.getString(R.string.settings_section_about))
+                    assertEquals(FontWeight.Bold, style.fontWeight)
+                    assertEquals(scheme.onSurface, style.color)
+                }
             }
         }
     }

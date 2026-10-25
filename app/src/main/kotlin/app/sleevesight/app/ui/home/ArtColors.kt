@@ -1,7 +1,6 @@
 package app.sleevesight.app.ui.home
 
 import android.graphics.Bitmap
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -11,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.scale
+import app.sleevesight.app.ui.theme.isAppInDarkTheme
 import com.materialkolor.hct.Hct
 import com.materialkolor.quantize.QuantizerCelebi
 import com.materialkolor.scheme.DynamicScheme
@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 /**
  * The colours of the now-playing screen, taken from the album art (design, *User interface*):
  * material-color-utilities picks the art's most suitable colour as the seed of a Material 3
- * scheme, light or dark as the system is. Worked out off the main thread, once per bitmap; until
+ * scheme, light or dark as the app is (*Theme*). Worked out off the main thread, once per bitmap; until
  * then, and without art, the app's own colours.
  */
 @Composable
@@ -30,7 +30,7 @@ internal fun ArtTheme(
     art: Bitmap?,
     content: @Composable () -> Unit,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = isAppInDarkTheme()
     val scheme by produceState<ColorScheme?>(initialValue = null, art, dark) {
         value = art?.let { withContext(Dispatchers.Default) { safeArtScheme(it, dark) } }
     }

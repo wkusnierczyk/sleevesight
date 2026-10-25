@@ -33,7 +33,7 @@
     <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
     <string name="home_genres">Genres</string>
     <string name="home_genres_none">None found.</string>
-    <string name="home_genres_off">Genre labels are off in Settings.</string>
+    <string name="home_genres_off">Every genre source is off in Settings.</string>
     <!-- The disclosure triangles of the genres' and the sources' folds: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
@@ -165,5 +165,6 @@
     <string name="home_scope_web">web</string>
     <string name="home_source_name_wikidata">Wikidata</string>
     <string name="home_source_name_discogs">Discogs</string>
+    <string name="home_source_name_web">Web search</string>
     <string name="home_source_name_player">the player</string>
 </resources>

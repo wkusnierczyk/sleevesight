@@ -29,7 +29,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/** *Players to follow* and the session layer, through the app graph as the app wires them (#126). */
+/** *Players* and the session layer, through the app graph as the app wires them (#126). */
 @RunWith(RobolectricTestRunner::class)
 class FollowedPlayersTest {
     @get:Rule
@@ -51,7 +51,7 @@ class FollowedPlayersTest {
 
     private fun storedPlayers(store: SettingsStore = graph.settings): Map<String, Boolean> = store.now().followedPlayers
 
-    /** Sets [player]'s switch under *Players to follow*, as the settings screen does. */
+    /** Sets [player]'s switch under *Players*, as the settings screen does. */
     private fun follow(
         player: String,
         on: Boolean,

@@ -18,13 +18,15 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Only a setting the user moved off its default is stored; one at its default has no key. So a
  * default revised in a later version reaches everyone who has not changed that setting (#100: the
- * MusicBrainz labels may be off by default in the release). A set of switches (*Where to look*,
+ * MusicBrainz labels may be off by default in the release). A set of switches (*Sources*,
  * the web search engines, the genre label sources) is stored as the switches moved on or off
  * against their defaults, so one the user has not moved, or one a later version adds, follows its
- * default; *Players to follow* is stored the same way, by package name ([readPlayers]).
+ * default; *Players* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
- * later one), or out of range reads as that setting's default, and the others are unaffected.
+ * later one), or out of range reads as that setting's default, and the others are unaffected. One
+ * exception: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
+ * *Diagnostics* on, so someone who used the diagnostics keeps the way to them.
  *
  * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
  * settings that changed, so a value this version cannot read stays until the user changes that
@@ -45,6 +47,7 @@ internal object SettingsCodec {
     private val ENGINES_OFF = stringSetPreferencesKey("web.engines.off")
     private val LABELS_ON = stringSetPreferencesKey("labels.on")
     private val LABELS_OFF = stringSetPreferencesKey("labels.off")
+    private val SHOW_GENRES = booleanPreferencesKey("genres.show")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
     private val PAUSE_AUTO_WRITE = intPreferencesKey("insights.pause_auto_write_after")
@@ -58,6 +61,8 @@ internal object SettingsCodec {
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
+    private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
+    private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
 
@@ -77,6 +82,7 @@ internal object SettingsCodec {
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
+            showGenres = prefs[SHOW_GENRES] ?: defaults.showGenres,
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
             writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
             pauseAutoWriteAfter = pauseOf(prefs[PAUSE_AUTO_WRITE], defaults.pauseAutoWriteAfter),
@@ -96,6 +102,8 @@ internal object SettingsCodec {
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
+            developerMode = developerModeOf(prefs),
+            theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
         )
@@ -140,6 +148,7 @@ internal object SettingsCodec {
         switches(SOURCES_ON, SOURCES_OFF) { it.enabledSources }
         switches(ENGINES_ON, ENGINES_OFF) { it.webEngines }
         switches(LABELS_ON, LABELS_OFF) { it.labelSources }
+        if (moved { it.showGenres }) prefs.put(SHOW_GENRES, settings.showGenres, defaults.showGenres)
         if (moved { it.writeInsights }) prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         if (moved { it.writeAutomatically }) {
             prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
@@ -193,12 +202,25 @@ internal object SettingsCodec {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
+        // only where that would read otherwise; either moving can change which.
+        if (moved { it.developerMode } || moved { it.showDiagnostics }) {
+            prefs.put(DEVELOPER_MODE, settings.developerMode, prefs[DIAGNOSTICS] ?: defaults.showDiagnostics)
+        }
+        if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
     }
 
     /**
-     * *Players to follow* as overrides of the defaults, with `on` and `off` keys as the switch sets
+     * *Developer mode* as stored, or, with no key, as *Diagnostics* is: a file from before developer
+     * mode (#444) with *Diagnostics* on reads as on, so its user keeps the way to the diagnostics.
+     */
+    private fun developerModeOf(prefs: Preferences): Boolean =
+        prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
+
+    /**
+     * *Players* as overrides of the defaults, with `on` and `off` keys as the switch sets
      * have ([readSwitches]): a player listed by default that this phone has not already listed off
      * follows its default, including one a later version adds or whose default it revises. A player
      * seen but not listed by default is stored with its switch, off as first listed (`players.off`,
@@ -219,7 +241,7 @@ internal object SettingsCodec {
         ).filterKeys { !Settings.isCall(it) }
 
     /**
-     * Drops from *Players to follow* what an older version listed by the old rule, any app with a
+     * Drops from *Players* what an older version listed by the old rule, any app with a
      * media session (#435): each player listed off that is not listed by default, so it is listed
      * again only once it reports music ([SettingsStore.playerSeen]), and every phone call's package,
      * whatever its switch. A player switched on stays, so the user's choice is not undone; one
@@ -295,7 +317,7 @@ internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues
 /** `pauseAutoWriteAfter` null is *Off*, which needs a value of its own to be stored. */
 private const val NEVER_PAUSE = 0
 
-/** *Pause automatic writing after* as [stored]: *Off*, a positive count, or else the [default]. */
+/** *Saver* as [stored]: *Off*, a positive count, or else the [default]. */
 private fun pauseOf(
     stored: Int?,
     default: Int?,

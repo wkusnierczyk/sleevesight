@@ -1,13 +1,29 @@
 package app.sleevesight.app.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLabel
+import app.sleevesight.app.ui.theme.LinkLook
 import app.sleevesight.app.ui.theme.TextPart
 
 /**
@@ -40,10 +56,6 @@ internal fun rememberOpenUrl(url: String): () -> Unit {
     }
 }
 
-/** Opens [PRIVACY_POLICY_URL] in the browser, as [rememberOpenUrl] does. */
-@Composable
-internal fun rememberOpenPrivacyPolicy(): () -> Unit = rememberOpenUrl(PRIVACY_POLICY_URL)
-
 /**
  * [url], shown without its scheme, as a link of its own ([LinkLabel]) that opens the page in the
  * browser: the whole text the link, with at least the minimum touch target, and an action a screen
@@ -60,6 +72,45 @@ internal fun WebLink(
         style = MaterialTheme.typography.bodyMedium,
         modifier = modifier,
     )
+}
+
+/**
+ * A link that opens another app or a web page ([onClick]): [text] drawn as every link is
+ * ([LinkLook], #442) and the Material *open in new* symbol after it, in the text colour, with at
+ * least the minimum touch target. A screen reader reads it as [description] ("Open Spotify"), a
+ * button, not the symbol.
+ */
+@Composable
+internal fun ExternalLink(
+    text: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier =
+            modifier
+                .minimumInteractiveComponentSize()
+                .clickable(role = Role.Button, onClick = onClick)
+                .clearAndSetSemantics {
+                    contentDescription = description
+                    role = Role.Button
+                    onClick {
+                        onClick()
+                        true
+                    }
+                },
+    ) {
+        LinkLook(text, style = MaterialTheme.typography.bodyMedium)
+        Icon(
+            painterResource(R.drawable.ic_open_in_new),
+            contentDescription = null,
+            tint = LocalContentColor.current,
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }
 
 /** [PRIVACY_POLICY_URL] as a [WebLink]. */
