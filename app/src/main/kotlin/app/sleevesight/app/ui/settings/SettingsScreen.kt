@@ -65,7 +65,8 @@ import java.io.IOException
  * removal of keys) run in [saves], which outlives the screen, as the clear does, so leaving the
  * screen, or a rotation, does not cut one short; the screen and its dialogs only wait for the
  * result, and a screen gone by then shows nothing of it. [onOpenCredits] opens the credits
- * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
+ * screen, [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on, and
+ * [onOpenWhatLeaves] the first-run screen, from *About* (#441).
  * [scanner] reads an API key's QR code, or a setup code of several (#268): the camera, but for
  * tests; [keyboard] runs *Type on a computer* (#394): Bluetooth, but for tests. [playerLabel]
  * names a player by its package, and [playerLaunch] gives the intent that opens it, if any.
@@ -80,6 +81,7 @@ fun SettingsScreen(
     saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
+    onOpenWhatLeaves: () -> Unit = {},
     scanner: QrScanner = CameraQrScanner,
     keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
     playerLaunch: (String) -> Intent? = { null },
@@ -109,7 +111,13 @@ fun SettingsScreen(
             Notices(changeFailures, clearing.ended)
             settings?.let { current ->
                 val navigation =
-                    Navigation(PlayerApps(playerLabel, playerLaunch), modelNames::of, onOpenCredits, onOpenDiagnostics)
+                    Navigation(
+                        PlayerApps(playerLabel, playerLaunch),
+                        modelNames::of,
+                        onOpenCredits,
+                        onOpenDiagnostics,
+                        onOpenWhatLeaves,
+                    )
                 SettingsContent(current, keys, navigation, update) { dialog = it }
             }
         }
@@ -269,6 +277,7 @@ private class Navigation(
     val modelName: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
+    val openWhatLeaves: () -> Unit,
 )
 
 /**
@@ -348,7 +357,9 @@ private fun SettingsContent(
         FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
         FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
-        FoldedSection(SettingsSection.ABOUT, folds) { AboutSection(settings, update, navigation.openCredits) }
+        FoldedSection(SettingsSection.ABOUT, folds) {
+            AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
+        }
         if (settings.developerMode) {
             FoldedSection(SettingsSection.DEVELOPER, folds) {
                 DeveloperSection(settings, update, navigation.openDiagnostics)

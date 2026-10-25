@@ -41,7 +41,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The cogwheel**, at the right, opens the settings.
 
-At the bottom of the home screen, *What leaves the phone* opens the first-run screen again, to reread it.
+At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too.
 
 ### The playing track
 
@@ -51,10 +51,9 @@ From top to bottom, the card shows:
 
 - **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen; a player that has none says so.
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
-- **The title**, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
+- **The title**, large and bold, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
 - **The artists**, each credited one, featured artists included.
-- **The album**, or *Album not reported* when the player gives none.
-- **The year of first release**, *Released* and the year, when MusicBrainz found one. It is the year the recording first came out, not the year of the release being played.
+- **The album**, in italics, followed by the year of first release when MusicBrainz found one: *Rubber Soul*, 1965. The year is the one the recording first came out, not the year of the release being played. When the player gives no album, the year stands alone, or, with no year either, the line reads *Album not reported*.
 
 A new track shows at once, with its sources and insight to come.
 
@@ -70,7 +69,7 @@ When there are none, it says *None found.*, or *Every genre source is off in Set
 
 ### The insight
 
-*Why it's interesting* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
+*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
 
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 
@@ -214,7 +213,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | Situation | What you see |
 |---|---|
 | **Offline** | Sources that cannot be reached show *unreachable*, and *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again, and show *looking* meanwhile; the rest keep what they found. What was kept on the phone from earlier lookups still shows, marked *(kept)*. An insight that cannot be written for want of a connection says *The insight could not be written: no connection.* |
-| **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI service*]({{ '/docs/tutorials/settings/' | relative_url }}). |
+| **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
 | **No key for Last.fm or web search** | Its chip says *needs your key, in Settings*, and it is not asked. MusicBrainz and Wikipedia need no key. |
 | **A source rejects a match** | Its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. A rejected match is never used. |

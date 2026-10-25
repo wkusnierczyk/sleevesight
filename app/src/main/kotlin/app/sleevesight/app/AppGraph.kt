@@ -1,10 +1,12 @@
 package app.sleevesight.app
 
+import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.SQLException
 import android.net.ConnectivityManager
+import android.os.Build
 import android.util.Log
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
@@ -137,14 +139,35 @@ class AppGraph(
     /**
      * *Theme* (#444), for the theme, as [font] is: the stored choice, as it changes, held for the
      * process, and before the settings' first read in a new process, the theme last read
-     * ([LastTheme]).
+     * ([LastTheme]). From Android 12 each is also given to the system as the app's night mode
+     * ([nightMode]), so the starting window and the splash screen, which come before any of the
+     * app's code, are drawn as chosen too; below it they follow the system's dark theme.
      */
     val theme: StateFlow<ThemeChoice> =
         settings.settings
             .map { it.theme }
             .distinctUntilChanged()
-            .onEach { lastTheme.value = it }
-            .stateIn(mainScope, SharingStarted.Eagerly, lastTheme.value)
+            .onEach {
+                lastTheme.value = it
+                nightMode(it)
+            }.stateIn(mainScope, SharingStarted.Eagerly, lastTheme.value)
+
+    /**
+     * Gives [theme] to the system as the app's night mode (Android 12 and later), which it keeps
+     * across restarts and applies to the app's configuration: *System* follows the system's dark
+     * theme (`MODE_NIGHT_AUTO`, as AndroidX's own night mode maps it), *Light* and *Dark* are fixed.
+     * Unchanged, it changes nothing; changed, the system restarts the open activity in it.
+     */
+    private fun nightMode(theme: ThemeChoice) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val mode =
+            when (theme) {
+                ThemeChoice.SYSTEM -> UiModeManager.MODE_NIGHT_AUTO
+                ThemeChoice.LIGHT -> UiModeManager.MODE_NIGHT_NO
+                ThemeChoice.DARK -> UiModeManager.MODE_NIGHT_YES
+            }
+        appContext.getSystemService(UiModeManager::class.java)?.setApplicationNightMode(mode)
+    }
 
     /** *Logo intro at start* as last read, for a new process's decision before its first frame. */
     private val lastIntro = LastIntro(appContext)

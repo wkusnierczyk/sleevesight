@@ -1,0 +1,15 @@
+kotlinx-io, its NOTICE file (https://github.com/Kotlin/kotlinx-io)
+
+kotlinx-io is licensed under the Apache License, Version 2.0, whose text is in the app too
+(apache-2.0.txt). Its distribution includes the NOTICE file below, which section 4(d) of that
+license asks to go with every copy; it is copied from NOTICE at 0.9.1.
+
+
+   =========================================================================
+   ==  NOTICE file corresponding to the section 4 d of                    ==
+   ==  the Apache License, Version 2.0,                                   ==
+   ==  in this case for the kotlinx-io library.                            ==
+   =========================================================================
+
+   kotlinx-io library.
+   Copyright 2017-2023 JetBrains s.r.o and respective authors and developers

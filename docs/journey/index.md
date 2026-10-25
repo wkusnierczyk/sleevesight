@@ -29,7 +29,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 At the bottom, a link opens the privacy policy in your browser.
 
-**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the phone*, at the bottom of the home screen.
+**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings.
 
 <!-- screenshot: the first-run screen, top, under the app's name: the intro and "What it reads", from app version … -->
 
@@ -86,7 +86,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **The players.** Sleevesight follows Spotify by default. Any other player that plays music (a track with a title and an artist) while Sleevesight has notification access appears under *Players* in the settings, by name and switched off; switch it on to follow it too. *Open the app ↗* under its name opens it. Nothing is kept or sent of a player you do not follow.
 
-**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Why it's interesting*, and *Sources*. Lookups and writing run while the app is on screen.
+**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
 
 **An insight is written.** While the sources are asked, the card says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight* (step 6).
 
@@ -97,7 +97,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of the card means, offline or when a source fails.
 
 <!-- screenshot: the home screen with a track playing: player row, cover, title and artists, genre labels, from app version … -->
-<!-- screenshot: "Why it's interesting" with an insight, its citation chips and the grounded line, from app version … -->
+<!-- screenshot: "Key insights" with an insight, its citation chips and the grounded line, from app version … -->
 <!-- screenshot: "Sources" unfolded, with each source's chip and evidence lines, from app version … -->
 
 ## 6. Write, Rewrite, automatic writing, and the history

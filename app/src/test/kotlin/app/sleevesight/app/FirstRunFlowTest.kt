@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -364,13 +365,17 @@ class FirstRunFlowTest {
     fun homeLeadsBackToTheFirstRunScreen() {
         acknowledgeFirstRun()
         setAccess(granted = true)
-        launch().use {
+        launch().use { scenario ->
             compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
             // Robolectric runs out of touch mode, so Continue takes focus and is scrolled into view
             // when Home opens the first-run screen; the heading is scrolled back to.
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            // Back on the Home it came from, not a second one over it: nothing left for Back to pop.
+            var handlesBack = true
+            scenario.onActivity { handlesBack = it.onBackPressedDispatcher.hasEnabledCallbacks() }
+            assertFalse(handlesBack)
         }
     }
 
@@ -420,7 +425,43 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.credits_intro)).assertIsDisplayed()
             // The icons' set, Material Symbols, with its licence (#445).
             compose.onNodeWithText(text(R.string.credits_material_symbols)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("Apache License 2.0").performScrollTo().assertIsDisplayed()
+            // The first of them: the libraries' notices below name the license too (#488).
+            compose
+                .onAllNodesWithText("Apache License 2.0")
+                .onFirst()
+                .performScrollTo()
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun theSettingsOpenWhatLeavesTheDeviceAtItsTopAndContinueComesBack() {
+        acknowledgeFirstRun()
+        setAccess(granted = true)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.setInTouchMode(true)
+        try {
+            launch().use { scenario ->
+                compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
+                // Under *About* (#444).
+                compose.openSection(SettingsSection.ABOUT)
+                compose.waitUntil(5_000) {
+                    compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
+                }
+                compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().performClick()
+                // At the top, as from Home: the app's name and the heading, unscrolled.
+                compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+                // Back on the settings, not Home.
+                compose.onNodeWithText(text(R.string.settings_what_leaves)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.home_placeholder)).assertDoesNotExist()
+                // And Home under them, as before the explanation opened.
+                scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+                compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            }
+        } finally {
+            instrumentation.setInTouchMode(false)
         }
     }
 
