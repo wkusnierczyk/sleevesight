@@ -35,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // *Purge keys* (#446): the saved keys it deletes, the deletion, and what it did.
 
@@ -61,11 +63,15 @@ internal fun PurgeKeysScreen(
     var done by remember { mutableStateOf(false) }
     // Every key stored, as `SecretStore.reset` removes every one, in the order *Secrets* shows them.
     val stored by produceState<List<ShownKey>?>(null, secrets) {
-        value =
+        val keys =
             SecretId.entries
                 .filter { (secrets[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
                 .sortedBy { SHOWN_KEYS.indexOf(it).takeIf { at -> at >= 0 } ?: SHOWN_KEYS.size }
                 .map { ShownKey(it, if (secrets[it] == SecretState.SAVED) ending(it) else null) }
+        // Set on the main thread. On the phone the effect resumes there already, and this costs
+        // nothing; under Compose's test rule effects run unconfined, so the reads resume on the key
+        // store's thread, and a list set there was at times never shown.
+        withContext(Dispatchers.Main.immediate) { value = keys }
     }
     val scope = rememberCoroutineScope()
     KeyScreen(R.string.settings_remove_all_keys, busy, onDismiss) {

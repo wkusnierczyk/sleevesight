@@ -26,6 +26,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.SoftwareKeySource
 import app.sleevesight.app.TestStores
+import app.sleevesight.app.idleUntil
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
@@ -98,10 +99,15 @@ class PurgeKeysTest {
         }
     }
 
+    /**
+     * Waits for [condition], failing, naming [what], after five seconds. What the screens show is
+     * read and saved on DataStore's and the key store's threads: each step runs the main looper and
+     * advances its clock ([idleUntil]), so the result posted back to it arrives.
+     */
     private fun waitFor(
         what: String,
         condition: () -> Boolean,
-    ) = compose.waitUntil(conditionDescription = what, timeoutMillis = 5_000) { condition() }
+    ) = idleUntil(what) { condition() }
 
     private fun waitForNode(matcher: SemanticsMatcher) =
         waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }

@@ -142,7 +142,7 @@ class KeyAutofillTest {
                                 shown.removed++
                                 true
                             },
-                            scanner = { _, _ -> },
+                            scanner = { },
                             keyboard = { _, _, _ -> },
                             onDismiss = {
                                 calls += RecordingAutofillManager.DISMISSED
