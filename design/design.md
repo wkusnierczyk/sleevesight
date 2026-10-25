@@ -529,7 +529,7 @@ The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signe
 
 ### Phase 2. Detail and discovery
 
-Song, artist and album detail content, opening as the layout setting says (#522; the setting brought forward to Phase 1.5 for what the home screen held then, #447); genre cards; sounds-like cards; the re-evaluation of MusicBrainz tags as a genre label source (D12, #101); transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
+Song, artist and album detail content, opening as the layout setting says (the setting brought forward to Phase 1.5 for what the home screen held then, #447, and the song, artist and album insights with it, #522); genre cards; sounds-like cards; the re-evaluation of MusicBrainz tags as a genre label source (D12, #101); transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
 
 ### Phase 3. Context and reach
 

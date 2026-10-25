@@ -67,7 +67,7 @@ A tap on a label shows where it came from: *… comes from the track's tags on:*
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
-With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
+With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; with labels of one level only, there is no *Genres ›*, and the labels open nothing. Where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
 
 ### The insight
 
@@ -139,7 +139,7 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
-- **Genres ›**, or a label on the home screen, opens the table of genre labels.
+- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, the labels are all there is: there is no *Genres ›*, and they open nothing.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
 The insight itself stays on the home screen, in full, whichever layout is set.

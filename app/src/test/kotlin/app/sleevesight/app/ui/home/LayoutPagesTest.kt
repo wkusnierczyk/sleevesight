@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -61,6 +63,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
@@ -190,6 +193,53 @@ class LayoutPagesTest {
         }
     }
 
+    /**
+     * As [show], but Home and its pages drawn as the app draws them, by [NowPlayingHome] and
+     * [NowPlayingPage] from a [HomeFeed] of [track], with the settings published as the app
+     * publishes them, a [StateFlow] held for the process ([settings]).
+     */
+    private fun showFeed(
+        track: TrackState,
+        settings: Settings,
+        block: () -> Unit,
+    ) {
+        val playing = track.nowPlaying
+        val feed =
+            HomeFeed(
+                view = MutableStateFlow(PipelineView(track, aiReady = true, writeKey = RunKey.of(normalizer, playing))),
+                nowPlaying = MutableStateFlow(playing),
+                playback = MutableStateFlow(PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)),
+                art = MutableStateFlow(null),
+                settings = MutableStateFlow(settings),
+                normalizer = normalizer,
+                playerLabel = { it },
+                playerActivity = { null },
+                write = { _, _ -> writes++ },
+                stop = {},
+            )
+        ActivityScenario.launch(MainActivity::class.java).use { launched ->
+            scenario = launched
+            launched.onActivity { activity ->
+                val graph = (activity.application as SleevesightApplication).graph
+                activity.setContent {
+                    nav = rememberNavController()
+                    SleevesightNavHost(
+                        graph.notificationAccess,
+                        graph.firstRun,
+                        { true },
+                        nav,
+                        pipeline = { links -> NowPlayingHome(feed, links.openSettings, links.openPage) },
+                        page = { page, links ->
+                            NowPlayingPage(feed, page, links.openSettings, links.openPage, links.back)
+                        },
+                    )
+                }
+            }
+            compose.waitForIdle()
+            block()
+        }
+    }
+
     private fun count(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size
 
     private fun onHome() = assertEquals(Home.serializer().descriptor.serialName, nav.currentDestination?.route)
@@ -258,6 +308,44 @@ class LayoutPagesTest {
             pressBack()
             onHome()
             assertEquals(scrolled, top(SOURCES_PAGE_LINK_TAG))
+        }
+
+    @Test
+    fun throughTheAppsFeedHomeComesBackFromAPageLaidOutAndScrolledAsItWasLeft() =
+        showFeed(long(), pages) {
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo()
+            val scrolled = top(SOURCES_PAGE_LINK_TAG)
+
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performClick()
+            compose.waitForIdle()
+            title(text(R.string.home_sources_title))
+            // Frame by frame as Home comes back: laid out under *Separate pages* from its first
+            // frame, never as boxes while the settings are still being read.
+            compose.mainClock.autoAdvance = false
+            compose.onNodeWithTag(PAGE_BACK_TAG).performClick()
+            repeat(BACK_FRAMES) {
+                compose.mainClock.advanceTimeByFrame()
+                assertEquals(0, count(SOURCES_FOLD_TAG))
+            }
+            compose.mainClock.autoAdvance = true
+            compose.waitForIdle()
+            onHome()
+            assertEquals(scrolled, top(SOURCES_PAGE_LINK_TAG))
+        }
+
+    @Test
+    fun aDoubleTapOpensOnePageAndOneBackReturnsHome() =
+        show(state(long(), pages)) {
+            // Both taps land before the page comes in, as a quick double tap does.
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performTouchInput {
+                click()
+                click()
+            }
+            compose.waitForIdle()
+            title(text(R.string.home_sources_title))
+            back()
+            onHome()
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).assertExists()
         }
 
     // Android's back, as the system sends it.
@@ -382,3 +470,6 @@ class LayoutPagesTest {
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
         }
 }
+
+// Frames enough for back's transition to Home to finish.
+private const val BACK_FRAMES = 60

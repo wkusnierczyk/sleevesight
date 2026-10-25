@@ -4,18 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
-import app.sleevesight.app.report.MailHandoff
-import app.sleevesight.app.report.PhoneMail
-import app.sleevesight.app.ui.report.InsightReportDialog
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.TrackState
 
 // Home's pages (#447), and what Home and its pages read alike of the state.
@@ -82,25 +76,25 @@ private fun SourcesPage(
 }
 
 /**
- * What Home and its pages read of [state] for the track [playing]: the pipeline's track beside it,
- * the settings, and from them what *Sources* and the insight show.
+ * What Home and its pages read of [state] for the track [playing]: the pipeline's [view], the
+ * pipeline's track beside it, the settings, and from them what *Sources* shows.
  */
 internal class Showing(
     state: NowPlayingState,
-    private val playing: NowPlaying,
+    playing: NowPlaying,
 ) {
-    private val view = state.view
+    /** The pipeline's state, as published. */
+    val view = state.view
     private val settings = state.settings
-    private val modelAllowed = settings?.isEnabled(SourceId.MODEL) == true
+
+    /** Whether the model's own knowledge may be used (#437), as the settings say. */
+    val modelAllowed: Boolean = settings?.isEnabled(SourceId.MODEL) == true
 
     /** The pipeline's track beside [playing], or null until the pipeline reaches it. */
     val track: TrackState? = trackFor(view, playing)
 
     /** *Show grounding details* (#437, #440). */
     val details: Boolean = settings?.showGroundingDetails == true
-
-    /** The insight, or Idle for a track the pipeline has not reached yet. */
-    val insight: InsightState get() = track?.insight ?: NOT_YET
 
     /** What *Sources* shows of [track]. */
     fun sources() =
@@ -111,62 +105,4 @@ internal class Showing(
             offline = offlineShown(view, track),
             details = details,
         )
-
-    /** What the insight needs besides the insight, from the pipeline's view of [track] and the settings. */
-    fun insightContext() =
-        InsightContext(
-            track = track,
-            aiReady = view.aiReady,
-            insightsOn = settings?.writeInsights ?: true,
-            modelAllowed = modelAllowed,
-            offers =
-                InsightOffers(
-                    rewrite = view.rewrite && track != null,
-                    retry = view.retry && track != null,
-                    stop = view.stopCall != null && track != null,
-                    paused = view.lapsed && track != null,
-                ),
-            rewriteFailed = view.rewriteFailed.takeIf { track != null },
-        )
-
-    /**
-     * Where the insight's taps go: a tap carries what it was shown for, the run Write is offered
-     * for, beside this track, and the call Stop is offered for; a citation to [cite], a report to
-     * [report].
-     */
-    fun insightActions(
-        actions: NowPlayingActions,
-        cite: (String) -> Unit,
-        report: (TrackState, InsightState.Written) -> Unit,
-    ) = InsightActions(
-        onWrite = { view.writeKey?.let { actions.write(it, playing) } },
-        onStop = { view.stopCall?.let(actions.stop) },
-        onCite = cite,
-        onReport = report,
-    )
 }
-
-/**
- * The way to *Report a problem* (#390): the report's dialog, while one is open, handed to [mail],
- * or to the phone's own mail apps when null; returns what opens it, of an insight and the track it
- * was written for, whatever plays meanwhile.
- */
-@Composable
-internal fun rememberReport(mail: MailHandoff?): (TrackState, InsightState.Written) -> Unit {
-    var reporting by remember { mutableStateOf<Reported?>(null) }
-    reporting?.let { reported ->
-        val context = LocalContext.current
-        val handoff = mail ?: remember(context) { PhoneMail(context) }
-        InsightReportDialog(reported.track, reported.insight, handoff) { reporting = null }
-    }
-    return { track, written -> reporting = Reported(track, written) }
-}
-
-// What a report is of: the insight, and the track it was written for.
-private class Reported(
-    val track: TrackState,
-    val insight: InsightState.Written,
-)
-
-// A track the pipeline has not reached yet.
-private val NOT_YET = InsightState.Idle(canWrite = false)

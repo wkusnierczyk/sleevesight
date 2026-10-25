@@ -496,18 +496,23 @@ enum class ThemeChoice {
 }
 
 /**
- * *Layout* (#447; design, *Layout setting*): how an item of the home screen opens. In Phase 1.5 the
- * items are *Sources*, the genres' table, where a genre label comes from, and the insight; the
- * Phase 2.0 detail cards join them. Each item is one component, mounted either way.
+ * *Layout* (#447; design, *Layout setting*): how an item of the home screen opens. The items are
+ * *Sources* and the genres' table; the song, artist and album insights join them, also in Phase 1.5
+ * (#522), and the Phase 2.0 detail cards after. The key insight is always on Home, in full, under
+ * either layout: it is not an item, as there is nothing more to open. Each item is one component,
+ * mounted either way.
  */
 enum class Layout {
-    /** Each item on a page of its own, with a back arrow; Android's back returns to Home where it was. */
+    /**
+     * Each item on a page of its own, with a back arrow; Android's back returns to Home where it
+     * was. A genre chip opens the genres' table; where a label comes from is not shown.
+     */
     SEPARATE_PAGES,
 
     /**
-     * Each item in place, folded under its heading's disclosure triangle (*Sources*, the genres) or
-     * under its chip (where a label comes from); the insight shows in full. The default: Home as it
-     * was before the setting, and everything a track has on one screen.
+     * Each item in place, folded under its heading's disclosure triangle (*Sources*, the genres),
+     * and where a genre label comes from under its chip. The default: Home as it was before the
+     * setting, and everything a track has on one screen.
      */
     EXPANDABLE_BOXES,
 }

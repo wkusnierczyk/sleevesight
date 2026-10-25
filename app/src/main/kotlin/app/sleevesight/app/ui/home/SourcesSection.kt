@@ -50,9 +50,9 @@ import app.sleevesight.core.pipeline.TrackState
  * starts at the same place.
  *
  * With *Show grounding details* on ([SourcesShown.details]), the chips are every source's, as
- * [SourcesShown.chips] has them,
- * each with its letter and its status ("W the song (kept)"), the model's own knowledge's `M` among
- * them, and the list ends with the matches the sources rejected, with their reasons.
+ * [SourcesShown.chips] has them, each with its letter and its status ("W the song (kept)"), the
+ * model's own knowledge's `M` among them, and the list ends with the matches the sources rejected,
+ * with their reasons.
  *
  * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
  * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
