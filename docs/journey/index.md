@@ -55,11 +55,11 @@ The settings are in sections, each folded under its name: a tap on a section's n
 
 **The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. A service switched off keeps its key, model and reasoning effort, so you can switch back. Until its key is saved, the service switched on says *Needs your Anthropic key, in Secrets.* (or OpenAI's, or Google's).
 
-**The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key:
+**The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key, the last two as icons in the *Key* field:
 
-- **Type it** into the *Key* field and tap *Save*.
-- **Scan QR code** fills the field from a QR code that holds the key, once the key has that service's form.
-- **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
+- **Type it** into the *Key* field and tap *Save*. Once something is entered, an eye in the field shows it, to check it before it is saved; a saved key is never shown again.
+- **Scan QR code** (the QR code icon) fills the field from a QR code that holds the key, once the key has that service's form.
+- **Type on a computer** (the keyboard icon) connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
 If you keep the key in a password manager, it offers its saved entries on the *Key* field, as on any password field; it is not asked to save the key.
 
@@ -68,7 +68,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **What it costs.** Each insight written is a paid call on your key (now and then two; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
 
 <!-- screenshot: Settings, the "AI services" section, with Anthropic switched on and its key not set ("Needs your Anthropic key, in Secrets."), from app version … -->
-<!-- screenshot: the key dialog: the masked "Key" field, "Scan QR code" and "Type on a computer", from app version … -->
+<!-- screenshot: the key dialog: the masked "Key" field with its QR code, keyboard and eye icons, from app version … -->
 <!-- screenshot: "Save these keys?" after "Load keys", listing keys by their last four characters, from app version … (with test keys only) -->
 
 ## 4. Choosing the sources
