@@ -94,6 +94,8 @@
     <string name="purge_keys_none">No key is saved. Deleting still deletes the phone’s key that sealed them, so the next key you save is sealed with a new one.</string>
     <string name="purge_keys_delete">Delete</string>
     <string name="purge_keys_try_again">Try again</string>
+    <string name="purge_keys_not_removed">These keys could not be removed: the phone’s storage failed. Try again.</string>
+    <string name="purge_keys_seal_not_deleted">The keys were removed, but the phone’s key that sealed them could not be deleted: the phone’s key store failed. Try again.</string>
     <string name="purge_keys_done_title">Keys deleted</string>
     <string name="purge_keys_done">These keys have been safely deleted:</string>
     <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>

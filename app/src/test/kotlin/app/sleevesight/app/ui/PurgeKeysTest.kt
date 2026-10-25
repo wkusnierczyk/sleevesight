@@ -225,7 +225,7 @@ class PurgeKeysTest {
     }
 
     @Test
-    fun aPurgeThatFailsSaysWhatWasNotDoneAndTryAgainFinishesIt() {
+    fun aPurgeWhosePhoneKeyCannotBeDeletedSaysSoAndTryAgainFinishesIt() {
         // The phone's key cannot be deleted the first time.
         val failingOnce =
             object : SoftwareKeySource() {
@@ -243,14 +243,40 @@ class PurgeKeysTest {
             waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
-            waitForText(text(R.string.settings_remove_all_keys_failed))
-            // Only the phone's key could not be deleted: the API keys are gone, as the message allows.
+            // The API keys are gone; only the phone's key that sealed them is left, and it says so.
+            waitForText(text(R.string.purge_keys_seal_not_deleted))
             assertTrue(allAbsent(failingSecrets))
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            assertTrue(!shown(text(R.string.purge_keys_not_removed)))
+            assertTrue(!shown(listed(R.string.settings_key_name_lastfm, lastFmKey)))
 
             compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
             waitForText(text(R.string.purge_keys_done_title))
             assertEquals(1, failingOnce.deletions)
+            // The confirmation lists the keys as they were before the first try.
+            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun aPurgeWhoseKeysCannotBeRemovedListsThemAndTryAgainFinishesIt() {
+        val flaky = FlakyDataStore(stores.open("flaky-secrets"))
+        val flakySecrets = SecretStore(flaky, testCipher())
+        runBlocking { flakySecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
+        show(secretStore = flakySecrets) {
+            openPurge()
+            waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+
+            // The entry stays, and, its phone's key deleted, can no longer be read: listed as such.
+            waitForText(text(R.string.purge_keys_not_removed))
+            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
+            waitForText(unreadable)
+            assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
+
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_done_title))
+            assertTrue(allAbsent(flakySecrets))
             compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
         }
     }

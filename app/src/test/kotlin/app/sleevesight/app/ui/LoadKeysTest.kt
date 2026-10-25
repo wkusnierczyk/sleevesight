@@ -306,6 +306,9 @@ class LoadKeysTest {
             waitForText(app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic)))
             assertEquals(lastFmKey, runBlocking { store.get(SecretId.LASTFM) }?.reveal())
             assertNull(runBlocking { store.get(SecretId.ANTHROPIC) })
+            // The key saved on the first try still reads as new: as it was when the code was read.
+            val lastFm = text(R.string.settings_key_name_lastfm)
+            compose.onNodeWithText(app.getString(R.string.setup_new, lastFm, ending(lastFmKey))).assertIsDisplayed()
 
             val writes = flaky.writes.get()
             compose.onNodeWithText(text(R.string.settings_save)).performClick()

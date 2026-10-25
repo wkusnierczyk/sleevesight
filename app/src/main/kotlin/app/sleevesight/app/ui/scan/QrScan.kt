@@ -118,8 +118,9 @@ object QrDecoder {
 }
 
 /**
- * A scan for one key's field (#268): [scanner]'s view over the screen, and under it what to do and
- * *Cancel*, which calls [onDismiss], as Back does. The window is secure (`FLAG_SECURE`): no
+ * A scan for one key's field (#268): [scanner]'s view over the screen, whose frame says where to
+ * hold the code (or, without the camera, why not), and under it *Cancel*, which calls [onDismiss],
+ * as Back does. The window is secure (`FLAG_SECURE`): no
  * screenshot or screen recording shows the code, which may be the keys.
  */
 @Composable
@@ -143,7 +144,6 @@ internal fun QrScanDialog(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                     Text(stringResource(R.string.settings_cancel))
                 }

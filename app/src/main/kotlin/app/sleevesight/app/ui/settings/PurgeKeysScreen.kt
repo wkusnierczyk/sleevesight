@@ -59,24 +59,27 @@ internal fun PurgeKeysScreen(
     // The keys listed when *Delete* was tapped: what the screen then says it deleted.
     var deleting by remember { mutableStateOf<List<ShownKey>?>(null) }
     var done by remember { mutableStateOf(false) }
+    // Every key stored, as `SecretStore.reset` removes every one, in the order *Secrets* shows them.
     val stored by produceState<List<ShownKey>?>(null, secrets) {
         value =
-            SHOWN_KEYS
+            SecretId.entries
                 .filter { (secrets[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
+                .sortedBy { SHOWN_KEYS.indexOf(it).takeIf { at -> at >= 0 } ?: SHOWN_KEYS.size }
                 .map { ShownKey(it, if (secrets[it] == SecretState.SAVED) ending(it) else null) }
     }
     val scope = rememberCoroutineScope()
     KeyScreen(R.string.settings_remove_all_keys, busy, onDismiss) {
-        val listed = deleting ?: stored
         if (done) {
-            DeletedStep(listed.orEmpty(), onDismiss)
+            DeletedStep(deleting.orEmpty(), onDismiss)
         } else {
-            PurgeStep(listed, failed, busy, onDismiss) {
+            // The keys as they are now: after a failure, those the deletion left.
+            PurgeStep(stored, failed, busy, onDismiss) {
                 // A second tap in the same frame finds the button still enabled.
                 if (!busy) {
                     busy = true
                     failed = false
-                    deleting = listed
+                    // What the confirmation lists: the keys as they were when *Delete* was first tapped.
+                    deleting = deleting ?: stored
                     scope.launch {
                         val purged =
                             try {
@@ -93,8 +96,10 @@ internal fun PurgeKeysScreen(
 }
 
 /**
- * What *Purge keys* deletes, the [listed] keys (null while they are read), and its buttons: *Delete*
- * calls [onDelete], or, once it [failed], *Try again* does. Nothing can be tapped while [busy].
+ * What *Purge keys* deletes, the [listed] keys stored now (null while they are read), and its
+ * buttons: *Delete* calls [onDelete]. Once a deletion [failed], it says which step failed instead:
+ * the keys it could not remove, those [listed], or, with none left, the phone's key that sealed
+ * them; and *Try again* calls [onDelete]. Nothing can be tapped while [busy].
  */
 @Composable
 private fun ColumnScope.PurgeStep(
@@ -109,21 +114,30 @@ private fun ColumnScope.PurgeStep(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val style = MaterialTheme.typography.bodyMedium
-        if (listed != null) {
-            if (listed.isEmpty()) {
+        when {
+            listed == null -> {}
+
+            failed -> {
+                // With no key left, only the phone's key that sealed them could not be deleted.
+                val failure =
+                    if (listed.isEmpty()) R.string.purge_keys_seal_not_deleted else R.string.purge_keys_not_removed
+                Text(
+                    stringResource(failure),
+                    style = style,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                for (key in listed) Text(shownKey(key), style = style)
+            }
+
+            listed.isEmpty() -> {
                 Text(stringResource(R.string.purge_keys_none), style = style)
-            } else {
+            }
+
+            else -> {
                 Text(stringResource(R.string.purge_keys_listed), style = style)
                 for (key in listed) Text(shownKey(key), style = style)
             }
-        }
-        if (failed) {
-            Text(
-                stringResource(R.string.settings_remove_all_keys_failed),
-                style = style,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
         }
         MoreAboutSafeDelete()
     }

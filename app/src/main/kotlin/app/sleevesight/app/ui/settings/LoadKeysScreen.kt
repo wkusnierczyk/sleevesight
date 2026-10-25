@@ -163,6 +163,8 @@ private fun ColumnScope.FoundStep(
 ) {
     val keys = remember(read) { (read as? SetupRead.Setup)?.keys?.mapKeys { SecretId.of(it.key) }.orEmpty() }
     var unsaved by remember(read) { mutableStateOf<List<SecretId>>(emptyList()) }
+    // The keys stored when the code was read: a key it holds stays *new* once a first try saved it.
+    val before = remember(read) { secrets }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val offer = offerOf(read)
@@ -175,7 +177,7 @@ private fun ColumnScope.FoundStep(
         when (read) {
             SetupRead.NotASetup -> Text(stringResource(R.string.setup_not_a_setup), style = style)
             is SetupRead.Unsupported -> Text(stringResource(R.string.setup_unsupported, read.version), style = style)
-            is SetupRead.Setup -> SetupContents(read, keys, secrets, unsaved)
+            is SetupRead.Setup -> SetupContents(read, keys, before, unsaved)
         }
     }
     KeyScreenActions {

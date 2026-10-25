@@ -184,13 +184,11 @@
     <string name="keyboard_unsupported">This phone cannot offer itself to a computer over Bluetooth. Type the key here, or scan it.</string>
     <string name="keyboard_failed">Bluetooth could not be started. Stop, and try again.</string>
     <string name="keyboard_stop">Stop</string>
-    <string name="scan_hint">Point the camera at the QR code.</string>
     <string name="scan_view">Camera view: hold the QR code inside the frame.</string>
     <string name="scan_camera_refused">Sleevesight may not use the camera. Allow it in the phone’s settings for Sleevesight to scan, or type the key instead.</string>
     <string name="scan_no_camera">This phone has no camera Sleevesight can use. Type the key instead.</string>
     <string name="settings_remove_all_keys">Purge keys</string>
     <string name="settings_remove_all_keys_value">Safely delete all saved keys.</string>
-    <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
     <string name="settings_what_leaves">What leaves the device</string>
