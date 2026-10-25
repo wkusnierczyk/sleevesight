@@ -148,7 +148,8 @@ internal class NowPlayingActions(
  * pipeline has not reached yet shows at once, its evidence and insight to come.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
- * the detail cards, the transport controls and the handoff to the player (design, *Phase 2*).
+ * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
+ * transport controls and the handoff to the player (design, *Phase 2*).
  *
  * *Layout* (#447): under *Expandable boxes*, the default, *Sources* and the genres' table fold in
  * place, a chip's attribution shows under it, and a citation unfolds *Sources* to its line. Under
