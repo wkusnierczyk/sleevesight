@@ -25,6 +25,7 @@ import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.report.AppBuild
+import app.sleevesight.app.report.Handed
 import app.sleevesight.app.report.Mail
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.TesterPart
@@ -75,9 +76,9 @@ class TesterReportScreenTest {
     private class FakeMail : MailHandoff {
         val sent = mutableListOf<Mail>()
 
-        override fun send(mail: Mail): Boolean {
+        override fun send(mail: Mail): Handed {
             sent += mail
-            return true
+            return Handed.WHOLE
         }
 
         override fun copy(mail: Mail) = Unit
