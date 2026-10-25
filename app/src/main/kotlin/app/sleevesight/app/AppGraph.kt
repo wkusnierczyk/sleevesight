@@ -102,8 +102,15 @@ class AppGraph(
 
     val firstRun = FirstRunAcknowledgement(appContext)
 
-    /** The user's settings. DataStore allows one instance per file in a process, so only here. */
-    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)))
+    /**
+     * The user's settings, with this build's defaults. DataStore allows one instance per file in a
+     * process, so only here.
+     */
+    val settings =
+        SettingsStore(
+            preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
+            SettingsStore.BUILD_DEFAULTS,
+        )
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))

@@ -33,11 +33,14 @@ import kotlin.time.Duration.Companion.milliseconds
  * setting, and in a set of switches only the switches that changed, so the others stay as stored:
  * names this version does not know, and overrides a later version stored against other defaults.
  *
+ * The defaults are `:core`'s [Settings], but for those a build sets: [SettingsStore] passes the
+ * build's ([SettingsStore.BUILD_DEFAULTS]), and a test may pass others. Since only a setting moved
+ * off its default is stored, a default that differs between builds, as developer mode's does
+ * (#451), holds wherever the user has not chosen, and a choice either way is kept in either build.
+ *
  * The AI service's settings are stored per provider by [AiSettingsCodec].
  */
 internal object SettingsCodec {
-    private val defaults = Settings()
-
     private val LAYOUT = stringPreferencesKey("layout")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
@@ -72,13 +75,16 @@ internal object SettingsCodec {
     private fun lifetimeKey(source: SourceId) = longPreferencesKey("cache.lifetime_ms.${source.name}")
 
     @Suppress("CyclomaticComplexMethod") // One line per setting, each its own key.
-    fun read(prefs: Preferences): Settings =
+    fun read(
+        prefs: Preferences,
+        defaults: Settings = Settings(),
+    ): Settings =
         Settings(
             layout = enumOf(prefs[LAYOUT]) ?: defaults.layout,
             aiProvider = AiSettingsCodec.readProvider(prefs),
             aiModels = AiSettingsCodec.readModels(prefs),
             aiEfforts = AiSettingsCodec.readEfforts(prefs),
-            followedPlayers = readPlayers(prefs),
+            followedPlayers = readPlayers(prefs, defaults),
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
@@ -102,7 +108,7 @@ internal object SettingsCodec {
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
-            developerMode = developerModeOf(prefs),
+            developerMode = developerModeOf(prefs, defaults),
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
@@ -111,14 +117,15 @@ internal object SettingsCodec {
     /**
      * Stores [settings] in [prefs], rewriting only the settings that differ from what [prefs] reads
      * as, so a value a later version stored, which this one reads as the default, stays until the
-     * user changes that setting.
+     * user changes that setting. [defaults] are those [read] reads with.
      */
     @Suppress("CyclomaticComplexMethod", "LongMethod") // One line per setting, each its own key.
     fun write(
         settings: Settings,
         prefs: MutablePreferences,
+        defaults: Settings = Settings(),
     ) {
-        val stored = read(prefs)
+        val stored = read(prefs, defaults)
 
         fun moved(of: (Settings) -> Any?) = of(settings) != of(stored)
 
@@ -202,10 +209,12 @@ internal object SettingsCodec {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
-        // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
-        // only where that would read otherwise; either moving can change which.
+        // Without its key, it reads as *Diagnostics*'s key, or with neither as its default
+        // ([developerModeOf]), so the key is kept only where that would read otherwise; either
+        // moving can change which. Against its own default, not *Diagnostics*'s: in a build where
+        // it is on by default (#451), developer mode turned off is stored as off.
         if (moved { it.developerMode } || moved { it.showDiagnostics }) {
-            prefs.put(DEVELOPER_MODE, settings.developerMode, prefs[DIAGNOSTICS] ?: defaults.showDiagnostics)
+            prefs.put(DEVELOPER_MODE, settings.developerMode, prefs[DIAGNOSTICS] ?: defaults.developerMode)
         }
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
@@ -215,8 +224,12 @@ internal object SettingsCodec {
     /**
      * *Developer mode* as stored, or, with no key, as *Diagnostics* is: a file from before developer
      * mode (#444) with *Diagnostics* on reads as on, so its user keeps the way to the diagnostics.
+     * With neither key, the build's default ([defaults]).
      */
-    private fun developerModeOf(prefs: Preferences): Boolean =
+    private fun developerModeOf(
+        prefs: Preferences,
+        defaults: Settings,
+    ): Boolean =
         prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
 
     /**
@@ -233,7 +246,10 @@ internal object SettingsCodec {
      * A phone call's package ([Settings.isCall]) is never read, whichever key holds it: an older
      * version listed it like any player, and a file with it switched on must not follow it (#435).
      */
-    private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
+    private fun readPlayers(
+        prefs: Preferences,
+        defaults: Settings,
+    ): Map<String, Boolean> =
         (
             defaults.followedPlayers +
                 prefs[PLAYERS_ON].orEmpty().associateWith { true } +
@@ -249,7 +265,7 @@ internal object SettingsCodec {
      * the two players' keys.
      */
     fun prunePlayers(prefs: MutablePreferences) {
-        val listedByDefault = defaults.followedPlayers.keys
+        val listedByDefault = Settings().followedPlayers.keys
         // A player in both keys reads as off, so it is not kept as on.
         val on = (prefs[PLAYERS_ON].orEmpty() - prefs[PLAYERS_OFF].orEmpty()).filterNot(Settings::isCall).toSet()
         val off = prefs[PLAYERS_OFF].orEmpty().filter { it in listedByDefault && !Settings.isCall(it) }.toSet()
