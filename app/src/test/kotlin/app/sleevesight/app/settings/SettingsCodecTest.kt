@@ -86,6 +86,7 @@ class SettingsCodecTest {
                 showDiagnostics = true,
                 showGroundingDetails = true,
                 developerMode = true,
+                reportButton = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,

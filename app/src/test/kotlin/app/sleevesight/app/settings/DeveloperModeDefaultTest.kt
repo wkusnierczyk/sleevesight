@@ -35,9 +35,10 @@ class DeveloperModeDefaultTest {
     private fun store(defaults: Settings) = SettingsStore(stores.open("settings"), defaults)
 
     @Test
-    fun theBuildsDefaultsDifferFromCoresOnlyInDeveloperModeAsTheBuildSetsIt() {
+    fun theBuildsDefaultsDifferFromCoresOnlyInDeveloperModeAndTheReportButtonAsTheBuildSetsThem() {
         assertEquals(BuildConfig.DEVELOPER_MODE_DEFAULT, SettingsStore.BUILD_DEFAULTS.developerMode)
-        assertEquals(Settings(), SettingsStore.BUILD_DEFAULTS.copy(developerMode = false))
+        assertEquals(BuildConfig.DEVELOPER_MODE_DEFAULT, SettingsStore.BUILD_DEFAULTS.reportButton)
+        assertEquals(Settings(), SettingsStore.BUILD_DEFAULTS.copy(developerMode = false, reportButton = false))
     }
 
     @Test

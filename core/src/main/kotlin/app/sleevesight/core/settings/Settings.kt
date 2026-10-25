@@ -99,6 +99,10 @@ import kotlin.time.Duration.Companion.seconds
  *   taps on *Version*, off by its switch, which turns off every developer option with it
  *   ([withoutDeveloperMode]). Off by default here; a build for Play's testing tracks makes it on
  *   by default (#451: `:app`'s `SettingsStore.BUILD_DEFAULTS`), so testers reach the diagnostics.
+ * @property reportButton *Report button* (#452), a developer setting: whether Home shows a small
+ *   button that collects the app's state into a report for the tester to review, edit and send
+ *   from their own mail app. Shown only in developer mode. Off by default here; on by default in a
+ *   build for Play's testing tracks, as [developerMode] is (`:app`'s `SettingsStore.BUILD_DEFAULTS`).
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
@@ -134,6 +138,7 @@ data class Settings(
     val showDiagnostics: Boolean = false,
     val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
+    val reportButton: Boolean = false,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
@@ -220,11 +225,11 @@ data class Settings(
 
     /**
      * These settings with developer mode off, and with it every developer option ([showDiagnostics],
-     * [showGroundingDetails]), so nothing hidden keeps running. A developer option joins here with
-     * its setting.
+     * [showGroundingDetails], [reportButton]), so nothing hidden keeps running. A developer option
+     * joins here with its setting.
      */
     fun withoutDeveloperMode(): Settings =
-        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false)
+        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false, reportButton = false)
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
