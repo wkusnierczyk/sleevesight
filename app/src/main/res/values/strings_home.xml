@@ -4,7 +4,7 @@
     <string name="home_placeholder">Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.</string>
     <string name="home_access_off">Sleevesight needs notification access to see what is playing.</string>
     <string name="home_turn_on_access">Turn on notification access</string>
-    <string name="home_what_leaves">What leaves the phone</string>
+    <string name="home_what_leaves">What leaves the device?</string>
     <!-- The header's cogwheel: what a screen reader says, and its tooltip. -->
     <string name="home_settings">Settings</string>
     <!-- The header's name (the logo, once it lands), as a screen reader says it; %1$s is the app's name. -->
@@ -25,7 +25,8 @@
     <string name="home_progress">Playback position</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
-    <string name="home_released">Released %1$s</string>
+    <!-- The album, then the year of the first release: "Rubber Soul, 1965". -->
+    <string name="home_album_year">%1$s, %2$s</string>
 
     <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
     <string name="home_genres">Genres</string>
@@ -54,7 +55,7 @@
     <string name="home_genre_licence">licence</string>
 
     <!-- The insight. -->
-    <string name="home_insight_title">Why it’s interesting</string>
+    <string name="home_insight_title">Key insights</string>
     <string name="home_write">Write insight</string>
     <string name="home_rewrite">Rewrite</string>
     <string name="home_insight_gathering">Gathering evidence…</string>

@@ -11,13 +11,17 @@ import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.shownAddress
 
 /**
- * The way to the credits; the usage and settings pages on the site (#415, #416); and the privacy
- * policy on the site, with where the app stands under the GDPR and the EU AI Act (#295). The pages
- * open in the browser, and each row shows its address, so it can be typed in where no browser opens
- * ([rememberOpenUrl]).
+ * The way to the credits; the usage and settings pages on the site (#415, #416); the first-run
+ * screen's explanation of what leaves the device (#441), as Home's bottom link opens it; and the
+ * privacy policy on the site, with where the app stands under the GDPR and the EU AI Act (#295).
+ * The pages open in the browser, and each row shows its address, so it can be typed in where no
+ * browser opens ([rememberOpenUrl]).
  */
 @Composable
-internal fun AboutSection(openCredits: () -> Unit) {
+internal fun AboutSection(
+    openCredits: () -> Unit,
+    openWhatLeaves: () -> Unit,
+) {
     val openPrivacyPolicy = rememberOpenPrivacyPolicy()
     SectionHeading(R.string.settings_section_about)
     ValueRow(
@@ -38,6 +42,11 @@ internal fun AboutSection(openCredits: () -> Unit) {
         summary = stringResource(R.string.settings_settings_page_summary),
         link = true,
         onClick = rememberOpenUrl(SETTINGS_PAGE_URL),
+    )
+    ValueRow(
+        title = stringResource(R.string.settings_what_leaves),
+        value = stringResource(R.string.settings_what_leaves_value),
+        onClick = openWhatLeaves,
     )
     ValueRow(
         title = stringResource(R.string.settings_privacy),

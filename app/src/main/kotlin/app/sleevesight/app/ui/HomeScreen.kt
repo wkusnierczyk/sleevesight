@@ -23,10 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,14 +42,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
+import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import kotlinx.coroutines.launch
 
 /**
  * Where the first-run flow lands: a header that stays at the top ([HomeHeader]), and under it, while
- * notification access is on, what is playing ([pipeline], the now-playing content) and the way back
- * to what leaves the phone; while it is off, the way to turn it on. Everything under the header
- * scrolls, so a citation can bring its evidence line into view.
+ * notification access is on, what is playing ([pipeline], the now-playing content) and, at the
+ * bottom under a muted divider, the way back to what leaves the device (#441); while it is off, the
+ * way to turn it on. Everything under the header scrolls, so a citation can bring its evidence line
+ * into view.
  */
 @Composable
 fun HomeScreen(
@@ -74,7 +76,14 @@ fun HomeScreen(
             ) {
                 if (accessGranted) {
                     pipeline()
-                    TextButton(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_what_leaves)) }
+                    // Reference, read once: under what the user came for, set apart by a muted line.
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
+                    // A link, as every link is (#442), with a full touch target.
+                    LinkLabel(
+                        stringResource(R.string.home_what_leaves),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.clickable(onClick = onOpenFirstRun).minimumInteractiveComponentSize(),
+                    )
                 } else {
                     Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
                     Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
@@ -135,6 +144,9 @@ private fun HomeHeader(
         HorizontalDivider(color = if (scroll.canScrollBackward) DividerDefaults.color else Color.Transparent)
     }
 }
+
+/** How much of the divider's colour shows above *What leaves the device?*. */
+private const val MUTED_ALPHA = 0.5f
 
 @Preview(showBackground = true)
 @Composable

@@ -1,0 +1,14 @@
+{% comment %}
+  The footer of the product page and the documentation pages (#501): the licence, the page's source
+  (`include.source`, its file in the repository) and the brand sheet's *Fonts*, then what the site
+  does not do: on a page with a diagram (`include.diagrams`), that the diagram script comes from
+  jsDelivr, as the privacy policy says. Its style is in `site-header-style.html`.
+{% endcomment %}
+<footer>
+  <p><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">Open source (GPL-3.0)</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/{{ include.source }}">This page's source</a> · <a href="{{ '/design/brand.html#fonts' | relative_url }}">Fonts</a></p>
+  {%- if include.diagrams %}
+  <p>This site sets no cookies. This page draws its diagrams with a script from jsDelivr (<a href="{{ '/privacy.html' | relative_url }}">privacy policy</a>); everything else comes from the site itself.</p>
+  {%- else %}
+  <p>This site sets no cookies and loads nothing from anywhere else.</p>
+  {%- endif %}
+</footer>

@@ -29,7 +29,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 At the bottom, a link opens the privacy policy in your browser.
 
-**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the phone*, at the bottom of the home screen.
+**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings.
 
 <!-- screenshot: the first-run screen, top, under the app's name: the intro and "What it reads", from app version … -->
 
@@ -59,6 +59,8 @@ The first run does not ask for an AI service or a key. Without one, Sleevesight 
 - **Scan QR code** fills the field from a QR code that holds the key, once the key has that service's form.
 - **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
+If you keep the key in a password manager, it offers its saved entries on the *Key* field, as on any password field; it is not asked to save the key.
+
 To save several keys at once, *Scan keys*, under *API keys* near the end of the settings, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Before saving, it lists each key it found by its last four characters, and says which would replace a key already saved; *Save* saves them. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
 
 **What it costs.** Each insight written is a paid call on your key (now and then two; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
@@ -84,7 +86,7 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 
 **The players.** Sleevesight follows Spotify by default. Any other player that plays music (a track with a title and an artist) while Sleevesight has notification access appears under *Players to follow* in the settings, by name and switched off; switch it on to follow it too. Nothing is kept or sent of a player you do not follow.
 
-**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Why it's interesting*, and *Sources*. Lookups and writing run while the app is on screen.
+**The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Key insights*, and *Sources*. Lookups and writing run while the app is on screen.
 
 **An insight is written.** While the sources are asked, the card says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight* (step 6).
 
@@ -95,7 +97,7 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of the card means, offline or when a source fails.
 
 <!-- screenshot: the home screen with a track playing: player row, cover, title and artists, genre labels, from app version … -->
-<!-- screenshot: "Why it's interesting" with an insight, its citation chips and the grounded line, from app version … -->
+<!-- screenshot: "Key insights" with an insight, its citation chips and the grounded line, from app version … -->
 <!-- screenshot: "Sources" unfolded, with each source's chip and evidence lines, from app version … -->
 
 ## 6. Write, Rewrite, automatic writing, and the history

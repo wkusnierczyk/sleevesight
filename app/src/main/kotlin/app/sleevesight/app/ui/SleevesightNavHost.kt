@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,7 +15,7 @@ import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.ui.home.NothingPlaying
 import kotlinx.serialization.Serializable
 
-/** What leaves the phone, and the way to notification access. */
+/** What leaves the device, and the way to notification access; opened again from [Home] and [SettingsPage]. */
 @Serializable
 data object FirstRun
 
@@ -34,10 +35,11 @@ data object CreditsPage
 @Serializable
 data object DiagnosticsPage
 
-/** Where the settings screen leads: the credits, and the diagnostics screen. */
+/** Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen. */
 class SettingsLinks(
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
+    val openWhatLeaves: () -> Unit,
 )
 
 /**
@@ -69,20 +71,24 @@ fun SleevesightNavHost(
             FirstRunScreen(
                 accessGranted = granted,
                 openAccessSettings = openAccessSettings,
-                onContinue = {
-                    firstRun.acknowledge()
-                    // Back to Home if the user came from there; else Home replaces this screen.
-                    if (!navController.popBackStack<Home>(inclusive = false)) {
-                        navController.navigate(Home) { popUpTo<FirstRun> { inclusive = true } }
-                    }
-                },
+                // Once: a second tap while the screen leaves would pop the screen under it too.
+                onContinue =
+                    dropUnlessResumed {
+                        firstRun.acknowledge()
+                        // Back to where the user came from (Home, or the settings); else Home
+                        // replaces this screen.
+                        if (navController.previousBackStackEntry == null || !navController.popBackStack()) {
+                            navController.navigate(Home) { popUpTo<FirstRun> { inclusive = true } }
+                        }
+                    },
             )
         }
         composable<Home> {
             if (firstRun.acknowledged) {
                 HomeScreen(
                     accessGranted = granted,
-                    onOpenFirstRun = { navController.navigate(FirstRun) },
+                    // Single top: a double tap opens it once, so one Continue comes back.
+                    onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
                     onOpenSettings = { navController.navigate(SettingsPage) },
                     pipeline = pipeline,
                 )
@@ -95,6 +101,8 @@ fun SleevesightNavHost(
                 SettingsLinks(
                     openCredits = { navController.navigate(CreditsPage) },
                     openDiagnostics = { navController.navigate(DiagnosticsPage) },
+                    // Single top, as from Home.
+                    openWhatLeaves = { navController.navigate(FirstRun) { launchSingleTop = true } },
                 )
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
