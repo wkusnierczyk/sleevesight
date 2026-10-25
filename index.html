@@ -28,7 +28,9 @@ layout: null
 <meta name="twitter:image:alt" content="The Sleevesight logo on red: the words Sleeve and sight beside a vinyl record, and the tagline Insights on what's playing">
 <!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its
      header logo is the brand sheet's 8b mark, the words and the record; its intro is one of those
-     listed at `.sl-intro` in the style sheet, picked at random on each visit (`data-logo`). Its fonts
+     listed at `.sl-intro` in `_includes/site-header-style.html`, picked at random on each visit
+     (`data-logo`). The header, the intro and the footer are shared with the documentation pages
+     (`_includes/site-*.html`, #501). Its fonts
      are Roboto Flex for titles, labels and the app's text (the hero phone and the example boxes, so
      what the app shows reads apart from the page's own words), Roboto Slab for the running text,
      and Roboto Mono for the citation chips; each is a cut-down copy served from this site
@@ -83,71 +85,21 @@ layout: null
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
-/* Titles, labels, the header, the skip link, the mock's caption and the app's text in Flex; the
-   running text in Slab (body). Before the rules below, so their own weights win; the containers
-   reset Slab's text weight to Flex's regular. */
+/* Titles, labels, the skip link, the mock's caption and the app's text in Flex (the header's in
+   `_includes/site-header-style.html`); the running text in Slab (body). Before the rules below, so
+   their own weights win; the containers reset Slab's text weight to Flex's regular. */
 h1,h2,h3,.lead{font-family:var(--f-ui)}
-header.top,.phone,.box,figcaption,.skip{font-family:var(--f-ui);font-weight:400}
+.phone,.box,figcaption,.skip{font-family:var(--f-ui);font-weight:400}
 a{color:var(--accent);text-underline-offset:3px;text-decoration-thickness:1px}
 a:hover{text-decoration-thickness:2px}
 a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
 .skip{position:absolute;left:16px;top:-48px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:20}
 .skip:focus{top:12px}
-.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
-/* The header. At the top of the page it is large. Scrolled down, it stays at the top of the window,
-   small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
-   logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
-   hidden until the top. Without the script, the header is large and scrolls away with the page, and
-   the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
-   with the page's Flex). */
-header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
-.brand{display:flex;align-items:center;flex:none;text-decoration:none}
-/* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
-   tall as "sight". The svg is the words' ink box, 69 units tall, and 72 px tall at the top of the
-   page. */
-.brand>svg{display:block;flex:none;width:133.84px;height:72px;overflow:visible}
-@media (max-width:370px){.brand>svg{width:107.82px;height:58px}}
-nav.top{flex:none}
-.sl-stack header.top .row{flex-direction:column;align-items:flex-start}
-.sl-stack nav.top ul{flex-direction:column;gap:0}
-.sl-stack nav.top a{display:block;padding:3px 0}
-@media (max-width:506px){
-  html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
-  html:not(.js) nav.top ul{flex-direction:column;gap:0}
-  html:not(.js) nav.top a{display:block;padding:3px 0}
-}
-.js{scroll-padding-top:80px}
-.js header.top .bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg);border-bottom:1px solid transparent}
-.sl-compact header.top .bar{border-bottom-color:var(--line);box-shadow:0 8px 18px -14px rgba(0,0,0,.45)}
-.sl-compact header.top .row{padding-top:12px;padding-bottom:12px}
-.sl-compact .brand>svg{width:66.92px;height:36px}
-.sl-compact nav.top ul{font-size:15px;gap:4px 18px}
-.sl-compact.sl-stack header.top .row{flex-direction:row}
-.sl-compact.sl-stack nav.top{display:none}
-@media (prefers-reduced-motion: no-preference){
-  header.top .bar{transition:border-color .25s,box-shadow .25s}
-  header.top .row{transition:padding .25s ease}
-  .brand>svg{transition:width .25s ease,height .25s ease}
-  nav.top ul{transition:font-size .25s ease}
-}
-.sl-still *{transition:none!important}
-/* The words (`#words`): outlined from Roboto Flex 400 at 88% width
-   (`assets/logo/src/make_tile.py`), so they need no font; "Sleeve" in ink (`--tile-ink`, the page's
-   `--ink` in light and dark), and "sight" in `--sight`. Each word is a group of paths, one to a
-   letter (`#w-sleeve-1` to `#w-sight-5`), so an intro can show or turn each letter on its own. The
-   tile, in the intros only: white with a faint edge on light, since the page is white too, and
-   black with a faint edge on dark. The record (`#lp`) is the eye logo's disc in its colours, set
-   through variables, since a selector cannot reach into a <use>. On dark, the record's rim takes
-   the outline's grey, and the groove gives way to a wider black disc, so the grey meets the black
-   directly. */
+</style>
+{% include site-header-style.html %}
+<style>
 :root{--tile-bg:#fff;--tile-edge:#00000026;--tile-ink:#141a22;--rim:#1f2328;--core:none;--groove:inline}
 @media (prefers-color-scheme: dark){:root{--tile-bg:#000;--tile-edge:#ffffff26;--tile-ink:#e5e8ee;--rim:#8b949e;--core:inline;--groove:none}}
-.t-bg{fill:var(--tile-bg);stroke:var(--tile-edge)}
-.t-ink{fill:var(--tile-ink)}
-.t-red{fill:var(--sight)}
-nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:4px 22px;font-size:17px;white-space:nowrap}
-nav.top a{color:var(--muted);text-decoration:none}
-nav.top a:hover{color:var(--ink);text-decoration:underline}
 
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center;padding:32px 0 56px}
 .hero h1{margin:0 0 16px;font-size:clamp(36px,6vw,58px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em;text-wrap:balance}
@@ -225,103 +177,7 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 .two .small{margin-top:0}
 .lead{font-size:19px;font-weight:600;margin:0 0 12px}
 .small{font-size:16.5px;color:var(--muted)}
-footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:15px;color:var(--muted)}
-footer p{margin:0 0 4px}
 
-/* The intro (`.sl-intro`): set by the scripts when motion is allowed, the address has no `#`, and the
-   page was neither reloaded nor reached by Back or Forward (the navigation's type), so a reload skips
-   it without the address changing or anything kept in the browser. One of those below, picked at
-   random (`data-logo`); no address picks one. Each plays large in the middle of the window (`.splash`)
-   and ends on the 8b mark, which then shrinks onto the header's (`--fx`, `--fy`, `--fs`, measured by
-   the script), where the header's own logo takes over at `--land` and the rest of the page fades in.
-   Scrolling, a key or a click ends the intro at once. Activating the logo (a click, Enter or Space)
-   plays one again where the page is (`replay()`).
-   - C (`.sp-c`): the mark fades in (0-0.7 s), turns twice about the record's centre (0.9-2.9 s), and
-     shrinks onto the header (3.3-3.95 s).
-   - D (`.sp-d`): the tile, on C's timings, turning about the dot of the i; the tile fades as it flies,
-     so the words land on the page, and the record then turns in beside "sight", growing as it fades
-     in (4.2-4.9 s).
-   - F (`.sp-f`): the mark fades in, and the record circles the words once about the dot of the i, the
-     words staying still (0.9-2.9 s), on C's timings; the splash is a square centred on the dot, with
-     room for the record's path (92.04 units from the dot at the farthest).
-   - G (`.sp-g`): the record fades in alone, where it sits in the mark, and the words are typed in
-     beside it, a letter at a time (`--at`, 0.9-2.68 s): an uneven beat, 120-210 ms between letters,
-     and 360 ms between the lines, as for a return; no caret. Then the flight, on C's timings.
-   - H (`.sp-h`): the mark fades in, and each e of "Sleeve" turns once about the centre of its ink, as
-     the record does on hover (`lg-turn`, 900 ms), one after the other from the left, each 600 ms after
-     the one before (0.9-3 s). Then the flight, on C's timings.
-   - I (`.sp-i`): the record fades in where it sits in the mark, with the words to its right,
-     left-aligned with each other, as far from it as "sight" is in the mark (10 units). Each word then
-     slides left into its place, on C's turning easing: "Sleeve" (0.9-2.05 s), then "sight" (1.75-2.9 s),
-     starting before "Sleeve" lands and passing behind the record, which is drawn over it. Then the
-     flight, on C's timings.
-   - R1 (`.sp-r1`): "Sleeve" fades in, and the record rolls in under it from the left, two and a
-     quarter turns over its own circumference (2.25 × 2 × pi × 17.58 = 248.53 units), uncovering "sight"
-     (0.7-3.15 s), fading in as it starts, since a wide window would otherwise show it waiting; then
-     the flight (3.4-4.05 s).
-   - R2 (`.sp-r2`): the tile slides left off the record behind it (0.56-2.1 s); the record shrinks into
-     its place beside "sight" and the tile fades, leaving the words (2.52-3.92 s); then the flight
-     (4.1-4.75 s).
-   The reveals' timelines are the brand sheet's, played once. Hovering over or focusing the logo
-   (`.play`) spins the record once in place. Nothing moves under "reduce motion". */
-:root{--fly:3300ms;--land:3950ms}
-[data-logo="r1"]{--fly:3400ms;--land:4050ms}
-[data-logo="r2"]{--fly:4100ms;--land:4750ms}
-.brand .lp-disc{transform-box:fill-box;transform-origin:center}
-.splash{display:none}
-.sl-intro .splash{position:fixed;z-index:30;left:var(--sx);top:var(--sy);pointer-events:none}
-.sl-intro[data-logo="c"] .sp-c,.sl-intro[data-logo="d"] .sp-d,.sl-intro[data-logo="f"] .sp-f,
-.sl-intro[data-logo="g"] .sp-g,.sl-intro[data-logo="h"] .sp-h,.sl-intro[data-logo="i"] .sp-i{display:block;animation:tl-in 700ms ease-out both,sl-gone 1ms var(--land) forwards}
-.sl-intro[data-logo="r1"] .sp-r1,.sl-intro[data-logo="r2"] .sp-r2{display:block;animation:sl-gone 1ms var(--land) forwards}
-.splash .fly{width:var(--sb);height:var(--sbh);transform-origin:0 0;animation:sl-fly 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
-.splash .spin{width:100%;height:100%;animation:tl-spin 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
-.splash svg{display:block;width:100%;height:100%;overflow:visible}
-/* The record's path is about the dot, the origin of the words' units. */
-.sp-f .orbit{transform-box:view-box;transform-origin:0 0;animation:lg-turn 2000ms cubic-bezier(.45,0,.55,1) 900ms both}
-/* G's letters each show at their key's moment. H's e's each turn about the centre of their ink (set
-   on each <use> in the words' units, `transform-box: view-box`), on the hover's spin (`lg-turn`,
-   900 ms). */
-.sp-g .key{animation:tl-in 1ms var(--at) both}
-.sp-h .turn{transform-box:view-box;animation:lg-turn 900ms cubic-bezier(.45,0,.55,1) var(--at) both}
-/* I's words slide in from where they start, right of the record, each by its own distance in the
-   words' units. */
-.sp-i .i-sleeve{animation:i-sleeve 1150ms cubic-bezier(.45,0,.55,1) 900ms both}
-.sp-i .i-sight{animation:i-sight 1150ms cubic-bezier(.45,0,.55,1) 1750ms both}
-.sp-d .t-bg{animation:tl-bare 650ms cubic-bezier(.3,0,.2,1) var(--fly) both}
-.splash .rv-all{animation:rv-all 7s both}
-.r1-rec{transform-box:fill-box;transform-origin:center;animation:r1-turn 7s both}
-.r1-roll{animation:r1-roll 7s both,r1-show 7s both}
-.r1-wipe{animation:r1-roll 7s both}
-.r2-pan{animation:r2-pan 7s both}
-.r2-tile{animation:r2-slide 7s both}
-.r2-bg{animation:r2-bg 7s both}
-.r2-rec{animation:r2-shrink 7s both}
-.sl-wait header.top .brand,.sl-wait header.top nav,.sl-wait main,.sl-wait footer{opacity:0}
-.sl-intro .brand>svg{animation:sl-hold var(--land)}
-.sl-intro header.top nav,.sl-intro main,.sl-intro footer{animation:sl-arrive 450ms ease-out var(--land) both}
-.sl-intro[data-logo="d"] .brand .lp-disc{animation:d-rec 700ms cubic-bezier(.2,0,.2,1) calc(var(--land) + 250ms) both}
-@media (prefers-reduced-motion: no-preference){
-  .brand.play .lp-disc{animation:lg-turn 900ms cubic-bezier(.45,0,.55,1)}
-}
-@keyframes sl-fly{to{transform:translate(var(--fx),var(--fy)) scale(var(--fs))}}
-@keyframes sl-gone{from,to{visibility:hidden;opacity:0}}
-@keyframes sl-hold{from,to{opacity:0}}
-@keyframes sl-arrive{from{opacity:0}}
-@keyframes tl-in{from{opacity:0}}
-@keyframes tl-bare{to{opacity:0}}
-@keyframes tl-spin{from{transform:rotate(0)}to{transform:rotate(720deg)}}
-@keyframes lg-turn{to{transform:rotate(360deg)}}
-@keyframes i-sleeve{from{transform:translateX(138.27px)}}
-@keyframes i-sight{from{transform:translateX(117.58px)}}
-@keyframes d-rec{from{opacity:0;transform:rotate(-360deg) scale(.6)}to{opacity:1;transform:none}}
-@keyframes rv-all{0%{opacity:0}5%,100%{opacity:1}}
-@keyframes r1-roll{0%,10%{transform:translateX(-248.53px);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
-@keyframes r1-turn{0%,10%{transform:rotate(-810deg);animation-timing-function:cubic-bezier(.45,0,.3,1)}45%,100%{transform:none}}
-@keyframes r1-show{0%,10%{opacity:0}20%,100%{opacity:1}}
-@keyframes r2-pan{0%,36%{transform:translateX(-39.5px);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
-@keyframes r2-slide{0%,8%{transform:translateX(140px);animation-timing-function:cubic-bezier(.45,0,.2,1)}30%,100%{transform:none}}
-@keyframes r2-bg{0%,38%{opacity:1}54%,100%{opacity:0}}
-@keyframes r2-shrink{0%,36%{transform:translate(-126.12px,-51.55px) scale(3.6405);animation-timing-function:cubic-bezier(.45,0,.3,1)}56%,100%{transform:none}}
 @media (max-width:880px){
   .hero{grid-template-columns:minmax(0,1fr);gap:40px;padding-top:8px}
   figure.mock{justify-self:center;max-width:360px}
@@ -336,52 +192,11 @@ footer p{margin:0 0 4px}
   section{padding:36px 0}
 }
 </style>
-<script>
-document.documentElement.classList.add('js');
-// Set before the first paint: the intro (`data-logo`), and its wait, so the page never shows before
-// the intro starts.
-(function () {
-  var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'];
-  root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
-  // `location.hash` is empty for a bare `#`, so the address is read whole. A reload, or Back or Forward
-  // to the page, skips the intro (#368).
-  var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null,
-      again = nav && (nav.type === 'reload' || nav.type === 'back_forward');
-  if (again || location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
-  root.classList.add('sl-wait');
-  // The second script's `start()` takes the wait off; should it fail or never run, the page shows
-  // after three seconds all the same, without the intro.
-  setTimeout(function () { root.classList.remove('sl-wait'); }, 3000);
-})();
-</script>
+{% include site-intro-head.html %}
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="words"><g id="w-sleeve" class="t-ink"><path id="w-sleeve-1" d="M-37.59 -16.93Q-37.59 -13.34 -35.46 -11.47Q-33.33 -9.6 -29.71 -9.6Q-26.11 -9.6 -24.04 -11.52Q-21.97 -13.44 -21.97 -16.72Q-21.97 -19.82 -23.65 -21.61Q-25.33 -23.4 -28.8 -24.81Q-32.26 -26.18 -33.44 -27.35Q-34.63 -28.52 -34.63 -30.47Q-34.63 -32.66 -33.48 -33.8Q-32.34 -34.95 -29.82 -34.95Q-27.42 -34.95 -26.18 -33.66Q-24.95 -32.37 -24.95 -30.1V-29.05H-22.43V-30.14Q-22.43 -33.43 -24.43 -35.29Q-26.43 -37.16 -29.82 -37.16Q-33.28 -37.16 -35.2 -35.31Q-37.12 -33.46 -37.12 -30.38Q-37.12 -27.22 -35.47 -25.61Q-33.81 -24.01 -30.34 -22.58Q-26.89 -21.16 -25.68 -19.98Q-24.48 -18.79 -24.48 -16.64Q-24.48 -14.34 -25.82 -13.07Q-27.17 -11.81 -29.72 -11.81Q-32.26 -11.81 -33.67 -13.06Q-35.08 -14.31 -35.08 -16.95V-18.16H-37.59Z"/><path id="w-sleeve-2" d="M-18.87 -10.02H-16.44V-37.26H-18.87Z"/><path id="w-sleeve-3" d="M-13.57 -18.05Q-13.57 -14.21 -11.63 -11.91Q-9.69 -9.61 -6.12 -9.61Q-3.72 -9.61 -2.15 -10.65Q-0.58 -11.7 0.1 -13.05L-1.58 -14.37Q-2.23 -13.15 -3.37 -12.43Q-4.52 -11.71 -6.15 -11.71Q-8.62 -11.71 -9.87 -13.46Q-11.12 -15.21 -11.12 -18.02V-19.69Q-11.12 -22.53 -9.93 -24.26Q-8.74 -25.99 -6.41 -25.99Q-4.21 -25.99 -3.22 -24.52Q-2.24 -23.06 -2.24 -21.08V-20.5H-12.19V-18.46H0.22V-19.92Q0.21 -23.8 -1.51 -25.95Q-3.23 -28.1 -6.45 -28.1Q-9.66 -28.1 -11.61 -25.77Q-13.57 -23.45 -13.57 -19.67Z"/><path id="w-sleeve-4" d="M1.88 -18.05Q1.88 -14.21 3.81 -11.91Q5.75 -9.61 9.32 -9.61Q11.73 -9.61 13.29 -10.65Q14.86 -11.7 15.54 -13.05L13.86 -14.37Q13.22 -13.15 12.07 -12.43Q10.93 -11.71 9.29 -11.71Q6.82 -11.71 5.58 -13.46Q4.33 -15.21 4.33 -18.02V-19.69Q4.33 -22.53 5.52 -24.26Q6.7 -25.99 9.04 -25.99Q11.24 -25.99 12.22 -24.52Q13.21 -23.06 13.21 -21.08V-20.5H3.26V-18.46H15.66V-19.92Q15.66 -23.8 13.94 -25.95Q12.22 -28.1 8.99 -28.1Q5.79 -28.1 3.83 -25.77Q1.88 -23.45 1.88 -19.67Z"/><path id="w-sleeve-5" d="M16.1 -27.69 22.34 -10.02H24.53L30.77 -27.69H28.35L24.19 -15.35Q23.96 -14.69 23.78 -14.1Q23.59 -13.5 23.5 -13.17H23.4Q23.32 -13.5 23.14 -14.1Q22.96 -14.69 22.73 -15.35L18.58 -27.69Z"/><path id="w-sleeve-6" d="M31.21 -18.05Q31.21 -14.21 33.14 -11.91Q35.08 -9.61 38.65 -9.61Q41.06 -9.61 42.62 -10.65Q44.19 -11.7 44.87 -13.05L43.19 -14.37Q42.55 -13.15 41.4 -12.43Q40.26 -11.71 38.62 -11.71Q36.15 -11.71 34.91 -13.46Q33.66 -15.21 33.66 -18.02V-19.69Q33.66 -22.53 34.85 -24.26Q36.03 -25.99 38.37 -25.99Q40.57 -25.99 41.55 -24.52Q42.54 -23.06 42.54 -21.08V-20.5H32.59V-18.46H44.99V-19.92Q44.99 -23.8 43.27 -25.95Q41.55 -28.1 38.32 -28.1Q35.12 -28.1 33.16 -25.77Q31.21 -23.45 31.21 -19.67Z"/></g><g id="w-sight" class="t-red"><path id="w-sight-1" d="M-16.9 18.44V18.93Q-16.9 21.44 -15.3 22.84Q-13.7 24.24 -10.6 24.24Q-7.47 24.24 -5.91 22.82Q-4.35 21.41 -4.35 19Q-4.35 16.78 -5.79 15.6Q-7.22 14.42 -9.75 13.66Q-12.25 12.91 -13.14 12.25Q-14.03 11.59 -14.03 10.44Q-14.03 9.13 -13.18 8.5Q-12.33 7.87 -10.65 7.87Q-8.95 7.87 -8.05 8.54Q-7.15 9.21 -7.15 10.75V11.23H-4.73V10.77Q-4.73 8.34 -6.35 7.04Q-7.98 5.74 -10.65 5.74Q-13.3 5.74 -14.89 7.03Q-16.47 8.32 -16.47 10.51Q-16.47 12.63 -15.1 13.78Q-13.74 14.93 -11.15 15.71Q-8.6 16.46 -7.69 17.14Q-6.78 17.83 -6.78 19.2Q-6.78 20.7 -7.79 21.41Q-8.8 22.12 -10.61 22.12Q-12.39 22.12 -13.43 21.36Q-14.47 20.61 -14.47 18.9V18.44Z"/><path id="w-sight-2" d="M-1.22 23.82H1.22V6.15H-1.22ZM-1.61 -0.01Q-1.61 0.67 -1.2 1.14Q-0.79 1.61 -0.01 1.61Q0.77 1.61 1.19 1.14Q1.61 0.67 1.61 -0.01Q1.61 -0.7 1.2 -1.15Q0.79 -1.61 0.01 -1.61Q-0.77 -1.61 -1.19 -1.15Q-1.61 -0.68 -1.61 -0.01Z"/><path id="w-sight-3" d="M4.79 29.56Q5.88 30.5 7.49 31.12Q9.1 31.74 11.05 31.74Q14.35 31.74 16.29 29.68Q18.24 27.62 18.24 23.64V6.15H15.97L15.91 8.36H15.87Q15.21 7.28 13.86 6.54Q12.52 5.81 10.82 5.81Q7.69 5.81 5.93 8.15Q4.17 10.49 4.17 14.14V15.8Q4.17 19.44 5.92 21.76Q7.68 24.09 10.72 24.09Q12.51 24.09 13.78 23.42Q15.05 22.76 15.81 21.68V23.59Q15.81 26.66 14.49 28.1Q13.18 29.54 11.1 29.54Q9.42 29.54 8.15 28.95Q6.88 28.35 6.13 27.63ZM6.65 15.82V14.16Q6.65 11.42 7.8 9.69Q8.95 7.95 11.39 7.95Q13.01 7.95 14.16 8.84Q15.31 9.74 15.81 10.91V19Q15.32 20.18 14.17 21.07Q13.03 21.96 11.38 21.96Q8.96 21.96 7.81 20.25Q6.65 18.55 6.65 15.82Z"/><path id="w-sight-4" d="M22.1 23.82H24.54V10.93Q25.13 9.64 26.26 8.8Q27.39 7.97 28.85 7.97Q30.54 7.97 31.46 8.88Q32.38 9.79 32.38 11.97V23.82H34.82V11.84Q34.82 8.6 33.42 7.2Q32.01 5.81 29.7 5.81Q28.04 5.81 26.68 6.47Q25.32 7.14 24.54 8.35V-3.42H22.1Z"/><path id="w-sight-5" d="M36.33 8.22H45.52V6.15H36.33ZM39.24 19.35Q39.24 22.02 40.3 23.13Q41.37 24.23 43.2 24.23Q43.89 24.23 44.46 24.12Q45.03 24.01 45.4 23.85L45.39 21.72Q45.01 21.89 44.6 21.97Q44.19 22.06 43.76 22.06Q42.69 22.06 42.18 21.52Q41.67 20.98 41.67 19.32V0.46H39.24V6.88V7.21Z"/></g></g><symbol id="lp" viewBox="8 8 16 16"><circle cx="16" cy="16" r="7.5" style="fill:var(--rim)"/><circle cx="16" cy="16" r="5.7" fill="#000" style="display:var(--core)"/><circle cx="16" cy="16" r="5.4" fill="none" stroke="#57606a" stroke-width=".8" style="display:var(--groove)"/><circle cx="16" cy="16" r="3" fill="#cf222e"/><path d="M14.4 14.9 A2 2 0 0 1 17.6 14.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><path d="M15.1 18.05 H16.9" fill="none" stroke="#fff" stroke-width=".42" stroke-linecap="round"/><circle cx="16" cy="16" r=".9" fill="#fff"/></symbol></defs></svg>
-<div class="splash sp-c" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-54.9 -113.84 256 256"><use href="#words"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div></div>
-<div class="splash sp-d" aria-hidden="true"><div class="fly"><div class="spin"><svg viewBox="-72 -72 144 144"><rect class="t-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></svg></div></div></div>
-<div class="splash sp-f" aria-hidden="true"><div class="fly"><svg viewBox="-94 -94 188 188"><use href="#words"/><g class="orbit"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></g></svg></div></div>
-<div class="splash sp-g" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><g class="t-ink"><use class="key" href="#w-sleeve-1" style="--at:900ms"/><use class="key" href="#w-sleeve-2" style="--at:1030ms"/><use class="key" href="#w-sleeve-3" style="--at:1200ms"/><use class="key" href="#w-sleeve-4" style="--at:1320ms"/><use class="key" href="#w-sleeve-5" style="--at:1530ms"/><use class="key" href="#w-sleeve-6" style="--at:1680ms"/></g><g class="t-red"><use class="key" href="#w-sight-1" style="--at:2040ms"/><use class="key" href="#w-sight-2" style="--at:2170ms"/><use class="key" href="#w-sight-3" style="--at:2370ms"/><use class="key" href="#w-sight-4" style="--at:2490ms"/><use class="key" href="#w-sight-5" style="--at:2680ms"/></g></svg></div></div>
-<div class="splash sp-h" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 128.27 69"><g class="t-ink"><use href="#w-sleeve-1"/><use href="#w-sleeve-2"/><use class="turn" href="#w-sleeve-3" style="transform-origin:-6.675px -18.855px;--at:900ms"/><use class="turn" href="#w-sleeve-4" style="transform-origin:8.77px -18.855px;--at:1500ms"/><use href="#w-sleeve-5"/><use class="turn" href="#w-sleeve-6" style="transform-origin:38.1px -18.855px;--at:2100ms"/></g><use href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/></svg></div></div>
-<div class="splash sp-i" aria-hidden="true"><div class="fly"><svg viewBox="-37.59 -37.26 221.38 69"><use class="i-sight" href="#w-sight"/><use href="#lp" x="54.35" y="-4.59" width="37.5" height="37.5"/><use class="i-sleeve" href="#w-sleeve"/></svg></div></div>
-<!-- R1's "sight" is clipped at the record's centre, so it shows from behind the record as it passes. -->
-<div class="splash sp-r1" aria-hidden="true"><div class="fly"><svg viewBox="-56.4 -45.76 166 86"><defs><clipPath id="r1-clip"><rect class="r1-wipe" x="-300" y="-60" width="373.1" height="120"/></clipPath></defs><g class="rv-all"><use href="#w-sleeve"/><use href="#w-sight" clip-path="url(#r1-clip)"/><g class="r1-roll"><g transform="translate(54.35 -4.59)"><use class="r1-rec" href="#lp" width="37.5" height="37.5"/></g></g></g></svg></div></div>
-<div class="splash sp-r2" aria-hidden="true"><div class="fly"><svg viewBox="-119.5 -82.76 292 160"><g class="rv-all"><g class="r2-pan"><g class="r2-rec"><g transform="translate(54.35 -4.59)"><use href="#lp" width="37.5" height="37.5"/></g></g><g class="r2-tile"><rect class="t-bg r2-bg" x="-71.5" y="-71.5" width="143" height="143" rx="31.5" stroke-width="1" vector-effect="non-scaling-stroke"/><use href="#words"/></g></g></g></svg></div></div>
-<header class="top"><div class="bar"><div class="row wrap">
-  <!-- `#`: the top of this page, without a reload, where motion is reduced or the script is off;
-       otherwise the script makes it a button that plays the intro again (`replay()`). -->
-  <a class="brand" href="#" aria-label="Sleevesight, top of the page">
-    <svg viewBox="-37.59 -37.26 128.27 69" aria-hidden="true"><use href="#words"/><g transform="translate(54.35 -4.59)"><use class="lp-disc" href="#lp" width="37.5" height="37.5"/></g></svg>
-  </a>
-  <nav class="top" aria-label="Site">
-    <ul>
-      <li><a href="#how">How it works</a></li>
-      <li><a href="#privacy">Privacy</a></li>
-      <li><a href="#install">Install</a></li>
-      <li><a href="#more">More</a></li>
-    </ul>
-  </nav>
-</div></div></header>
+{% include site-header.html %}
 <div class="wrap">
 
 <main id="main">
@@ -519,148 +334,8 @@ document.documentElement.classList.add('js');
 </section>
 </main>
 
-<footer>
-  <p><a href="https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE">Open source (GPL-3.0)</a> · <a href="https://github.com/wkusnierczyk/sleevesight/blob/main/index.html">This page's source</a> · <a href="design/brand.html#fonts">Fonts</a></p>
-  <p>This site sets no cookies and loads nothing from anywhere else.</p>
-</footer>
+{% include site-footer.html source="index.html" %}
 </div>
-<script>
-(function () {
-  var root = document.documentElement, header = document.querySelector('header.top'), bar = header.querySelector('.bar'),
-      row = bar.querySelector('.row'), brand = row.querySelector('.brand'), mark = brand.querySelector('svg'),
-      nav = row.querySelector('nav');
-  // Lays out the large header, as it is at the top of the page, without animating it: whether the menu
-  // fits on one line beside the logo, and the height the header keeps in the page while it is small.
-  function measure() {
-    var compact = root.classList.contains('sl-compact');
-    root.classList.add('sl-still');
-    root.classList.remove('sl-compact', 'sl-stack');
-    var room = row.clientWidth - parseFloat(getComputedStyle(row).paddingLeft) * 2;
-    root.classList.toggle('sl-stack', brand.offsetWidth + 24 + nav.offsetWidth > room);
-    header.style.height = bar.offsetHeight + 'px';
-    root.classList.toggle('sl-compact', compact);
-    void bar.offsetHeight;
-    root.classList.remove('sl-still');
-  }
-  function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
-  measure();
-  onScroll();
-  // At most once a frame: `measure()` forces a layout, and `resize` can come more often than frames
-  // (synthetic events, some engines).
-  var measuring = 0;
-  addEventListener('resize', function () {
-    if (!measuring) measuring = requestAnimationFrame(function () { measuring = 0; measure(); });
-  });
-  // The menu's width changes when the page's font arrives (`font-display: swap`), after the first layout.
-  if (document.fonts) document.fonts.ready.then(measure);
-  addEventListener('scroll', onScroll, {passive: true});
-
-  // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
-  // key (a screen reader's cursor), so either ends the intro too.
-  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'],
-      moving = matchMedia('(prefers-reduced-motion: no-preference)'), v;
-  function end() {
-    stops.forEach(function (e) { removeEventListener(e, stop); });
-    root.classList.remove('sl-intro');
-  }
-  // A held key's repeats (Enter or Space on the logo) do not end the intro it started.
-  function stop(e) { if (!(e.type === 'keydown' && e.repeat)) end(); }
-  function listen() { stops.forEach(function (e) { addEventListener(e, stop, {passive: true}); }); }
-  // The intro ends with its last move: D's record turning in, the others' page arriving.
-  function last(e) { if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
-  brand.addEventListener('animationend', last);
-  document.querySelector('main').addEventListener('animationend', last);
-  // Each splash's svg in the words' units: its viewBox's left, top, width and height. C's is a square of
-  // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
-  // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
-  // 188 centred on the dot, with room for the record's path; G's and H's are the header's box, the
-  // mark's ink, since nothing in them leaves it; I's is the mark's ink widened to the right, to 183.79,
-  // past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record horizontally,
-  // and the record stays still midway across the window; R1's and R2's are the brand sheet's reveals.
-  var boxes = {c: [-54.9, -113.84, 256, 256], d: [-72, -72, 144, 144], f: [-94, -94, 188, 188],
-               g: [-37.59, -37.26, 128.27, 69], h: [-37.59, -37.26, 128.27, 69],
-               i: [-37.59, -37.26, 221.38, 69],
-               r1: [-56.4, -45.76, 166, 86], r2: [-119.5, -82.76, 292, 160]};
-  function start() {
-    // The splash is centred in the window, at most 300/144 px to the unit (D's tile 300 px across), less
-    // where the window is too small for it. The header's logo is the words' ink box, from -37.59, -37.26
-    // and 69 tall, so the splash lands where the header's logo sits in it.
-    v = root.getAttribute('data-logo');
-    var b = boxes[v], m = mark.getBoundingClientRect(), u = m.height / 69,
-        k = v === 'd' ? Math.min(300, innerWidth * .62, innerHeight * .45) / 144
-                      : Math.min(300 / 144, innerWidth * .95 / b[2], innerHeight * .9 / b[3]),
-        w = b[2] * k, h = b[3] * k, x = (innerWidth - w) / 2, y = (innerHeight - h) / 2;
-    root.style.setProperty('--sb', w + 'px');
-    root.style.setProperty('--sbh', h + 'px');
-    root.style.setProperty('--sx', x + 'px');
-    root.style.setProperty('--sy', y + 'px');
-    root.style.setProperty('--fx', m.left + (b[0] + 37.59) * u - x + 'px');
-    root.style.setProperty('--fy', m.top + (b[1] + 37.26) * u - y + 'px');
-    root.style.setProperty('--fs', u / k);
-    root.classList.remove('sl-wait');
-    root.classList.add('sl-intro');
-  }
-  if (root.classList.contains('sl-wait')) {
-    start();
-    listen();
-  }
-
-  // The replay: a click on the logo, a step up from the hover's spin. It plays an intro picked afresh,
-  // as on a new visit, where the page is: the splash flies to the header's logo as it is, small when
-  // scrolled down, and the page fades back in at the same place. The header's transitions are settled
-  // first (`.sl-still`), so a click just after a scroll measures the logo where it ends up. Reading the
-  // layout between taking the class off and putting it back restarts the animations. The stops listen
-  // from the next frame on, so that nothing of the click or key that started the replay can end it.
-  function replay() {
-    end();
-    brand.classList.remove('play');
-    var all = Object.keys(boxes);
-    root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
-    root.classList.add('sl-still');
-    void bar.offsetHeight;
-    start();
-    root.classList.remove('sl-still');
-    requestAnimationFrame(listen);
-  }
-  // Where motion is allowed, the logo is a button that plays the intro, named so, and Space presses it
-  // as well as Enter. Under "reduce motion" it is the link to the top of the page, as without the
-  // script; it follows the setting if that changes, and a change to "reduce motion" ends an intro that
-  // is playing. A click with a modifier, or another button, keeps the link's own behaviour (a new tab,
-  // say), and Space with Ctrl, Alt or Meta is left alone (an input-source switch, say).
-  function role() {
-    if (moving.matches) {
-      brand.setAttribute('role', 'button');
-      brand.setAttribute('aria-label', 'Sleevesight, play the intro');
-    } else {
-      brand.removeAttribute('role');
-      brand.setAttribute('aria-label', 'Sleevesight, top of the page');
-      end();
-    }
-  }
-  role();
-  if (moving.addEventListener) moving.addEventListener('change', role);
-  brand.addEventListener('click', function (e) {
-    if (!moving.matches || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    replay();
-  });
-  // Space's repeats are cancelled too, or a held Space would scroll the page.
-  brand.addEventListener('keydown', function (e) {
-    if (!moving.matches || e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
-    e.preventDefault();
-    if (!e.repeat) replay();
-  });
-
-  function play() {
-    if (!moving.matches || root.classList.contains('sl-intro')) return;
-    brand.classList.add('play');
-  }
-  brand.addEventListener('pointerenter', play);
-  brand.addEventListener('focus', play);
-  brand.addEventListener('animationend', function (e) {
-    if (e.animationName === 'lg-turn') brand.classList.remove('play');
-  });
-})();
-</script>
+{% include site-header-script.html %}
 </body>
 </html>
