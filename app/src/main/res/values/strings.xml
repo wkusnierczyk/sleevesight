@@ -16,7 +16,7 @@
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
 
     <string name="first_run_stays_title">What stays on the phone</string>
-    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
+    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself, or type a key on a computer, when the phone advertises itself over Bluetooth to devices nearby. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
     <!-- What a screen reader says a tap on a web address shown as a link does (the privacy policy's, an AI service's terms). -->
     <string name="link_open">Open in your browser</string>
@@ -181,7 +181,7 @@
     <string name="keyboard_starting">Starting Bluetooth…</string>
     <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Show this phone’s name to the computer” is on, under Secrets.</string>
     <string name="keyboard_waiting_named">Waiting for the computer: on the page, choose “Connect” and pick this phone, listed as “%1$s”.</string>
-    <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name is too long to advertise, or not set, so it shows as “Unknown or Unsupported Device”.</string>
+    <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name could not be advertised (it may be too long, or not set), so it shows as “Unknown or Unsupported Device”.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>
     <string name="keyboard_off">Bluetooth is off. Turn it on, and the phone waits for the computer.</string>
     <string name="keyboard_refused">Sleevesight may not use Bluetooth. Allow “Nearby devices” for Sleevesight in the phone’s settings, or type the key here.</string>

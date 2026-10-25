@@ -34,6 +34,7 @@ Requests go straight from your phone to each service. None passes through a serv
 - **Your API keys** go only to the service each belongs to, with each request to it.
 - **To Spotify**, only if you connect a Spotify account, once the app offers that: requests for the playlist or album being played, made with your own token.
 - **To the server a cover's web address names**, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.
+- **Over Bluetooth, to devices nearby**, only while a key's dialog is typing on a computer (*Type on a computer*): the phone advertises a service named for the session's random identifier, which any device nearby that scans for Bluetooth can see, and, only with *Show this phone's name to the computer* on, the phone's Bluetooth name. What you type travels from the computer to the phone, encrypted with the session's key; the phone sends nothing back but Bluetooth's acknowledgements.
 - **To a file you choose**, only if you export the diagnostics: with the *Diagnostics* developer setting on, *Export* writes what the diagnostics screen shows (the latest events of the app's current run, the track changes recorded, what skip detection has learned, and the caches' sizes) to a file where you choose, which may be a cloud folder. That copy is yours, outside the app.
 
 Every request is made over HTTPS; Android refuses the app any unencrypted connection, so a cover given as an `http://` address is not fetched.
