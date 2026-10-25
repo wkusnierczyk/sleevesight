@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -91,6 +94,24 @@ class SettingsStore(
             if (packageName in players) s else s.copy(followedPlayers = players + (packageName to false))
         }
     }
+
+    /**
+     * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, saved in
+     * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
+     * result says whether it was saved: false after an I/O error, which leaves the setting as it was;
+     * any other failure propagates, as the settings screen's saves do.
+     */
+    fun reportButtonHider(saves: CoroutineScope): () -> Deferred<Boolean> =
+        {
+            saves.async {
+                try {
+                    update { it.copy(reportButton = ReportButton.HIDE) }
+                    true
+                } catch (_: IOException) {
+                    false
+                }
+            }
+        }
 
     companion object {
         /**

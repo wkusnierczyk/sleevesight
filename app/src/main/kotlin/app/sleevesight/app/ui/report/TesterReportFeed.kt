@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -33,17 +34,21 @@ import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.report.TesterSnapshot
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * What Home's report button (#452) reads: the [settings], whose *Developer mode* on and *Report
  * button* other than *Hide* show it; [hide], which sets *Report button* to *Hide* (#518), from the
- * button's menu; the [reports], which take what the app knows at the tap; and [mail], where a
- * report goes, null for the phone's own mail apps ([PhoneMail]).
+ * button's menu, in a scope that outlives Home, and says whether it was saved
+ * ([SettingsStore.reportButtonHider][app.sleevesight.app.settings.SettingsStore.reportButtonHider]);
+ * the [reports], which take what the app knows at the tap; and [mail], where a report goes, null for
+ * the phone's own mail apps ([PhoneMail]).
  */
 class TesterReportFeed(
     val settings: Flow<Settings>,
-    val hide: () -> Unit,
+    val hide: () -> Deferred<Boolean>,
     val reports: TesterReports,
     val mail: MailHandoff? = null,
 )
@@ -62,7 +67,10 @@ class ReportButtonState(
  * [content] (Home) given its report button: null while the button is not shown (no [feed], or
  * developer mode off, or *Report button* at *Hide*), else what the button does ([ReportButtonState]).
  * The review outlives the button: hidden meanwhile, an open review stays until the tester closes
- * it. So does the message the menu's *Hide* shows, which says where to bring the button back.
+ * it. So does the message the menu's *Hide* shows once the choice is saved, which says where to
+ * bring the button back; a save that failed says the button could not be hidden, as it is still
+ * there. The save is awaited here, so if Home goes before it ends, it is still made, but no message
+ * shows.
  */
 @Composable
 fun WithTesterReport(
@@ -75,7 +83,9 @@ fun WithTesterReport(
     }
     val settings by feed.settings.collectAsState(initial = null)
     var open by remember { mutableStateOf<TesterSnapshot?>(null) }
-    var hidden by rememberSaveable { mutableStateOf(false) }
+    // How the last *Hide* ended, until its message is dismissed: saved, or not; null for none.
+    var hidden by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val scope = rememberCoroutineScope()
     val choice = settings?.takeIf { it.developerMode }?.reportButton ?: ReportButton.HIDE
     content(
         if (choice == ReportButton.HIDE) {
@@ -85,8 +95,8 @@ fun WithTesterReport(
                 hideWhileScrolling = choice == ReportButton.AUTO,
                 onReport = { open = feed.reports.snapshot(settings) },
                 onHide = {
-                    feed.hide()
-                    hidden = true
+                    val saved = feed.hide()
+                    scope.launch { hidden = saved.await() }
                 },
             )
         },
@@ -96,7 +106,7 @@ fun WithTesterReport(
         val handoff = feed.mail ?: remember(context) { PhoneMail(context) }
         TesterReportDialog(snapshot, { feed.reports.history(snapshot) }, handoff) { open = null }
     }
-    if (hidden) ReportButtonHiddenDialog { hidden = false }
+    hidden?.let { saved -> ReportButtonHiddenDialog(saved) { hidden = null } }
 }
 
 /**
@@ -148,12 +158,20 @@ fun TesterReportButton(
     }
 }
 
-/** After the menu's *Hide* (#518): where to bring the button back, and *Dismiss*. */
+/**
+ * After the menu's *Hide* (#518): once [saved], where to bring the button back; else that it could
+ * not be hidden. With *Dismiss*.
+ */
 @Composable
-private fun ReportButtonHiddenDialog(onDismiss: () -> Unit) {
+private fun ReportButtonHiddenDialog(
+    saved: Boolean,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text(stringResource(R.string.tester_report_hidden)) },
+        text = {
+            Text(stringResource(if (saved) R.string.tester_report_hidden else R.string.tester_report_not_hidden))
+        },
         confirmButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag(TESTER_REPORT_HIDDEN_DISMISS_TAG)) {
                 Text(stringResource(R.string.tester_report_hidden_dismiss))

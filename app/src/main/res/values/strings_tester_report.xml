@@ -9,6 +9,8 @@
     <string name="tester_report_menu_hide">Hide</string>
     <!-- After the menu's Hide: where to bring the button back. -->
     <string name="tester_report_hidden">The report button is hidden. To bring it back: Settings → Developer → Report button.</string>
+    <!-- After the menu's Hide, when the setting could not be saved. -->
+    <string name="tester_report_not_hidden">The report button could not be hidden. Try again, or choose Hide under Settings → Developer → Report button.</string>
     <string name="tester_report_hidden_dismiss">Dismiss</string>
 
     <string name="tester_report_title">Tester report</string>

@@ -148,7 +148,9 @@ class TesterReportScreenTest {
 
     private fun show(block: () -> Unit) =
         showContent(block) {
-            WithTesterReport(TesterReportFeed(settings, hide = {}, reports, mail)) { report ->
+            WithTesterReport(
+                TesterReportFeed(settings, hide = { CompletableDeferred(true) }, reports, mail),
+            ) { report ->
                 HomeScreen(true, onOpenFirstRun = {}, onOpenSettings = {}, report = report) {
                     Text("What is playing")
                 }

@@ -36,9 +36,6 @@ import app.sleevesight.app.ui.theme.isAppInDarkTheme
 import app.sleevesight.app.ui.theme.isDark
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
-import app.sleevesight.core.settings.ReportButton
-import kotlinx.coroutines.launch
-import java.io.IOException
 
 /** The one activity; every screen is a Compose destination in [SleevesightNavHost]. */
 class MainActivity : ComponentActivity() {
@@ -65,17 +62,8 @@ class MainActivity : ComponentActivity() {
     private val testerReport: TesterReportFeed by lazy {
         TesterReportFeed(
             settings = graph.settings.settings,
-            // The menu's *Hide* (#518), saved in the process's scope, so leaving Home does not cut it
-            // short. A save that fails leaves the button where it was, to hide again.
-            hide = {
-                graph.settingsSaves.launch {
-                    try {
-                        graph.settings.update { it.copy(reportButton = ReportButton.HIDE) }
-                    } catch (_: IOException) {
-                        // Only an I/O error, as the settings screen's saves: the button stays.
-                    }
-                }
-            },
+            // The menu's *Hide* (#518), saved in the process's scope.
+            hide = graph.settings.reportButtonHider(graph.settingsSaves),
             reports =
                 TesterReports(
                     build =
