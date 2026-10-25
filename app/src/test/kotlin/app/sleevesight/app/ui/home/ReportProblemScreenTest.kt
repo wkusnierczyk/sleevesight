@@ -4,7 +4,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -39,6 +44,7 @@ import app.sleevesight.app.ui.report.REPORT_DIALOG_TAG
 import app.sleevesight.app.ui.report.REPORT_NOTE_TAG
 import app.sleevesight.app.ui.report.REPORT_SEND_TAG
 import app.sleevesight.app.ui.report.REPORT_TAG
+import app.sleevesight.app.ui.report.ReportDialog
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import org.junit.Assert.assertEquals
@@ -64,6 +70,7 @@ class ReportProblemScreenTest {
     // A mail app that takes the report, or none ([takes] false).
     private class FakeMail(
         var takes: Boolean = true,
+        override val confirmsCopy: Boolean = true,
     ) : MailHandoff {
         val sent = mutableListOf<Mail>()
         val copied = mutableListOf<Mail>()
@@ -85,6 +92,21 @@ class ReportProblemScreenTest {
     private fun state(view: PipelineView) =
         NowPlayingState(view, view.track?.nowPlaying ?: sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING))
 
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does for a recreated activity (as in
+    // `SourcesFoldScreenTest`).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
     private fun show(
         initial: NowPlayingState,
         block: (update: (NowPlayingState) -> Unit) -> Unit,
@@ -93,14 +115,23 @@ class ReportProblemScreenTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
-                    Column(Modifier.verticalScroll(rememberScrollState())) {
-                        NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize, mail = mail))
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                NowPlayingContent(current.value, NowPlayingActions(normalizer::normalize, mail = mail))
+                            }
+                        }
                     }
                 }
             }
-            block { current.value = it }
+            block {
+                current.value = it
+                compose.waitForIdle()
+            }
         }
     }
+
+    private fun dialogs() = compose.onAllNodesWithTag(REPORT_DIALOG_TAG).fetchSemanticsNodes().size
 
     private fun openReport() = compose.onNodeWithTag(REPORT_TAG).performScrollTo().performClick()
 
@@ -155,7 +186,7 @@ class ReportProblemScreenTest {
             assertTrue("Reason: Wrong\nNote: It charted in 1974.\n" in sent.body)
             assertTrue(reply in sent.body)
             // A mail app took it: the dialog closes, and the user sends it from there.
-            assertEquals(0, compose.onAllNodesWithTag(REPORT_DIALOG_TAG).fetchSemanticsNodes().size)
+            assertEquals(0, dialogs())
         }
 
     @Test
@@ -170,8 +201,83 @@ class ReportProblemScreenTest {
             compose.onNodeWithTag(REPORT_COPY_TAG).performClick()
 
             assertTrue("Reason: Offensive or inappropriate\n" in mail.copied.single().body)
-            compose.onNodeWithText(text(R.string.report_copied, Mail.SUPPORT)).assertExists()
+            // The system confirms the copy itself, as Android 13 and later do: only where to paste it.
+            compose.onNodeWithText(text(R.string.report_paste, Mail.SUPPORT)).assertExists()
             compose.onNodeWithTag(REPORT_DIALOG_TAG).assertExists()
+        }
+
+    @Test
+    fun copyReportIsOfferedWhenAMailAppIsThereToo() =
+        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
+            openReport()
+            compose.onNodeWithTag(REPORT_COPY_TAG).assertIsNotEnabled()
+            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
+            compose.onNodeWithTag(REPORT_COPY_TAG).assertIsEnabled().performClick()
+
+            assertTrue("Reason: Wrong\n" in mail.copied.single().body)
+            assertTrue(mail.sent.isEmpty())
+        }
+
+    @Test
+    fun belowAndroid13TheDialogSaysTheReportWasCopied() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    ReportDialog("Report", Mail(Mail.SUPPORT, "S", "B"), FakeMail(confirmsCopy = false), {}) {}
+                }
+            }
+            compose.onNodeWithTag(REPORT_COPY_TAG).performClick()
+
+            compose.onNodeWithText(text(R.string.report_copied, Mail.SUPPORT)).assertExists()
+        }
+    }
+
+    @Test
+    fun theDialogStaysWithWhatWasTypedWhenThePlayerStopsReporting() =
+        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) { update ->
+            openReport()
+            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
+            compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
+
+            // The player's session ended: the screen shows nothing playing.
+            update(NowPlayingState(PipelineView(), playing = null))
+
+            compose.onNodeWithText(text(R.string.home_placeholder)).assertExists()
+            compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
+            assertTrue("Note: It charted in 1974.\n" in mail.sent.single().body)
+        }
+
+    @Test
+    fun reopenedAfterCancelTheReportStartsAfresh() =
+        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
+            openReport()
+            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
+            compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
+            compose.onNodeWithText(text(R.string.report_cancel)).performClick()
+            assertEquals(0, dialogs())
+
+            openReport()
+
+            compose.onNodeWithTag(REPORT_SEND_TAG).assertIsNotEnabled()
+            compose.onNode(hasText("It charted in 1974.", substring = true)).assertDoesNotExist()
+        }
+
+    @Test
+    fun afterTheScreenIsRestoredAReportOpenedOnAnotherTrackStartsAfresh() =
+        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) { update ->
+            openReport()
+            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
+            compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
+
+            restore()
+            // Closed with the activity, as it holds the track it is of, which is not saved.
+            assertEquals(0, dialogs())
+            update(state(PipelineView(track(playing = carefree, insight = written(reply)), aiReady = true)))
+            openReport()
+
+            // Nothing of the report on the other track: no reason chosen, no note.
+            compose.onNodeWithTag(REPORT_SEND_TAG).assertIsNotEnabled()
+            compose.onNode(hasText("It charted in 1974.", substring = true)).assertDoesNotExist()
         }
 
     @Test

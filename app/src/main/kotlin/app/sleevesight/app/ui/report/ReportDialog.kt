@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -16,7 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -34,9 +35,13 @@ import app.sleevesight.app.report.MailHandoff
  * A report composed in the app and handed to the user's mail app (#390), the one dialog every
  * report goes through (the tester's report to come, #452, too): [inputs] for what the user adds,
  * then the whole [mail] as it will be sent, so nothing leaves the phone unseen. [mail] is null
- * while the inputs are not enough to send (no reason chosen), and *Open in mail app* waits for it.
- * It hands the mail to [handoff]; a mail app taking it closes the dialog, and the user sends it
- * from there. With no mail app, the dialog says so and offers to copy the report instead.
+ * while the inputs are not enough to send (no reason chosen), and *Open in mail app* and *Copy
+ * report* wait for it. *Open in mail app* hands the mail to [handoff]; a mail app taking it closes
+ * the dialog, and the user sends it from there. With no mail app, the dialog says so. *Copy report*
+ * is offered either way, for a mail app the hand-off does not reach; where the system confirms
+ * the copy itself ([MailHandoff.confirmsCopy]), the dialog says only where to paste it.
+ *
+ * Its state is held only while it is open, not saved: closed by a rotation, it opens afresh.
  */
 @Composable
 internal fun ReportDialog(
@@ -46,8 +51,8 @@ internal fun ReportDialog(
     onDismiss: () -> Unit,
     inputs: @Composable ColumnScope.() -> Unit,
 ) {
-    var noMailApp by rememberSaveable { mutableStateOf(false) }
-    var copied by rememberSaveable { mutableStateOf(false) }
+    var noMailApp by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag(REPORT_DIALOG_TAG),
@@ -65,35 +70,47 @@ internal fun ReportDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Preview(mail)
-                if (noMailApp) {
-                    // Said as it appears, without moving the focus from the button tapped.
-                    val said = if (copied) R.string.report_copied else R.string.report_no_mail_app
-                    Text(
-                        stringResource(said, Mail.SUPPORT),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (copied) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
+                Status(noMailApp, copied, handoff.confirmsCopy)
             }
         },
         confirmButton = {
-            if (noMailApp) {
+            Action(R.string.report_send, mail, REPORT_SEND_TAG) {
+                if (handoff.send(it)) onDismiss() else noMailApp = true
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(if (copied) R.string.report_close else R.string.report_cancel))
+                }
                 Action(R.string.report_copy, mail, REPORT_COPY_TAG) {
                     handoff.copy(it)
                     copied = true
                 }
-            } else {
-                Action(R.string.report_send, mail, REPORT_SEND_TAG) {
-                    if (handoff.send(it)) onDismiss() else noMailApp = true
-                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(if (copied) R.string.report_close else R.string.report_cancel))
-            }
-        },
+    )
+}
+
+// What became of the hand-off: no mail app took it, or it was copied. Said as it appears, without
+// moving the focus from the button tapped.
+@Composable
+private fun Status(
+    noMailApp: Boolean,
+    copied: Boolean,
+    systemConfirmsCopy: Boolean,
+) {
+    val said =
+        when {
+            copied -> if (systemConfirmsCopy) R.string.report_paste else R.string.report_copied
+            noMailApp -> R.string.report_no_mail_app
+            else -> return
+        }
+    Text(
+        stringResource(said, Mail.SUPPORT),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (copied) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
 }
 

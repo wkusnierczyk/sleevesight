@@ -7,7 +7,7 @@
 
     <string name="report_title">Report a problem</string>
     <!-- %1$s is the support address. -->
-    <string name="report_intro">Tell the developer what is wrong with this insight. The report opens in your mail app, addressed to %1$s, and leaves the phone only if you send it from there.</string>
+    <string name="report_intro">Tell the developer what is wrong with this insight. The report opens in your mail app, addressed to %1$s, and reaches the developer only if you send it from there. Until then your mail app handles it as any message you write, which may keep a draft in your mail account.</string>
     <string name="report_reason">What is wrong?</string>
     <string name="report_reason_offensive">Offensive or inappropriate</string>
     <string name="report_reason_wrong">Wrong</string>
@@ -21,7 +21,9 @@
     <string name="report_close">Close</string>
     <!-- %1$s is the support address. -->
     <string name="report_no_mail_app">No mail app on this phone can take the report. Copy it, and send it to %1$s from wherever you write email.</string>
-    <!-- %1$s is the support address. -->
+    <!-- %1$s is the support address. Below Android 13, which confirms a copy itself. -->
     <string name="report_copied">Copied. Paste it into an email to %1$s.</string>
+    <!-- %1$s is the support address. Android 13 and later confirm the copy themselves. -->
+    <string name="report_paste">Paste it into an email to %1$s.</string>
     <string name="report_copy">Copy report</string>
 </resources>

@@ -14,7 +14,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,8 +44,9 @@ internal fun InsightReportDialog(
     handoff: MailHandoff,
     onDismiss: () -> Unit,
 ) {
-    var reason by rememberSaveable { mutableStateOf<ReportReason?>(null) }
-    var note by rememberSaveable { mutableStateOf("") }
+    // Held only while the dialog is open, not saved: reopened, on this track or another, it starts afresh.
+    var reason by remember { mutableStateOf<ReportReason?>(null) }
+    var note by remember { mutableStateOf("") }
     val mail = reason?.let { insightReport(track, insight, it, note) }
     ReportDialog(stringResource(R.string.report_title), mail, handoff, onDismiss) {
         Text(stringResource(R.string.report_intro, Mail.SUPPORT), style = MaterialTheme.typography.bodyMedium)

@@ -13,10 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -25,10 +21,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
-import app.sleevesight.app.ui.report.InsightReportDialog
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
-import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.GroundedText
 
 /**
@@ -37,8 +31,8 @@ import app.sleevesight.core.synthesis.GroundedText
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
  *
- * A written insight offers *Report a problem* (#390), beside the line under it: the report is of
- * the insight and the track as they were when it was tapped, whatever plays while it is open.
+ * A written insight offers *Report a problem* (#390), beside the line under it, which hands the
+ * insight and its track to [InsightActions.onReport].
  */
 @Composable
 internal fun InsightCard(
@@ -46,31 +40,22 @@ internal fun InsightCard(
     context: InsightContext,
     actions: InsightActions,
 ) {
-    var reporting by remember { mutableStateOf<Reported?>(null) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
-            InsightBody(insight, context, actions) { reporting = it }
+            InsightBody(insight, context, actions)
         }
     }
-    reporting?.let { InsightReportDialog(it.track, it.insight, actions.mail) { reporting = null } }
 }
-
-// What a report is of: the insight, and the track it was written for.
-private class Reported(
-    val track: TrackState,
-    val insight: InsightState.Written,
-)
 
 @Composable
 private fun InsightBody(
     insight: InsightState,
     context: InsightContext,
     actions: InsightActions,
-    onReport: (Reported) -> Unit,
 ) {
     when (insight) {
         is InsightState.Idle -> {
@@ -91,7 +76,7 @@ private fun InsightBody(
             if (context.offers.stop) StopButton(actions.onStop)
         }
 
-        is InsightState.Written -> Written(insight, context, actions, onReport)
+        is InsightState.Written -> Written(insight, context, actions)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
         is InsightState.Failed -> {
             Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
@@ -145,7 +130,6 @@ private fun Written(
     insight: InsightState.Written,
     context: InsightContext,
     actions: InsightActions,
-    onReport: (Reported) -> Unit,
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
@@ -154,7 +138,7 @@ private fun Written(
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Meta(insight.grounded, insight.cached, Modifier.weight(1f))
-        context.track?.let { track -> ReportAction { onReport(Reported(track, insight)) } }
+        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
     context.rewriteFailed?.let {

@@ -1,13 +1,13 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
-import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
@@ -69,14 +69,14 @@ internal class InsightOffers(
 
 /**
  * Where the insight card's taps go: Write and Rewrite ([onWrite]) and Stop ([onStop]) to the
- * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line; a
- * report of a problem with the insight ([mail], #390) to the user's mail app.
+ * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line;
+ * *Report a problem* ([onReport], #390) with the written insight and the track it was written for.
  */
 internal class InsightActions(
     val onWrite: () -> Unit,
     val onStop: () -> Unit,
     val onCite: (String) -> Unit,
-    val mail: MailHandoff,
+    val onReport: (TrackState, InsightState.Written) -> Unit,
 )
 
 /** A run of a sentence's text, or a citation in it. */
