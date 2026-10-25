@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -112,7 +113,7 @@ class PhoneNameSettingTest {
     // Opens the Last.fm key's dialog, starts a session, and closes the dialog once it runs.
     private fun typeOnAComputer() {
         compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-        compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
         waitForText(text(R.string.keyboard_connected))
         compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
         compose.waitForIdle()
