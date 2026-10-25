@@ -46,7 +46,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 - **Skip detection.** Under *On skip*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Saver*); the card then asks for a tap.
 - **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is underlined. A line under the insight counts the sentences grounded.
-- **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), unfold *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise.
+- **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. If it is not there (its *Developer mode* switch hides it), unfold *About* and tap *Version* seven times to bring it back. Under *Developer*, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. *Report button*, on in the test build, shows the report button on the home screen (*What to tell us*, below).
 
 ## What to tell us
 
@@ -60,9 +60,17 @@ Anything that surprises you. In particular:
 - **The app icon:** how it looks on your home screen, with your launcher and, on Android 13 or later, with themed icons on. A screenshot of the home screen helps.
 - **The product page's intro:** each time you open [sleevesight.app](https://sleevesight.app/) in the browser, one of several intros plays, picked at random (not on a reload, and not with *Reduce motion* on in your system settings); a click on the logo plays one again, picked afresh. Which did you like, and why? Did any feel too long? If one turned the logo, what did the turn remind you of?
 
-With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds what the app did, and every track change recorded on the phone, with the tracks' titles and times. That is the whole history kept (90 days by default), not only the tracks around your report, so send it only if you are happy to.
+**The report button.** The test build shows a small button with a bug on it at the bottom right of the home screen. Tap it as soon as you notice something: it takes what the app knows at that moment, so you need not note the track or the time. Before anything is sent, it shows you the whole report, in parts:
 
-For an insight that is wrong or offensive, *Report a problem*, under the insight, composes the report for you: it shows what it holds (the track, the insight and its evidence, the AI service and model), and opens it in your mail app, addressed to us, to send from there. Send other reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
+- **App:** when you tapped, with your time zone, and the app's version and build.
+- **Settings:** your settings. Never your API keys.
+- **Now playing:** the track as your player reports it, what the sources found, and the insight with its citation check.
+- **Diagnostics:** what the app did since it started (each source's outcome and time, the AI calls, the citation check), and what skip detection has learned.
+- **Track-change history:** off until you turn it on. It lists the latest 100 track changes recorded on your phone, with the tracks' titles and times. For a track change or a skip it is what helps us most, but it lists the tracks you played, so turn it on only if you are happy to share it.
+
+The report holds only the app's own diagnostics and what it received from your player: never your API keys, and nothing from outside the app. Each part has a switch that leaves it out, and *Edit* to change its text. Write what you expected under *What did you expect?*. *Open in mail app* then opens the report in your mail app, addressed to us, and it reaches us only when you send it from there; *Copy report* copies it instead, to send however you like. If the button is not on the home screen, turn it on under Settings → *Developer* → *Report button* (if *Developer* is not there, see *Diagnostics* above).
+
+For an insight that is wrong or offensive, *Report a problem*, under the insight, composes a report of that insight alone: it shows what it holds (the track, the insight and its evidence, the AI service and model), and opens it in your mail app, addressed to us, to send from there. Send anything else to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
 
 ## What leaves your phone
 
@@ -72,9 +80,9 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.
-- **To us,** only a problem report you send from your mail app, which you see in full first; never your keys, the history or the settings. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
+- **To us,** only a report you send from your mail app, which you see in full first, and never your keys. A tester report holds your settings, and the track changes only if you turn them on; a report of a problem with an insight holds neither. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a problem report to your mail app. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a report to your mail app (a tester report holds the track changes only if you add them). Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 
