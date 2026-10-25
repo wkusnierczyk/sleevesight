@@ -27,9 +27,10 @@ internal fun trackFor(
 
 /**
  * The year the recording was first released, as MusicBrainz's resolution gives it (`plan.md`,
- * *Release-date semantics*: the first release as "Released"; the release being played is the `P`
- * line). From MusicBrainz's result, which keeps it in the retrieval cache, so a track served from
- * the cache (which makes no resolution) shows the same year; else from the run's resolution.
+ * *Release-date semantics*: the first release as "Released", shown since #438 as the year after
+ * the album; the release being played is the `P` line). From MusicBrainz's result, which keeps it
+ * in the retrieval cache, so a track served from the cache (which makes no resolution) shows the
+ * same year; else from the run's resolution.
  * Null when MusicBrainz found none.
  */
 internal fun releaseYear(track: TrackState?): String? {

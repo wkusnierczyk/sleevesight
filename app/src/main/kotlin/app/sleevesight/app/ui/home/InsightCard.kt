@@ -32,7 +32,7 @@ import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.synthesis.GroundedText
 
 /**
- * *Why it's interesting*: the insight in each of its states (architecture, *Errors and empty
+ * *Key insights*: the insight in each of its states (architecture, *Errors and empty
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
