@@ -280,7 +280,7 @@ class AppGraph(
     }
 
     /**
-     * The session layer, following the players switched on under *Players to follow*: a switch
+     * The session layer, following the players switched on under *Players*: a switch
      * turned on or off reaches it at once. It waits for the settings' first read before it reads
      * any session, so a player switched off is never followed in between, and follows none while
      * the file cannot be read.
@@ -402,7 +402,7 @@ class AppGraph(
     init {
         // The events, in memory only, off the main thread.
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
-        // Each player the session layer sees appears under *Players to follow*, switched off.
+        // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }

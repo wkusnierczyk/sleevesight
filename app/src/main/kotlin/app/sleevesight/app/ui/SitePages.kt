@@ -11,3 +11,6 @@ internal const val SOURCE_CODE_URL = "https://github.com/wkusnierczyk/sleevesigh
 
 /** The licence, GPL-3.0, as the repository holds it, linked from *About*. */
 internal const val LICENCE_URL = "https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE"
+
+/** The dependencies page on the site (`docs/dependencies/index.md`, #412), linked from *Credits* (#502). */
+internal const val DEPENDENCIES_PAGE_URL = "https://sleevesight.app/docs/dependencies/"

@@ -55,7 +55,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property track the current track's state, null before the first run. It stays through a
  *   rebuild of the pipeline (a key saved, say) until the new pipeline publishes its own, and
  *   offers Write only while the coordinator does ([CoordinatorState.offersWrite]).
- * @property needsKey the keyed sources (Last.fm, web search) switched on under *Where to look* (web
+ * @property needsKey the keyed sources (Last.fm, web search) switched on under *Sources* (web
  *   search with an engine switched on, `Settings.isEnabled`) that are not looked up because their
  *   key is not saved, or cannot be read: their state is that they need a key, not a failure. They
  *   have no entry in [TrackState.sources], which holds one per adapter, and a source needs its key
@@ -89,7 +89,7 @@ import kotlin.coroutines.cancellation.CancellationException
  *   and the playing track's are then asked again.
  * @property lapsed whether the Write offered is offered only because automatic writing paused
  *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
- *   *Pause automatic writing after* names, so the first action expired, and a tap resumes it.
+ *   *Saver* names, so the first action expired, and a tap resumes it.
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -131,7 +131,7 @@ class PipelineKeys(
  * (a bug: the stages map their failures to outcomes) is reported and ends, and the next track runs.
  *
  * [next] is the next item in the shown player's queue (`NextInQueue`), which is prepared ahead
- * while *Prepare the next track* is on (D13): the coordinator starts and grants the preparation
+ * while *Proactive* is on (D13): the coordinator starts and grants the preparation
  * ([Pipeline.prepare]) only once the current run's requests are over, and cancels it when the
  * next item or the playing track changes.
  *
@@ -140,7 +140,7 @@ class PipelineKeys(
  * told when the coordinator takes a user's action (a tap on Write), for the time since the last
  * one that each track change is recorded with (D15).
  *
- * *Pause automatic writing after* reaches the coordinator as `PauseAutoWriteChanged`, from the
+ * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
  * settings as *Look up in the background* does (#203).
  *
  * [online] is whether the phone is online (its default network has validated internet access),

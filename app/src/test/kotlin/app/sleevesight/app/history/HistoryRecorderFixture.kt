@@ -39,7 +39,7 @@ internal abstract class HistoryRecorderFixture : SessionRepositoryFixture() {
     protected val history = SessionHistory(driver)
     protected val warnings = mutableListOf<String>()
 
-    /** The user's *Start a new session after a break of*, as each read of the settings gives it. */
+    /** The user's *New session idle trigger*, as each read of the settings gives it. */
     protected val sessionGap = MutableSharedFlow<Duration>(replay = 1)
 
     /** Whether the settings have been read when the recorder starts: then the gap is the default. */

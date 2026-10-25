@@ -49,7 +49,7 @@ class SettingsStore(
     val settings: Flow<Settings> = stored.retryReads {}.distinctUntilChanged()
 
     /**
-     * The package names of the players switched on under *Players to follow*, for the session layer
+     * The package names of the players switched on under *Players*, for the session layer
      * (#48), which reads only these players' sessions and drops the others' events. A player is
      * followed only on the user's stored choice: nothing is emitted before the first read
      * succeeds, and a read that fails after it names no player until the retry succeeds.
@@ -78,7 +78,7 @@ class SettingsStore(
     }
 
     /**
-     * Records a player the session layer has seen, so *Players to follow* shows a switch for it,
+     * Records a player the session layer has seen, so *Players* shows a switch for it,
      * off: a new player is followed only once the user switches it on. A player already listed
      * keeps its switch. The session layer names only players that reported music (#435); a phone
      * call's package ([Settings.isCall]) is never listed, whoever names it.

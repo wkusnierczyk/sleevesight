@@ -39,7 +39,7 @@ import kotlin.time.Duration.Companion.seconds
  * notification access allows: access can be granted in Settings before the app is first opened,
  * which binds the listener service at once. It attaches when the acknowledgement arrives.
  *
- * **Players to follow** come from [followed], package names: in the app, the settings'
+ * **Players followed** come from [followed], package names: in the app, the settings'
  * `SettingsStore.followedPlayers`, which `AppGraph` hands it (#126); with none given, `Settings`'
  * default (Spotify). Sessions of other players are dropped, and each newly seen one is logged as
  * ignored. A player with several sessions is followed through the first, the one the system ranks
@@ -60,7 +60,7 @@ import kotlin.time.Duration.Companion.seconds
  * restart, or while notification access is off) is read like any player's once Android no longer
  * marks it. A VoIP call in an ordinary media session (usage media) is not recognised.
  *
- * **Players seen** ([seenPlayers]), for *Players to follow*, are those whose session has reported
+ * **Players seen** ([seenPlayers]), for *Players*, are those whose session has reported
  * music, a title and an artist ([SessionMapping.reportsMusic]): a followed player's from its own
  * callback; another's, until it has, from a callback that reads only its metadata, for that test,
  * and is removed once the player has passed it or its session ends. Nothing else of an unfollowed
@@ -168,7 +168,7 @@ class SessionRepository(
 
     /**
      * The players whose session has reported music since the process started, followed or not;
-     * never a call: for *Players to follow* (#435).
+     * never a call: for *Players* (#435).
      */
     val seenPlayers: StateFlow<Set<String>> = seenState.asStateFlow()
 
