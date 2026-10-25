@@ -149,6 +149,65 @@ class HomeModelTest {
     }
 
     @Test
+    fun onlyTheSourcesThatGaveLinesHaveChipsByDefaultAndNeverTheModel() {
+        val withRelease =
+            EvidenceSet.of(
+                listOf(
+                    HomeFixtures.musicBrainzLine,
+                    HomeFixtures.wikidataLine,
+                    draft(SourceId.PLAYER, "On the release \"Sundown\"."),
+                ),
+                JvmHasher,
+            )
+        val state =
+            track(
+                sources =
+                    mapOf(
+                        SourceId.MUSICBRAINZ to done(evidence = listOf(HomeFixtures.musicBrainzLine)),
+                        // Wikidata's line only: Wikipedia's chip, which covers it, shows.
+                        SourceId.WIKIPEDIA to done(Outcome.None),
+                        SourceId.WEB to done(Outcome.Rejected("another song")),
+                        SourceId.DISCOGS to SourceState.Pending,
+                    ),
+                evidence = withRelease,
+            )
+        val chips = sourceChips(state, needsKey = setOf(SourceId.LASTFM), modelAllowed = true)
+        assertEquals(
+            listOf(SourceId.PLAYER, SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA),
+            chipsWithLines(chips, state.evidence).map { it.source },
+        )
+        assertEquals(emptyList<SourceChip>(), chipsWithLines(chips, null))
+    }
+
+    @Test
+    fun aNoteOnlyForAKeyAnUnreachableSourceOrAFailure() {
+        val state =
+            track(
+                sources =
+                    mapOf(
+                        SourceId.MUSICBRAINZ to done(evidence = listOf(HomeFixtures.musicBrainzLine), cached = true),
+                        SourceId.WIKIPEDIA to done(Outcome.Rejected("a different Sundown")),
+                        SourceId.WIKIDATA to done(Outcome.None),
+                        SourceId.DISCOGS to done(Outcome.SourceOff),
+                        SourceId.WEB to done(Outcome.Unreachable),
+                        SourceId.LASTFM to SourceState.Failed("IllegalStateException"),
+                    ),
+            )
+        val chips = sourceChips(state, needsKey = setOf(SourceId.LASTFM, SourceId.DISCOGS), modelAllowed = true)
+        assertEquals(
+            listOf(SourceNote.Failed(SourceId.LASTFM), SourceNote.Unreachable(SourceId.WEB)),
+            sourceNotes(chips, offline = false),
+        )
+        // Offline, the section's own line says why a source could not be reached.
+        assertEquals(listOf(SourceNote.Failed(SourceId.LASTFM)), sourceNotes(chips, offline = true))
+        val keyless = track(sources = mapOf(SourceId.MUSICBRAINZ to done()))
+        assertEquals(
+            listOf(SourceNote.NeedsKey(SourceId.LASTFM)),
+            sourceNotes(sourceChips(keyless, setOf(SourceId.LASTFM), modelAllowed = false), offline = false),
+        )
+    }
+
+    @Test
     fun rejectedMatchesAndUnverifiedLinesComeFromEachSourcesResult() {
         val unverified = draft(SourceId.LASTFM, "Gordon Lightfoot has 1M listeners.")
         val state =

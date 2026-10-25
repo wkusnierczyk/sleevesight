@@ -49,7 +49,8 @@ class SettingsLinks(
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it.
+ * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, given the
+ * way to the settings.
  */
 @Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
 @Composable
@@ -59,7 +60,7 @@ fun SleevesightNavHost(
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
     settings: @Composable (links: SettingsLinks) -> Unit = {},
-    pipeline: @Composable () -> Unit = { NothingPlaying() },
+    pipeline: @Composable (openSettings: () -> Unit) -> Unit = { NothingPlaying() },
     diagnostics: @Composable () -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
@@ -85,12 +86,13 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
+                val openSettings = { navController.navigate(SettingsPage) }
                 HomeScreen(
                     accessGranted = granted,
                     // Single top: a double tap opens it once, so one Continue comes back.
                     onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
-                    onOpenSettings = { navController.navigate(SettingsPage) },
-                    pipeline = pipeline,
+                    onOpenSettings = openSettings,
+                    pipeline = { pipeline(openSettings) },
                 )
             } else {
                 FirstRunFirst(navController)

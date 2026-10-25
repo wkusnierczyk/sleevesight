@@ -17,10 +17,9 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Which evidence lines show, and the one a citation points at: display only, for one track's
  * [evidence]. A source's chip hides or shows its lines ([toggle]); a citation tapped shows its
- * line, even if its source's lines were hidden, scrolls to it and flashes it ([cite]); a chip
- * chosen while the list is folded shows its source's lines and scrolls to the first ([reveal]).
- * Each of them, and a chip that shows its lines again, says where in the list the line now is, for
- * the fold to unfold to ([SourcesFold.reach]).
+ * line, even if its source's lines were hidden, scrolls to it and flashes it ([cite]). A citation,
+ * and a chip that shows its lines again, says where in the list the line now is, for the fold to
+ * unfold to ([SourcesFold.reach]).
  */
 @Stable
 internal class LineFocus(
@@ -68,17 +67,6 @@ internal class LineFocus(
         evidence?.get(id)?.let { hidden = hidden - it.source }
         flash = Flash(id, ++taps)
         return indexOf(id)
-    }
-
-    /**
-     * Shows [chip]'s lines and scrolls to the first, unflashed; returns its place in the list as
-     * it now shows, or null when the chip's sources have no line.
-     */
-    fun reveal(chip: SourceChip): Int? {
-        hidden = hidden - chip.filters
-        val first = evidence?.lines?.firstOrNull { it.source in chip.filters } ?: return null
-        flash = Flash(first.id, ++taps, flashes = false)
-        return indexOf(first.id)
     }
 
     /** Where the line [id] is among the lines shown, or null if it is not one of them. */

@@ -19,7 +19,7 @@ import app.sleevesight.core.model.NowPlaying
  * test.
  */
 internal sealed interface Fold {
-    /** None of the list shows: the heading, the chips and *show* only. */
+    /** None of the list shows: the section's heading only (#440). */
     data object Folded : Fold
 
     /** The first [count] screenfuls of the list, at least one. */
@@ -81,8 +81,8 @@ internal sealed interface Fold {
 /**
  * What the fold is kept as across recompositions and a recreated screen (a rotation, or Android
  * restoring the screen it had closed): the [fold] of the track last shown, [track], so a new
- * track can start folded. [touched] is whether a fold control (or a citation, or a chip) changed
- * the fold on that track, so changes in how much shows are announced only once the listener has
+ * track can start folded. [touched] is whether the heading, a paging control, a citation or a
+ * chip changed the fold on that track, so changes in how much shows are announced only once the listener has
  * acted on the list; it is not saved.
  */
 @Stable

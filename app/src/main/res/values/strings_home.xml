@@ -35,9 +35,9 @@
     <!-- The disclosure triangles of the genres' and the sources' folds: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
-    <!-- The fold's state, as a screen reader says it. -->
-    <string name="home_genres_collapsed">collapsed</string>
-    <string name="home_genres_expanded">expanded</string>
+    <!-- A fold's state, as a screen reader says it. -->
+    <string name="home_fold_collapsed">collapsed</string>
+    <string name="home_fold_expanded">expanded</string>
     <string name="home_genres_track">Track</string>
     <string name="home_genres_artist_row">Artist</string>
     <string name="home_genres_album">Album</string>
@@ -117,6 +117,7 @@
 
     <!-- Sources. -->
     <string name="home_sources_title">Sources</string>
+    <!-- A source's chip under Show grounding details: its letter and its status ("W the song"). -->
     <string name="home_source_chip">%1$s %2$s</string>
     <string name="home_source_pending">looking</string>
     <string name="home_source_found_song">the song</string>
@@ -132,27 +133,23 @@
     <string name="home_source_release">release</string>
     <string name="home_source_model_allowed">allowed</string>
     <string name="home_source_filter">Show or hide the lines of %1$s</string>
-    <!-- A chip's action while the list is folded: it unfolds the list to that source's first line. -->
-    <string name="home_source_reveal">Show the lines of %1$s</string>
     <string name="home_source_lines_shown">lines shown</string>
     <string name="home_source_lines_hidden">lines hidden</string>
     <string name="home_sources_offline">Offline. The sources that could not be reached are asked again when the phone is back online.</string>
-    <!-- The fold of the list of sources: each control as drawn, and as a screen reader says it. -->
-    <string name="home_sources_show">show ▸</string>
-    <string name="home_sources_show_words">Show sources</string>
-    <string name="home_sources_hide">hide ▾</string>
-    <string name="home_sources_hide_words">Hide sources</string>
-    <string name="home_sources_more">more…</string>
+    <!-- What needs the listener, under the chips: a source's name, then what it needs or what went wrong. -->
+    <string name="home_source_note_key">%1$s needs your key, in %2$s.</string>
+    <!-- The link to the settings in the sentence above. -->
+    <string name="home_source_note_settings">Settings</string>
+    <string name="home_source_note_unreachable">%1$s could not be reached.</string>
+    <string name="home_source_note_failed">%1$s failed.</string>
+    <!-- The paging of the list of sources: each control as drawn, and as a screen reader says it. -->
+    <string name="home_sources_more">show more…</string>
     <string name="home_sources_more_words">Show more sources</string>
-    <string name="home_sources_all">show all ▸▸</string>
+    <string name="home_sources_all">show all</string>
     <string name="home_sources_all_words">Show all sources</string>
-    <string name="home_sources_less">… less</string>
+    <string name="home_sources_less">… show less</string>
     <string name="home_sources_less_words">Show fewer sources</string>
-    <!-- How much of the list shows. An entry is an evidence line, an unverified line or a rejected match. -->
-    <plurals name="home_sources_folded">
-        <item quantity="one">%d entry, folded</item>
-        <item quantity="other">%d entries, folded</item>
-    </plurals>
+    <!-- How much of the list shows, unfolded. An entry is an evidence line, an unverified line or a rejected match. -->
     <string name="home_sources_showing">Showing %1$d of %2$d entries</string>
     <plurals name="home_sources_showing_all">
         <item quantity="one">Showing %d entry</item>
@@ -179,4 +176,7 @@
     <string name="home_source_name_discogs">Discogs</string>
     <string name="home_source_name_web">Web search</string>
     <string name="home_source_name_player">the player</string>
+    <!-- Chips' names under Sources, beside their letters, where they differ from the settings' names. -->
+    <string name="home_source_chip_wikipedia">Wikipedia</string>
+    <string name="home_source_chip_player">Player</string>
 </resources>

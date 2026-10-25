@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,11 +26,14 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -54,22 +58,27 @@ import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
 /**
- * The *Sources* section, quiet, at the bottom (design, *Home screen*): a chip per source with its
- * state, which shows or hides that source's lines (a display filter only: what the model may use
- * is the settings'), the chips of a row centred on one line; the evidence lines, each with its
- * scope and a link to where it was found; the lines of matches that could not be verified, which
- * are shown but never cited; and the matches rejected, with their reasons. The lines are a table
- * of two columns (#270): the tags right-aligned in the first, as wide as the widest, so every
- * line's text starts at the same place.
+ * The *Sources* section, quiet, at the bottom (design, *Home screen*). Its heading is its fold
+ * (#440): `Sources ▸` folded, and nothing else; `Sources ▾` unfolded, and under it a chip for each
+ * source that gave lines, by name with the letter its citations use ([chipsWithLines]), which shows
+ * or hides that source's lines (a display filter only: what the model may use is the settings'),
+ * the chips of a row centred on one line; a note when a source needs the listener's key, could not
+ * be reached or failed ([sourceNotes]), its key's linking to the settings ([openSettings]); and the
+ * list: the evidence lines, each with its scope and a link to where it was found, and the lines of
+ * matches that could not be verified, which are shown but never cited. The lines are a table of two
+ * columns (#270): the tags right-aligned in the first, as wide as the widest, so every line's text
+ * starts at the same place.
  *
- * The list is folded ([fold], #269): it starts folded, the heading and the chips showing and
- * *show* under them, and unfolds a screenful ([Fold.PAGE] lines) at a time, *more* and *show all*
- * under it while lines remain, *less* back to the first screenful once past it, and *hide* above
- * it and under it, so folding it is never a scroll away. The unverified lines and the rejected
- * matches are part of the list, after the evidence lines, under their own headings. While the
- * list is folded, a chip unfolds it to its source's first line rather than hiding its lines, and
- * a citation tapped unfolds it to the line cited ([LineFocus.cite]). Each control is a button a
- * screen reader names in words, and the list says how much of it shows.
+ * With *Show grounding details* on ([details]), the chips are every source's, as [chips] has them,
+ * each with its letter and its status ("W the song (kept)"), the model's own knowledge's `M` among
+ * them, and the list ends with the matches the sources rejected, with their reasons.
+ *
+ * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
+ * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
+ * The unverified lines and the rejected matches are part of the list, after the evidence lines,
+ * under their own headings. A citation tapped unfolds it to the line cited ([LineFocus.cite]). The
+ * heading is a button a screen reader names *Sources*, collapsed or expanded, each control one it
+ * names in words, and the list says how much of it shows.
  *
  * When the insight shown is the one written earlier ([cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
@@ -78,7 +87,7 @@ import app.sleevesight.core.pipeline.TrackState
  * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
  * sources are asked again once it is back online.
  */
-@Suppress("LongParameterList") // What the section shows, and the two states it is unfolded by.
+@Suppress("LongParameterList") // What the section shows, the states it is unfolded by, and its link.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SourcesSection(
@@ -88,56 +97,143 @@ internal fun SourcesSection(
     fold: SourcesFold,
     cardKept: Boolean,
     offline: Boolean = false,
+    details: Boolean = false,
+    openSettings: () -> Unit = {},
 ) {
     val hidden = focus.hidden
+    val lines = track?.evidence?.lines.orEmpty()
+    val unverified = track?.let(::unverifiedLines).orEmpty()
+    val entries =
+        lines.filter { it.source !in hidden }.map(Entry::Line) +
+            unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
+            (if (details) track?.let(::rejectedMatches).orEmpty() else emptyList())
+                .mapIndexed { index, match -> Entry.Rejected(match, index) }
+    // The lines the chips hide: with every entry hidden, the count still shows.
+    val filtered = lines.count { it.source in hidden }
     val folded = fold.fold == Fold.Folded
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(R.string.home_sources_title),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() },
-        )
-        val lines = track?.evidence?.lines.orEmpty()
-        val unverified = track?.let(::unverifiedLines).orEmpty()
+        SourcesHeading(folded) {
+            if (!folded) {
+                fold.set(Fold.Folded)
+            } else {
+                // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
+                if (entries.isEmpty()) focus.showAll()
+                fold.set(Fold.Pages(1))
+            }
+        }
+        if (folded) return@Column
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
-            for (chip in chips) {
-                val filters = lines.any { it.source in chip.filters }
-                val shown = chip.filters.none { it in hidden }
-                StatusChip(chip, filtering = filters, shown = shown, folded = folded) {
+        val shownChips = if (details) chips else chipsWithLines(chips, track?.evidence)
+        if (shownChips.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (chip in shownChips) {
+                    val filters = lines.any { it.source in chip.filters }
+                    val shown = chip.filters.none { it in hidden }
                     // Lines shown again are unfolded to, wherever they fall in the list.
-                    (if (folded) focus.reveal(chip) else focus.toggle(chip))?.let(fold::reach)
+                    val toggle = { focus.toggle(chip)?.let(fold::reach) }
+                    if (details) {
+                        StatusChip(chip, filtering = filters, shown = shown) { toggle() }
+                    } else {
+                        NameChip(chip, shown = shown) { toggle() }
+                    }
                 }
             }
         }
+        val notes = sourceNotes(chips, offline)
+        if (notes.isNotEmpty()) Notes(notes, openSettings)
         if (offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
             val empty = if (track?.gathered == true) R.string.home_evidence_empty else R.string.home_evidence_looking
             Small(stringResource(empty))
         }
-        val entries =
-            lines.filter { it.source !in hidden }.map(Entry::Line) +
-                unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
-                track
-                    ?.let(::rejectedMatches)
-                    .orEmpty()
-                    .mapIndexed { index, match -> Entry.Rejected(match, index) }
-        // The lines the chips hide: with every entry hidden, the fold and its count still show.
-        val filtered = lines.count { it.source in hidden }
         if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size
         val shown = fold.fold.shown(total)
-        FoldStatus(fold, shown, total, filtered, focus::showAll)
+        FoldStatus(fold, shown, total, filtered)
         if (shown == 0) return@Column
         if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
         Entries(entries.take(shown), tagWidth, focus)
         FoldControls(fold, shown, total)
     }
+}
+
+/**
+ * The section's heading, and its fold (#440): `Sources` and the disclosure triangle of the genres'
+ * fold (#439), right while [folded], down while not; the whole line a button, which a screen
+ * reader reads as the heading *Sources*, collapsed or expanded.
+ */
+@Composable
+private fun SourcesHeading(
+    folded: Boolean,
+    toggle: () -> Unit,
+) {
+    val name = stringResource(R.string.home_sources_title)
+    val state = stringResource(if (folded) R.string.home_fold_collapsed else R.string.home_fold_expanded)
+    val symbol = stringResource(if (folded) R.string.home_fold_folded else R.string.home_fold_unfolded)
+    Text(
+        "$name $symbol",
+        style = MaterialTheme.typography.titleSmall,
+        modifier =
+            Modifier
+                .testTag(SOURCES_FOLD_TAG)
+                .minimumInteractiveComponentSize()
+                .clip(RoundedCornerShape(4.dp))
+                .clickable(role = Role.Button, onClick = toggle)
+                .clearAndSetSemantics {
+                    heading()
+                    contentDescription = name
+                    stateDescription = state
+                }.wrapContentHeight(Alignment.CenterVertically)
+                .padding(end = 4.dp),
+    )
+}
+
+/**
+ * What needs the listener, in one note (#440): each source that needs its key, "Last.fm needs your
+ * key, in Settings.", the settings a link ([openSettings]); each one that could not be reached or
+ * failed.
+ */
+@Composable
+private fun Notes(
+    notes: List<SourceNote>,
+    openSettings: () -> Unit,
+) {
+    val settings = stringResource(R.string.home_source_note_settings)
+    val linkStyle = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
+    val sentences =
+        notes.map { note ->
+            val name = chipName(note.source)
+            when (note) {
+                is SourceNote.NeedsKey -> stringResource(R.string.home_source_note_key, name, settings)
+                is SourceNote.Unreachable -> stringResource(R.string.home_source_note_unreachable, name)
+                is SourceNote.Failed -> stringResource(R.string.home_source_note_failed, name)
+            } to (note is SourceNote.NeedsKey)
+        }
+    val text =
+        buildAnnotatedString {
+            sentences.forEachIndexed { index, (sentence, linked) ->
+                if (index > 0) append(" ")
+                val at = sentence.lastIndexOf(settings)
+                if (!linked || at < 0) {
+                    append(sentence)
+                    return@forEachIndexed
+                }
+                append(sentence.substring(0, at))
+                withLink(LinkAnnotation.Clickable(SETTINGS_LINK, linkStyle) { openSettings() }) { append(settings) }
+                append(sentence.substring(at + settings.length))
+            }
+        }
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testTag(SOURCES_NOTE_TAG),
+    )
 }
 
 /**
@@ -217,15 +313,14 @@ internal fun offlineShown(
         track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
 
 /**
- * A source's chip: its tag and state. One whose source has lines ([filtering]) shows or hides them
- * ([shown]); while the list is [folded], it unfolds the list to them instead, a button then.
+ * A source's chip under *Show grounding details*: its letter and its status ("W the song"), as the
+ * chips were before #440. One whose source has lines ([filtering]) shows or hides them ([shown]).
  */
 @Composable
 private fun StatusChip(
     chip: SourceChip,
     filtering: Boolean,
     shown: Boolean,
-    folded: Boolean,
     onToggle: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -233,28 +328,17 @@ private fun StatusChip(
     val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
     val shape = RoundedCornerShape(8.dp)
     // The chip's own text is what it says; the filter is its action and its state.
-    val name = sourceName(chip.source)
-    val action = stringResource(if (folded) R.string.home_source_reveal else R.string.home_source_filter, name)
+    val action = stringResource(R.string.home_source_filter, sourceName(chip.source))
     val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
     val toggle =
-        when {
-            !filtering -> {
-                Modifier
-            }
-
-            folded -> {
-                Modifier
-                    .semantics { stateDescription = state }
-                    .clickable(onClickLabel = action, role = Role.Button, onClick = onToggle)
-            }
-
-            else -> {
-                Modifier
-                    .semantics {
-                        stateDescription = state
-                        toggleableState = ToggleableState(shown)
-                    }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
-            }
+        if (filtering) {
+            Modifier
+                .semantics {
+                    stateDescription = state
+                    toggleableState = ToggleableState(shown)
+                }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
+        } else {
+            Modifier
         }
     Text(
         label,
@@ -276,6 +360,45 @@ private fun StatusChip(
                 .then(toggle)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
     )
+}
+
+/**
+ * A source's chip (#440): the letter its citations use, small, and its name ("W Wikipedia"); it
+ * shows or hides the source's lines ([shown]). A screen reader reads it as the source's name, and
+ * whether its lines show.
+ */
+@Composable
+private fun NameChip(
+    chip: SourceChip,
+    shown: Boolean,
+    onToggle: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(8.dp)
+    val name = chipName(chip.source)
+    val action = stringResource(R.string.home_source_filter, name)
+    val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
+    val color = if (shown) colors.onSurfaceVariant else colors.outline
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .testTag(CHIP_PREFIX + chip.source.tag)
+                .minimumInteractiveComponentSize()
+                .clip(shape)
+                .background(if (shown) colors.secondaryContainer else Color.Transparent, shape)
+                .border(1.dp, colors.outlineVariant, shape)
+                .clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
+                .clearAndSetSemantics {
+                    contentDescription = name
+                    stateDescription = state
+                    toggleableState = ToggleableState(shown)
+                }.padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(chip.source.tag, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = LETTER_ALPHA))
+        Text(name, style = MaterialTheme.typography.labelMedium, color = color)
+    }
 }
 
 /**
@@ -390,8 +513,20 @@ private fun Small(text: String) {
 
 private val TAG_PADDING = 4.dp
 
+// The letter beside a chip's name: there to match a citation to its chip, quieter than the name.
+private const val LETTER_ALPHA = 0.75f
+
+// The note's link to the settings.
+private const val SETTINGS_LINK = "settings"
+
 /** The test tag of a source's chip, before its tag (`MB`, `W`). */
 const val CHIP_PREFIX: String = "chip:"
+
+/** The test tag of the section's heading, its fold. */
+const val SOURCES_FOLD_TAG: String = "sources-fold"
+
+/** The test tag of the note of what needs the listener. */
+const val SOURCES_NOTE_TAG: String = "sources-note"
 
 /** The test tag of an evidence line, before its id. */
 const val LINE_PREFIX: String = "line:"

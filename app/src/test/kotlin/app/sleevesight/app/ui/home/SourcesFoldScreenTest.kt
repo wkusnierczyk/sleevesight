@@ -26,7 +26,6 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -68,7 +67,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** The *Sources* list's fold (#269): each state, the moves between them, and what unfolds it. */
+/**
+ * The *Sources* list's fold (#269), its heading since #440: each state, the moves between them, and
+ * what unfolds it.
+ */
 @RunWith(RobolectricTestRunner::class)
 class SourcesFoldScreenTest {
     @get:Rule
@@ -177,88 +179,103 @@ class SourcesFoldScreenTest {
 
     private fun status(expected: String) = compose.onNodeWithTag(FOLD_STATUS_TAG).assertTextEquals(expected)
 
-    /** Which controls show, by tag, as a set. */
+    /** Which paging controls show, by tag, as a set. */
     private fun controls(): Set<String> =
-        listOf(FOLD_SHOW_TAG, FOLD_HIDE_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG, FOLD_LESS_TAG)
-            .flatMap { tag -> List(count(tag)) { tag } }
-            .groupingBy { it }
-            .eachCount()
-            .map { (tag, n) -> if (n > 1) "$tag x$n" else tag }
-            .toSet()
+        listOf(FOLD_MORE_TAG, FOLD_ALL_TAG, FOLD_LESS_TAG).filter { count(it) > 0 }.toSet()
+
+    /** The heading as drawn: `Sources` and its disclosure triangle. */
+    private fun heading(folded: Boolean) =
+        text(R.string.home_sources_title) + " " +
+            text(if (folded) R.string.home_fold_folded else R.string.home_fold_unfolded)
+
+    // The heading's state as a screen reader says it: its triangle drawn is not read.
+    private fun headingDrawn(folded: Boolean) =
+        compose
+            .onNodeWithTag(SOURCES_FOLD_TAG)
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.StateDescription,
+                    text(if (folded) R.string.home_fold_collapsed else R.string.home_fold_expanded),
+                ),
+            )
 
     @Test
-    fun theListStartsFoldedWithItsHeadingChipsAndShow() =
-        show(state(long(20))) {
-            compose.onNodeWithText(text(R.string.home_sources_title)).assertExists()
-            compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
-            assertEquals(setOf(FOLD_SHOW_TAG), controls())
+    fun theListStartsFoldedAsItsHeadingAlone() =
+        show(state(long(20, wikipedia = 3))) {
+            compose.onNodeWithTag(SOURCES_FOLD_TAG).assertExists()
+            // No chips, no note, no count, no controls: the heading's line only.
+            assertEquals(0, count(CHIP_PREFIX + "MB"))
+            assertEquals(0, count(CHIP_PREFIX + "W"))
+            assertEquals(0, count(FOLD_STATUS_TAG))
+            assertEquals(emptySet<String>(), controls())
             assertEquals(0, linesShown())
-            status(plural(R.plurals.home_sources_folded, 20))
         }
 
     @Test
-    fun showUnfoldsTheFirstScreenfulWithMoreAndShowAllUnderIt() =
+    fun theHeadingUnfoldsTheFirstScreenfulWithShowMoreAndShowAllUnderIt() =
         show(state(long(20))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             assertEquals(Fold.PAGE, linesShown())
             compose.onNodeWithTag(LINE_PREFIX + "MB8").assertExists()
             assertEquals(0, count(LINE_PREFIX + "MB9"))
-            // *hide* above the list and under it; no *less* at the first screenful.
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
+            compose.onNodeWithTag(CHIP_PREFIX + "MB").assertExists()
+            // No *less* at the first screenful.
+            assertEquals(setOf(FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
             status(text(R.string.home_sources_showing, 8, 20))
         }
 
     @Test
-    fun moreAddsAScreenfulUntilTheEndAndLessGoesBackToTheFirst() =
+    fun showMoreAddsAScreenfulUntilTheEndAndShowLessGoesBackToTheFirst() =
         show(state(long(20))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             assertEquals(16, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
+            assertEquals(setOf(FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
             status(text(R.string.home_sources_showing, 16, 20))
 
             tap(FOLD_MORE_TAG)
             assertEquals(20, linesShown())
-            // Nothing left: *more* and *show all* go, *less* stays.
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG), controls())
+            // Nothing left: *show more…* and *show all* go, *… show less* stays.
+            assertEquals(setOf(FOLD_LESS_TAG), controls())
             status(plural(R.plurals.home_sources_showing_all, 20))
 
             tap(FOLD_LESS_TAG)
             assertEquals(Fold.PAGE, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
+            assertEquals(setOf(FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
         }
 
     @Test
-    fun showAllShowsEveryLineWithLessAndHide() =
+    fun showAllShowsEveryLineWithShowLess() =
         show(state(long(20))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_ALL_TAG)
             assertEquals(20, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG), controls())
+            assertEquals(setOf(FOLD_LESS_TAG), controls())
         }
 
     @Test
-    fun hideAboveOrUnderTheListFoldsItFromEveryUnfoldedState() =
+    fun theHeadingFoldsItFromEveryUnfoldedStateWithItsTriangleTurned() =
         show(state(long(20))) {
+            headingDrawn(folded = true)
             for (unfold in listOf(emptyList(), listOf(FOLD_MORE_TAG), listOf(FOLD_ALL_TAG))) {
-                for (top in listOf(true, false)) {
-                    tap(FOLD_SHOW_TAG)
-                    unfold.forEach(::tap)
-                    val hides = compose.onAllNodesWithTag(FOLD_HIDE_TAG)
-                    (if (top) hides.onFirst() else hides.onLast()).performScrollTo().performClick()
-                    compose.waitForIdle()
-                    assertEquals("$unfold, top $top", 0, linesShown())
-                    assertEquals(setOf(FOLD_SHOW_TAG), controls())
-                }
+                tap(SOURCES_FOLD_TAG)
+                unfold.forEach(::tap)
+                headingDrawn(folded = false)
+                tap(SOURCES_FOLD_TAG)
+                headingDrawn(folded = true)
+                assertEquals("$unfold", 0, linesShown())
+                assertEquals(emptySet<String>(), controls())
+                assertEquals(0, count(CHIP_PREFIX + "MB"))
+                assertEquals(0, count(FOLD_STATUS_TAG))
             }
         }
 
     @Test
-    fun aListOfAScreenfulOrLessUnfoldsWholeWithHideOnly() =
+    fun aListOfAScreenfulOrLessUnfoldsWholeWithNoPaging() =
         show(state(track())) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             assertEquals(3, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2"), controls())
+            assertEquals(emptySet<String>(), controls())
             status(plural(R.plurals.home_sources_showing_all, 3))
         }
 
@@ -274,51 +291,61 @@ class SourcesFoldScreenTest {
             }
             compose.waitForIdle()
             compose.onNodeWithTag(LINE_PREFIX + "MB12").assertIsDisplayed()
-            // Unfolded by whole screenfuls, so *more* goes on from there.
+            // Unfolded by whole screenfuls, so *show more…* goes on from there.
             assertEquals(16, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
+            assertEquals(setOf(FOLD_LESS_TAG, FOLD_MORE_TAG, FOLD_ALL_TAG), controls())
         }
     }
 
     @Test
-    fun aChipChosenWhileFoldedUnfoldsToItsSourcesFirstLineEvenIfItHidThem() =
-        show(state(long(20, wikipedia = 3))) {
-            tap(CHIP_PREFIX + "W")
-            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
-            assertEquals(23, linesShown())
+    fun thePagingReadsShowMoreShowLessAndShowAllInPlainText() {
+        assertEquals("show more…", text(R.string.home_sources_more))
+        assertEquals("… show less", text(R.string.home_sources_less))
+        assertEquals("show all", text(R.string.home_sources_all))
+    }
 
-            // Unfolded, the chip hides its lines; folded again, it shows them and unfolds to them.
-            tap(FOLD_LESS_TAG)
-            tap(CHIP_PREFIX + "W")
-            assertEquals(Fold.PAGE, linesShown())
-            tap(FOLD_HIDE_TAG)
-            tap(CHIP_PREFIX + "W")
-            compose.onNodeWithTag(LINE_PREFIX + "W1").assertIsDisplayed()
-            compose
-                .onNodeWithTag(CHIP_PREFIX + "W")
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.StateDescription,
-                        text(R.string.home_source_lines_shown),
-                    ),
-                )
+    @Test
+    fun theHeadingIsAButtonReadAsSourcesCollapsedOrExpanded() =
+        show(state(long(20))) {
+            fun check(expanded: Boolean) {
+                compose
+                    .onNodeWithTag(SOURCES_FOLD_TAG)
+                    .performScrollTo()
+                    .assert(
+                        SemanticsMatcher.expectValue(
+                            SemanticsProperties.ContentDescription,
+                            listOf(text(R.string.home_sources_title)),
+                        ),
+                    ).assert(
+                        SemanticsMatcher.expectValue(
+                            SemanticsProperties.StateDescription,
+                            text(if (expanded) R.string.home_fold_expanded else R.string.home_fold_collapsed),
+                        ),
+                    ).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+                    .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                    .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick))
+                    .assertTouchHeightIsEqualTo(48.dp)
+                // The triangle is not read: no node says the heading as drawn.
+                for (folded in listOf(true, false)) {
+                    assertEquals(0, compose.onAllNodesWithText(heading(folded)).fetchSemanticsNodes().size)
+                }
+            }
+            check(expanded = false)
+            tap(SOURCES_FOLD_TAG)
+            check(expanded = true)
         }
 
     @Test
-    fun theControlsAreButtonsNamedInWordsWith48DpTargets() =
+    fun thePagingControlsAreButtonsNamedInWordsWith48DpTargets() =
         show(state(long(20))) {
             val words =
                 mapOf(
-                    FOLD_SHOW_TAG to R.string.home_sources_show_words,
-                    FOLD_HIDE_TAG to R.string.home_sources_hide_words,
                     FOLD_MORE_TAG to R.string.home_sources_more_words,
                     FOLD_ALL_TAG to R.string.home_sources_all_words,
                     FOLD_LESS_TAG to R.string.home_sources_less_words,
                 )
             val drawn =
                 listOf(
-                    R.string.home_sources_show,
-                    R.string.home_sources_hide,
                     R.string.home_sources_more,
                     R.string.home_sources_all,
                     R.string.home_sources_less,
@@ -343,18 +370,7 @@ class SourcesFoldScreenTest {
                 }
             }
 
-            check(FOLD_SHOW_TAG)
-            // Not announced until the listener changes the fold.
-            assertFalse(announced())
-            // A folded chip is a button that shows its source's lines.
-            val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB")
-            chip.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-            assertEquals(
-                text(R.string.home_source_reveal, text(R.string.settings_source_musicbrainz)),
-                chip.fetchSemanticsNode().config[SemanticsActions.OnClick].label,
-            )
-            tap(FOLD_SHOW_TAG)
-            check(FOLD_HIDE_TAG)
+            tap(SOURCES_FOLD_TAG)
             check(FOLD_MORE_TAG)
             check(FOLD_ALL_TAG)
             tap(FOLD_MORE_TAG)
@@ -363,26 +379,28 @@ class SourcesFoldScreenTest {
             compose
                 .onNodeWithTag(FOLD_STATUS_TAG)
                 .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
-            // An unfolded chip is the filter switch it was.
-            chip.assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
+            // A chip is the filter switch it was.
+            compose
+                .onNodeWithTag(CHIP_PREFIX + "MB")
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch))
         }
 
     @Test
     fun aNewTrackStartsFoldedByDefault() =
         show(state(long(20))) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             assertEquals(Fold.PAGE, linesShown())
             current.value = state(long(20, playing = carefree))
             compose.waitForIdle()
             assertEquals(0, linesShown())
-            assertEquals(setOf(FOLD_SHOW_TAG), controls())
+            headingDrawn(folded = true)
         }
 
     @Test
     fun aNewTrackKeepsTheFoldAsLeftWithTheSettingOnAtItsFirstScreenful() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             assertEquals(16, linesShown())
             current.value = state(long(20, playing = carefree), keep)
@@ -394,7 +412,7 @@ class SourcesFoldScreenTest {
             compose.waitForIdle()
             assertEquals(20, linesShown())
 
-            tap(FOLD_HIDE_TAG)
+            tap(SOURCES_FOLD_TAG)
             current.value = state(long(20, playing = carefree), keep)
             compose.waitForIdle()
             assertEquals(0, linesShown())
@@ -404,7 +422,7 @@ class SourcesFoldScreenTest {
     @Test
     fun theSameTrackKeepsItsFoldWhenItsEvidenceChanges() =
         show(state(long(20))) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             // The sources asked again (back online): a new evidence set for the track playing on.
             current.value = state(long(21))
@@ -413,7 +431,7 @@ class SourcesFoldScreenTest {
         }
 
     @Test
-    fun unverifiedLinesAndRejectedMatchesFoldWithTheRestUnderTheirHeadings() {
+    fun unverifiedLinesAndWithGroundingDetailsRejectedMatchesFoldWithTheRestUnderTheirHeadings() {
         val mb = (1..7).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
         val unverified: List<EvidenceDraft> =
             listOf(draft(SourceId.WIKIPEDIA, "Perhaps one."), draft(SourceId.WIKIPEDIA, "Perhaps two."))
@@ -426,11 +444,11 @@ class SourcesFoldScreenTest {
                         rejections = listOf(Rejection("Sundown (film)", "a film", Scope.SONG)),
                     ),
             )
-        show(state(track(sources = sources, evidence = EvidenceSet.of(mb, JvmHasher)))) {
+        val details = Settings(showGroundingDetails = true)
+        show(state(track(sources = sources, evidence = EvidenceSet.of(mb, JvmHasher)), details)) {
             assertEquals(0, compose.onAllNodesWithText(text(R.string.home_unverified)).fetchSemanticsNodes().size)
-            status(plural(R.plurals.home_sources_folded, 10))
 
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             // The first screenful: 7 lines and the first unverified one, under its heading.
             assertEquals(7, linesShown())
             compose.onNodeWithText(text(R.string.home_unverified)).assertExists()
@@ -445,6 +463,15 @@ class SourcesFoldScreenTest {
             val wikipedia = text(R.string.settings_source_wikipedia)
             val rejected = text(R.string.home_rejected_subject, wikipedia, "Sundown (film)", "a film")
             compose.onNodeWithText(rejected).assertExists()
+        }
+        // Without the setting, no rejected match: the 7 lines and the 2 unverified ones.
+        show(state(track(sources = sources, evidence = EvidenceSet.of(mb, JvmHasher)))) {
+            tap(SOURCES_FOLD_TAG)
+            status(text(R.string.home_sources_showing, 8, 9))
+            tap(FOLD_MORE_TAG)
+            status(plural(R.plurals.home_sources_showing_all, 9))
+            compose.onNodeWithText("Perhaps two.").assertExists()
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.home_rejected_title)).fetchSemanticsNodes().size)
         }
     }
 
@@ -467,7 +494,7 @@ class SourcesFoldScreenTest {
     @Test
     fun aTrackPlayedAgainAfterOthersStartsFoldedWithNoFoldChangedOnTheOthers() =
         show(state(long(20))) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             current.value = state(long(20, playing = carefree))
             compose.waitForIdle()
@@ -480,7 +507,7 @@ class SourcesFoldScreenTest {
     fun withTheSettingOnATrackPlayedAgainAfterOthersComesBackAtItsFirstScreenful() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             current.value = state(long(20, playing = carefree), keep)
             compose.waitForIdle()
@@ -493,7 +520,7 @@ class SourcesFoldScreenTest {
     @Test
     fun theFoldOutlivesARestoredScreen() =
         show(state(long(20))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             restore()
             assertEquals(16, linesShown())
@@ -503,7 +530,7 @@ class SourcesFoldScreenTest {
     fun theFoldOutlivesAWhileWithNothingPlaying() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             current.value = NowPlayingState(PipelineView(), playing = null, settings = keep)
             compose.waitForIdle()
             current.value = state(long(20, playing = carefree), keep)
@@ -513,24 +540,28 @@ class SourcesFoldScreenTest {
     }
 
     @Test
-    fun howMuchShowsIsAnnouncedOnlyOnceTheFoldWasChangedOnTheTrack() =
-        show(state(long(20))) { current ->
+    fun howMuchShowsIsAnnouncedOnlyOnceTheFoldWasChangedOnTheTrack() {
+        val keep = Settings(keepSourcesUnfolded = true)
+        show(state(long(20), keep)) { current ->
+            tap(SOURCES_FOLD_TAG)
+            assertTrue(announced())
+            // The next track, unfolded as left: not announced until the listener changes the fold.
+            current.value = state(long(20, playing = carefree), keep)
+            compose.waitForIdle()
             assertFalse(announced())
             // Sources landing change the count by themselves: not announced.
-            current.value = state(long(21))
+            current.value = state(long(21, playing = carefree), keep)
             compose.waitForIdle()
             assertFalse(announced())
-            tap(FOLD_SHOW_TAG)
+            tap(FOLD_MORE_TAG)
             assertTrue(announced())
-            current.value = state(long(20, playing = carefree))
-            compose.waitForIdle()
-            assertFalse(announced())
         }
+    }
 
     @Test
     fun aCitationOfALineWhoseSourceAChipHidWhilePartlyUnfoldedReachesIt() =
         show(state(citing(long(20, wikipedia = 3), "W3"))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(CHIP_PREFIX + "W")
             assertEquals(0, count(LINE_PREFIX + "W3"))
             cite("W3")
@@ -543,13 +574,13 @@ class SourcesFoldScreenTest {
             cite("MB20")
             compose.onNodeWithTag(LINE_PREFIX + "MB20").assertIsDisplayed()
             assertEquals(20, linesShown())
-            assertEquals(setOf("$FOLD_HIDE_TAG x2", FOLD_LESS_TAG), controls())
+            assertEquals(setOf(FOLD_LESS_TAG), controls())
         }
 
     @Test
     fun aChipShowingItsLinesAgainWhilePartlyUnfoldedUnfoldsToThem() =
         show(state(long(20, wikipedia = 3))) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(CHIP_PREFIX + "W")
             tap(CHIP_PREFIX + "W")
             // Unfolded to, and scrolled to: it is far below the chip tapped.
@@ -558,19 +589,18 @@ class SourcesFoldScreenTest {
         }
 
     @Test
-    fun withEveryEntryHiddenByTheChipsHideAndTheCountStay() =
+    fun withEveryEntryHiddenByTheChipsTheCountSaysSoAndUnfoldingAgainShowsThem() =
         show(state(track())) {
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(CHIP_PREFIX + "MB")
             tap(CHIP_PREFIX + "W")
             assertEquals(0, linesShown())
-            assertEquals(setOf(FOLD_HIDE_TAG), controls())
+            assertEquals(emptySet<String>(), controls())
             status(plural(R.plurals.home_sources_filtered, 3))
-            tap(FOLD_HIDE_TAG)
-            assertEquals(setOf(FOLD_SHOW_TAG), controls())
-            status(plural(R.plurals.home_sources_filtered, 3))
-            // *show* then shows the lines the chips hid, not an empty list.
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
+            assertEquals(0, count(FOLD_STATUS_TAG))
+            // Unfolding then shows the lines the chips hid, not an empty list.
+            tap(SOURCES_FOLD_TAG)
             assertEquals(3, linesShown())
             compose
                 .onNodeWithTag(CHIP_PREFIX + "MB")
@@ -586,7 +616,7 @@ class SourcesFoldScreenTest {
     fun aTrackChangeWhileTheSettingsAreUnreadFoldsTheListWhenTheyKeepNone() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             // The settings unread across the track change, then read with the setting off.
             current.value =
@@ -595,7 +625,7 @@ class SourcesFoldScreenTest {
             current.value = state(long(20, playing = carefree), Settings())
             compose.waitForIdle()
             assertEquals(0, linesShown())
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             assertEquals(Fold.PAGE, linesShown())
         }
     }
@@ -604,7 +634,7 @@ class SourcesFoldScreenTest {
     fun aTrackChangeWhileTheSettingsAreUnreadKeepsTheFoldTheyKeep() {
         val keep = Settings(keepSourcesUnfolded = true)
         show(state(long(20), keep)) { current ->
-            tap(FOLD_SHOW_TAG)
+            tap(SOURCES_FOLD_TAG)
             tap(FOLD_MORE_TAG)
             // Back from another screen: the settings not read yet, and the next track playing.
             current.value =

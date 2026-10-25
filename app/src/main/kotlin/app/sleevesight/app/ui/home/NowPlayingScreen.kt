@@ -61,9 +61,12 @@ class HomeFeed(
     val stop: (CallId) -> Unit,
 )
 
-/** The now-playing part of the home screen, from [feed]. */
+/** The now-playing part of the home screen, from [feed]; a link to the settings goes to [openSettings]. */
 @Composable
-fun NowPlayingHome(feed: HomeFeed) {
+fun NowPlayingHome(
+    feed: HomeFeed,
+    openSettings: () -> Unit = {},
+) {
     val view by feed.view.collectAsState()
     val playing by feed.nowPlaying.collectAsState()
     val playback by feed.playback.collectAsState()
@@ -77,6 +80,7 @@ fun NowPlayingHome(feed: HomeFeed) {
             playerActivity = feed.playerActivity,
             write = feed.write,
             stop = feed.stop,
+            openSettings = openSettings,
         ),
     )
 }
@@ -92,7 +96,8 @@ internal class NowPlayingState(
 
 /**
  * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
- * with the insight (#390); null is the phone's own mail apps ([PhoneMail]).
+ * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
+ * the settings, from *Sources*' note of a source that needs its key (#440).
  */
 internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
@@ -101,6 +106,7 @@ internal class NowPlayingActions(
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
     val mail: MailHandoff? = null,
+    val openSettings: () -> Unit = {},
 )
 
 /**
@@ -170,6 +176,8 @@ internal fun NowPlayingContent(
                     fold = fold,
                     cardKept = view.cardShown && track != null,
                     offline = offlineShown(view, track),
+                    details = settings?.showGroundingDetails == true,
+                    openSettings = actions.openSettings,
                 )
             }
         }

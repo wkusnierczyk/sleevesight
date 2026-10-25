@@ -121,8 +121,8 @@ class NowPlayingScreenTest {
         settings: Settings = Settings(),
     ) = NowPlayingState(view, sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING), settings = settings)
 
-    // The *Sources* list starts folded (#269): its first screenful, or all of it.
-    private fun unfold() = compose.onNodeWithTag(FOLD_SHOW_TAG).performScrollTo().performClick()
+    // The *Sources* list starts folded (#269), its heading the fold (#440): its first screenful, or all of it.
+    private fun unfold() = compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
 
     private fun unfoldAll() {
         unfold()
@@ -155,6 +155,7 @@ class NowPlayingScreenTest {
         ) {
             compose.onNodeWithText("Carefree Highway").assertExists()
             assertEquals(0, compose.onAllNodesWithText("It was recorded", substring = true).fetchSemanticsNodes().size)
+            unfold()
             compose.onNodeWithText(text(R.string.home_evidence_looking)).assertExists()
         }
 
@@ -567,11 +568,18 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aFilterChipKeepsItsTextAndSaysWhetherItsLinesShow() =
+    fun aChipIsReadAsItsSourcesNameAndWhetherItsLinesShow() =
         show(state(PipelineView(track()))) {
             unfold()
             val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB").performScrollTo()
-            chip.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+            chip.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(text(R.string.settings_source_musicbrainz)),
+                ),
+            )
+            // Its letter is drawn, not read.
+            assertEquals(0, compose.onAllNodesWithText("MB").fetchSemanticsNodes().size)
             chip.assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.StateDescription,
@@ -637,7 +645,8 @@ class NowPlayingScreenTest {
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w411dp-h891dp-420dpi")
     fun theChipsOfARowShareACentre() =
-        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)))) {
+        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
+            unfold()
             val chips =
                 listOf("MB", "W", "L").map {
                     val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
@@ -662,12 +671,13 @@ class NowPlayingScreenTest {
                         SourceId.WIKIPEDIA to done(Outcome.Rejected("a different Sundown")),
                     ),
             )
-        show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)))) {
+        // Under *Show grounding details* (#440): every source's status, as before.
+        show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
+            unfold()
             val kept = text(R.string.home_source_cached, text(R.string.home_source_found_song))
             compose.onNodeWithText(text(R.string.home_source_chip, "MB", kept)).assertExists()
             val needsKey = text(R.string.home_source_chip, "L", text(R.string.home_source_needs_key))
             compose.onNodeWithText(needsKey).assertExists()
-            unfold()
             val wikipedia = text(R.string.settings_source_wikipedia)
             compose.onNodeWithText(text(R.string.home_rejected, wikipedia, "a different Sundown")).assertExists()
         }
@@ -678,9 +688,11 @@ class NowPlayingScreenTest {
         val unreachable =
             track(sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.WIKIPEDIA to done(Outcome.Unreachable)))
         show(state(PipelineView(unreachable, offline = true))) {
+            unfold()
             compose.onNodeWithText(text(R.string.home_sources_offline)).performScrollTo().assertIsDisplayed()
         }
         show(state(PipelineView(unreachable, offline = false))) {
+            unfold()
             compose.onNodeWithText(text(R.string.home_sources_offline)).assertDoesNotExist()
         }
     }

@@ -16,7 +16,8 @@ import app.sleevesight.core.settings.Settings
  *   ([openDiagnostics]; `design/design.md`, *Diagnostics*).
  * - *Show grounding details* (#437), off by default: the grounding check's counts in full under
  *   each insight, where otherwise only a note shows, and only for a sentence the sources do not
- *   back (`Settings.showGroundingDetails`). #440 adds the full source statuses to it.
+ *   back; and under *Sources* every source's status, the `M` chip and the rejected matches (#440)
+ *   (`Settings.showGroundingDetails`).
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */

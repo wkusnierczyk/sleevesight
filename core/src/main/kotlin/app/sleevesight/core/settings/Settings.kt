@@ -88,8 +88,10 @@ import kotlin.time.Duration.Companion.seconds
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
  *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
- *   rather than only a note when a sentence is not backed by the sources. Off: the citations
- *   already show how each sentence is grounded. #440 adds the full source statuses to it.
+ *   rather than only a note when a sentence is not backed by the sources, and whether *Sources*
+ *   shows every source's chip with its status, the model's own knowledge's `M` among them, and the
+ *   matches rejected (#440), rather than only the sources that gave lines, by name. Off: the
+ *   citations already show how each sentence is grounded, and most statuses are diagnostics.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
  *   section, the options a developer or tester may want and a listener will not. Turned on by seven
  *   taps on *Version*, off by its switch, which turns off every developer option with it

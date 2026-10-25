@@ -82,6 +82,19 @@ internal fun sourceName(source: SourceId): String =
         },
     )
 
+/**
+ * A source's name on its chip and in the note under *Sources* (#440): as [sourceName] has it, but
+ * Wikipedia's without "and Wikidata", which the settings' switch covers, and the player's
+ * capitalised.
+ */
+@Composable
+internal fun chipName(source: SourceId): String =
+    when (source) {
+        SourceId.WIKIPEDIA -> stringResource(R.string.home_source_chip_wikipedia)
+        SourceId.PLAYER -> stringResource(R.string.home_source_chip_player)
+        else -> sourceName(source)
+    }
+
 /** The words for an insight's failure, from the fixed label the pipeline gives it (`InsightState.Failed.reason`). */
 @Composable
 internal fun failureText(reason: String): String =

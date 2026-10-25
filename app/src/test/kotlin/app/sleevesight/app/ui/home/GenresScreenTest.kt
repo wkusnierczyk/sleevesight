@@ -122,7 +122,7 @@ class GenresScreenTest {
         show(TrackGenres(listOf(track, beatles, album))) {
             assertEquals(listOf("Baroque Pop", "Ballad"), chips(GenreLevel.TRACK))
             assertEquals(emptyList<String>(), chips(GenreLevel.ARTIST))
-            assertEquals(text(R.string.home_genres_collapsed), stateOfFold())
+            assertEquals(text(R.string.home_fold_collapsed), stateOfFold())
             assertEquals(
                 Role.Button,
                 compose
@@ -134,7 +134,7 @@ class GenresScreenTest {
 
             compose.onNodeWithTag(GENRES_FOLD_TAG).performClick()
             compose.waitForIdle()
-            assertEquals(text(R.string.home_genres_expanded), stateOfFold())
+            assertEquals(text(R.string.home_fold_expanded), stateOfFold())
             assertEquals(
                 listOf("Track: Baroque Pop, Ballad", "Artist, The Beatles: Rock, Pop", "Album: Folk Rock, Pop"),
                 rowWords(),
