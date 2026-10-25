@@ -18,8 +18,8 @@ import kotlin.time.Instant
  * Per D4 an adapter looks up by name at once and awaits [Resolution] only to verify its match
  * against the resolved ids, so a slow MusicBrainz delays only its own lines. A match that cannot
  * be verified stays unverified (shown, not cited). Web search is the exception: a web page has no
- * id to verify against, so its results are kept or dropped by their own filter, and the kept ones
- * are cited (`ExaWebSearch`).
+ * id to verify against, so its results are kept or dropped by `RecordingFilter` alone, and the kept
+ * ones may be cited (`ExaWebSearch`).
  *
  * The pipeline always completes the `Deferred<Resolution>` normally: with [Resolution.NONE] when
  * resolution fails, is switched off or is cancelled, never exceptionally, so `await()` never
