@@ -77,13 +77,13 @@ internal fun <T> ChoiceDialog(
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
  * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
  * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
- * only a key the key store could not seal suggests *Reset saved keys*, which cannot cure a file that
+ * only a key the key store could not seal suggests *Purge keys*, which cannot cure a file that
  * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
  * result says.
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*. The window is
+ * field as it was. A setup code, which holds several keys, is pointed to *Load keys*. The window is
  * secure (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
@@ -250,8 +250,8 @@ internal class Confirmation(
 )
 
 /**
- * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
- * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
+ * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Purge
+ * keys*). [onConfirm] returns whether it succeeded: the dialog closes only
  * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
  * second tap does not run it again.
  */

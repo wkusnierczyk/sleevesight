@@ -101,7 +101,7 @@ internal fun SecretsSection(
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
  * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
  * reads QR codes, and [keyboard] runs *Type on a computer* (#394), advertising the phone's name
- * with [showPhoneName] (#433); *Scan keys* shows what a
+ * with [showPhoneName] (#433); *Load keys* shows what a
  * setup code holds by [open]ing the next dialog, and saves nothing until the user confirms it there.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.

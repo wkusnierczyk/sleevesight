@@ -33,7 +33,7 @@ interface SecretKeySource {
 
     /**
      * Deletes the key, so the next save creates a new one and nothing sealed before opens again.
-     * Only the user's *Reset saved keys* does this, never a failure.
+     * Only the user's *Purge keys* does this, never a failure.
      */
     fun delete()
 }

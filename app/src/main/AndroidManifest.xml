@@ -50,7 +50,7 @@
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
-    <!-- The apps with a launcher icon, so *Players to follow* can name a player (its label) rather
+    <!-- The apps with a launcher icon, so *Players* can name a player (its label) rather
          than show its package (#435): from Android 11 on, another app's label is hidden without
          this. Only the label of a player that reported music is read; the list of apps is neither
          kept nor sent. Not QUERY_ALL_PACKAGES, which Play restricts and the app does not need. -->

@@ -30,7 +30,7 @@ import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.SetupRead
 import kotlinx.coroutines.launch
 
-// *Scan keys* (#268): what a scanned setup code holds, confirmed before anything is saved.
+// *Load keys* (#268): what a scanned setup code holds, confirmed before anything is saved.
 
 private val SETUP_LIST_HEIGHT = 360.dp
 

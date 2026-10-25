@@ -10,7 +10,9 @@
      product page's header, it does not shrink); the headings keep clear of it when a link jumps to
      them. The record is the product page's (`index.html`, `#lp`), in its light colours, since the
      theme has no dark mode. The font is the site's own cut-down copy, so nothing is fetched from
-     another site. Used by `_layouts/default.html` when the page sets `logo: linear`. -->
+     another site. Used by `_layouts/default.html` when the page sets `logo: linear`; no page does since
+     the documentation pages took the product page's header (#501), and it stays as the linear logo's
+     reference, which the app's header logo follows. -->
 <style>
 @font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
   font-weight:400 700;font-stretch:88% 100%;font-display:swap}

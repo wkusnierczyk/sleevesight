@@ -118,7 +118,7 @@ class PipelineWiring internal constructor(
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which
      * need no key; Last.fm only with its key in [keys], since `Settings.givesLabels` does not know
      * about the key and relies on that; web search from the engines switched on in [settings] whose
-     * key is in [keys] ([web]). A source switched off under *Where to look* still gets its adapter:
+     * key is in [keys] ([web]). A source switched off under *Sources* still gets its adapter:
      * the pipeline reads the switch for each track.
      *
      * The keys, the web engines and *Show genres* (#444), unlike those switches, are read here, when

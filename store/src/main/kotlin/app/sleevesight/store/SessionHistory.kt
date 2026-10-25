@@ -29,7 +29,7 @@ import kotlin.time.Instant
  *
  * 1. [started]: a track began to play: a new one, a resume after a pause or a stop, or one found
  *    playing when the app starts. Only here is a listening session decided, by the session gap the
- *    caller passes (the user's *Start a new session after a break of*), so a new gap applies from
+ *    caller passes (the user's *New session idle trigger*), so a new gap applies from
  *    the next start. The break is the time since the last row was last heard
  *    ([PlayedTrack.heardUntil]).
  *    - The same track as the last row, and a break of at most the gap: that row again, playing,

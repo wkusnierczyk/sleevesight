@@ -32,7 +32,7 @@ import kotlin.time.Duration.Companion.seconds
  *   Read [effort]; set with [withEffort].
  * @property followedPlayers one switch per player whose session reported music, by package name;
  *   never a phone call's ([isCall]). See [follows].
- * @property enabledSources the user's *Where to look* switches: what the model may use. Ask
+ * @property enabledSources the user's *Sources* switches: what the model may use. Ask
  *   [isEnabled] about a [SourceId], which maps it to its switch.
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
  *   only with one on. See [DEFAULT_WEB_ENGINES].
@@ -42,7 +42,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property showGenres *Show genres* (#444): off, no genre labels are asked for from any source,
  *   and the home screen shows none. On by default.
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
- * @property pauseAutoWriteAfter *Pause automatic writing after* (#203): the track changes reported
+ * @property pauseAutoWriteAfter *Saver* (#203): the track changes reported
  *   while Sleevesight is not on screen that are written as usual; at the next, the user's first
  *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
  *   action lasts as long as the process.
@@ -75,7 +75,7 @@ import kotlin.time.Duration.Companion.seconds
  * @property historyLifetime *Keep history for*: how long the session history and the track changes
  *   are kept, counted back from today to when a track began to play and a change began; null keeps
  *   them for ever. See [DEFAULT_HISTORY_LIFETIME].
- * @property sessionGap *Start a new session after a break of*: how long a break in listening, from
+ * @property sessionGap *New session idle trigger*: how long a break in listening, from
  *   when the last track was last heard, ends a listening session. See [DEFAULT_SESSION_GAP].
  * @property keepSourcesUnfolded *Keep Sources as you left them* (#269): whether the *Sources* list
  *   under an insight keeps, for the next track, how it was left: folded, a screenful, or all its
@@ -401,7 +401,7 @@ data class Settings(
         const val DEFAULT_PAUSE_AUTO_WRITE_AFTER: Int = 5
 
         /**
-         * The choices of *Pause automatic writing after*, besides *Off*: 3 (a few minutes away), 5
+         * The choices of *Saver*, besides *Off*: 3 (a few minutes away), 5
          * (the default), 10 (an album side or a commute).
          */
         val PAUSE_AUTO_WRITE_CHOICES: List<Int> = listOf(3, 5, 10)
@@ -429,7 +429,7 @@ data class Settings(
 }
 
 /**
- * The user's switches under *Where to look* (`design/design.md`, *Settings*), each covering the
+ * The user's switches under *Sources* (`design/design.md`, *Settings*), each covering the
  * sources it names. The player's metadata ([SourceId.PLAYER]) has no switch: it is always used.
  */
 enum class SourceSwitch(
@@ -490,7 +490,7 @@ enum class Layout {
     EXPANDABLE_BOXES,
 }
 
-/** *Write insights automatically* (D5): which track changes write an insight without a tap. */
+/** *Reactive* (D5): which track changes write an insight without a tap. */
 enum class WriteAutomatically {
     ON_EVERY_TRACK_CHANGE,
     WHEN_I_SKIP,
@@ -498,7 +498,7 @@ enum class WriteAutomatically {
 }
 
 /**
- * *Prepare the next track* (D13): what runs ahead for the next item in the player's queue.
+ * *Proactive* (D13): what runs ahead for the next item in the player's queue.
  * *Evidence and insight*, first proposed as the default, is not offered: the queue item the app
  * reads has no album or length, so an insight written from it would be kept under a key the
  * playing track never reads, and paid for again when it plays (#172 measured Spotify's: they
