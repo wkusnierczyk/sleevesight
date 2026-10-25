@@ -87,7 +87,7 @@ internal fun <T> ChoiceDialog(
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
  * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
  * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
- * only a key the key store could not seal suggests *Reset saved keys*, which cannot cure a file that
+ * only a key the key store could not seal suggests *Purge keys*, which cannot cure a file that
  * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
  * result says.
  *
@@ -171,17 +171,13 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        QrScanDialog(
-            scanner,
-            { text ->
-                scanning = null
-                val result = scanned(purpose, id, text.trim(), ledger)
-                failed = result.failed
-                result.key?.let { enter(it) }
-                session = result.session
-            },
-            { scanning = null },
-        )
+        QrScanDialog(scanner, onDismiss = { scanning = null }) { text ->
+            scanning = null
+            val result = scanned(purpose, id, text.trim(), ledger)
+            failed = result.failed
+            result.key?.let { enter(it) }
+            session = result.session
+        }
     }
     val running =
         session?.let { s ->

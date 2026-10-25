@@ -126,8 +126,8 @@ object QrDecoder {
 @Composable
 internal fun QrScanDialog(
     scanner: QrScanner,
-    onScanned: (String) -> Unit,
     onDismiss: () -> Unit,
+    onScanned: (String) -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
