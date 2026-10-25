@@ -22,25 +22,33 @@ object MusicBrainzEvidence {
 
     private const val SITE = "https://musicbrainz.org"
 
-    // The first-release line's end when the release is an album, as [lines] writes it: `, on the album “…”.`
-    private const val ON_THE_ALBUM = ", on the album \u201C"
-    private const val CLOSING = "\u201D."
-    private const val FIRST_RELEASED = " was first released "
+    // The first-release line as [lines] writes it: the title quoted, an optional credit, the date as
+    // `EvidenceText.date` words it, then the release's type, if any, and its title, quoted, to the end.
+    // The title and credit are matched lazily, so the line is read at its first date and type; the
+    // release's title is everything after them, whatever it holds.
+    private val FIRST_RELEASE =
+        Regex(
+            "^\u201C.*?\u201D(?: by .*?)? was first released (?:in \\S+|in \\S+ \\S+|on \\S+ \\S+ \\S+), " +
+                "on (the [a-z]+ )?\u201C(.*)\u201D\\.$",
+        )
+
+    private const val ALBUM = "the album "
 
     /**
      * The album a first-release line of [lines] names, as written: `Sundown` from "“Carefree
      * Highway” by Gordon Lightfoot was first released in 1974, on the album “Sundown”." Null when
      * [text] is no first-release line, or names a single, an EP or a release of no type: the release
-     * is read from its own slot of the template, never from the track's title or the artist credit
-     * quoted before it (#424, `PromptEvidence.restatesRelease`).
+     * is read from its own slot of the template, after the date and the type, never from the track's
+     * title or the artist credit quoted before it, and whole, even when its title holds the
+     * template's own words (#424, `PromptEvidence.restatesRelease`).
      */
-    fun firstReleaseAlbum(text: String): String? {
-        val at = text.lastIndexOf(ON_THE_ALBUM)
-        val start = at + ON_THE_ALBUM.length
-        val end = text.length - CLOSING.length
-        val written = FIRST_RELEASED in text && text.endsWith(CLOSING) && at >= 0 && start < end
-        return if (written) text.substring(start, end) else null
-    }
+    fun firstReleaseAlbum(text: String): String? =
+        FIRST_RELEASE
+            .find(text)
+            ?.takeIf { it.groupValues[1] == ALBUM }
+            ?.groupValues
+            ?.get(2)
+            ?.takeIf { it.isNotEmpty() }
 
     /** The lines for [resolution], dated [retrievedAt]; none when no recording was accepted. */
     fun lines(

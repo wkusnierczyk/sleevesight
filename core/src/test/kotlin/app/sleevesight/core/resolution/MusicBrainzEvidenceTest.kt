@@ -92,6 +92,13 @@ class MusicBrainzEvidenceTest {
             "Greatest Hits, Vol. 2 \u201CLive\u201D",
             MusicBrainzEvidence.firstReleaseAlbum(firstLine("Album", "Greatest Hits, Vol. 2 \u201CLive\u201D")),
         )
+        // A release title holding the template's own words is read whole, and by its own type.
+        val tricky = "Notes, on the album \u201CSundown\u201D"
+        assertEquals(tricky, MusicBrainzEvidence.firstReleaseAlbum(firstLine("Album", tricky)))
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine("Single", tricky)))
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine(null, tricky)))
+        val titled = firstLine("Album", "Sundown", title = "Was first released in 1974, on")
+        assertEquals("Sundown", MusicBrainzEvidence.firstReleaseAlbum(titled))
         assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine("Single", "Sundown")))
         assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine("EP", "Sundown")))
         assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine(null, "Sundown")))

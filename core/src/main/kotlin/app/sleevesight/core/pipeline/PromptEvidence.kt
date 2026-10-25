@@ -82,41 +82,69 @@ object PromptEvidence {
      * first-release line says the song first came out on an album of the same name
      * ([MusicBrainzEvidence.firstReleaseAlbum]). The names are compared whole, folded as an
      * [ArtistFact]'s text is ([ArtistFact.matchKey]: case, spacing, quotation marks, apostrophes,
-     * dashes and a closing full stop), each less its closing bracketed parts (the player's "Rubber
-     * Soul (Remastered)" is MusicBrainz's “Rubber Soul”). So the album "Greatest Hits" is not
-     * “Greatest Hits II”, and the track's title or the artist credit, which the line quotes too, never
-     * counts: on a title track first released as a single (“Sundown” ... on the single “Sundown”)
-     * the line stays, since the album it is on is another release. The other sources' lines do not
-     * count either, being free text: Wikipedia's "from his 1974 album Sundown" may name the release,
-     * but a name found inside a sentence may be part of a longer one, or another recording's. A
-     * player's " - Single" or " - EP" is kept in its name, so its single is not taken for the album.
+     * dashes and a closing full stop), the player's less its closing bracketed parts ([edition]: its
+     * "Rubber Soul (Remastered)" is MusicBrainz's “Rubber Soul”). MusicBrainz's name is taken as it
+     * is: a song first released on “Sundown (Live)” came out on another edition than the studio
+     * "Sundown" the player reports, so its line stays.
+     *
+     * So the album "Greatest Hits" is not “Greatest Hits II”, and the track's title or the artist
+     * credit, which the line quotes too, never counts: on a title track first released as a single
+     * (“Sundown” ... on the single “Sundown”) the line stays, since the album it is on is another
+     * release. The other sources' lines do not count either, being free text: Wikipedia's "from his
+     * 1974 album Sundown" may name the release, but a name found inside a sentence may be part of a
+     * longer one, or another recording's. A player's " - Single" or " - EP" is kept in its name, so
+     * its single is not taken for the album.
      */
     internal fun restatesRelease(
         evidence: EvidenceSet,
         release: String?,
     ): (EvidenceLine) -> Boolean {
-        val wanted = release?.let(::releaseKey)
+        val wanted = release?.let { ArtistFact.matchKey(edition(it)) }?.takeIf { it.isNotEmpty() }
         val named =
             wanted != null &&
                 evidence.lines.any { line ->
                     line.source == SourceId.MUSICBRAINZ &&
                         line.scope == Scope.SONG &&
-                        MusicBrainzEvidence.firstReleaseAlbum(line.text)?.let(::releaseKey) == wanted
+                        MusicBrainzEvidence.firstReleaseAlbum(line.text)?.let { ArtistFact.matchKey(it) } == wanted
                 }
         return { line -> named && line.source == SourceId.PLAYER }
     }
 
-    // [name] folded, less its closing bracketed parts unless nothing else is left; null when blank.
-    private fun releaseKey(name: String): String? {
-        var stripped = name.trim()
-        while (true) {
-            val next = stripped.replace(CLOSING_BRACKETS, "")
-            if (next == stripped) break
-            stripped = next
+    /**
+     * [release] less its closing bracketed parts, `(…)` or `[…]`, each balanced (nested ones
+     * included) and with any white space before it (no-break spaces too), one after another, as long
+     * as something is left: "Sundown (Remastered (2024)) [Deluxe]" is "Sundown", "(Untitled)
+     * (Deluxe)" is "(Untitled)". An unbalanced closing bracket ends the stripping.
+     */
+    internal fun edition(release: String): String {
+        var name = release.trim()
+        var rest = less(name)
+        while (rest != null) {
+            name = rest
+            rest = less(name)
         }
-        return ArtistFact.matchKey(stripped).ifEmpty { ArtistFact.matchKey(name) }.ifEmpty { null }
+        return name
     }
 
-    // One closing `(…)` or `[…]` part, and the white space before it.
-    private val CLOSING_BRACKETS = Regex("""\s*[(\[][^()\[\]]*[)\]]\s*$""")
+    // [name] less the bracketed part it ends with and the white space before it; null when it ends
+    // with none, or nothing would be left.
+    private fun less(name: String): String? =
+        openerOfLast(name)?.let { name.substring(0, it).trim() }?.takeIf { it.isNotEmpty() }
+
+    // The index of the bracket that opens the one [name] ends with, or null when it ends with none or
+    // it is not balanced.
+    private fun openerOfLast(name: String): Int? {
+        if (name.isEmpty() || name.last() !in CLOSERS) return null
+        var depth = 0
+        return name.indices.reversed().firstOrNull { i ->
+            when (name[i]) {
+                in CLOSERS -> depth++
+                in OPENERS -> depth--
+            }
+            depth == 0
+        }
+    }
+
+    private val OPENERS = setOf('(', '[')
+    private val CLOSERS = setOf(')', ']')
 }

@@ -120,9 +120,26 @@ class PromptEvidenceTest {
         assertEquals(listOf("MB1"), sentOn("Fisherman's Blues", firstRelease("Fisherman\u2019s Blues")))
         assertEquals(listOf("MB1"), sentOn("Rubber Soul (Remastered)", firstRelease("Rubber Soul")))
         assertEquals(listOf("MB1"), sentOn("Sundown (Remastered) [Deluxe]", firstRelease("Sundown")))
-        assertEquals(listOf("MB1"), sentOn("Sundown", firstRelease("Sundown (Deluxe Edition)")))
         assertEquals(listOf("MB1"), sentOn("DAMN.", firstRelease("DAMN.")))
         assertEquals(listOf("MB1"), sentOn("(Untitled)", firstRelease("(Untitled)")))
+    }
+
+    @Test
+    fun `the player's closing parts are stripped balanced, nested, after any space, while a name is left`() {
+        assertEquals("Sundown", PromptEvidence.edition("Sundown (Remastered (2024))"))
+        assertEquals("Sundown", PromptEvidence.edition("Sundown (Remastered)\u00A0[Deluxe]\u00A0"))
+        assertEquals("(Untitled)", PromptEvidence.edition("(Untitled) (Deluxe)"))
+        assertEquals("()", PromptEvidence.edition("()"))
+        assertEquals("Sundown )", PromptEvidence.edition("Sundown )"))
+        assertEquals(listOf("MB1"), sentOn("Sundown (Remastered (2024))", firstRelease("Sundown")))
+        assertEquals(listOf("MB1"), sentOn("(Untitled) (Deluxe)", firstRelease("(Untitled)")))
+        assertEquals(listOf("MB1"), sentOn("()", firstRelease("()")))
+    }
+
+    @Test
+    fun `MusicBrainz's name is taken as it is, so a first release on another edition keeps the line`() {
+        assertEquals(listOf("MB1", "P1"), sentOn("Sundown", firstRelease("Sundown (Live)")))
+        assertEquals(listOf("MB1", "P1"), sentOn("Sundown", firstRelease("Sundown (Deluxe Edition)")))
     }
 
     @Test
@@ -162,6 +179,18 @@ class PromptEvidenceTest {
     }
 
     @Test
+    fun `the template's words count only in MusicBrainz's line about the song`() {
+        val template = "\u201CThe Song\u201D by The Band was first released in 1974, on the album \u201CSundown\u201D."
+
+        assertEquals(listOf("W1", "P1"), sentOn("Sundown", line(SourceId.WIKIPEDIA, template)))
+        assertEquals(listOf("G1", "P1"), sentOn("Sundown", line(SourceId.WEB, template, Scope.WEB)))
+        assertEquals(
+            listOf("MB1", "P1"),
+            sentOn("Sundown", line(SourceId.MUSICBRAINZ, template, Scope.ORIGINAL_SONG)),
+        )
+    }
+
+    @Test
     fun `only MusicBrainz's first-release line names the release, not another source or line`() {
         val wikipedia = line(SourceId.WIKIPEDIA, "It is from his 1974 album Sundown.")
         val artist = line(SourceId.WIKIPEDIA, "The band's best-known album is Sundown.", Scope.ARTIST)
@@ -181,6 +210,5 @@ class PromptEvidenceTest {
 
         assertEquals(listOf("MB1", "P1"), sent(evidence, album = null))
         assertEquals(listOf("MB1", "P1"), sent(evidence, album = " "))
-        assertEquals(listOf("MB1", "P1"), sent(evidence, album = "()"))
     }
 }

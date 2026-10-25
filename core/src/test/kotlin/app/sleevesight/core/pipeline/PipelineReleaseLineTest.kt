@@ -26,8 +26,9 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration
 
 /**
- * The player's release line is left out of the insight's prompt when a line about the song names
- * the release, so the model has no line to pad the insight with (#424).
+ * The player's release line is left out of the insight's prompt when MusicBrainz's first-release
+ * line names that album, so the model has no line to pad the insight with (#424); it is left out as
+ * #239's artist lines are, so a reply citing it is unknown and `NO_EVIDENCE` asks again with it.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PipelineReleaseLineTest {
