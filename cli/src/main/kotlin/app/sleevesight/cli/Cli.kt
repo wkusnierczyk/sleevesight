@@ -125,6 +125,7 @@ class Cli(
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
                 labelSources = setOf(LabelSource.LASTFM),
+                artistFactsOncePerSession = options.artistFactsOncePerSession,
             )
 
         fun run(): Int {
@@ -154,6 +155,7 @@ class Cli(
                     allowModel = allowModel,
                     results = results,
                     passes = options.repeat,
+                    artistFactsOncePerSession = options.artistFactsOncePerSession,
                     musicBrainzTrackLabels = results.count { labelledByMusicBrainz(it, vocabulary) },
                     gate = gate,
                     diagnostics =
@@ -185,8 +187,11 @@ class Cli(
         private fun runAll(events: MutableList<PipelineEvent>): List<TrackResult> {
             val stored =
                 caches?.let { StorePipelineCache(it, Dispatchers.IO, ArtistKeeping.ALWAYS) } ?: PipelineCache.None
-            // A repeated run measures the replies, so every pass writes its insights afresh.
-            val cache = if (options.repeat > 1) FreshCards(stored) else stored
+            // A repeated run measures the replies, so every pass writes its insights afresh; so does a
+            // run with every artist fact (#407), since the cache keys a card by the evidence, not the
+            // setting, and would serve the cards a default run wrote without them.
+            val fresh = options.repeat > 1 || !options.artistFactsOncePerSession
+            val cache = if (fresh) FreshCards(stored) else stored
             return (1..options.repeat).flatMap { pass ->
                 // A pass is one listening session (#239): its tracks play one after another.
                 val pipeline =
@@ -350,7 +355,9 @@ class Cli(
 
 /**
  * [cache] that serves no card, so every insight is written afresh, and keeps the rest: a repeated
- * run (`--repeat`) measures the model's replies, which vary from one call to the next (#399).
+ * run (`--repeat`) measures the model's replies, which vary from one call to the next (#399), and a
+ * run with every artist fact (`--artist-facts-every-track`, #407) is not served the cards a default
+ * run wrote without them.
  */
 internal class FreshCards(
     private val cache: PipelineCache,
