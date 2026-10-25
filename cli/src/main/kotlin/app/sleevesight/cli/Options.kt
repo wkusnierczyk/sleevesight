@@ -46,6 +46,7 @@ data class Options(
     val record: Set<String>,
     val keysFile: File,
     val repeat: Int = 1,
+    val artistFactsOncePerSession: Boolean = true,
 ) {
     companion object {
         val USAGE: String =
@@ -78,6 +79,11 @@ data class Options(
                                   the gate pools the passes (not for record)
               --no-web            leave web search off in a live run
               --no-insights       gather evidence only: no AI calls
+              --artist-facts-every-track
+                                  give every insight all its artist's facts, as the app's "Tell an
+                                  artist's facts once per session" off does (default: once a pass);
+                                  every insight is written afresh, none read from the cache. For
+                                  live: the recorded replies answer the default prompts
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
                                   services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
@@ -147,6 +153,7 @@ data class Options(
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
                 repeat = repeat,
+                artistFactsOncePerSession = "--artist-facts-every-track" !in switches,
             )
         }
 
@@ -214,7 +221,7 @@ data class Options(
             return values to switches
         }
 
-        private val SWITCHES = setOf("--no-web", "--no-insights")
+        private val SWITCHES = setOf("--no-web", "--no-insights", "--artist-facts-every-track")
 
         private val VALUED =
             setOf(

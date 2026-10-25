@@ -75,6 +75,7 @@ class SettingsCodecTest {
                 crossfade = Crossfade.Fixed(6.seconds),
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
+                artistFactsOncePerSession = false,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 keepArtistResults = true,
                 artistCacheLifetime = 30.days,
@@ -83,6 +84,7 @@ class SettingsCodecTest {
                 sessionGap = 10.minutes,
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
+                showGroundingDetails = true,
                 developerMode = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
@@ -149,6 +151,24 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun artistFactsAreToldOncePerSessionByDefaultAndForAnInstallFromBefore() {
+        assertEquals(true, Settings().artistFactsOncePerSession)
+        // As stored before the setting existed (#407), when the facts were told once per session unasked.
+        val before = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertEquals(true, SettingsCodec.read(before).artistFactsOncePerSession)
+    }
+
+    @Test
+    fun artistFactsOnEveryTrackAreStoredUnderTheirKey() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(artistFactsOncePerSession = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("insights.artist_facts_once") to false), prefs)
+        assertEquals(false, SettingsCodec.read(prefs).artistFactsOncePerSession)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned on again, it is the default and has no key", prefs.asMap().isEmpty())
+    }
+
+    @Test
     fun aFileFromBeforeDeveloperModeWithDiagnosticsOnReadsAsDeveloperModeOn() {
         val before = mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true)
         assertTrue(SettingsCodec.read(before).developerMode)
@@ -168,6 +188,17 @@ class SettingsCodecTest {
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
         // A state no screen makes, kept as it is: developer mode off with *Diagnostics* on.
         assertEquals(Settings(showDiagnostics = true), roundTrip(Settings(showDiagnostics = true)))
+    }
+
+    @Test
+    fun showGroundingDetailsIsStoredUnderItsKeyAndClearedWithDeveloperMode() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true), prefs)
+        assertEquals(true, prefs[booleanPreferencesKey("developer.grounding_details")])
+        assertTrue(SettingsCodec.read(prefs).showGroundingDetails)
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
+        assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
     }
 
     @Test

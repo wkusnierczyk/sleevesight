@@ -54,6 +54,7 @@ internal object SettingsCodec {
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
     private val BACKGROUND = booleanPreferencesKey("lookups.background")
+    private val ARTIST_FACTS_ONCE = booleanPreferencesKey("insights.artist_facts_once")
     private val KEEP_ARTIST_RESULTS = booleanPreferencesKey("cache.keep_artist_results")
     private val ARTIST_LIFETIME_MS = longPreferencesKey("cache.artist_lifetime_ms")
     private val CACHE_SIZE_LIMIT = longPreferencesKey("cache.size_limit")
@@ -62,6 +63,7 @@ internal object SettingsCodec {
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
+    private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
@@ -89,6 +91,7 @@ internal object SettingsCodec {
             crossfade = readCrossfade(prefs),
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
             lookUpInBackground = prefs[BACKGROUND] ?: defaults.lookUpInBackground,
+            artistFactsOncePerSession = prefs[ARTIST_FACTS_ONCE] ?: defaults.artistFactsOncePerSession,
             cacheLifetimes = readLifetimes(prefs),
             keepArtistResults = prefs[KEEP_ARTIST_RESULTS] ?: defaults.keepArtistResults,
             artistCacheLifetime =
@@ -102,6 +105,7 @@ internal object SettingsCodec {
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
+            showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs),
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
@@ -169,6 +173,9 @@ internal object SettingsCodec {
         if (moved { it.lookUpInBackground }) {
             prefs.put(BACKGROUND, settings.lookUpInBackground, defaults.lookUpInBackground)
         }
+        if (moved { it.artistFactsOncePerSession }) {
+            prefs.put(ARTIST_FACTS_ONCE, settings.artistFactsOncePerSession, defaults.artistFactsOncePerSession)
+        }
         for (source in Settings.DEFAULT_CACHE_LIFETIMES.keys) {
             if (!moved { it.cacheLifetimes[source] }) continue
             prefs.put(
@@ -202,6 +209,9 @@ internal object SettingsCodec {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        if (moved { it.showGroundingDetails }) {
+            prefs.put(GROUNDING_DETAILS, settings.showGroundingDetails, defaults.showGroundingDetails)
+        }
         // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
         // only where that would read otherwise; either moving can change which.
         if (moved { it.developerMode } || moved { it.showDiagnostics }) {

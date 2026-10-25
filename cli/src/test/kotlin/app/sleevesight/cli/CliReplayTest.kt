@@ -131,6 +131,17 @@ class CliReplayTest {
     }
 
     @Test
+    fun `a run with every artist fact says so in the report's header, and a default run does not`() {
+        val (status, report) =
+            run("replay", "--fixtures", fixtures, "--tracks", "1", "--no-insights", "--artist-facts-every-track")
+        val (_, default) = run("replay", "--fixtures", fixtures, "--tracks", "1", "--no-insights")
+
+        assertEquals(0, status, report)
+        assertTrue("Artist facts: on every track (--artist-facts-every-track)." in report, report)
+        assertFalse("Artist facts: on every track" in default, default)
+    }
+
+    @Test
     fun `a bad command line is a usage error`() {
         assertEquals(Cli.EXIT_USAGE, run("replay", "--frobnicate").first)
         assertEquals(Cli.EXIT_USAGE, run().first)

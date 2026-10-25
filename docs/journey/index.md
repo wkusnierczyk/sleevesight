@@ -92,7 +92,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **An insight is written.** While the sources are asked, the card says *Gathering evidence…*; while the AI service writes, *Writing…*, with *Stop*. The insight is a few sentences on why the track is interesting. On the very first track, and after the app starts afresh, it waits for a tap on *Write insight* (step 6).
 
-**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. A line under the insight counts the sentences grounded, such as *3 of 3 sentences grounded*.
+**Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. When a sentence is not backed by the sources (it cites nothing, a line that does not exist, or the model's own knowledge), a note under the insight says how many, such as *1 sentence is not backed by the sources.*; otherwise there is none.
 
 **The *Sources* list.** Under the insight, each source has a chip saying what it found: *the song*, *the artist only*, *nothing found*, *rejected* or *unreachable*, among others, with *(kept)* when the finding came from the phone rather than a new request. The list starts folded; *show >* opens it. Below the evidence lines come what was found but not verified, so not cited, and the matches the app rejected, with why.
 

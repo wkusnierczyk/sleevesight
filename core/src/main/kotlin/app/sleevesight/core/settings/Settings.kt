@@ -47,6 +47,10 @@ import kotlin.time.Duration.Companion.seconds
  *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
  *   action lasts as long as the process.
  *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
+ * @property artistFactsOncePerSession *Tell an artist's facts once per session* (#407): on, an
+ *   insight's prompt leaves out the artist-level lines another insight of the listening session
+ *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
+ *   every insight is written from all its evidence, as before #239.
  * @property cacheLifetimes the retrieval cache lifetime per source (D9). A source with none (the
  *   pseudo-sources, which retrieve nothing) is not cached.
  * @property keepArtistResults *Keep what sources said about each artist* (#420): whether what the
@@ -86,6 +90,10 @@ import kotlin.time.Duration.Companion.seconds
  *   screen it closed, not when the app is started afresh.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
+ * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
+ *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
+ *   rather than only a note when a sentence is not backed by the sources. Off: the citations
+ *   already show how each sentence is grounded. #440 adds the full source statuses to it.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
  *   section, the options a developer or tester may want and a listener will not. Turned on by seven
  *   taps on *Version*, off by its switch, which turns off every developer option with it
@@ -114,6 +122,7 @@ data class Settings(
     val crossfade: Crossfade = Crossfade.Autodetect,
     val prepareNextTrack: PrepareNextTrack = PrepareNextTrack.EVIDENCE,
     val lookUpInBackground: Boolean = false,
+    val artistFactsOncePerSession: Boolean = true,
     val cacheLifetimes: Map<SourceId, Duration> = DEFAULT_CACHE_LIFETIMES,
     val keepArtistResults: Boolean = false,
     val artistCacheLifetime: Duration = DEFAULT_ARTIST_CACHE_LIFETIME,
@@ -122,6 +131,7 @@ data class Settings(
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
+    val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
@@ -208,10 +218,12 @@ data class Settings(
     fun givesLabels(source: LabelSource): Boolean = showGenres && source in labelSources && isEnabled(source.source)
 
     /**
-     * These settings with developer mode off, and with it every developer option ([showDiagnostics]),
-     * so nothing hidden keeps running. A developer option joins here with its setting.
+     * These settings with developer mode off, and with it every developer option ([showDiagnostics],
+     * [showGroundingDetails]), so nothing hidden keeps running. A developer option joins here with
+     * its setting.
      */
-    fun withoutDeveloperMode(): Settings = copy(developerMode = false, showDiagnostics = false)
+    fun withoutDeveloperMode(): Settings =
+        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false)
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
