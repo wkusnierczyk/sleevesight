@@ -21,8 +21,8 @@ import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.requestFocus
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -142,9 +142,7 @@ class LinkLookTest {
         (layout.getLineBaseline(line).toInt() + 1 until layout.getLineBottom(line).toInt().coerceAtMost(picture.height))
             .maxBy { y -> picture.row(y).count { it.inked(scheme.onSurface, scheme.surface) } }
 
-    private fun linkedIn(
-        parts: List<TextPart>,
-    ): (Int) -> Boolean {
+    private fun linkedIn(parts: List<TextPart>): (Int) -> Boolean {
         val ranges = mutableListOf<IntRange>()
         var at = 0
         for (part in parts) {
@@ -211,12 +209,14 @@ class LinkLookTest {
             val tint = scheme.onSurface.copy(alpha = 0.12f).compositeOver(scheme.surface)
             // The glyphs' smoothed edges take the tint's grey here and there; the focused link's box
             // is filled with it.
-            val before = pictures.picture(TAG).all().count { it.near(tint, tolerance = 3) }
-            // As with a keyboard or a D-pad: a link takes focus only out of touch mode. Focus is then
-            // moved to the link's own node (Tab does not move it in Robolectric's window).
-            compose.runOnIdle { checkNotNull(input).requestInputMode(InputMode.Keyboard) }
             val link = compose.onNode(hasClickAction() and hasParent(hasTestTag(TAG)), useUnmergedTree = true)
-            link.assertIsNotFocused().requestFocus()
+            link.assertIsNotFocused()
+            val before = pictures.picture(TAG).all().count { it.near(tint, tolerance = 3) }
+            // As with a keyboard or a D-pad: a link takes focus only out of touch mode, where the
+            // screen's first link may take it at once. Focus is moved to the link's own node (Tab
+            // does not move it in Robolectric's window).
+            compose.runOnIdle { checkNotNull(input).requestInputMode(InputMode.Keyboard) }
+            link.requestFocus()
             compose.waitForIdle()
             link.assertIsFocused()
             val after = pictures.picture(TAG).all().count { it.near(tint, tolerance = 3) }
@@ -243,9 +243,13 @@ class LinkLookTest {
             sources
                 .filter { it.name != "Accents.kt" }
                 .flatMap { file ->
-                    file.readLines().withIndex().filter { (_, line) ->
-                        made.containsMatchIn(line) && !(file.name == "Citations.kt" && "LinkAnnotation.Url" !in line)
-                    }.map { (i, line) -> "${file.name}:${i + 1}: ${line.trim()}" }
+                    file
+                        .readLines()
+                        .withIndex()
+                        .filter { (_, line) ->
+                            made.containsMatchIn(line) &&
+                                !(file.name == "Citations.kt" && "LinkAnnotation.Url" !in line)
+                        }.map { (i, line) -> "${file.name}:${i + 1}: ${line.trim()}" }
                 }
         assertEquals(emptyList<String>(), elsewhere)
     }

@@ -28,31 +28,8 @@ import androidx.compose.ui.unit.sp
 // Links and switches without the palette's accent colour (#442): the system's dynamic accent (on
 // Android 12 and later, from the wallpaper or the chosen colour theme) looked out of place, and
 // links were styled two ways. Every link in the app is drawn here, by [LinkedText] or [LinkLabel],
-// so none can take another look or lose its line (`PlainAccentsTest` holds the rest of the app to
-// that).
-
-/** A piece of a [LinkedText]: [Words], a [Link] to a web page, or an [Action] run on a tap. */
-internal sealed interface TextPart {
-    val text: String
-
-    /** Plain text. */
-    data class Words(
-        override val text: String,
-    ) : TextPart
-
-    /** A link that opens [url] in the browser. */
-    data class Link(
-        override val text: String,
-        val url: String,
-    ) : TextPart
-
-    /** A link that runs [onClick] in the app; [tag] names it to tests and to accessibility. */
-    class Action(
-        override val text: String,
-        val tag: String,
-        val onClick: () -> Unit,
-    ) : TextPart
-}
+// so none can take another look or lose its line (`LinkLookTest.linksAreMadeOnlyHere` holds the
+// rest of the app to that).
 
 /**
  * [parts] as one text, each link in it marked as every link in the app is (#442): in the text
