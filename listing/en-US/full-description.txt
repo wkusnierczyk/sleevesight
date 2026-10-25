@@ -2,14 +2,14 @@ Sleevesight shows short insights about the song you are playing: who made it, wh
 
 HOW IT WORKS
 • Track. Sleevesight follows what your music player is playing, through the player's Android media session. It reads the title, artists, album, cover and playback state, and the queue up next, and never touches the audio.
-• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia, Last.fm and Exa web search. A match that fails an identity check is shown as rejected, not used quietly.
+• Trace. It looks the track up in the sources you switch on: MusicBrainz, Wikipedia, Last.fm and Exa web search. A match that fails an identity check is rejected and never used.
 • Tell. Your AI service turns what the sources found into a few sentences, each citing its evidence. Once an insight is written, the app checks its citations: a sentence without a source, or citing evidence that does not exist, is flagged. With the model's own knowledge switched on (it is off by default), the model may add what it knows, marked unverified. When little is documented about a track, the insight is short. When the sources give nothing to write from, Sleevesight says so and makes no AI call, unless the model's own knowledge is on.
 
 ON SCREEN
 • The cover, title, artists, album and year of first release, in colors taken from the cover.
 • Genre labels from the artists' tags, each saying where it came from.
 • The insight, whose citations jump to their evidence.
-• What each source found, rejected or could not verify.
+• The lines each source gave, linked to where they were found, what could not be verified, and a note when a source needs your key or could not be reached.
 
 WORKS WITH YOUR PLAYER
 Spotify is followed by default, and any other player whose Android media session reports music can be switched on. Calls from the phone app are never read. Sleevesight reads the phone's media session, not Spotify's Web API, so it needs no Spotify developer app and no Spotify login, whichever Spotify plan you have.
