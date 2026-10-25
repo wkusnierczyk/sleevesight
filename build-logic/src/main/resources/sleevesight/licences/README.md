@@ -2,9 +2,10 @@
 
 The texts `listLibraryLicences` holds each notice to (`ListLibraryLicences.kt`, #488): a notice must
 contain its licence's whole text here, whitespace, typographic quotes and rules of `=` or `-` aside.
-They are the bodies of SPDX's texts (MIT, BSD-3-Clause, Apache-2.0, MPL-2.0, Unicode-3.0) (https://github.com/spdx/license-list-data, `text/<id>.txt`),
-from the grant to the end, without the title and the copyright line, which vary. Where licences in
-use vary in their wording, the text has a placeholder:
+They are the bodies of SPDX's texts for MIT, BSD-3-Clause, Apache-2.0, MPL-2.0 and Unicode-3.0
+(https://github.com/spdx/license-list-data, `text/<id>.txt`), from the first term (the grant, or the
+opening heading) to the last (Apache's `END OF TERMS AND CONDITIONS`, before its appendix), without
+the title and the copyright line, which vary. Where licences in use vary in their wording, the text has a placeholder:
 
 - `{*}`: any words, up to 200 characters (BSD-3-Clause's "Neither the name of {*} nor").
 - `{-}`: a list item's marker or none (`1.`, `*`, `-`, `(a)`), with its space.

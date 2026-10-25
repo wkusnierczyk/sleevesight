@@ -150,13 +150,15 @@ class ListLibraryLicencesTest {
     }
 
     @Test
-    fun `the build knows the Apache License, MIT, BSD-3-Clause and MPL-2_0 by name or URL, and no other`() {
+    fun `the build knows the Apache License, MIT, BSD-3-Clause, MPL-2_0 and Unicode-3_0 by name or URL, and no other`() {
         assertEquals("Apache-2.0", ListLibraryLicences.spdx(apache))
         assertEquals("Apache-2.0", ListLibraryLicences.spdx(PomLicence("Apache-2.0", "")))
         assertEquals("MIT", ListLibraryLicences.spdx(PomLicence("The MIT License", "https://github.com/x/y/blob/master/LICENSE")))
         assertEquals("MIT", ListLibraryLicences.spdx(mit))
         assertEquals("BSD-3-Clause", ListLibraryLicences.spdx(PomLicence("BSD-3-Clause", "https://opensource.org/licenses/BSD-3-Clause")))
         assertEquals("MPL-2.0", ListLibraryLicences.spdx(PomLicence("MPL-2.0", "https://www.mozilla.org/MPL/2.0/")))
+        assertEquals("Unicode-3.0", ListLibraryLicences.spdx(PomLicence("Unicode-3.0", "https://www.unicode.org/license.txt")))
+        assertEquals("Unicode-3.0", ListLibraryLicences.spdx(PomLicence("", "https://www.unicode.org/license.txt")))
         assertEquals(null, ListLibraryLicences.spdx(PomLicence("Eclipse Public License 2.0", "https://www.eclipse.org/legal/epl-2.0/")))
         assertEquals(null, ListLibraryLicences.spdx(PomLicence("BSD-2-Clause", "")))
         // Names and URLs that only start like a known licence's.
@@ -354,6 +356,17 @@ class ListLibraryLicencesTest {
             listOf("k:other:1: licence-notices.txt gives EPL-2.0, a licence the build does not know"),
             run(listOf("k:other:1"), licences, listOf(Entry("k:other", "EPL-2.0", "e.txt", "E"))).problems,
         )
+    }
+
+    @Test
+    fun `a Unicode-3_0 notice must hold the licence's whole text`() {
+        val licences = mapOf("o:okhttp:1" to listOf(apache))
+        val table = listOf(Entry("o:okhttp", "Unicode-3.0", "u.txt", "IDNA table"))
+        val unicode = "Copyright © 1991-2023 Unicode, Inc.\n\n" + reference("Unicode-3.0")
+        assertEquals(emptyList(), run(listOf("o:okhttp:1"), licences, table, notices = mapOf("u.txt" to unicode)).problems)
+        val cut = run(listOf("o:okhttp:1"), licences, table, notices = mapOf("u.txt" to unicode.substringBefore("Except as contained")))
+        assertEquals(1, cut.problems.size)
+        assertTrue(cut.problems.single().startsWith("o:okhttp:1: u.txt lacks the Unicode-3.0 text: \"Except as contained"), cut.problems.single())
     }
 
     @Test
