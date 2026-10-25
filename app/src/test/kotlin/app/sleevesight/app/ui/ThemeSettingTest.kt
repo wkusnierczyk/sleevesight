@@ -1,5 +1,7 @@
 package app.sleevesight.app.ui
 
+import android.app.UiModeManager
+import android.util.TypedValue
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
@@ -8,6 +10,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.core.view.WindowCompat
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -36,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,6 +48,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 /**
  * *Theme* (#444): *System*, *Light* or *Dark*, under *Appearance*; the theme follows it, and what
@@ -117,5 +123,58 @@ class ThemeSettingTest {
         assertTrue(file.delete())
         idleUntil("the settings' first read") { app.graph.theme.value == ThemeChoice.SYSTEM }
         assertEquals(ThemeChoice.SYSTEM, LastTheme(app).value)
+    }
+
+    /** Whether [activity]'s window is light, and its status bar's icons dark, as a light app's are. */
+    private fun windowLight(activity: MainActivity): Pair<Boolean, Boolean> {
+        val value = TypedValue()
+        activity.theme.resolveAttribute(android.R.attr.isLightTheme, value, true)
+        val bars = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+        return (value.data != 0) to bars.isAppearanceLightStatusBars
+    }
+
+    /**
+     * A cold start with *Theme* last read as [theme] on a system of the other theme: the window and
+     * the bars are as chosen from the activity's creation, before Compose's first frame.
+     */
+    private fun coldStart(theme: ThemeChoice): Pair<Boolean, Boolean> {
+        LastTheme(app).value = theme
+        // The settings' first read held off, as in `aNewProcessStartsInTheThemeLastRead…`.
+        val file = app.preferencesDataStoreFile("settings")
+        assertTrue(file.mkdirs())
+        try {
+            var light: Pair<Boolean, Boolean>? = null
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { light = windowLight(it) }
+            }
+            return checkNotNull(light)
+        } finally {
+            assertTrue(file.delete())
+        }
+    }
+
+    @Test
+    fun aColdStartInDarkOnALightSystemIsDarkFromItsFirstFrame() {
+        assertEquals(false to false, coldStart(ThemeChoice.DARK))
+    }
+
+    @Test
+    @Config(qualifiers = "night")
+    fun aColdStartInLightOnADarkSystemIsLightFromItsFirstFrame() {
+        assertEquals(true to true, coldStart(ThemeChoice.LIGHT))
+    }
+
+    @Test
+    fun theThemeIsGivenToTheSystemAsTheAppsNightMode() {
+        val uiMode = shadowOf(app.getSystemService(UiModeManager::class.java))
+        for ((theme, mode) in listOf(
+            ThemeChoice.DARK to UiModeManager.MODE_NIGHT_YES,
+            ThemeChoice.LIGHT to UiModeManager.MODE_NIGHT_NO,
+            ThemeChoice.SYSTEM to UiModeManager.MODE_NIGHT_AUTO,
+        )) {
+            runBlocking { app.graph.settings.update { it.copy(theme = theme) } }
+            idleUntil("$theme applied") { app.graph.theme.value == theme }
+            assertEquals(theme.name, mode, uiMode.applicationNightMode)
+        }
     }
 }

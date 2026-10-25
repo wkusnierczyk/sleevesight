@@ -214,7 +214,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | Situation | What you see |
 |---|---|
 | **Offline** | Sources that cannot be reached show *unreachable*, and *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again, and show *looking* meanwhile; the rest keep what they found. What was kept on the phone from earlier lookups still shows, marked *(kept)*. An insight that cannot be written for want of a connection says *The insight could not be written: no connection.* |
-| **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI service*]({{ '/docs/tutorials/settings/' | relative_url }}). |
+| **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
 | **No key for Last.fm or web search** | Its chip says *needs your key, in Settings*, and it is not asked. MusicBrainz and Wikipedia need no key. |
 | **A source rejects a match** | Its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. A rejected match is never used. |
