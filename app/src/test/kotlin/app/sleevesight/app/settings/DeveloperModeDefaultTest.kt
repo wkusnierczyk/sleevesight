@@ -103,6 +103,17 @@ class DeveloperModeDefaultTest {
     }
 
     @Test
+    fun aChoiceStoredInOneBuildSurvivesDiagnosticsMovedInTheOther() {
+        // Turned on in the public build, then *Diagnostics* turned on and off in the test build.
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(onByDefault, prefs, Settings())
+        SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), prefs, onByDefault)
+        SettingsCodec.write(onByDefault, prefs, onByDefault)
+        assertTrue(SettingsCodec.read(prefs, onByDefault).developerMode)
+        assertTrue(SettingsCodec.read(prefs, Settings()).developerMode)
+    }
+
+    @Test
     fun withNoChoiceStoredEachBuildReadsItsOwnDefault() {
         // A tester who never moved it, after installing the public build over the test build.
         val untouched = mutablePreferencesOf()

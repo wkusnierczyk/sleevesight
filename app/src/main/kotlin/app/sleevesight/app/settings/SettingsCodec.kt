@@ -36,7 +36,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * The defaults are `:core`'s [Settings], but for those a build sets: [SettingsStore] passes the
  * build's ([SettingsStore.BUILD_DEFAULTS]), and a test may pass others. Since only a setting moved
  * off its default is stored, a default that differs between builds, as developer mode's does
- * (#451), holds wherever the user has not chosen, and a choice either way is kept in either build.
+ * (#451), holds wherever nothing is stored; a choice that differs from this build's default is
+ * stored, and so holds in the other build too, while one equal to it is not.
  *
  * The AI service's settings are stored per provider by [AiSettingsCodec].
  */
@@ -210,11 +211,15 @@ internal object SettingsCodec {
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         // Without its key, it reads as *Diagnostics*'s key, or with neither as its default
-        // ([developerModeOf]), so the key is kept only where that would read otherwise; either
-        // moving can change which. Against its own default, not *Diagnostics*'s: in a build where
-        // it is on by default (#451), developer mode turned off is stored as off.
-        if (moved { it.developerMode } || moved { it.showDiagnostics }) {
-            prefs.put(DEVELOPER_MODE, settings.developerMode, prefs[DIAGNOSTICS] ?: defaults.developerMode)
+        // ([developerModeOf]). Moved, it is stored only where that would read otherwise, against its
+        // own default, not *Diagnostics*'s: in a build where it is on by default (#451), developer
+        // mode turned off is stored as off. When only *Diagnostics* moves, a stored key stays, since
+        // it may be a choice another build's default needs (developer mode turned on in the public
+        // build, then *Diagnostics* turned on and off in the test build); without one, it is stored
+        // if *Diagnostics*'s new value would read otherwise.
+        val impliedDeveloperMode = prefs[DIAGNOSTICS] ?: defaults.developerMode
+        if (moved { it.developerMode } || (moved { it.showDiagnostics } && DEVELOPER_MODE !in prefs)) {
+            prefs.put(DEVELOPER_MODE, settings.developerMode, impliedDeveloperMode)
         }
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
