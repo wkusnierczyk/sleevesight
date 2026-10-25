@@ -29,11 +29,11 @@ import kotlinx.coroutines.flow.StateFlow
  * Roboto (#377), bundled in `res/font`: Roboto 3.016 from `googlefonts/roboto-3-classic`, its
  * `android/static` build, under the SIL Open Font License 1.1 (`assets/licences/roboto-ofl.txt`,
  * and the credits). Regular and Medium, the weights Material 3's type scale uses (400 and 500),
- * and the citations' `FontWeight.Medium`. No bold and no italic files: the two the app sets, the
- * track header's bold title and italic album (#438), are synthesized, the bold from Medium (the
- * nearest lighter weight) and the italic from Regular.
+ * and the citations' `FontWeight.Medium`; Bold (700) for the settings' section headings (#442) and
+ * the track header's title (#438). No italic file: the track header's italic album (#438) is
+ * synthesized from Regular.
  *
- * A family of the two files rather than a `res/font` family XML: Compose picks the weight among
+ * A family of the files rather than a `res/font` family XML: Compose picks the weight among
  * the fonts of a family it is given, while an XML family reaches it as one `Typeface`, whose
  * weights only Android 9 and later can select by number (the minimum is Android 8, where Medium
  * would be drawn as Regular or synthesized).
@@ -45,6 +45,7 @@ internal val Roboto: FontFamily =
     FontFamily(
         Font(R.font.roboto_regular, FontWeight.Normal),
         Font(R.font.roboto_medium, FontWeight.Medium),
+        Font(R.font.roboto_bold, FontWeight.Bold),
     )
 
 /** *Font*'s default, the app's own. */
