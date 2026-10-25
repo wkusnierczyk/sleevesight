@@ -4,7 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -14,6 +18,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -91,17 +96,42 @@ class SettingsStore(
         }
     }
 
+    /**
+     * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
+     * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
+     * result says whether it was saved: false after an I/O error, which leaves the setting as it was.
+     * Any other failure fails the launch, so it reaches [saves] whether or not anyone awaits the
+     * result, as the settings screen's saves do; the result is then cancelled, so a wait for it ends.
+     */
+    fun reportButtonHider(saves: CoroutineScope): () -> Deferred<Boolean> =
+        {
+            val saved = CompletableDeferred<Boolean>()
+            saves
+                .launch {
+                    saved.complete(
+                        try {
+                            update { it.copy(reportButton = ReportButton.HIDE) }
+                            true
+                        } catch (_: IOException) {
+                            false
+                        },
+                    )
+                }.invokeOnCompletion { saved.cancel() } // Nothing once completed.
+            saved
+        }
+
     companion object {
         /**
          * The settings' defaults in this build: `:core`'s, with developer mode's as the build sets
          * it (`BuildConfig.DEVELOPER_MODE_DEFAULT`, #451): on in a build for Play's testing tracks,
          * so testers reach *Diagnostics* without seven taps on *Version*, and off in any other. The
-         * tester's *Report button* (#452) follows the same flag: on in that build, off in any other.
+         * tester's *Report button* (#452, #518) follows the same flag: *Auto* in that build, so the
+         * button keeps out of the way while Home scrolls, and *Hide* in any other.
          */
         val BUILD_DEFAULTS: Settings =
             Settings(
                 developerMode = BuildConfig.DEVELOPER_MODE_DEFAULT,
-                reportButton = BuildConfig.DEVELOPER_MODE_DEFAULT,
+                reportButton = if (BuildConfig.DEVELOPER_MODE_DEFAULT) ReportButton.AUTO else ReportButton.HIDE,
             )
 
         /** The first retry of a failed read: soon, as a passing I/O error clears in moments. */

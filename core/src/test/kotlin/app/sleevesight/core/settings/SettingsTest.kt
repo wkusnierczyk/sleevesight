@@ -35,9 +35,20 @@ class SettingsTest {
 
     @Test
     fun `turning developer mode off turns off every developer option`() {
-        val on = Settings(developerMode = true, showDiagnostics = true, showGroundingDetails = true)
+        val on =
+            Settings(
+                developerMode = true,
+                showDiagnostics = true,
+                showGroundingDetails = true,
+                reportButton = ReportButton.SHOW,
+            )
         assertEquals(Settings(), on.withoutDeveloperMode())
         assertFalse(defaults.showGroundingDetails)
+        // The report button (#518) is hidden by default and with developer mode off, whatever its choice.
+        assertEquals(ReportButton.HIDE, defaults.reportButton)
+        for (choice in ReportButton.entries) {
+            assertEquals(ReportButton.HIDE, on.copy(reportButton = choice).withoutDeveloperMode().reportButton)
+        }
     }
 
     @Test

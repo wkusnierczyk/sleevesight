@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -24,9 +25,11 @@ import kotlin.time.Duration.Companion.milliseconds
  * default; *Players* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
- * later one), or out of range reads as that setting's default, and the others are unaffected. One
- * exception: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
- * *Diagnostics* on, so someone who used the diagnostics keeps the way to them.
+ * later one), or out of range reads as that setting's default, and the others are unaffected. Two
+ * exceptions: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
+ * *Diagnostics* on, so someone who used the diagnostics keeps the way to them; and *Report button*
+ * (#518), a choice stored under a key of its own, reads in a file from when it was a switch as that
+ * switch was ([reportButtonOf]).
  *
  * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
  * settings that changed, so a value this version cannot read stays until the user changes that
@@ -69,7 +72,6 @@ internal object SettingsCodec {
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
     private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
-    private val REPORT_BUTTON = booleanPreferencesKey("developer.report_button")
     private val LINK_STYLE = stringPreferencesKey("developer.link_style")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
@@ -118,7 +120,7 @@ internal object SettingsCodec {
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs, defaults),
-            reportButton = prefs[REPORT_BUTTON] ?: defaults.reportButton,
+            reportButton = reportButtonOf(prefs, defaults),
             linkStyle = enumOf(prefs[LINK_STYLE]) ?: defaults.linkStyle,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
@@ -238,7 +240,12 @@ internal object SettingsCodec {
         if (moved { it.developerMode } || (moved { it.showDiagnostics } && DEVELOPER_MODE !in prefs)) {
             prefs.put(DEVELOPER_MODE, settings.developerMode, impliedDeveloperMode)
         }
-        if (moved { it.reportButton }) prefs.put(REPORT_BUTTON, settings.reportButton, defaults.reportButton)
+        // Moved, it is stored under its own key against its default, and the old switch's key goes:
+        // left, it would read in place of a choice equal to the default, which is not stored.
+        if (moved { it.reportButton }) {
+            prefs.remove(REPORT_BUTTON_SWITCH)
+            prefs.put(REPORT_BUTTON, settings.reportButton.name, defaults.reportButton.name)
+        }
         if (moved { it.linkStyle }) prefs.put(LINK_STYLE, settings.linkStyle.name, defaults.linkStyle.name)
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
@@ -349,6 +356,29 @@ internal object SettingsCodec {
         Settings.DEFAULT_CACHE_LIFETIMES.mapValues { (source, default) ->
             prefs[lifetimeKey(source)]?.takeIf { it > 0 }?.milliseconds ?: default
         }
+}
+
+/** *Report button* (#518), a choice; read through [reportButtonOf]. */
+private val REPORT_BUTTON = stringPreferencesKey("developer.report_button_choice")
+
+/** *Report button* when it was a switch (#452), read only where [REPORT_BUTTON] is not stored. */
+private val REPORT_BUTTON_SWITCH = booleanPreferencesKey("developer.report_button")
+
+/**
+ * *Report button* as stored (#518), or, with no key of its own, as its switch was stored before it
+ * became a choice (#452): on as *Auto*, the test build's default, and off as *Hide*. With neither
+ * key, or a name this version does not know, the build's default ([defaults]).
+ */
+private fun reportButtonOf(
+    prefs: Preferences,
+    defaults: Settings,
+): ReportButton {
+    prefs[REPORT_BUTTON]?.let { return enumOf(it) ?: defaults.reportButton }
+    return when (prefs[REPORT_BUTTON_SWITCH]) {
+        true -> ReportButton.AUTO
+        false -> ReportButton.HIDE
+        null -> defaults.reportButton
+    }
 }
 
 internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }

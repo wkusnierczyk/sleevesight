@@ -1,10 +1,15 @@
 package app.sleevesight.app
 
 import android.app.Application
+import androidx.annotation.VisibleForTesting
 
 /** Holds the process's one [AppGraph]. */
 class SleevesightApplication : Application() {
-    private val made = lazy { AppGraph(this) }
+    /** How the graph is made, on first use; a test may make it with stand-ins first. */
+    @VisibleForTesting
+    internal var makeGraph: (Application) -> AppGraph = { AppGraph(it) }
+
+    private val made = lazy { makeGraph(this) }
 
     val graph: AppGraph by made
 

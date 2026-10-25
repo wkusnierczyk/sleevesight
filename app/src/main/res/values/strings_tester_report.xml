@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The tester's report (#452): Home's button, in developer mode with *Report button* on, and the
-     review before the report is handed to the tester's own mail app. -->
+<!-- The tester's report (#452): Home's button, in developer mode with *Report button* not *Hide*,
+     its menu (#518), and the review before the report is handed to the tester's own mail app. -->
 <resources>
-    <!-- What a screen reader says for Home's button. -->
-    <string name="tester_report_button">Report to the developer: collect what the app knows now, to review and send</string>
+    <!-- What a screen reader says for Home's button, which opens its menu. -->
+    <string name="tester_report_button">Report to the developer, or hide this button</string>
+    <!-- The button's menu (#518): the review, or the button hidden. -->
+    <string name="tester_report_menu_report">Report</string>
+    <string name="tester_report_menu_hide">Hide</string>
+    <!-- After the menu's Hide: where to bring the button back. -->
+    <string name="tester_report_hidden">The report button is hidden. To bring it back: Settings → Developer → Report button.</string>
+    <!-- After the menu's Hide, when the setting could not be saved. -->
+    <string name="tester_report_not_hidden">The report button could not be hidden. Try again, or choose Hide under Settings → Developer → Report button.</string>
+    <string name="tester_report_hidden_dismiss">Dismiss</string>
 
     <string name="tester_report_title">Tester report</string>
     <!-- %1$s is the support address. -->

@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.app.TestStores
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -37,8 +38,13 @@ class DeveloperModeDefaultTest {
     @Test
     fun theBuildsDefaultsDifferFromCoresOnlyInDeveloperModeAndTheReportButtonAsTheBuildSetsThem() {
         assertEquals(BuildConfig.DEVELOPER_MODE_DEFAULT, SettingsStore.BUILD_DEFAULTS.developerMode)
-        assertEquals(BuildConfig.DEVELOPER_MODE_DEFAULT, SettingsStore.BUILD_DEFAULTS.reportButton)
-        assertEquals(Settings(), SettingsStore.BUILD_DEFAULTS.copy(developerMode = false, reportButton = false))
+        // *Report button* (#518): *Auto* in the test build, *Hide* in any other.
+        val button = if (BuildConfig.DEVELOPER_MODE_DEFAULT) ReportButton.AUTO else ReportButton.HIDE
+        assertEquals(button, SettingsStore.BUILD_DEFAULTS.reportButton)
+        assertEquals(
+            Settings(),
+            SettingsStore.BUILD_DEFAULTS.copy(developerMode = false, reportButton = ReportButton.HIDE),
+        )
     }
 
     @Test

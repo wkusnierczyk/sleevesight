@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity() {
     private val testerReport: TesterReportFeed by lazy {
         TesterReportFeed(
             settings = graph.settings.settings,
+            // The menu's *Hide* (#518), saved in the process's scope.
+            hide = graph.settings.reportButtonHider(graph.settingsSaves),
             reports =
                 TesterReports(
                     build =

@@ -12,6 +12,7 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.pipeline.WrittenBy
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.PlaybackStateRecord
 import app.sleevesight.store.TrackChangePage
@@ -101,10 +102,11 @@ class TesterReportTest {
 
     @Test
     fun theSettingsPartListsEverySettingAndTheModelInUse() {
-        val text = TesterReport.settings(Settings(aiProvider = ProviderId.ANTHROPIC, reportButton = true))
+        val text = TesterReport.settings(Settings(aiProvider = ProviderId.ANTHROPIC, reportButton = ReportButton.AUTO))
         for ((name, _) in SETTING_LINES) assertTrue(name, text.lines().any { it.startsWith("$name: ") })
         assertTrue(text.contains("aiProvider: Anthropic"))
-        assertTrue(text.contains("reportButton: on"))
+        // *Report button* by its choice (#518).
+        assertTrue(text.contains("reportButton: AUTO"))
         assertTrue(text.contains("developerMode: off"))
         assertTrue(text.endsWith("In use: Anthropic, claude-haiku-5-5, effort low"))
         assertEquals("Not read yet.", TesterReport.settings(null))

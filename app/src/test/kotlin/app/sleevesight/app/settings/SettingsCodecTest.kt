@@ -16,6 +16,7 @@ import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.PrepareNextTrack
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.ThemeChoice
@@ -88,7 +89,7 @@ class SettingsCodecTest {
                 showDiagnostics = true,
                 showGroundingDetails = true,
                 developerMode = true,
-                reportButton = true,
+                reportButton = ReportButton.SHOW,
                 linkStyle = LinkStyle.HIGHLIGHT,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
