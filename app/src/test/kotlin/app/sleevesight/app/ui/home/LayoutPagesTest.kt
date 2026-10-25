@@ -66,6 +66,7 @@ import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -323,10 +324,14 @@ class LayoutPagesTest {
             // frame, never as boxes while the settings are still being read.
             compose.mainClock.autoAdvance = false
             compose.onNodeWithTag(PAGE_BACK_TAG).performClick()
+            var drawn = false
             repeat(BACK_FRAMES) {
                 compose.mainClock.advanceTimeByFrame()
                 assertEquals(0, count(SOURCES_FOLD_TAG))
+                drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
             }
+            // Home was drawn in those frames, so the fold's absence means something.
+            assertTrue(drawn)
             compose.mainClock.autoAdvance = true
             compose.waitForIdle()
             onHome()

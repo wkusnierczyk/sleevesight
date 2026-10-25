@@ -525,7 +525,7 @@ Session layer, home screen, sources section, insight with grounding check, genre
 
 ### Phase 1.5. Play release
 
-The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. With it, the AI service gets a row per provider (#227), and OpenAI and Google join Anthropic (#228, #229; moved from Phase 3 on 2026-10-18), so alpha testers can choose a provider and vary its effort. The layout setting (*Layout setting*, #447) comes forward from Phase 2 for what the home screen holds now that opens: *Sources* and the genres' table. The work is in [plan.md](plan.md).
+The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. With it, the AI service gets a row per provider (#227), and OpenAI and Google join Anthropic (#228, #229; moved from Phase 3 on 2026-10-18), so alpha testers can choose a provider and vary its effort. The layout setting (*Layout setting*, #447) comes forward from Phase 2 for what the home screen holds now that opens: *Sources* and the genres' table. The song, artist and album insights (#522) come with it, as items that open as the setting says. The work is in [plan.md](plan.md).
 
 ### Phase 2. Detail and discovery
 
