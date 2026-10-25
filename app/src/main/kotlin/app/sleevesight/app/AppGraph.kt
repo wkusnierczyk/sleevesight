@@ -84,9 +84,13 @@ import kotlinx.coroutines.withContext
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
  * per process, held by [SleevesightApplication]. Components take what they need through their
  * constructors; nothing outside this class constructs a long-lived object.
+ *
+ * @param settingsData the settings' file, made here unless a test passes a stand-in.
  */
 class AppGraph(
     context: Context,
+    settingsData: DataStore<Preferences> =
+        preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
 ) {
     private val appContext = context.applicationContext
 
@@ -105,14 +109,10 @@ class AppGraph(
     val firstRun = FirstRunAcknowledgement(appContext)
 
     /**
-     * The user's settings, with this build's defaults. DataStore allows one instance per file in a
-     * process, so only here.
+     * The user's settings, with this build's defaults, in [settingsData]. DataStore allows one
+     * instance per file in a process, so it is made only for the graph.
      */
-    val settings =
-        SettingsStore(
-            preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
-            SettingsStore.BUILD_DEFAULTS,
-        )
+    val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))

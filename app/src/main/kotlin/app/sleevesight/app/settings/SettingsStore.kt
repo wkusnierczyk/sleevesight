@@ -6,9 +6,9 @@ import androidx.datastore.preferences.core.edit
 import app.sleevesight.app.BuildConfig
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.math.pow
 import kotlin.time.Duration
@@ -96,21 +97,27 @@ class SettingsStore(
     }
 
     /**
-     * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, saved in
+     * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
      * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
-     * result says whether it was saved: false after an I/O error, which leaves the setting as it was;
-     * any other failure propagates, as the settings screen's saves do.
+     * result says whether it was saved: false after an I/O error, which leaves the setting as it was.
+     * Any other failure fails the launch, so it reaches [saves] whether or not anyone awaits the
+     * result, as the settings screen's saves do; the result is then cancelled, so a wait for it ends.
      */
     fun reportButtonHider(saves: CoroutineScope): () -> Deferred<Boolean> =
         {
-            saves.async {
-                try {
-                    update { it.copy(reportButton = ReportButton.HIDE) }
-                    true
-                } catch (_: IOException) {
-                    false
-                }
-            }
+            val saved = CompletableDeferred<Boolean>()
+            saves
+                .launch {
+                    saved.complete(
+                        try {
+                            update { it.copy(reportButton = ReportButton.HIDE) }
+                            true
+                        } catch (_: IOException) {
+                            false
+                        },
+                    )
+                }.invokeOnCompletion { saved.cancel() } // Nothing once completed.
+            saved
         }
 
     companion object {
