@@ -1,0 +1,147 @@
+{% comment %}
+  The header's script, at the end of the body of the product page and the documentation pages
+  (#501): the header's size as the page scrolls, the intro, and on the product page the logo's
+  replay.
+{% endcomment %}
+<script>
+(function () {
+  var root = document.documentElement, header = document.querySelector('header.top'), bar = header.querySelector('.bar'),
+      row = bar.querySelector('.row'), brand = row.querySelector('.brand'), mark = brand.querySelector('svg'),
+      nav = row.querySelector('nav');
+  // Lays out the large header, as it is at the top of the page, without animating it: whether the menu
+  // fits on one line beside the logo, and the height the header keeps in the page while it is small.
+  function measure() {
+    var compact = root.classList.contains('sl-compact');
+    root.classList.add('sl-still');
+    root.classList.remove('sl-compact', 'sl-stack');
+    var room = row.clientWidth - parseFloat(getComputedStyle(row).paddingLeft) * 2;
+    root.classList.toggle('sl-stack', brand.offsetWidth + 24 + nav.offsetWidth > room);
+    header.style.height = bar.offsetHeight + 'px';
+    root.classList.toggle('sl-compact', compact);
+    void bar.offsetHeight;
+    root.classList.remove('sl-still');
+  }
+  function onScroll() { root.classList.toggle('sl-compact', scrollY > 4); }
+  measure();
+  onScroll();
+  // At most once a frame: `measure()` forces a layout, and `resize` can come more often than frames
+  // (synthetic events, some engines).
+  var measuring = 0;
+  addEventListener('resize', function () {
+    if (!measuring) measuring = requestAnimationFrame(function () { measuring = 0; measure(); });
+  });
+  // The menu's width changes when the page's font arrives (`font-display: swap`), after the first layout.
+  if (document.fonts) document.fonts.ready.then(measure);
+  addEventListener('scroll', onScroll, {passive: true});
+
+  // A resize (a phone turned) would leave the splash's places stale, and focus can arrive without a
+  // key (a screen reader's cursor), so either ends the intro too.
+  var stops = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll', 'resize', 'focusin'],
+      moving = matchMedia('(prefers-reduced-motion: no-preference)'), v;
+  function end() {
+    stops.forEach(function (e) { removeEventListener(e, stop); });
+    root.classList.remove('sl-intro');
+  }
+  // A held key's repeats (Enter or Space on the logo) do not end the intro it started.
+  function stop(e) { if (!(e.type === 'keydown' && e.repeat)) end(); }
+  function listen() { stops.forEach(function (e) { addEventListener(e, stop, {passive: true}); }); }
+  // The intro ends with its last move: D's record turning in, the others' page arriving.
+  function last(e) { if (e.animationName === (v === 'd' ? 'd-rec' : 'sl-arrive')) end(); }
+  brand.addEventListener('animationend', last);
+  document.querySelector('main').addEventListener('animationend', last);
+  // Each splash's svg in the words' units: its viewBox's left, top, width and height. C's is a square of
+  // 256 centred on the record, with room for the words' sweep (119.5 from the record's centre at the
+  // farthest); D's is the tile, 144 across, with room for its corners as it turns; F's is a square of
+  // 188 centred on the dot, with room for the record's path; G's and H's are the header's box, the
+  // mark's ink, since nothing in them leaves it; I's is the mark's ink widened to the right, to 183.79,
+  // past where "Sleeve" starts (183.26 at the farthest), so it is centred on the record horizontally,
+  // and the record stays still midway across the window; R1's and R2's are the brand sheet's reveals.
+  var boxes = {c: [-54.9, -113.84, 256, 256], d: [-72, -72, 144, 144], f: [-94, -94, 188, 188],
+               g: [-37.59, -37.26, 128.27, 69], h: [-37.59, -37.26, 128.27, 69],
+               i: [-37.59, -37.26, 221.38, 69],
+               r1: [-56.4, -45.76, 166, 86], r2: [-119.5, -82.76, 292, 160]};
+  function start() {
+    // The splash is centred in the window, at most 300/144 px to the unit (D's tile 300 px across), less
+    // where the window is too small for it. The header's logo is the words' ink box, from -37.59, -37.26
+    // and 69 tall, so the splash lands where the header's logo sits in it.
+    v = root.getAttribute('data-logo');
+    var b = boxes[v], m = mark.getBoundingClientRect(), u = m.height / 69,
+        k = v === 'd' ? Math.min(300, innerWidth * .62, innerHeight * .45) / 144
+                      : Math.min(300 / 144, innerWidth * .95 / b[2], innerHeight * .9 / b[3]),
+        w = b[2] * k, h = b[3] * k, x = (innerWidth - w) / 2, y = (innerHeight - h) / 2;
+    root.style.setProperty('--sb', w + 'px');
+    root.style.setProperty('--sbh', h + 'px');
+    root.style.setProperty('--sx', x + 'px');
+    root.style.setProperty('--sy', y + 'px');
+    root.style.setProperty('--fx', m.left + (b[0] + 37.59) * u - x + 'px');
+    root.style.setProperty('--fy', m.top + (b[1] + 37.26) * u - y + 'px');
+    root.style.setProperty('--fs', u / k);
+    root.classList.remove('sl-wait');
+    root.classList.add('sl-intro');
+  }
+  if (root.classList.contains('sl-wait')) {
+    start();
+    listen();
+  }
+
+  // The replay: a click on the logo, a step up from the hover's spin. It plays an intro picked afresh,
+  // as on a new visit, where the page is: the splash flies to the header's logo as it is, small when
+  // scrolled down, and the page fades back in at the same place. The header's transitions are settled
+  // first (`.sl-still`), so a click just after a scroll measures the logo where it ends up. Reading the
+  // layout between taking the class off and putting it back restarts the animations. The stops listen
+  // from the next frame on, so that nothing of the click or key that started the replay can end it.
+  function replay() {
+    end();
+    brand.classList.remove('play');
+    var all = Object.keys(boxes);
+    root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
+    root.classList.add('sl-still');
+    void bar.offsetHeight;
+    start();
+    root.classList.remove('sl-still');
+    requestAnimationFrame(listen);
+  }
+  // Where motion is allowed, the logo is a button that plays the intro, named so, and Space presses it
+  // as well as Enter. Under "reduce motion" it is the link to the top of the page, as without the
+  // script; it follows the setting if that changes, and a change to "reduce motion" ends an intro that
+  // is playing. A click with a modifier, or another button, keeps the link's own behaviour (a new tab,
+  // say), and Space with Ctrl, Alt or Meta is left alone (an input-source switch, say). On the
+  // documentation pages the logo has no `data-replay` and stays the link to the product page.
+  var replays = brand.hasAttribute('data-replay');
+  function role() {
+    if (!replays) {
+      if (!moving.matches) end();
+    } else if (moving.matches) {
+      brand.setAttribute('role', 'button');
+      brand.setAttribute('aria-label', 'Sleevesight, play the intro');
+    } else {
+      brand.removeAttribute('role');
+      brand.setAttribute('aria-label', 'Sleevesight, top of the page');
+      end();
+    }
+  }
+  role();
+  if (moving.addEventListener) moving.addEventListener('change', role);
+  brand.addEventListener('click', function (e) {
+    if (!replays || !moving.matches || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    replay();
+  });
+  // Space's repeats are cancelled too, or a held Space would scroll the page.
+  brand.addEventListener('keydown', function (e) {
+    if (!replays || !moving.matches || e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+    if (!e.repeat) replay();
+  });
+
+  function play() {
+    if (!moving.matches || root.classList.contains('sl-intro')) return;
+    brand.classList.add('play');
+  }
+  brand.addEventListener('pointerenter', play);
+  brand.addEventListener('focus', play);
+  brand.addEventListener('animationend', function (e) {
+    if (e.animationName === 'lg-turn') brand.classList.remove('play');
+  });
+})();
+</script>
