@@ -37,7 +37,7 @@ class SeenPlayersRecorderTest {
             val job = launch { SeenPlayersRecorder(seen, record, { warnings += it }).run() }
 
             seen.value = setOf(OTHER)
-            assertEquals(listOf("Could not list $OTHER under Players to follow"), warnings)
+            assertEquals(listOf("Could not list $OTHER under Players"), warnings)
 
             failing = false
             seen.value = setOf(OTHER, SPOTIFY)

@@ -79,7 +79,7 @@ enum class SaveResult {
 
     /**
      * The key store could not seal the key, or may not make a key ([SecretStore]'s class KDoc):
-     * if that keeps happening, *Reset saved keys* is the way out.
+     * if that keeps happening, *Purge keys* is the way out.
      */
     NOT_SEALED,
 
@@ -100,7 +100,7 @@ enum class SecretState {
      * onto another phone, a reset Keystore), the value is damaged, or the key store fails. It reads
      * as no key. Saving it again works when the Keystore key is gone from API 31 (a new one is made);
      * before API 31 with any key stored, this one included, or when the key store keeps failing, the
-     * user's *Reset saved keys* ([SecretStore.reset]) is the way out.
+     * user's *Purge keys* ([SecretStore.reset]) is the way out.
      */
     UNREADABLE,
 }
@@ -119,7 +119,7 @@ enum class SecretState {
  * that cannot cost a stored key: from API 31 (keystore2, which reports a failed lookup as an
  * error), or when no key is stored. Before API 31 the key store reports a failed lookup as no key,
  * and creating one deletes whatever is under the alias, so with keys stored such a save fails and
- * *Reset saved keys* is the way out. [legacyKeystore] says which applies.
+ * *Purge keys* is the way out. [legacyKeystore] says which applies.
  *
  * The cipher's work, which goes to the Keystore over binder calls, runs on [dispatcher], never on
  * the caller's (the screen's main thread). Saves, removals and resets run one at a time. One that
@@ -231,7 +231,7 @@ class SecretStore(
     suspend fun clear(id: SecretId): Boolean = writes.withLock { write { it.remove(keyOf(id)) } }
 
     /**
-     * *Reset saved keys*, and *Remove all API keys*: removes every saved key and deletes the Keystore
+     * *Purge keys*: removes every saved key and deletes the Keystore
      * key, so the next save makes a new one. The way out when the key store cannot read the saved
      * keys or seal new ones. False when either step failed; the other is still done.
      *
@@ -242,7 +242,7 @@ class SecretStore(
      * the next reset that can write the file. Keeping the Keystore key would leave every key
      * working after a removal the user was told had not finished. Until a reset removes them, a save
      * makes a new Keystore key from API 31 (the entries left stay unreadable); before it, with
-     * entries stored, a save fails ([SaveResult.NOT_SEALED]) and *Reset saved keys* is offered again.
+     * entries stored, a save fails ([SaveResult.NOT_SEALED]) and *Purge keys* is offered again.
      */
     suspend fun reset(): Boolean =
         writes.withLock {

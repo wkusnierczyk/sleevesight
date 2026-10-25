@@ -23,9 +23,9 @@ data class Card(
 )
 
 /**
- * What decides, from a run's settings, whether it writes without a tap: the causes *Write insights
- * automatically* writes on ([writesOn], `AutoWrite.causes`: none while *Write insights* is off or
- * under *Never*), and whether the model's own knowledge is allowed ([allowModel]), which decides
+ * What decides, from a run's settings, whether it writes without a tap: the causes *Reactive*
+ * writes on ([writesOn], `AutoWrite.causes`: none while *Show insights* is off or
+ * under *Manual*), and whether the model's own knowledge is allowed ([allowModel]), which decides
  * whether the evidence has anything to narrate (`EvidenceSet.nothingToNarrate`).
  */
 data class WriteSettings(
@@ -93,7 +93,7 @@ sealed interface CoordinatorEvent {
     ) : CoordinatorEvent
 
     /**
-     * *Pause automatic writing after* switched (#203): [after] track changes reported while no
+     * *Saver* switched (#203): [after] track changes reported while no
      * activity is started are written as usual, and the first action expires at the next one; null
      * for *Off*, never.
      */
@@ -118,8 +118,8 @@ sealed interface CoordinatorEvent {
 
     /**
      * Run [run] has its evidence and could write its insight; [writesOn] are the causes of a change
-     * that *Write insights automatically* writes on, once the user has acted, under the run's
-     * settings (`AutoWrite.causes`: none while *Write insights* is off or under *Never*), and
+     * that *Reactive* writes on, once the user has acted, under the run's
+     * settings (`AutoWrite.causes`: none while *Show insights* is off or under *Manual*), and
      * [allowModel] whether its settings allow the model's own knowledge (#192: a run that asks
      * again writes without a tap only under the settings the track was decided under).
      */
@@ -195,7 +195,7 @@ sealed interface CoordinatorEvent {
 
     /**
      * The track to prepare ahead (D13) is now [next]: the item after the playing track in the shown
-     * player's queue (`NextInQueue`), or null when there is none or *Prepare the next track* is off.
+     * player's queue (`NextInQueue`), or null when there is none or *Proactive* is off.
      */
     data class NextChanged(
         val next: NowPlaying?,
@@ -301,7 +301,7 @@ sealed interface CoordinatorEffect {
  * the background, the screen turned off and on, or a configuration change keeps it. Only its
  * expiry clears it (#203): [away] counts the track changes reported while no activity is started
  * (a report of another insight track than the report before), from the last activity start or
- * action, and once it passes [pauseAfter] (*Pause automatic writing after*; null for *Off*), at
+ * action, and once it passes [pauseAfter] (*Saver*; null for *Off*), at
  * the next change after that many, the first action, if made, expires: [acted] false and
  * [expired] true, until the user acts again, and a tap kept for the run (#192) is dropped. An
  * activity start resets [away], not [expired]. [ledger] is the insight of the current insight
@@ -581,10 +581,10 @@ fun sameInsightTrack(
  * question comes only when a rebuild's run cannot find its card under its new card key (new
  * evidence, another service), and Write is offered beside the card paid for, which the view keeps
  * showing ([CoordinatorState.rewrites]), as the user's choice to rewrite it. Else write when the
- * latest report's cause, which the current run holds, is one *Write insights automatically* writes
- * on under the run's settings (`InsightAsked.writesOn`: every cause under *On every track change*,
- * a skip in the player or an action in Sleevesight under *When I skip*, none under *Never* or with
- * *Write insights* off), the user has acted since the app started (a cold start: a return to the
+ * latest report's cause, which the current run holds, is one *Reactive* writes
+ * on under the run's settings (`InsightAsked.writesOn`: every cause under *On track change*,
+ * a skip in the player or an action in Sleevesight under *On skip*, none under *Manual* or with
+ * *Show insights* off), the user has acted since the app started (a cold start: a return to the
  * app keeps the first action) and that first action has not expired, and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
@@ -733,7 +733,7 @@ class PipelineCoordinator(
     }
 
     // A track change reported while no activity is started (#203): one more away, and past the
-    // count *Pause automatic writing after* names, the first action, if made, expires. A tap kept
+    // count *Saver* names, the first action, if made, expires. A tap kept
     // for the run (#192) goes with it: it was made before, and must not pay after.
     private fun counted() {
         val away = state.away + 1

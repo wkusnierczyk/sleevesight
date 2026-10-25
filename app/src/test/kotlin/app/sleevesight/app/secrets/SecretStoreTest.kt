@@ -554,7 +554,7 @@ class SecretStoreTest {
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
 
             // An entry is still stored, so no Keystore key may be made: the save fails in the key
-            // store, which offers *Reset saved keys* again.
+            // store, which offers *Purge keys* again.
             assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.creations)
 

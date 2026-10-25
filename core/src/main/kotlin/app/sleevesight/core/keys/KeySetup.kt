@@ -3,7 +3,7 @@ package app.sleevesight.core.keys
 import app.sleevesight.core.Secret
 
 // The keys a QR code carries (#268): one key alone, for its own field, or a setup code with
-// several, named, which the CLI draws (`keys-qr`) and the settings screen reads (*Scan keys*).
+// several, named, which the CLI draws (`keys-qr`) and the settings screen reads (*Load keys*).
 
 /** A service whose key a setup code may carry, by the name the code gives it. */
 enum class KeyName(
