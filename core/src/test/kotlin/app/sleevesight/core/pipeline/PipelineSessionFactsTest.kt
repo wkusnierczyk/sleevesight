@@ -335,6 +335,21 @@ class PipelineSessionFactsTest {
         }
 
     @Test
+    fun `a card written from fewer lines, served from the cache, keeps no record of the lines its prompt held`() =
+        runTest {
+            val pipeline = pipeline(cache = MemoryCache())
+            pipeline.run(track("One"), write = true)
+            val written = assertIs<InsightState.Written>(pipeline.run(track("Two"), write = true).insight)
+            assertEquals(setOf("MB1", "L2"), written.held)
+
+            val again = assertIs<InsightState.Written>(pipeline.run(track("Two"), write = true).insight)
+
+            // A problem report on it (#390) lists every line, and says its prompt may have held fewer.
+            assertTrue(again.cached)
+            assertEquals(null, again.held)
+        }
+
+    @Test
     fun `a track written again is not denied the facts its own insight cited`() =
         runTest {
             val pipeline = pipeline()
