@@ -76,7 +76,7 @@ internal fun sourceName(source: SourceId): String =
             SourceId.WIKIDATA -> R.string.home_source_name_wikidata
             SourceId.LASTFM -> R.string.settings_source_lastfm
             SourceId.DISCOGS -> R.string.home_source_name_discogs
-            SourceId.WEB -> R.string.settings_source_web
+            SourceId.WEB -> R.string.home_source_name_web
             SourceId.MODEL -> R.string.settings_source_model
             SourceId.PLAYER -> R.string.home_source_name_player
         },

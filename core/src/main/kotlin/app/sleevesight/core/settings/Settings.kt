@@ -37,7 +37,10 @@ import kotlin.time.Duration.Companion.seconds
  * @property webEngines the web search engines switched on under *Web search* (D11); web search runs
  *   only with one on. See [DEFAULT_WEB_ENGINES].
  * @property labelSources the sources whose tags give genre labels (D12, #84); ask [givesLabels],
- *   which also needs the source on under *Where to look*. See [DEFAULT_LABEL_SOURCES].
+ *   which also needs the source on under *Sources* and [showGenres] on. See
+ *   [DEFAULT_LABEL_SOURCES].
+ * @property showGenres *Show genres* (#444): off, no genre labels are asked for from any source,
+ *   and the home screen shows none. On by default.
  * @property writeInsights the master switch: off means no AI calls at all; evidence is still shown.
  * @property pauseAutoWriteAfter *Pause automatic writing after* (#203): the track changes reported
  *   while Sleevesight is not on screen that are written as usual; at the next, the user's first
@@ -83,6 +86,11 @@ import kotlin.time.Duration.Companion.seconds
  *   screen it closed, not when the app is started afresh.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
+ * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
+ *   section, the options a developer or tester may want and a listener will not. Turned on by seven
+ *   taps on *Version*, off by its switch, which turns off every developer option with it
+ *   ([withoutDeveloperMode]). Off by default.
+ * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
  * @property introAtStart *Logo intro at start* (#383): whether the app, opened from the launcher
@@ -99,6 +107,7 @@ data class Settings(
     val enabledSources: Set<SourceSwitch> = DEFAULT_SOURCES,
     val webEngines: Set<WebEngine> = DEFAULT_WEB_ENGINES,
     val labelSources: Set<LabelSource> = DEFAULT_LABEL_SOURCES,
+    val showGenres: Boolean = true,
     val writeInsights: Boolean = true,
     val writeAutomatically: WriteAutomatically = WriteAutomatically.ON_EVERY_TRACK_CHANGE,
     val pauseAutoWriteAfter: Int? = DEFAULT_PAUSE_AUTO_WRITE_AFTER,
@@ -113,6 +122,8 @@ data class Settings(
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val keepSourcesUnfolded: Boolean = false,
     val showDiagnostics: Boolean = false,
+    val developerMode: Boolean = false,
+    val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
 ) {
@@ -190,11 +201,17 @@ data class Settings(
         }
 
     /**
-     * Whether [source]'s tags give genre labels: its label switch is on, and its source is on under
-     * *Where to look*, since the tags come with that source's lookup. Last.fm also needs its key,
-     * without which it is not looked up at all.
+     * Whether [source]'s tags give genre labels: [showGenres] is on, its label switch is on, and its
+     * source is on under *Sources*, since the tags come with that source's lookup. Last.fm also
+     * needs its key, without which it is not looked up at all.
      */
-    fun givesLabels(source: LabelSource): Boolean = source in labelSources && isEnabled(source.source)
+    fun givesLabels(source: LabelSource): Boolean = showGenres && source in labelSources && isEnabled(source.source)
+
+    /**
+     * These settings with developer mode off, and with it every developer option ([showDiagnostics]),
+     * so nothing hidden keeps running. A developer option joins here with its setting.
+     */
+    fun withoutDeveloperMode(): Settings = copy(developerMode = false, showDiagnostics = false)
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
@@ -451,6 +468,14 @@ enum class FontChoice {
 
     /** The font chosen in the phone's own settings, for someone who prefers it everywhere. */
     SYSTEM_FONT,
+}
+
+/** *Theme* (#444): whether the app is light or dark. */
+enum class ThemeChoice {
+    /** Light or dark as the phone's dark theme is, the default. */
+    SYSTEM,
+    LIGHT,
+    DARK,
 }
 
 /** How the detail content is shown. */

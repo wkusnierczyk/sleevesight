@@ -42,7 +42,6 @@ import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
-import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.keys.KeyShape
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
@@ -304,12 +303,16 @@ internal fun ConfirmDialog(
  * The model for [provider]: its default, stored as no choice so that it follows the default if a
  * later version revises it, or one of the models its service lists for the saved key, fetched by
  * [load] when the dialog opens. A model chosen earlier stays offered when the list cannot be had.
+ * Each is offered by its name, with its id under it, smaller ([RadioRow]); one the service names
+ * by its id alone, by its id. The names come from the list, else from [modelName].
  */
+@Suppress("LongParameterList") // The provider, its model, the list, and what the dialog does.
 @Composable
 internal fun ModelDialog(
     provider: ProviderId,
     current: String?,
     load: suspend () -> ModelLoad,
+    modelName: (String) -> String,
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -317,9 +320,10 @@ internal fun ModelDialog(
     val default = Settings.DEFAULT_MODELS[provider]
     val listed = (loaded as? ModelLoad.Listed)?.models.orEmpty()
     val earlier = current?.takeIf { c -> c != default && listed.none { it.id == c } }
+    val named = { id: String -> listed.firstOrNull { it.id == id }?.displayName ?: modelName(id) }
     val others =
-        listed.filter { it.id != default }.map { it.id to optionLabel(it) } +
-            listOfNotNull(earlier?.let { it to it })
+        listed.filter { it.id != default }.map { it.id to it.displayName } +
+            listOfNotNull(earlier?.let { it to modelName(it) })
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -334,14 +338,14 @@ internal fun ModelDialog(
                     )
                 }
                 default?.let { d ->
-                    val label = stringResource(R.string.settings_ai_model_default, d)
-                    RadioRow(label, selected = current == null || current == d) {
+                    val label = stringResource(R.string.settings_ai_model_default, named(d))
+                    RadioRow(label, selected = current == null || current == d, detail = d) {
                         onSelect(null)
                         onDismiss()
                     }
                 }
                 for ((id, label) in others) {
-                    RadioRow(label, selected = current == id) {
+                    RadioRow(label, selected = current == id, detail = id.takeIf { it != label }) {
                         onSelect(id)
                         onDismiss()
                     }
@@ -351,10 +355,6 @@ internal fun ModelDialog(
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )
 }
-
-/** A listed model as the dialog offers it: its name and id, or its id alone where the service names it by that. */
-internal fun optionLabel(model: ModelInfo): String =
-    if (model.displayName == model.id) model.id else "${model.displayName} (${model.id})"
 
 private fun modelStatus(load: ModelLoad): Int? =
     when (load) {

@@ -2,16 +2,20 @@ package app.sleevesight.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import app.sleevesight.app.ui.DiagnosticsScreen
@@ -24,6 +28,7 @@ import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.logo.endsOnKeys
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.isAppInDarkTheme
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 
@@ -58,7 +63,8 @@ class MainActivity : ComponentActivity() {
         val intro = if (playsIntro(savedInstanceState)) LogoIntro.random(animatorDurationScale()) else null
         this.intro = intro
         setContent {
-            SleevesightTheme(fonts = graph.font) {
+            SleevesightTheme(fonts = graph.font, themes = graph.theme) {
+                SystemBarsFollowTheme()
                 CompositionLocalProvider(LocalLogoIntro provides intro) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.
@@ -78,6 +84,7 @@ class MainActivity : ComponentActivity() {
                                         graph.settingsSaves,
                                         links.openCredits,
                                         links.openDiagnostics,
+                                        playerLaunch = graph::playerLaunchIntent,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
@@ -89,6 +96,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * The status and navigation bars' icons, dark on a light app and light on a dark one, as *Theme*
+     * (#444) has it rather than the system's dark theme, which `enableEdgeToEdge` goes by unless told.
+     */
+    @Composable
+    private fun SystemBarsFollowTheme() {
+        val dark = isAppInDarkTheme()
+        LaunchedEffect(dark) {
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+                navigationBarStyle = SystemBarStyle.auto(LIGHT_SCRIM, DARK_SCRIM) { dark },
+            )
         }
     }
 
@@ -162,6 +184,10 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TAG = "Sleevesight"
+
+        // `enableEdgeToEdge`'s own scrims for the three-button navigation bar, which it keeps private.
+        val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
 
         // `NavController`'s `KEY_DEEP_LINK_*` keys, which are restricted to its library group, so
         // spelled out; `NavDeepLinkBuilder` writes them.

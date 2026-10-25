@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import android.content.Intent
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -30,6 +32,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.settings.ListedModelNames
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
@@ -38,29 +41,22 @@ import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.keys.SetupRead
 import app.sleevesight.core.model.ProviderId
-import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.settings.Crossfade
-import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
-import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.IOException
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.seconds
 
 /**
- * The settings screen (design, *Settings*): the AI services, each with its switch, key, model and
- * reasoning effort ([AiSection], #227), the players to follow, where to look, the web search
- * engines and the keyed sources' keys, the genre label sources (D12, #84), the insight settings
- * (D5, D13), the home screen's (#269), the lookup settings (D6, D9), the history's (#148), and the
- * font (#377); at the end, *Scan keys* and, while any key is stored, *Remove all API keys*, the way
- * to the credits, the link to the privacy policy on the site, and the developer setting
- * *Diagnostics*. Each change is saved at once. The rows show the stored settings, so a change that
- * cannot be saved (the settings file cannot be read or written) leaves its row at the stored value,
- * and the screen says so above the list until a later change is saved.
+ * The settings screen (design, *Settings*; #444): its sections, each folded under its heading and
+ * short description, all folded when the screen opens ([SettingsSection], [FoldedSection]):
+ * *Players*, *Sources*, *AI services* ([AiSection], #227), *Secrets*, *Genres* (D12, #84),
+ * *Insights* (D5, D13), *History* (#148, D9), *Appearance* (#377), *About*, and *Developer*, shown
+ * only in developer mode, which seven taps on *Version* turn on ([VersionRow]). Each change is saved
+ * at once. The rows show the stored settings, so a change that cannot be saved (the settings file
+ * cannot be read or written) leaves its row at the stored value, and the screen says so above the
+ * list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
  * its default model only. [clearHistory] clears the session history and the track changes, once
@@ -72,9 +68,9 @@ import kotlin.time.Duration.Companion.seconds
  * screen, and [onOpenDiagnostics] the diagnostics screen, offered while *Diagnostics* is on.
  * [scanner] reads an API key's QR code, or a setup code of several (#268): the camera, but for
  * tests; [keyboard] runs *Type on a computer* (#394): Bluetooth, but for tests. [playerLabel]
- * names a player by its package.
+ * names a player by its package, and [playerLaunch] gives the intent that opens it, if any.
  */
-@Suppress("LongParameterList") // The stores and actions the screen works on, each its own.
+@Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
 fun SettingsScreen(
     settingsStore: SettingsStore,
@@ -86,14 +82,15 @@ fun SettingsScreen(
     onOpenDiagnostics: () -> Unit = {},
     scanner: QrScanner = CameraQrScanner,
     keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
+    playerLaunch: (String) -> Intent? = { null },
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
-    // Whether the key store could not seal the last key saved: as with an unreadable key, it offers
-    // *Reset saved keys*. Not a file that could not be written, which a reset would not cure.
+    // Whether the key store could not seal the last key saved: as with an unreadable key, *Purge
+    // keys* says why to use it. Not a file that could not be written, which a purge would not cure.
     var sealFailed by remember { mutableStateOf(false) }
     // The changes in a row that could not be saved, 0 once one is: each one is announced.
     var changeFailures by remember { mutableIntStateOf(0) }
@@ -103,15 +100,17 @@ fun SettingsScreen(
             changeFailures = if (failed) changeFailures + 1 else 0
         }
     val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
+    val context = LocalContext.current
+    val modelNames = remember(context) { ListedModelNames(context) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding()) {
             // Above the list, so it shows wherever the list is scrolled to.
             Notices(changeFailures, clearing.ended)
             settings?.let { current ->
-                SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits, onOpenDiagnostics), update) {
-                    dialog = it
-                }
+                val navigation =
+                    Navigation(PlayerApps(playerLabel, playerLaunch), modelNames::of, onOpenCredits, onOpenDiagnostics)
+                SettingsContent(current, keys, navigation, update) { dialog = it }
             }
         }
     }
@@ -149,7 +148,12 @@ fun SettingsScreen(
             ModelDialog(
                 provider = shown.provider,
                 current = settings?.aiModels?.get(shown.provider),
-                load = { loadModels(shown.provider, secretStore, aiProviders) },
+                load = {
+                    loadModels(shown.provider, secretStore, aiProviders).also { loaded ->
+                        if (loaded is ModelLoad.Listed) modelNames.learn(loaded.models)
+                    }
+                },
+                modelName = modelNames::of,
                 onSelect = { model -> update { it.withModel(shown.provider, model) } },
                 onDismiss = close,
             )
@@ -234,13 +238,10 @@ internal sealed interface SettingsDialog {
         val id: SecretId,
     ) : Keys
 
-    /** *Reset saved keys*, offered after a failure. */
-    data object ResetKeys : Keys
+    /** *Purge keys*, offered while any key is stored, or after a failure. */
+    data object PurgeKeys : Keys
 
-    /** *Remove all API keys*, offered while any key is stored; the same removal as [ResetKeys]. */
-    data object RemoveAllKeys : Keys
-
-    /** *Scan keys*: the camera, reading a setup code (#268). */
+    /** *Load keys*: the camera, reading a setup code (#268). */
     data object ScanKeys : Keys
 
     /** What the setup code scanned holds, [read], to confirm before anything is saved. */
@@ -251,39 +252,35 @@ internal sealed interface SettingsDialog {
     data object ClearHistory : SettingsDialog
 }
 
-/** How the screen names players, and where it leads. */
+/**
+ * How the settings name a player and open it: [label] names it by its package; [launch] is the
+ * intent that opens it from its launcher entry, or null for a player with none, which offers no
+ * link.
+ */
+internal class PlayerApps(
+    val label: (String) -> String,
+    val launch: (String) -> Intent? = { null },
+)
+
+/** How the screen names players and models, and where it leads. */
 private class Navigation(
-    val playerLabel: (String) -> String,
+    val players: PlayerApps,
+    val modelName: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
 )
 
-/** The saved keys' states, and whether to offer *Reset saved keys*. */
+/**
+ * The saved keys' states, and whether *Purge keys* says why to use it: a saved key cannot be read,
+ * or the key store could not seal a key (once *Reset saved keys*).
+ */
 internal class KeysShown(
     val states: Map<SecretId, SecretState>,
     val offerReset: Boolean,
 ) {
-    /** Whether any key is stored, readable or not: *Remove all API keys* is offered then. */
+    /** Whether any key is stored, readable or not: *Purge keys* is offered then. */
     val anyStored: Boolean get() = states.values.any { it != SecretState.ABSENT }
 }
-
-/** The cache lifetimes of the sources with an adapter (D9); Discogs's comes with it. */
-private val SHOWN_LIFETIMES =
-    listOf(
-        SourceId.MUSICBRAINZ to R.string.settings_source_musicbrainz,
-        SourceId.WIKIDATA to R.string.settings_cache_wikidata,
-        SourceId.WIKIPEDIA to R.string.settings_cache_wikipedia,
-        SourceId.LASTFM to R.string.settings_source_lastfm,
-        SourceId.WEB to R.string.settings_cache_web,
-    )
-
-/** The lifetimes offered, which include every default (D9); a stored one outside them is offered too. */
-@Suppress("MagicNumber") // The values are the offer itself.
-private val LIFETIME_DAYS = listOf(1, 3, 7, 14, 30, 90)
-
-private val MAX_CROSSFADE_SECONDS =
-    Crossfade.Fixed.MAX.inWholeSeconds
-        .toInt()
 
 /**
  * Says above the list that the last change could not be saved ([changeFailures], the failures in a
@@ -321,6 +318,7 @@ private fun Notices(
     }
 }
 
+@Suppress("LongMethod") // One fold per section, in the order shown.
 @Composable
 private fun SettingsContent(
     settings: Settings,
@@ -330,6 +328,7 @@ private fun SettingsContent(
     open: (SettingsDialog) -> Unit,
 ) {
     val secrets = keys.states
+    val folds = rememberSectionFolds()
     Column(
         modifier =
             Modifier
@@ -338,160 +337,21 @@ private fun SettingsContent(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
-        if (keys.offerReset) {
-            ValueRow(
-                title = stringResource(R.string.settings_reset_keys),
-                value = stringResource(R.string.settings_reset_keys_value),
-                summary = stringResource(R.string.settings_reset_keys_summary),
-                onClick = { open(SettingsDialog.ResetKeys) },
-            )
+        FoldedSection(SettingsSection.PLAYERS, folds) { PlayersSection(settings, navigation.players, update) }
+        FoldedSection(SettingsSection.SOURCES, folds) { SourcesSection(settings, secrets, update) }
+        FoldedSection(SettingsSection.AI_SERVICES, folds) {
+            AiSection(settings, secrets, navigation.modelName, update, open)
         }
-        AiSection(settings, secrets, update, open)
-        PlayersSection(settings, navigation.playerLabel, update)
-        SourcesSection(settings, secrets, update, open)
-        LabelsSection(settings, secrets, update)
-        InsightsSection(settings, update, open)
-        HomeSection(settings, update)
-        LookupsSection(settings, update, open)
-        HistorySection(settings, update, open)
-        AppearanceSection(settings, update, open)
-        SavedKeysSection(keys, open)
-        AboutSection(navigation.openCredits)
-        DeveloperSection(settings, update, navigation.openDiagnostics)
-    }
-}
-
-@Composable
-private fun PlayersSection(
-    settings: Settings,
-    playerLabel: (String) -> String,
-    update: Update,
-) {
-    SectionHeading(R.string.settings_section_players)
-    Hint(R.string.settings_players_hint)
-    for ((player, followed) in settings.followedPlayers.toSortedMap()) {
-        SwitchRow(title = playerLabel(player), summary = player, checked = followed) { on ->
-            update { it.copy(followedPlayers = it.followedPlayers + (player to on)) }
+        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(keys, open) }
+        FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
+        FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
+        FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
+        FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
+        FoldedSection(SettingsSection.ABOUT, folds) { AboutSection(settings, update, navigation.openCredits) }
+        if (settings.developerMode) {
+            FoldedSection(SettingsSection.DEVELOPER, folds) {
+                DeveloperSection(settings, update, navigation.openDiagnostics)
+            }
         }
     }
-}
-
-@Composable
-private fun InsightsSection(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    SectionHeading(R.string.settings_section_insights)
-    SwitchRow(
-        title = stringResource(R.string.settings_write_insights),
-        summary = stringResource(R.string.settings_write_insights_summary),
-        checked = settings.writeInsights,
-    ) { on -> update { it.copy(writeInsights = on) } }
-
-    val modes =
-        listOf(
-            WriteAutomatically.ON_EVERY_TRACK_CHANGE to stringResource(R.string.settings_write_every_change),
-            WriteAutomatically.WHEN_I_SKIP to stringResource(R.string.settings_write_when_skip),
-            WriteAutomatically.NEVER to stringResource(R.string.settings_write_never),
-        )
-    ValueRow(
-        title = stringResource(R.string.settings_write_automatically),
-        value = modes.first { it.first == settings.writeAutomatically }.second,
-        summary = stringResource(R.string.settings_write_automatically_summary),
-        onClick =
-            {
-                open(
-                    SettingsDialog.Choice(
-                        R.string.settings_write_automatically,
-                        modes,
-                        settings.writeAutomatically,
-                    ) { mode ->
-                        update { it.copy(writeAutomatically = mode) }
-                    },
-                )
-            }.takeIf { settings.writeInsights },
-    )
-
-    PauseAutoWriteRow(settings, update, open)
-    CrossfadeRow(settings, update, open)
-
-    val preparations =
-        listOf(
-            PrepareNextTrack.OFF to stringResource(R.string.settings_prepare_off),
-            PrepareNextTrack.EVIDENCE to stringResource(R.string.settings_prepare_evidence),
-        )
-    ValueRow(
-        title = stringResource(R.string.settings_prepare_next),
-        value = preparations.first { it.first == settings.prepareNextTrack }.second,
-        summary = stringResource(R.string.settings_prepare_next_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_prepare_next, preparations, settings.prepareNextTrack) { p ->
-                update { it.copy(prepareNextTrack = p) }
-            },
-        )
-    }
-}
-
-/** *Crossfade* (D5): autodetect, or a fixed 0 to 15 seconds. */
-@Composable
-private fun CrossfadeRow(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val options =
-        listOf<Pair<Crossfade, String>>(Crossfade.Autodetect to crossfadeLabel(Crossfade.Autodetect)) +
-            (0..MAX_CROSSFADE_SECONDS).map { s -> Crossfade.Fixed(s.seconds).let { it to crossfadeLabel(it) } }
-    ValueRow(
-        title = stringResource(R.string.settings_crossfade),
-        value = crossfadeLabel(settings.crossfade),
-        summary = stringResource(R.string.settings_crossfade_summary),
-        onClick =
-            {
-                open(
-                    SettingsDialog.Choice(R.string.settings_crossfade, options, settings.crossfade) { c ->
-                        update { it.copy(crossfade = c) }
-                    },
-                )
-            }.takeIf { settings.writeInsights },
-    )
-}
-
-@Composable
-private fun LookupsSection(
-    settings: Settings,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    SectionHeading(R.string.settings_section_lookups)
-    SwitchRow(
-        title = stringResource(R.string.settings_background),
-        summary = stringResource(R.string.settings_background_summary),
-        checked = settings.lookUpInBackground,
-    ) { on -> update { it.copy(lookUpInBackground = on) } }
-
-    Hint(R.string.settings_cache_lifetimes)
-    for ((source, name) in SHOWN_LIFETIMES) {
-        val lifetime = settings.cacheLifetimes[source] ?: continue
-        val options = (LIFETIME_DAYS.map { it.days } + lifetime).distinct().sorted().map { it to daysLabel(it) }
-        ValueRow(title = stringResource(name), value = daysLabel(lifetime), indent = true) {
-            open(
-                SettingsDialog.Choice(name, options, lifetime) { chosen ->
-                    update { it.copy(cacheLifetimes = it.cacheLifetimes + (source to chosen)) }
-                },
-            )
-        }
-    }
-
-    // A privacy choice (#420), so its title is in the theme's error colour: what is kept per
-    // artist amounts to a list of the artists heard. Beside the lifetimes it is kept for; in the
-    // settings' later sections (#444), both go under *History*.
-    SwitchRow(
-        title = stringResource(R.string.settings_keep_artists),
-        summary = stringResource(R.string.settings_keep_artists_summary),
-        checked = settings.keepArtistResults,
-        highlight = true,
-    ) { on -> update { it.copy(keepArtistResults = on) } }
 }

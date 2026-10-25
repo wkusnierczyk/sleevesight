@@ -9,6 +9,7 @@ import app.sleevesight.core.ai.CompletionEvent
 import app.sleevesight.core.ai.CompletionRequest
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.ai.ModelList
+import app.sleevesight.core.ai.ModelNames
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.net.HostPolicy
@@ -314,7 +315,8 @@ class OpenAiProvider(
         /**
          * The text models of the list: none whose shutdown date has passed by [now], those with
          * none announced first, and newest first within each (the list itself is in no stated
-         * order). A shutdown date is a calendar date (`2026-10-23`), compared as written.
+         * order). A shutdown date is a calendar date (`2026-10-23`), compared as written. The list
+         * names no model, so each is named from [ModelNames], else by its id.
          */
         private fun textModels(
             models: List<WireModel>,
@@ -328,7 +330,7 @@ class OpenAiProvider(
                     compareBy<WireModel> { it.shutdownDate != null }
                         .thenByDescending { it.created }
                         .thenBy { it.id },
-                ).map { ModelInfo(it.id, it.id, it.created?.let(Instant::fromEpochSeconds)) }
+                ).map { ModelInfo(it.id, ModelNames.of(it.id) ?: it.id, it.created?.let(Instant::fromEpochSeconds)) }
         }
 
         private const val ISO_DATE_LENGTH = 10

@@ -1,6 +1,7 @@
 package app.sleevesight.app
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.SQLException
 import android.net.ConnectivityManager
@@ -38,6 +39,7 @@ import app.sleevesight.app.session.UserActions
 import app.sleevesight.app.session.onlyWhen
 import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.LastIntro
+import app.sleevesight.app.settings.LastTheme
 import app.sleevesight.app.settings.PrunePlayersMigration
 import app.sleevesight.app.settings.SeenPlayersRecorder
 import app.sleevesight.app.settings.SettingsStore
@@ -50,6 +52,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.store.ArtistKeeping
 import app.sleevesight.store.Caches
 import app.sleevesight.store.SessionHistory
@@ -127,6 +130,21 @@ class AppGraph(
             .distinctUntilChanged()
             .onEach { lastFont.value = it }
             .stateIn(mainScope, SharingStarted.Eagerly, lastFont.value)
+
+    /** *Theme* as last read, for a new process's first frames. */
+    private val lastTheme = LastTheme(appContext)
+
+    /**
+     * *Theme* (#444), for the theme, as [font] is: the stored choice, as it changes, held for the
+     * process, and before the settings' first read in a new process, the theme last read
+     * ([LastTheme]).
+     */
+    val theme: StateFlow<ThemeChoice> =
+        settings.settings
+            .map { it.theme }
+            .distinctUntilChanged()
+            .onEach { lastTheme.value = it }
+            .stateIn(mainScope, SharingStarted.Eagerly, lastTheme.value)
 
     /** *Logo intro at start* as last read, for a new process's decision before its first frame. */
     private val lastIntro = LastIntro(appContext)
@@ -402,6 +420,13 @@ class AppGraph(
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
+
+    /**
+     * The intent that opens a player from its launcher entry, for *Open the app ↗* under its name in
+     * the settings (#444); null for one with none, or not visible to this app.
+     */
+    fun playerLaunchIntent(packageName: String): Intent? =
+        appContext.packageManager.getLaunchIntentForPackage(packageName)
 
     private companion object {
         const val TAG = "Sleevesight"

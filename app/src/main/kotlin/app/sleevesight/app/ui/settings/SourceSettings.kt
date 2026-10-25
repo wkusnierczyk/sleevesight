@@ -6,121 +6,213 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.ExternalLink
+import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
 
-// *Where to look*, with the web search engines and the keys, and *Genre labels* (D12, #84).
+// *Sources* (#444; once *Where to look*) and *Genres* (D12, #84; once *Genre labels*).
 
-/** The *Where to look* switches of the sources with an adapter; Discogs comes in Phase 3. */
-private val SHOWN_SWITCHES =
+/**
+ * A row of *Sources*: a source's switch ([SourceSwitch]), or a web search engine's ([WebEngine]),
+ * each a service of the first level since #444 (a later engine is a row of its own); with its
+ * [name], what it is ([summary]), and its site, opened by *Open website ↗* ([url]; none for the AI
+ * service's knowledge, which has none of its own).
+ */
+private sealed class SourceRow(
+    @StringRes val name: Int,
+    @StringRes val summary: Int,
+    val url: String?,
+) {
+    class Source(
+        val switch: SourceSwitch,
+        name: Int,
+        summary: Int,
+        url: String?,
+    ) : SourceRow(name, summary, url)
+
+    class Engine(
+        val engine: WebEngine,
+        name: Int,
+        summary: Int,
+        url: String,
+    ) : SourceRow(name, summary, url)
+}
+
+/**
+ * The rows of *Sources*, in the order shown: the sources with an adapter (Discogs comes in Phase 3),
+ * then the web search engines, then the AI service's own knowledge.
+ */
+private val SOURCE_ROWS: List<SourceRow> =
     listOf(
-        SourceSwitch.MUSICBRAINZ to R.string.settings_source_musicbrainz,
-        SourceSwitch.WIKIPEDIA to R.string.settings_source_wikipedia,
-        SourceSwitch.LASTFM to R.string.settings_source_lastfm,
-        SourceSwitch.WEB to R.string.settings_source_web,
-        SourceSwitch.MODEL to R.string.settings_source_model,
+        SourceRow.Source(
+            SourceSwitch.MUSICBRAINZ,
+            R.string.settings_source_musicbrainz,
+            R.string.settings_source_musicbrainz_summary,
+            "https://musicbrainz.org/",
+        ),
+        SourceRow.Source(
+            SourceSwitch.WIKIPEDIA,
+            R.string.settings_source_wikipedia,
+            R.string.settings_source_wikipedia_summary,
+            "https://www.wikipedia.org/",
+        ),
+        SourceRow.Source(
+            SourceSwitch.LASTFM,
+            R.string.settings_source_lastfm,
+            R.string.settings_source_lastfm_summary,
+            "https://www.last.fm/",
+        ),
+        SourceRow.Engine(
+            WebEngine.EXA,
+            R.string.settings_engine_exa,
+            R.string.settings_engine_exa_summary,
+            "https://exa.ai/",
+        ),
+        SourceRow.Source(
+            SourceSwitch.MODEL,
+            R.string.settings_source_model,
+            R.string.settings_source_model_summary,
+            null,
+        ),
     )
 
+/**
+ * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key
+ * it lacks, where to save it ([keyNote]): the keys themselves are under *Secrets*. A web search
+ * engine's row is on while web search is on with that engine ([Settings.isEnabled] needs both):
+ * switching it on turns both on, and off turns the engine off.
+ */
 @Composable
 internal fun SourcesSection(
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
     update: Update,
-    open: (SettingsDialog) -> Unit,
 ) {
-    SectionHeading(R.string.settings_section_sources)
-    Hint(R.string.settings_sources_hint)
-    for ((switch, name) in SHOWN_SWITCHES) {
+    for (row in SOURCE_ROWS) {
+        val key =
+            when (row) {
+                is SourceRow.Source -> sourceKey(row.switch)
+                is SourceRow.Engine -> engineKey(row.engine)
+            }
+        val checked =
+            when (row) {
+                is SourceRow.Source -> row.switch in settings.enabledSources
+                is SourceRow.Engine -> SourceSwitch.WEB in settings.enabledSources && row.engine in settings.webEngines
+            }
+        val name = stringResource(row.name)
         SwitchRow(
-            title = stringResource(name),
-            summary = sourceSummary(switch, settings)?.let { stringResource(it) },
-            checked = switch in settings.enabledSources,
-        ) { on ->
-            update { it.copy(enabledSources = if (on) it.enabledSources + switch else it.enabledSources - switch) }
-        }
-        sourceKey(switch)?.let { id -> KeyRow(stringResource(keyName(id)), id, secrets, indent = true, open) }
-        if (switch == SourceSwitch.WEB) EngineRows(settings, secrets, update, open)
+            title = name,
+            summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets) }),
+            checked = checked,
+            below = row.url?.let { url -> { WebsiteLink(name, url) } },
+        ) { on -> update { switched(it, row, on) } }
     }
 }
 
-/**
- * What a *Where to look* switch says under its name: for *Web search* on with no engine on, that
- * nothing is searched until one is ([Settings.isEnabled] needs one).
- */
-@StringRes
-private fun sourceSummary(
-    switch: SourceSwitch,
+/** [settings] with [row] switched [on]. */
+private fun switched(
     settings: Settings,
-): Int? =
-    when {
-        switch == SourceSwitch.MODEL -> R.string.settings_source_model_summary
-        switch == SourceSwitch.WEB && switch in settings.enabledSources && settings.webEngines.isEmpty() ->
-            R.string.settings_source_web_no_engine
-        else -> null
+    row: SourceRow,
+    on: Boolean,
+): Settings =
+    when (row) {
+        is SourceRow.Source -> {
+            val sources = if (on) settings.enabledSources + row.switch else settings.enabledSources - row.switch
+            settings.copy(enabledSources = sources)
+        }
+
+        is SourceRow.Engine -> {
+            if (on) {
+                settings.copy(
+                    enabledSources = settings.enabledSources + SourceSwitch.WEB,
+                    webEngines = settings.webEngines + row.engine,
+                )
+            } else {
+                settings.copy(webEngines = settings.webEngines - row.engine)
+            }
+        }
     }
 
+/** *Open website ↗* for the service [name], opening [url] in the browser. */
+@Composable
+internal fun WebsiteLink(
+    name: String,
+    url: String,
+) {
+    ExternalLink(
+        text = stringResource(R.string.settings_open_website),
+        description = stringResource(R.string.settings_open_website_of, name),
+        onClick = rememberOpenUrl(url),
+    )
+}
+
+/** [first], and [second] on a line of its own when there is one. */
+internal fun lines(
+    first: String,
+    second: String?,
+): String = if (second == null) first else "$first\n$second"
+
 /**
- * The web search engines under *Web search* (D11), each a switch with its key. While *Web search*
- * is off, no engine searches, so each shows off, cannot be moved, and says why, as *Genre labels*
- * does; the choice itself is kept for when *Web search* is back on.
+ * What a row that needs the key [id] says of it, where the key is not saved and readable: that it
+ * is needed, in *Secrets*, or that the one saved can no longer be read. Nothing before the keys'
+ * states are read, which would show it, for a moment, beside a saved key.
  */
 @Composable
-private fun EngineRows(
-    settings: Settings,
+internal fun keyNote(
+    id: SecretId,
     secrets: Map<SecretId, SecretState>,
-    update: Update,
-    open: (SettingsDialog) -> Unit,
-) {
-    val searching = SourceSwitch.WEB in settings.enabledSources
-    for (engine in WebEngine.entries) {
-        SwitchRow(
-            title = stringResource(engineName(engine)),
-            summary = if (searching) null else stringResource(R.string.settings_engine_web_off),
-            checked = searching && engine in settings.webEngines,
-            indent = true,
-            onChange =
-                { on: Boolean ->
-                    update { it.copy(webEngines = if (on) it.webEngines + engine else it.webEngines - engine) }
-                }.takeIf { searching },
-        )
-        val id = engineKey(engine)
-        KeyRow(stringResource(keyName(id)), id, secrets, indent = true, open)
+): String? =
+    when (secrets[id]) {
+        null, SecretState.SAVED -> null
+        SecretState.ABSENT -> stringResource(R.string.settings_needs_key, stringResource(keyRecipient(id)))
+        SecretState.UNREADABLE -> {
+            stringResource(R.string.settings_key_unreadable_note, stringResource(keyRecipient(id)))
+        }
     }
-}
 
 /**
- * *Genre labels* (D12, #84): which sources' tags give labels. A source gives labels only while it
- * is on under *Where to look*, and Last.fm only with its key saved and readable, so until then its
- * switch shows off and cannot be moved, and says why: a key saved but no longer readable
+ * *Genres* (D12, #84, #444): *Show genres*, off for none at all, not asked for from any source
+ * ([Settings.givesLabels]), nor shown; then which sources' tags give genre labels, each with where
+ * its tags come from. A source gives labels only while *Show genres* is on and the source is on
+ * under *Sources*, and Last.fm only with its key saved and readable, so until then its switch shows
+ * off and cannot be moved, and says why: a key saved but no longer readable
  * ([SecretState.UNREADABLE]) is told apart from no key.
  */
 @Composable
-internal fun LabelsSection(
+internal fun GenresSection(
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
     update: Update,
 ) {
-    SectionHeading(R.string.settings_section_labels)
-    Hint(R.string.settings_labels_hint)
+    SwitchRow(
+        title = stringResource(R.string.settings_show_genres),
+        summary = stringResource(R.string.settings_show_genres_summary),
+        checked = settings.showGenres,
+    ) { on -> update { it.copy(showGenres = on) } }
     for (source in LabelSource.entries) {
-        val key = secrets[SecretId.LASTFM]
         val why =
             when {
-                !settings.isEnabled(source.source) -> R.string.settings_labels_source_off
-                source != LabelSource.LASTFM || key == SecretState.SAVED -> null
-                key == SecretState.UNREADABLE -> R.string.settings_labels_key_unreadable
-                else -> R.string.settings_labels_needs_key
+                !settings.showGenres -> stringResource(R.string.settings_labels_genres_off)
+                !settings.isEnabled(source.source) -> stringResource(R.string.settings_labels_source_off)
+                source == LabelSource.LASTFM -> keyNote(SecretId.LASTFM, secrets)
+                else -> null
             }
+        // Last.fm's switch is offered only with its key saved, so not before the keys' states are read.
+        val offered = why == null && (source != LabelSource.LASTFM || secrets[SecretId.LASTFM] == SecretState.SAVED)
+        val name = stringResource(labelSourceName(source))
         SwitchRow(
-            title = stringResource(labelSourceName(source)),
-            summary = why?.let { stringResource(it) } ?: labelSourceSummary(source)?.let { stringResource(it) },
-            checked = why == null && source in settings.labelSources,
+            title = name,
+            summary = lines(stringResource(labelSourceSummary(source)), why),
+            checked = offered && source in settings.labelSources,
+            indent = true,
+            below = labelSourcePage(source)?.let { url -> { WebsiteLink(name, url) } },
             onChange =
                 { on: Boolean ->
                     update { it.copy(labelSources = if (on) it.labelSources + source else it.labelSources - source) }
-                }.takeIf { why == null },
+                }.takeIf { offered },
         )
     }
 }
@@ -133,8 +225,19 @@ private fun labelSourceName(source: LabelSource): Int =
     }
 
 @StringRes
-private fun labelSourceSummary(source: LabelSource): Int? =
+private fun labelSourceSummary(source: LabelSource): Int =
+    when (source) {
+        LabelSource.LASTFM -> R.string.settings_labels_lastfm_summary
+        LabelSource.MUSICBRAINZ -> R.string.settings_labels_musicbrainz_summary
+    }
+
+/**
+ * The page where a source explains its tags, for *Open website ↗*: MusicBrainz's on its tags, their
+ * votes and its genre list. Last.fm has a page per tag, but none that explains its tags (checked
+ * 2026-10-25), so it has no link.
+ */
+private fun labelSourcePage(source: LabelSource): String? =
     when (source) {
         LabelSource.LASTFM -> null
-        LabelSource.MUSICBRAINZ -> R.string.settings_labels_musicbrainz_summary
+        LabelSource.MUSICBRAINZ -> "https://musicbrainz.org/doc/Folksonomy_Tagging"
     }

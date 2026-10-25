@@ -186,6 +186,17 @@ class GenresScreenTest {
     }
 
     @Test
+    fun showGenresOffShowsNoGenresAtAll() {
+        // Labels the run holds still show nothing: *Show genres* off (#444) hides the whole fold.
+        show(TrackGenres(listOf(track, beatles, album)), Settings(showGenres = false)) {
+            compose.onNodeWithText(text(R.string.home_genres_off)).assertDoesNotExist()
+            compose.onNodeWithText(text(R.string.home_genres_none)).assertDoesNotExist()
+            assertEquals(0, compose.onAllNodesWithTag(GENRES_FOLD_TAG).fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithTag(GENRE_PREFIX + "track:baroquepop").fetchSemanticsNodes().size)
+        }
+    }
+
+    @Test
     fun aTapOnALabelSaysWhichLevelsTagsGaveIt() {
         show(TrackGenres(listOf(track, beatles, album))) {
             val chip = compose.onNodeWithTag(GENRE_PREFIX + "track:baroquepop")

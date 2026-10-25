@@ -51,38 +51,40 @@ With nothing playing yet, the home screen says *Nothing playing in a player you 
 
 The first run does not ask for an AI service or a key. Without one, Sleevesight still looks the track up and shows what the sources found, and the insight's place says *Choose an AI service and save its key in Settings to have insights written.* To have insights written, open *Settings* with the cogwheel.
 
-**The AI service.** Under *AI service*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. A service switched off keeps its key, model and reasoning effort, so you can switch back. Until its key is saved, the service switched on says *Insights wait until its API key is saved.*
+The settings are in sections, each folded under its name: a tap on a section's name unfolds it.
 
-**The key.** Each service has its key row under its switch (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key:
+**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. A service switched off keeps its key, model and reasoning effort, so you can switch back. Until its key is saved, the service switched on says *Needs your Anthropic key, in Secrets.* (or OpenAI's, or Google's).
+
+**The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key:
 
 - **Type it** into the *Key* field and tap *Save*.
 - **Scan QR code** fills the field from a QR code that holds the key, once the key has that service's form.
 - **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
-To save several keys at once, *Scan keys*, under *API keys* near the end of the settings, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Before saving, it lists each key it found by its last four characters, and says which would replace a key already saved; *Save* saves them. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
+To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Before saving, it lists each key it found by its last four characters, and says which would replace a key already saved; *Save* saves them. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
 
 **What it costs.** Each insight written is a paid call on your key (now and then two; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
 
-<!-- screenshot: Settings, the "AI service" section, with Anthropic switched on and its key not set ("Insights wait until its API key is saved."), from app version … -->
+<!-- screenshot: Settings, the "AI services" section, with Anthropic switched on and its key not set ("Needs your Anthropic key, in Secrets."), from app version … -->
 <!-- screenshot: the key dialog: the masked "Key" field, "Scan QR code" and "Type on a computer", from app version … -->
-<!-- screenshot: "Save these keys?" after "Scan keys", listing keys by their last four characters, from app version … (with test keys only) -->
+<!-- screenshot: "Save these keys?" after "Load keys", listing keys by their last four characters, from app version … (with test keys only) -->
 
 ## 4. Choosing the sources
 
-**Where to look.** The sources are what the AI may use, under *Where to look* in the settings:
+**The sources.** The sources are what the AI may use, under *Sources* in the settings, each with a link to its website:
 
 - *MusicBrainz*, and *Wikipedia and Wikidata*: no key needed; on by default.
-- *Last.fm*: on by default, but it needs your own Last.fm API key, saved on its row; without one it is not asked, and its chip on the home screen says *needs your key, in Settings*.
-- *Web search*, with the *Exa* engine: likewise on by default, and searching only once your Exa API key is saved.
-- *The model's own knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
+- *Last.fm*: on by default, but it needs your own Last.fm API key, saved under *Secrets*; without one it is not asked, and its chip on the home screen says *needs your key, in Settings*.
+- *Exa web search*: likewise on by default, and searching only once your Exa API key is saved.
+- *AI service knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
 
-**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genre labels* you choose whose artist tags give the coloured genre labels. With *Prepare the next track* set to *Evidence*, as it is by default, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; *Off* sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
+**What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
 
-<!-- screenshot: Settings, "Where to look", with the defaults: MusicBrainz and Wikipedia on, Last.fm and Exa without keys, the model's own knowledge off, from app version … -->
+<!-- screenshot: Settings, "Sources", with the defaults: MusicBrainz and Wikipedia on, Last.fm and Exa without keys, the AI service knowledge off, from app version … -->
 
 ## 5. Playing music
 
-**The players.** Sleevesight follows Spotify by default. Any other player that plays music (a track with a title and an artist) while Sleevesight has notification access appears under *Players to follow* in the settings, by name and switched off; switch it on to follow it too. Nothing is kept or sent of a player you do not follow.
+**The players.** Sleevesight follows Spotify by default. Any other player that plays music (a track with a title and an artist) while Sleevesight has notification access appears under *Players* in the settings, by name and switched off; switch it on to follow it too. *Open the app ↗* under its name opens it. Nothing is kept or sent of a player you do not follow.
 
 **The track appears.** Play music in a player you follow and open Sleevesight. The home screen follows the track, top to bottom: the player and its state (a tap opens the player), the cover with the playback position, the title, artists, album and year, the genre labels, *Why it's interesting*, and *Sources*. Lookups and writing run while the app is on screen.
 
@@ -102,23 +104,23 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 
 **Write insight.** Each time the app starts afresh, nothing is written until you tap *Write insight*; the card says *Tap Write insight to have it written from the sources below.* That first tap is what lets automatic writing go on. Android usually keeps the app's process alive after you leave it, often for days, so coming back keeps it going; a restart of the phone, an update, or the system ending the app asks for the tap again.
 
-**Automatic writing.** *Write insights automatically*, under *Insights* in the settings, decides which tracks are written without a tap:
+**Automatic writing.** *Reactive*, under *Insights* in the settings, decides which tracks are written without a tap:
 
-- *On every track change*, the default: a new insight for each new track.
-- *When I skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default) helps tell the two apart.
-- *Never: only when I tap Write*.
+- *On track change*, the default: a new insight for each new track.
+- *On skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
+- *Manual: only when I tap Write*.
 
-*Write insights* off makes no AI calls at all; the sources are still shown.
+*Show insights* off makes no AI calls at all; the sources are still shown.
 
-**While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Pause automatic writing after* (5 track changes by default) stops one forgotten tap from paying for days: past that many track changes away, the card says *Automatic writing paused* and waits for a tap on *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
+**While you are away.** With *Look up in the background* off, the default, nothing is looked up or written while Sleevesight is not on screen. *Saver* (on, after 5 track changes, by default) stops one forgotten tap from paying for days: past that many track changes away, the card says *Automatic writing paused* and waits for a tap on *Write insight*. With *Look up in the background* on, insights are written while you are away, up to that count, each a paid call on your key.
 
-**Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *The model's own knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call, or two. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
+**Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call, or two. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
 
-**The history.** Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default) and *Start a new session after a break of* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*).
+**The history.** Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default) and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
 <!-- screenshot: the insight card waiting for the first tap: "Tap Write insight…" with the Write insight button, from app version … -->
 <!-- screenshot: an insight written earlier, shown after the evidence changed, with "Written earlier…" and "Rewrite", from app version … -->
-<!-- screenshot: Settings, "Insights": Write insights, Write insights automatically, Pause automatic writing after, Crossfade, Prepare the next track, from app version … -->
+<!-- screenshot: Settings, "Insights": Show insights, Reactive, Proactive, Saver, Look up in the background, from app version … -->
 
 ## 7. Changing settings later, and clearing what is kept
 
@@ -128,10 +130,10 @@ To save several keys at once, *Scan keys*, under *API keys* near the end of the 
 
 - **The history:** *Clear history*, under *History*, deletes the tracks played and the track changes, once you confirm with *Clear*. *Keep history for* sets how far back it reaches.
 - **What sources said about artists:** *Keep what sources said about each artist* is off by default; turning it off after turning it on deletes what was kept.
-- **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Remove all API keys*, under *API keys*, deletes them all. If a saved key can no longer be read, *Reset saved keys* appears at the top of the settings.
+- **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Purge keys*, under *Secrets*, deletes them all. If a saved key can no longer be read, *Purge keys* says so, as the way to enter the keys afresh.
 - **Everything:** Android's *Clear storage* for Sleevesight, or uninstalling it, deletes all it kept, the insights written and the sources' findings included. Findings also expire on their own, on the lifetimes the settings show.
 
 What a service keeps of the requests it received, such as the AI service for your account, is between you and that service; the [privacy policy]({{ '/privacy.html' | relative_url }}) says more.
 
-<!-- screenshot: Settings, "History": Keep history for, Start a new session after a break of, Clear history, from app version … -->
+<!-- screenshot: Settings, "History": Keep history for, New session idle trigger, Clear history, from app version … -->
 <!-- screenshot: the "Clear history?" dialog, from app version … -->

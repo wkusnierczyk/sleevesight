@@ -64,9 +64,9 @@ Under the track come its genre labels: the tags Last.fm and MusicBrainz give the
 
 Folded, *Genres ▸* shows the labels of the most specific level found: the track's, else the album's, else the artists'. A tap unfolds it, *Genres ▾*, to a table with a row for each level that has labels: *Track*, one *Artist* row per artist, its name before its labels, and *Album*. When only one level has labels, they show on their own, with no fold. A screen reader says whether the fold is folded or unfolded, and reads each row of the table as one.
 
-A tap on a label shows where it came from: *… comes from the track's tags on:* (or the album's, or the artist's, named when the track has several), then each source, linked to its page there, and for MusicBrainz a link to its licence. A second tap closes it. Which sources give labels is set under [*Genre labels*]({{ '/docs/tutorials/settings/' | relative_url }}).
+A tap on a label shows where it came from: *… comes from the track's tags on:* (or the album's, or the artist's, named when the track has several), then each source, linked to its page there, and for MusicBrainz a link to its licence. A second tap closes it. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
 
-When there are none, it says *None found.*, or *Genre labels are off in Settings.*
+When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
 ### The insight
 
@@ -75,7 +75,7 @@ When there are none, it says *None found.*, or *Genre labels are off in Settings
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 
 - **Citation chips.** Each sentence cites the evidence lines it rests on, by their ids, such as `MB1` or `W3`. A tap on a chip unfolds *Sources* as far as that line, scrolls to it and flashes it. A screen reader reads each chip by what it points at ("Source W3"), and offers the lines as actions of the paragraph.
-- **The model's own knowledge.** When [*The model's own knowledge*]({{ '/docs/tutorials/settings/' | relative_url }}) is on, a claim from it is cited `M`, in a colour of its own, and a screen reader calls it "From the model's own knowledge, not verified". It is off by default.
+- **The model's own knowledge.** When [*AI service knowledge*]({{ '/docs/tutorials/settings/' | relative_url }}) is on, a claim from it is cited `M`, in a colour of its own, and a screen reader calls it "From the model's own knowledge, not verified". It is off by default.
 - **Flagged sentences.** Before the insight is kept, the app checks every citation in code. A sentence that cites nothing is underlined in the error colour (a screen reader says "not cited"), and a citation of a line that does not exist shows in the error colour.
 - **The grounded-sentences line**, under the insight, gives the check's counts: *4 of 5 sentences grounded*, then, where there are any, how many come from the model's own knowledge, how many are uncited, and how many cite missing evidence. *kept from before* says the insight was not written now but shown from what was written earlier.
 
@@ -102,14 +102,14 @@ When little is documented about a track, the insight is short rather than filled
 | *rejected* | What it found failed the identity check (shown in the error colour) |
 | *unreachable* | It could not be reached |
 | *failed* | The lookup went wrong (shown in the error colour) |
-| *off* | You switched the source off under *Where to look* |
+| *off* | You switched the source off under *Sources* |
 | *needs your key, in Settings* | Last.fm or web search is on, but its key is not saved |
 | *allowed* | The `M` chip: the model's own knowledge may be cited |
 | *(kept)*, after any of these | The answer was kept on the phone from an earlier lookup |
 
 The tags are `MB` MusicBrainz, `W` Wikipedia (its chip covers Wikidata's `WD` lines too), `L` Last.fm, `G` web search, `P` the player and `M` the model's own knowledge.
 
-A chip of a source with lines shows or hides those lines. That only changes what you see: what the AI service may use is set under [*Where to look*]({{ '/docs/tutorials/settings/' | relative_url }}).
+A chip of a source with lines shows or hides those lines. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}).
 
 **The list.** Under the chips come the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own headings, come *Found, but not verified, so not cited*, lines from matches that could not be checked against the track, which are shown but never given to the insight, and *Rejected matches*, each with its source and the reason it was rejected.
 
@@ -162,18 +162,18 @@ Nothing is written again unless you tap *Rewrite*, which is one call, or two in 
 
 ### What costs nothing
 
-- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *The model's own knowledge* are as they were, the insight written then is shown again, marked *kept from before*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, least recently shown first, once they pass the cache's size limit.
+- **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *AI service knowledge* are as they were, the insight written then is shown again, marked *kept from before*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, least recently shown first, once they pass the cache's size limit.
 - **Nothing to write from.** When the sources give nothing to write an insight from, the card says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
 - **The next track.** The track next in the player's queue is looked up ahead (by default, at MusicBrainz), so its sources come sooner when it plays. No insight is written ahead.
 
 ### Automatic writing
 
-By default, [*Write insights automatically*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track, so each track change is a call. *When I skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Never: only when I tap Write* offers *Write insight* on every track.
+By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Manual: only when I tap Write* offers *Write insight* on every track.
 
 Automatic writing needs a first tap:
 
 - **After the app starts afresh**, nothing is written until your first tap on *Write insight*, in every mode. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
-- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Pause automatic writing after*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). The card then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
+- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). The card then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
 
 <!-- screenshot: the insight card with the automatic-writing-paused line and Write insight, from the app version it is taken from -->
 
@@ -187,14 +187,14 @@ Sleevesight keeps, on the phone only, the tracks it has seen play and the track 
 
 What there is:
 
-- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), [*Start a new session after a break of*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends, and *Clear history*, which deletes the tracks played and the track changes together, once you confirm.
+- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends, and *Clear history*, which deletes the tracks played and the track changes together, once you confirm.
 - **The diagnostics screen**, under the developer settings, which lists the track changes recorded, with what skip detection learns from them, and can export them to a file you choose.
 
 The history is left out of Android's backup, and the app never sends it anywhere; only an export you make from the diagnostics screen takes a copy of the track changes off the app.
 
 ## Players
 
-**Followed.** Spotify is followed by default. Any player whose media session reports music, a track with a title and an artist, can be followed: once it has played music while Sleevesight has notification access, it appears by its name, switched off, under [*Players to follow*]({{ '/docs/tutorials/settings/' | relative_url }}), and switching it on follows it at once. Following Spotify needs no Spotify account in Sleevesight and no developer app, whichever Spotify plan you have: the app reads the phone's media session, not Spotify's Web API.
+**Followed.** Spotify is followed by default. Any player whose media session reports music, a track with a title and an artist, can be followed: once it has played music while Sleevesight has notification access, it appears by its name, switched off, under [*Players*]({{ '/docs/tutorials/settings/' | relative_url }}), and switching it on follows it at once. Following Spotify needs no Spotify account in Sleevesight and no developer app, whichever Spotify plan you have: the app reads the phone's media session, not Spotify's Web API.
 
 With several players followed, the home screen shows the one playing; with none playing, the one most recently active.
 

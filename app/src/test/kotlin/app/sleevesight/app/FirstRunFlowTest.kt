@@ -44,6 +44,8 @@ import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.PRIVACY_POLICY_SHOWN
 import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.openSection
+import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -409,6 +411,8 @@ class FirstRunFlowTest {
         setAccess(granted = true)
         launch().use {
             compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
+            // The credits are under *About* (#444).
+            compose.openSection(SettingsSection.ABOUT)
             compose.waitUntil(5_000) {
                 compose.onAllNodesWithText(text(R.string.credits_title)).fetchSemanticsNodes().isNotEmpty()
             }

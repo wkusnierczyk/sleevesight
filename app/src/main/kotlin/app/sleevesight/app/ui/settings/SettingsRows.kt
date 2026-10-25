@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -25,19 +24,6 @@ import androidx.compose.ui.unit.dp
 private const val DISABLED_ALPHA = 0.38f
 
 @Composable
-internal fun SectionHeading(
-    @StringRes text: Int,
-) {
-    HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
-    Text(
-        stringResource(text),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp),
-    )
-}
-
-@Composable
 internal fun Hint(
     @StringRes text: Int,
 ) {
@@ -46,7 +32,9 @@ internal fun Hint(
 
 /**
  * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
- * sets its title in the theme's error colour, for a privacy choice (#420).
+ * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
+ * title and summary, as a link to the service the switch is for; a link there is a control of its
+ * own, apart from the switch.
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -56,6 +44,7 @@ internal fun SwitchRow(
     checked: Boolean,
     indent: Boolean = false,
     highlight: Boolean = false,
+    below: (@Composable () -> Unit)? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
     val enabled = onChange != null
@@ -77,6 +66,7 @@ internal fun SwitchRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+            below?.invoke()
         }
         Spacer(Modifier.width(16.dp))
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)
@@ -111,11 +101,15 @@ internal fun ValueRow(
     }
 }
 
-/** One option in a dialog's list; the whole row selects it. */
+/**
+ * One option in a dialog's list; the whole row selects it. [detail], when given, goes under the
+ * label, smaller and muted: a model's id under its name.
+ */
 @Composable
 internal fun RadioRow(
     label: String,
     selected: Boolean,
+    detail: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
@@ -127,6 +121,11 @@ internal fun RadioRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = null)
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
+        Column(modifier = Modifier.padding(start = 12.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            detail?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
