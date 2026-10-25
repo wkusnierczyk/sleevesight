@@ -13,20 +13,27 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.report.MailHandoff
+import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
+import app.sleevesight.app.ui.report.InsightReportDialog
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
+import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,13 +90,17 @@ internal class NowPlayingState(
     val settings: Settings? = null,
 )
 
-/** How the screen names what it shows, and where its taps go. */
+/**
+ * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
+ * with the insight (#390); null is the phone's own mail apps ([PhoneMail]).
+ */
 internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
+    val mail: MailHandoff? = null,
 )
 
 /**
@@ -107,6 +118,10 @@ internal fun NowPlayingContent(
     actions: NowPlayingActions,
 ) {
     val playing = state.playing
+    // Above the return, so a report being written outlives the player's session ending (#390); of
+    // the insight and track it was opened on, whatever plays meanwhile.
+    var reporting by remember { mutableStateOf<Reported?>(null) }
+    reporting?.let { ReportOpen(it, actions.mail) { reporting = null } }
     // Above the return, so the fold outlives a while with nothing playing.
     val foldMemory = rememberFoldMemory()
     if (playing == null) {
@@ -124,21 +139,7 @@ internal fun NowPlayingContent(
     val fold = sourcesFold(foldMemory, playing, keep = settings?.keepSourcesUnfolded)
     // A citation tapped unfolds the list far enough to show its line.
     val cite: (String) -> Unit = { id -> focus.cite(id)?.let(fold::reach) }
-    val insight =
-        InsightContext(
-            track = track,
-            aiReady = view.aiReady,
-            insightsOn = settings?.writeInsights ?: true,
-            modelAllowed = modelAllowed,
-            offers =
-                InsightOffers(
-                    rewrite = view.rewrite && track != null,
-                    retry = view.retry && track != null,
-                    stop = view.stopCall != null && track != null,
-                    paused = view.lapsed && track != null,
-                ),
-            rewriteFailed = view.rewriteFailed.takeIf { track != null },
-        )
+    val insight = insightContext(view, track, settings, modelAllowed)
 
     ArtTheme(state.art) {
         Surface(
@@ -154,7 +155,13 @@ internal fun NowPlayingContent(
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
-                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, cite))
+                InsightCard(
+                    track?.insight ?: NOT_YET,
+                    insight,
+                    InsightActions(onWrite, onStop, cite) { reportedTrack, written ->
+                        reporting = Reported(reportedTrack, written)
+                    },
+                )
                 SourcesSection(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
@@ -166,6 +173,45 @@ internal fun NowPlayingContent(
             }
         }
     }
+}
+
+// What the insight card needs besides the insight, from the pipeline's [view] of [track] and the [settings].
+private fun insightContext(
+    view: PipelineView,
+    track: TrackState?,
+    settings: Settings?,
+    modelAllowed: Boolean,
+) = InsightContext(
+    track = track,
+    aiReady = view.aiReady,
+    insightsOn = settings?.writeInsights ?: true,
+    modelAllowed = modelAllowed,
+    offers =
+        InsightOffers(
+            rewrite = view.rewrite && track != null,
+            retry = view.retry && track != null,
+            stop = view.stopCall != null && track != null,
+            paused = view.lapsed && track != null,
+        ),
+    rewriteFailed = view.rewriteFailed.takeIf { track != null },
+)
+
+// What a report is of: the insight, and the track it was written for.
+private class Reported(
+    val track: TrackState,
+    val insight: InsightState.Written,
+)
+
+// The report's dialog, handed to [mail], or to the phone's own mail apps when null.
+@Composable
+private fun ReportOpen(
+    reported: Reported,
+    mail: MailHandoff?,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val handoff = mail ?: remember(context) { PhoneMail(context) }
+    InsightReportDialog(reported.track, reported.insight, handoff, onDismiss)
 }
 
 /** Nothing playing in a player followed. */

@@ -15,7 +15,7 @@ This page gives the picture: what Sleevesight is made of, what talks to what, an
 
 ## In short
 
-Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code once the reply is complete. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts and no ads, and no telemetry, crash reporting or analytics of its own; if any is added, it will never carry your data. Nothing you play, and nothing the app sends, reaches its developer.
+Sleevesight is an Android app with no server of its own. It reads what your music player is playing from the phone's media session, looks the track up at the music sources you switch on, has the AI service you choose write a short insight from what the sources found, and checks every citation in code once the reply is complete. Every request goes from the phone straight to the service it is for, with your own API key where the service needs one. Sleevesight has no accounts and no ads, and no telemetry, crash reporting or analytics of its own; if any is added, it will never carry your data. Nothing you play, and nothing the app sends on its own, reaches its developer: only a problem report you send from your own mail app does.
 
 ## The parts
 
@@ -92,6 +92,7 @@ flowchart LR
   App -- "title, artists, the film or show, your key" --> Exa["Exa web search"]
   App -- "title, artists, album, evidence, your key" --> AI["Anthropic, OpenAI or Google"]
   App -- "a request for the image" --> Art["The cover's server"]
+  App -. "a problem report, only if you send it from your mail app" .-> Dev["The developer, by email"]
   Play["Google Play"] -- "the app and its updates" --> App
 ```
 
@@ -105,9 +106,10 @@ Requests go straight from the phone to each service, over HTTPS; Android refuses
 | Exa (web search) | Switched on, with your key | The title and artists, the film or show a title says it is from, and your Exa key. |
 | The AI service you choose: Anthropic, OpenAI or Google | *Show insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight a request of its own, with no conversation kept. Your key for that service, and the model you chose. |
 | The server a cover's web address names | A player gives the cover only as a web address | A request for that image. The address itself may identify the album or episode. |
+| The developer, at `support@sleevesight.app` | You tap *Report a problem* on an insight and send the report from your own mail app | The reason and your note; the track as the player reported it (title, artists, album, length) and its MusicBrainz ids; the insight and the evidence lines it was written from, with their sources and addresses; the prompt version, AI service, model and effort. You see all of it before your mail app opens; your mail app handles it from then on as any message you write (some keep a draft in your mail account), and sends it from your address only if you do. Never your keys, the history or the settings. |
 | Google Play | Installing and updating the app | Google handles the installation under its own policy; it gives the developer aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. The app holds no Google Play library. |
 
-The album name goes to the AI service alone, never to the sources. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself.
+The album name goes to the AI service alone, never to the sources. Each API key goes only to the service it belongs to. By default, lookups and writing happen only while Sleevesight is on screen; with *Look up in the background* on, also while it is not. A Spotify account, once the app offers connecting one, would add requests to Spotify's Web API with your own token; no build offers it yet. Nothing else leaves the phone, except a diagnostics export you make yourself, a problem report you hand to your mail app, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see (the session's service, and the phone's name only with *Show this phone's name to the computer* on).
 
 ## Enforced, not promised
 
