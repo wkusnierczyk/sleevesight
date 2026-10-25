@@ -4,11 +4,10 @@
 # headers; the description replaces the repository's description in them and in the `og:` tags.
 title: Sleevesight
 description: Insights on what's playing. An app with short, sourced insights about the artist, song, and album.
-# The documentation pages under `docs/` (#421) share a layout: the linear logo, the product page's
-# type, and a link back to the index.
+# The documentation pages under `docs/` (#421) share a layout: the product page's intro, header and
+# footer (#501), its type, and a link back to the index.
 defaults:
   - scope:
       path: docs
     values:
       layout: docs
-      logo: linear

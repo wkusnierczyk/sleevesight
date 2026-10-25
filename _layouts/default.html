@@ -5,7 +5,9 @@
   `assets/js/LICENSE-anchor-js.txt`), which adds links to the headings, is served from this site
   (`assets/js/anchor.min.js`, the same file, so the same integrity hash) instead of from cdnjs, so
   a visit sends nothing to a third party for it (#295); and a page that sets `logo: linear` is
-  headed by the linear logo (`_includes/logo-linear.html`) in place of the site's title (#158); and
+  headed by the linear logo (`_includes/logo-linear.html`) in place of the site's title (#158; no
+  page sets it since the documentation pages took the product page's header, #501, but the include
+  stays the linear logo's reference, which the app's header logo follows); and
   its footer is the line every page of the site carries, the licence, the page's source (its file,
   or the one it renders, `source_path`) and the brand sheet's *Fonts*, in place of the theme's
   "This site is open source. Improve this page." (#454). Keep it in step with the theme's layout.
