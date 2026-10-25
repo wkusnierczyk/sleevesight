@@ -201,7 +201,8 @@ class KeyScanTest {
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.keyboard_connected))
             assertEquals(1, running.size)
-            assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_key_scan_characters)).fetchSemanticsNodes().size)
+            val characters = compose.onAllNodesWithText(text(R.string.settings_key_scan_characters))
+            assertEquals(0, characters.fetchSemanticsNodes().size)
             // While the session runs, neither icon starts another scan.
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).assertIsNotEnabled()
             compose.onNodeWithContentDescription(text(R.string.settings_key_type)).assertIsNotEnabled()

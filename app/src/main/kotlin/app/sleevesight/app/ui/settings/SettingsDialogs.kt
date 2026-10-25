@@ -133,7 +133,7 @@ internal fun KeyDialog(
 
     fun enter(text: String) {
         typed = text
-        if (text.isEmpty()) shown = false
+        shown = stillShown(shown, text)
     }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
@@ -236,6 +236,12 @@ private fun CancelAutofillOnDestroy(autofill: AutofillManager?) {
         onDispose { lifecycle.removeObserver(observer) }
     }
 }
+
+/** Whether the key field, [shown] until now, still shows what it holds once it holds [text]: not when emptied. */
+private fun stillShown(
+    shown: Boolean,
+    text: String,
+): Boolean = shown && text.isNotEmpty()
 
 /**
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
