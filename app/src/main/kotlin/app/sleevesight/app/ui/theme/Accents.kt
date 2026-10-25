@@ -12,7 +12,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
@@ -160,7 +160,9 @@ private fun linkStyles(ink: Color): TextLinkStyles {
 
 /**
  * [text] with each of [links] marked as *Link style* says ([LocalLinkStyle]): a line under it, or a
- * highlight behind it. The marks are worked out once per layout and style, and only drawn after.
+ * highlight behind it. The marks are worked out in the draw phase, from the layout the same frame
+ * made, so a link is marked on its first frame and at once after a new layout. They are worked out
+ * again only when the layout, the links, the style or the colour change; other draws only draw them.
  */
 @Suppress("LongParameterList") // The text and its links, and how both are drawn.
 @Composable
@@ -173,20 +175,22 @@ private fun MarkedText(
     modifier: Modifier,
 ) {
     val look = LocalLinkStyle.current
-    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val marks = remember(layout, links, look) { layout?.let { marks(it, links, look) } ?: Marks.NONE }
+    val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,
         style = style,
         color = color,
-        onTextLayout = { layout = it },
+        onTextLayout = { layout.value = it },
         modifier =
-            modifier.drawBehind {
-                when (look) {
-                    LinkStyle.UNDERLINE -> for (mark in marks.rects) drawRect(ink, mark.topLeft, mark.size)
-                    LinkStyle.HIGHLIGHT -> {
-                        val fill = ink.copy(alpha = ink.alpha * HIGHLIGHT_ALPHA)
-                        for (mark in marks.rects) drawRoundRect(fill, mark.topLeft, mark.size, marks.corner)
+            modifier.drawWithCache {
+                // Read here, in the draw phase, the layout is the one this frame measured.
+                val marks = layout.value?.let { marks(it, links, look) } ?: Marks.NONE
+                val fill = ink.copy(alpha = ink.alpha * HIGHLIGHT_ALPHA)
+                onDrawBehind {
+                    when (look) {
+                        LinkStyle.UNDERLINE -> for (mark in marks.rects) drawRect(ink, mark.topLeft, mark.size)
+                        LinkStyle.HIGHLIGHT ->
+                            for (mark in marks.rects) drawRoundRect(fill, mark.topLeft, mark.size, marks.corner)
                     }
                 }
             },

@@ -30,14 +30,17 @@ internal class AccentPictures(
 ) {
     /**
      * [content] on a surface of the app's theme, light or [dark], its links marked as [linkStyle]
-     * says (#519), and the scheme it was drawn in.
+     * says (#519), and the scheme it was drawn in. With [firstFrame], as it is after its first frame
+     * alone, the clock stopped there; else once all is idle.
      */
     fun show(
         dark: Boolean,
         content: @Composable () -> Unit,
         linkStyle: LinkStyle = LinkStyle.UNDERLINE,
+        firstFrame: Boolean = false,
         check: (ColorScheme) -> Unit,
     ) = ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+        if (firstFrame) compose.mainClock.autoAdvance = false
         var scheme: ColorScheme? = null
         scenario.onActivity {
             it.setContent {
@@ -47,7 +50,7 @@ internal class AccentPictures(
                 }
             }
         }
-        compose.waitForIdle()
+        if (firstFrame) compose.mainClock.advanceTimeByFrame() else compose.waitForIdle()
         check(checkNotNull(scheme))
     }
 

@@ -146,6 +146,36 @@ class LinkHighlightTest {
         }
     }
 
+    @Test
+    fun aLinkIsMarkedOnItsFirstFrameInEitherStyle() {
+        // The clock stopped after the first frame: a mark worked out on a later one, from a layout
+        // the first saved for it, is missing.
+        for (style in LinkStyle.entries) {
+            pictures.show(false, {
+                LinkedText(
+                    // All of it the link, so the underline runs the whole inked width.
+                    listOf(Link("example.org", URL)),
+                    MaterialTheme.typography.bodyLarge,
+                    Modifier.testTag(TAG),
+                )
+            }, style, firstFrame = true) { scheme ->
+                val picture = pictures.picture(TAG)
+                when (style) {
+                    LinkStyle.UNDERLINE ->
+                        assertTrue(
+                            "underlined on the first frame",
+                            underlineRows(picture, scheme).isNotEmpty(),
+                        )
+                    LinkStyle.HIGHLIGHT ->
+                        assertTrue(
+                            "filled on the first frame, ${picture.filled(scheme)} pixels",
+                            picture.filled(scheme) > FILLED_PIXELS,
+                        )
+                }
+            }
+        }
+    }
+
     private companion object {
         const val TAG = "text"
         const val URL = "https://example.org"
