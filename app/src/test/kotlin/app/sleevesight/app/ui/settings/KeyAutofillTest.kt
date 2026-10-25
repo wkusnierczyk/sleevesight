@@ -1,5 +1,7 @@
 package app.sleevesight.app.ui.settings
 
+import android.graphics.Rect
+import android.view.View
 import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import androidx.activity.compose.setContent
@@ -42,7 +44,10 @@ import org.robolectric.shadows.ShadowAutofillManager
 /**
  * A password manager fills each key field, and is never asked to save the key (#376): the dialog
  * cancels the autofill session before anything can commit it. The platform's autofill manager is
- * shadowed to record what it is asked, in order; a commit after the cancel finds no session.
+ * shadowed to record what it is asked, in order, with the dialog's own closing in the same record;
+ * a commit after the cancel finds no session. The shadow keeps no session of its own: that Compose
+ * tracks the field at all shows in the commit it sends when the field goes (which the dialog's
+ * code before #376 let through first) and in the entry it reports when the field is focused.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [KeyAutofillTest.RecordingAutofillManager::class])
@@ -54,9 +59,18 @@ class KeyAutofillTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    /** The platform's autofill manager, recording each commit and cancel it is asked for, in order. */
+    /** The platform's autofill manager, recording each entry, commit and cancel it is told of, in order. */
     @Implements(AutofillManager::class)
     class RecordingAutofillManager : ShadowAutofillManager() {
+        @Implementation
+        fun notifyViewEntered(
+            @Suppress("UNUSED_PARAMETER") view: View,
+            @Suppress("UNUSED_PARAMETER") virtualId: Int,
+            @Suppress("UNUSED_PARAMETER") absBounds: Rect,
+        ) {
+            calls += ENTERED
+        }
+
         @Implementation
         fun commit() {
             calls += COMMIT
@@ -68,8 +82,12 @@ class KeyAutofillTest {
         }
 
         companion object {
+            const val ENTERED = "entered"
             const val COMMIT = "commit"
             const val CANCEL = "cancel"
+
+            /** Not the autofill manager's: the dialog's own [onDismiss][KeyDialog], recorded by the test. */
+            const val DISMISSED = "dismissed"
             val calls = mutableListOf<String>()
         }
     }
@@ -79,23 +97,34 @@ class KeyAutofillTest {
     @Before
     fun forget() = calls.clear()
 
+    /** What the autofill manager was told, without the field's entries, which come as focus moves. */
+    private fun told() = calls.filter { it != RecordingAutofillManager.ENTERED }
+
     /** The session ended unsaved: cancelled, and not committed before that. */
     private fun assertEndedUnsaved() =
-        assertEquals("cancelled before any commit", RecordingAutofillManager.CANCEL, calls.firstOrNull())
+        assertEquals("cancelled before any commit", RecordingAutofillManager.CANCEL, told().firstOrNull())
+
+    /** The dialog closed itself, and cancelled the session first, before it said it was done. */
+    private fun assertCancelledThenClosed() =
+        assertEquals(
+            "cancelled, then dismissed",
+            listOf(RecordingAutofillManager.CANCEL, RecordingAutofillManager.DISMISSED),
+            told().take(2),
+        )
 
     /** What the dialog was asked to do, and the switch that takes it away without closing it. */
     private class Shown {
         var open by mutableStateOf(true)
         val saved = mutableListOf<String>()
         var removed = 0
-        var dismissed = 0
+        val dismissed get() = RecordingAutofillManager.calls.count { it == RecordingAutofillManager.DISMISSED }
     }
 
     private fun show(
         id: SecretId = SecretId.ANTHROPIC,
         state: SecretState = SecretState.ABSENT,
         saving: SaveResult = SaveResult.SAVED,
-        block: (Shown) -> Unit,
+        block: ActivityScenario<MainActivity>.(Shown) -> Unit,
     ) {
         val shown = Shown()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -116,7 +145,7 @@ class KeyAutofillTest {
                             scanner = { _, _ -> },
                             keyboard = { _, _, _ -> },
                             onDismiss = {
-                                shown.dismissed++
+                                calls += RecordingAutofillManager.DISMISSED
                                 shown.open = false
                             },
                         )
@@ -126,7 +155,7 @@ class KeyAutofillTest {
             compose.waitUntil(timeoutMillis = 5_000) {
                 compose.onAllNodes(hasText(text(R.string.settings_key_field))).fetchSemanticsNodes().isNotEmpty()
             }
-            block(shown)
+            scenario.block(shown)
         }
     }
 
@@ -166,7 +195,7 @@ class KeyAutofillTest {
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
             compose.waitForIdle()
             assertEquals(1, shown.dismissed)
-            assertEndedUnsaved()
+            assertCancelledThenClosed()
         }
 
     @Test
@@ -176,7 +205,7 @@ class KeyAutofillTest {
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
             compose.waitForIdle()
-            assertEndedUnsaved()
+            assertCancelledThenClosed()
         }
 
     @Test
@@ -186,19 +215,22 @@ class KeyAutofillTest {
             compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
             compose.waitForIdle()
             assertEquals(1, shown.removed)
-            assertEndedUnsaved()
+            assertCancelledThenClosed()
         }
 
     @Test
     fun aKeyThatCannotBeSavedKeepsTheDialogAndItsAutofillSession() =
         show(saving = SaveResult.NOT_WRITTEN) { shown ->
+            field().performClick()
+            compose.waitForIdle()
+            assertTrue("Compose tracks the field for autofill", RecordingAutofillManager.ENTERED in calls)
             fill("filled-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             compose.waitUntil(timeoutMillis = 5_000) {
                 compose.onAllNodes(hasText(text(R.string.settings_key_write_failed))).fetchSemanticsNodes().isNotEmpty()
             }
             assertEquals(0, shown.dismissed)
-            assertEquals("the session goes on while the dialog stays", emptyList<String>(), calls)
+            assertEquals("the session goes on while the dialog stays", emptyList<String>(), told())
         }
 
     @Test
@@ -207,6 +239,17 @@ class KeyAutofillTest {
             compose.runOnIdle { shown.open = false }
             compose.waitForIdle()
             assertEquals("not closed by the dialog", 0, shown.dismissed)
+            assertEndedUnsaved()
+        }
+
+    @Test
+    fun aDialogThatGoesWithTheActivityAlsoEndsTheAutofillSessionUnsaved() =
+        show {
+            fill("filled-key")
+            compose.waitForIdle()
+            // As a rotation does: the dialog's window composition goes first, then the activity's.
+            recreate()
+            compose.waitForIdle()
             assertEndedUnsaved()
         }
 }
