@@ -6,9 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -55,6 +56,8 @@ import org.robolectric.shadows.ShadowDialog
  */
 @RunWith(RobolectricTestRunner::class)
 class LoadKeysTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -212,6 +215,7 @@ class LoadKeysTest {
             assertEquals(0, compose.onAllNodesWithSubstring(exaKey).size)
             compose.waitForIdle()
             assertNull(stored(SecretId.ANTHROPIC))
+            assertEquals("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f", stored(SecretId.EXA))
 
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitForText(text(R.string.load_keys_saved_title))
@@ -313,7 +317,9 @@ class LoadKeysTest {
             assertEquals(lastFmKey, runBlocking { store.get(SecretId.LASTFM) }?.reveal())
             assertNull(runBlocking { store.get(SecretId.ANTHROPIC) })
             // The key saved on the first try still reads as new: as it was when the code was read.
+            // The save has reached the screen first: *Secrets*, under it, offers to remove the key.
             val lastFm = text(R.string.settings_key_name_lastfm)
+            waitForNode(hasContentDescription(app.getString(R.string.settings_key_remove, lastFm)))
             compose.onNodeWithText(app.getString(R.string.setup_new, lastFm, ending(lastFmKey))).assertIsDisplayed()
 
             val writes = flaky.writes.get()

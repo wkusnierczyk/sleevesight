@@ -15,7 +15,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -54,6 +54,8 @@ import org.robolectric.Shadows.shadowOf
 /** Each AI service's terms, told where its key is entered (#409). */
 @RunWith(RobolectricTestRunner::class)
 class ServiceTermsTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 

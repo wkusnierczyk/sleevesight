@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,11 +34,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.secrets.ResetResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // *Purge keys* (#446): the saved keys it deletes, the deletion, and what it did.
 
@@ -45,55 +45,48 @@ import kotlinx.coroutines.withContext
  * *Purge keys*, a screen of its own ([KeyScreen], secure): the saved keys it would delete
  * ([secrets]), each by its name and last four characters ([ending], which reads them), or as one
  * that can no longer be read; *Delete* and *Cancel*; and *More about safe delete*, which unfolds
- * what the deletion does. [onPurge] deletes every key with the phone's key for them, and returns
- * whether every step succeeded: then the screen says the keys listed were deleted, with *Done*;
- * otherwise it says what was not, with *Try again*. While it runs, nothing else can be done.
+ * what the deletion does. [onPurge] deletes every key with the phone's key for them, and says how
+ * each step went and what is stored after them: when both succeeded, the screen says the keys listed
+ * were deleted, with *Done*; otherwise it says which step failed, from that result alone, and lists
+ * the keys left, with *Try again*. While it runs, nothing else can be done.
  */
 @Composable
 internal fun PurgeKeysScreen(
     secrets: Map<SecretId, SecretState>,
     ending: suspend (SecretId) -> String?,
-    onPurge: suspend () -> Boolean,
+    onPurge: suspend () -> ResetResult,
     onDismiss: () -> Unit,
 ) {
     var busy by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    var failure by remember { mutableStateOf<PurgeFailure?>(null) }
     // The keys listed when *Delete* was tapped: what the screen then says it deleted.
     var deleting by remember { mutableStateOf<List<ShownKey>?>(null) }
     var done by remember { mutableStateOf(false) }
     // Every key stored, as `SecretStore.reset` removes every one, in the order *Secrets* shows them.
-    val stored by produceState<List<ShownKey>?>(null, secrets) {
-        val keys =
-            SecretId.entries
-                .filter { (secrets[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
-                .sortedBy { SHOWN_KEYS.indexOf(it).takeIf { at -> at >= 0 } ?: SHOWN_KEYS.size }
-                .map { ShownKey(it, if (secrets[it] == SecretState.SAVED) ending(it) else null) }
-        // Set on the main thread. On the phone the effect resumes there already, and this costs
-        // nothing; under Compose's test rule effects run unconfined, so the reads resume on the key
-        // store's thread, and a list set there was at times never shown.
-        withContext(Dispatchers.Main.immediate) { value = keys }
-    }
+    val stored by produceState<List<ShownKey>?>(null, secrets) { value = shownKeys(secrets, ending) }
     val scope = rememberCoroutineScope()
     KeyScreen(R.string.settings_remove_all_keys, busy, onDismiss) {
         if (done) {
             DeletedStep(deleting.orEmpty(), onDismiss)
         } else {
             // The keys as they are now: after a failure, those the deletion left.
-            PurgeStep(stored, failed, busy, onDismiss) {
+            PurgeStep(stored, failure, busy, onDismiss) {
                 // A second tap in the same frame finds the button still enabled.
                 if (!busy) {
                     busy = true
-                    failed = false
+                    failure = null
                     // What the confirmation lists: the keys as they were when *Delete* was first tapped.
-                    deleting = deleting ?: stored
+                    val listed = deleting ?: stored.orEmpty()
+                    deleting = listed
                     scope.launch {
-                        val purged =
-                            try {
-                                onPurge()
-                            } finally {
-                                busy = false
-                            }
-                        if (purged) done = true else failed = true
+                        try {
+                            val result = onPurge()
+                            // The keys left as the reset read them, or, unread, those it was asked to delete.
+                            val left = result.left?.let { shownKeys(it, ending) } ?: listed
+                            if (result.done) done = true else failure = PurgeFailure(result, left)
+                        } finally {
+                            busy = false
+                        }
                     }
                 }
             }
@@ -101,16 +94,42 @@ internal fun PurgeKeysScreen(
     }
 }
 
+/** The keys [states] holds, readable ([ending]) or not, in the order *Secrets* shows them. */
+private suspend fun shownKeys(
+    states: Map<SecretId, SecretState>,
+    ending: suspend (SecretId) -> String?,
+): List<ShownKey> =
+    SecretId.entries
+        .filter { (states[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
+        .sortedBy { SHOWN_KEYS.indexOf(it).takeIf { at -> at >= 0 } ?: SHOWN_KEYS.size }
+        .map { ShownKey(it, if (states[it] == SecretState.SAVED) ending(it) else null) }
+
+/** A deletion that did not finish: how its steps went ([result]), and the keys [left] after it. */
+private class PurgeFailure(
+    val result: ResetResult,
+    val left: List<ShownKey>,
+)
+
+/** What [failure] says: which step failed, from its result, and whether keys are left to list. */
+@StringRes
+private fun messageOf(failure: PurgeFailure): Int =
+    when {
+        !failure.result.removed && !failure.result.sealDeleted -> R.string.purge_keys_both_failed
+        !failure.result.removed && failure.left.isEmpty() -> R.string.purge_keys_storage_failed
+        !failure.result.removed -> R.string.purge_keys_not_removed
+        else -> R.string.purge_keys_seal_not_deleted
+    }
+
 /**
  * What *Purge keys* deletes, the [listed] keys stored now (null while they are read), and its
- * buttons: *Delete* calls [onDelete]. Once a deletion [failed], it says which step failed instead:
- * the keys it could not remove, those [listed], or, with none left, the phone's key that sealed
- * them; and *Try again* calls [onDelete]. Nothing can be tapped while [busy].
+ * buttons: *Delete* calls [onDelete]. After a [failure], it says which step failed instead
+ * ([messageOf]) and lists the keys left; and *Try again* calls [onDelete]. Nothing can be tapped
+ * while [busy].
  */
 @Composable
 private fun ColumnScope.PurgeStep(
     listed: List<ShownKey>?,
-    failed: Boolean,
+    failure: PurgeFailure?,
     busy: Boolean,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -121,20 +140,17 @@ private fun ColumnScope.PurgeStep(
     ) {
         val style = MaterialTheme.typography.bodyMedium
         when {
-            listed == null -> {}
-
-            failed -> {
-                // With no key left, only the phone's key that sealed them could not be deleted.
-                val failure =
-                    if (listed.isEmpty()) R.string.purge_keys_seal_not_deleted else R.string.purge_keys_not_removed
+            failure != null -> {
                 Text(
-                    stringResource(failure),
+                    stringResource(messageOf(failure)),
                     style = style,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
-                for (key in listed) Text(shownKey(key), style = style)
+                for (key in failure.left) Text(shownKey(key), style = style)
             }
+
+            listed == null -> {}
 
             listed.isEmpty() -> {
                 Text(stringResource(R.string.purge_keys_none), style = style)
@@ -150,7 +166,7 @@ private fun ColumnScope.PurgeStep(
     KeyScreenActions {
         TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
         TextButton(onClick = onDelete, enabled = !busy && listed != null) {
-            Text(stringResource(if (failed) R.string.purge_keys_try_again else R.string.purge_keys_delete))
+            Text(stringResource(if (failure != null) R.string.purge_keys_try_again else R.string.purge_keys_delete))
         }
     }
 }

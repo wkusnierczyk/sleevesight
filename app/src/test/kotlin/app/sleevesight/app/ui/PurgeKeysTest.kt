@@ -2,6 +2,7 @@ package app.sleevesight.app.ui
 
 import android.view.WindowManager
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,7 +12,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -63,6 +64,8 @@ import javax.crypto.SecretKey
  */
 @RunWith(RobolectricTestRunner::class)
 class PurgeKeysTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -288,6 +291,59 @@ class PurgeKeysTest {
     }
 
     @Test
+    fun aPurgeOfNoKeysWhoseStorageFailsSaysTheStorageFailedNotThePhonesKey() {
+        // Opened with no key saved, as after a key store failure; the phone's key is deleted, the
+        // storage's edit fails.
+        val flaky = FlakyDataStore(stores.open("empty-flaky-secrets"))
+        val keys = SoftwareKeySource()
+        val emptySecrets = SecretStore(flaky, SecretCipher(keys))
+        purgeAlone(emptySecrets) {
+            waitForText(text(R.string.purge_keys_none))
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+
+            waitForText(text(R.string.purge_keys_storage_failed))
+            assertEquals(1, keys.deletions)
+            for (wrong in listOf(R.string.purge_keys_seal_not_deleted, R.string.purge_keys_not_removed)) {
+                assertTrue(!shown(text(wrong)))
+            }
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_done_none))
+        }
+    }
+
+    @Test
+    fun aPurgeWhoseStorageAndPhoneKeyBothFailSaysSoAndListsTheKeysLeft() {
+        val failingOnce =
+            object : SoftwareKeySource() {
+                var failures = 1
+
+                override fun delete() {
+                    if (failures-- > 0) throw ProviderException("key store down")
+                    super.delete()
+                }
+            }
+        val flaky = FlakyDataStore(stores.open("both-failing-secrets"))
+        val failingSecrets = SecretStore(flaky, SecretCipher(failingOnce))
+        runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
+        show(secretStore = failingSecrets) {
+            openPurge()
+            waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+
+            // Neither step done: the key is left, still readable, and listed so.
+            waitForText(text(R.string.purge_keys_both_failed))
+            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
+
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_done_title))
+            assertTrue(allAbsent(failingSecrets))
+        }
+    }
+
+    @Test
     fun anUnreadableKeyMakesPurgeKeysSayWhyAndIsListedAsSuch() {
         val dataStore = stores.open("reset-secrets")
         runBlocking { SecretStore(dataStore, testCipher()).set(SecretId.LASTFM, Secret(lastFmKey)) }
@@ -296,6 +352,9 @@ class PurgeKeysTest {
         show(secretStore = resetting) {
             waitForText(text(R.string.settings_reset_keys_value))
             compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
+            // A key that cannot be read can still be removed, alone or with the others.
+            val removeLastFm = app.getString(R.string.settings_key_remove, text(R.string.settings_key_name_lastfm))
+            compose.onNodeWithContentDescription(removeLastFm).assertExists()
 
             openPurge()
             val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
@@ -335,6 +394,32 @@ class PurgeKeysTest {
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()
             waitFor("Purge keys no longer saying why") { !shown(text(R.string.settings_reset_keys_value)) }
             assertEquals(1, keys.deletions)
+        }
+    }
+
+    /** *Purge keys* alone, on [store], as the settings open it, with nothing under it. */
+    private fun purgeAlone(
+        store: SecretStore,
+        block: () -> Unit,
+    ) {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    val states by store.states.collectAsState(emptyMap())
+                    KeyDialogs(
+                        SettingsDialog.PurgeKeys,
+                        states,
+                        store,
+                        saves,
+                        scanner = { },
+                        keyboard = { _, _, _, _ -> },
+                        showPhoneName = false,
+                        onSealFailed = {},
+                        onDismiss = {},
+                    )
+                }
+            }
+            block()
         }
     }
 

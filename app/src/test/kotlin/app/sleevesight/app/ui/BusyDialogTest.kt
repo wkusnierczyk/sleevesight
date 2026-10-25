@@ -10,7 +10,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -54,6 +54,8 @@ import org.robolectric.shadows.ShadowDialog
  */
 @RunWith(RobolectricTestRunner::class)
 class BusyDialogTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 

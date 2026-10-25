@@ -159,7 +159,7 @@ internal fun KeyDialogs(
             PurgeKeysScreen(
                 secrets = secrets,
                 ending = { id -> store.get(id)?.reveal()?.let(::endingOf) },
-                onPurge = { saves.async { store.reset().also { if (it) onSealFailed(false) } }.await() },
+                onPurge = { saves.async { store.reset().also { if (it.done) onSealFailed(false) } }.await() },
                 onDismiss = onDismiss,
             )
         }
