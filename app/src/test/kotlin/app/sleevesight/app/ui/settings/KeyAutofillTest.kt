@@ -167,8 +167,8 @@ class KeyAutofillTest {
             it(checkNotNull(FillableData.createFromAutofillValue(AutofillValue.forText(key))))
         }
 
-    // Compose also infers the content type from `KeyboardType.Password`; the field marks it itself,
-    // so this holds whatever the keyboard type becomes.
+    // Compose also infers the content type from `KeyboardType.Password`, and the field marks it
+    // itself, so this holds as long as either the mark or the keyboard type stays.
     @Test
     fun everyKeyFieldIsAMaskedPasswordThatAPasswordManagerFills() {
         for (id in SecretId.entries) {
