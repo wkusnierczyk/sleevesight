@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * Automatic writing expires when the app is unattended (#203), through [PipelineCoordinator]: the
  * track changes reported while no activity is started are counted, an activity start resets the
- * count, and with *Pause automatic writing after* at n, n changes away are written as usual and the
+ * count, and with *Saver* at n, n changes away are written as usual and the
  * first action expires at the next, so nothing more is written without a new tap. *Off* never
  * expires it.
  */
@@ -254,7 +254,7 @@ class PipelineCoordinatorPauseTest {
         assertFalse("before any action, nothing expired", fresh.coordinator.state.expired)
         assertFalse("before any action, not lapsed", fresh.coordinator.state.lapsed)
 
-        // *Never*: Write is offered whatever the first action, so not because it expired.
+        // *Manual*: Write is offered whatever the first action, so not because it expired.
         val never = started()
         never.writesOn = emptySet()
         never.pause(1)

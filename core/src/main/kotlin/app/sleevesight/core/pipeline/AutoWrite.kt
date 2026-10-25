@@ -30,12 +30,12 @@ data class TrackChange(
  * Whether an insight is written without a tap (D5; `design/architecture.md`, *Writing insights
  * automatically*):
  *
- * - never while *Write insights* is off, or before the user's first action since the app started
+ * - never while *Show insights* is off, or before the user's first action since the app started
  *   (in the app, a cold start: a return to it keeps the first action, until it expires after the
- *   track changes *Pause automatic writing after* names while the app is not on screen, #203);
- * - *On every track change*: every track;
- * - *When I skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
- * - *Never*: none.
+ *   track changes *Saver* names while the app is not on screen, #203);
+ * - *On track change*: every track;
+ * - *On skip*: tracks the user moved to, by a skip in the player or an action in Sleevesight;
+ * - *Manual*: none.
  */
 object AutoWrite {
     fun writes(

@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 
 /**
- * Prunes *Players to follow* once, as the settings file is first read after the upgrade to music
+ * Prunes *Players* once, as the settings file is first read after the upgrade to music
  * players only (#435; [SettingsCodec.prunePlayers]): the players an older version listed only for
  * having had a media session, and every phone call. Run once per file, marked by [DONE], since the
  * players listed after it each reported music and must not be dropped at the next start. A file

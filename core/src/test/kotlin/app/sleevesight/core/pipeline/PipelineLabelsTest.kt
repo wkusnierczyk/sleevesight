@@ -209,7 +209,7 @@ class PipelineLabelsTest {
         }
 
     @Test
-    fun `a source off under Where to look gives no labels, whatever its label switch`() =
+    fun `a source off under Sources gives no labels, whatever its label switch`() =
         runTest {
             settings = settings.copy(enabledSources = settings.enabledSources - SourceSwitch.LASTFM)
             assertEquals(listOf("Country", "Folk"), track().genres.all.map { it.genre.label })

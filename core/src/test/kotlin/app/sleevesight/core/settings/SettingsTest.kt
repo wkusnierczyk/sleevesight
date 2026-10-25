@@ -174,7 +174,7 @@ class SettingsTest {
     }
 
     @Test
-    fun `a label source gives labels only while its source is on under Where to look`() {
+    fun `a label source gives labels only while its source is on under Sources`() {
         val noMusicBrainz = defaults.copy(enabledSources = defaults.enabledSources - SourceSwitch.MUSICBRAINZ)
         assertFalse(noMusicBrainz.givesLabels(LabelSource.MUSICBRAINZ))
         assertTrue(noMusicBrainz.givesLabels(LabelSource.LASTFM))

@@ -16,7 +16,7 @@ import java.io.InputStream
 import java.io.PrintStream
 
 /**
- * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Scan keys*.
+ * `keys-qr` (#268): draws a setup code ([KeySetup]) in the terminal, for the app's *Load keys*.
  * The keys come from the developer's environment or keys file ([Keys]); with `--keys`, from that
  * file alone, not the environment, so a tester's file cannot pick up the developer's own keys; with
  * `--<name>-from`, only from the files given, `-` for standard input, so a tester's key is drawn without being saved
@@ -71,7 +71,7 @@ class KeysQr(
         out.print(draw(encode(KeySetup.write(keys))))
         out.flush()
         err.println("Holds the ${keys.keys.joinToString { label(it) }} key${if (keys.size > 1) "s" else ""}.")
-        err.println("In Sleevesight: Settings, API keys, Scan keys. Then clear the terminal: the code is the keys.")
+        err.println("In Sleevesight: Settings, Secrets, Load keys. Then clear the terminal: the code is the keys.")
         return 0
     }
 
@@ -136,7 +136,7 @@ class KeysQr(
             Usage: sleevesight-cli keys-qr [--keys <file>] [--anthropic-from <file|->] [--openai-from <file|->]
                                            [--google-from <file|->] [--exa-from <file|->] [--lastfm-from <file|->]
 
-              Draws a setup code for the app's Settings, API keys, Scan keys: the keys from the
+              Draws a setup code for the app's Settings, Secrets, Load keys: the keys from the
               environment or ~/.config/sleevesight/keys.env; with --keys, from that file alone; with
               any --<name>-from, only the keys in those files, - for standard input (one at most).
               --keys and --<name>-from cannot be combined.

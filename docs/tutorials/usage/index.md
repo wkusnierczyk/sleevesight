@@ -217,7 +217,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
 | **No key for Last.fm or web search** | Its chip says *needs your key, in Settings*, and it is not asked. MusicBrainz and Wikipedia need no key. |
 | **A source rejects a match** | Its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. A rejected match is never used. |
-| **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. |
+| **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
 | **A source fails** | Its chip says *failed*; the other sources' lines are used. |
 | **The AI service refuses or fails** | *The insight could not be written:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, it does not know the model, and the like. *Write insight* tries again, as a new call. |
 | **The reply stopped early** | The insight shows with *The reply stopped early, so this is incomplete, and it was not kept.* |

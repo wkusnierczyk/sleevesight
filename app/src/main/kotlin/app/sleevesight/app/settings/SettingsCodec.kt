@@ -18,10 +18,10 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * Only a setting the user moved off its default is stored; one at its default has no key. So a
  * default revised in a later version reaches everyone who has not changed that setting (#100: the
- * MusicBrainz labels may be off by default in the release). A set of switches (*Where to look*,
+ * MusicBrainz labels may be off by default in the release). A set of switches (*Sources*,
  * the web search engines, the genre label sources) is stored as the switches moved on or off
  * against their defaults, so one the user has not moved, or one a later version adds, follows its
- * default; *Players to follow* is stored the same way, by package name ([readPlayers]).
+ * default; *Players* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
  * later one), or out of range reads as that setting's default, and the others are unaffected. One
@@ -225,7 +225,7 @@ internal object SettingsCodec {
         prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
 
     /**
-     * *Players to follow* as overrides of the defaults, with `on` and `off` keys as the switch sets
+     * *Players* as overrides of the defaults, with `on` and `off` keys as the switch sets
      * have ([readSwitches]): a player listed by default that this phone has not already listed off
      * follows its default, including one a later version adds or whose default it revises. A player
      * seen but not listed by default is stored with its switch, off as first listed (`players.off`,
@@ -246,7 +246,7 @@ internal object SettingsCodec {
         ).filterKeys { !Settings.isCall(it) }
 
     /**
-     * Drops from *Players to follow* what an older version listed by the old rule, any app with a
+     * Drops from *Players* what an older version listed by the old rule, any app with a
      * media session (#435): each player listed off that is not listed by default, so it is listed
      * again only once it reports music ([SettingsStore.playerSeen]), and every phone call's package,
      * whatever its switch. A player switched on stays, so the user's choice is not undone; one
@@ -322,7 +322,7 @@ internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues
 /** `pauseAutoWriteAfter` null is *Off*, which needs a value of its own to be stored. */
 private const val NEVER_PAUSE = 0
 
-/** *Pause automatic writing after* as [stored]: *Off*, a positive count, or else the [default]. */
+/** *Saver* as [stored]: *Off*, a positive count, or else the [default]. */
 private fun pauseOf(
     stored: Int?,
     default: Int?,
