@@ -123,6 +123,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      # The release's track and its guard against a `PLAY_TRACK` left at `production`
+      # (`release-track.sh`, #451), tested in a throwaway repository. Shell only, so every run.
+      - name: Release track
+        run: .github/scripts/test-release-track.sh
+
       # Developer mode is on by default in a build for Play's testing tracks and off in any other
       # (#451; `release.yml` sets which). The flag's value is read back from each build, and the
       # settings' default checked under each: the public build's by `build` above, the test build's

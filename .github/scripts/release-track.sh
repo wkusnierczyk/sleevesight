@@ -14,7 +14,7 @@
 # `v<major>.<minor>.<patch>` tag the tagged commit contains, other than its own) differs from it in
 # `release-notes/` only (`design/release.md`, *Test and production builds*). So a `PLAY_TRACK` left
 # at `production` stops the next test tag, which brings new code, rather than ship that code to
-# production untested. The tags must be fetched before it runs.
+# production untested. The tags must be fetched before it runs. `test-release-track.sh` tests it.
 #
 # Usage: release-track.sh <PLAY_TRACK value> <tag> <tagged commit>
 set -euo pipefail
