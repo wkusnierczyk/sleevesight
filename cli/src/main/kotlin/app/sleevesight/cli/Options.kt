@@ -46,7 +46,7 @@ data class Options(
     val record: Set<String>,
     val keysFile: File,
     val repeat: Int = 1,
-    val artistFactsOnce: Boolean = true,
+    val artistFactsOncePerSession: Boolean = true,
 ) {
     companion object {
         val USAGE: String =
@@ -81,7 +81,8 @@ data class Options(
               --no-insights       gather evidence only: no AI calls
               --artist-facts-every-track
                                   give every insight all its artist's facts, as the app's *Tell an
-                                  artist's facts once per session* off does (default: once a pass)
+                                  artist's facts once per session* off does (default: once a pass);
+                                  every insight is written afresh, none read from the cache
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
                                   services anthropic, google (default: musicbrainz,wikidata,wikipedia)
               --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
@@ -151,7 +152,7 @@ data class Options(
                 record = if (mode == Mode.RECORD) record else emptySet(),
                 keysFile = values["--keys"]?.let(::File) ?: Keys.DEFAULT_FILE,
                 repeat = repeat,
-                artistFactsOnce = "--artist-facts-every-track" !in switches,
+                artistFactsOncePerSession = "--artist-facts-every-track" !in switches,
             )
         }
 

@@ -136,7 +136,7 @@ If a saved key can no longer be read, as after the phone's Keystore is reset, it
 
 *Generated current track summaries.* Unfolded: *Sleevesight collects track, artist, and album information from sources and uses AI to generate readable descriptions based on the sourced evidence.* When an insight is written, and what is looked up ahead.
 
-- ***Show insights*** (**default: on**). Off: no AI calls at all; the evidence is still shown. The master switch: with it off, nothing is written, and the rows about writing (*Reactive*, *Crossfade*, *Saver*) cannot be changed. *Proactive* still can, and still looks the next track up at MusicBrainz ahead of its play while it is on.
+- ***Show insights*** (**default: on**). Off: no AI calls at all; the evidence is still shown. The master switch: with it off, nothing is written, and the rows about writing (*Reactive*, *Crossfade*, *Saver*, *Tell an artist's facts once per session*) cannot be changed. *Proactive* still can, and still looks the next track up at MusicBrainz ahead of its play while it is on.
 - ***Reactive*** (**default: *On track change***). *When an insight is written without a tap. Each insight written is a paid call on your AI service key.*
   - *On track change*: an insight is written as each track starts, with its lookups mostly done ahead.
   - *On skip*: only when you skip a track, which the app tells from a natural end by watching the playback (see *Crossfade*).

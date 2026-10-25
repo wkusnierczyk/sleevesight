@@ -95,8 +95,8 @@ class OptionsTest {
 
     @Test
     fun `artist facts are told once a pass, unless --artist-facts-every-track is given`() {
-        assertTrue(Options.parse(listOf("replay")).artistFactsOnce)
-        assertFalse(Options.parse(listOf("live", "--artist-facts-every-track")).artistFactsOnce)
+        assertTrue(Options.parse(listOf("replay")).artistFactsOncePerSession)
+        assertFalse(Options.parse(listOf("live", "--artist-facts-every-track")).artistFactsOncePerSession)
     }
 
     @Test
