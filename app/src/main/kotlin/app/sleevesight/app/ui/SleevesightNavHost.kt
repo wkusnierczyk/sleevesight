@@ -5,13 +5,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.session.NotificationAccess
+import app.sleevesight.app.ui.home.HomePage
 import app.sleevesight.app.ui.home.NothingPlaying
 import kotlinx.serialization.Serializable
 
@@ -35,6 +39,16 @@ data object CreditsPage
 @Serializable
 data object DiagnosticsPage
 
+/**
+ * Where Home and its pages lead: the settings ([openSettings]), a page of Home's ([openPage], under
+ * *Layout*'s *Separate pages*, #447), and, from a page, back ([back]) to where it was opened from.
+ */
+class HomeLinks(
+    val openSettings: () -> Unit,
+    val openPage: (HomePage) -> Unit,
+    val back: () -> Unit,
+)
+
 /** Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen. */
 class SettingsLinks(
     val openCredits: () -> Unit,
@@ -50,9 +64,11 @@ class SettingsLinks(
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
  * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, given the
- * way to the settings.
+ * way to the settings and to Home's pages; each of [HomePage]'s pages (#447) shows an item of it
+ * on a page of its own, as [page] draws it, and goes back to where it was opened from, Home at the
+ * place it was scrolled to, as Android's back does.
  */
-@Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
+@Suppress("LongParameterList", "LongMethod") // The access and first-run seams, and each screen's content.
 @Composable
 fun SleevesightNavHost(
     notificationAccess: NotificationAccess,
@@ -60,7 +76,8 @@ fun SleevesightNavHost(
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
     settings: @Composable (links: SettingsLinks) -> Unit = {},
-    pipeline: @Composable (openSettings: () -> Unit) -> Unit = { NothingPlaying() },
+    pipeline: @Composable (links: HomeLinks) -> Unit = { NothingPlaying() },
+    page: @Composable (page: HomePage, links: HomeLinks) -> Unit = { _, _ -> },
     diagnostics: @Composable () -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
@@ -86,19 +103,26 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
-                // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
-                val openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } }
+                val links = homeLinks(navController)
                 HomeScreen(
                     accessGranted = granted,
                     // Single top: a double tap opens it once, so one Continue comes back.
                     onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
-                    onOpenSettings = openSettings,
-                    pipeline = { pipeline(openSettings) },
+                    onOpenSettings = links.openSettings,
+                    pipeline = { pipeline(links) },
                 )
             } else {
                 FirstRunFirst(navController)
             }
         }
+        // Home's pages (#447), each drawn by [page] for the route it was opened with.
+        val homePage = @Composable { route: HomePage ->
+            if (firstRun.acknowledged) page(route, homeLinks(navController)) else FirstRunFirst(navController)
+        }
+        composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>()) }
+        composable<HomePage.Genres> { homePage(HomePage.Genres) }
+        composable<HomePage.Genre> { homePage(it.toRoute<HomePage.Genre>()) }
+        composable<HomePage.Insight> { homePage(HomePage.Insight) }
         composable<SettingsPage> {
             val links =
                 SettingsLinks(
@@ -116,6 +140,24 @@ fun SleevesightNavHost(
             if (firstRun.acknowledged) diagnostics() else FirstRunFirst(navController)
         }
     }
+}
+
+/**
+ * Where Home and its pages lead, through [navController]. A page opens, and back is taken, only
+ * while the screen it is on is resumed: a second tap while the first one's page comes in, or while
+ * the page leaves, does nothing, so one back always returns to the screen the page was opened from.
+ */
+@Composable
+private fun homeLinks(navController: NavHostController): HomeLinks {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    return HomeLinks(
+        // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
+        openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } },
+        openPage = { page ->
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) navController.navigate(page)
+        },
+        back = dropUnlessResumed { navController.popBackStack() },
+    )
 }
 
 /**

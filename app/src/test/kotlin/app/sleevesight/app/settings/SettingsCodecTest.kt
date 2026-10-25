@@ -60,7 +60,7 @@ class SettingsCodecTest {
     fun everySettingRoundTrips() {
         val changed =
             Settings(
-                layout = Layout.EXPANDABLE_BOXES,
+                layout = Layout.SEPARATE_PAGES,
                 aiProvider = ProviderId.ANTHROPIC,
                 aiModels = mapOf(ProviderId.ANTHROPIC to "claude-opus-5-5", ProviderId.OPENAI to "gpt-other"),
                 aiEfforts = mapOf(ProviderId.ANTHROPIC to ReasoningEffort.HIGH),
@@ -590,8 +590,8 @@ class SettingsCodecTest {
         assertEquals(setOf("LASTFM", "OUIJA"), prefs[stringSetPreferencesKey("sources.off")])
 
         // A change to the setting itself replaces what this version cannot read.
-        SettingsCodec.write(SettingsCodec.read(prefs).copy(layout = Layout.EXPANDABLE_BOXES), prefs)
-        assertEquals(Layout.EXPANDABLE_BOXES.name, prefs[stringPreferencesKey("layout")])
+        SettingsCodec.write(SettingsCodec.read(prefs).copy(layout = Layout.SEPARATE_PAGES), prefs)
+        assertEquals(Layout.SEPARATE_PAGES.name, prefs[stringPreferencesKey("layout")])
         assertEquals("EXTREME", prefs[stringPreferencesKey("ai.effort.ANTHROPIC")])
         assertEquals("ULTRA", prefs[stringPreferencesKey("ai.effort.OPENAI")])
     }

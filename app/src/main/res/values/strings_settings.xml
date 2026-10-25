@@ -76,4 +76,9 @@
     <string name="settings_grounding_details_summary">Under each insight, the grounding check’s counts in full: how many sentences are grounded, and how many come from the model’s own knowledge, are uncited, or cite missing evidence. Under Sources, every source’s status, the M chip and the rejected matches.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
+    <!-- Appearance → Layout (#447): how an item of the home screen opens. -->
+    <string name="settings_layout">Layout</string>
+    <string name="settings_layout_boxes">Expandable boxes</string>
+    <string name="settings_layout_pages">Separate pages</string>
+    <string name="settings_layout_summary">How Sources, the genres, where a genre comes from and the insight open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
 </resources>

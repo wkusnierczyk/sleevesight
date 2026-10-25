@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "arrow back", outlined, weight 400 (Apache-2.0): a page of Home's goes back
+     (#447). Mirrored right to left. Its path is drawn in Material Symbols' 960-unit box, whose top
+     is at y = -960. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:autoMirrored="true"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M313-440l224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z" />
+    </group>
+</vector>

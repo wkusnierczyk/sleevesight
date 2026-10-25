@@ -235,11 +235,13 @@ class AppGraph(
 
     /**
      * The latest settings read, for the caches, which read them on every call, the pipeline and
-     * the history's recorder and retention. Nothing is read before the first run is acknowledged;
-     * null until the first read after it. The pipeline, the caches' only caller, starts after it,
-     * and the history's retention deletes nothing (and opens no `history.db`) before it.
+     * the history's recorder and retention, and the home screen and its pages (#447), which come
+     * back to them laid out as they were left. Nothing is read before the first run is
+     * acknowledged; null until the first read after it. The pipeline, the caches' only caller,
+     * starts after it, and the history's retention deletes nothing (and opens no `history.db`)
+     * before it.
      */
-    private val latestSettings =
+    val latestSettings: StateFlow<Settings?> =
         settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
 
     private val normalizer = Normalizer(JvmAccentFolder)

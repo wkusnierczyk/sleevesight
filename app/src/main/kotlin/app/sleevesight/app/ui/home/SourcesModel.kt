@@ -1,8 +1,11 @@
 package app.sleevesight.app.ui.home
 
+import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.pipeline.SourceState
+import app.sleevesight.core.pipeline.TrackState
 
 // What *Sources* shows of each source by default (#440): the chips of the sources that gave lines,
 // and a note only for what needs the listener; the rest is behind *Show grounding details*.
@@ -60,3 +63,15 @@ internal fun sourceNotes(
             else -> null
         }
     }
+
+/**
+ * Whether the *Sources* section says the phone is offline (#192): while it is ([view]'s
+ * `offline`), for a [track] with a source unreachable, which is asked again once the phone is
+ * back online.
+ */
+internal fun offlineShown(
+    view: PipelineView,
+    track: TrackState?,
+): Boolean =
+    view.offline &&
+        track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true

@@ -23,6 +23,8 @@ import kotlin.time.Duration.Companion.seconds
  * [DEFAULT_MODELS] and its effort scale in [EFFORT_SCALES] (and, in `:app`, its key and its entry
  * in the providers offered); nothing here changes for it.
  *
+ * @property layout *Layout* (#447): whether what Home holds opens in place (*Expandable boxes*,
+ *   the default) or each on a page of its own (*Separate pages*). See [Layout].
  * @property aiProvider the AI service switched on, whose model and effort the pipeline uses; null
  *   is none, and no insight is written.
  * @property aiModels the model each provider was set to; a provider not in it uses its default
@@ -87,7 +89,8 @@ import kotlin.time.Duration.Companion.seconds
  *   long list makes the screen hard to scan, and unfolding it to check one insight's sources says
  *   nothing about the next. On, a list shown past its first screenful but not in full comes back
  *   at its first screenful. The fold is kept through a rotation and when Android restores the
- *   screen it closed, not when the app is started afresh.
+ *   screen it closed, not when the app is started afresh. Only under *Expandable boxes* ([layout]):
+ *   under *Separate pages* each page opens fresh.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
@@ -109,7 +112,7 @@ import kotlin.time.Duration.Companion.seconds
  *   while the phone's *Remove animations* is on. Off, for someone who would rather not wait.
  */
 data class Settings(
-    val layout: Layout = Layout.SEPARATE_PAGES,
+    val layout: Layout = Layout.EXPANDABLE_BOXES,
     val aiProvider: ProviderId? = null,
     val aiModels: Map<ProviderId, String> = emptyMap(),
     val aiEfforts: Map<ProviderId, ReasoningEffort?> = emptyMap(),
@@ -492,9 +495,20 @@ enum class ThemeChoice {
     DARK,
 }
 
-/** How the detail content is shown. */
+/**
+ * *Layout* (#447; design, *Layout setting*): how an item of the home screen opens. In Phase 1.5 the
+ * items are *Sources*, the genres' table, where a genre label comes from, and the insight; the
+ * Phase 2.0 detail cards join them. Each item is one component, mounted either way.
+ */
 enum class Layout {
+    /** Each item on a page of its own, with a back arrow; Android's back returns to Home where it was. */
     SEPARATE_PAGES,
+
+    /**
+     * Each item in place, folded under its heading's disclosure triangle (*Sources*, the genres) or
+     * under its chip (where a label comes from); the insight shows in full. The default: Home as it
+     * was before the setting, and everything a track has on one screen.
+     */
     EXPANDABLE_BOXES,
 }
 
