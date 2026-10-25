@@ -1,8 +1,10 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
@@ -137,22 +139,34 @@ class PhoneNameSettingTest {
 
     @Test
     fun waitingSaysHowTheComputerListsThePhone() {
+        val off = text(R.string.keyboard_waiting)
+        val named = app.getString(R.string.keyboard_waiting_named, "Pixel 9")
+        val dropped = text(R.string.keyboard_waiting_name_not_fitted)
+        // Each case drawn alone, and only its line shown.
+        var case by mutableStateOf(Pair(false, null as String?))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
-                activity.setContent {
-                    Column {
-                        KeyboardStatus(waitingMessage(showName = false, advertised = null)) {}
-                        KeyboardStatus(waitingMessage(showName = true, advertised = "Pixel 9")) {}
-                        KeyboardStatus(waitingMessage(showName = true, advertised = null)) {}
-                    }
+                activity.setContent { KeyboardStatus(waitingMessage(case.first, case.second)) {} }
+            }
+            val cases =
+                listOf(
+                    // Off: the unknown device, and the setting that names it.
+                    Triple(off, false, null),
+                    // On: the name the chooser shows.
+                    Triple(named, true, "Pixel 9"),
+                    // On, but the name could not be advertised: the unknown device, and why.
+                    Triple(dropped, true, null),
+                    // Off, a name read or not: still the unknown device.
+                    Triple(off, false, "Pixel 9"),
+                )
+            for ((shown, showName, advertised) in cases) {
+                case = Pair(showName, advertised)
+                compose.waitForIdle()
+                for (line in listOf(off, named, dropped)) {
+                    val count = compose.onAllNodes(hasText(line)).fetchSemanticsNodes().size
+                    assertEquals("$line, for $showName and $advertised", if (line == shown) 1 else 0, count)
                 }
             }
-            // Off: the unknown device, and the setting that names it.
-            waitForText(text(R.string.keyboard_waiting))
-            // On: the name the chooser shows.
-            waitForText(app.getString(R.string.keyboard_waiting_named, "Pixel 9"))
-            // On, but the name did not fit: the unknown device, and why.
-            waitForText(text(R.string.keyboard_waiting_name_not_fitted))
         }
     }
 }
