@@ -26,7 +26,7 @@ object EventLine {
             is PipelineEvent.InsightWaits -> "insight    ${e.key}: ${e.reason}"
             is PipelineEvent.ModelCall ->
                 "model      ${e.key}: ${e.provider.name.lowercase()} ${e.model}" +
-                    if (e.leftOut.isEmpty()) "" else ", artist lines left out: ${e.leftOut.joinToString()}"
+                    if (e.leftOut.isEmpty()) "" else ", lines left out: ${e.leftOut.joinToString()}"
             is PipelineEvent.ModelDone -> modelDone(e)
             is PipelineEvent.ModelFailed -> "model      ${e.key}: failed, ${e.kind.name.lowercase()}"
             is PipelineEvent.ModelStopped -> "model      ${e.key}: stopped"
