@@ -86,9 +86,9 @@ class PipelineTime(
  * The pipeline the CLI and the app run (`design/architecture.md`, *Data flow*, *Concurrency*,
  * *State*): normalize; consult the retrieval cache; look every missing source up by name in
  * parallel, with MusicBrainz resolution alongside (D4), each adapter verifying its match when the
- * resolved ids land; publish a [TrackState] as each source lands; assemble the evidence; then
- * write the insight, on request or as the auto-write setting says (D5), from the synthesis cache
- * when it has it, and check it.
+ * resolved ids land (web search, with no id to verify against, only filters its results); publish
+ * a [TrackState] as each source lands; assemble the evidence; then write the insight, on request
+ * or as the auto-write setting says (D5), from the synthesis cache when it has it, and check it.
  *
  * [follow] is the app's loop over track changes, which debounces them and cancels a superseded
  * track's run (`collectLatest`); [run] is one track, as the CLI uses it. [state] is the current
