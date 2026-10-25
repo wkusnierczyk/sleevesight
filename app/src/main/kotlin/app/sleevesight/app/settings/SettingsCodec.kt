@@ -229,8 +229,7 @@ internal object SettingsCodec {
     private fun developerModeOf(
         prefs: Preferences,
         defaults: Settings,
-    ): Boolean =
-        prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
+    ): Boolean = prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
 
     /**
      * *Players to follow* as overrides of the defaults, with `on` and `off` keys as the switch sets

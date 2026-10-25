@@ -54,7 +54,8 @@ class DeveloperModeDefaultTest {
         runBlocking {
             assertTrue(store(onByDefault).settings.first().developerMode)
             stores.close()
-            assertTrue(stores.open("settings").data.first().asMap().isEmpty())
+            val stored = stores.open("settings").data.first()
+            assertTrue(stored.toString(), stored.asMap().isEmpty())
         }
 
     @Test
