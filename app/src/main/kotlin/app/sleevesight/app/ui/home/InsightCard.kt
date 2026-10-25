@@ -20,19 +20,21 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.core.pipeline.InsightState
-import app.sleevesight.core.synthesis.GroundedText
 
 /**
  * *Key insights*: the insight in each of its states (architecture, *Errors and empty
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
- * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
+ * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
+ * insight, [GroundingLine]: a note, or with [groundingDetails] (*Show grounding details*, #437) the
+ * grounding check's counts in full.
  */
 @Composable
 internal fun InsightCard(
     insight: InsightState,
     context: InsightContext,
     actions: InsightActions,
+    groundingDetails: Boolean = false,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -40,7 +42,7 @@ internal fun InsightCard(
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
-            InsightBody(insight, context, actions)
+            InsightBody(insight, context, actions, groundingDetails)
         }
     }
 }
@@ -50,6 +52,7 @@ private fun InsightBody(
     insight: InsightState,
     context: InsightContext,
     actions: InsightActions,
+    groundingDetails: Boolean,
 ) {
     when (insight) {
         is InsightState.Idle -> {
@@ -70,7 +73,7 @@ private fun InsightBody(
             if (context.offers.stop) StopButton(actions.onStop)
         }
 
-        is InsightState.Written -> Written(insight, context, actions)
+        is InsightState.Written -> Written(insight, context, actions, groundingDetails)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
         is InsightState.Failed -> {
             Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
@@ -124,13 +127,14 @@ private fun Written(
     insight: InsightState.Written,
     context: InsightContext,
     actions: InsightActions,
+    groundingDetails: Boolean,
 ) {
     val paragraphs = insight.grounded.paragraphs
     if (paragraphs.isEmpty()) Prose(AnnotatedString(insight.grounded.text))
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    Meta(insight.grounded, insight.cached)
+    GroundingLine(insight.grounded, insight.cached, groundingDetails)
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
     context.rewriteFailed?.let {
         if (it == PipelineHost.STOPPED) {
@@ -147,28 +151,6 @@ private fun Written(
             Text(stringResource(R.string.home_rewrite))
         }
     }
-}
-
-/** The grounding check's counts, as the simulator gives them. */
-@Composable
-private fun Meta(
-    grounded: GroundedText,
-    cached: Boolean,
-) {
-    val counts = grounded.counts
-    val parts =
-        buildList {
-            add(stringResource(R.string.home_meta_grounded, counts.ok + counts.hedge, counts.total))
-            if (counts.model > 0) add(stringResource(R.string.home_meta_model, counts.model))
-            if (counts.uncited > 0) add(stringResource(R.string.home_meta_uncited, counts.uncited))
-            if (counts.unknown > 0) add(stringResource(R.string.home_meta_unknown, counts.unknown))
-            if (cached) add(stringResource(R.string.home_meta_kept))
-        }
-    Text(
-        parts.joinToString(" · "),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable
