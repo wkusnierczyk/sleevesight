@@ -16,10 +16,16 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.app.R
 
 // The key field's icons (#432): the eye, *Scan QR code* and *Type on a computer*, and the width
@@ -45,15 +51,18 @@ internal fun Modifier.keyDialogWidth(): Modifier =
 
 /**
  * The key field's trailing icons: the eye, only once something is [entered], which shows what is
- * in the field when it is not [shown] and hides it when it is, each icon naming what a tap does;
- * then *Scan QR code* and *Type on a computer*, which start [onScan] for the key or for a
- * keyboard session, and are off unless [scans]. The eye comes first, so that the other two keep
- * their place when it appears. Each is a 48 dp button with its name spoken and shown as a tooltip.
+ * in the field when it is not [shown] and hides it when it is, each icon naming what a tap does,
+ * and is off unless [showable]; then *Scan QR code* and *Type on a computer*, which start [onScan]
+ * for the key or for a keyboard session, and are off unless [scans]. The eye comes first, so that
+ * the other two keep their place when it appears. Each is a 48 dp button with its name spoken and
+ * shown as a tooltip.
  */
+@Suppress("LongParameterList") // The eye's state and switch, and the scans'.
 @Composable
 internal fun KeyFieldIcons(
     entered: Boolean,
     shown: Boolean,
+    showable: Boolean,
     onShow: (Boolean) -> Unit,
     scans: Boolean,
     onScan: (ScanFor) -> Unit,
@@ -63,6 +72,7 @@ internal fun KeyFieldIcons(
             FieldIcon(
                 icon = if (shown) R.drawable.ic_visibility_off else R.drawable.ic_visibility,
                 label = stringResource(if (shown) R.string.settings_key_hide else R.string.settings_key_show),
+                enabled = showable,
             ) { onShow(!shown) }
         }
         FieldIcon(R.drawable.ic_qr_scan, stringResource(R.string.settings_key_scan), enabled = scans) {
@@ -71,6 +81,26 @@ internal fun KeyFieldIcons(
         FieldIcon(R.drawable.ic_type_on_computer, stringResource(R.string.settings_key_type), enabled = scans) {
             onScan(ScanFor.KEYBOARD)
         }
+    }
+}
+
+/**
+ * Calls [onStop] when the activity stops: the app goes to the background, or the screen locks. The
+ * key field hides what it shows then, so that it is not shown on the way back. Composed in the
+ * dialog's own content, as `CancelAutofillOnDestroy` is; unlike it, it leaves autofill alone, since
+ * a password manager's unlock screen stops the activity in the middle of a fill.
+ */
+@Composable
+internal fun OnStop(onStop: () -> Unit) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val stop by rememberUpdatedState(onStop)
+    DisposableEffect(lifecycle) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) stop()
+            }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 }
 

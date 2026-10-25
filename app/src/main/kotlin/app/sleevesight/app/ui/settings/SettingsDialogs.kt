@@ -113,8 +113,12 @@ internal fun <T> ChoiceDialog(
  * *Scan QR code* and *Type on a computer* are icons in the field (#432), with the eye, which shows
  * what the field holds. The dialog never loads the saved key, so the eye shows only what was
  * entered here; it is there only while the field holds something, and the field is masked again
- * when it empties or the dialog closes. On a phone the dialog takes the screen's width, less a
- * margin ([keyDialogWidth]).
+ * when it empties, when the dialog closes, and when the app is left or the screen locks (the
+ * activity stops). The eye is off while a save or a removal runs, and stays on during a keyboard
+ * session, to check what arrives. While shown, the field stays a password, to autofill and to
+ * accessibility services alike: Compose marks it so from its keyboard type, which stays `Password`
+ * so that the keyboard neither learns nor suggests the key. On a phone the dialog takes the
+ * screen's width, less a margin ([keyDialogWidth]).
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -247,7 +251,7 @@ private fun stillShown(
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
  * service's terms with a link to them (#409), the field showing [typed], masked unless [shown],
  * with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and what [failed], if
- * anything; the scans are off while [busy] or while a session runs.
+ * anything; the eye is off while [busy], and the scans while [busy] or while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
@@ -262,6 +266,8 @@ private fun KeyEntry(
     keyboard: (@Composable () -> Unit)?,
     onScan: (ScanFor) -> Unit,
 ) {
+    // Hides the key when the app is left or the screen locks.
+    OnStop { onShow(false) }
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -278,7 +284,9 @@ private fun KeyEntry(
             value = typed,
             onValueChange = onType,
             label = { Text(stringResource(R.string.settings_key_field)) },
-            trailingIcon = { KeyFieldIcons(typed.isNotEmpty(), shown, onShow, !busy && keyboard == null, onScan) },
+            trailingIcon = {
+                KeyFieldIcons(typed.isNotEmpty(), shown, !busy, onShow, !busy && keyboard == null, onScan)
+            },
             singleLine = true,
             visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),

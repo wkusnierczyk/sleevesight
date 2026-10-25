@@ -5,12 +5,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.hasClickAction
@@ -26,15 +28,19 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
+import app.sleevesight.app.keyboard.KeyboardVectors
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
+import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -47,7 +53,7 @@ import org.robolectric.annotation.Config
 /**
  * The key field's icons (#432): *Scan QR code* and *Type on a computer* in the field, in place of
  * the links under it, and the eye, there only while the field holds something, which shows and
- * hides it; the field is masked again when it empties or the dialog closes. The dialog takes the
+ * hides it; the field is masked again when it empties, the dialog closes or the app is left. The dialog takes the
  * screen's width, less a margin, up to Material's widest dialog.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -64,26 +70,37 @@ class KeyFieldIconsTest {
     private val scan get() = text(R.string.settings_key_scan)
     private val type get() = text(R.string.settings_key_type)
 
-    /** Whether the dialog is open. */
-    private class Shown {
+    /** Whether the dialog is open, and the activity it is in. */
+    private class Shown(
+        val scenario: ActivityScenario<MainActivity>,
+    ) {
         var open by mutableStateOf(true)
     }
 
-    private fun show(block: (Shown) -> Unit) {
-        val shown = Shown()
-        // A scanner that reads, at once, a code that is neither a key nor a keyboard code.
-        val scanner: QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(NEITHER) } }
+    /**
+     * Shows the dialog, whose scanner reads [code] at once, whose saves end as [saving] says, and
+     * whose computer types [typed] as soon as a keyboard session starts.
+     */
+    private fun show(
+        code: String = NEITHER,
+        saving: CompletableDeferred<SaveResult> = CompletableDeferred(SaveResult.SAVED),
+        typed: String = "",
+        block: (Shown) -> Unit,
+    ) {
+        val scanner: QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(code) } }
+        val keyboard: ComputerKeyboard = { session, onText, _ -> LaunchedEffect(session) { onText(typed) } }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val shown = Shown(scenario)
             scenario.onActivity { activity ->
                 activity.setContent {
                     if (shown.open) {
                         KeyDialog(
                             id = SecretId.ANTHROPIC,
                             state = SecretState.ABSENT,
-                            onSave = { SaveResult.SAVED },
+                            onSave = { saving.await() },
                             onRemove = { true },
                             scanner = scanner,
-                            keyboard = { _, _, _ -> },
+                            keyboard = keyboard,
                             onDismiss = { shown.open = false },
                         )
                     }
@@ -211,12 +228,80 @@ class KeyFieldIconsTest {
             assertTrue(masked())
         }
 
+    @Test
+    fun theFieldIsMaskedAgainWhenTheAppIsLeftAndComeBackTo() =
+        show { shown ->
+            field().performTextInput("sk-ant-typed")
+            compose.onNodeWithContentDescription(show).performClick()
+            compose.waitForIdle()
+            assertFalse(masked())
+
+            // Another app in front, or the screen locked, then back.
+            shown.scenario.moveToState(Lifecycle.State.CREATED)
+            shown.scenario.moveToState(Lifecycle.State.RESUMED)
+            compose.waitForIdle()
+            assertTrue("masked on return", masked())
+            compose.onNodeWithContentDescription(show).assertIsEnabled()
+            assertEquals("what was typed is kept", 1, count(hasContentDescription(show)))
+        }
+
+    @Test
+    fun whileASaveRunsNoIconIsOnAndAllAreOnAgainWhenItFails() {
+        val saving = CompletableDeferred<SaveResult>()
+        show(saving = saving) {
+            field().performTextInput("sk-ant-typed")
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            compose.waitForIdle()
+            for (name in listOf(show, scan, type)) compose.onNodeWithContentDescription(name).assertIsNotEnabled()
+
+            saving.complete(SaveResult.NOT_WRITTEN)
+            waitFor(hasText(text(R.string.settings_key_write_failed)))
+            for (name in listOf(show, scan, type)) compose.onNodeWithContentDescription(name).assertIsEnabled()
+        }
+    }
+
+    @Test
+    fun duringAKeyboardSessionTheEyeStaysOnToCheckWhatArrivesAndTheScansAreOff() =
+        show(code = KeyboardVectors.freshCode(), typed = "sk-ant-from-the-computer") {
+            compose.onNodeWithContentDescription(type).performClick()
+            waitFor(hasContentDescription(show))
+            compose.onNodeWithContentDescription(scan).assertIsNotEnabled()
+            compose.onNodeWithContentDescription(type).assertIsNotEnabled()
+            compose.onNodeWithContentDescription(show).assertIsEnabled().performClick()
+            compose.waitForIdle()
+            assertEquals("sk-ant-from-the-computer", showing())
+        }
+
+    // Compose marks the field a password from its keyboard type, which stays `Password` while the
+    // key is shown so that the keyboard neither learns nor suggests it.
+    @Test
+    fun shownTheKeyStaysAPasswordToAutofillAndToAccessibilityServices() =
+        show {
+            field().performTextInput("sk-ant-typed")
+            compose.onNodeWithContentDescription(show).performClick()
+            compose.waitForIdle()
+            val config = field().fetchSemanticsNode().config
+            assertEquals("sk-ant-typed", showing())
+            assertTrue("a password to accessibility services", SemanticsProperties.Password in config)
+            val type = config.getOrNull(SemanticsProperties.ContentType)
+            assertEquals("a password to autofill", ContentType.Password, type)
+        }
+
     // The field spans the dialog, whose text has Material's 24 dp padding at each side.
 
     @Test
     @Config(qualifiers = "w411dp-h891dp")
     fun onAPhoneTheDialogTakesTheScreensWidthLessAMargin() =
         show { field().assertWidthIsEqualTo((411 - 2 * 16 - 2 * 24).dp) }
+
+    @Test
+    @Config(qualifiers = "w360dp-h740dp")
+    fun onASmallPhoneTooTheDialogTakesTheScreensWidthLessAMargin() =
+        show { field().assertWidthIsEqualTo((360 - 2 * 16 - 2 * 24).dp) }
+
+    @Test
+    @Config(qualifiers = "w592dp-h900dp")
+    fun at592DpTheTwoRulesMeet() = show { field().assertWidthIsEqualTo((560 - 2 * 24).dp) }
 
     @Test
     @Config(qualifiers = "w800dp-h1280dp")
