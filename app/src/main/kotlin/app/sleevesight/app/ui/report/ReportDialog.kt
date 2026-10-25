@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.report.Handed
 import app.sleevesight.app.report.Mail
 import app.sleevesight.app.report.MailHandoff
 
@@ -36,8 +37,10 @@ import app.sleevesight.app.report.MailHandoff
  * report goes through (the tester's report to come, #452, too): [inputs] for what the user adds,
  * then the whole [mail] as it will be sent, so nothing leaves the phone unseen. [mail] is null
  * while the inputs are not enough to send (no reason chosen), and *Open in mail app* and *Copy
- * report* wait for it. *Open in mail app* hands the mail to [handoff]; a mail app taking it closes
- * the dialog, and the user sends it from there. With no mail app, the dialog says so. *Copy report*
+ * report* wait for it. *Open in mail app* hands the mail to [handoff]; a mail app taking it whole
+ * closes the dialog, and the user sends it from there. A body too long for the mail's address
+ * reaches some mail apps without its text ([Handed.BODY_IN_EXTRAS]): the dialog copies it too, stays
+ * open and says to paste it if the message is empty. With no mail app, the dialog says so. *Copy report*
  * is offered either way, for a mail app the hand-off does not reach; where the system confirms
  * the copy itself ([MailHandoff.confirmsCopy]), the dialog says only where to paste it.
  *
@@ -51,7 +54,7 @@ internal fun ReportDialog(
     onDismiss: () -> Unit,
     inputs: @Composable ColumnScope.() -> Unit,
 ) {
-    var noMailApp by remember { mutableStateOf(false) }
+    var handed by remember { mutableStateOf<Handed?>(null) }
     var copied by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -70,12 +73,20 @@ internal fun ReportDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Preview(mail)
-                Status(noMailApp, copied, handoff.confirmsCopy)
+                Status(handed, copied, handoff.confirmsCopy)
             }
         },
         confirmButton = {
             Action(R.string.report_send, mail, REPORT_SEND_TAG) {
-                if (handoff.send(it)) onDismiss() else noMailApp = true
+                handed = handoff.send(it)
+                when (handed) {
+                    Handed.WHOLE -> onDismiss()
+                    Handed.BODY_IN_EXTRAS -> {
+                        handoff.copy(it)
+                        copied = true
+                    }
+                    else -> Unit
+                }
             }
         },
         dismissButton = {
@@ -92,24 +103,32 @@ internal fun ReportDialog(
     )
 }
 
-// What became of the hand-off: no mail app took it, or it was copied. Said as it appears, without
-// moving the focus from the button tapped.
+// What became of the hand-off: the mail app may show it without its text, no mail app took it, or
+// it was copied. Said as it appears, without moving the focus from the button tapped.
 @Composable
 private fun Status(
-    noMailApp: Boolean,
+    handed: Handed?,
     copied: Boolean,
     systemConfirmsCopy: Boolean,
 ) {
     val said =
         when {
+            handed == Handed.BODY_IN_EXTRAS -> R.string.report_long
             copied -> if (systemConfirmsCopy) R.string.report_paste else R.string.report_copied
-            noMailApp -> R.string.report_no_mail_app
+            handed == Handed.NO_MAIL_APP -> R.string.report_no_mail_app
             else -> return
         }
     Text(
         stringResource(said, Mail.SUPPORT),
         style = MaterialTheme.typography.bodyMedium,
-        color = if (copied) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error,
+        color =
+            if (said ==
+                R.string.report_no_mail_app
+            ) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
 }

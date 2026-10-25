@@ -30,6 +30,7 @@ import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.report.Handed
 import app.sleevesight.app.report.Mail
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.session.PlaybackInfo
@@ -67,17 +68,17 @@ class ReportProblemScreenTest {
         vararg args: Any,
     ) = app.getString(id, *args)
 
-    // A mail app that takes the report, or none ([takes] false).
+    // A mail app that takes the report as [handed] says: whole, its body in the extras only, or none.
     private class FakeMail(
-        var takes: Boolean = true,
+        var handed: Handed = Handed.WHOLE,
         override val confirmsCopy: Boolean = true,
     ) : MailHandoff {
         val sent = mutableListOf<Mail>()
         val copied = mutableListOf<Mail>()
 
-        override fun send(mail: Mail): Boolean {
-            if (takes) sent += mail
-            return takes
+        override fun send(mail: Mail): Handed {
+            if (handed != Handed.NO_MAIL_APP) sent += mail
+            return handed
         }
 
         override fun copy(mail: Mail) {
@@ -192,7 +193,7 @@ class ReportProblemScreenTest {
     @Test
     fun withNoMailAppTheDialogSaysSoAndOffersToCopyTheReport() =
         show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
-            mail.takes = false
+            mail.handed = Handed.NO_MAIL_APP
             openReport()
             compose.onNodeWithText(text(R.string.report_reason_offensive)).performClick()
             compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
@@ -204,6 +205,21 @@ class ReportProblemScreenTest {
             // The system confirms the copy itself, as Android 13 and later do: only where to paste it.
             compose.onNodeWithText(text(R.string.report_paste, Mail.SUPPORT)).assertExists()
             compose.onNodeWithTag(REPORT_DIALOG_TAG).assertExists()
+        }
+
+    @Test
+    fun aReportTooLongForTheAddressIsCopiedTooAndTheDialogStaysOpenToSaySo() =
+        show(state(PipelineView(track(insight = written(reply)), aiReady = true))) {
+            mail.handed = Handed.BODY_IN_EXTRAS
+            openReport()
+            compose.onNodeWithText(text(R.string.report_reason_wrong)).performClick()
+            compose.onNodeWithTag(REPORT_NOTE_TAG).performTextInput("It charted in 1974.")
+            compose.onNodeWithTag(REPORT_SEND_TAG).performClick()
+
+            // Handed to the mail app, which may open it empty: copied too, and the dialog says to paste it.
+            assertEquals(mail.sent.single(), mail.copied.single())
+            compose.onNodeWithText(text(R.string.report_long, Mail.SUPPORT)).assertExists()
+            assertEquals(1, dialogs())
         }
 
     @Test

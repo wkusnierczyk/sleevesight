@@ -26,4 +26,6 @@
     <!-- %1$s is the support address. Android 13 and later confirm the copy themselves. -->
     <string name="report_paste">Paste it into an email to %1$s.</string>
     <string name="report_copy">Copy report</string>
+    <!-- %1$s is the support address. A body too long for the mail's address, handed beside it. -->
+    <string name="report_long">The report is long, and some mail apps open it without its text. It is copied too: if the message to %1$s is empty, paste it there.</string>
 </resources>

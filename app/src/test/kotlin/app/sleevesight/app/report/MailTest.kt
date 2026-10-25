@@ -14,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 /** The hand-off of a composed mail to the phone's mail apps, or to the clipboard (#390). */
 @RunWith(RobolectricTestRunner::class)
@@ -75,7 +76,7 @@ class MailTest {
 
     @Test
     fun sendStartsTheMailAppWhenOneTakesIt() {
-        assertTrue(PhoneMail(app).send(mail))
+        assertEquals(Handed.WHOLE, PhoneMail(app).send(mail))
 
         val started = shadowOf(app).nextStartedActivity
         assertEquals(Intent.ACTION_SENDTO, started.action)
@@ -86,7 +87,15 @@ class MailTest {
         // Robolectric resolves nothing: with the check on, an intent no app answers is refused.
         shadowOf(app).checkActivities(true)
 
-        assertFalse(PhoneMail(app).send(mail))
+        assertEquals(Handed.NO_MAIL_APP, PhoneMail(app).send(mail))
+    }
+
+    @Test
+    fun sendSaysWhenTheBodyWentInTheExtrasOnly() {
+        val long = Mail(Mail.SUPPORT, "Long", "Zażółć gęślą jaźń 🎵\n".repeat(400))
+
+        assertEquals(Handed.BODY_IN_EXTRAS, PhoneMail(app).send(long))
+        assertEquals("mailto:support@sleevesight.app?subject=Long", shadowOf(app).nextStartedActivity.data.toString())
     }
 
     @Test
@@ -104,7 +113,13 @@ class MailTest {
 
     @Test
     fun theSystemConfirmsTheCopyFromAndroid13() {
-        // The tests run on 36; below 33 the dialog says the report was copied itself.
+        // The tests run on 36.
         assertTrue(PhoneMail(app).confirmsCopy)
+    }
+
+    @Test
+    @Config(sdk = [32])
+    fun belowAndroid13TheSystemDoesNotConfirmTheCopy() {
+        assertFalse(PhoneMail(app).confirmsCopy)
     }
 }

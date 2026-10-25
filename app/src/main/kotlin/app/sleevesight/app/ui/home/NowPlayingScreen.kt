@@ -158,9 +158,8 @@ internal fun NowPlayingContent(
                 InsightCard(
                     track?.insight ?: NOT_YET,
                     insight,
-                    InsightActions(onWrite, onStop, cite) { track, written ->
-                        reporting =
-                            Reported(track, written)
+                    InsightActions(onWrite, onStop, cite) { reportedTrack, written ->
+                        reporting = Reported(reportedTrack, written)
                     },
                 )
                 SourcesSection(
