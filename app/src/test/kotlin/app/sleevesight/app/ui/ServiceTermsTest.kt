@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -149,7 +150,7 @@ class ServiceTermsTest {
     fun withATypeOnAComputerSessionRunningTheTermsAndTheSessionScrollIntoView() =
         show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = tall) {
             compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(SESSION_END)
             compose.onNodeWithText(SESSION_END).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("ai.google.dev/gemini-api/terms").performScrollTo().assertIsDisplayed()

@@ -7,11 +7,13 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -141,7 +143,7 @@ class KeyScanTest {
     fun aScannedKeyFillsTheFieldAndIsSavedOnlyOnSave() =
         show(scanner = scanning("  $lastFmKey\n")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
             compose.waitForIdle()
             assertNull(stored(SecretId.LASTFM))
@@ -157,7 +159,7 @@ class KeyScanTest {
         for ((id, key) in keys) {
             show(scanner = scanning(key)) {
                 compose.onNodeWithText(text(keyName(id))).performScrollTo().performClick()
-                compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+                compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
                 waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
                 compose.onNodeWithText(text(R.string.settings_save)).performClick()
                 waitFor("the scanned $id key stored") { stored(id) == key }
@@ -169,7 +171,7 @@ class KeyScanTest {
     fun anAnthropicKeyScannedIntoOpenAisFieldIsRefused() =
         show(scanner = scanning(anthropicKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_openai)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_shape))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
         }
@@ -178,7 +180,7 @@ class KeyScanTest {
     fun aScannedKeyOfAnotherFormIsRefusedWithTheReason() =
         show(scanner = scanning(exaKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_shape))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
         }
@@ -187,9 +189,25 @@ class KeyScanTest {
     fun aSetupCodeScannedIntoOneKeysFieldPointsToScanKeys() =
         show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_scan)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_setup))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
+        }
+
+    @Test
+    fun aKeyboardCodeScannedWithTheQrIconStartsTheSessionAndNotTheKeysCheck() =
+        show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = typing(lastFmKey)) {
+            compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+            waitForText(text(R.string.keyboard_connected))
+            assertEquals(1, running.size)
+            assertEquals(0, compose.onAllNodesWithText(text(R.string.settings_key_scan_characters)).fetchSemanticsNodes().size)
+            // While the session runs, neither icon starts another scan.
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).assertIsNotEnabled()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).assertIsNotEnabled()
+            waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
+            compose.onNodeWithText(text(R.string.settings_save)).performClick()
+            waitFor("the typed Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
         }
 
     @Test
@@ -291,7 +309,7 @@ class KeyScanTest {
     fun textTypedOnAComputerFillsTheFieldAndIsSavedOnSave() =
         show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = typing(" $lastFmKey")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_connected))
             assertEquals(1, running.size)
             waitForNode(hasText(text(R.string.settings_save)) and isEnabled())
@@ -307,10 +325,10 @@ class KeyScanTest {
     fun stopEndsTheSessionAndKeepsWhatWasTyped() =
         show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = typing(lastFmKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_connected))
             compose.onNodeWithText(text(R.string.keyboard_stop)).performClick()
-            waitForText(text(R.string.settings_key_type))
+            waitForNode(hasContentDescription(text(R.string.settings_key_type)) and isEnabled())
             waitFor("the session ended") { running.isEmpty() }
             compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled()
         }
@@ -320,13 +338,13 @@ class KeyScanTest {
         val code = KeyboardVectors.freshCode()
         show(scanner = scanning(code), keyboard = typing(lastFmKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_connected))
             compose.onNodeWithText(text(R.string.keyboard_stop)).performClick()
-            waitForText(text(R.string.settings_key_type))
+            waitForNode(hasContentDescription(text(R.string.settings_key_type)) and isEnabled())
             waitFor("the session ended") { running.isEmpty() }
 
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_code_used))
             assertEquals(0, running.size)
         }
@@ -336,7 +354,7 @@ class KeyScanTest {
     fun aCodeThatIsNotAKeyboardCodeStartsNoSession() =
         show(scanner = scanning(lastFmKey), keyboard = typing(lastFmKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_not_code))
             assertEquals(0, running.size)
             compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
@@ -346,7 +364,7 @@ class KeyScanTest {
     fun aKeyboardCodeOfALaterVersionIsSaidToBeUnreadable() =
         show(scanner = scanning("sleevesight-keyboard:v2:whatever"), keyboard = typing(lastFmKey)) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(text(R.string.keyboard_code_unreadable))
             assertEquals(0, running.size)
         }

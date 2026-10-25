@@ -3,9 +3,8 @@ package app.sleevesight.app.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -29,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -84,12 +84,18 @@ internal fun <T> ChoiceDialog(
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*. The window is
- * secure (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
+ * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*; a keyboard
+ * session's code starts that session, as *Type on a computer* would. The window is secure
+ * (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
  * on the phone is. The session ends when the user stops it or the dialog closes.
+ *
+ * Both are icons in the field (#432), with the eye, which shows what the field holds. The dialog
+ * never loads the saved key, so the eye shows only what was entered here; it is there only while
+ * the field holds something, and the field is masked again when it empties or the dialog closes.
+ * On a phone the dialog takes the screen's width, less a margin ([keyDialogWidth]).
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -103,6 +109,13 @@ internal fun KeyDialog(
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
+    // Whether the field shows what it holds: not at first, nor once it is emptied (#432).
+    var shown by remember { mutableStateOf(false) }
+
+    fun enter(text: String) {
+        typed = text
+        if (text.isEmpty()) shown = false
+    }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf<Int?>(null) }
     var scanning by remember { mutableStateOf<ScanFor?>(null) }
@@ -130,7 +143,7 @@ internal fun KeyDialog(
                 scanning = null
                 val result = scanned(purpose, id, text.trim(), ledger)
                 failed = result.failed
-                result.key?.let { typed = it }
+                result.key?.let { enter(it) }
                 session = result.session
             },
             { scanning = null },
@@ -138,15 +151,16 @@ internal fun KeyDialog(
     }
     val running =
         session?.let { s ->
-            @Composable { key(s) { keyboard(s, { typed = it }, { session = null }) } }
+            @Composable { key(s) { keyboard(s, { enter(it) }, { session = null }) } }
         }
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        modifier = Modifier.keyDialogWidth(),
+        properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn, usePlatformDefaultWidth = false),
         title = { Text(stringResource(keyName(id))) },
         text = {
-            KeyEntry(id, typed, { typed = it }, failed, busy, running) {
+            KeyEntry(id, typed, ::enter, shown, { shown = it }, failed, busy, running) {
                 failed = null
                 scanning = it
             }
@@ -173,17 +187,18 @@ internal fun KeyDialog(
 
 /**
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
- * service's terms with a link to them (#409), the field showing [typed] masked, *Scan QR code* and
- * *Type on a computer*, or the [keyboard] session running instead, and what [failed], if anything;
- * the field and the scans are off while [busy].
+ * service's terms with a link to them (#409), the field showing [typed], masked unless [shown],
+ * with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and what [failed], if
+ * anything; the scans are off while [busy] or while a session runs.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
 private fun KeyEntry(
     id: SecretId,
     typed: String,
     onType: (String) -> Unit,
+    shown: Boolean,
+    onShow: (Boolean) -> Unit,
     @StringRes failed: Int?,
     busy: Boolean,
     keyboard: (@Composable () -> Unit)?,
@@ -205,22 +220,13 @@ private fun KeyEntry(
             value = typed,
             onValueChange = onType,
             label = { Text(stringResource(R.string.settings_key_field)) },
+            trailingIcon = { KeyFieldIcons(typed.isNotEmpty(), shown, onShow, !busy && keyboard == null, onScan) },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+            modifier = Modifier.fillMaxWidth(),
         )
-        if (keyboard != null) {
-            keyboard()
-        } else {
-            FlowRow {
-                TextButton(onClick = { onScan(ScanFor.KEY) }, enabled = !busy) {
-                    Text(stringResource(R.string.settings_key_scan))
-                }
-                TextButton(onClick = { onScan(ScanFor.KEYBOARD) }, enabled = !busy) {
-                    Text(stringResource(R.string.settings_key_type))
-                }
-            }
-        }
+        keyboard?.invoke()
         failed?.let {
             Text(
                 stringResource(it),
