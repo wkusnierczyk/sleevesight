@@ -65,9 +65,10 @@ class SessionHistoryTest {
     @Test
     fun `a track is kept with its length and without its art`() {
         // The privacy policy and the first-run screen say the length stays on the phone, not the cover.
-        play(sundown.copy(artUri = "content://art/1"), start)
+        val kept = play(sundown.copy(artUri = "content://art/1"), start)
 
-        assertEquals(listOf(sundown), history.latestSession().map { it.track })
+        assertEquals(sundown, kept.track)
+        assertEquals(listOf(kept), history.latestSession())
     }
 
     @Test
