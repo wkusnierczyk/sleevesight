@@ -326,6 +326,82 @@ class PurgeKeysTest {
         }
     }
 
+    /** A key store whose next [failures] deletions fail. */
+    private class FailingDeletes : SoftwareKeySource() {
+        var failures = 0
+
+        override fun delete() {
+            if (failures > 0) {
+                failures--
+                throw ProviderException("key store down")
+            }
+            super.delete()
+        }
+    }
+
+    @Test
+    fun aRetryAfterTheKeysWereRemovedDoesNotListThemAgain() {
+        val keys = FailingDeletes()
+        val flaky = FlakyDataStore(stores.open("retry-removed-secrets"))
+        val failingSecrets = SecretStore(flaky, SecretCipher(keys))
+        runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
+        show(secretStore = failingSecrets) {
+            openPurge()
+            val lastFm = listed(R.string.settings_key_name_lastfm, lastFmKey)
+            waitForText(lastFm)
+            // The first try removes the entries; the Keystore key is not deleted.
+            keys.failures = 1
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+            waitForText(text(R.string.purge_keys_seal_not_deleted))
+
+            // The retry fails both steps and cannot read the file after them: it starts from what
+            // the first try left, nothing.
+            flaky.writeFailures.set(1)
+            flaky.failures.set(1)
+            keys.failures = 1
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_both_failed_none))
+            assertTrue(!shown(lastFm))
+            assertTrue(!shown(text(R.string.purge_keys_both_failed)))
+
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_done_title))
+        }
+    }
+
+    @Test
+    fun aRetryAfterThePhonesKeyWasDeletedListsTheKeysLeftAsUnreadable() {
+        val keys = FailingDeletes()
+        val flaky = FlakyDataStore(stores.open("retry-sealed-secrets"))
+        val failingSecrets = SecretStore(flaky, SecretCipher(keys))
+        runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
+        show(secretStore = failingSecrets) {
+            openPurge()
+            val lastFm = listed(R.string.settings_key_name_lastfm, lastFmKey)
+            waitForText(lastFm)
+            // The first try deletes the Keystore key; the entries stay, and no longer open.
+            flaky.writeFailures.set(1)
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+            waitForText(text(R.string.purge_keys_not_removed))
+            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
+            waitForText(unreadable)
+
+            // The retry fails both steps and cannot read the file after them: the key it starts
+            // from is the one the first try left, which can no longer be read.
+            flaky.writeFailures.set(1)
+            flaky.failures.set(1)
+            keys.failures = 1
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_both_failed))
+            compose.onNodeWithText(unreadable).assertIsDisplayed()
+            assertTrue(!shown(lastFm))
+
+            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
+            waitForText(text(R.string.purge_keys_done_title))
+            assertTrue(allAbsent(failingSecrets))
+        }
+    }
+
     @Test
     fun anUnreadableKeyMakesPurgeKeysSayWhyAndIsListedAsSuch() {
         val dataStore = stores.open("reset-secrets")

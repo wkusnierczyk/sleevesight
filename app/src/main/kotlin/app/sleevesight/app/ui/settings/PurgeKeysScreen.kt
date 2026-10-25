@@ -73,14 +73,16 @@ internal fun PurgeKeysScreen(
                 // A second tap in the same frame finds the button still enabled.
                 if (!busy) {
                     busy = true
-                    failure = null
                     // What the confirmation lists: the keys as they were when *Delete* was first tapped.
                     val listed = deleting ?: stored.orEmpty()
                     deleting = listed
+                    // What this attempt starts from: on *Try again*, what the last one left.
+                    val before = failure?.left ?: listed
+                    failure = null
                     scope.launch {
                         try {
-                            // Read nothing more: what is left comes from the reset and the keys listed.
-                            val outcome = purgeFailure(onPurge(), listed)
+                            // Read nothing more: what is left comes from the reset and the keys before it.
+                            val outcome = purgeFailure(onPurge(), before)
                             if (outcome == null) done = true else failure = outcome
                         } finally {
                             busy = false
