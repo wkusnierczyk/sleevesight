@@ -211,4 +211,17 @@ class PromptEvidenceTest {
         assertEquals(listOf("MB1", "P1"), sent(evidence, album = null))
         assertEquals(listOf("MB1", "P1"), sent(evidence, album = " "))
     }
+
+    @Test
+    fun `with an artist's facts told on every track, only the restated release line is left out`() {
+        val own = (2..PromptEvidence.ENOUGH_OF_ITS_OWN).map(::song)
+        val evidence = set(firstRelease("Sundown"), *own.toTypedArray(), formed, label, player("Sundown"))
+        val cited = setOf(ArtistFact.of(checkNotNull(evidence["W1"])))
+
+        val sent = PromptEvidence.of(evidence, "Sundown", cited, JvmHasher, artistFactsOnce = false).ids
+
+        assertEquals(listOf("MB1", "MB2", "MB3", "MB4", "W1", "WD1"), sent)
+        val kept = PromptEvidence.of(set(song(1), formed, player("Sundown")), "Sundown", cited, JvmHasher, false)
+        assertEquals(listOf("MB1", "W1", "P1"), kept.ids)
+    }
 }

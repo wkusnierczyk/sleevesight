@@ -56,22 +56,26 @@ object PromptEvidence {
     /**
      * What to send of [evidence], given the facts [citedByOthers] cited in the session and the
      * [release] the player reports (`NowPlaying.album`, the `P` line's), null when it reports none.
+     * With [artistFactsOnce] off (*Tell an artist's facts once per session*, #407), every
+     * artist-level line is sent, and only a restated release line is left out (#424).
      */
     fun of(
         evidence: EvidenceSet,
         release: String?,
         citedByOthers: Set<ArtistFact>,
         hasher: Hasher,
+        artistFactsOnce: Boolean = true,
     ): EvidenceSet {
         val own = evidence.lines.count { it.scope in TRACK_SCOPES }
         val restated = restatesRelease(evidence, release)
         val sent =
-            if (own >= ENOUGH_OF_ITS_OWN) {
-                evidence.without(hasher) { it.scope == Scope.ARTIST || restated(it) }
-            } else {
-                evidence.without(hasher) {
-                    (it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers) || restated(it)
-                }
+            when {
+                !artistFactsOnce -> evidence.without(hasher, restated)
+                own >= ENOUGH_OF_ITS_OWN -> evidence.without(hasher) { it.scope == Scope.ARTIST || restated(it) }
+                else ->
+                    evidence.without(hasher) {
+                        (it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers) || restated(it)
+                    }
             }
         // Decided on the retrieved lines alone: the artists' report does not matter with model knowledge off.
         return if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent

@@ -39,8 +39,10 @@ class Diagnostics(
  * Everything a report shows. [tracklist] names the tracklist run (`--tracklist`), null for the
  * fixture playlist; [allowModel] is the run's *Model's own knowledge* switch, which decides the
  * prompts [ArtistFacts] rebuilds; [passes] is how many times the tracks ran (`--repeat`), each pass
- * in [results] in turn. [musicBrainzTrackLabels] counts the results whose MusicBrainz recording tags
- * would give the track labels (#439): a count, since the tags are not listed.
+ * in [results] in turn. [artistFactsOncePerSession] is false for a run with every artist fact in
+ * every prompt (`--artist-facts-every-track`, #407). [musicBrainzTrackLabels] counts the results
+ * whose MusicBrainz recording tags would give the track labels (#439): a count, since the tags are
+ * not listed.
  */
 @Suppress("LongParameterList") // Everything one report shows, each its own part of it.
 class RunSummary(
@@ -51,6 +53,7 @@ class RunSummary(
     val allowModel: Boolean = false,
     val results: List<TrackResult>,
     val passes: Int = 1,
+    val artistFactsOncePerSession: Boolean = true,
     val musicBrainzTrackLabels: Int = 0,
     val gate: List<Criterion>,
     val diagnostics: Diagnostics,
@@ -100,8 +103,10 @@ class Report(
             } else {
                 ""
             }
+        val facts =
+            if (run.artistFactsOncePerSession) "" else " Artist facts: on every track (--artist-facts-every-track)."
         appendLine(
-            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size / run.passes}$passes.$tracklist " +
+            "Mode: ${run.mode.name.lowercase()}. Tracks: ${run.results.size / run.passes}$passes.$tracklist$facts " +
                 "Time: ${d.elapsed.inWholeSeconds} s.",
         )
         appendLine()
@@ -381,7 +386,8 @@ class Report(
             "Per track, in the run's order: its evidence lines and how many are artist-level (Last.fm's bio, " +
                 "the Wikipedia artist article, Wikidata's artist facts); *left out*, the artist-level lines its " +
                 "last prompt left out (#239, `PromptEvidence`: all for a track with enough of its own, else " +
-                "those another insight of the listening session cited); the size of the last prompt its run " +
+                "those another insight of the listening session cited; none with --artist-facts-every-track, " +
+                "#407); the size of the last prompt its run " +
                 "sent, rebuilt as the pipeline built it (none for an insight from the cache or not written), " +
                 "and of its artist-level lines; *resent*, those the prompt sent before it held too; the tokens " +
                 "of every call the run made; the insight's sentences citing artist-level lines only; and the " +

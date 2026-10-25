@@ -54,7 +54,9 @@ class PipelineReleaseLineTest {
                 cache = cache,
             ),
             PipelineTime(timeSource = testTimeSource),
-        ) { Settings(aiProvider = ProviderId.ANTHROPIC) }
+        ) { settings }
+
+    private var settings = Settings(aiProvider = ProviderId.ANTHROPIC)
 
     private val sundown = nowPlaying("Carefree Highway", "Gordon Lightfoot", "Sundown")
 
@@ -138,5 +140,21 @@ class PipelineReleaseLineTest {
                 listOf(listOf("P1"), emptyList()),
                 events.filterIsInstance<PipelineEvent.ModelCall>().map { it.leftOut },
             )
+        }
+
+    @Test
+    fun `with an artist's facts told on every track, the release line is still left out`() =
+        runTest {
+            settings = settings.copy(artistFactsOncePerSession = false)
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+
+            pipeline.run(sundown, write = true)
+
+            val prompt = provider.requests.single().prompt
+            assertFalse("(player metadata, release)" in prompt)
+            assertTrue("[MB1] (MusicBrainz, song)" in prompt)
+            runCurrent()
+            assertEquals(listOf(listOf("P1")), events.filterIsInstance<PipelineEvent.ModelCall>().map { it.leftOut })
         }
 }
