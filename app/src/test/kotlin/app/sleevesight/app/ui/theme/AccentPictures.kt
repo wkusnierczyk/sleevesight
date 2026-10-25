@@ -18,6 +18,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
+import app.sleevesight.core.settings.LinkStyle
 import kotlin.math.abs
 
 /**
@@ -27,16 +28,20 @@ import kotlin.math.abs
 internal class AccentPictures(
     private val compose: ComposeTestRule,
 ) {
-    /** [content] on a surface of the app's theme, light or [dark], and the scheme it was drawn in. */
+    /**
+     * [content] on a surface of the app's theme, light or [dark], its links marked as [linkStyle]
+     * says (#519), and the scheme it was drawn in.
+     */
     fun show(
         dark: Boolean,
         content: @Composable () -> Unit,
+        linkStyle: LinkStyle = LinkStyle.UNDERLINE,
         check: (ColorScheme) -> Unit,
     ) = ActivityScenario.launch(MainActivity::class.java).use { scenario ->
         var scheme: ColorScheme? = null
         scenario.onActivity {
             it.setContent {
-                SleevesightTheme(darkTheme = dark) {
+                SleevesightTheme(darkTheme = dark, linkStyle = linkStyle) {
                     scheme = MaterialTheme.colorScheme
                     Surface { content() }
                 }

@@ -10,8 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
@@ -28,18 +30,28 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.sp
+import app.sleevesight.core.settings.LinkStyle
 
 // Links without the palette's accent colour (#442): the system's dynamic accent (on
 // Android 12 and later, from the wallpaper or the chosen colour theme) looked out of place, and
 // links were styled two ways. Every link in the app is drawn here, by [LinkedText] or [LinkLabel],
 // so none can take another look or lose its line (`LinkSourcesTest` holds the rest of the app to
-// that).
+// that). How a link is marked, a line below it or a highlight behind it, is *Link style* (#519),
+// which [SleevesightTheme] provides as [LocalLinkStyle].
+
+/**
+ * *Link style* (#519), as [SleevesightTheme] was given it: how every link drawn here is marked, a
+ * thin line below it ([LinkStyle.UNDERLINE], the default) or a faint highlight behind it
+ * ([LinkStyle.HIGHLIGHT]).
+ */
+internal val LocalLinkStyle = staticCompositionLocalOf { LinkStyle.UNDERLINE }
 
 /**
  * [parts] as one text, each link in it marked as every link in the app is (#442): in the text
  * colour ([color], else the style's, else the content colour), with a thin line a little below the
- * text, clear of the descenders, which Android's own underline crosses; focused, hovered or
- * pressed, a faint tint of the text colour behind it.
+ * text, clear of the descenders, which Android's own underline crosses, or, as *Link style* says
+ * (#519, [LocalLinkStyle]), a faint rounded highlight of the text colour behind it; focused,
+ * hovered or pressed, a faint tint of the text colour behind it.
  */
 @Composable
 internal fun LinkedText(
@@ -63,7 +75,7 @@ internal fun LinkedText(
                 if (part is TextPart.Linked) links += start until length
             }
         }
-    UnderlinedText(text, links, style, ink, color, modifier)
+    MarkedText(text, links, style, ink, color, modifier)
 }
 
 /**
@@ -95,7 +107,7 @@ internal fun LinkLabel(
                 }
             }.pointerInput(Unit) { detectTapGestures { follow() } }
             .minimumInteractiveComponentSize()
-    UnderlinedText(text, listOf(link.text.indices), style, ink, color, target)
+    MarkedText(text, listOf(link.text.indices), style, ink, color, target)
 }
 
 /**
@@ -110,7 +122,7 @@ internal fun LinkLook(
     color: Color = Color.Unspecified,
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
-    UnderlinedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
+    MarkedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
 }
 
 /** What following [link] does: open its page in the browser, or run its action. */
@@ -149,10 +161,13 @@ private fun linkStyles(ink: Color): TextLinkStyles {
     return TextLinkStyles(style = null, focusedStyle = inUse, hoveredStyle = inUse, pressedStyle = inUse)
 }
 
-/** [text] with a line under each of [links], worked out once per layout and only drawn after. */
+/**
+ * [text] with each of [links] marked as *Link style* says ([LocalLinkStyle]): a line under it, or a
+ * highlight behind it. The marks are worked out once per layout and style, and only drawn after.
+ */
 @Suppress("LongParameterList") // The text and its links, and how both are drawn.
 @Composable
-private fun UnderlinedText(
+private fun MarkedText(
     text: AnnotatedString,
     links: List<IntRange>,
     style: TextStyle,
@@ -160,39 +175,81 @@ private fun UnderlinedText(
     color: Color,
     modifier: Modifier,
 ) {
-    var lines by remember { mutableStateOf(emptyList<Rect>()) }
+    val look = LocalLinkStyle.current
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val marks = remember(layout, links, look) { layout?.let { marks(it, links, look) } ?: Marks.NONE }
     Text(
         text,
         style = style,
         color = color,
-        onTextLayout = { lines = underlines(it, links) },
-        modifier = modifier.drawBehind { for (line in lines) drawRect(ink, line.topLeft, line.size) },
+        onTextLayout = { layout = it },
+        modifier =
+            modifier.drawBehind {
+                when (look) {
+                    LinkStyle.UNDERLINE -> for (mark in marks.rects) drawRect(ink, mark.topLeft, mark.size)
+                    LinkStyle.HIGHLIGHT -> {
+                        val fill = ink.copy(alpha = ink.alpha * HIGHLIGHT_ALPHA)
+                        for (mark in marks.rects) drawRoundRect(fill, mark.topLeft, mark.size, marks.corner)
+                    }
+                }
+            },
     )
 }
 
+/** The rectangles that mark a text's links, and the corners of a highlight's. */
+private class Marks(
+    val rects: List<Rect>,
+    val corner: CornerRadius,
+) {
+    companion object {
+        val NONE = Marks(emptyList(), CornerRadius.Zero)
+    }
+}
+
 /**
- * The lines under [links] in [layout]: on each line of text a link spans, one under each stretch
- * of it as drawn, so a link that mixes left-to-right and right-to-left text is underlined where its
- * glyphs are and nowhere between them.
+ * The marks of [links] in [layout], as [look] draws them: on each line of text a link spans, one
+ * under (or behind) each stretch of it as drawn, so a link that mixes left-to-right and
+ * right-to-left text is marked where its glyphs are and nowhere between them.
  */
-private fun underlines(
+private fun marks(
     layout: TextLayoutResult,
     links: List<IntRange>,
-): List<Rect> {
+    look: LinkStyle,
+): Marks {
     val em = emOf(layout)
     val thickness = maxOf(1f, em * UNDERLINE_THICKNESS)
-    val lines = mutableListOf<Rect>()
+    val rects = mutableListOf<Rect>()
     for (link in links.filterNot { it.isEmpty() }) {
         for (line in layout.getLineForOffset(link.first)..layout.getLineForOffset(link.last)) {
             val from = maxOf(link.first, layout.getLineStart(line))
             val to = minOf(link.last, layout.getLineEnd(line, visibleEnd = true) - 1)
             if (to < from) continue
-            // Inside the line's own box, should a tight line height leave less room below.
-            val top = minOf(layout.getLineBaseline(line) + em * UNDERLINE_GAP, layout.getLineBottom(line) - thickness)
-            for ((left, right) in stretches(layout, from..to)) lines += Rect(left, top, right, top + thickness)
+            val baseline = layout.getLineBaseline(line)
+            for ((left, right) in stretches(layout, from..to)) {
+                rects +=
+                    when (look) {
+                        // Inside the line's own box, should a tight line height leave less room below.
+                        LinkStyle.UNDERLINE -> {
+                            val top = minOf(baseline + em * UNDERLINE_GAP, layout.getLineBottom(line) - thickness)
+                            Rect(left, top, right, top + thickness)
+                        }
+                        // From above the capitals to below the descenders, a little wider than the
+                        // glyphs, and inside the line's box, so lines close together keep apart.
+                        LinkStyle.HIGHLIGHT -> {
+                            val pad = em * HIGHLIGHT_PADDING
+                            Rect(
+                                left - pad,
+                                maxOf(baseline - em * HIGHLIGHT_ABOVE, layout.getLineTop(line)),
+                                right + pad,
+                                minOf(baseline + em * HIGHLIGHT_BELOW, layout.getLineBottom(line)),
+                            )
+                        }
+                    }
+            }
         }
     }
-    return lines
+    val corner = if (look == LinkStyle.HIGHLIGHT) CornerRadius(em * HIGHLIGHT_CORNER) else CornerRadius.Zero
+    return Marks(rects, corner)
 }
 
 /** The stretches, left to right, that the characters of [range] (on one line) are drawn over. */
@@ -228,6 +285,16 @@ private fun emOf(layout: TextLayoutResult): Float =
 // own underline, and far enough down to leave a gap under g, p and y.
 private const val UNDERLINE_THICKNESS = 0.05f
 private const val UNDERLINE_GAP = 0.24f
+
+// The highlight (#519), in ems: from the baseline up past the capitals and down past the
+// descenders, a little wider than the glyphs, with rounded corners, filled with the text colour at
+// a faint alpha, as #442 rendered it beside the underline (Roboto, 16 sp: 20 dp tall over 13 dp of
+// glyphs, 3 dp each side, 4 dp corners, 10 % ink).
+private const val HIGHLIGHT_ABOVE = 0.86f
+private const val HIGHLIGHT_BELOW = 0.38f
+private const val HIGHLIGHT_PADDING = 0.17f
+private const val HIGHLIGHT_CORNER = 0.24f
+private const val HIGHLIGHT_ALPHA = 0.10f
 
 // Compose's own default size, which an em is relative to when nothing sets one.
 private val DEFAULT_FONT_SIZE = 14.sp

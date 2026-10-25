@@ -108,6 +108,9 @@ import kotlin.time.Duration.Companion.seconds
  *   button that collects the app's state into a report for the tester to review, edit and send
  *   from their own mail app. Shown only in developer mode. Off by default here; on by default in a
  *   build for Play's testing tracks, as [developerMode] is (`:app`'s `SettingsStore.BUILD_DEFAULTS`).
+ * @property linkStyle *Link style* (#519), a developer setting: how every link in the app is
+ *   marked, a thin line below it (the default) or a faint highlight behind it, so both can be tried
+ *   on the phone over real album art before one is kept. See [LinkStyle].
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
@@ -145,6 +148,7 @@ data class Settings(
     val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
     val reportButton: Boolean = false,
+    val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
@@ -231,11 +235,17 @@ data class Settings(
 
     /**
      * These settings with developer mode off, and with it every developer option ([showDiagnostics],
-     * [showGroundingDetails], [reportButton]), so nothing hidden keeps running. A developer option
-     * joins here with its setting.
+     * [showGroundingDetails], [reportButton]) and [linkStyle] back to its default, so nothing hidden
+     * keeps running or changes the look. A developer option joins here with its setting.
      */
     fun withoutDeveloperMode(): Settings =
-        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false, reportButton = false)
+        copy(
+            developerMode = false,
+            showDiagnostics = false,
+            showGroundingDetails = false,
+            reportButton = false,
+            linkStyle = LinkStyle.UNDERLINE,
+        )
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
@@ -500,6 +510,19 @@ enum class ThemeChoice {
     SYSTEM,
     LIGHT,
     DARK,
+}
+
+/**
+ * *Link style* (#519): how a link is marked out from the text around it, in the text's own colour
+ * either way (#442). A developer setting until one of the two is chosen on the phone; then the
+ * other goes, and the setting with it, or it moves to *Appearance*.
+ */
+enum class LinkStyle {
+    /** A thin line a little below the text, clear of the descenders: #442's choice, the default. */
+    UNDERLINE,
+
+    /** A faint rounded fill of the text colour behind the link's text. */
+    HIGHLIGHT,
 }
 
 /** How the detail content is shown. */

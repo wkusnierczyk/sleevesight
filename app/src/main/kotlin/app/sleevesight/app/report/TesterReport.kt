@@ -410,6 +410,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "showGroundingDetails" to { onOff(it.showGroundingDetails) },
         "developerMode" to { onOff(it.developerMode) },
         "reportButton" to { onOff(it.reportButton) },
+        "linkStyle" to { it.linkStyle.name },
         "theme" to { it.theme.name },
         "font" to { it.font.name },
         "introAtStart" to { onOff(it.introAtStart) },

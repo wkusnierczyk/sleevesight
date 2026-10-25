@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 
 /**
@@ -19,6 +20,9 @@ import app.sleevesight.core.settings.Settings
  *   back (`Settings.showGroundingDetails`). #440 adds the full source statuses to it.
  * - *Report button* (#452): Home's button for a tester's report ([Settings.reportButton]), on by
  *   default in the test build and off in any other.
+ * - *Link style* (#519): every link underlined (the default) or highlighted
+ *   ([Settings.linkStyle]), to try both on the phone over real album art; back to the underline
+ *   with developer mode off.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -26,6 +30,7 @@ import app.sleevesight.core.settings.Settings
 internal fun DeveloperSection(
     settings: Settings,
     update: Update,
+    open: (SettingsDialog) -> Unit,
     openDiagnostics: () -> Unit,
 ) {
     SwitchRow(
@@ -51,6 +56,22 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_report_button_summary),
         checked = settings.reportButton,
     ) { on -> update { it.copy(reportButton = on) } }
+    val linkStyles =
+        listOf(
+            LinkStyle.UNDERLINE to stringResource(R.string.settings_link_style_underline),
+            LinkStyle.HIGHLIGHT to stringResource(R.string.settings_link_style_highlight),
+        )
+    ValueRow(
+        title = stringResource(R.string.settings_link_style),
+        value = linkStyles.first { it.first == settings.linkStyle }.second,
+        summary = stringResource(R.string.settings_link_style_summary),
+    ) {
+        open(
+            SettingsDialog.Choice(R.string.settings_link_style, linkStyles, settings.linkStyle) { style ->
+                update { it.copy(linkStyle = style) }
+            },
+        )
+    }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),
