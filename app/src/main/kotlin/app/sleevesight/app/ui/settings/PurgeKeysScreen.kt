@@ -47,8 +47,8 @@ import kotlinx.coroutines.launch
  * that can no longer be read; *Delete* and *Cancel*; and *More about safe delete*, which unfolds
  * what the deletion does. [onPurge] deletes every key with the phone's key for them, and says how
  * each step went and what is stored after them: when both succeeded, the screen says the keys listed
- * were deleted, with *Done*; otherwise it says which step failed, from that result alone, and lists
- * the keys left, with *Try again*. While it runs, nothing else can be done.
+ * were deleted, with *Done*; otherwise it says which step failed and lists the keys left, from
+ * that result alone ([purgeFailure]), with *Try again*. While it runs, nothing else can be done.
  */
 @Composable
 internal fun PurgeKeysScreen(
@@ -58,7 +58,7 @@ internal fun PurgeKeysScreen(
     onDismiss: () -> Unit,
 ) {
     var busy by remember { mutableStateOf(false) }
-    var failure by remember { mutableStateOf<PurgeFailure?>(null) }
+    var failure by remember { mutableStateOf<ShownFailure?>(null) }
     // The keys listed when *Delete* was tapped: what the screen then says it deleted.
     var deleting by remember { mutableStateOf<List<ShownKey>?>(null) }
     var done by remember { mutableStateOf(false) }
@@ -80,10 +80,8 @@ internal fun PurgeKeysScreen(
                     deleting = listed
                     scope.launch {
                         try {
-                            val result = onPurge()
-                            // The keys left as the reset read them, or, unread, those it was asked to delete.
-                            val left = result.left?.let { shownKeys(it, ending) } ?: listed
-                            if (result.done) done = true else failure = PurgeFailure(result, left)
+                            val outcome = purgeFailure(onPurge(), listed.map { it.id })
+                            if (outcome == null) done = true else failure = shown(outcome, ending)
                         } finally {
                             busy = false
                         }
@@ -99,37 +97,32 @@ private suspend fun shownKeys(
     states: Map<SecretId, SecretState>,
     ending: suspend (SecretId) -> String?,
 ): List<ShownKey> =
-    SecretId.entries
-        .filter { (states[it] ?: SecretState.ABSENT) != SecretState.ABSENT }
-        .sortedBy { SHOWN_KEYS.indexOf(it).takeIf { at -> at >= 0 } ?: SHOWN_KEYS.size }
+    inShownOrder(states.filterValues { it != SecretState.ABSENT }.keys)
         .map { ShownKey(it, if (states[it] == SecretState.SAVED) ending(it) else null) }
 
-/** A deletion that did not finish: how its steps went ([result]), and the keys [left] after it. */
-private class PurgeFailure(
-    val result: ResetResult,
+/** [failure] as the screen shows it: each key left that still opens by its last characters ([ending]). */
+private suspend fun shown(
+    failure: PurgeFailure,
+    ending: suspend (SecretId) -> String?,
+): ShownFailure =
+    ShownFailure(failure.message, failure.left.map { ShownKey(it.id, if (it.readable) ending(it.id) else null) })
+
+/** What a deletion that did not finish says ([purgeFailure]), and the keys [left], as shown. */
+private class ShownFailure(
+    @StringRes val message: Int,
     val left: List<ShownKey>,
 )
 
-/** What [failure] says: which step failed, from its result, and whether keys are left to list. */
-@StringRes
-private fun messageOf(failure: PurgeFailure): Int =
-    when {
-        !failure.result.removed && !failure.result.sealDeleted -> R.string.purge_keys_both_failed
-        !failure.result.removed && failure.left.isEmpty() -> R.string.purge_keys_storage_failed
-        !failure.result.removed -> R.string.purge_keys_not_removed
-        else -> R.string.purge_keys_seal_not_deleted
-    }
-
 /**
  * What *Purge keys* deletes, the [listed] keys stored now (null while they are read), and its
- * buttons: *Delete* calls [onDelete]. After a [failure], it says which step failed instead
- * ([messageOf]) and lists the keys left; and *Try again* calls [onDelete]. Nothing can be tapped
+ * buttons: *Delete* calls [onDelete]. After a [failure], it says which step failed instead and
+ * lists the keys left ([purgeFailure]); and *Try again* calls [onDelete]. Nothing can be tapped
  * while [busy].
  */
 @Composable
 private fun ColumnScope.PurgeStep(
     listed: List<ShownKey>?,
-    failure: PurgeFailure?,
+    failure: ShownFailure?,
     busy: Boolean,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
@@ -142,7 +135,7 @@ private fun ColumnScope.PurgeStep(
         when {
             failure != null -> {
                 Text(
-                    stringResource(messageOf(failure)),
+                    stringResource(failure.message),
                     style = style,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },

@@ -111,6 +111,8 @@
     <string name="purge_keys_not_removed">These keys could not be removed: the phone’s storage failed. Try again.</string>
     <string name="purge_keys_storage_failed">The phone’s storage failed, so the deletion did not finish. Try again.</string>
     <string name="purge_keys_both_failed">Neither the keys nor the phone’s key that sealed them could be deleted: the phone’s storage and key store failed. Try again.</string>
+    <string name="purge_keys_both_failed_none">The phone’s storage and its key store both failed, so the deletion did not finish. Try again.</string>
+    <string name="purge_keys_seal_failed">The key in the phone’s Android Keystore could not be deleted: the phone’s key store failed. Try again.</string>
     <string name="purge_keys_seal_not_deleted">The keys were removed, but the phone’s key that sealed them could not be deleted: the phone’s key store failed. Try again.</string>
     <string name="purge_keys_done_title">Keys deleted</string>
     <string name="purge_keys_done">These keys have been safely deleted:</string>

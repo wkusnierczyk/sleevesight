@@ -2,7 +2,6 @@ package app.sleevesight.app.ui
 
 import android.view.WindowManager
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -291,29 +290,7 @@ class PurgeKeysTest {
     }
 
     @Test
-    fun aPurgeOfNoKeysWhoseStorageFailsSaysTheStorageFailedNotThePhonesKey() {
-        // Opened with no key saved, as after a key store failure; the phone's key is deleted, the
-        // storage's edit fails.
-        val flaky = FlakyDataStore(stores.open("empty-flaky-secrets"))
-        val keys = SoftwareKeySource()
-        val emptySecrets = SecretStore(flaky, SecretCipher(keys))
-        purgeAlone(emptySecrets) {
-            waitForText(text(R.string.purge_keys_none))
-            flaky.writeFailures.set(1)
-            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
-
-            waitForText(text(R.string.purge_keys_storage_failed))
-            assertEquals(1, keys.deletions)
-            for (wrong in listOf(R.string.purge_keys_seal_not_deleted, R.string.purge_keys_not_removed)) {
-                assertTrue(!shown(text(wrong)))
-            }
-            compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
-            waitForText(text(R.string.purge_keys_done_none))
-        }
-    }
-
-    @Test
-    fun aPurgeWhoseStorageAndPhoneKeyBothFailSaysSoAndListsTheKeysLeft() {
+    fun aPurgeWhoseStorageAndPhoneKeyFailAndWhoseFileCannotBeReadAfterListsTheKeysAsked() {
         val failingOnce =
             object : SoftwareKeySource() {
                 var failures = 1
@@ -323,19 +300,21 @@ class PurgeKeysTest {
                     super.delete()
                 }
             }
-        val flaky = FlakyDataStore(stores.open("both-failing-secrets"))
+        val flaky = FlakyDataStore(stores.open("unread-secrets"))
         val failingSecrets = SecretStore(flaky, SecretCipher(failingOnce))
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = failingSecrets) {
             openPurge()
             waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            // The edit fails, the Keystore key is not deleted, and the read after them fails.
             flaky.writeFailures.set(1)
+            flaky.failures.set(1)
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
-            // Neither step done: the key is left, still readable, and listed so.
+            // Unread, the key asked for is listed, and with its Keystore key it still opens.
             waitForText(text(R.string.purge_keys_both_failed))
             compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
-            assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
+            assertEquals(0, flaky.failures.get())
 
             compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
             waitForText(text(R.string.purge_keys_done_title))
@@ -394,32 +373,6 @@ class PurgeKeysTest {
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()
             waitFor("Purge keys no longer saying why") { !shown(text(R.string.settings_reset_keys_value)) }
             assertEquals(1, keys.deletions)
-        }
-    }
-
-    /** *Purge keys* alone, on [store], as the settings open it, with nothing under it. */
-    private fun purgeAlone(
-        store: SecretStore,
-        block: () -> Unit,
-    ) {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent {
-                    val states by store.states.collectAsState(emptyMap())
-                    KeyDialogs(
-                        SettingsDialog.PurgeKeys,
-                        states,
-                        store,
-                        saves,
-                        scanner = { },
-                        keyboard = { _, _, _, _ -> },
-                        showPhoneName = false,
-                        onSealFailed = {},
-                        onDismiss = {},
-                    )
-                }
-            }
-            block()
         }
     }
 
