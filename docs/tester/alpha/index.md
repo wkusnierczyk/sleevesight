@@ -46,7 +46,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 - **Skip detection.** Under *On skip*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Saver*); the card then asks for a tap.
 - **Citations.** Each sentence ends with chips for the sources it cites; a tap jumps to the evidence under *Sources*. A sentence that cites nothing is underlined. A line under the insight counts the sentences grounded.
-- **Diagnostics.** In Settings, under *Developer* (developer mode is on in the test build), turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise.
+- **Diagnostics.** The test build starts in developer mode, so Settings shows a *Developer* section, last. There, turn on *Diagnostics*, then *Open diagnostics*: what the app did since it started (each source's outcome and time, AI calls, the citation check), the track changes recorded, and what skip detection has learned. *Export* writes it to a file where you choose, which may be a cloud folder; nothing of it leaves the phone otherwise. The *Developer mode* switch there hides the section; seven taps on *Version*, under *About*, bring it back.
 
 ## What to tell us
 

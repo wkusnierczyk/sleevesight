@@ -51,7 +51,7 @@ When little is documented about a track, the insight is short instead of filling
 
 ## You choose
 
-Each of these is a setting; the [settings page](https://sleevesight.app/docs/tutorials/settings/) explains every one, with its default and why. The settings are in sections, each folded under its name and a line on what it holds: *Players*, *Sources*, *AI services*, *Secrets*, *Genres*, *Insights*, *History*, *Appearance* and *About*, with *Developer* after seven taps on *Version*, as on Android.
+Each of these is a setting; the [settings page](https://sleevesight.app/docs/tutorials/settings/) explains every one, with its default and why. The settings are in sections, each folded under its name and a line on what it holds: *Players*, *Sources*, *AI services*, *Secrets*, *Genres*, *Insights*, *History*, *Appearance* and *About*, with *Developer* after seven taps on *Version*, as on Android (from the start in the test build on Google Play's testing tracks).
 
 - **Sources.** Each source is a switch, with a link to its website, and the AI service's own knowledge is a separate one, off by default. MusicBrainz and Wikipedia need no key; Last.fm and the Exa web search need your own API key. Discogs comes in Phase 3.
 - **Genres.** *Show genres* off asks no source for genres, and the home screen shows none. The genre labels are the tags Last.fm and MusicBrainz give the track, its artists and its album, kept only when they name a genre in a fixed list; each source is a switch. MusicBrainz gives the track's (with no request of its own) and the artists', Last.fm all three. MusicBrainz's tags are by its contributors under CC BY-NC-SA 3.0: they are used for labels only, never sent to the AI service, and each label from them credits and links MusicBrainz.

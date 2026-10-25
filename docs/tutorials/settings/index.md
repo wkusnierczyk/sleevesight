@@ -191,7 +191,7 @@ Old entries go by the phone's clock. Each time Sleevesight starts, with the phon
 
 ## Developer
 
-Shown only in developer mode, which seven taps on *Version* turn on, last, with no description: its options are for a developer or a tester, not for listening. Developer mode is a setting kept with the others: it survives a restart, and clearing the app's data turns it off.
+Shown only in developer mode, which seven taps on *Version* turn on, last, with no description: its options are for a developer or a tester, not for listening. Developer mode is a setting kept with the others: it survives a restart, and clearing the app's data returns it to its default. That is off, except in the test build that Google Play's testing tracks get, which starts in developer mode, so testers find *Diagnostics* without the seven taps; turned off there, it stays off.
 
 - ***Diagnostics*** (**default: off**). *Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.* While it is on, *Open diagnostics* appears under it.
 - ***Developer mode***. *Off: hides this section, and turns off what it holds.* Turning it off turns *Diagnostics* off too, so nothing hidden keeps running, and hides the section until the next seven taps.
