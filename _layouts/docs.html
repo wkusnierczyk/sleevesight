@@ -1,14 +1,29 @@
----
-layout: default
----
 {% comment %}
   The documentation pages under `/docs/` (#421), set for every page under `docs/` by the defaults
-  in `_config.yml`: the default layout headed by the linear logo, the product page's type
-  (`index.html`), and a line back to the index at the top and the foot of each page but the index
-  itself. The fonts are the page's own cut-down copies (`assets/fonts/make_page_font.py`), which hold
-  printable ASCII, Latin-1 and the common punctuation, so a page's text needs no rebuild while it
-  stays within them.
+  in `_config.yml`. They open as the product page does (#501): its intro, its header with the stacked
+  logo and the menu, and its footer, shared with `index.html` (`_includes/site-header-style.html`,
+  `site-intro-head.html`, `site-header.html`, `site-header-script.html`, `site-footer.html`); the
+  logo links to the product page rather than replaying the intro. The head and the text's style are
+  the Primer theme's, as in `_layouts/default.html`, which the site's other pages keep, in the
+  product page's type, with a line back to the index at the top and the foot of each page but the
+  index itself. The colours are the product page's light ones, since the theme has no dark mode. The
+  fonts are the page's own cut-down copies (`assets/fonts/make_page_font.py`), which hold printable
+  ASCII, Latin-1 and the common punctuation, so a page's text needs no rebuild while it stays within
+  them. A page with a diagram loads the diagram script from jsDelivr (`_includes/head-custom.html`),
+  and its footer says so.
 {% endcomment %}
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+{% seo %}
+    <link rel="stylesheet" href="{{ "/assets/css/style.css?v=" | append: site.github.build_revision | relative_url }}">
+    {% include head-custom.html %}
+    <link rel="preload" href="{{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ '/assets/fonts/RobotoSlab-page.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:"Sleevesight Flex";src:url({{ '/assets/fonts/RobotoFlex-page.woff2' | relative_url }}) format("woff2");
   font-weight:400 700;font-stretch:88% 100%;font-display:swap}
@@ -16,16 +31,35 @@ layout: default
   font-weight:350 700;font-display:swap}
 @font-face{font-family:"Sleevesight Mono";src:url({{ '/assets/fonts/RobotoMono-page.woff2' | relative_url }}) format("woff2");
   font-weight:500;font-display:swap}
-.markdown-body{font-family:"Sleevesight Slab",ui-serif,Georgia,serif;font-weight:350;font-size:18px;line-height:1.55}
+:root{
+  --bg:#fff; --ink:#141a22; --muted:#596473; --line:#d2d8e0; --sight:#cf222e;
+  --f-ui:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-text:"Sleevesight Slab",ui-serif,Georgia,serif;
+  --tile-bg:#fff; --tile-edge:#00000026; --tile-ink:#141a22; --rim:#1f2328; --core:none; --groove:inline;
+}
+body{background:var(--bg);font-family:var(--f-text)}
+.skip{position:absolute;left:16px;top:-48px;background:#fafbfc;padding:8px 12px;border-radius:8px;z-index:20;font-family:var(--f-ui)}
+.skip:focus{top:12px}
+main.markdown-body{padding-top:8px}
+.markdown-body{font-family:var(--f-text);font-weight:350;font-size:18px;line-height:1.55}
 .markdown-body strong,.markdown-body b{font-weight:700}
-.markdown-body h1,.markdown-body h2,.markdown-body h3{font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:700;letter-spacing:-.01em}
+.markdown-body h1,.markdown-body h2,.markdown-body h3{font-family:var(--f-ui);font-weight:700;letter-spacing:-.01em}
 .markdown-body h1{font-stretch:90%}
 .markdown-body h2,.markdown-body h3{font-stretch:92%}
 .markdown-body code{font-family:"Sleevesight Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;font-weight:500}
-.markdown-body .docs-nav{font-family:"Sleevesight Flex",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;margin:0 0 24px}
+.markdown-body .docs-nav{font-family:var(--f-ui);font-size:16px;margin:0 0 24px}
 .markdown-body .docs-nav.foot{margin:40px 0 0}
 .markdown-body img{border:1px solid #d0d7de;border-radius:6px}
+footer{margin-top:40px}
 </style>
+{% include site-header-style.html %}
+{% include site-intro-head.html %}
+  </head>
+  <body>
+<a class="skip" href="#main">Skip to content</a>
+{% include site-header.html home=true %}
+<div class="wrap">
+<main id="main" class="markdown-body">
 {% unless page.docs_index %}
 <p class="docs-nav"><a href="{{ '/docs/' | relative_url }}">« Documentation</a></p>
 {% endunless %}
@@ -35,3 +69,12 @@ layout: default
 {% unless page.docs_index %}
 <p class="docs-nav foot"><a href="{{ '/docs/' | relative_url }}">« Documentation</a></p>
 {% endunless %}
+</main>
+{% if content contains 'language-mermaid' %}{% assign diagrams = true %}{% else %}{% assign diagrams = false %}{% endif %}
+{% include site-footer.html source=page.path diagrams=diagrams %}
+</div>
+{% include site-header-script.html %}
+    <script src="{{ "/assets/js/anchor.min.js" | relative_url }}" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg="></script>
+    <script>anchors.add();</script>
+  </body>
+</html>
