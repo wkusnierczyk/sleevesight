@@ -161,6 +161,7 @@ internal fun NowPlayingContent(
                     InsightActions(onWrite, onStop, cite) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)
                     },
+                    settings?.showGroundingDetails == true,
                 )
                 SourcesSection(
                     track = track,

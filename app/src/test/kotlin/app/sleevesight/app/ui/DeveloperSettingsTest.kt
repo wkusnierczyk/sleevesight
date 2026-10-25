@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -45,8 +46,8 @@ import org.robolectric.shadows.ShadowToast
 /**
  * Developer mode (#444): seven taps on *About*'s *Version* show the *Developer* section, whose
  * *Developer mode* switch hides it again and turns its options off; *Diagnostics*, the developer
- * setting, with the way to the diagnostics screen behind it (#54); and the players' package names,
- * shown only in developer mode.
+ * setting, with the way to the diagnostics screen behind it (#54); *Show grounding details* (#437);
+ * and the players' package names, shown only in developer mode.
  */
 @RunWith(RobolectricTestRunner::class)
 class DeveloperSettingsTest {
@@ -168,6 +169,23 @@ class DeveloperSettingsTest {
 
             compose.onNodeWithText(text(R.string.settings_diagnostics)).performScrollTo().performClick()
             compose.waitUntil(5_000) { !shown(R.string.settings_diagnostics_open) }
+        }
+    }
+
+    @Test
+    fun showGroundingDetailsIsADeveloperOptionOffByDefaultAndOffWithDeveloperMode() {
+        runBlocking { settings.update { it.copy(developerMode = true) } }
+        show {
+            compose.openSection(SettingsSection.DEVELOPER)
+            compose.waitUntil(5_000) { shown(R.string.settings_grounding_details) }
+            val details = compose.onNodeWithText(text(R.string.settings_grounding_details)).performScrollTo()
+            details.assertIsOff()
+            details.performClick()
+            compose.waitUntil(5_000) { settings.now().showGroundingDetails }
+
+            compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
+            compose.waitUntil(5_000) { !settings.now().developerMode && !developerShown }
+            assertFalse("Grounding details off with developer mode", settings.now().showGroundingDetails)
         }
     }
 

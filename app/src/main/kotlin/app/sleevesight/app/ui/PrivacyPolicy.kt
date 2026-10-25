@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -20,10 +20,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.LinkLabel
+import app.sleevesight.app.ui.theme.LinkLook
+import app.sleevesight.app.ui.theme.TextPart
 
 /**
  * The privacy policy on the site (`privacy.md`, #57), with where the app stands under the GDPR and
@@ -56,41 +57,28 @@ internal fun rememberOpenUrl(url: String): () -> Unit {
 }
 
 /**
- * The app's links' style: the one place it is set, for the web addresses ([WebLink]) and the links
- * that open another app or a site ([ExternalLink]) alike.
- */
-@Composable
-internal fun linkStyle(): TextStyle =
-    MaterialTheme.typography.bodyMedium.copy(
-        color = MaterialTheme.colorScheme.primary,
-        textDecoration = TextDecoration.Underline,
-    )
-
-/**
- * [url], shown without its scheme and styled as the credits' links are, opening the page when
- * tapped: a clickable text, the whole of it the link, with at least the minimum touch target, and
- * an action a screen reader names (`link_open`).
+ * [url], shown without its scheme, as a link of its own ([LinkLabel]) that opens the page in the
+ * browser: the whole text the link, with at least the minimum touch target, and an action a screen
+ * reader names (`link_open`).
  */
 @Composable
 internal fun WebLink(
     url: String,
     modifier: Modifier = Modifier,
 ) {
-    val open = rememberOpenUrl(url)
-    Text(
-        shownAddress(url),
-        style = linkStyle(),
-        modifier =
-            modifier
-                .clickable(onClickLabel = stringResource(R.string.link_open), onClick = open)
-                .minimumInteractiveComponentSize(),
+    LinkLabel(
+        TextPart.Link(shownAddress(url), url),
+        onClickLabel = stringResource(R.string.link_open),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = modifier,
     )
 }
 
 /**
- * A link that opens another app or a web page ([onClick]): [text] in the links' style and the
- * Material *open in new* symbol after it, with at least the minimum touch target. A screen reader
- * reads it as [description] ("Open Spotify"), a button, not the symbol.
+ * A link that opens another app or a web page ([onClick]): [text] drawn as every link is
+ * ([LinkLook], #442) and the Material *open in new* symbol after it, in the text colour, with at
+ * least the minimum touch target. A screen reader reads it as [description] ("Open Spotify"), a
+ * button, not the symbol.
  */
 @Composable
 internal fun ExternalLink(
@@ -99,7 +87,6 @@ internal fun ExternalLink(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val style = linkStyle()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -116,11 +103,11 @@ internal fun ExternalLink(
                     }
                 },
     ) {
-        Text(text, style = style)
+        LinkLook(text, style = MaterialTheme.typography.bodyMedium)
         Icon(
             painterResource(R.drawable.ic_open_in_new),
             contentDescription = null,
-            tint = style.color,
+            tint = LocalContentColor.current,
             modifier = Modifier.size(16.dp),
         )
     }

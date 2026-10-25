@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -43,7 +42,9 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.report.TesterReportButton
+import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.TextPart
 import kotlinx.coroutines.launch
 
 /**
@@ -107,7 +108,12 @@ private fun HomeBody(
             pipeline()
             // Reference, read once: under what the user came for, set apart by a muted line.
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
-            TextButton(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_what_leaves)) }
+            // A link, as every link is (#442), with a full touch target.
+            LinkLabel(
+                TextPart.Action(stringResource(R.string.home_what_leaves), WHAT_LEAVES_TAG, onOpenFirstRun),
+                onClickLabel = stringResource(R.string.home_what_leaves_open),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         } else {
             Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
             Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
@@ -175,6 +181,9 @@ private val REPORT_MARGIN = 16.dp
  * margin below and 16 dp above it, so the end of Home scrolls clear of it.
  */
 private val REPORT_CLEARANCE = 72.dp
+
+/** The link tag of *What leaves the device?* on Home. */
+const val WHAT_LEAVES_TAG: String = "what-leaves"
 
 /** How much of the divider's colour shows above *What leaves the device?*. */
 private const val MUTED_ALPHA = 0.5f
