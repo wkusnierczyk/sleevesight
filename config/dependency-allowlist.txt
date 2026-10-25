@@ -3,7 +3,8 @@
 # matches that one module only. Prefer exact groups: `androidx.*` would admit
 # androidx.privacysandbox.ads, an ads API.
 # Adding a line is a reviewed decision: no analytics, crash-reporting or ads SDKs
-# (design, Structural constraints), and every licence GPL-3.0 compatible.
+# (design, Structural constraints), and every licence GPL-3.0 compatible. A licence other than
+# Apache-2.0 also needs its notice in the app (config/licence-notices.txt), which the build checks.
 #
 # When the Phase 0 probe was removed (#30), only `org.jetbrains.kotlin` and `org.jetbrains`
 # were in use; the rest, `com.google.guava` and `org.jspecify` included, were sized to the
@@ -17,7 +18,9 @@ org.jetbrains.kotlin           Apache-2.0
 org.jetbrains.kotlinx          Apache-2.0
 org.jetbrains                  Apache-2.0   # annotations
 io.ktor                        Apache-2.0   # HTTP client, in :net only (#35)
-com.squareup.okhttp3           Apache-2.0   # Ktor's engine, in :net only (#35)
+com.squareup.okhttp3           Apache-2.0   # Ktor's engine, in :net only (#35); its Android AAR ships the Public
+                                            # Suffix List, MPL-2.0, and Unicode's IDNA table, Unicode-3.0
+                                            # (config/licence-notices.txt)
 com.squareup.okio              Apache-2.0   # I/O, pulled in by OkHttp, and by DataStore (datastore-core-okio) in :app
 app.cash.sqldelight            Apache-2.0   # database runtime, in :store (#41); the Android driver, in :app (#49)
 org.xerial:sqlite-jdbc         Apache-2.0   # SQLite JDBC driver (its SQLite is public domain), for :cli (#44);
@@ -39,7 +42,8 @@ androidx.compose.ui            Apache-2.0
 androidx.concurrent            Apache-2.0
 androidx.core                  Apache-2.0
 androidx.customview            Apache-2.0
-androidx.datastore             Apache-2.0   # settings and sealed keys (#50)
+androidx.datastore             Apache-2.0   # settings and sealed keys (#50); its datastore-preferences-external-protobuf,
+                                            # a copy of Protocol Buffers, is BSD-3-Clause (config/licence-notices.txt)
 androidx.emoji2                Apache-2.0
 androidx.graphics              Apache-2.0
 androidx.interpolator          Apache-2.0
@@ -56,5 +60,6 @@ androidx.window                Apache-2.0
 com.google.guava               Apache-2.0   # listenablefuture, pulled in by androidx
 org.jspecify                   Apache-2.0   # nullness annotations, pulled in by androidx
 com.google.zxing               Apache-2.0   # QR codes of the API keys: drawn by :cli, read on the phone (#268)
-com.materialkolor              MIT          # material-color-utilities, ported to Kotlin: the art's colours (#52)
+com.materialkolor              MIT          # material-color-utilities, ported to Kotlin: the art's colours (#52); the
+                                            # ported code is Google's, Apache-2.0 (config/licence-notices.txt)
 dev.drewhamilton.poko          Apache-2.0   # annotations, pulled in by com.materialkolor
