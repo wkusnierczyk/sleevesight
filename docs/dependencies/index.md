@@ -31,13 +31,15 @@ The release build is shrunk by R8, which drops the code nothing calls; being on 
 
 ## Licences and GPL-3.0
 
-Sleevesight is under the [GNU General Public License, version 3](https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE). Every shipped library is under one of three permissive licences, each of which lets its code be combined into a GPL-3.0 program and the whole distributed under the GPL:
+Sleevesight is under the [GNU General Public License, version 3](https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE). Every shipped library is under a permissive licence, but for one data file inside OkHttp under the MPL-2.0, a file-level copyleft licence; each of them lets its code be combined into a GPL-3.0 program and the whole distributed under the GPL:
 
-- **Apache-2.0**, the licence of almost everything below. The Free Software Foundation counts it compatible with GPL version 3 (not with version 2, because of its patent terms).
+- **Apache-2.0**, the licence of almost everything below. The Free Software Foundation counts it compatible with GPL version 3 (not with version 2, because of its patent terms). It asks that each copy carry the licence and the NOTICE file the library's distribution has, if it has one.
 - **MIT**, which asks only that its copyright and permission notice go with each copy.
 - **BSD-3-Clause**, which asks the same and adds that the authors' names are not used to endorse the product.
+- **MPL-2.0**, for one file of data inside OkHttp, the Public Suffix List. It asks that recipients learn the file's licence and where its source is, and allows the file to be distributed in a larger work under the GPL (its section 3.3).
+- **Unicode-3.0**, for Unicode's IDNA mapping table, which OkHttp compiles into its code to read international host names. It asks that its copyright and permission notice go with each copy, as MIT does.
 
-The credits screen in the app (*Credits*, under *About* in *Settings*) lists the data sources, the font and the icons, not the libraries.
+The credits screen in the app (*Credits*, under *About* in *Settings*) lists the libraries too: by Maven group those under the Apache License alone, and by name each notice that goes further, with each licence's text in full. The build writes that list from the libraries' POMs and [`config/licence-notices.txt`](https://github.com/wkusnierczyk/sleevesight/blob/main/config/licence-notices.txt), and fails when a shipped library's licence needs a notice the app does not carry ([#488](https://github.com/wkusnierczyk/sleevesight/issues/488)).
 
 ## Shipped libraries
 
@@ -45,7 +47,7 @@ The credits screen in the app (*Credits*, under *About* in *Settings*) lists the
 
 - **Groups:** `org.jetbrains.kotlin`, `org.jetbrains.kotlinx`, `org.jetbrains`
 - **Where:** every module.
-- **Licence:** Apache-2.0.
+- **Licence:** Apache-2.0, with the NOTICE files of kotlinx.coroutines, kotlinx.serialization and kotlinx-io; the standard library's `kotlin.time` has code from the ThreeTen backport, under BSD-3-Clause.
 
 The Kotlin standard library; coroutines, which every module uses and `:core`'s API carries (a source adapter's lookup takes a `Deferred`, and a new track cancels the work for the last one); and kotlinx.serialization, the JSON of the genre vocabulary in `:core`, of the sources' and AI services' responses in `:sources` and `:ai`, of the cached results in `:store`, and of the screens' typed routes in `:app`. `kotlinx-io` comes in with Ktor, and `org.jetbrains:annotations` with the standard library and coroutines.
 
@@ -55,7 +57,7 @@ Chosen against: Moshi for JSON, since kotlinx.serialization uses no reflection a
 
 - **Groups:** `io.ktor`, `com.squareup.okhttp3`, `com.squareup.okio`, `org.slf4j`
 - **Where:** `:net`; Okio also under DataStore in `:app`.
-- **Licence:** Apache-2.0; SLF4J's API, MIT.
+- **Licence:** Apache-2.0; SLF4J's API, MIT; the Public Suffix List in OkHttp's Android artifact, MPL-2.0; Unicode's IDNA mapping table compiled into OkHttp, Unicode-3.0.
 
 Ktor's HTTP client, on OkHttp as its engine, makes every request the app sends: to the sources, the AI services and, for players that give their cover only as a web address, the cover's server. Only `:net` may depend on it. It takes Ktor as an `implementation` dependency, so the modules above it see `:net`'s own types and never Ktor's; the module graph (`config/module-graph.properties`), Detekt's rules and a check of the compiled classes stop any other module from reaching an HTTP client. Okio is OkHttp's I/O library.
 
@@ -107,7 +109,7 @@ The dependency allowlist names each of these groups exactly rather than allowing
 
 - **Groups:** `com.google.zxing`
 - **Where:** `:app`, which reads QR codes; also the command-line tool, which draws them in a terminal and does not ship.
-- **Licence:** Apache-2.0 (from its parent POM, `zxing-parent`).
+- **Licence:** Apache-2.0 (from its parent POM, `zxing-parent`), with its NOTICE file, which names Barcode4J's authors.
 
 *Scan keys*, and *Scan QR code* beside each key's field, read a QR code from the camera's frames: one key, or a setup code holding several, such as the [API keys page]({{ '/api-keys.html' | relative_url }}) draws. Only ZXing's core and its QR code reader are used, on the phone; nothing of a frame is kept or sent.
 
@@ -123,7 +125,7 @@ Chosen against: Google's code scanner, whose ML Kit reports usage to Google; and
 
 The now-playing screen takes its colours from the album art: the art's most suitable colour, as the library's `Score` picks it, seeds a Material 3 tonal-spot scheme, light or dark as the phone is. This is Google's material-color-utilities in the Kotlin port published as `com.materialkolor:material-color-utilities`, since Google publishes no artifact of its own for it.
 
-Limits as used here: the port is a third party's, under MIT; Google's original is under Apache-2.0. The port's POM names MIT only, and this page does not say how the port treats the original's notice.
+Limits as used here: the port is a third party's, under MIT; Google's original is under Apache-2.0. The port's POM names MIT only, while its sources keep Google's Apache-2.0 headers, so the app's notice for it names both.
 
 ## Data sources
 
