@@ -85,7 +85,7 @@ class PhoneNameSettingTest {
     }
 
     /** A scanner that reads a new keyboard code at once, as the camera would on the page's. */
-    private val scanning: QrScanner = { onScanned, _ ->
+    private val scanning: QrScanner = { onScanned ->
         LaunchedEffect(Unit) { onScanned(KeyboardVectors.freshCode()) }
     }
 

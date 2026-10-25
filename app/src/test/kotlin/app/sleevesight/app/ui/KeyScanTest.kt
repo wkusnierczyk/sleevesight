@@ -4,13 +4,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
-import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -19,7 +17,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import app.sleevesight.app.FlakyDataStore
 import app.sleevesight.app.MainActivity
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
@@ -35,7 +32,6 @@ import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.keyName
-import app.sleevesight.core.Secret
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,8 +48,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Entering keys by QR code on the settings screen (#268), with a scanner that needs no camera, and
- * by typing on a computer (#394), with a keyboard that needs no Bluetooth.
+ * Entering a key by QR code in its dialog on the settings screen (#268), with a scanner that needs
+ * no camera, and by typing on a computer (#394), with a keyboard that needs no Bluetooth. Several
+ * keys at once, *Load keys*, are [LoadKeysTest]'s.
  */
 @RunWith(RobolectricTestRunner::class)
 class KeyScanTest {
@@ -80,7 +77,6 @@ class KeyScanTest {
     private fun show(
         scanner: QrScanner,
         keyboard: ComputerKeyboard = { _, _, _, _ -> },
-        secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -88,7 +84,7 @@ class KeyScanTest {
                 activity.setContent {
                     SettingsScreen(
                         settings,
-                        secretStore,
+                        secrets,
                         emptyMap(),
                         { CompletableDeferred(true) },
                         saves,
@@ -114,11 +110,8 @@ class KeyScanTest {
 
     private fun waitForText(text: String) = waitForNode(hasText(text))
 
-    private fun ComposeTestRule.onAllNodesWithSubstring(text: String) =
-        onAllNodes(hasText(text, substring = true), useUnmergedTree = true).fetchSemanticsNodes()
-
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
-    private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
+    private fun scanning(text: String): QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(text) } }
 
     /** Keyboard sessions started and not yet ended. */
     private val running = mutableListOf<Any>()
@@ -189,7 +182,7 @@ class KeyScanTest {
         }
 
     @Test
-    fun aSetupCodeScannedIntoOneKeysFieldPointsToScanKeys() =
+    fun aSetupCodeScannedIntoOneKeysFieldPointsToLoadKeys() =
         show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
@@ -213,101 +206,6 @@ class KeyScanTest {
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitFor("the typed Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
         }
-
-    @Test
-    fun scanKeysShowsWhatTheCodeHoldsAndSavesNothingBeforeTheConfirmation() {
-        runBlocking { secrets.set(SecretId.EXA, Secret("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f")) }
-        val code = "sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey\nlastfm=not-a-key\nmistral=x"
-        show(scanner = scanning(code)) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            val anthropic = text(R.string.settings_key_name_anthropic)
-            val exa = text(R.string.settings_key_name_exa)
-            val lastFm = text(R.string.settings_key_name_lastfm)
-            waitForText(app.getString(R.string.setup_new, anthropic, "…" + anthropicKey.takeLast(4)))
-            compose
-                .onNodeWithText(
-                    app.getString(R.string.setup_replaces, exa, "…" + exaKey.takeLast(4)),
-                ).assertIsDisplayed()
-            compose
-                .onNodeWithText(app.getString(R.string.setup_refused, lastFm, text(R.string.setup_refused_shape)))
-                .performScrollTo()
-                .assertIsDisplayed()
-            compose
-                .onNodeWithText(app.getString(R.string.setup_unknown, "mistral"))
-                .performScrollTo()
-                .assertIsDisplayed()
-            // No key is shown whole.
-            assertEquals(0, compose.onAllNodesWithSubstring(anthropicKey).size)
-            assertEquals(0, compose.onAllNodesWithSubstring(exaKey).size)
-            // Nothing is saved yet.
-            compose.waitForIdle()
-            assertNull(stored(SecretId.ANTHROPIC))
-            assertEquals("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f", stored(SecretId.EXA))
-
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitFor("the setup's keys stored") {
-                stored(SecretId.ANTHROPIC) == anthropicKey &&
-                    stored(SecretId.EXA) == exaKey
-            }
-            assertNull(stored(SecretId.LASTFM))
-            waitFor("the dialog closed") {
-                compose.onAllNodesWithText(text(R.string.setup_title)).fetchSemanticsNodes().isEmpty()
-            }
-        }
-    }
-
-    @Test
-    fun scanKeysCancelledSavesNothing() =
-        show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey")) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            waitForText(text(R.string.setup_title))
-            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
-            waitFor("the dialog closed") {
-                compose.onAllNodesWithText(text(R.string.setup_title)).fetchSemanticsNodes().isEmpty()
-            }
-            assertNull(stored(SecretId.LASTFM))
-        }
-
-    @Test
-    fun scanKeysSaysWhenTheCodeIsNotASetupCode() =
-        show(scanner = scanning(lastFmKey)) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            waitForText(text(R.string.setup_not_a_setup_title))
-            compose.onNodeWithText(text(R.string.setup_scan_again)).assertIsDisplayed()
-        }
-
-    @Test
-    fun aKeyOfTheSetupThatCannotBeSavedIsNamedAndSavedAloneOnTheNextTry() {
-        val flaky = FlakyDataStore(stores.open("flaky-secrets"))
-        val store = SecretStore(flaky, testCipher())
-        show(
-            scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nlastfm=$lastFmKey"),
-            secretStore = store,
-        ) {
-            compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
-            waitForText(text(R.string.setup_title))
-            flaky.writeFailures.set(1)
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-
-            // The first key failed; the second was saved; the dialog stays, naming the one left.
-            val failed = app.getString(R.string.setup_failed, text(R.string.settings_key_name_anthropic))
-            waitForText(failed)
-            assertEquals(lastFmKey, runBlocking { store.get(SecretId.LASTFM) }?.reveal())
-            assertNull(runBlocking { store.get(SecretId.ANTHROPIC) })
-
-            val writes = flaky.writes.get()
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitFor("the Anthropic key stored") {
-                runBlocking { store.get(SecretId.ANTHROPIC) }?.reveal() ==
-                    anthropicKey
-            }
-            // Only the key left was saved again.
-            assertEquals(writes + 1, flaky.writes.get())
-            waitFor("the dialog closed") {
-                compose.onAllNodesWithText(text(R.string.setup_title)).fetchSemanticsNodes().isEmpty()
-            }
-        }
-    }
 
     @Test
     fun textTypedOnAComputerFillsTheFieldAndIsSavedOnSave() =

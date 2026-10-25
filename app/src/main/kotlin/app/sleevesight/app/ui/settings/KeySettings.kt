@@ -17,16 +17,15 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.Secret
-import app.sleevesight.core.keys.KeySetup
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 
 // *Secrets* (#234, #444): *Load keys* (#268), *Purge keys*, and each key's row, with its button
-// that removes it; and their dialogs.
+// that removes it; and their dialogs and screens (#446).
 
 /** The keys' rows under *Secrets*, in the order shown: the AI services', then the sources'. */
-private val SHOWN_KEYS =
+internal val SHOWN_KEYS =
     listOf(SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
 
 /**
@@ -58,11 +57,12 @@ internal fun KeyRow(
 }
 
 /**
- * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268); *Purge
- * keys*, while any key is stored, readable or not, or after a failure ([KeysShown.offerReset]),
- * when it says why (what was *Reset saved keys*, which did the same); each key's row, the AI
- * services' and the sources' alike; and *Show this phone's name to the computer* (#433), for the
- * key dialogs' *Type on a computer*.
+ * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268), on a
+ * screen of its own that, in developer mode ([Settings.developerMode]), names the CLI's `keys-qr`
+ * too ([LoadKeysScreen]); *Purge keys*, while any key is stored, readable or not, or after a failure
+ * ([KeysShown.offerReset]), when it says why (what was *Reset saved keys*, which did the same), on a
+ * screen of its own ([PurgeKeysScreen]); each key's row, the AI services' and the sources' alike;
+ * and *Show this phone's name to the computer* (#433), for the key dialogs' *Type on a computer*.
  */
 @Composable
 internal fun SecretsSection(
@@ -74,7 +74,7 @@ internal fun SecretsSection(
     ValueRow(
         title = stringResource(R.string.settings_scan_keys),
         value = stringResource(R.string.settings_scan_keys_value),
-        onClick = { open(SettingsDialog.ScanKeys) },
+        onClick = { open(SettingsDialog.LoadKeys(settings.developerMode)) },
     )
     if (keys.anyStored || keys.offerReset) {
         val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
@@ -101,8 +101,9 @@ internal fun SecretsSection(
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
  * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
  * reads QR codes, and [keyboard] runs *Type on a computer* (#394), advertising the phone's name
- * with [showPhoneName] (#433); *Load keys* shows what a
- * setup code holds by [open]ing the next dialog, and saves nothing until the user confirms it there.
+ * with [showPhoneName] (#433). *Load keys* shows what a setup code holds, and saves nothing until
+ * the user confirms it there; *Purge keys* lists the keys it deletes, reading each one's last
+ * characters from [store].
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
 @Composable
@@ -115,7 +116,6 @@ internal fun KeyDialogs(
     keyboard: ComputerKeyboard,
     showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
-    open: (SettingsDialog) -> Unit,
     onDismiss: () -> Unit,
 ) {
     when (shown) {
@@ -137,16 +137,12 @@ internal fun KeyDialogs(
             )
         }
 
-        SettingsDialog.ScanKeys -> {
-            scanner({ text -> open(SettingsDialog.SetupFound(KeySetup.read(text))) }, onDismiss)
-        }
-
-        is SettingsDialog.SetupFound -> {
-            SetupDialog(
-                read = shown.read,
+        is SettingsDialog.LoadKeys -> {
+            LoadKeysScreen(
                 secrets = secrets,
+                scanner = scanner,
+                developerMode = shown.developerMode,
                 onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
-                onScanAgain = { open(SettingsDialog.ScanKeys) },
                 onDismiss = onDismiss,
             )
         }
@@ -160,10 +156,11 @@ internal fun KeyDialogs(
         }
 
         SettingsDialog.PurgeKeys -> {
-            ConfirmDialog(
-                purgeConfirmation(),
-                onConfirm = { saves.async { store.reset().also { if (it) onSealFailed(false) } }.await() },
-                onDismiss,
+            PurgeKeysScreen(
+                secrets = secrets,
+                ending = { id -> store.get(id)?.reveal()?.let(::endingOf) },
+                onPurge = { saves.async { store.reset().also { if (it.done) onSealFailed(false) } }.await() },
+                onDismiss = onDismiss,
             )
         }
     }
@@ -191,14 +188,4 @@ private fun removeKeyConfirmation(id: SecretId): Confirmation =
         explained = stringResource(R.string.settings_key_remove_explained, stringResource(keyRecipient(id))),
         confirm = stringResource(R.string.settings_remove),
         failed = stringResource(R.string.settings_key_remove_failed),
-    )
-
-/** What *Purge keys*, removing every key with the phone's key for them, says. */
-@Composable
-private fun purgeConfirmation(): Confirmation =
-    Confirmation(
-        title = stringResource(R.string.settings_remove_all_keys_title),
-        explained = stringResource(R.string.settings_reset_keys_explained),
-        confirm = stringResource(R.string.settings_remove_all),
-        failed = stringResource(R.string.settings_remove_all_keys_failed),
     )

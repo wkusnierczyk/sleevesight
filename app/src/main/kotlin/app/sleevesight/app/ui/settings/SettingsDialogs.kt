@@ -49,6 +49,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.keys.KeyShape
@@ -170,16 +171,13 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        scanner(
-            { text ->
-                scanning = null
-                val result = scanned(purpose, id, text.trim(), ledger)
-                failed = result.failed
-                result.key?.let { enter(it) }
-                session = result.session
-            },
-            { scanning = null },
-        )
+        QrScanDialog(scanner, onDismiss = { scanning = null }) { text ->
+            scanning = null
+            val result = scanned(purpose, id, text.trim(), ledger)
+            failed = result.failed
+            result.key?.let { enter(it) }
+            session = result.session
+        }
     }
     val running =
         session?.let { s ->
@@ -329,8 +327,7 @@ internal class Confirmation(
 )
 
 /**
- * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Purge
- * keys*). [onConfirm] returns whether it succeeded: the dialog closes only
+ * Confirms the removal of a saved key. [onConfirm] returns whether it succeeded: the dialog closes only
  * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
  * second tap does not run it again.
  */
