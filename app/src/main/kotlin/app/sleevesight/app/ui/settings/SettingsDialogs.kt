@@ -17,6 +17,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -25,13 +26,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.AutofillManager
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.sleevesight.app.R
 import app.sleevesight.app.keyboard.KeyboardSession
 import app.sleevesight.app.keyboard.SessionLedger
@@ -90,6 +99,15 @@ internal fun <T> ChoiceDialog(
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
  * on the phone is. The session ends when the user stops it or the dialog closes. The phone
  * advertises its Bluetooth name meanwhile only with [showPhoneName] (#433).
+ *
+ * The field is a password to the autofill service (#376), so a password manager offers its saved
+ * entries on it. It fills but is never asked to save: Compose commits the autofill session when the
+ * field leaves the screen, which offers the password manager to keep what was typed as a new login,
+ * so the dialog cancels the session first, however it goes: when it closes itself (`close`), when it
+ * leaves the composition, and when the activity is destroyed ([CancelAutofillOnDestroy]). Saving a
+ * key into a password manager means passing it through that manager's service, which scanning a key
+ * handed over by someone else avoids. A fill the user asks for by hand (the field's *Autofill*
+ * menu) still shows the service what the field holds, as in any app.
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -111,6 +129,14 @@ internal fun KeyDialog(
     val ledger = SessionLedger.of(LocalContext.current)
     val scope = rememberCoroutineScope()
     val value = typed.trim()
+    val autofill = LocalAutofillManager.current
+
+    // Ends the autofill session unsaved before the field goes, which would otherwise commit it. The
+    // effect after the dialog cancels as well; this makes the order certain on the dialog's own way out.
+    fun close() {
+        autofill?.cancel()
+        onDismiss()
+    }
 
     // Runs [action], which returns what to say of its failure, or null when it succeeded.
     fun run(action: suspend () -> Int?) {
@@ -121,7 +147,7 @@ internal fun KeyDialog(
         scope.launch {
             val failure = action()
             busy = false
-            if (failure == null) onDismiss() else failed = failure
+            if (failure == null) close() else failed = failure
         }
     }
 
@@ -143,10 +169,11 @@ internal fun KeyDialog(
         }
 
     AlertDialog(
-        onDismissRequest = { if (!busy) onDismiss() },
+        onDismissRequest = { if (!busy) close() },
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(stringResource(keyName(id))) },
         text = {
+            CancelAutofillOnDestroy(autofill)
             KeyEntry(id, typed, { typed = it }, failed, busy, running) {
                 failed = null
                 scanning = it
@@ -166,10 +193,34 @@ internal fun KeyDialog(
                         enabled = !busy,
                     ) { Text(stringResource(R.string.settings_remove)) }
                 }
-                TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+                TextButton(onClick = ::close, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
             }
         },
     )
+    // The dialog can also go without closing itself, when the screen does. After the dialog in
+    // this composition, so that it is forgotten, and cancels, before the dialog's window goes.
+    DisposableEffect(autofill) { onDispose { autofill?.cancel() } }
+}
+
+/**
+ * Cancels [autofill]'s session when the activity is destroyed, as on a rotation. Then the dialog's
+ * window composition is disposed before the screen's, and Compose would commit the session as the
+ * field goes, before [KeyDialog]'s own effect runs. Composed inside the dialog's window, this
+ * observer is added after that composition's, and the lifecycle tells its newest observers of
+ * `ON_DESTROY` first. Not on `ON_STOP`: a password manager's unlock screen stops the activity in the
+ * middle of a fill.
+ */
+@Composable
+private fun CancelAutofillOnDestroy(autofill: AutofillManager?) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, autofill) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_DESTROY) autofill?.cancel()
+            }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 }
 
 /**
@@ -209,6 +260,7 @@ private fun KeyEntry(
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+            modifier = Modifier.semantics { contentType = ContentType.Password },
         )
         if (keyboard != null) {
             keyboard()
