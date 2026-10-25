@@ -259,8 +259,8 @@ internal class TrackRun(
         update { it.copy(sources = it.sources + (source to landed)) }
     }
 
-    // The cited lines: the player's release, then each enabled source's evidence lines (verified, or
-    // web search's kept ones), in the adapters' order, so the same retrieval gives the same ids
+    // The cited lines: the player's release, then each enabled source's evidence lines (verified,
+    // or web search's kept ones), in the adapters' order, so the same retrieval gives the same ids
     // whatever order the sources land in.
     // The genre labels: those of the label sources switched on, combined; never evidence.
     private fun assemble(): EvidenceSet {
