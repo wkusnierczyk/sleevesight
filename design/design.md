@@ -295,6 +295,8 @@ When the app is opened from the launcher with no screen to restore (not a return
 
 ### Home screen, top to bottom
 
+As described here, under *Layout*'s *Expandable boxes*, the default; under *Separate pages*, *Sources*, the genres' table, where a genre label comes from and the insight each open on a page of their own instead (*Layout setting* below).
+
 **Header** (#445). Pinned at the top; everything under it scrolls, with a thin divider under it once scrolled. At the left, the one-line logo (#383, *Logo and intro* above): a tap scrolls Home back to the top, animated, or at once with the phone's animations off; a screen reader says "Sleevesight, scroll to top". At the right, the Material *settings* symbol, a cogwheel, opens the settings, with the content description and tooltip "Settings". Both are at least 48 dp targets. A menu icon, if one comes, goes beside the cogwheel.
 
 1. **Player row.** Player name and state ("Spotify · Playing"). The name opens the player's own screen through the session activity. Previous, play or pause, next act through transport controls.
@@ -320,10 +322,12 @@ The detail section is called **Insight**. "Analysis" is reserved for a future de
 
 ### Layout setting
 
-- **Separate pages.** Each item opens a full screen with a back arrow; Android back works throughout.
-- **Expandable boxes.** Song, each artist, and album are boxes on the home screen that expand in place; genre and sounds-like cards open inline under their chips (for a label only MusicBrainz gives, see D12, *Genre labels*).
+*Appearance → Layout* (decided 2026-10-12; brought forward from Phase 2 to Phase 1.5, #447): whether what the home screen holds opens in place or on a page of its own.
 
-The detail content is one component mounted either way.
+- **Expandable boxes** (the default: the home screen as it was before the setting, everything a track has on one screen). Each item expands in place, with the disclosure triangle (▸ folded, ▾ unfolded): *Sources* and the genres' table fold under their headings, and where a genre label comes from shows under its chip. In Phase 2, song, each artist and album are boxes too, and genre and sounds-like cards open inline under their chips (for a label only MusicBrainz gives, see D12, *Genre labels*).
+- **Separate pages.** Each item opens a full screen in the album art's colours, the colour of the home screen's box, with a back arrow and its name as the title, which a screen reader reads as a heading; the arrow and Android's back return to where it was opened from, the home screen at the place it was scrolled to. On the home screen, an item's name is followed by `›` in place of the triangle, and a screen reader names its action "open page": **Sources ›** opens *Sources*; **Genres ›**, before the most specific level's chips, opens the table; a chip opens where its label comes from, with the label as the page's title; **Key insights ›**, the insight's title, opens the insight on its own page, with Write, Stop, Rewrite and *Report a problem* as on the card (the card still shows the insight in full). A citation, on the card or on the insight's page, opens *Sources* at its line, scrolled to and flashed. Each page opens fresh: *Sources* at its first screenful with every source's lines shown, whatever *Keep Sources as you left them* says, which applies only to the boxes. A page shows the track playing, from the same state as the home screen, so it follows a track change; a label's page the new track lacks says so.
+
+Each item is one component mounted either way (`SourcesBody`, the genres' `Table` and `Credits`, `InsightBody`), so nothing is built twice; the Phase 2 detail cards join the same setting.
 
 ### Settings screen
 
@@ -373,9 +377,9 @@ The groups are the settings screen's sections (*Settings screen* above), in its 
 | History | Clear history: the session history and the track changes, after a confirmation | |
 | Appearance | Theme: system, light or dark (#444); the album art's colours follow it | System |
 | Appearance | Font: the app's font (Roboto, bundled), or the system font, the one chosen in the phone's settings; the diagnostics screen's monospace text stays monospace ([#377](https://github.com/wkusnierczyk/sleevesight/issues/377)) | App font: the same type on every phone, in the family the logo and the product page take their faces from (Roboto Flex, Slab and Mono), though not the same faces; many phones' system font is not Roboto |
-| Appearance | Keep Sources as you left them: whether the *Sources* list keeps, for the next track, how it was left (folded, a screenful, or all of it; shown past the first screenful but not in full, it comes back at the first), or each new track's list starts folded (#269) | Off: each new track's list starts folded |
+| Appearance | Layout: expandable boxes or separate pages (#447, *Layout setting*): whether *Sources*, the genres' table, where a genre label comes from and the insight open in place on the home screen, or each on a page of its own with a back arrow | Expandable boxes: the home screen as before the setting, everything a track has on one screen |
+| Appearance | Keep Sources as you left them: whether the *Sources* list keeps, for the next track, how it was left (folded, a screenful, or all of it; shown past the first screenful but not in full, it comes back at the first), or each new track's list starts folded (#269). Under *Expandable boxes* only: shown but not offered under *Separate pages*, where each page opens fresh | Off: each new track's list starts folded |
 | Appearance | Logo intro at start: whether the app, opened from the launcher while it is not open (not a return to it), plays a logo intro before its first screen ([#383](https://github.com/wkusnierczyk/sleevesight/issues/383)) | On: a few seconds, only when the app is opened while it is not open, skipped by a tap, Back or any key; never under *Remove animations* or TalkBack |
-| Appearance | Layout: separate pages or expandable boxes (#447) | Separate pages |
 | About | Version (seven taps: developer mode), Credits, *What leaves the device* (the first-run screen, #441), and the site's pages with *Open website ↗*: the documentation's index, the privacy policy, the source code and its licence | |
 | Developer | Developer mode: shown and turned on by seven taps on *Version*; its switch turns it, and every developer option, off ([#444](https://github.com/wkusnierczyk/sleevesight/issues/444)) | Off |
 | Developer | Diagnostics: the way to the diagnostics screen (*Diagnostics* below) | Off |
@@ -521,11 +525,11 @@ Session layer, home screen, sources section, insight with grounding check, genre
 
 ### Phase 1.5. Play release
 
-The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. With it, the AI service gets a row per provider (#227), and OpenAI and Google join Anthropic (#228, #229; moved from Phase 3 on 2026-10-18), so alpha testers can choose a provider and vary its effort. The work is in [plan.md](plan.md).
+The release through Google Play (D7), after Phase 1 (owner, 2026-10-13): a signed app bundle from a release workflow, the store listing, privacy policy and data safety form, and Play's review of an app that holds notification access. With it, the AI service gets a row per provider (#227), and OpenAI and Google join Anthropic (#228, #229; moved from Phase 3 on 2026-10-18), so alpha testers can choose a provider and vary its effort. The layout setting (*Layout setting*, #447) comes forward from Phase 2 for what the home screen holds now: *Sources*, the genres' table, where a genre label comes from, and the insight. The work is in [plan.md](plan.md).
 
 ### Phase 2. Detail and discovery
 
-Song, artist and album detail content; genre cards; sounds-like cards; the re-evaluation of MusicBrainz tags as a genre label source (D12, #101); layout setting; transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
+Song, artist and album detail content, opening as the layout setting says (brought forward to Phase 1.5 for what the home screen held then, #447); genre cards; sounds-like cards; the re-evaluation of MusicBrainz tags as a genre label source (D12, #101); transport controls and player handoff; the prompt style with its overrides per card (D14); learned skip detection (D15), here or later.
 
 ### Phase 3. Context and reach
 
@@ -571,6 +575,7 @@ D1 to D15 are set out, with their options and reasoning, under *Decisions* in [a
 | 2026-10-12 | Working name Sleevesight | Spoken-aloud test still to do |
 | 2026-10-13 | Phase 1.5, Play release, after Phase 1 | D7 makes Play's review, the listing and the signed bundle work of their own; the MVP's exit needs only an `adb` install |
 | 2026-10-18 | OpenAI and Google move from Phase 3 to Phase 1.5 (#228, #229), after the AI settings per provider (#227); Ollama stays in Phase 3 | Alpha testers can choose a provider and vary its effort, which tells more than an all-Anthropic alpha |
+| 2026-10-23 | The layout setting in Phase 1.5 (#447), for *Sources*, the genres' table, a genre label's attribution and the insight; *Expandable boxes* the default | So that what the home screen shows now follows it, and the Phase 2 cards slot in; the default keeps the home screen as it was |
 | 2026-10-24 | Genre labels by level, the track's, each artist's and the album's, as a fold with a table (#439); Last.fm's track and album tags asked for, MusicBrainz's recording tags read from the lookup already made; chips plain, without a hue per family | An artist's tags describe a career, not the track playing. On three albums the album's labels came on every track and the track's on most; on the test playlist few, all on tracks the artists' labels already covered |
 
 ## Open questions
