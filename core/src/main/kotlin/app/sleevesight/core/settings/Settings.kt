@@ -498,10 +498,9 @@ enum class ThemeChoice {
 /**
  * *Layout* (#447; design, *Layout setting*): how an item of the home screen opens. The items are
  * *Sources* and the genres' table; the song, artist and album insights join them, also in Phase 1.5
- * (#522), and in Phase 2.0 the rest of the detail content, the genre (#523) and sounds-like cards
- * among it. The key insight is always on Home, in full, under
- * either layout: it is not an item, as there is nothing more to open. Each item is one component,
- * mounted either way.
+ * (#522), and in Phase 2 the rest of the detail content, the genre (#523) and sounds-like cards
+ * among it. The key insight is always on Home, in full, under either layout: it is not an item, as
+ * there is nothing more to open. Each item is one component, mounted either way.
  */
 enum class Layout {
     /**

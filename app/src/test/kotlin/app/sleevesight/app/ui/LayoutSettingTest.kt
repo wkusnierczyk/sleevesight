@@ -3,6 +3,8 @@ package app.sleevesight.app.ui
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
@@ -31,6 +33,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -99,17 +102,24 @@ class LayoutSettingTest {
         }
 
     @Test
-    fun keepSourcesIsOfferedUnderExpandableBoxesOnly() =
+    fun keepSourcesIsOfferedUnderExpandableBoxesOnlyAndKeptUnderSeparatePages() =
         show {
-            keepSources().performScrollTo().assertIsEnabled()
+            keepSources()
+                .performScrollTo()
+                .assertIsEnabled()
+                .assertIsOff()
+                .performClick()
+            compose.waitUntil(5_000) { settings.now().keepSourcesUnfolded }
 
             choose(R.string.settings_layout_pages)
             compose.waitUntil(5_000) { settings.now().layout == Layout.SEPARATE_PAGES }
-            keepSources().performScrollTo().assertIsNotEnabled()
+            // Not offered, but kept as it was.
+            keepSources().performScrollTo().assertIsNotEnabled().assertIsOn()
+            assertTrue(settings.now().keepSourcesUnfolded)
 
             choose(R.string.settings_layout_boxes)
             compose.waitUntil(5_000) { settings.now().layout == Layout.EXPANDABLE_BOXES }
-            keepSources().performScrollTo().assertIsEnabled().performClick()
-            compose.waitUntil(5_000) { settings.now().keepSourcesUnfolded }
+            keepSources().performScrollTo().assertIsEnabled().assertIsOn()
+            assertTrue(settings.now().keepSourcesUnfolded)
         }
 }

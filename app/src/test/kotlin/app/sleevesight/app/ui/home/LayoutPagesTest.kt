@@ -18,6 +18,7 @@ import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -42,6 +43,7 @@ import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.HomeLinks
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.home.HomeFixtures.carefree
 import app.sleevesight.app.ui.home.HomeFixtures.done
 import app.sleevesight.app.ui.home.HomeFixtures.draft
 import app.sleevesight.app.ui.home.HomeFixtures.normalizer
@@ -56,6 +58,7 @@ import app.sleevesight.core.genres.LabelCredit
 import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.genres.TrackLabel
+import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.RunKey
@@ -114,14 +117,16 @@ class LayoutPagesTest {
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")))
     }
 
-    /** Sundown with [count] MusicBrainz lines, its genres, and [insight]. */
+    /** [playing] (Sundown) with [count] MusicBrainz lines, `[fact] 1.` on, its genres, and [insight]. */
     private fun long(
         count: Int = 20,
         insight: InsightState = InsightState.Idle(canWrite = false),
+        playing: NowPlaying = sundown,
+        fact: String = "Fact",
     ): TrackState {
-        val mb = (1..count).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
+        val mb = (1..count).map { draft(SourceId.MUSICBRAINZ, "$fact $it.") }
         return track(
-            sundown,
+            playing,
             insight,
             mapOf(SourceId.MUSICBRAINZ to done(evidence = mb)),
             EvidenceSet.of(mb, JvmHasher),
@@ -426,6 +431,59 @@ class LayoutPagesTest {
         }
         assertEquals(2, writes)
     }
+
+    @Test
+    fun sourcesPageFollowsANewTrackFromItsFirstScreenful() =
+        show(state(long(), pages)) { current ->
+            compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(FOLD_MORE_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(FOLD_STATUS_TAG).assertTextEquals(text(R.string.home_sources_showing, 16, 20))
+
+            current.value = state(long(count = 12, playing = carefree, fact = "Highway"), pages)
+            compose.waitForIdle()
+            title(text(R.string.home_sources_title))
+            compose.onNodeWithTag(FOLD_STATUS_TAG).assertTextEquals(text(R.string.home_sources_showing, Fold.PAGE, 12))
+            compose.onNodeWithText("Highway 1.", substring = true).assertExists()
+            assertEquals(0, compose.onAllNodesWithText("Fact 1.", substring = true).fetchSemanticsNodes().size)
+        }
+
+    @Test
+    fun genresPageFollowsANewTrackAOneLevelTrackAndShowGenres() =
+        show(state(long(), pages)) { current ->
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performScrollTo().performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:Gordon Lightfoot:rock").assertExists()
+
+            // Another track, with genres of its own.
+            val jazz =
+                TrackGenres(
+                    listOf(
+                        GenreRow(GenreLevel.TRACK, null, listOf(label("jazz", GenreLevel.TRACK))),
+                        GenreRow(GenreLevel.ALBUM, null, listOf(label("bebop", GenreLevel.ALBUM))),
+                    ),
+                )
+            val next = long(playing = carefree)
+            current.value = state(next.copy(genres = jazz), pages)
+            compose.waitForIdle()
+            title(text(R.string.home_genres))
+            compose.onNodeWithTag(GENRE_PREFIX + "album:bebop").assertExists()
+            assertEquals(0, count(GENRE_PREFIX + "artist:Gordon Lightfoot:rock"))
+
+            // One level: its chips, plain.
+            current.value = state(next.copy(genres = TrackGenres(jazz.rows.take(1))), pages)
+            compose.waitForIdle()
+            assertEquals(0, count(GENRES_ROW_PREFIX + "0"))
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "track:jazz")
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+
+            // *Show genres* turned off.
+            current.value = state(next.copy(genres = jazz), pages.copy(showGenres = false))
+            compose.waitForIdle()
+            compose.onNodeWithText(text(R.string.home_genres_hidden)).assertIsDisplayed()
+            assertEquals(0, count(GENRE_PREFIX + "track:jazz"))
+        }
 
     @Test
     fun eachPageOpensFreshWhateverKeepSourcesSays() =
