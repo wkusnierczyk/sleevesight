@@ -120,6 +120,8 @@
     <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>
+    <string name="settings_artist_facts_once">Tell an artist’s facts once per session</string>
+    <string name="settings_artist_facts_once_summary">On: a track’s insight leaves out the artist’s facts an insight earlier in the listening session told, and a track with enough about the song itself gets none. Off: every insight may tell all of them.</string>
     <string name="settings_cache_lifetimes">How long each source’s findings are kept</string>
     <string name="settings_cache_wikipedia">Wikipedia</string>
     <string name="settings_cache_wikidata">Wikidata</string>
@@ -130,7 +132,7 @@
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
     <string name="settings_session_gap">New session idle trigger</string>
-    <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions are kept. Within a session, each artist fact is told once. A change applies from the next track that starts.</string>
+    <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions are kept. Within a session, each artist fact is told once, unless “Tell an artist’s facts once per session” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
     <string name="settings_clear_history_value">Deletes the tracks played and the track changes</string>
     <string name="settings_clear_history_title">Clear history?</string>

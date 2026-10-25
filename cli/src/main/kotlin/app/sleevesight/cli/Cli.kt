@@ -125,6 +125,7 @@ class Cli(
                         sources.filter { !it.first.on }.mapNotNull { SourceSwitch.of(it.first.source) }.toSet(),
                 // MusicBrainz tags stay out of the report, which lists each track's labels (`Report`).
                 labelSources = setOf(LabelSource.LASTFM),
+                artistFactsOncePerSession = options.artistFactsOnce,
             )
 
         fun run(): Int {

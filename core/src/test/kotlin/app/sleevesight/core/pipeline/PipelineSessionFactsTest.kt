@@ -32,7 +32,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 
-/** The artist facts an insight cites are left out of the next tracks' prompts in its session (#239). */
+/**
+ * The artist facts an insight cites are left out of the next tracks' prompts in its session (#239),
+ * unless *Tell an artist's facts once per session* is off (#407).
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PipelineSessionFactsTest {
     private val normalizer = Normalizer(JvmAccentFolder)
@@ -340,6 +343,48 @@ class PipelineSessionFactsTest {
             pipeline.run(track("One"), write = true)
 
             assertTrue(formed in prompt(1))
+        }
+
+    @Test
+    fun `with the facts told on every track, the next prompt has the line cited, and nothing is left out`() =
+        runTest {
+            settings = settings.copy(artistFactsOncePerSession = false)
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+
+            pipeline.run(track("One"), write = true)
+            pipeline.run(track("Two"), write = true)
+
+            assertTrue("[L1] (Last.fm, artist) $formed" in prompt(1))
+            assertTrue("[L2] (Last.fm, artist) $label" in prompt(1))
+            runCurrent()
+            val calls = events.filterIsInstance<PipelineEvent.ModelCall>()
+            assertEquals(listOf(emptyList<String>(), emptyList()), calls.map { it.leftOut })
+        }
+
+    @Test
+    fun `with the facts told on every track, a track with enough evidence of its own gets the artist lines too`() =
+        runTest {
+            settings = settings.copy(artistFactsOncePerSession = false)
+            val pipeline = pipeline(adapters(songLines = PromptEvidence.ENOUGH_OF_ITS_OWN))
+
+            pipeline.run(track("One"), write = true)
+
+            assertTrue(formed in prompt(0) && label in prompt(0))
+        }
+
+    @Test
+    fun `facts told while they are told on every track are not told again once the switch is back on`() =
+        runTest {
+            settings = settings.copy(artistFactsOncePerSession = false)
+            val pipeline = pipeline()
+
+            pipeline.run(track("One"), write = true)
+            settings = settings.copy(artistFactsOncePerSession = true)
+            pipeline.run(track("Two"), write = true)
+
+            assertFalse(formed in prompt(1))
+            assertTrue(label in prompt(1))
         }
 
     @Test

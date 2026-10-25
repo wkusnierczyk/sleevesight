@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class OptionsTest {
     @Test
@@ -90,6 +91,12 @@ class OptionsTest {
         assertEquals("off: no SLEEVESIGHT_GOOGLE_API_KEY", off("live", "--provider", "google"))
         assertEquals("off: no recorded replies", off("replay"))
         assertEquals("off: --no-insights", off("record", "--record", "wikidata", "--no-insights"))
+    }
+
+    @Test
+    fun `artist facts are told once a pass, unless --artist-facts-every-track is given`() {
+        assertTrue(Options.parse(listOf("replay")).artistFactsOnce)
+        assertFalse(Options.parse(listOf("live", "--artist-facts-every-track")).artistFactsOnce)
     }
 
     @Test
