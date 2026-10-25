@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import app.sleevesight.app.FirstRunAcknowledgement
 import app.sleevesight.app.session.NotificationAccess
 import app.sleevesight.app.ui.home.NothingPlaying
+import app.sleevesight.app.ui.report.TesterReportFeed
+import app.sleevesight.app.ui.report.WithTesterReport
 import kotlinx.serialization.Serializable
 
 /** What leaves the device, and the way to notification access; opened again from [Home] and [SettingsPage]. */
@@ -49,7 +51,8 @@ class SettingsLinks(
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it.
+ * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, and, with
+ * a [testerReport] feed, the tester's report button while its settings show it (#452).
  */
 @Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
 @Composable
@@ -58,6 +61,7 @@ fun SleevesightNavHost(
     firstRun: FirstRunAcknowledgement,
     openAccessSettings: () -> Boolean,
     navController: NavHostController = rememberNavController(),
+    testerReport: TesterReportFeed? = null,
     settings: @Composable (links: SettingsLinks) -> Unit = {},
     pipeline: @Composable () -> Unit = { NothingPlaying() },
     diagnostics: @Composable () -> Unit = {},
@@ -85,13 +89,16 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
-                HomeScreen(
-                    accessGranted = granted,
-                    // Single top: a double tap opens it once, so one Continue comes back.
-                    onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
-                    onOpenSettings = { navController.navigate(SettingsPage) },
-                    pipeline = pipeline,
-                )
+                WithTesterReport(testerReport) { onReport ->
+                    HomeScreen(
+                        accessGranted = granted,
+                        // Single top: a double tap opens it once, so one Continue comes back.
+                        onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
+                        onOpenSettings = { navController.navigate(SettingsPage) },
+                        onReport = onReport,
+                        pipeline = pipeline,
+                    )
+                }
             } else {
                 FirstRunFirst(navController)
             }

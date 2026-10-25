@@ -43,15 +43,19 @@ import app.sleevesight.app.report.MailHandoff
  * open and says to paste it if the message is empty. With no mail app, the dialog says so. *Copy report*
  * is offered either way, for a mail app the hand-off does not reach; where the system confirms
  * the copy itself ([MailHandoff.confirmsCopy]), the dialog says only where to paste it.
+ * [previewHint] says what the report holds, above it: by default that it holds no key, history or
+ * settings, as the insight's report does; the tester's report (#452) says what it holds instead.
  *
  * Its state is held only while it is open, not saved: closed by a rotation, it opens afresh.
  */
+@Suppress("LongParameterList") // What the dialog shows, where the mail goes, and the inputs.
 @Composable
 internal fun ReportDialog(
     title: String,
     mail: Mail?,
     handoff: MailHandoff,
     onDismiss: () -> Unit,
+    previewHint: String = stringResource(R.string.report_preview_hint),
     inputs: @Composable ColumnScope.() -> Unit,
 ) {
     var handed by remember { mutableStateOf<Handed?>(null) }
@@ -68,7 +72,7 @@ internal fun ReportDialog(
                 inputs()
                 Text(stringResource(R.string.report_preview_title), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    stringResource(R.string.report_preview_hint),
+                    previewHint,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

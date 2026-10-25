@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The tester's report (#452): Home's button, in developer mode with *Report button* on, and the
+     review before the report is handed to the tester's own mail app. -->
+<resources>
+    <!-- What a screen reader says for Home's button. -->
+    <string name="tester_report_button">Report to the developer: collect what the app knows now, to review and send</string>
+
+    <string name="tester_report_title">Tester report</string>
+    <!-- %1$s is the support address. -->
+    <string name="tester_report_intro">What Sleevesight knows right now, for the developer. It holds only the app\'s own diagnostics and what it received from the player: never your API keys, and nothing from outside the app. Edit any part or leave it out, and say what you expected. Nothing is sent until you send it from your mail app, addressed to %1$s.</string>
+    <string name="tester_report_note">What did you expect?</string>
+    <string name="tester_report_parts">What it holds</string>
+    <string name="tester_report_part_app">When you tapped, with the time zone, and the app\'s version and build.</string>
+    <string name="tester_report_part_settings">Your settings. Never your API keys.</string>
+    <string name="tester_report_part_now_playing">The track as the player reports it, what the sources found, and the insight with its citation check.</string>
+    <string name="tester_report_part_diagnostics">What the app did since it started, and what skip detection has learned.</string>
+    <!-- %1$d is the most track changes the part holds. -->
+    <string name="tester_report_part_history">The track changes recorded on this phone, with the tracks\' titles and times (the latest %1$d). Off until you turn it on, since it lists the tracks you played.</string>
+    <string name="tester_report_history_reading">Reading the history…</string>
+    <string name="tester_report_edit">Edit</string>
+    <!-- What a screen reader says for Edit; %1$s is the part's name. -->
+    <string name="tester_report_edit_description">Edit %1$s</string>
+    <string name="tester_report_edit_done">Done</string>
+    <string name="tester_report_preview_hint">Exactly this, as you left it above. Your mail app adds your email address as the sender.</string>
+</resources>
