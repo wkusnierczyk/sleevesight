@@ -16,7 +16,16 @@ layout: null
 <meta property="og:title" content="Sleevesight: insights on what's playing">
 <meta property="og:description" content="Short, sourced insights about the artist, song, and album you are playing. Your sources, your AI service, your key.">
 <meta property="og:url" content="https://sleevesight.app/">
-<meta name="twitter:card" content="summary">
+<!-- The link preview: the stacked logo and the tagline on the label's red, 1200 x 630, built from the
+     logo's sources by `assets/logo/src/make_og_image.py` (the brand sheet, *Link preview*). Open
+     Graph asks for an absolute URL. -->
+<meta property="og:image" content="https://sleevesight.app/assets/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sleevesight logo on red: the words Sleeve and sight beside a vinyl record, and the tagline Insights on what's playing">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image:alt" content="The Sleevesight logo on red: the words Sleeve and sight beside a vinyl record, and the tagline Insights on what's playing">
 <!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its
      header logo is the brand sheet's 8b mark, the words and the record; its intro is one of those
      listed at `.sl-intro` in the style sheet, picked at random on each visit (`data-logo`). Its fonts
@@ -154,9 +163,8 @@ figure.mock{margin:0;justify-self:end;width:100%;max-width:400px}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--s-pri);flex:none}
 .cover{margin-top:12px;border-radius:16px;overflow:hidden;aspect-ratio:1}
 .cover svg{display:block;width:100%;height:100%}
-.np-title{margin:12px 0 0;font-size:24px;line-height:1.1;font-weight:650;font-stretch:90%}
-.np-meta{font-size:14px;color:var(--s-onv);margin:2px 0 0;line-height:1.35}
-.np-meta strong{color:var(--s-on);font-weight:500;font-size:15px}
+.np-title{margin:12px 0 0;font-size:26px;line-height:1.1;font-weight:700;font-stretch:90%}
+.np-meta{font-size:15px;margin:4px 0 0;line-height:1.35}
 .genres{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
 .genres li{border-radius:8px;padding:4px 10px;font-size:12.5px;font-weight:550;background:hsl(var(--gh) 72% 90%);color:hsl(var(--gh) 62% 22%)}
 @media (prefers-color-scheme: dark){.genres li{background:hsl(var(--gh) 34% 25%);color:hsl(var(--gh) 75% 86%)}}
@@ -388,8 +396,7 @@ document.documentElement.classList.add('js');
        genre labels and the insight, with its citations, are the pipeline's own output from two live
        runs of `:cli` on the track (2026-10-18; web search off): the insight from Claude Haiku 5.5 on
        MusicBrainz and Wikipedia, the genre labels from Last.fm, coloured by the app's genre families.
-       The card's title is the one the app is to take (#354); the app's still reads "Why it's
-       interesting". -->
+       The card's title is the app's. -->
   <figure class="mock">
     <div class="phone" role="img" aria-labelledby="mock-desc">
       <div class="prow" aria-hidden="true"><span class="dot"></span><div><b>Spotify</b> <span>· Playing</span></div></div>
@@ -398,7 +405,7 @@ document.documentElement.classList.add('js');
       </div>
       <div aria-hidden="true">
         <p class="np-title">Michelle</p>
-        <p class="np-meta"><strong>The Beatles</strong><br>Rubber Soul<br>Released 1965</p>
+        <p class="np-meta">The Beatles<br><i>Rubber Soul</i>, 1965</p>
         <ul class="genres"><li style="--gh:8">Classic Rock</li><li style="--gh:8">Rock</li><li style="--gh:328">Pop</li></ul>
         <div class="card">
           <h2>Key insights</h2>

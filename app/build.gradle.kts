@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     // Reads an API key's QR code from the camera's frames, on the phone (#268). Not Google's code
     // scanner, whose ML Kit reports usage to Google; the camera is Android's own API, not CameraX.
     implementation(libs.zxing.core)

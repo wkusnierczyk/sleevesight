@@ -19,9 +19,17 @@ class ListedModelNames(
     /** [id]'s name: as a list gave it, else as the app knows it ([ModelNames]), else the id itself. */
     fun of(id: String): String = prefs.getString(id, null) ?: ModelNames.of(id) ?: id
 
-    /** Keeps the names [models] give that differ from their ids, replacing those kept before. */
+    /**
+     * Keeps the names [models] give that differ from their ids, replacing those kept before; not a
+     * name the app's own table gave ([ModelNames], OpenAI's), which a later version may revise.
+     */
     fun learn(models: List<ModelInfo>) {
-        val named = models.filter { it.displayName != it.id && prefs.getString(it.id, null) != it.displayName }
+        val named =
+            models.filter {
+                it.displayName != it.id &&
+                    it.displayName != ModelNames.of(it.id) &&
+                    prefs.getString(it.id, null) != it.displayName
+            }
         if (named.isEmpty()) return
         prefs.edit { named.forEach { putString(it.id, it.displayName) } }
     }

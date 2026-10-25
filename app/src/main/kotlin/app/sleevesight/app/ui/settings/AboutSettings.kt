@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,8 +42,9 @@ private const val COUNTDOWN_FROM = 4
 
 /**
  * *About*: *Version*, whose seven taps turn developer mode on ([VersionRow]); the way to the
- * credits; and the site's pages, each a row with its address, to type in where no browser opens,
- * and *Open website ↗*: the documentation's index (#421), through which the usage and settings
+ * credits; the first-run screen's explanation of what leaves the device (#441), as Home's bottom
+ * link opens it ([openWhatLeaves]); and the site's pages, each a row with its address, to type in
+ * where no browser opens, and *Open website ↗*: the documentation's index (#421), through which the usage and settings
  * pages (#415, #416) and later ones are reached, the privacy policy, with where the app stands under
  * the GDPR and the EU AI Act (#295), the source code and its licence.
  */
@@ -51,12 +53,18 @@ internal fun AboutSection(
     settings: Settings,
     update: Update,
     openCredits: () -> Unit,
+    openWhatLeaves: () -> Unit,
 ) {
     VersionRow(settings.developerMode) { update { it.copy(developerMode = true) } }
     ValueRow(
         title = stringResource(R.string.credits_title),
         value = stringResource(R.string.settings_credits_value),
         onClick = openCredits,
+    )
+    ValueRow(
+        title = stringResource(R.string.settings_what_leaves),
+        value = stringResource(R.string.settings_what_leaves_value),
+        onClick = openWhatLeaves,
     )
     LinkRow(R.string.settings_docs, DOCS_URL, R.string.settings_docs_summary)
     LinkRow(R.string.settings_privacy, PRIVACY_POLICY_URL, R.string.settings_privacy_summary)
@@ -77,9 +85,10 @@ internal fun VersionRow(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
-    var taps by remember { mutableIntStateOf(0) }
-    // Developer mode as this row turned it on, before the stored settings show it.
-    var turnedOn by remember { mutableStateOf(false) }
+    // Counted afresh whenever developer mode turns on or off, and kept through a rotation. After
+    // the seventh tap the count starts again, so a change that could not be saved can be tapped
+    // again; until the stored setting shows it on, a tap only counts.
+    var taps by rememberSaveable(developerMode) { mutableIntStateOf(0) }
     var shown by remember { mutableStateOf<Toast?>(null) }
     val say = { message: String ->
         // One message at a time, the latest, as a quick run of taps would otherwise queue them.
@@ -92,7 +101,7 @@ internal fun VersionRow(
                 .testTag(VERSION_TAG)
                 .fillMaxWidth()
                 .clickable {
-                    if (developerMode || turnedOn) {
+                    if (developerMode) {
                         say(resources.getString(R.string.settings_developer_already_on))
                         return@clickable
                     }
@@ -100,7 +109,7 @@ internal fun VersionRow(
                     val left = DEVELOPER_TAPS - taps
                     when {
                         left <= 0 -> {
-                            turnedOn = true
+                            taps = 0
                             onDeveloperMode()
                             say(resources.getString(R.string.settings_developer_on))
                         }
