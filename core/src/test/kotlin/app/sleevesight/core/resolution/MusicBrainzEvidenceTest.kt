@@ -65,4 +65,37 @@ class MusicBrainzEvidenceTest {
         assertEquals("https://musicbrainz.org/release-group/group", lines.first().url)
         assertEquals("https://musicbrainz.org/recording/first", lines[2].url)
     }
+
+    // #424: `PromptEvidence.restatesRelease` reads the album back out of the line written here.
+    private fun firstLine(
+        type: String?,
+        release: String,
+        title: String = "Sundown",
+    ): String =
+        MusicBrainzEvidence
+            .lines(
+                Resolution(
+                    outcome = Outcome.SongArticle,
+                    recordingMbid = "rec",
+                    title = title,
+                    artistCredit = "Gordon Lightfoot",
+                    firstRelease = FirstRelease("1974-01", release, "group", "release", type),
+                ),
+                at,
+            ).first()
+            .text
+
+    @Test
+    fun `the first-release line gives back the album it names, and no other release`() {
+        assertEquals("Sundown", MusicBrainzEvidence.firstReleaseAlbum(firstLine("Album", "Sundown")))
+        assertEquals(
+            "Greatest Hits, Vol. 2 \u201CLive\u201D",
+            MusicBrainzEvidence.firstReleaseAlbum(firstLine("Album", "Greatest Hits, Vol. 2 \u201CLive\u201D")),
+        )
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine("Single", "Sundown")))
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine("EP", "Sundown")))
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(firstLine(null, "Sundown")))
+        val writer = "\u201CSundown\u201D was written by Gordon Lightfoot."
+        assertEquals(null, MusicBrainzEvidence.firstReleaseAlbum(writer))
+    }
 }

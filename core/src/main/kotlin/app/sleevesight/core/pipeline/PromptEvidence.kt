@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.MusicBrainzEvidence
 
 /**
  * The evidence an insight's prompt is written from (#239, `design/design.md`, *Synthesis*): the
@@ -29,14 +30,15 @@ import app.sleevesight.core.model.SourceId
  * web search off, so how insights use the artist lines on tracks whose own lines are mostly web
  * results was not measured. With web search on, most tracks reach [ENOUGH_OF_ITS_OWN].
  *
- * The player's own release line (`P`, [SourceId.PLAYER]) is left out too when a line about the song
- * names that release ([restatesRelease], #424): MusicBrainz's "first released ..., on the album
- * “Sundown”", say. On thinly documented tracks the model padded the insight with a sentence citing
- * the `P` line alone ("This recording is on that same "Sundown" release [P1]"), cited and true but
- * telling nothing the line before it had not; with no `P` line there is nothing to restate. Where no
- * line about the song names the release, as on a compilation or a soundtrack, the `P` line stays,
- * and a sentence citing it tells the listener where this recording comes from. The release stays in
- * the prompt's track block either way.
+ * The player's own release line (`P`, [SourceId.PLAYER]) is left out too when MusicBrainz's
+ * first-release line names that release as the album the song first came out on
+ * ([restatesRelease], #424): "first released ..., on the album “Sundown”". On thinly documented
+ * tracks the model padded the insight with a sentence citing the `P` line alone ("This recording
+ * is on that same "Sundown" release [P1]"), cited and true but telling nothing the line before it
+ * had not; with no `P` line there is nothing to restate. Where the song first came out elsewhere,
+ * as for a compilation or a soundtrack, the `P` line stays, and a sentence citing it tells the
+ * listener where this recording comes from. The release stays in the prompt's track block either
+ * way.
  *
  * Which lines are left out depends on the session, so the synthesis cache keys a card by the whole
  * evidence's fingerprint, not the one sent: a track played again finds the card it was given.
@@ -76,51 +78,43 @@ object PromptEvidence {
     }
 
     /**
-     * Which lines of [evidence] only restate the player's [release]: its `P` line, when a line about
-     * the song ([Scope.SONG], from a source other than the player) names the release. A line names
-     * it when it holds the release's name, or the name less one closing bracketed part (the player's
-     * "Rubber Soul (Remastered)" is MusicBrainz's “Rubber Soul”), as a whole: case, spacing,
-     * quotation marks, apostrophes and dashes folded as an [ArtistFact]'s are, and no letter or digit
-     * right before or after it. Lines about an original song, the artist or a web page do not count:
-     * they may name another recording's release. The cost: a release whose name is a common word
-     * ("Love") is taken as named by a song line that uses the word, and its `P` line goes; the
-     * prompt's track block still gives the release, uncitable.
+     * Which lines of [evidence] only restate the player's [release]: its `P` line, when MusicBrainz's
+     * first-release line says the song first came out on an album of the same name
+     * ([MusicBrainzEvidence.firstReleaseAlbum]). The names are compared whole, folded as an
+     * [ArtistFact]'s text is ([ArtistFact.matchKey]: case, spacing, quotation marks, apostrophes,
+     * dashes and a closing full stop), each less its closing bracketed parts (the player's "Rubber
+     * Soul (Remastered)" is MusicBrainz's “Rubber Soul”). So the album "Greatest Hits" is not
+     * “Greatest Hits II”, and the track's title or the artist credit, which the line quotes too, never
+     * counts: on a title track first released as a single (“Sundown” ... on the single “Sundown”)
+     * the line stays, since the album it is on is another release. The other sources' lines do not
+     * count either, being free text: Wikipedia's "from his 1974 album Sundown" may name the release,
+     * but a name found inside a sentence may be part of a longer one, or another recording's. A
+     * player's " - Single" or " - EP" is kept in its name, so its single is not taken for the album.
      */
     internal fun restatesRelease(
         evidence: EvidenceSet,
         release: String?,
     ): (EvidenceLine) -> Boolean {
-        val names = release?.let(::releaseNames).orEmpty()
+        val wanted = release?.let(::releaseKey)
         val named =
-            names.isNotEmpty() &&
+            wanted != null &&
                 evidence.lines.any { line ->
-                    line.scope == Scope.SONG && line.source != SourceId.PLAYER && names.any { holds(line.text, it) }
+                    line.source == SourceId.MUSICBRAINZ &&
+                        line.scope == Scope.SONG &&
+                        MusicBrainzEvidence.firstReleaseAlbum(line.text)?.let(::releaseKey) == wanted
                 }
         return { line -> named && line.source == SourceId.PLAYER }
     }
 
-    // The release's name and the name less one closing bracketed part, folded; none blank.
-    private fun releaseNames(release: String): Set<String> =
-        listOf(release, release.replace(CLOSING_BRACKETS, ""))
-            .map { ArtistFact.matchKey(it) }
-            .filter { it.isNotEmpty() }
-            .toSet()
-
-    // Whether [text], folded, holds [name] with no letter or digit right before or after it.
-    private fun holds(
-        text: String,
-        name: String,
-    ): Boolean {
-        val folded = ArtistFact.matchKey(text)
-        var from = folded.indexOf(name)
-        while (from >= 0) {
-            val end = from + name.length
-            val before = from == 0 || !folded[from - 1].isLetterOrDigit()
-            val after = end == folded.length || !folded[end].isLetterOrDigit()
-            if (before && after) return true
-            from = folded.indexOf(name, from + 1)
+    // [name] folded, less its closing bracketed parts unless nothing else is left; null when blank.
+    private fun releaseKey(name: String): String? {
+        var stripped = name.trim()
+        while (true) {
+            val next = stripped.replace(CLOSING_BRACKETS, "")
+            if (next == stripped) break
+            stripped = next
         }
-        return false
+        return ArtistFact.matchKey(stripped).ifEmpty { ArtistFact.matchKey(name) }.ifEmpty { null }
     }
 
     // One closing `(…)` or `[…]` part, and the white space before it.

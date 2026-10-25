@@ -22,6 +22,26 @@ object MusicBrainzEvidence {
 
     private const val SITE = "https://musicbrainz.org"
 
+    // The first-release line's end when the release is an album, as [lines] writes it: `, on the album “…”.`
+    private const val ON_THE_ALBUM = ", on the album \u201C"
+    private const val CLOSING = "\u201D."
+    private const val FIRST_RELEASED = " was first released "
+
+    /**
+     * The album a first-release line of [lines] names, as written: `Sundown` from "“Carefree
+     * Highway” by Gordon Lightfoot was first released in 1974, on the album “Sundown”." Null when
+     * [text] is no first-release line, or names a single, an EP or a release of no type: the release
+     * is read from its own slot of the template, never from the track's title or the artist credit
+     * quoted before it (#424, `PromptEvidence.restatesRelease`).
+     */
+    fun firstReleaseAlbum(text: String): String? {
+        val at = text.lastIndexOf(ON_THE_ALBUM)
+        val start = at + ON_THE_ALBUM.length
+        val end = text.length - CLOSING.length
+        val written = FIRST_RELEASED in text && text.endsWith(CLOSING) && at >= 0 && start < end
+        return if (written) text.substring(start, end) else null
+    }
+
     /** The lines for [resolution], dated [retrievedAt]; none when no recording was accepted. */
     fun lines(
         resolution: Resolution,

@@ -54,8 +54,9 @@ object InsightPrompt {
      * afresh once, a paid call, when it is next played with insights on.
      * Version 5 (#399): the contract stated once, after the style, in fewer words. Each track kept
      * is written afresh once again.
-     * Version 6 (#424): the evidence given leaves out the player's release line (`P`) when a line
-     * about the song names the release (`PromptEvidence`); the template is version 5's. Raised as
+     * Version 6 (#424): the evidence given leaves out the player's release line (`P`) when
+     * MusicBrainz's first-release line names that album (`PromptEvidence`); the template is
+     * version 5's. Raised as
      * version 4 was: the cards written before it on thinly documented tracks are the ones padded
      * with a sentence restating that line, and each track kept is written afresh once.
      */
@@ -151,8 +152,8 @@ object InsightPrompt {
      *
      * It does not stop a thin insight's sentence that only restates the player's release line, cited
      * `[P1]` alone (#399): every wording tried that did cost more than the padding. The padding is
-     * stopped in code instead (#424): the line is left out of the prompt when a line about the song
-     * names the release (`PromptEvidence`), so there is nothing to restate. Forbidding a
+     * stopped in code instead (#424): the line is left out of the prompt when MusicBrainz's
+     * first-release line names that album (`PromptEvidence`), so there is nothing to restate. Forbidding a
      * sentence citing player metadata alone made the model reason at length first (more output
      * tokens than the input saved); "give it no sentence of its own" made it correct itself in the
      * reply on one-line tracks ("Wait, ..."), uncited; "do not restate" it, with "even one",

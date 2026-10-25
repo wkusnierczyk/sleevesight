@@ -28,12 +28,16 @@ class PromptEvidenceTest {
     private fun player(album: String) =
         line(SourceId.PLAYER, "This recording is on the release \"$album\".", Scope.RELEASE)
 
-    // MusicBrainz's first-release line (`MusicBrainzEvidence`).
-    private fun firstRelease(album: String) =
-        line(
-            SourceId.MUSICBRAINZ,
-            "\u201CThe Song\u201D by The Band was first released in 1974, on the album \u201C$album\u201D.",
-        )
+    // MusicBrainz's first-release line (`MusicBrainzEvidence`), on a release of [type].
+    private fun firstRelease(
+        album: String,
+        type: String = "album",
+        title: String = "The Song",
+        by: String = "The Band",
+    ) = line(
+        SourceId.MUSICBRAINZ,
+        "\u201C$title\u201D by $by was first released in 1974, on the $type \u201C$album\u201D.",
+    )
 
     // The ids sent for a track on [album] with its release line and [others].
     private fun sentOn(
@@ -88,10 +92,10 @@ class PromptEvidenceTest {
         assertSame(evidence, all)
     }
 
-    // #424: the player's release line, restated by a line about the song.
+    // #424: the player's release line, restated by MusicBrainz's first-release line.
 
     @Test
-    fun `the player's release line is left out when a line about the song names the release`() {
+    fun `the player's release line is left out when the song first came out on that album`() {
         assertEquals(listOf("MB1"), sentOn("Sundown", firstRelease("Sundown")))
     }
 
@@ -105,36 +109,67 @@ class PromptEvidenceTest {
     }
 
     @Test
-    fun `a release no line about the song names keeps its line, as on a compilation`() {
+    fun `a release the song did not first come out on keeps its line, as a compilation's`() {
         assertEquals(listOf("MB1", "P1"), sentOn("The Very Best Of Kiss", firstRelease("Ace Frehley")))
         assertEquals(listOf("W1", "P1"), sentOn("CV Home", line(SourceId.WIKIPEDIA, "It is a provincial anthem.")))
     }
 
     @Test
-    fun `the release is matched folded, and less a closing bracketed part`() {
+    fun `the names are compared folded, and less their closing bracketed parts`() {
         assertEquals(listOf("MB1"), sentOn("YOU ARE NOT MY MOTHER", firstRelease("You Are Not My Mother")))
         assertEquals(listOf("MB1"), sentOn("Fisherman's Blues", firstRelease("Fisherman\u2019s Blues")))
         assertEquals(listOf("MB1"), sentOn("Rubber Soul (Remastered)", firstRelease("Rubber Soul")))
-        assertEquals(
-            listOf("MB1"),
-            sentOn("Fisherman's Blues (Collector's Edition, 22 tracks)", firstRelease("Fisherman\u2019s Blues")),
-        )
+        assertEquals(listOf("MB1"), sentOn("Sundown (Remastered) [Deluxe]", firstRelease("Sundown")))
+        assertEquals(listOf("MB1"), sentOn("Sundown", firstRelease("Sundown (Deluxe Edition)")))
         assertEquals(listOf("MB1"), sentOn("DAMN.", firstRelease("DAMN.")))
+        assertEquals(listOf("MB1"), sentOn("(Untitled)", firstRelease("(Untitled)")))
     }
 
     @Test
-    fun `a release is named only as a whole, not inside a longer name or with more after the bracket`() {
+    fun `a name is the whole album's name, not part of a longer one at either end`() {
+        assertEquals(listOf("MB1", "P1"), sentOn("Greatest Hits", firstRelease("Greatest Hits II")))
+        assertEquals(listOf("MB1", "P1"), sentOn("Greatest Hits", firstRelease("The Greatest Hits")))
         assertEquals(listOf("MB1", "P1"), sentOn("Sun", firstRelease("Sundown")))
-        assertEquals(listOf("MB1", "P1"), sentOn("Sundown", firstRelease("Sundowner")))
         assertEquals(listOf("MB1", "P1"), sentOn("Bang (Soundtrack) Vol. 2", firstRelease("Bang")))
     }
 
     @Test
-    fun `only a line about the song names the release, not one about the artist, an original or the web`() {
+    fun `a short name counts only as the whole album's name`() {
+        // The Beatles' "1": MusicBrainz's album “1” names it; "No. 1" in another line does not.
+        assertEquals(listOf("MB1"), sentOn("1", firstRelease("1")))
+        assertEquals(listOf("MB1", "P1"), sentOn("1", line(SourceId.MUSICBRAINZ, "It reached No. 1.")))
+        assertEquals(listOf("MB1", "P1"), sentOn("x", firstRelease("x", title = "x", type = "single")))
+    }
+
+    @Test
+    fun `the track's title and the artist credit are not the release, on a title track or a self-titled album`() {
+        // A title track first released as a single: the album the player reports is another release.
+        val single = firstRelease("Sundown", type = "single", title = "Sundown", by = "Gordon Lightfoot")
+        val written = line(SourceId.MUSICBRAINZ, "\u201CSundown\u201D was written by Gordon Lightfoot.")
+        assertEquals(listOf("MB1", "MB2", "P1"), sentOn("Sundown", single, written))
+        // A self-titled album the song did not first come out on.
+        assertEquals(
+            listOf("MB1", "P1"),
+            sentOn("Ace Frehley", firstRelease("Kiss Alive", by = "Ace Frehley")),
+        )
+    }
+
+    @Test
+    fun `a single, an EP or a player's single of the album's name keeps the line`() {
+        assertEquals(listOf("MB1", "P1"), sentOn("Sundown", firstRelease("Sundown", type = "single")))
+        assertEquals(listOf("MB1", "P1"), sentOn("Sundown", firstRelease("Sundown", type = "ep")))
+        assertEquals(listOf("MB1", "P1"), sentOn("Sundown - Single", firstRelease("Sundown")))
+    }
+
+    @Test
+    fun `only MusicBrainz's first-release line names the release, not another source or line`() {
+        val wikipedia = line(SourceId.WIKIPEDIA, "It is from his 1974 album Sundown.")
         val artist = line(SourceId.WIKIPEDIA, "The band's best-known album is Sundown.", Scope.ARTIST)
-        val original = line(SourceId.MUSICBRAINZ, "The original is on the album Sundown.", Scope.ORIGINAL_SONG)
+        val original =
+            line(SourceId.MUSICBRAINZ, "The original is on the album \u201CSundown\u201D.", Scope.ORIGINAL_SONG)
         val web = line(SourceId.WEB, "Sundown is a 1974 album.", Scope.WEB)
 
+        assertEquals(listOf("W1", "P1"), sentOn("Sundown", wikipedia))
         assertEquals(listOf("MB1", "W1", "P1"), sentOn("Sundown", song(1), artist))
         assertEquals(listOf("MB1", "P1"), sentOn("Sundown", original))
         assertEquals(listOf("G1", "P1"), sentOn("Sundown", web))

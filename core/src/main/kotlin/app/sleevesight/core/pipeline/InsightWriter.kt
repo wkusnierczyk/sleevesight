@@ -22,8 +22,8 @@ import kotlin.time.TimeMark
  * own text: the call would be paid for a `NO_EVIDENCE` or a restatement of the release. The prompt
  * leaves out artist-level lines the insight should not dwell on (#239, [PromptEvidence]): all of
  * them for a track with enough of its own, else those other tracks' insights in the listening
- * session cited ([SessionFacts]); and the player's release line when a line about the song names
- * the release (#424). A fresh reply is checked against what its prompt held, a card from
+ * session cited ([SessionFacts]); and the player's release line when MusicBrainz's first-release
+ * line names that album (#424). A fresh reply is checked against what its prompt held, a card from
  * the cache against the whole evidence (see `finish`); both cite the whole evidence's ids.
  */
 internal class InsightWriter(
@@ -127,7 +127,7 @@ internal class InsightWriter(
     }
 
     // A call, from the evidence less the artist-level lines the insight should not dwell on (#239)
-    // and a release line another line restates (#424), each line keeping its id, or from the
+    // and a release line MusicBrainz's line restates (#424), each line keeping its id, or from the
     // [whole] of it once the run fell back to it. The card's key keeps the whole evidence's
     // fingerprint, so a track played again finds its card, whatever the session cited.
     private suspend fun stream(

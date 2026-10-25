@@ -9,6 +9,8 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.SentenceStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -40,7 +42,7 @@ class PipelineReleaseLineTest {
             },
         )
 
-    private fun TestScope.pipeline(): Pipeline =
+    private fun TestScope.pipeline(cache: PipelineCache = PipelineCache.None): Pipeline =
         Pipeline(
             PipelineParts(
                 normalizer = Normalizer(JvmAccentFolder),
@@ -48,9 +50,12 @@ class PipelineReleaseLineTest {
                 resolver = FakeResolver(),
                 hasher = JvmHasher,
                 ai = AiAccess(provider, Secret("sk-test")),
+                cache = cache,
             ),
             PipelineTime(timeSource = testTimeSource),
         ) { Settings(aiProvider = ProviderId.ANTHROPIC) }
+
+    private val sundown = nowPlaying("Carefree Highway", "Gordon Lightfoot", "Sundown")
 
     private fun TestScope.recording(pipeline: Pipeline): List<PipelineEvent> {
         val events = mutableListOf<PipelineEvent>()
@@ -65,7 +70,7 @@ class PipelineReleaseLineTest {
             val pipeline = pipeline()
             val events = recording(pipeline)
 
-            val state = pipeline.run(nowPlaying("Carefree Highway", "Gordon Lightfoot", "Sundown"), write = true)
+            val state = pipeline.run(sundown, write = true)
 
             val prompt = provider.requests.single().prompt
             assertFalse("(player metadata, release)" in prompt)
@@ -87,6 +92,50 @@ class PipelineReleaseLineTest {
             assertTrue(
                 "[P1] (player metadata, release) This recording is on the release \"Gord's Gold\"." in
                     provider.requests.single().prompt,
+            )
+        }
+
+    @Test
+    fun `a reply citing the release line left out is unknown, shown, and not kept`() =
+        runTest {
+            provider.reply = { FakeProvider.done("It came out in 1974 [MB1]. It is on Sundown [P1].") }
+            val cache = MemoryCache()
+            val pipeline = pipeline(cache)
+
+            val state = pipeline.run(sundown, write = true)
+
+            val written = assertIs<InsightState.Written>(state.insight)
+            assertEquals(
+                listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN),
+                written.grounded.paragraphs
+                    .flatten()
+                    .map { it.status },
+            )
+            assertEquals(emptyMap(), cache.cards)
+        }
+
+    @Test
+    fun `NO_EVIDENCE to a prompt without the release line asks again with it`() =
+        runTest {
+            provider.reply = { request ->
+                if ("(player metadata, release)" in request.prompt) {
+                    FakeProvider.done("It came out in 1974 [MB1].")
+                } else {
+                    FakeProvider.done(GroundingCheck.NO_EVIDENCE)
+                }
+            }
+            val pipeline = pipeline()
+            val events = recording(pipeline)
+
+            val state = pipeline.run(sundown, write = true)
+
+            assertEquals(2, provider.requests.size)
+            assertTrue("(player metadata, release)" in provider.requests[1].prompt)
+            assertEquals(null, assertIs<InsightState.Written>(state.insight).held)
+            runCurrent()
+            assertEquals(
+                listOf(listOf("P1"), emptyList()),
+                events.filterIsInstance<PipelineEvent.ModelCall>().map { it.leftOut },
             )
         }
 }
