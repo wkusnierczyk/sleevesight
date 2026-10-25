@@ -8,10 +8,13 @@ import android.bluetooth.le.AdvertiseCallback
  * as [read] gives it at each start, so a name changed meanwhile is the one advertised; a blank or
  * unreadable name is none.
  *
- * A start that carried the name and failed is tried again without it, for the rest of the opening:
- * Android refuses a name too long for the scan response (`ADVERTISE_FAILED_DATA_TOO_LARGE`), and a
- * vendor's stack may refuse a scan response with another error, and the name, an opt-in that only
- * confirms which device is the phone, must not fail the session. Not for
+ * A start that carried the name and failed is tried again without it, for the rest of the opening,
+ * when the name is what failed: Android refuses a name too long for the scan response
+ * (`ADVERTISE_FAILED_DATA_TOO_LARGE`), and a vendor's stack may refuse a scan response with another
+ * error, which shows as the first start with the name failing; the name, an opt-in that only
+ * confirms which device is the phone, must not fail the session. Once a start with the name has
+ * succeeded ([started]), a restart's other failure is taken as passing, as one without the name
+ * would be: the name is kept, and the restart tried again later with it. Never for
  * `ADVERTISE_FAILED_ALREADY_STARTED`, which is no failure.
  */
 internal class PhoneName(
@@ -20,18 +23,33 @@ internal class PhoneName(
 ) {
     private var named = show
 
+    // Whether a start with the name has succeeded in this opening.
+    private var worked = false
+
     /** The name for the next start's scan response, or null for none. */
     fun next(): String? = if (named) read()?.takeIf { it.isNotBlank() } else null
 
+    /** Notes that a start carrying [shown] (null: none) succeeded. */
+    fun started(shown: String?) {
+        if (shown != null) worked = true
+    }
+
     /**
      * Whether a start that carried [shown] (null: none) and failed with [errorCode] is to be tried
-     * again without the name; if so, no later start carries it.
+     * again without the name; if so, no later start carries it. Only when the name is what failed:
+     * no start with it has succeeded yet, or it no longer fits.
      */
     fun retryNameless(
         shown: String?,
         errorCode: Int,
     ): Boolean {
-        val retry = shown != null && errorCode != AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED
+        val retry =
+            shown != null &&
+                when (errorCode) {
+                    AdvertiseCallback.ADVERTISE_FAILED_ALREADY_STARTED -> false
+                    AdvertiseCallback.ADVERTISE_FAILED_DATA_TOO_LARGE -> true
+                    else -> !worked
+                }
         if (retry) named = false
         return retry
     }

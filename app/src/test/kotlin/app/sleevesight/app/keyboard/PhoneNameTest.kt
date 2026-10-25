@@ -89,6 +89,32 @@ class PhoneNameTest {
     }
 
     @Test
+    fun onceTheNameHasWorkedAPassingFailureKeepsIt() {
+        val name = PhoneName(show = true) { "Pixel 9" }
+        name.started(name.next())
+        // A restart that fails otherwise is tried again later, with the name.
+        assertFalse(name.retryNameless(name.next(), ADVERTISE_FAILED_INTERNAL_ERROR))
+        assertEquals("Pixel 9", name.next())
+    }
+
+    @Test
+    fun onceTheNameHasWorkedANameThatNoLongerFitsIsDropped() {
+        var current = "Pixel 9"
+        val name = PhoneName(show = true) { current }
+        name.started(name.next())
+        current = "Living room Pixel 9 Pro Fold (old one)"
+        assertTrue(name.retryNameless(name.next(), ADVERTISE_FAILED_DATA_TOO_LARGE))
+        assertNull(name.next())
+    }
+
+    @Test
+    fun aNamelessStartDoesNotCountAsTheNameWorking() {
+        val name = PhoneName(show = true) { "Pixel 9" }
+        name.started(null)
+        assertTrue(name.retryNameless(name.next(), ADVERTISE_FAILED_INTERNAL_ERROR))
+    }
+
+    @Test
     fun alreadyStartedIsNoFailure() {
         val name = PhoneName(show = true) { "Pixel 9" }
         assertFalse(name.retryNameless(name.next(), ADVERTISE_FAILED_ALREADY_STARTED))

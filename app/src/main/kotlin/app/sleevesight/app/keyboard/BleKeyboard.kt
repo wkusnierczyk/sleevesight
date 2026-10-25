@@ -319,6 +319,7 @@ class BleKeyboard(
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
                 if (!latest()) return
                 advertised = true
+                name.started(shown)
                 if (!stopped) onName(shown?.let(::advertisedName))
                 connection()
             }
