@@ -5,11 +5,14 @@ import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 
 /**
- * How the app looks: *Font* (#377), the app's own font, Roboto, or the phone's system font, a
- * change showing at once, in the whole app; and *Logo intro at start* (#383), from the next time
- * the app is opened.
+ * How the app looks: *Theme* (#444), light or dark as the system is, or always one of them;
+ * *Font* (#377), the app's own font, Roboto, or the phone's system font; both showing at once, in
+ * the whole app. *Keep Sources as you left them* (#269), off by default, so the *Sources* list under
+ * each new track's insight starts folded. *Logo intro at start* (#383), from the next time the app
+ * is opened.
  */
 @Composable
 internal fun AppearanceSection(
@@ -17,7 +20,23 @@ internal fun AppearanceSection(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    SectionHeading(R.string.settings_section_appearance)
+    val themes =
+        listOf(
+            ThemeChoice.SYSTEM to stringResource(R.string.settings_theme_system),
+            ThemeChoice.LIGHT to stringResource(R.string.settings_theme_light),
+            ThemeChoice.DARK to stringResource(R.string.settings_theme_dark),
+        )
+    ValueRow(
+        title = stringResource(R.string.settings_theme),
+        value = themes.first { it.first == settings.theme }.second,
+        summary = stringResource(R.string.settings_theme_summary),
+    ) {
+        open(
+            SettingsDialog.Choice(R.string.settings_theme, themes, settings.theme) { theme ->
+                update { it.copy(theme = theme) }
+            },
+        )
+    }
     val fonts =
         listOf(
             FontChoice.APP_FONT to stringResource(R.string.settings_font_app),
@@ -34,6 +53,11 @@ internal fun AppearanceSection(
             },
         )
     }
+    SwitchRow(
+        title = stringResource(R.string.settings_keep_sources),
+        summary = stringResource(R.string.settings_keep_sources_summary),
+        checked = settings.keepSourcesUnfolded,
+    ) { on -> update { it.copy(keepSourcesUnfolded = on) } }
     SwitchRow(
         title = stringResource(R.string.settings_intro),
         summary = stringResource(R.string.settings_intro_summary),

@@ -26,15 +26,20 @@ import kotlin.time.TimeSource
  * play, and MusicBrainz's data changes no faster than that. In memory only, for the process.
  * Whatever *Keep what sources said about each artist* says (#420): that switch is about what is
  * stored on the phone, and this is half an hour of memory that also serves the track's own lookups.
+ *
+ * A recording is kept by its id and by whether its tags were asked for ([tags], as [musicBrainz]
+ * asks: not while *Show genres* is off, #444), so one looked up without them is not served once
+ * they are wanted.
  */
 class RememberedMusicBrainz(
     private val musicBrainz: MusicBrainzLookup,
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val lifetime: Duration = LIFETIME,
     private val capacity: Int = CAPACITY,
+    private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup {
     private val searches = Memory<Pair<String, String>, List<MbRecording>>()
-    private val recordings = Memory<String, MbRecordingDetail>()
+    private val recordings = Memory<Pair<String, Boolean>, MbRecordingDetail>()
     private val works = Memory<String, MbWork>()
     private val artists = Memory<String, MbArtistSearch>()
 
@@ -44,7 +49,7 @@ class RememberedMusicBrainz(
     ): Lookup<List<MbRecording>> = searches.answer(title to artist) { musicBrainz.searchRecordings(title, artist) }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> =
-        recordings.answer(mbid) { musicBrainz.recording(mbid) }
+        recordings.answer(mbid to tags()) { musicBrainz.recording(mbid) }
 
     override suspend fun work(mbid: String): Lookup<MbWork> = works.answer(mbid) { musicBrainz.work(mbid) }
 

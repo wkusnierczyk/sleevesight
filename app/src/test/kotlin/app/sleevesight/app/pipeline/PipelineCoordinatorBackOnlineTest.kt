@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * Back online (#192), as `PipelineCoordinatorTest` runs its sequences: when the network returns,
  * the playing track's run asks again the sources it found unreachable, once per return; the
- * insight then follows *Write insights automatically*: a track not yet written may be written,
+ * insight then follows *Reactive*: a track not yet written may be written,
  * one written is not, without a tap.
  */
 class PipelineCoordinatorBackOnlineTest {
@@ -62,7 +62,7 @@ class PipelineCoordinatorBackOnlineTest {
                 assertEquals(listOf("A"), askedAgain)
             },
             Case(
-                "under When I skip, a natural end asked again is offered, not written",
+                "under On skip, a natural end asked again is offered, not written",
                 mapOf("Zero" to 1),
                 listOf("Zero", "A", "A"),
                 "A",
@@ -76,7 +76,7 @@ class PipelineCoordinatorBackOnlineTest {
                 settle()
             },
             Case(
-                "under When I skip, a skip asked again is written",
+                "under On skip, a skip asked again is written",
                 mapOf("Zero" to 1, "A" to 1),
                 listOf("Zero", "A", "A"),
             ) {

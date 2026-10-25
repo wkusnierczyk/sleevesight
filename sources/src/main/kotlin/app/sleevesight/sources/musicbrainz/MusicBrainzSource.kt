@@ -8,6 +8,7 @@ import app.sleevesight.core.resolution.MusicBrainzEvidence
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import kotlinx.coroutines.Deferred
 import kotlin.time.Clock
 import kotlin.time.TimeSource
@@ -28,15 +29,17 @@ import kotlin.time.TimeSource
 class MusicBrainzSource(
     private val clock: Clock = Clock.System,
     private val timeSource: TimeSource = TimeSource.Monotonic,
+    private val genres: Boolean = true,
 ) : SourceAdapter {
     override val id: SourceId = SourceId.MUSICBRAINZ
 
     /**
      * 2: the result names the resolved artists, for the genre labels (#84). 3: and the date of the
      * first release, for the home screen's year (#52). 4: the artists by name too, and the
-     * recording's tags, for the genre rows (#439).
+     * recording's tags, for the genre rows (#439). Without [genres] (*Show genres* off, #444), it
+     * keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
-    override val extractionVersion: Int = EXTRACTION_VERSION
+    override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
 
     /** It sends no request of its own, and its result names the artists the labels ask about (D13). */
     override val preparesAhead: Boolean = true
@@ -53,7 +56,7 @@ class MusicBrainzSource(
             latency = start.elapsedNow(),
             labelArtists = resolved.artists.filter { it.mbid != null }.distinctBy { it.mbid },
             recordingTags =
-                resolved.recordingMbid?.takeIf { resolved.recordingTags.isNotEmpty() }?.let {
+                resolved.recordingMbid?.takeIf { genres && resolved.recordingTags.isNotEmpty() }?.let {
                     RecordingTags(it, resolved.recordingTags)
                 },
             firstReleased = resolved.firstReleaseDate,

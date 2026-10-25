@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * *Write insights automatically* in each of its modes (D5; architecture, *Writing insights
+ * *Reactive* in each of its modes (D5; architecture, *Writing insights
  * automatically*), through [PipelineCoordinator]: which changes write without a tap, by the cause
  * the session layer gives the latest report, and nothing before the user's first action since the
  * app started: a cold start, a new process, with a new coordinator; a return to the app keeps it,

@@ -94,7 +94,7 @@ internal class World {
     val grants = mutableListOf<String>()
     private val preparing = HashMap<RunId, String>()
 
-    /** The causes the runs' settings write on (`AutoWrite.causes`): *On every track change* unless set. */
+    /** The causes the runs' settings write on (`AutoWrite.causes`): *On track change* unless set. */
     var writesOn: Set<ChangeCause> = mode(WriteAutomatically.ON_EVERY_TRACK_CHANGE)
 
     /**
@@ -417,7 +417,7 @@ internal class World {
             ?.text
 }
 
-/** The causes *Write insights automatically* writes on in [mode], with *Write insights* on. */
+/** The causes *Reactive* writes on in [mode], with *Show insights* on. */
 internal fun mode(mode: WriteAutomatically): Set<ChangeCause> = AutoWrite.causes(Settings(writeAutomatically = mode))
 
 // The steps of a sequence.
@@ -478,7 +478,7 @@ internal fun World.background(on: Boolean) {
     advance(0)
 }
 
-/** *Pause automatic writing after* set to [after] track changes away, or *Off* (#203). */
+/** *Saver* set to [after] track changes away, or *Off* (#203). */
 internal fun World.pause(after: Int?) {
     send(CoordinatorEvent.PauseAutoWriteChanged(after))
     advance(0)
