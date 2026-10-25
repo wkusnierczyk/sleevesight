@@ -31,7 +31,8 @@ internal class AccentPictures(
     /**
      * [content] on a surface of the app's theme, light or [dark], its links marked as [linkStyle]
      * says (#519), and the scheme it was drawn in. With [firstFrame], as it is after its first frame
-     * alone, the clock stopped there; else once all is idle.
+     * alone, the clock stopped there while [check] runs and running again after it; else once all
+     * is idle.
      */
     fun show(
         dark: Boolean,
@@ -41,17 +42,21 @@ internal class AccentPictures(
         check: (ColorScheme) -> Unit,
     ) = ActivityScenario.launch(MainActivity::class.java).use { scenario ->
         if (firstFrame) compose.mainClock.autoAdvance = false
-        var scheme: ColorScheme? = null
-        scenario.onActivity {
-            it.setContent {
-                SleevesightTheme(darkTheme = dark, linkStyle = linkStyle) {
-                    scheme = MaterialTheme.colorScheme
-                    Surface { content() }
+        try {
+            var scheme: ColorScheme? = null
+            scenario.onActivity {
+                it.setContent {
+                    SleevesightTheme(darkTheme = dark, linkStyle = linkStyle) {
+                        scheme = MaterialTheme.colorScheme
+                        Surface { content() }
+                    }
                 }
             }
+            if (firstFrame) compose.mainClock.advanceTimeByFrame() else compose.waitForIdle()
+            check(checkNotNull(scheme))
+        } finally {
+            compose.mainClock.autoAdvance = true
         }
-        if (firstFrame) compose.mainClock.advanceTimeByFrame() else compose.waitForIdle()
-        check(checkNotNull(scheme))
     }
 
     /** The node tagged [tag], as drawn. */
