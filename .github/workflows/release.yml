@@ -54,16 +54,17 @@ jobs:
       # A bundle for a testing track starts in developer mode, so testers reach *Diagnostics* without
       # seven taps on *Version*; one for `production` does not (#451). Play promotes a bundle from
       # one track to the next as it is, so the production release is a bundle of its own, from a tag
-      # of its own (`design/release.md`, *Test and production builds*).
+      # of its own on the tested code: `release-track.sh` refuses a production tag that changes more
+      # than release notes since the tag before it, and a track id it does not take
+      # (`design/release.md`, *Test and production builds*). The approval comes before this step,
+      # so the summary confirms the track; the check is what stops a `PLAY_TRACK` left at production.
       - name: Track and developer mode
         id: track
         env:
-          TRACK: ${{ vars.PLAY_TRACK || 'internal' }}
+          TRACK: ${{ vars.PLAY_TRACK }}
         run: |
-          if [ "$TRACK" = production ]; then developer=false; else developer=true; fi
-          echo "name=$TRACK" >> "$GITHUB_OUTPUT"
-          echo "developer-mode=$developer" >> "$GITHUB_OUTPUT"
-          echo "For the \`$TRACK\` track: developer mode $developer by default." >> "$GITHUB_STEP_SUMMARY"
+          git fetch --no-tags origin '+refs/tags/v*:refs/tags/v*'
+          .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"
 
       # Every release ships with its notes, reviewed with the change that ships: notes that are
       # missing, or that `check-release-notes.sh` refuses, stop the run before the build. A tag that
