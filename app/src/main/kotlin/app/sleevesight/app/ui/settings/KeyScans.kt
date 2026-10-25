@@ -31,7 +31,12 @@ internal fun scanned(
 ): Scanned =
     when (purpose) {
         ScanFor.KEY -> {
-            scanFailure(id, scanned)?.let { Scanned(failed = it) } ?: Scanned(key = scanned)
+            // A keyboard session's code is never a key: it starts that session (#432).
+            if (KeyboardSession.isSessionCode(scanned)) {
+                scanned(ScanFor.KEYBOARD, id, scanned, ledger)
+            } else {
+                scanFailure(id, scanned)?.let { Scanned(failed = it) } ?: Scanned(key = scanned)
+            }
         }
 
         ScanFor.KEYBOARD -> {

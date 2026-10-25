@@ -67,6 +67,7 @@ internal object SettingsCodec {
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
+    private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
@@ -111,6 +112,7 @@ internal object SettingsCodec {
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
+            showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs, defaults),
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
@@ -215,6 +217,9 @@ internal object SettingsCodec {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        if (moved { it.showGroundingDetails }) {
+            prefs.put(GROUNDING_DETAILS, settings.showGroundingDetails, defaults.showGroundingDetails)
+        }
         // Without its key, it reads as *Diagnostics*'s key, or with neither as its default
         // ([developerModeOf]). Moved, it is stored only where that would read otherwise, against its
         // own default, not *Diagnostics*'s: in a build where it is on by default (#451), developer

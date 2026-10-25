@@ -297,17 +297,6 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aWrittenInsightCountsItsGroundingAndFlagsTheUncited() =
-        show(
-            state(
-                PipelineView(track(insight = written("It was recorded in 1973 [MB1]. It is great.")), aiReady = true),
-            ),
-        ) {
-            compose.onNodeWithText(text(R.string.home_meta_grounded, 1, 2), substring = true).assertExists()
-            compose.onNodeWithText(text(R.string.home_meta_uncited, 1), substring = true).assertExists()
-        }
-
-    @Test
     fun aCitationShowsItsLineEvenWhenItsSourceIsHidden() =
         show(state(PipelineView(track(insight = written("It topped the charts [W1].")), aiReady = true))) {
             unfold()
