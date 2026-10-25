@@ -64,7 +64,7 @@ fun insightReport(
 // The MusicBrainz ids the run resolved. With no resolution, the artists' ids MusicBrainz's result
 // holds, if it has one: the run makes none when every source's findings were kept from before, which
 // it then says; it has none either when MusicBrainz is off, or the resolution failed.
-private fun StringBuilder.appendMusicBrainz(track: TrackState) {
+internal fun StringBuilder.appendMusicBrainz(track: TrackState) {
     appendLine("MusicBrainz ids")
     val resolution = track.resolution
     if (resolution == null) {
@@ -122,12 +122,12 @@ private fun StringBuilder.appendEvidence(
     }
 }
 
-private fun length(duration: Duration): String {
+internal fun length(duration: Duration): String {
     val seconds = duration.inWholeSeconds
     return "${seconds / SECONDS_PER_MINUTE}:${(seconds % SECONDS_PER_MINUTE).toString().padStart(2, '0')}"
 }
 
-private fun providerName(provider: ProviderId): String =
+internal fun providerName(provider: ProviderId): String =
     when (provider) {
         ProviderId.ANTHROPIC -> "Anthropic"
         ProviderId.OPENAI -> "OpenAI"
@@ -135,7 +135,7 @@ private fun providerName(provider: ProviderId): String =
         ProviderId.OLLAMA -> "Ollama"
     }
 
-private fun effortName(effort: ReasoningEffort?): String = effort?.name?.lowercase() ?: "the service's default"
+internal fun effortName(effort: ReasoningEffort?): String = effort?.name?.lowercase() ?: "the service's default"
 
 private const val NONE = "none"
 private const val NOT_REPORTED = "not reported"

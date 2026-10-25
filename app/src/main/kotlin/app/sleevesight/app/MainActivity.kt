@@ -19,6 +19,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import app.sleevesight.app.report.AppBuild
+import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.home.HomeFeed
@@ -27,6 +29,7 @@ import app.sleevesight.app.ui.logo.LocalLogoIntro
 import app.sleevesight.app.ui.logo.LogoIntro
 import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.logo.endsOnKeys
+import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.isAppInDarkTheme
@@ -52,6 +55,26 @@ class MainActivity : ComponentActivity() {
             playerActivity = graph.sessions::playerActivity,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
+        )
+    }
+
+    // What Home's tester report button reads (#452): what the app knows at the tap, never a key.
+    private val testerReport: TesterReportFeed by lazy {
+        TesterReportFeed(
+            settings = graph.settings.settings,
+            reports =
+                TesterReports(
+                    build =
+                        AppBuild(
+                            versionName = BuildConfig.VERSION_NAME,
+                            versionCode = BuildConfig.VERSION_CODE.toLong(),
+                            testBuild = BuildConfig.DEVELOPER_MODE_DEFAULT,
+                        ),
+                    view = graph.pipeline.state,
+                    playing = graph.sessions.nowPlaying,
+                    playback = graph.sessions.playback,
+                    diagnostics = graph.diagnostics,
+                ),
         )
     }
 
@@ -97,6 +120,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 pipeline = { NowPlayingHome(homeFeed) },
                                 diagnostics = { DiagnosticsScreen(graph.diagnostics) },
+                                testerReport = testerReport,
                             )
                         }
                         intro?.let { LogoIntroOverlay(it) }

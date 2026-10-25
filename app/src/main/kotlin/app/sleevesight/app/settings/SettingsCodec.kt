@@ -68,6 +68,7 @@ internal object SettingsCodec {
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
     private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
+    private val REPORT_BUTTON = booleanPreferencesKey("developer.report_button")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
@@ -114,6 +115,7 @@ internal object SettingsCodec {
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs, defaults),
+            reportButton = prefs[REPORT_BUTTON] ?: defaults.reportButton,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
@@ -231,6 +233,7 @@ internal object SettingsCodec {
         if (moved { it.developerMode } || (moved { it.showDiagnostics } && DEVELOPER_MODE !in prefs)) {
             prefs.put(DEVELOPER_MODE, settings.developerMode, impliedDeveloperMode)
         }
+        if (moved { it.reportButton }) prefs.put(REPORT_BUTTON, settings.reportButton, defaults.reportButton)
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)

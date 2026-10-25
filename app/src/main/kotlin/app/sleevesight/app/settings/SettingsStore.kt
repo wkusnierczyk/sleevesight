@@ -95,9 +95,14 @@ class SettingsStore(
         /**
          * The settings' defaults in this build: `:core`'s, with developer mode's as the build sets
          * it (`BuildConfig.DEVELOPER_MODE_DEFAULT`, #451): on in a build for Play's testing tracks,
-         * so testers reach *Diagnostics* without seven taps on *Version*, and off in any other.
+         * so testers reach *Diagnostics* without seven taps on *Version*, and off in any other. The
+         * tester's *Report button* (#452) follows the same flag: on in that build, off in any other.
          */
-        val BUILD_DEFAULTS: Settings = Settings(developerMode = BuildConfig.DEVELOPER_MODE_DEFAULT)
+        val BUILD_DEFAULTS: Settings =
+            Settings(
+                developerMode = BuildConfig.DEVELOPER_MODE_DEFAULT,
+                reportButton = BuildConfig.DEVELOPER_MODE_DEFAULT,
+            )
 
         /** The first retry of a failed read: soon, as a passing I/O error clears in moments. */
         val FIRST_RETRY: Duration = 250.milliseconds

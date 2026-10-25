@@ -74,6 +74,9 @@
     <string name="settings_developer_already_on">Developer mode is already on</string>
     <string name="settings_grounding_details">Show grounding details</string>
     <string name="settings_grounding_details_summary">Under each insight, the grounding check’s counts in full: how many sentences are grounded, and how many come from the model’s own knowledge, are uncited, or cite missing evidence.</string>
+    <!-- Developer: Home's button for a tester's report (#452). -->
+    <string name="settings_report_button">Report button</string>
+    <string name="settings_report_button_summary">Shows a button on Home that collects what the app knows at that moment into a report, for you to review, edit and send from your mail app.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
 </resources>
