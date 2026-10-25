@@ -357,7 +357,8 @@ class PurgeKeysTest {
                             gatedSecrets,
                             saves,
                             scanner = { },
-                            keyboard = { _, _, _ -> },
+                            keyboard = { _, _, _, _ -> },
+                            showPhoneName = false,
                             onSealFailed = { sealFailed = it },
                             onDismiss = {},
                         )

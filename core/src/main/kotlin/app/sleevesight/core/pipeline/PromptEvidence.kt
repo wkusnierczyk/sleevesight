@@ -1,8 +1,11 @@
 package app.sleevesight.core.pipeline
 
+import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
+import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.resolution.MusicBrainzEvidence
 
 /**
  * The evidence an insight's prompt is written from (#239, `design/design.md`, *Synthesis*): the
@@ -27,6 +30,16 @@ import app.sleevesight.core.evidence.Scope
  * web search off, so how insights use the artist lines on tracks whose own lines are mostly web
  * results was not measured. With web search on, most tracks reach [ENOUGH_OF_ITS_OWN].
  *
+ * The player's own release line (`P`, [SourceId.PLAYER]) is left out too when MusicBrainz's
+ * first-release line names that release as the album the song first came out on
+ * ([restatesRelease], #424): "first released ..., on the album “Sundown”". On thinly documented
+ * tracks the model padded the insight with a sentence citing the `P` line alone ("This recording
+ * is on that same "Sundown" release [P1]"), cited and true but telling nothing the line before it
+ * had not; with no `P` line there is nothing to restate. Where the song first came out elsewhere,
+ * as for a compilation or a soundtrack, the `P` line stays, and a sentence citing it tells the
+ * listener where this recording comes from. The release stays in the prompt's track block either
+ * way.
+ *
  * Which lines are left out depends on the session, so the synthesis cache keys a card by the whole
  * evidence's fingerprint, not the one sent: a track played again finds the card it was given.
  */
@@ -40,20 +53,102 @@ object PromptEvidence {
     /** The scopes of lines about the track itself, not its artist or the player's release. */
     val TRACK_SCOPES: Set<Scope> = setOf(Scope.SONG, Scope.ORIGINAL_SONG, Scope.WEB)
 
-    /** What to send of [evidence], given the facts [citedByOthers] cited in the session. */
+    /**
+     * What to send of [evidence], given the facts [citedByOthers] cited in the session and the
+     * [release] the player reports (`NowPlaying.album`, the `P` line's), null when it reports none.
+     * With [artistFactsOnce] off (*Tell an artist's facts once per session*, #407), every
+     * artist-level line is sent, and only a restated release line is left out (#424).
+     */
     fun of(
         evidence: EvidenceSet,
+        release: String?,
         citedByOthers: Set<ArtistFact>,
         hasher: Hasher,
+        artistFactsOnce: Boolean = true,
     ): EvidenceSet {
         val own = evidence.lines.count { it.scope in TRACK_SCOPES }
+        val restated = restatesRelease(evidence, release)
         val sent =
-            if (own >= ENOUGH_OF_ITS_OWN) {
-                evidence.without(hasher) { it.scope == Scope.ARTIST }
-            } else {
-                evidence.without(hasher) { it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers }
+            when {
+                !artistFactsOnce -> evidence.without(hasher, restated)
+                own >= ENOUGH_OF_ITS_OWN -> evidence.without(hasher) { it.scope == Scope.ARTIST || restated(it) }
+                else ->
+                    evidence.without(hasher) {
+                        (it.scope == Scope.ARTIST && ArtistFact.of(it) in citedByOthers) || restated(it)
+                    }
             }
         // Decided on the retrieved lines alone: the artists' report does not matter with model knowledge off.
         return if (sent.nothingToNarrate(allowModel = false, artistsKnown = true)) evidence else sent
     }
+
+    /**
+     * Which lines of [evidence] only restate the player's [release]: its `P` line, when MusicBrainz's
+     * first-release line says the song first came out on an album of the same name
+     * ([MusicBrainzEvidence.firstReleaseAlbum]). The names are compared whole, folded as an
+     * [ArtistFact]'s text is ([ArtistFact.matchKey]: case, spacing, quotation marks, apostrophes,
+     * dashes and a closing full stop), the player's less its closing bracketed parts ([edition]: its
+     * "Rubber Soul (Remastered)" is MusicBrainz's “Rubber Soul”). MusicBrainz's name is taken as it
+     * is: a song first released on “Sundown (Live)” came out on another edition than the studio
+     * "Sundown" the player reports, so its line stays.
+     *
+     * So the album "Greatest Hits" is not “Greatest Hits II”, and the track's title or the artist
+     * credit, which the line quotes too, never counts: on a title track first released as a single
+     * (“Sundown” ... on the single “Sundown”) the line stays, since the album it is on is another
+     * release. The other sources' lines do not count either, being free text: Wikipedia's "from his
+     * 1974 album Sundown" may name the release, but a name found inside a sentence may be part of a
+     * longer one, or another recording's. A player's " - Single" or " - EP" is kept in its name, so
+     * its single is not taken for the album.
+     */
+    internal fun restatesRelease(
+        evidence: EvidenceSet,
+        release: String?,
+    ): (EvidenceLine) -> Boolean {
+        val wanted = release?.let { ArtistFact.matchKey(edition(it)) }?.takeIf { it.isNotEmpty() }
+        val named =
+            wanted != null &&
+                evidence.lines.any { line ->
+                    line.source == SourceId.MUSICBRAINZ &&
+                        line.scope == Scope.SONG &&
+                        MusicBrainzEvidence.firstReleaseAlbum(line.text)?.let { ArtistFact.matchKey(it) } == wanted
+                }
+        return { line -> named && line.source == SourceId.PLAYER }
+    }
+
+    /**
+     * [release] less its closing bracketed parts, `(…)` or `[…]`, each balanced (nested ones
+     * included) and with any white space before it (no-break spaces too), one after another, as long
+     * as something is left: "Sundown (Remastered (2024)) [Deluxe]" is "Sundown", "(Untitled)
+     * (Deluxe)" is "(Untitled)". An unbalanced closing bracket ends the stripping.
+     */
+    internal fun edition(release: String): String {
+        var name = release.trim()
+        var rest = less(name)
+        while (rest != null) {
+            name = rest
+            rest = less(name)
+        }
+        return name
+    }
+
+    // [name] less the bracketed part it ends with and the white space before it; null when it ends
+    // with none, or nothing would be left.
+    private fun less(name: String): String? =
+        openerOfLast(name)?.let { name.substring(0, it).trim() }?.takeIf { it.isNotEmpty() }
+
+    // The index of the bracket that opens the one [name] ends with, or null when it ends with none or
+    // it is not balanced.
+    private fun openerOfLast(name: String): Int? {
+        if (name.isEmpty() || name.last() !in CLOSERS) return null
+        var depth = 0
+        return name.indices.reversed().firstOrNull { i ->
+            when (name[i]) {
+                in CLOSERS -> depth++
+                in OPENERS -> depth--
+            }
+            depth == 0
+        }
+    }
+
+    private val OPENERS = setOf('(', '[')
+    private val CLOSERS = setOf(')', ']')
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.ui.theme.plainSwitchColors
 
 private const val DISABLED_ALPHA = 0.38f
 
@@ -69,7 +70,7 @@ internal fun SwitchRow(
             below?.invoke()
         }
         Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = plainSwitchColors())
     }
 }
 

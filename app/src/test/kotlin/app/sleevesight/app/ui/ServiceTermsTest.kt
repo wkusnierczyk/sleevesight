@@ -16,6 +16,7 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -78,7 +79,7 @@ class ServiceTermsTest {
 
     private fun show(
         scanner: QrScanner = { },
-        keyboard: ComputerKeyboard = { _, _, _ -> },
+        keyboard: ComputerKeyboard = { _, _, _, _ -> },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -152,7 +153,7 @@ class ServiceTermsTest {
     fun withATypeOnAComputerSessionRunningTheTermsAndTheSessionScrollIntoView() =
         show(scanner = scanning(KeyboardVectors.freshCode()), keyboard = tall) {
             compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_key_type)).performClick()
+            compose.onNodeWithContentDescription(text(R.string.settings_key_type)).performClick()
             waitForText(SESSION_END)
             compose.onNodeWithText(SESSION_END).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("ai.google.dev/gemini-api/terms").performScrollTo().assertIsDisplayed()
@@ -184,7 +185,7 @@ class ServiceTermsTest {
         }
 
     /** A keyboard session taller than the screen, ending in a line of text, [SESSION_END]. */
-    private val tall: ComputerKeyboard = { _, _, _ ->
+    private val tall: ComputerKeyboard = { _, _, _, _ ->
         Column {
             Box(Modifier.height(1_200.dp))
             Text(SESSION_END)

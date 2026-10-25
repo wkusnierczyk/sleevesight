@@ -34,6 +34,13 @@ class SettingsTest {
     }
 
     @Test
+    fun `turning developer mode off turns off every developer option`() {
+        val on = Settings(developerMode = true, showDiagnostics = true, showGroundingDetails = true)
+        assertEquals(Settings(), on.withoutDeveloperMode())
+        assertFalse(defaults.showGroundingDetails)
+    }
+
+    @Test
     fun `the app's own font is the default, not the system's`() {
         assertEquals(FontChoice.APP_FONT, defaults.font)
     }

@@ -10,6 +10,8 @@
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
     <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
     <string name="settings_keys_short">Private API keys enabling external services</string>
+    <string name="settings_show_phone_name">Show this phone’s name to the computer</string>
+    <string name="settings_show_phone_name_summary">For Type on a computer: while its session is open, the phone advertises its Bluetooth name, so the computer’s list shows the phone by it. Anyone nearby scanning for Bluetooth can see the name meanwhile. Off: the phone is the only device listed, as “Unknown or Unsupported Device”.</string>
     <string name="settings_keys_long">Sleevesight uses external services that require authentication via API keys, obtained from each service’s own website. Your keys are stored encrypted on this phone, and each is sent only to its own service.</string>
     <string name="settings_genres_short">Current music genres</string>
     <string name="settings_genres_long">Sleevesight collects genre information from sources and compiles a short list of representative categories.</string>
@@ -72,6 +74,11 @@
     </plurals>
     <string name="settings_developer_on">Developer mode is on</string>
     <string name="settings_developer_already_on">Developer mode is already on</string>
+    <string name="settings_grounding_details">Show grounding details</string>
+    <string name="settings_grounding_details_summary">Under each insight, the grounding check’s counts in full: how many sentences are grounded, and how many come from the model’s own knowledge, are uncited, or cite missing evidence.</string>
+    <!-- Developer: Home's button for a tester's report (#452). -->
+    <string name="settings_report_button">Report button</string>
+    <string name="settings_report_button_summary">Shows a button on Home that collects what the app knows at that moment into a report, for you to review, edit and send from your mail app.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
 

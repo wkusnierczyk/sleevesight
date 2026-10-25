@@ -88,12 +88,26 @@ import kotlin.time.Duration.Companion.seconds
  *   nothing about the next. On, a list shown past its first screenful but not in full comes back
  *   at its first screenful. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh.
+ * @property showPhoneName *Show this phone's name to the computer* (#433): whether *Type on a
+ *   computer* advertises the phone's Bluetooth name, in the scan response, while a session's dialog
+ *   is open, so the computer's device chooser lists the phone by it. Off by default: anyone nearby
+ *   scanning for Bluetooth would see the name meanwhile, and the chooser lists the phone alone
+ *   either way, nameless as *Unknown or Unsupported Device*.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
+ * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
+ *   insight card shows the grounding check's full counts ("2 of 3 sentences grounded · 1 uncited")
+ *   rather than only a note when a sentence is not backed by the sources. Off: the citations
+ *   already show how each sentence is grounded. #440 adds the full source statuses to it.
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
  *   section, the options a developer or tester may want and a listener will not. Turned on by seven
  *   taps on *Version*, off by its switch, which turns off every developer option with it
- *   ([withoutDeveloperMode]). Off by default.
+ *   ([withoutDeveloperMode]). Off by default here; a build for Play's testing tracks makes it on
+ *   by default (#451: `:app`'s `SettingsStore.BUILD_DEFAULTS`), so testers reach the diagnostics.
+ * @property reportButton *Report button* (#452), a developer setting: whether Home shows a small
+ *   button that collects the app's state into a report for the tester to review, edit and send
+ *   from their own mail app. Shown only in developer mode. Off by default here; on by default in a
+ *   build for Play's testing tracks, as [developerMode] is (`:app`'s `SettingsStore.BUILD_DEFAULTS`).
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
@@ -126,8 +140,11 @@ data class Settings(
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val keepSourcesUnfolded: Boolean = false,
+    val showPhoneName: Boolean = false,
     val showDiagnostics: Boolean = false,
+    val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
+    val reportButton: Boolean = false,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
@@ -213,10 +230,12 @@ data class Settings(
     fun givesLabels(source: LabelSource): Boolean = showGenres && source in labelSources && isEnabled(source.source)
 
     /**
-     * These settings with developer mode off, and with it every developer option ([showDiagnostics]),
-     * so nothing hidden keeps running. A developer option joins here with its setting.
+     * These settings with developer mode off, and with it every developer option ([showDiagnostics],
+     * [showGroundingDetails], [reportButton]), so nothing hidden keeps running. A developer option
+     * joins here with its setting.
      */
-    fun withoutDeveloperMode(): Settings = copy(developerMode = false, showDiagnostics = false)
+    fun withoutDeveloperMode(): Settings =
+        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false, reportButton = false)
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"

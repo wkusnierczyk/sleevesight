@@ -138,6 +138,7 @@ fun SettingsScreen(
                 saves,
                 scanner,
                 keyboard,
+                showPhoneName = settings?.showPhoneName ?: false,
                 onSealFailed = { sealFailed = it },
                 onDismiss = close,
             )
@@ -349,7 +350,7 @@ private fun SettingsContent(
         FoldedSection(SettingsSection.AI_SERVICES, folds) {
             AiSection(settings, secrets, navigation.modelName, update, open)
         }
-        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(keys, settings.developerMode, open) }
+        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
         FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
         FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }

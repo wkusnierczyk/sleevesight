@@ -14,6 +14,11 @@ import app.sleevesight.core.settings.Settings
  *
  * - *Diagnostics*, off by default, and while it is on the way to the diagnostics screen
  *   ([openDiagnostics]; `design/design.md`, *Diagnostics*).
+ * - *Show grounding details* (#437), off by default: the grounding check's counts in full under
+ *   each insight, where otherwise only a note shows, and only for a sentence the sources do not
+ *   back (`Settings.showGroundingDetails`). #440 adds the full source statuses to it.
+ * - *Report button* (#452): Home's button for a tester's report ([Settings.reportButton]), on by
+ *   default in the test build and off in any other.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -36,6 +41,16 @@ internal fun DeveloperSection(
             onClick = openDiagnostics,
         )
     }
+    SwitchRow(
+        title = stringResource(R.string.settings_grounding_details),
+        summary = stringResource(R.string.settings_grounding_details_summary),
+        checked = settings.showGroundingDetails,
+    ) { on -> update { it.copy(showGroundingDetails = on) } }
+    SwitchRow(
+        title = stringResource(R.string.settings_report_button),
+        summary = stringResource(R.string.settings_report_button_summary),
+        checked = settings.reportButton,
+    ) { on -> update { it.copy(reportButton = on) } }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),

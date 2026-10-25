@@ -13,11 +13,11 @@
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
-    <string name="first_run_to_developer">To the developer, only if you send it: a report of a problem with an insight. “Report a problem” shows the whole report, with the track, the insight and its evidence, and the AI service and model that wrote it, and hands it to your mail app, addressed to support@sleevesight.app. It reaches the developer only if you send it; until then your mail app handles it as any message you write, which may keep a draft in your mail account. Never your API keys, history or settings.</string>
+    <string name="first_run_to_developer">To the developer, only if you send it: a report of a problem with an insight. “Report a problem” shows the whole report, with the track, the insight and its evidence, and the AI service and model that wrote it, and hands it to your mail app, addressed to support@sleevesight.app. It reaches the developer only if you send it; until then your mail app handles it as any message you write, which may keep a draft in your mail account. That report never holds your API keys, history or settings. In developer mode with “Report button” on (the test build’s default), a button on Home does the same for a report of the app’s state: its settings, what it received from the player, the sources and the AI service, and its diagnostics, with the track changes only if you add them; never your API keys.</string>
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
 
     <string name="first_run_stays_title">What stays on the phone</string>
-    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself or hand a problem report to your mail app. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
+    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself, hand a report to your mail app, or type a key on a computer, when the phone advertises itself over Bluetooth to devices nearby. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
     <!-- What a screen reader says a tap on a web address shown as a link does (the privacy policy's, an AI service's terms). -->
     <string name="link_open">Open in your browser</string>
@@ -56,8 +56,11 @@
     <string name="settings_key_name_lastfm">Last.fm API key</string>
     <string name="settings_key_name_exa">Exa API key</string>
     <string name="settings_key_recipient_exa">Exa</string>
-    <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again.</string>
+    <string name="settings_key_hint">Stored encrypted on this phone, and sent only to %1$s. A saved key is never shown again. You can only preview the key you enter before it’s saved.</string>
     <string name="settings_key_field">Key</string>
+    <!-- The eye in a key's field, named for what a tap does. -->
+    <string name="settings_key_show">Show key</string>
+    <string name="settings_key_hide">Hide key</string>
     <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. -->
     <string name="settings_terms_anthropic">Using this key means agreeing to Anthropic’s Commercial Terms of Service. They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
     <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
@@ -180,7 +183,9 @@
     <string name="keyboard_code_unreadable">This keyboard code cannot be read: it may be of a later version. Update Sleevesight, or reload the page on the computer and scan again.</string>
     <string name="keyboard_code_used">This keyboard code was used already. Reload the page on the computer, and scan its new code.</string>
     <string name="keyboard_starting">Starting Bluetooth…</string>
-    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone.</string>
+    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Show this phone’s name to the computer” is on, under Secrets.</string>
+    <string name="keyboard_waiting_named">Waiting for the computer: on the page, choose “Connect” and pick this phone, listed as “%1$s”.</string>
+    <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name could not be advertised (it may be too long, or not set), so it shows as “Unknown or Unsupported Device”.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>
     <string name="keyboard_off">Bluetooth is off. Turn it on, and the phone waits for the computer.</string>
     <string name="keyboard_refused">Sleevesight may not use Bluetooth. Allow “Nearby devices” for Sleevesight in the phone’s settings, or type the key here.</string>

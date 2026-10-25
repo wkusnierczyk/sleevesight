@@ -83,8 +83,11 @@ class SettingsCodecTest {
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
                 keepSourcesUnfolded = true,
+                showPhoneName = true,
                 showDiagnostics = true,
+                showGroundingDetails = true,
                 developerMode = true,
+                reportButton = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
@@ -175,18 +178,52 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun developerModeIsStoredOnlyWhereDiagnosticsWouldReadOtherwise() {
+    fun developerModeIsStoredWhereDiagnosticsWouldReadOtherwiseAndKeptOnceStored() {
+        // Turned on with *Diagnostics*, which reads as developer mode on, its own key is not needed.
+        val both = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), both)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true), both)
+
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(Settings(developerMode = true), prefs)
         assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.mode") to true), prefs)
-        // With *Diagnostics* on, which reads as developer mode on, its own key is not needed.
+        // Once stored, it stays when *Diagnostics* moves: another build's default may need it.
         SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), prefs)
-        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true), prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                booleanPreferencesKey("developer.mode") to true,
+                booleanPreferencesKey("developer.diagnostics") to true,
+            ),
+            prefs,
+        )
         // Turned off, with its options, nothing is left.
         SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true).withoutDeveloperMode(), prefs)
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
         // A state no screen makes, kept as it is: developer mode off with *Diagnostics* on.
         assertEquals(Settings(showDiagnostics = true), roundTrip(Settings(showDiagnostics = true)))
+    }
+
+    @Test
+    fun thePhonesNameIsHiddenByDefaultAndShownUnderItsKey() {
+        // As stored before the setting existed (#433): other settings, and no name shown.
+        val before = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertFalse(SettingsCodec.read(before).showPhoneName)
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(showPhoneName = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("keyboard.show_phone_name") to true), prefs)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned off again, it is the default and has no key", prefs.asMap().isEmpty())
+    }
+
+    @Test
+    fun showGroundingDetailsIsStoredUnderItsKeyAndClearedWithDeveloperMode() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true), prefs)
+        assertEquals(true, prefs[booleanPreferencesKey("developer.grounding_details")])
+        assertTrue(SettingsCodec.read(prefs).showGroundingDetails)
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
+        assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
     }
 
     @Test
