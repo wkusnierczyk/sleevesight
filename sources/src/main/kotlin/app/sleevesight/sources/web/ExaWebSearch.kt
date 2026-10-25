@@ -35,8 +35,9 @@ import kotlin.time.TimeSource
  *
  * The query names the song and its credited artists ([ExaSearchRequest.of]); the results are then
  * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The adapter does not
- * wait for [Resolution]: a web result has no id to verify against, so the filter is its check, and
- * its lines stay unverified like any other source's that MusicBrainz cannot confirm.
+ * wait for [Resolution]: a web result has no id to verify against, so the filter is its only check.
+ * A kept result's line goes in [SourceResult.evidence] and may be cited, never checked against
+ * the ids MusicBrainz resolves.
  *
  * Outcomes: [Outcome.SongArticle] when a result is kept; [Outcome.Rejected] when results came back
  * and none passed the filter; [Outcome.None] when none came back, or when the track cannot be
