@@ -14,6 +14,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Layout
+import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
@@ -88,6 +89,7 @@ class SettingsCodecTest {
                 showGroundingDetails = true,
                 developerMode = true,
                 reportButton = true,
+                linkStyle = LinkStyle.HIGHLIGHT,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
@@ -224,6 +226,24 @@ class SettingsCodecTest {
         SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
         assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
+    }
+
+    @Test
+    fun theLinkStyleIsUnderlinedByDefaultStoredByNameAndClearedWithDeveloperMode() {
+        // As stored before the setting existed (#519): other settings, and no link style.
+        val before = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertEquals(LinkStyle.UNDERLINE, SettingsCodec.read(before).linkStyle)
+        val prefs = mutablePreferencesOf()
+        val highlighted = Settings(developerMode = true, linkStyle = LinkStyle.HIGHLIGHT)
+        SettingsCodec.write(highlighted, prefs)
+        assertEquals("HIGHLIGHT", prefs[stringPreferencesKey("developer.link_style")])
+        assertEquals(highlighted, SettingsCodec.read(prefs))
+        // A name this version does not know, as a later one may store, reads as the default.
+        prefs[stringPreferencesKey("developer.link_style")] = "DOTTED"
+        assertEquals(LinkStyle.UNDERLINE, SettingsCodec.read(prefs).linkStyle)
+        prefs[stringPreferencesKey("developer.link_style")] = "HIGHLIGHT"
+        SettingsCodec.write(highlighted.withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
     }
 
     @Test

@@ -79,6 +79,10 @@
     <!-- Developer: Home's button for a tester's report (#452). -->
     <string name="settings_report_button">Report button</string>
     <string name="settings_report_button_summary">Shows a button on Home that collects what the app knows at that moment into a report, for you to review, edit and send from your mail app.</string>
+    <string name="settings_link_style">Link style</string>
+    <string name="settings_link_style_summary">How links are marked: a thin line below them, or a faint highlight behind them.</string>
+    <string name="settings_link_style_underline">Underline</string>
+    <string name="settings_link_style_highlight">Highlight</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
 </resources>
