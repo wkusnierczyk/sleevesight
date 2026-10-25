@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Report a problem (#390): composed in the app, sent from the user's own mail app. -->
+<resources>
+    <!-- The insight card's action, and what a screen reader says for it. -->
+    <string name="report_action">Report a problem</string>
+    <string name="report_action_description">Report a problem with this insight</string>
+
+    <string name="report_title">Report a problem</string>
+    <!-- %1$s is the support address. -->
+    <string name="report_intro">Tell the developer what is wrong with this insight. The report opens in your mail app, addressed to %1$s, and reaches the developer only if you send it from there. Until then your mail app handles it as any message you write, which may keep a draft in your mail account.</string>
+    <string name="report_reason">What is wrong?</string>
+    <string name="report_reason_offensive">Offensive or inappropriate</string>
+    <string name="report_reason_wrong">Wrong</string>
+    <string name="report_reason_other">Other</string>
+    <string name="report_note">Note (optional)</string>
+    <string name="report_preview_title">What is sent</string>
+    <string name="report_preview_hint">Exactly this, and never your API keys, history or settings. Your mail app adds your email address as the sender.</string>
+    <string name="report_preview_waits">Choose what is wrong to see the report.</string>
+    <string name="report_send">Open in mail app</string>
+    <string name="report_cancel">Cancel</string>
+    <string name="report_close">Close</string>
+    <!-- %1$s is the support address. -->
+    <string name="report_no_mail_app">No mail app on this phone can take the report. Copy it, and send it to %1$s from wherever you write email.</string>
+    <!-- %1$s is the support address. Below Android 13, which confirms a copy itself. -->
+    <string name="report_copied">Copied. Paste it into an email to %1$s.</string>
+    <!-- %1$s is the support address. Android 13 and later confirm the copy themselves. -->
+    <string name="report_paste">Paste it into an email to %1$s.</string>
+    <string name="report_copy">Copy report</string>
+    <!-- %1$s is the support address. A body too long for the mail's address, handed beside it. -->
+    <string name="report_long">The report is long, and some mail apps open it without its text. It is copied too: if the message to %1$s is empty, paste it there.</string>
+</resources>

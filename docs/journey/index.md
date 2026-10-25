@@ -24,8 +24,8 @@ In short: you install the app, read what it sends where, and give it notificatio
 **The first-run screen.** Opened for the first time, Sleevesight shows one screen before anything else, and reads, builds or sends nothing until you continue past it. It says, under three headings:
 
 - *What it reads*: what the players you follow report (the player, the title, artists, album, length and cover, whether it is playing and how far in, and the queue of tracks up next), and what it never reads: the notifications themselves, calls from the phone app, and the audio.
-- *What leaves the phone, and to whom*: the playing track's title and artists to the sources you switch on; the title, artists, album and what the sources found to the AI service you choose; each API key only to its own service; a request for a cover's image when a player gives the cover only as a web address. Each service also sees your phone's IP address.
-- *What stays on the phone*: everything else, including the history and your keys, which are stored encrypted.
+- *What leaves the phone, and to whom*: the playing track's title and artists to the sources you switch on; the title, artists, album and what the sources found to the AI service you choose; each API key only to its own service; a request for a cover's image when a player gives the cover only as a web address; and to the developer, only if you send it from your mail app, a report of a problem with an insight; until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account. Each service also sees your phone's IP address.
+- *What stays on the phone*: everything else, apart from a problem report you hand to your mail app, including the history and your keys, which are stored encrypted.
 
 At the bottom, a link opens the privacy policy in your browser.
 
@@ -60,6 +60,8 @@ The settings are in sections, each folded under its name: a tap on a section's n
 - **Type it** into the *Key* field and tap *Save*.
 - **Scan QR code** fills the field from a QR code that holds the key, once the key has that service's form.
 - **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
+
+If you keep the key in a password manager, it offers its saved entries on the *Key* field, as on any password field; it is not asked to save the key.
 
 To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Before saving, it lists each key it found by its last four characters, and says which would replace a key already saved; *Save* saves them. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
 
