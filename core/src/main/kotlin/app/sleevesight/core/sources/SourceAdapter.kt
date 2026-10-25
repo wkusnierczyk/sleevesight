@@ -65,6 +65,13 @@ interface SourceAdapter {
     ): SourceResult
 }
 
+/**
+ * Added to an adapter's [SourceAdapter.extractionVersion] while no genre information is asked for
+ * (*Show genres* off, #444): its results then hold no tags, so the retrieval cache keeps them apart
+ * from those made with them, and neither is served for the other.
+ */
+const val WITHOUT_GENRES_VERSION: Int = 1_000
+
 /** The prefix of the evidence ids of this adapter's own source, [SourceAdapter.id]. */
 val SourceAdapter.tag: String get() = id.tag
 

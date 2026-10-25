@@ -189,6 +189,8 @@ class AppGraph(
             JvmAccentFolder,
             JvmResourceReader,
             artistResults,
+            // *Show genres* (#444) as last read: on until the first read, which comes before any lookup.
+            genres = { latestSettings.value?.showGenres != false },
         )
 
     /**

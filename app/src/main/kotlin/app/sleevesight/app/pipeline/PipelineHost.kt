@@ -277,7 +277,9 @@ class PipelineHost(
                 }
             }
             launch {
-                val inputs = latest.map { it.webEngines to it.aiProvider }.distinctUntilChanged()
+                // What the parts are built with: the keys, the web engines, the AI service, and *Show
+                // genres* (#444), whose adapters ask for tags or not.
+                val inputs = latest.map { Triple(it.webEngines, it.aiProvider, it.showGenres) }.distinctUntilChanged()
                 combine(keyChanges, inputs) { _, _ -> }.collect { queue.send(CoordinatorEvent.RebuildRequested) }
             }
             launch {
