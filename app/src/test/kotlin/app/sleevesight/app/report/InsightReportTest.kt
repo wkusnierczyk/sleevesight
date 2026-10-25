@@ -81,7 +81,7 @@ class InsightReportTest {
             Insight
             It was recorded in 1973 [MB1]. It topped the charts [W1].
 
-            Evidence
+            Evidence the prompt held
             [MB1] (MusicBrainz, song) Sundown was recorded in 1973.
               https://musicbrainz.org/recording/1
             [W1] (Wikipedia, song) It topped the charts.
@@ -128,8 +128,32 @@ class InsightReportTest {
         val mail =
             insightReport(track(sources = mapOf(SourceId.MUSICBRAINZ to kept)), insight(), ReportReason.WRONG, "")
 
-        assertTrue("Not resolved in this run: the sources' findings were kept from before.\n" in mail.body)
+        assertTrue("None resolved in this run: the sources' findings were kept from before.\n" in mail.body)
         assertTrue("Artist: Gordon Lightfoot: art-1\n" in mail.body)
+    }
+
+    @Test
+    fun aTrackLookedUpAfreshWithNoResolutionSaysNoneWasResolvedNotThatItWasKept() {
+        // The resolution failed, or MusicBrainz is off: the sources were asked now, none served kept.
+        val mail = insightReport(track(), insight(), ReportReason.WRONG, "")
+
+        assertTrue("MusicBrainz ids\nNone resolved for this track.\n\n" in mail.body)
+        assertFalse("kept from before" in mail.body)
+    }
+
+    @Test
+    fun anInsightFromTheCacheListsEveryLineAndSaysItsPromptMayHaveHeldFewer() {
+        // What the pipeline gives for a card served from the cache: no record of the lines its
+        // prompt held, which may have left some out (#239; `PipelineSessionFactsTest` pins that it is so).
+        val cached = insight().copy(cached = true, held = null)
+
+        val mail = insightReport(track(), cached, ReportReason.WRONG, "")
+
+        assertTrue(
+            "Evidence: every line of the track. The insight was kept from before, and the prompt that wrote it " +
+                "may have held fewer.\n[MB1]" in mail.body,
+        )
+        assertTrue("[WD1] (Wikidata, song)" in mail.body)
     }
 
     @Test

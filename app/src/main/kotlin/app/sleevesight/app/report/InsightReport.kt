@@ -52,7 +52,7 @@ fun insightReport(
             appendLine("Insight")
             appendLine(insight.grounded.text.trim())
             appendLine()
-            appendEvidence(track, insight.held)
+            appendEvidence(track, insight)
         }.trimEnd() + "\n"
     return Mail(
         to = Mail.SUPPORT,
@@ -61,13 +61,16 @@ fun insightReport(
     )
 }
 
-// The MusicBrainz ids the run resolved, or, for a track whose findings were all kept from before,
-// which makes no resolution, the artists' ids MusicBrainz's kept result holds.
+// The MusicBrainz ids the run resolved. With no resolution, the artists' ids MusicBrainz's result
+// holds, if it has one: the run makes none when every source's findings were kept from before, which
+// it then says; it has none either when MusicBrainz is off, or the resolution failed.
 private fun StringBuilder.appendMusicBrainz(track: TrackState) {
     appendLine("MusicBrainz ids")
     val resolution = track.resolution
     if (resolution == null) {
-        appendLine("Not resolved in this run: the sources' findings were kept from before.")
+        val allKept =
+            track.sources.isNotEmpty() && track.sources.values.all { (it as? SourceState.Done)?.cached == true }
+        appendLine(if (allKept) ALL_KEPT else NONE_RESOLVED)
         val kept = (track.sources[SourceId.MUSICBRAINZ] as? SourceState.Done)?.result?.labelArtists.orEmpty()
         appendArtists(kept)
         return
@@ -90,13 +93,23 @@ private fun StringBuilder.appendResolved(resolution: Resolution) {
     resolution.original?.let { appendLine("Original recording: ${it.recordingMbid}") }
 }
 
-// The lines the insight's prompt held ([held]; all of them when null), as the prompt gave them,
-// each with its address.
+// The lines the insight's prompt held ([InsightState.Written.held]; all of them when null), as the prompt gave
+// them, each with its address. An insight served from the cache keeps no record of what its prompt
+// held, which may have left out some of the artist's lines (#239), so its report says so and lists
+// all the track's lines.
 private fun StringBuilder.appendEvidence(
     track: TrackState,
-    held: Set<String>?,
+    insight: InsightState.Written,
 ) {
-    appendLine("Evidence")
+    val held = insight.held
+    appendLine(
+        if (insight.cached && held == null) {
+            "Evidence: every line of the track. The insight was kept from before, and the prompt that wrote it " +
+                "may have held fewer."
+        } else {
+            "Evidence the prompt held"
+        },
+    )
     val lines =
         track.evidence
             ?.lines
@@ -127,5 +140,7 @@ private fun effortName(effort: ReasoningEffort?): String = effort?.name?.lowerca
 private const val NONE = "none"
 private const val NOT_REPORTED = "not reported"
 private const val NOT_RESOLVED = "not resolved"
+private const val NONE_RESOLVED = "None resolved for this track."
+private const val ALL_KEPT = "None resolved in this run: the sources' findings were kept from before."
 private const val UNKNOWN = "not known"
 private const val SECONDS_PER_MINUTE = 60
