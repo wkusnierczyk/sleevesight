@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
@@ -11,15 +12,17 @@ import app.sleevesight.core.synthesis.GroundedText
 /**
  * The line under a written insight: with [details] (*Show grounding details*, a developer option,
  * #437) the grounding check's counts in full ([Meta]), else a note only when there is something
- * to say ([Note]).
+ * to say ([Note]). [modifier] goes to the line's text, so a caller that sets the line in a row
+ * beside other content (a weight) keeps that content whether or not a note shows.
  */
 @Composable
 internal fun GroundingLine(
     grounded: GroundedText,
     cached: Boolean,
     details: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    if (details) Meta(grounded, cached) else Note(grounded, cached)
+    if (details) Meta(grounded, cached, modifier) else Note(grounded, cached, modifier)
 }
 
 /**
@@ -32,6 +35,7 @@ internal fun GroundingLine(
 private fun Note(
     grounded: GroundedText,
     cached: Boolean,
+    modifier: Modifier,
 ) {
     val counts = grounded.counts
     val unbacked = counts.uncited + counts.unknown + counts.model
@@ -40,7 +44,7 @@ private fun Note(
             if (unbacked > 0) add(pluralStringResource(R.plurals.home_note_unbacked, unbacked, unbacked))
             if (cached) add(stringResource(R.string.home_note_kept))
         }
-    if (parts.isNotEmpty()) MetaLine(parts.joinToString(" "))
+    if (parts.isNotEmpty()) MetaLine(parts.joinToString(" "), modifier)
 }
 
 /** The grounding check's counts in full, as the simulator gives them (*Show grounding details*). */
@@ -48,6 +52,7 @@ private fun Note(
 private fun Meta(
     grounded: GroundedText,
     cached: Boolean,
+    modifier: Modifier,
 ) {
     val counts = grounded.counts
     val parts =
@@ -61,13 +66,17 @@ private fun Meta(
             }
             if (cached) add(stringResource(R.string.home_meta_kept))
         }
-    MetaLine(parts.joinToString(" · "))
+    MetaLine(parts.joinToString(" · "), modifier)
 }
 
 @Composable
-private fun MetaLine(text: String) {
+private fun MetaLine(
+    text: String,
+    modifier: Modifier,
+) {
     Text(
         text,
+        modifier = modifier,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

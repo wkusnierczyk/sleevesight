@@ -179,7 +179,7 @@ class SettingsCodecTest {
         assertTrue(SettingsCodec.read(prefs).showGroundingDetails)
         SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
-        assertFalse(SettingsCodec.read(mutablePreferencesOf()).showGroundingDetails)
+        assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
     }
 
     @Test

@@ -23,6 +23,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,12 +85,18 @@ class GroundingNoteTest {
     // Neither the count nor a word of it: "sentences grounded", "sentence grounded".
     private fun assertNoGroundedCount() = assertEquals(0, count(" grounded", substring = true))
 
+    // No note of any count, "0 sentences …" included.
+    private fun assertNoUnbackedNote() {
+        assertTrue(unbacked(1).contains(NOT_BACKED) && unbacked(2).contains(NOT_BACKED))
+        assertEquals(0, count(NOT_BACKED, substring = true))
+    }
+
     @Test
     fun aFullyCitedInsightShowsNoGroundedCountAndNoNote() =
         show(written("It was recorded in 1973 [MB1]. It topped the charts [W1].")) {
             compose.onNodeWithText("It was recorded in 1973", substring = true).assertExists()
             assertNoGroundedCount()
-            assertEquals(0, count(unbacked(1)) + count(unbacked(2)))
+            assertNoUnbackedNote()
             assertEquals(0, count(text(R.string.home_note_kept), substring = true))
         }
 
@@ -119,6 +126,7 @@ class GroundingNoteTest {
         show(written("It was recorded in 1973 [MB1].", cached = true)) {
             compose.onNodeWithText(text(R.string.home_note_kept)).assertExists()
             assertNoGroundedCount()
+            assertNoUnbackedNote()
         }
         show(written("It was recorded in 1973 [MB1]. It is great.", cached = true)) {
             compose.onNodeWithText("${unbacked(1)} ${text(R.string.home_note_kept)}").assertExists()
@@ -146,5 +154,9 @@ class GroundingNoteTest {
             compose.onNodeWithText(plural(R.plurals.home_meta_grounded, 1, 1, 1)).assertExists()
             assertEquals("1 of 1 sentence grounded", plural(R.plurals.home_meta_grounded, 1, 1, 1))
         }
+    }
+
+    private companion object {
+        const val NOT_BACKED = "not backed by the sources"
     }
 }
