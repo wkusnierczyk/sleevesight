@@ -76,6 +76,17 @@ enum class TesterPart(
  * pages, so no key can reach it; the diagnostics' lines are the export's ([DiagnosticsText]).
  */
 object TesterReport {
+    /**
+     * The longest report, in characters with its address and subject, that is handed to a mail app
+     * or copied: 500 KB as Android passes text (UTF-16), half of what Android lets one app hand
+     * another (Binder's 1 MB), so the intent's other parts and the mail app's own fit too. Past it,
+     * handing it over would fail, or crash the app.
+     */
+    const val MAX_CHARS: Int = 250_000
+
+    /** Whether [mail] is short enough to hand to a mail app or copy ([MAX_CHARS]). */
+    fun fits(mail: Mail): Boolean = mail.asText().length <= MAX_CHARS
+
     /** The most track changes the history part holds: the latest, so a mail app can take the report. */
     const val HISTORY_LIMIT: Int = 100
 
@@ -386,6 +397,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         },
         "prepareNextTrack" to { it.prepareNextTrack.name },
         "lookUpInBackground" to { onOff(it.lookUpInBackground) },
+        "artistFactsOncePerSession" to { onOff(it.artistFactsOncePerSession) },
         "cacheLifetimes" to { s -> s.cacheLifetimes.entries.joinToString { "${it.key.tag} ${it.value}" } },
         "keepArtistResults" to { onOff(it.keepArtistResults) },
         "artistCacheLifetime" to { it.artistCacheLifetime.toString() },

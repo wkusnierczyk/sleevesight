@@ -2,9 +2,13 @@ package app.sleevesight.app.ui.report
 
 import androidx.activity.compose.setContent
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
@@ -29,6 +33,7 @@ import app.sleevesight.app.report.Handed
 import app.sleevesight.app.report.Mail
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.TesterPart
+import app.sleevesight.app.report.TesterReport
 import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.session.PlaybackStatus
@@ -36,12 +41,14 @@ import app.sleevesight.app.ui.HomeScreen
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.CacheStats
 import app.sleevesight.store.TableStats
 import app.sleevesight.store.TrackChangePage
 import app.sleevesight.store.TrackChangeRecord
 import app.sleevesight.store.TrackRef
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -137,21 +144,38 @@ class TesterReportScreenTest {
             elapsedRealtime = { 0L },
         )
 
-    private fun show(block: () -> Unit) {
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity {
-                it.setContent {
-                    WithTesterReport(TesterReportFeed(settings, reports, mail)) { onReport ->
-                        HomeScreen(true, onOpenFirstRun = {}, onOpenSettings = {}, onReport = onReport) {
-                            Text("What is playing")
-                        }
-                    }
+    private fun show(block: () -> Unit) =
+        showContent(block) {
+            WithTesterReport(TesterReportFeed(settings, reports, mail)) { onReport ->
+                HomeScreen(true, onOpenFirstRun = {}, onOpenSettings = {}, onReport = onReport) {
+                    Text("What is playing")
                 }
             }
+        }
+
+    // The review alone, of the moment it is opened, with the history read by [readHistory].
+    private fun showReview(
+        readHistory: suspend () -> String,
+        block: () -> Unit,
+    ) {
+        val snapshot = reports.snapshot(settings.value)
+        showContent(block) { TesterReportDialog(snapshot, readHistory, mail) {} }
+    }
+
+    private fun showContent(
+        block: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent(content = content) }
             compose.waitForIdle()
             block()
         }
     }
+
+    private fun send() = compose.onNodeWithTag(REPORT_SEND_TAG)
+
+    private fun copy() = compose.onNodeWithTag(REPORT_COPY_TAG)
 
     private fun buttons() = compose.onAllNodesWithTag(TESTER_REPORT_TAG).fetchSemanticsNodes().size
 
@@ -244,6 +268,72 @@ class TesterReportScreenTest {
             // A mail app took it: the review closes, and the tester sends it from there.
             assertEquals(0, compose.onAllNodesWithTag(REPORT_DIALOG_TAG).fetchSemanticsNodes().size)
         }
+
+    @Test
+    fun whileTheHistoryIsReadNothingCanBeSentOrCopied() {
+        val read = CompletableDeferred<Unit>()
+        showReview({
+            read.await()
+            "\"Song B\" was played."
+        }) {
+            send().assertIsEnabled()
+            part(TesterPart.HISTORY).performClick()
+            compose.waitForIdle()
+            send().assertIsNotEnabled()
+            copy().assertIsNotEnabled()
+            assertEquals(app.getString(R.string.tester_report_waits_for_history), preview())
+
+            // Turned off while it is read, it no longer holds the report back; on again, it does.
+            part(TesterPart.HISTORY).performClick()
+            compose.waitForIdle()
+            send().assertIsEnabled()
+            part(TesterPart.HISTORY).performClick()
+            compose.waitForIdle()
+            send().assertIsNotEnabled()
+
+            read.complete(Unit)
+            compose.waitUntil(5_000) { preview().contains("\"Song B\" was played.") }
+            send().assertIsEnabled()
+            copy().assertIsEnabled()
+        }
+    }
+
+    @Test
+    fun aReportTooLongToHandOverWaitsUntilItIsShortened() =
+        showReview({ "" }) {
+            compose.onNodeWithTag(testerEditTag(TesterPart.APP)).performScrollTo().performClick()
+            val app = compose.onNodeWithTag(testerTextTag(TesterPart.APP)).performScrollTo()
+            app.performTextReplacement("x".repeat(TesterReport.MAX_CHARS))
+            compose.waitForIdle()
+            send().assertIsNotEnabled()
+            copy().assertIsNotEnabled()
+            assertTrue(preview(), preview().startsWith("The report is too long to hand to a mail app"))
+
+            app.performTextReplacement("Shorter.")
+            compose.waitForIdle()
+            send().assertIsEnabled().performClick()
+            assertTrue(
+                mail.sent
+                    .single()
+                    .body
+                    .contains("## App\nShorter.\n"),
+            )
+        }
+
+    @Test
+    fun aPartTooLongToEditInPlaceHasNoEdit() {
+        // Some 150 events: the diagnostics part runs past what *Edit* opens.
+        repeat(150) { diagnostics.log.record(PipelineEvent.Superseded("a track with a long title|its artist $it")) }
+        showReview({ "" }) {
+            compose.onNodeWithTag(testerTooLongTag(TesterPart.DIAGNOSTICS)).performScrollTo().assertExists()
+            compose.onAllNodesWithTag(testerEditTag(TesterPart.DIAGNOSTICS)).assertCountEquals(0)
+            compose.onNodeWithTag(testerEditTag(TesterPart.APP)).performScrollTo().assertExists()
+            // Left out with its switch all the same.
+            part(TesterPart.DIAGNOSTICS).performClick()
+            compose.waitForIdle()
+            assertFalse(preview().contains("## Diagnostics"))
+        }
+    }
 
     @Test
     fun theReportIsOfTheMomentOfTheTap() =

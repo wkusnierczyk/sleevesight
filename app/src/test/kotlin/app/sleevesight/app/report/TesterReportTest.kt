@@ -229,6 +229,18 @@ class TesterReportTest {
     }
 
     @Test
+    fun aReportPastTheLimitDoesNotFit() {
+        val snapshot = snapshot()
+        val short = TesterReport.mail(snapshot, "", allParts(snapshot))
+        val head = short.asText().length - short.body.length
+        // The whole mail counts, address and subject included.
+        val atLimit = short.copy(body = "x".repeat(TesterReport.MAX_CHARS - head))
+        assertTrue(TesterReport.fits(short))
+        assertTrue(TesterReport.fits(atLimit))
+        assertFalse(TesterReport.fits(atLimit.copy(body = atLimit.body + "x")))
+    }
+
+    @Test
     fun theHistoryIsInTheMailOnlyWhenKept() {
         val snapshot = snapshot()
         val history = runBlocking { TesterReport.history(pages(listOf(change(1))), at) }

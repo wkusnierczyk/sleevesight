@@ -45,6 +45,8 @@ import app.sleevesight.app.report.MailHandoff
  * the copy itself ([MailHandoff.confirmsCopy]), the dialog says only where to paste it.
  * [previewHint] says what the report holds, above it: by default that it holds no key, history or
  * settings, as the insight's report does; the tester's report (#452) says what it holds instead.
+ * [held], when set, says why the report cannot go yet (a part still being read, or a report too
+ * long to hand over): it stands in place of the report, and both actions wait, as with no [mail].
  *
  * Its state is held only while it is open, not saved: closed by a rotation, it opens afresh.
  */
@@ -56,8 +58,10 @@ internal fun ReportDialog(
     handoff: MailHandoff,
     onDismiss: () -> Unit,
     previewHint: String = stringResource(R.string.report_preview_hint),
+    held: String? = null,
     inputs: @Composable ColumnScope.() -> Unit,
 ) {
+    val ready = mail.takeIf { held == null }
     var handed by remember { mutableStateOf<Handed?>(null) }
     var copied by remember { mutableStateOf(false) }
     AlertDialog(
@@ -76,12 +80,12 @@ internal fun ReportDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Preview(mail)
+                Preview(ready, held)
                 Status(handed, copied, handoff.confirmsCopy)
             }
         },
         confirmButton = {
-            Action(R.string.report_send, mail, REPORT_SEND_TAG) {
+            Action(R.string.report_send, ready, REPORT_SEND_TAG) {
                 handed = handoff.send(it)
                 when (handed) {
                     Handed.WHOLE -> onDismiss()
@@ -98,7 +102,7 @@ internal fun ReportDialog(
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(if (copied) R.string.report_close else R.string.report_cancel))
                 }
-                Action(R.string.report_copy, mail, REPORT_COPY_TAG) {
+                Action(R.string.report_copy, ready, REPORT_COPY_TAG) {
                     handoff.copy(it)
                     copied = true
                 }
@@ -154,14 +158,17 @@ private fun Action(
 
 // The mail as it will be sent: the address, the subject and the body, in a monospaced block.
 @Composable
-private fun Preview(mail: Mail?) {
+private fun Preview(
+    mail: Mail?,
+    held: String?,
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth().testTag(REPORT_PREVIEW_TAG),
     ) {
         Text(
-            mail?.asText() ?: stringResource(R.string.report_preview_waits),
+            mail?.asText() ?: held ?: stringResource(R.string.report_preview_waits),
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
             modifier = Modifier.padding(8.dp),
         )
