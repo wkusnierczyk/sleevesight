@@ -2,16 +2,21 @@ package app.sleevesight.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import app.sleevesight.app.ui.DiagnosticsScreen
@@ -24,6 +29,8 @@ import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.logo.endsOnKeys
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.isAppInDarkTheme
+import app.sleevesight.app.ui.theme.isDark
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.platform.JvmAccentFolder
 
@@ -49,8 +56,12 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The window light or dark as *Theme* (#444) last read, from its first frame: the starting
+        // window before this follows the system below Android 12, where the theme cannot reach it.
+        val dark = graph.theme.value.isDark(systemDark())
+        setTheme(if (dark) R.style.Theme_Sleevesight_Dark else R.style.Theme_Sleevesight_Light)
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        followTheme(dark)
         // The app declares no deep links, and the activity is exported (it is the launcher), so
         // another app could send Navigation's explicit deep-link extras to open a destination
         // directly. They are dropped before the navigation graph reads the intent.
@@ -58,7 +69,8 @@ class MainActivity : ComponentActivity() {
         val intro = if (playsIntro(savedInstanceState)) LogoIntro.random(animatorDurationScale()) else null
         this.intro = intro
         setContent {
-            SleevesightTheme(fonts = graph.font) {
+            SleevesightTheme(fonts = graph.font, themes = graph.theme) {
+                SystemBarsFollowTheme()
                 CompositionLocalProvider(LocalLogoIntro provides intro) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
                     // accessibility services (Switch Access and the like), as it is of touch.
@@ -79,6 +91,7 @@ class MainActivity : ComponentActivity() {
                                         links.openCredits,
                                         links.openDiagnostics,
                                         onOpenWhatLeaves = links.openWhatLeaves,
+                                        playerLaunch = graph::playerLaunchIntent,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
@@ -91,6 +104,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Whether the system's dark theme is on, as this activity's configuration says. */
+    private fun systemDark(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+
+    /**
+     * Edge to edge, with the status and navigation bars' icons dark on a light app and light on a
+     * dark one, as *Theme* (#444) has it ([dark]) rather than the system's dark theme, which
+     * `enableEdgeToEdge` goes by unless told.
+     */
+    private fun followTheme(dark: Boolean) =
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+            navigationBarStyle = SystemBarStyle.auto(LIGHT_SCRIM, DARK_SCRIM) { dark },
+        )
+
+    /** The bars follow each change of *Theme* while the app is open ([followTheme]). */
+    @Composable
+    private fun SystemBarsFollowTheme() {
+        val dark = isAppInDarkTheme()
+        LaunchedEffect(dark) { followTheme(dark) }
     }
 
     /** The logo's intro this activity plays, or null; for tests. */
@@ -163,6 +198,10 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val TAG = "Sleevesight"
+
+        // `enableEdgeToEdge`'s own scrims for the three-button navigation bar, which it keeps private.
+        val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DARK_SCRIM = Color.argb(0x80, 0x1b, 0x1b, 0x1b)
 
         // `NavController`'s `KEY_DEEP_LINK_*` keys, which are restricted to its library group, so
         // spelled out; `NavDeepLinkBuilder` writes them.

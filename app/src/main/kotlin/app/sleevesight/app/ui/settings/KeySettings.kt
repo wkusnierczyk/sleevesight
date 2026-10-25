@@ -21,8 +21,12 @@ import app.sleevesight.core.keys.KeySetup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 
-// The API keys (#234): each key's row, with its button that removes it, *Scan keys* (#268),
-// *Remove all API keys*, and their dialogs.
+// *Secrets* (#234, #444): *Load keys* (#268), *Purge keys*, and each key's row, with its button
+// that removes it; and their dialogs.
+
+/** The keys' rows under *Secrets*, in the order shown: the AI services', then the sources'. */
+private val SHOWN_KEYS =
+    listOf(SecretId.ANTHROPIC, SecretId.OPENAI, SecretId.GOOGLE, SecretId.LASTFM, SecretId.EXA)
 
 /**
  * The key [id]'s row: its state, which opens the key's dialog, and, while a key is stored, readable
@@ -53,29 +57,30 @@ internal fun KeyRow(
 }
 
 /**
- * *Scan keys*, which saves several keys from one QR code, a setup code (#268); and *Remove all API
- * keys*, while any key is stored, readable or not: the way to remove every key at any time, where
- * *Reset saved keys* above the list shows only after a failure.
+ * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268); *Purge
+ * keys*, while any key is stored, readable or not, or after a failure ([KeysShown.offerReset]),
+ * when it says why (what was *Reset saved keys*, which did the same); and each key's row, the AI
+ * services' and the sources' alike.
  */
 @Composable
-internal fun SavedKeysSection(
+internal fun SecretsSection(
     keys: KeysShown,
     open: (SettingsDialog) -> Unit,
 ) {
-    SectionHeading(R.string.settings_section_keys)
-    Hint(R.string.settings_keys_hint)
     ValueRow(
         title = stringResource(R.string.settings_scan_keys),
         value = stringResource(R.string.settings_scan_keys_value),
         onClick = { open(SettingsDialog.ScanKeys) },
     )
-    if (keys.anyStored) {
+    if (keys.anyStored || keys.offerReset) {
+        val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
         ValueRow(
             title = stringResource(R.string.settings_remove_all_keys),
-            value = stringResource(R.string.settings_remove_all_keys_value),
-            onClick = { open(SettingsDialog.RemoveAllKeys) },
+            value = stringResource(why),
+            onClick = { open(SettingsDialog.PurgeKeys) },
         )
     }
+    for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)
 }
 
 /**
@@ -83,7 +88,7 @@ internal fun SavedKeysSection(
  * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
  * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
- * reads QR codes, and [keyboard] runs *Type on a computer* (#394); *Scan keys* shows what a
+ * reads QR codes, and [keyboard] runs *Type on a computer* (#394); *Load keys* shows what a
  * setup code holds by [open]ing the next dialog, and saves nothing until the user confirms it there.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
@@ -139,9 +144,9 @@ internal fun KeyDialogs(
             )
         }
 
-        SettingsDialog.ResetKeys, SettingsDialog.RemoveAllKeys -> {
+        SettingsDialog.PurgeKeys -> {
             ConfirmDialog(
-                removeAllConfirmation(reset = shown == SettingsDialog.ResetKeys),
+                purgeConfirmation(),
                 onConfirm = { saves.async { store.reset().also { if (it) onSealFailed(false) } }.await() },
                 onDismiss,
             )
@@ -173,24 +178,12 @@ private fun removeKeyConfirmation(id: SecretId): Confirmation =
         failed = stringResource(R.string.settings_key_remove_failed),
     )
 
-/**
- * What removing every key says: as *Reset saved keys* after a failure ([reset]), or as *Remove all
- * API keys*. The removal is the same, and so is what it explains.
- */
+/** What *Purge keys*, removing every key with the phone's key for them, says. */
 @Composable
-private fun removeAllConfirmation(reset: Boolean): Confirmation =
-    if (reset) {
-        Confirmation(
-            title = stringResource(R.string.settings_reset_keys_title),
-            explained = stringResource(R.string.settings_reset_keys_explained),
-            confirm = stringResource(R.string.settings_reset),
-            failed = stringResource(R.string.settings_reset_keys_failed),
-        )
-    } else {
-        Confirmation(
-            title = stringResource(R.string.settings_remove_all_keys_title),
-            explained = stringResource(R.string.settings_reset_keys_explained),
-            confirm = stringResource(R.string.settings_remove_all),
-            failed = stringResource(R.string.settings_remove_all_keys_failed),
-        )
-    }
+private fun purgeConfirmation(): Confirmation =
+    Confirmation(
+        title = stringResource(R.string.settings_remove_all_keys_title),
+        explained = stringResource(R.string.settings_reset_keys_explained),
+        confirm = stringResource(R.string.settings_remove_all),
+        failed = stringResource(R.string.settings_remove_all_keys_failed),
+    )

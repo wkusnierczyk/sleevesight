@@ -77,6 +77,19 @@ class RememberedMusicBrainzTest {
         }
 
     @Test
+    fun `a recording kept without its tags is not served once they are wanted`() =
+        runTest {
+            var tags = false
+            val byTags = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2) { tags }
+            byTags.recording("short")
+            byTags.recording("short")
+            tags = true
+            byTags.recording("short")
+            byTags.recording("short")
+            assertEquals(listOf("recording short", "recording short"), counting.asked)
+        }
+
+    @Test
     fun `an answer is kept for its lifetime only`() =
         runTest {
             remembered.searchRecordings("Song", "Artist")

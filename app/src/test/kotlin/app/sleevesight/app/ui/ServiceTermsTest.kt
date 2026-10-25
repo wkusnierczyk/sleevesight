@@ -35,6 +35,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.settings.keyName
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -96,6 +97,8 @@ class ServiceTermsTest {
                 }
             }
             waitForText(text(R.string.settings_title))
+            // The keys' rows, *Load keys* and *Purge keys* are under *Secrets* (#444).
+            compose.openSection(SettingsSection.SECRETS)
             scenario.block()
         }
     }

@@ -46,7 +46,7 @@ object SessionMapping {
 
     /**
      * Whether [metadata] reports music: a title ([title]) and an artist (`ARTIST`), blank values
-     * absent; the album is not needed. What lists a player under *Players to follow* (#435): a
+     * absent; the album is not needed. What lists a player under *Players* (#435): a
      * call (a caller as its title, no artist) and most video apps never report it.
      */
     fun reportsMusic(metadata: MediaMetadata?): Boolean =

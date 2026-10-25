@@ -9,7 +9,7 @@
     <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
-    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata gets only identifiers. For the genre labels, Last.fm also gets the album name, the only source that does. While “Prepare the next track” is set to “Evidence”, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
+    <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata gets only identifiers. For the genre labels, Last.fm also gets the album name, the only source that does. While “Proactive” is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
@@ -33,12 +33,10 @@
     <!-- Settings (design, Settings). -->
     <string name="settings_title">Settings</string>
 
-    <string name="settings_section_ai">AI service</string>
+    <string name="settings_section_ai">AI services</string>
     <string name="settings_ai_provider_anthropic">Anthropic</string>
     <string name="settings_ai_provider_openai">OpenAI</string>
     <string name="settings_ai_provider_google">Google</string>
-    <string name="settings_ai_providers_hint">The service switched on writes the insights, one service at a time. A service switched off keeps its key, model and effort.</string>
-    <string name="settings_ai_provider_needs_key">Insights wait until its API key is saved.</string>
     <string name="settings_ai_model_of">%1$s model</string>
     <string name="settings_ai_model_default">%1$s (default)</string>
     <string name="settings_ai_effort_of">%1$s reasoning effort</string>
@@ -68,7 +66,7 @@
     <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
     <string name="settings_terms_google">Using this key means agreeing to Google’s Gemini API terms. They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
     <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
-    <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Reset saved keys”.</string>
+    <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Purge keys” in Secrets.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>
     <string name="settings_key_remove">Remove the %1$s</string>
     <string name="settings_key_remove_title">Remove the %1$s?</string>
@@ -76,15 +74,10 @@
     <string name="settings_key_remove_failed">The key could not be removed: the phone’s storage failed. Try again.</string>
     <string name="settings_change_failed">The last change could not be saved: the phone’s storage failed. The setting keeps its saved value; try again.</string>
     <string name="settings_save">Save</string>
-    <string name="settings_reset">Reset</string>
-    <string name="settings_reset_keys">Reset saved keys</string>
-    <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved</string>
-    <string name="settings_reset_keys_summary">Removes every saved key, so you can enter them again.</string>
-    <string name="settings_reset_keys_title">Reset saved keys?</string>
+    <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved: delete all saved keys, then enter them again.</string>
     <string name="settings_reset_keys_explained">Keys for all API services used by Sleevesight are irrecoverably deleted.</string>
-    <string name="settings_reset_keys_failed">The keys could not be reset: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_remove">Remove</string>
-    <string name="settings_remove_all">Remove all</string>
+    <string name="settings_remove_all">Purge</string>
     <string name="settings_cancel">Cancel</string>
 
     <string name="settings_model_loading">Listing the service’s models…</string>
@@ -96,52 +89,39 @@
     <string name="settings_model_failed_unavailable_here">The models could not be listed: the service is not offered in your country.</string>
     <string name="settings_model_failed_other">The models could not be listed: the service answered with an error.</string>
 
-    <string name="settings_section_players">Players to follow</string>
-    <string name="settings_players_hint">Sleevesight follows only the players switched on here. Other players are only checked for music, a track with a title and an artist, to be listed here; nothing of them is kept or sent. Calls from the phone app, and sessions Android marks as voice calls, are never read.</string>
+    <string name="settings_section_players">Players</string>
 
-    <string name="settings_section_sources">Where to look</string>
-    <string name="settings_sources_hint">What the AI may use. MusicBrainz and Wikipedia need no key; Last.fm and each web search engine need your own.</string>
+    <string name="settings_section_sources">Sources</string>
     <string name="settings_source_musicbrainz">MusicBrainz</string>
     <string name="settings_source_wikipedia">Wikipedia and Wikidata</string>
     <string name="settings_source_lastfm">Last.fm</string>
-    <string name="settings_source_web">Web search</string>
-    <string name="settings_source_web_no_engine">No engine is on, so nothing is searched</string>
-    <string name="settings_engine_exa">Exa</string>
-    <string name="settings_engine_web_off">Off while “Web search” is off</string>
-    <string name="settings_source_model">The model’s own knowledge</string>
-    <string name="settings_source_model_summary">At most one claim from what the model knows, marked unverified</string>
+    <string name="settings_engine_exa">Exa web search</string>
+    <string name="settings_source_model">AI service knowledge</string>
+    <string name="settings_source_model_summary">What the AI model learned in training, frozen at that time. At most one claim, marked unverified.</string>
 
-    <string name="settings_section_labels">Genre labels</string>
-    <string name="settings_labels_hint">Where the genre labels come from: the tags each source gives the track, its artists and its album, kept only when they name a genre. With both on, Last.fm’s come first. Web search gives no tags.</string>
-    <string name="settings_labels_source_off">Off under “Where to look”</string>
-    <string name="settings_labels_needs_key">Needs your Last.fm API key, under “Where to look”</string>
-    <string name="settings_labels_key_unreadable">Your Last.fm API key can no longer be read; see it under “Where to look”</string>
-    <string name="settings_labels_musicbrainz_summary">Tags by MusicBrainz contributors, CC BY-NC-SA 3.0. Used for labels only, never sent to the AI service.</string>
+    <string name="settings_section_labels">Genres</string>
+    <string name="settings_labels_source_off">Off under “Sources”</string>
+    <string name="settings_labels_musicbrainz_summary">Tags added and voted on by MusicBrainz contributors; Sleevesight keeps those that name a genre. CC BY-NC-SA 3.0; shown only, never sent to the AI service.</string>
 
     <string name="settings_section_insights">Insights</string>
-    <string name="settings_write_insights">Write insights</string>
-    <string name="settings_write_insights_summary">Off: no AI calls at all. The evidence is still shown.</string>
-    <string name="settings_write_automatically">Write insights automatically</string>
-    <string name="settings_write_automatically_summary">Each insight written is a paid call on your AI service key.</string>
-    <string name="settings_pause_auto_write">Pause automatic writing after</string>
-    <string name="settings_pause_auto_write_summary">Track changes while Sleevesight is not on screen, counted again from each time you open it.</string>
-    <string name="settings_pause_auto_write_off">Off: never pause</string>
-    <string name="settings_write_every_change">On every track change</string>
-    <string name="settings_write_when_skip">When I skip</string>
-    <string name="settings_write_never">Never: only when I tap Write</string>
+    <string name="settings_write_insights">Show insights</string>
+    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Off: no AI calls at all; the evidence is still shown.</string>
+    <string name="settings_write_automatically">Reactive</string>
+    <string name="settings_write_automatically_summary">When an insight is written without a tap. Each insight written is a paid call on your AI service key.</string>
+    <string name="settings_pause_auto_write">Saver</string>
+    <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it.</string>
+    <string name="settings_write_every_change">On track change</string>
+    <string name="settings_write_when_skip">On skip</string>
+    <string name="settings_write_never">Manual: only when I tap Write</string>
     <string name="settings_crossfade">Crossfade</string>
-    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “When I skip”.</string>
+    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On skip”.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
-    <string name="settings_prepare_next">Prepare the next track</string>
-    <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead.</string>
-    <string name="settings_prepare_off">Off</string>
-    <string name="settings_prepare_evidence">Evidence</string>
+    <string name="settings_prepare_next">Proactive</string>
+    <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
-    <string name="settings_section_home">Home screen</string>
     <string name="settings_keep_sources">Keep Sources as you left them</string>
     <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
-    <string name="settings_section_lookups">Lookups</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>
     <string name="settings_cache_lifetimes">How long each source’s findings are kept</string>
@@ -151,11 +131,10 @@
     <string name="settings_keep_artists">Keep what sources said about each artist</string>
     <string name="settings_keep_artists_summary">Off: nothing MusicBrainz, Wikipedia or Last.fm say about an artist is kept, so each track’s artists are looked up again, and their names go to the sources you switch on with every track. Of a track’s findings, only the web search’s findings (pages about the recording, which may name or describe its artists) and those of a lookup that found no artist to look up are kept, so a track played before is looked up again at MusicBrainz (its match held in memory for half an hour only), Wikipedia and Last.fm, unless it has no credited artist, and lookups are slower and more requests go out. On: what they say about each artist you play stays on this phone for as long as its sources’ findings, so fewer requests leave it; each track’s own lookups still send its artists’ names. Turning this off deletes what was kept.</string>
     <string name="settings_section_history">History</string>
-    <string name="settings_history_hint">The tracks Sleevesight has seen play, and the track changes it learns your skips from. Kept only on this phone.</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
-    <string name="settings_session_gap">Start a new session after a break of</string>
-    <string name="settings_session_gap_summary">Counted from when the last track was heard. A change applies from the next track that starts.</string>
+    <string name="settings_session_gap">New session idle trigger</string>
+    <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions are kept. Within a session, each artist fact is told once. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
     <string name="settings_clear_history_value">Deletes the tracks played and the track changes</string>
     <string name="settings_clear_history_title">Clear history?</string>
@@ -170,15 +149,14 @@
     <string name="settings_font_summary">The app’s own font looks the same on every phone. The system font is the one chosen in your phone’s settings.</string>
     <string name="settings_intro">Logo intro at start</string>
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
-    <string name="settings_section_keys">API keys</string>
-    <string name="settings_keys_hint">Your API keys, stored encrypted on this phone. Each is sent only to its own service.</string>
-    <string name="settings_scan_keys">Scan keys</string>
-    <string name="settings_scan_keys_value">Save several keys from one QR code</string>
+    <string name="settings_section_keys">Secrets</string>
+    <string name="settings_scan_keys">Load keys</string>
+    <string name="settings_scan_keys_value">Read multiple secrets from a QR code.</string>
     <string name="settings_key_scan">Scan QR code</string>
     <string name="settings_key_scan_empty">The QR code holds nothing.</string>
     <string name="settings_key_scan_characters">The QR code holds a space or a character no such key has: it is not this key.</string>
     <string name="settings_key_scan_shape">The QR code does not hold a key of this service’s form.</string>
-    <string name="settings_key_scan_setup">This QR code holds several keys: use “Scan keys” in Settings.</string>
+    <string name="settings_key_scan_setup">This QR code holds several keys: use “Load keys” in Settings, under Secrets.</string>
     <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
     <string name="setup_new">%1$s, ending %2$s: new</string>
@@ -215,20 +193,16 @@
     <string name="scan_hint">Point the camera at the QR code.</string>
     <string name="scan_camera_refused">Sleevesight may not use the camera. Allow it in the phone’s settings for Sleevesight to scan, or type the key instead.</string>
     <string name="scan_no_camera">This phone has no camera Sleevesight can use. Type the key instead.</string>
-    <string name="settings_remove_all_keys">Remove all API keys</string>
-    <string name="settings_remove_all_keys_value">Deletes every saved key from this phone</string>
-    <string name="settings_remove_all_keys_title">Remove all API keys?</string>
+    <string name="settings_remove_all_keys">Purge keys</string>
+    <string name="settings_remove_all_keys_value">Safely delete all saved keys.</string>
+    <string name="settings_remove_all_keys_title">Purge keys?</string>
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
-    <string name="settings_usage_page">How to use Sleevesight</string>
-    <string name="settings_usage_page_summary">Each part of the app explained: the home screen, the insight and its sources, writing, and what happens when something fails. Opens in your browser.</string>
-    <string name="settings_settings_page">Every setting explained</string>
-    <string name="settings_settings_page_summary">What each setting does, its default and why, and what changing it sends or keeps. Opens in your browser.</string>
     <string name="settings_what_leaves">What leaves the device</string>
     <string name="settings_what_leaves_value">What Sleevesight reads, what it sends and to whom, and what stays on the device</string>
     <string name="settings_privacy">Privacy policy</string>
-    <string name="settings_privacy_summary">What leaves the device, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
+    <string name="settings_privacy_summary">What leaves the device, and where Sleevesight stands under the GDPR and the EU AI Act.</string>
     <string name="settings_section_developer">Developer</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_summary">Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.</string>
@@ -265,7 +239,7 @@
         <item quantity="one">%d track change away</item>
         <item quantity="other">%d track changes away</item>
     </plurals>
-    <!-- Follows settings_pause_auto_write_summary for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under When I skip) is counted but not written. -->
+    <!-- Follows settings_pause_auto_write_summary for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On skip) is counted but not written. -->
     <plurals name="settings_pause_auto_write_summary_count">
         <item quantity="one">With %1$d, up to %1$d track is written while you are away; after that, nothing more is written until you tap Write insight.</item>
         <item quantity="other">With %1$d, up to %1$d tracks are written while you are away; after that, nothing more is written until you tap Write insight.</item>

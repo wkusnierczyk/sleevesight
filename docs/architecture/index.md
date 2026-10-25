@@ -41,7 +41,7 @@ flowchart LR
 
 ### The session layer
 
-Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Write insights automatically*. Playing, pausing and skipping from the app come in Phase 2; today a tap on the player's name opens the player.
+Android lets an app read what a music player is playing only through notification access. The session layer holds that access, and reads the media session of each player you follow: which player it is; the title, artists, album, length and cover; whether it is playing, and how far in; and the queue up next. It ignores the notifications themselves and never touches the audio. A call's session, from the phone's own call apps or one Android marks as a voice call, is dropped before anything of it is read. The session layer also tells a skip from a track that ended on its own, which decides whether an insight is written under *Reactive* set to *On skip*. Playing, pausing and skipping from the app come in Phase 2; today a tap on the player's name opens the player.
 
 ### The pipeline
 
@@ -67,14 +67,14 @@ Everything the app keeps is on the phone, and none of it is part of Android's ba
 
 ### The user interface
 
-One Android activity in Jetpack Compose: the first-run screen, the home screen with the now-playing card, the insight, its citations and *Sources*, the settings, the credits and the diagnostics. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Scan keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
+One Android activity in Jetpack Compose: the first-run screen, the home screen with the now-playing card, the insight, its citations and *Sources*, the settings, the credits and the diagnostics. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Load keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
 
 ### The site's pages
 
 The website, served by GitHub Pages, has three pages that work with the app:
 
 - **The [product page]({{ '/' | relative_url }})** says what the app does. It loads nothing from outside the site.
-- **[`api-keys`]({{ '/api-keys.html' | relative_url }})** draws a QR code of several API keys in the browser, for *Scan keys*. Its content security policy forbids any network request, and it stores nothing, so the keys leave the computer only in the code you scan.
+- **[`api-keys`]({{ '/api-keys.html' | relative_url }})** draws a QR code of several API keys in the browser, for *Load keys*. Its content security policy forbids any network request, and it stores nothing, so the keys leave the computer only in the code you scan.
 - **[`keyboard.html`]({{ '/keyboard.html' | relative_url }})**, for *Type on a computer*, makes a one-time key, shows it in a QR code for the phone to scan, and sends what you type to the phone over Bluetooth, encrypted with that key. Its content security policy forbids any network request, so nothing goes through a server; the Bluetooth link is between the computer and the phone alone.
 
 The pages with diagrams, this one among them, load the diagram script, Mermaid, from jsDelivr.
@@ -100,11 +100,11 @@ Requests go straight from the phone to each service, over HTTPS; Android refuses
 
 | Service | When | What it receives |
 |---|---|---|
-| MusicBrainz | Switched on (it is by default) | The title and artists of the playing track, cleaned of tags such as "2006 Remaster". While *Prepare the next track* is set to *Evidence*, as it is by default, the title and artists of the next track in the player's queue, before it plays. |
+| MusicBrainz | Switched on (it is by default) | The title and artists of the playing track, cleaned of tags such as "2006 Remaster". While *Proactive* is on, as it is by default, the title and artists of the next track in the player's queue, before it plays. |
 | Wikipedia and Wikidata | Wikipedia switched on | Wikipedia: the title and artists, to find their articles. Wikidata: only identifiers, from MusicBrainz or Wikipedia, never a name. |
 | Last.fm | Switched on, with your key | The artists' names only, and your Last.fm key. |
 | Exa (web search) | Switched on, with your key | The title and artists, the film or show a title says it is from, and your Exa key. |
-| The AI service you choose: Anthropic, OpenAI or Google | *Write insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight a request of its own, with no conversation kept. Your key for that service, and the model you chose. |
+| The AI service you choose: Anthropic, OpenAI or Google | *Show insights* on, a service switched on, with your key | The title, artists and album, and what the sources found, for the playing track only; each insight a request of its own, with no conversation kept. Your key for that service, and the model you chose. |
 | The server a cover's web address names | A player gives the cover only as a web address | A request for that image. The address itself may identify the album or episode. |
 | The developer, at `support@sleevesight.app` | You tap *Report a problem* on an insight and send the report from your own mail app | The reason and your note; the track as the player reported it (title, artists, album, length) and its MusicBrainz ids; the insight and the evidence lines it was written from, with their sources and addresses; the prompt version, AI service, model and effort. You see all of it before your mail app opens; your mail app handles it from then on as any message you write (some keep a draft in your mail account), and sends it from your address only if you do. Never your keys, the history or the settings. |
 | Google Play | Installing and updating the app | Google handles the installation under its own policy; it gives the developer aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. The app holds no Google Play library. |

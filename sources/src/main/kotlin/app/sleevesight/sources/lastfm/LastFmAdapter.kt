@@ -16,6 +16,7 @@ import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
@@ -54,6 +55,10 @@ import kotlin.time.TimeSource
  * reused stops being fresh ([SourceResult.freshUntil]).
  *
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
+ *
+ * Without [genres] (*Show genres* off, #444), no genre information is asked for: no
+ * `artist.getTopTags`, and no genre labels; its results are kept apart ([WITHOUT_GENRES_VERSION]),
+ * and an artist kept without its top tags is asked for again once they are wanted ([KeptArtists]).
  */
 @Suppress("LongParameterList") // Eight independent dependencies; the clocks and the cache are defaulted, for tests.
 class LastFmAdapter(
@@ -65,16 +70,17 @@ class LastFmAdapter(
     private val clock: Clock = Clock.System,
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val artists: ArtistResults = ArtistResults.None,
+    private val genres: Boolean = true,
 ) : SourceAdapter {
     override val id: SourceId = SourceId.LASTFM
 
-    override val extractionVersion: Int = EXTRACTION_VERSION
+    override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
 
     /** The verification asks MusicBrainz for the artists of a name. */
     override val consults: Set<SourceId> = setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ)
 
     private val check = ArtistCheck(accentFolder, musicBrainz, artists)
-    private val kept = KeptArtists(artists)
+    private val kept = KeptArtists(artists, genres)
 
     override suspend fun lookup(
         track: NormalizedTrack,
@@ -143,9 +149,9 @@ class LastFmAdapter(
         kept.get(name)?.let { return it }
         val fetched =
             coroutineScope {
-                val topTags = async { call("artist.gettoptags", name, LastFmJson::topTags) }
+                val topTags = if (genres) async { call("artist.gettoptags", name, LastFmJson::topTags) } else null
                 val info = call("artist.getinfo", name, LastFmJson::artistInfo)
-                Fetched(info, topTags.await(), clock.now())
+                Fetched(info, topTags?.await(), clock.now())
             }
         kept.keep(name, fetched)
         return fetched
@@ -203,7 +209,7 @@ class LastFmAdapter(
                 val judgement = check.judge(credited, artist, check.resolvedFor(credited, resolution.artists))
                 val match = judgement.match
                 val genres =
-                    if (match.shows) {
+                    if (match.shows && this.genres) {
                         vocabulary.labelsFor(
                             genreTags(artist, fetched.topTags),
                             artist.url,
@@ -238,7 +244,7 @@ class LastFmAdapter(
     /** The top tags above [MIN_TAG_COUNT], or the five tags of `artist.getInfo` when they did not arrive. */
     private fun genreTags(
         artist: LastFmArtist,
-        topTags: LastFmAnswer<List<LastFmTag>>,
+        topTags: LastFmAnswer<List<LastFmTag>>?,
     ): List<String> {
         val tags = (topTags as? LastFmAnswer.Found)?.value
         return tags?.filter { it.count >= MIN_TAG_COUNT }?.map { it.name } ?: artist.tags

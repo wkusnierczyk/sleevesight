@@ -15,10 +15,10 @@ import org.junit.Test
 import kotlin.time.Duration.Companion.hours
 
 /**
- * The session layer's cause reaching the decision through the host (D5): under *When I skip*, a
+ * The session layer's cause reaching the decision through the host (D5): under *On skip*, a
  * skip writes and a natural end offers Write, and a tap on Write taken is passed on as an action.
  * The first action lasts as long as the host, one per process: a return to the app keeps it, and a
- * new host (a cold start) starts without it (#190). *Pause automatic writing after* reaches the
+ * new host (a cold start) starts without it (#190). *Saver* reaches the
  * coordinator from the settings, and the view says when Write is offered because of it (#203).
  */
 @OptIn(ExperimentalCoroutinesApi::class)

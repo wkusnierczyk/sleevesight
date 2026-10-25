@@ -400,7 +400,7 @@ class PipelineCoordinatorTest {
                 settle()
             },
             Case(
-                "When I skip writes nothing for a change that ended on its own",
+                "On skip writes nothing for a change that ended on its own",
                 mapOf("Zero" to 1),
                 listOf("Zero", "B"),
                 "B",

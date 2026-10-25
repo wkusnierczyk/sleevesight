@@ -535,7 +535,9 @@ class OpenAiProviderTest {
                 ),
                 listed.map { it.id },
             )
-            assertEquals(ModelInfo("gpt-6-luna", "gpt-6-luna", Instant.fromEpochSeconds(1789000000)), listed[2])
+            // Named from the app's table, which OpenAI's list does not; one not in it by its id.
+            assertEquals(ModelInfo("gpt-6-luna", "GPT-6 Luna", Instant.fromEpochSeconds(1789000000)), listed[2])
+            assertEquals("ft:gpt-4.1-mini:example-org::abc123", listed[3].displayName)
             val sent = net.requests.single()
             assertEquals("https://api.openai.com/v1/models", sent.url)
             assertEquals(NetMethod.GET, sent.method)

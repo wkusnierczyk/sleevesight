@@ -54,11 +54,16 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * tags give for an artist is kept there per artist, so a second track by the same artist does not
  * ask for it again. The app's is the cache database's, the CLI's the run's cache, if it has one.
  *
+ * [genres] says whether genre information is asked for at all (*Show genres*, #444), read at each
+ * MusicBrainz recording's lookup, whose tags are asked for only then; the adapters take it from
+ * the settings they are built with ([adapters]).
+ *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
  * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
  * which a phone never calls (the client lives as long as the process) and Robolectric calls after
  * each test, so each test's client goes with it.
  */
+@Suppress("LongParameterList") // The client, the platform's parts, and how the app's wiring differs from the CLI's.
 class PipelineWiring internal constructor(
     private val net: NetClient,
     private val accentFolder: AccentFolder,
@@ -66,12 +71,13 @@ class PipelineWiring internal constructor(
     rememberMusicBrainz: Boolean = false,
     private val ownsNet: Boolean = false,
     private val artists: ArtistResults = ArtistResults.None,
+    genres: () -> Boolean = { true },
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
     // MusicBrainz's core data, for the resolver and Last.fm's check; the tags are asked apart.
     private val musicBrainz: MusicBrainzLookup =
-        MusicBrainzClient(net).let { if (rememberMusicBrainz) RememberedMusicBrainz(it) else it }
+        MusicBrainzClient(net, genres).let { if (rememberMusicBrainz) RememberedMusicBrainz(it, tags = genres) else it }
     private val vocabulary by lazy { GenreVocabulary.load(resources) }
     private val artFetcher = ArtFetcher(net)
 
@@ -112,11 +118,12 @@ class PipelineWiring internal constructor(
      * The adapters for `PipelineParts.adapters`: MusicBrainz and Wikipedia (with Wikidata), which
      * need no key; Last.fm only with its key in [keys], since `Settings.givesLabels` does not know
      * about the key and relies on that; web search from the engines switched on in [settings] whose
-     * key is in [keys] ([web]). A source switched off under *Where to look* still gets its adapter:
+     * key is in [keys] ([web]). A source switched off under *Sources* still gets its adapter:
      * the pipeline reads the switch for each track.
      *
-     * The keys and the web engines, unlike those switches, are read here, when the list is built: a
-     * key saved or removed, or an engine switched, takes a new list, and so a new pipeline. Each call
+     * The keys, the web engines and *Show genres* (#444), unlike those switches, are read here, when
+     * the list is built: a key saved or removed, an engine switched, or *Show genres* switched, takes
+     * a new list, and so a new pipeline. Each call
      * builds new adapters, so whatever state one holds in memory starts again: Last.fm's check of an
      * artist's name (`ArtistCheck` in `LastFmMatch.kt`) keeps its verdicts in the artist cache, which
      * outlives the adapters, or, without one, in memory for up to 1024 names, which does not.
@@ -126,22 +133,25 @@ class PipelineWiring internal constructor(
         settings: Settings,
     ): List<SourceAdapter> =
         listOfNotNull(
-            musicBrainz(),
+            musicBrainz(settings.showGenres),
             wikipedia(),
-            keys.lastFm?.let(::lastFm),
+            keys.lastFm?.let { lastFm(it, settings.showGenres) },
             web(keys.web.filterKeys { it in settings.webEngines }),
         )
 
-    /** MusicBrainz's templated lines, from the resolution. */
-    fun musicBrainz(): SourceAdapter = MusicBrainzSource()
+    /** MusicBrainz's templated lines, from the resolution; with the recording's tags only with [genres]. */
+    fun musicBrainz(genres: Boolean = true): SourceAdapter = MusicBrainzSource(genres = genres)
 
     /** Wikipedia's lead sentences, with Wikidata's identity check. */
     fun wikipedia(): SourceAdapter =
         WikipediaSource(WikipediaClient(net), IdentityCheck(WikidataClient(net), names), names, artists = artists)
 
-    /** Last.fm on the user's [key]. */
-    fun lastFm(key: Secret): SourceAdapter =
-        LastFmAdapter(net, musicBrainz, key, vocabulary, accentFolder, artists = artists)
+    /** Last.fm on the user's [key]; asking for the artists' top tags only with [genres]. */
+    fun lastFm(
+        key: Secret,
+        genres: Boolean = true,
+    ): SourceAdapter =
+        LastFmAdapter(net, musicBrainz, key, vocabulary, accentFolder, artists = artists, genres = genres)
 
     /**
      * Web search through the [engines] given, each with its key, or null for none. Exa is the only

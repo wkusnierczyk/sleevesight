@@ -9,7 +9,8 @@ import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 
-// *AI service* (#227): one row per provider offered, as *Web search* has one per engine.
+// *AI services* (#227, #444): one row per provider offered, with its model and effort; the keys are
+// under *Secrets*.
 
 /**
  * The providers offered, in the order shown: those with a client in `:ai`, Anthropic, OpenAI
@@ -21,41 +22,41 @@ import app.sleevesight.core.settings.Settings
 internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, ProviderId.OPENAI, ProviderId.GOOGLE)
 
 /**
- * The AI services: per provider offered, a switch, and under it its key, its model and its
- * reasoning effort. The switches are exclusive: switching one on switches the one on before off,
- * and with all off no insight is written. A provider's key, model and effort can be set while it
- * is off, and stay when it is switched off, so switching back restores them.
+ * The AI services: per provider offered, a switch, and under it its model, by name ([modelName]),
+ * and its reasoning effort. The switches are exclusive: switching one on switches the one on before
+ * off, and with all off no insight is written. A provider's model and effort can be set while it
+ * is off, and stay when it is switched off, so switching back restores them. Its key is under
+ * *Secrets*; switched on without it, the provider says so.
  */
 @Composable
 internal fun AiSection(
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
+    modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    SectionHeading(R.string.settings_section_ai)
-    Hint(R.string.settings_ai_providers_hint)
-    for (provider in OFFERED_PROVIDERS) ProviderRows(provider, settings, secrets, update, open)
+    for (provider in OFFERED_PROVIDERS) ProviderRows(provider, settings, secrets, modelName, update, open)
 }
 
-/** [provider]'s switch, key, model and effort. */
+/** [provider]'s switch, model and effort. */
+@Suppress("LongParameterList") // The provider, what the rows show, and what they change.
 @Composable
 private fun ProviderRows(
     provider: ProviderId,
     settings: Settings,
     secrets: Map<SecretId, SecretState>,
+    modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val on = settings.aiProvider == provider
     val keyId = SecretId.forProvider(provider)
-    // Switched on, it says when its key is missing or cannot be read: insights wait for it. Not
-    // before the keys' states are read, which would show it, for a moment, beside a saved key.
-    val needsKey = keyId != null && secrets[keyId].let { it != null && it != SecretState.SAVED }
     val name = stringResource(providerName(provider))
     SwitchRow(
         title = name,
-        summary = stringResource(R.string.settings_ai_provider_needs_key).takeIf { on && needsKey },
+        // Switched on, it says when its key is missing or cannot be read: insights wait for it.
+        summary = keyId?.let { keyNote(it, secrets) }.takeIf { on },
         checked = on,
     ) { switchedOn ->
         update {
@@ -66,13 +67,18 @@ private fun ProviderRows(
             }
         }
     }
-    keyId?.let { KeyRow(stringResource(keyName(it)), it, secrets, indent = true, open) }
-    val default = Settings.DEFAULT_MODELS[provider]?.let { stringResource(R.string.settings_ai_model_default, it) }
+    val default = Settings.DEFAULT_MODELS[provider]
+    val chosen = settings.aiModels[provider]
     ValueRow(
-        // Each row and dialog names its provider, as the key row does: with several providers,
-        // a screen reader reads each row on its own.
+        // Each row and dialog names its provider: with several providers, a screen reader reads
+        // each row on its own.
         title = stringResource(R.string.settings_ai_model_of, name),
-        value = settings.aiModels[provider] ?: default.orEmpty(),
+        value =
+            when {
+                chosen != null && chosen != default -> modelName(chosen)
+                default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
+                else -> ""
+            },
         indent = true,
         onClick = { open(SettingsDialog.Model(provider)) },
     )

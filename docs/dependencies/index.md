@@ -111,7 +111,7 @@ The dependency allowlist names each of these groups exactly rather than allowing
 - **Where:** `:app`, which reads QR codes; also the command-line tool, which draws them in a terminal and does not ship.
 - **Licence:** Apache-2.0 (from its parent POM, `zxing-parent`), with its NOTICE file, which names Barcode4J's authors.
 
-*Scan keys*, and *Scan QR code* in each key's field, read a QR code from the camera's frames: one key, or a setup code holding several, such as the [API keys page]({{ '/api-keys.html' | relative_url }}) draws. Only ZXing's core and its QR code reader are used, on the phone; nothing of a frame is kept or sent.
+*Load keys*, and *Scan QR code* in each key's field, read a QR code from the camera's frames: one key, or a setup code holding several, such as the [API keys page]({{ '/api-keys.html' | relative_url }}) draws. Only ZXing's core and its QR code reader are used, on the phone; nothing of a frame is kept or sent.
 
 Limits as used here: the camera is driven by the app's own code on Android's camera2 API, and ZXing sees only each frame's brightness. ZXing's project is in maintenance mode, changed by contributed fixes.
 

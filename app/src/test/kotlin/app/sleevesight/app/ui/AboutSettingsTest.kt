@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -18,6 +19,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +35,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/** *About*'s rows for the usage and settings pages on the site (#415, #416), opened in the browser. */
+/** *About*'s rows for the site's pages (#415, #416, #421, #444), each opened in the browser. */
 @RunWith(RobolectricTestRunner::class)
 class AboutSettingsTest {
     @get:Rule
@@ -55,13 +57,18 @@ class AboutSettingsTest {
     }
 
     @Test
-    fun theUsagePageRowOpensThePageOnTheSite() {
-        assertRowOpens(R.string.settings_usage_page, "https://sleevesight.app/docs/tutorials/usage/")
+    fun theDocumentationRowOpensTheIndexOnTheSite() {
+        assertRowOpens(R.string.settings_docs, "https://sleevesight.app/docs/")
     }
 
     @Test
-    fun theSettingsPageRowOpensThePageOnTheSite() {
-        assertRowOpens(R.string.settings_settings_page, "https://sleevesight.app/docs/tutorials/settings/")
+    fun theSourceCodeRowOpensTheRepository() {
+        assertRowOpens(R.string.settings_source_code, "https://github.com/wkusnierczyk/sleevesight")
+    }
+
+    @Test
+    fun theLicenceRowOpensTheLicence() {
+        assertRowOpens(R.string.settings_licence, "https://github.com/wkusnierczyk/sleevesight/blob/main/LICENSE")
     }
 
     private fun assertRowOpens(
@@ -76,11 +83,14 @@ class AboutSettingsTest {
                     }
                 }
             }
+            compose.openSection(SettingsSection.ABOUT)
             val text = app.getString(title)
             compose.waitUntil(5_000) { compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText(text).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(url.removePrefix("https://")).assertIsDisplayed()
-            compose.onNodeWithText(text).performClick()
+            // The address, to type in where no browser opens.
+            compose.onNodeWithText(url.removePrefix("https://")).performScrollTo().assertIsDisplayed()
+            val link = app.getString(R.string.settings_open_page, text)
+            compose.onNodeWithContentDescription(link).performScrollTo().performClick()
 
             var started: Intent? = null
             scenario.onActivity { started = shadowOf(it).nextStartedActivity }

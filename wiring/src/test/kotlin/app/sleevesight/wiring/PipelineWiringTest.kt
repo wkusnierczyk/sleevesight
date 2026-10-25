@@ -7,6 +7,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WebEngine
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.net.NetClient
 import app.sleevesight.net.NetRequest
 import app.sleevesight.net.NetResponse
@@ -70,6 +71,18 @@ class PipelineWiringTest {
             listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM),
             ids(keyed, Settings(webEngines = emptySet())),
         )
+    }
+
+    @Test
+    fun `with Show genres off the MusicBrainz and Last fm adapters are built without genres`() {
+        val keys = SourceKeys(lastFm = lastFm)
+        val on = wiring.adapters(keys, Settings()).associate { it.id to it.extractionVersion }
+        val off = wiring.adapters(keys, Settings(showGenres = false)).associate { it.id to it.extractionVersion }
+        for (source in listOf(SourceId.MUSICBRAINZ, SourceId.LASTFM)) {
+            assertEquals(on.getValue(source) + WITHOUT_GENRES_VERSION, off.getValue(source), "$source")
+        }
+        // A source with no tags is built the same either way.
+        assertEquals(on.getValue(SourceId.WIKIPEDIA), off.getValue(SourceId.WIKIPEDIA))
     }
 
     @Test
