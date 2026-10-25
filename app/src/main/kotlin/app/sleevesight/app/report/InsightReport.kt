@@ -15,7 +15,8 @@ import kotlin.time.Duration
  * The report of a problem with [insight], written for [track], for the developer (#390): the
  * [reason] and the user's [note]; the track as the player reported it (title, artists, album,
  * length) and the MusicBrainz ids resolved for it; the insight's text, and the evidence lines its
- * prompt held, each with its source, scope and address; and the prompt version, AI service, model
+ * prompt held (every line of the track for an insight served from the cache, which keeps no record
+ * of them), each with its source, scope and address; and the prompt version, AI service, model
  * and effort it was written with. Nothing else: never a key, the history, the settings, the player
  * or anything about the phone. In English, as the developer reads it, whatever the phone's
  * language; addressed to [Mail.SUPPORT].
