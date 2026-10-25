@@ -12,8 +12,10 @@ import app.sleevesight.core.synthesis.GroundedText
 /**
  * The line under a written insight: with [details] (*Show grounding details*, a developer option,
  * #437) the grounding check's counts in full ([Meta]), else a note only when there is something
- * to say ([Note]). [modifier] goes to the line's text, so a caller that sets the line in a row
- * beside other content (a weight) keeps that content whether or not a note shows.
+ * to say ([Note]). [modifier] goes to the line's text. With no note, nothing is drawn, and the
+ * modifier with it: a caller that sets the line in a row beside other content fills the space
+ * itself, so that content keeps its place (a weighted `Box` around the line, a
+ * `Spacer(Modifier.weight(1f))`, or `Arrangement.End`).
  */
 @Composable
 internal fun GroundingLine(
