@@ -42,7 +42,8 @@ private const val COUNTDOWN_FROM = 4
 
 /**
  * *About*: *Version*, whose seven taps turn developer mode on ([VersionRow]); the way to the
- * credits; and the site's pages, each a row with its address, to type in where no browser opens,
+ * credits; the first-run screen's explanation of what leaves the device (#441), as Home's bottom
+ * link opens it ([openWhatLeaves]); and the site's pages, each a row with its address, to type in where no browser opens,
  * and *Open website ↗*: the documentation's index (#421), through which the usage and settings
  * pages (#415, #416) and later ones are reached, the privacy policy, with where the app stands under
  * the GDPR and the EU AI Act (#295), the source code and its licence.
@@ -52,12 +53,18 @@ internal fun AboutSection(
     settings: Settings,
     update: Update,
     openCredits: () -> Unit,
+    openWhatLeaves: () -> Unit,
 ) {
     VersionRow(settings.developerMode) { update { it.copy(developerMode = true) } }
     ValueRow(
         title = stringResource(R.string.credits_title),
         value = stringResource(R.string.settings_credits_value),
         onClick = openCredits,
+    )
+    ValueRow(
+        title = stringResource(R.string.settings_what_leaves),
+        value = stringResource(R.string.settings_what_leaves_value),
+        onClick = openWhatLeaves,
     )
     LinkRow(R.string.settings_docs, DOCS_URL, R.string.settings_docs_summary)
     LinkRow(R.string.settings_privacy, PRIVACY_POLICY_URL, R.string.settings_privacy_summary)

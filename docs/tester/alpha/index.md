@@ -41,7 +41,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 ## Using Sleevesight
 
-- **Play music in Spotify** (or another player you follow), then open Sleevesight. The home screen follows the track: the cover, the title and artists, the genre labels, and under *Why it's interesting* the insight.
+- **Play music in Spotify** (or another player you follow), then open Sleevesight. The home screen follows the track: the cover, the title and artists, the genre labels, and under *Key insights* the insight.
 - **Write insight.** Nothing is written until your first tap on *Write insight*. After that, under the default *Reactive: On track change*, a new insight is written for each new track as it starts, until Android closes the app in the background, often days later; after that, the next track waits for a tap on *Write insight* again. *On skip* writes only the tracks you skip to; *Manual: only when I tap Write* writes only when you tap.
 - **Skip detection.** Under *On skip*, the app tells a skip from a track that ended on its own by the time left and, for Spotify, the player's states just before the change. It uses your crossfade setting, detected by default.
 - **While you are away.** Lookups and writing happen only while the app is on screen, unless you turn on *Look up in the background*. Automatic writing pauses after 5 track changes away (*Saver*); the card then asks for a tap.

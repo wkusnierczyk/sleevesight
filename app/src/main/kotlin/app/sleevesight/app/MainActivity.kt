@@ -90,6 +90,7 @@ class MainActivity : ComponentActivity() {
                                         graph.settingsSaves,
                                         links.openCredits,
                                         links.openDiagnostics,
+                                        onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLaunch = graph::playerLaunchIntent,
                                         playerLabel = graph::playerLabel,
                                     )

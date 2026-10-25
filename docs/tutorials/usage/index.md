@@ -41,7 +41,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The cogwheel**, at the right, opens the settings.
 
-At the bottom of the home screen, *What leaves the phone* opens the first-run screen again, to reread it.
+At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too.
 
 ### The playing track
 
@@ -51,10 +51,9 @@ From top to bottom, the card shows:
 
 - **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen; a player that has none says so.
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
-- **The title**, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
+- **The title**, large and bold, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
 - **The artists**, each credited one, featured artists included.
-- **The album**, or *Album not reported* when the player gives none.
-- **The year of first release**, *Released* and the year, when MusicBrainz found one. It is the year the recording first came out, not the year of the release being played.
+- **The album**, in italics, followed by the year of first release when MusicBrainz found one: *Rubber Soul*, 1965. The year is the one the recording first came out, not the year of the release being played. When the player gives no album, the year stands alone, or, with no year either, the line reads *Album not reported*.
 
 A new track shows at once, with its sources and insight to come.
 
@@ -70,7 +69,7 @@ When there are none, it says *None found.*, or *Every genre source is off in Set
 
 ### The insight
 
-*Why it's interesting* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
+*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
 
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 

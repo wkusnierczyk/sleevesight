@@ -195,8 +195,10 @@
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
+    <string name="settings_what_leaves">What leaves the device</string>
+    <string name="settings_what_leaves_value">What Sleevesight reads, what it sends and to whom, and what stays on the device</string>
     <string name="settings_privacy">Privacy policy</string>
-    <string name="settings_privacy_summary">What leaves the phone, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
+    <string name="settings_privacy_summary">What leaves the device, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
     <string name="settings_section_developer">Developer</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_summary">Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.</string>
