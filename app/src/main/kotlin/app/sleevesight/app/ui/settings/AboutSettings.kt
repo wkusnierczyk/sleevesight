@@ -29,18 +29,21 @@ internal fun AboutSection(openCredits: () -> Unit) {
         title = stringResource(R.string.settings_usage_page),
         value = shownAddress(USAGE_PAGE_URL),
         summary = stringResource(R.string.settings_usage_page_summary),
+        link = true,
         onClick = rememberOpenUrl(USAGE_PAGE_URL),
     )
     ValueRow(
         title = stringResource(R.string.settings_settings_page),
         value = shownAddress(SETTINGS_PAGE_URL),
         summary = stringResource(R.string.settings_settings_page_summary),
+        link = true,
         onClick = rememberOpenUrl(SETTINGS_PAGE_URL),
     )
     ValueRow(
         title = stringResource(R.string.settings_privacy),
         value = PRIVACY_POLICY_SHOWN,
         summary = stringResource(R.string.settings_privacy_summary),
+        link = true,
         onClick = openPrivacyPolicy,
     )
 }

@@ -20,10 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.plainSwitchColors
 
 private const val DISABLED_ALPHA = 0.38f
 
+/** A section's heading: bold, in the text colour (#442). */
 @Composable
 internal fun SectionHeading(
     @StringRes text: Int,
@@ -31,8 +36,8 @@ internal fun SectionHeading(
     HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
     Text(
         stringResource(text),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(top = 8.dp),
     )
 }
@@ -79,17 +84,22 @@ internal fun SwitchRow(
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
         }
         Spacer(Modifier.width(16.dp))
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = plainSwitchColors())
     }
 }
 
-/** A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled. */
+/**
+ * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled. A
+ * [link] row opens a web page, its value the page's address, marked as every link is.
+ */
+@Suppress("LongParameterList") // Each sets one aspect of the row; all but three have defaults.
 @Composable
 internal fun ValueRow(
     title: String,
     value: String,
     summary: String? = null,
     indent: Boolean = false,
+    link: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
@@ -102,11 +112,15 @@ internal fun ValueRow(
                 .padding(start = if (indent) 16.dp else 0.dp, top = 8.dp, bottom = 8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-        )
+        if (link) {
+            LinkedText(AnnotatedString(value), style = MaterialTheme.typography.bodyMedium, color = color, whole = true)
+        } else {
+            Text(
+                value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+            )
+        }
         summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
     }
 }

@@ -15,15 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.linkStyles
 import app.sleevesight.core.genres.LabelSource
 
 /**
@@ -118,11 +117,8 @@ private fun CreditEntry(credit: Credit) {
     )
     Text(stringResource(credit.text), style = MaterialTheme.typography.bodyMedium)
     credit.licence?.let { licence ->
-        val linkStyle =
-            TextLinkStyles(
-                SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline),
-            )
-        Text(
+        val linkStyle = linkStyles()
+        LinkedText(
             buildAnnotatedString { withLink(LinkAnnotation.Url(licence.url, linkStyle)) { append(licence.name) } },
             style = MaterialTheme.typography.bodyMedium,
         )
