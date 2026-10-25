@@ -25,7 +25,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 - *What it reads*: what the players you follow report (the player, the title, artists, album, length and cover, whether it is playing and how far in, and the queue of tracks up next), and what it never reads: the notifications themselves, calls from the phone app, and the audio.
 - *What leaves the phone, and to whom*: the playing track's title and artists to the sources you switch on; the title, artists, album and what the sources found to the AI service you choose; each API key only to its own service; a request for a cover's image when a player gives the cover only as a web address; and to the developer, only if you send it from your mail app, a report of a problem with an insight, or, in developer mode, a tester's report of the app's state; until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account. Each service also sees your phone's IP address.
-- *What stays on the phone*: everything else, apart from a report you hand to your mail app, including the history and your keys, which are stored encrypted.
+- *What stays on the phone*: everything else, apart from a diagnostics export you make yourself, a report you hand to your mail app, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see; the history and your keys, which are stored encrypted, included.
 
 At the bottom, a link opens the privacy policy in your browser.
 
@@ -59,7 +59,7 @@ The settings are in sections, each folded under its name: a tap on a section's n
 
 - **Type it** into the *Key* field and tap *Save*. Once something is entered, an eye in the field shows it, to check it before it is saved; a saved key is never shown again.
 - **Scan QR code** (the QR code icon) fills the field from a QR code that holds the key, once the key has that service's form.
-- **Type on a computer** (the keyboard icon) connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
+- **Type on a computer** (the keyboard icon) connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone (the only device listed, as *Unknown or Unsupported Device* unless *Show this phone's name to the computer* is on), and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
 If you keep the key in a password manager, it offers its saved entries on the *Key* field, as on any password field; it is not asked to save the key.
 

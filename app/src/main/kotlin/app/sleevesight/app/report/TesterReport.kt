@@ -405,6 +405,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "historyLifetime" to { s -> s.historyLifetime?.toString() ?: "forever" },
         "sessionGap" to { it.sessionGap.toString() },
         "keepSourcesUnfolded" to { onOff(it.keepSourcesUnfolded) },
+        "showPhoneName" to { onOff(it.showPhoneName) },
         "showDiagnostics" to { onOff(it.showDiagnostics) },
         "showGroundingDetails" to { onOff(it.showGroundingDetails) },
         "developerMode" to { onOff(it.developerMode) },

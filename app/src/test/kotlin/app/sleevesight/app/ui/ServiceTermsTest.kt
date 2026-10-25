@@ -79,7 +79,7 @@ class ServiceTermsTest {
 
     private fun show(
         scanner: QrScanner = { _, _ -> },
-        keyboard: ComputerKeyboard = { _, _, _ -> },
+        keyboard: ComputerKeyboard = { _, _, _, _ -> },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -185,7 +185,7 @@ class ServiceTermsTest {
         }
 
     /** A keyboard session taller than the screen, ending in a line of text, [SESSION_END]. */
-    private val tall: ComputerKeyboard = { _, _, _ ->
+    private val tall: ComputerKeyboard = { _, _, _, _ ->
         Column {
             Box(Modifier.height(1_200.dp))
             Text(SESSION_END)

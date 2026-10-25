@@ -65,6 +65,7 @@ internal object SettingsCodec {
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
+    private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
     private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
@@ -112,6 +113,7 @@ internal object SettingsCodec {
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs, defaults),
@@ -218,6 +220,7 @@ internal object SettingsCodec {
         if (moved { it.keepSourcesUnfolded }) {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
+        if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         if (moved { it.showGroundingDetails }) {
             prefs.put(GROUNDING_DETAILS, settings.showGroundingDetails, defaults.showGroundingDetails)

@@ -143,7 +143,8 @@ class KeyAutofillTest {
                                 true
                             },
                             scanner = { _, _ -> },
-                            keyboard = { _, _, _ -> },
+                            keyboard = { _, _, _, _ -> },
+                            showPhoneName = false,
                             onDismiss = {
                                 calls += RecordingAutofillManager.DISMISSED
                                 shown.open = false

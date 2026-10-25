@@ -88,6 +88,11 @@ import kotlin.time.Duration.Companion.seconds
  *   nothing about the next. On, a list shown past its first screenful but not in full comes back
  *   at its first screenful. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh.
+ * @property showPhoneName *Show this phone's name to the computer* (#433): whether *Type on a
+ *   computer* advertises the phone's Bluetooth name, in the scan response, while a session's dialog
+ *   is open, so the computer's device chooser lists the phone by it. Off by default: anyone nearby
+ *   scanning for Bluetooth would see the name meanwhile, and the chooser lists the phone alone
+ *   either way, nameless as *Unknown or Unsupported Device*.
  * @property showDiagnostics *Diagnostics*, a developer setting: whether the settings lead to the
  *   diagnostics screen (`design/design.md`, *Diagnostics*). Off: a listener has no use for it.
  * @property showGroundingDetails *Show grounding details* (#437), a developer setting: whether the
@@ -135,6 +140,7 @@ data class Settings(
     val historyLifetime: Duration? = DEFAULT_HISTORY_LIFETIME,
     val sessionGap: Duration = DEFAULT_SESSION_GAP,
     val keepSourcesUnfolded: Boolean = false,
+    val showPhoneName: Boolean = false,
     val showDiagnostics: Boolean = false,
     val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
