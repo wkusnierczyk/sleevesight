@@ -84,6 +84,7 @@ class SettingsCodecTest {
                 sessionGap = 10.minutes,
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
+                showGroundingDetails = true,
                 developerMode = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
@@ -187,6 +188,17 @@ class SettingsCodecTest {
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
         // A state no screen makes, kept as it is: developer mode off with *Diagnostics* on.
         assertEquals(Settings(showDiagnostics = true), roundTrip(Settings(showDiagnostics = true)))
+    }
+
+    @Test
+    fun showGroundingDetailsIsStoredUnderItsKeyAndClearedWithDeveloperMode() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true), prefs)
+        assertEquals(true, prefs[booleanPreferencesKey("developer.grounding_details")])
+        assertTrue(SettingsCodec.read(prefs).showGroundingDetails)
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
+        assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
     }
 
     @Test
