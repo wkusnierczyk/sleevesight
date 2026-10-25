@@ -90,7 +90,9 @@ fun NowPlayingPage(
 }
 
 // What [feed] publishes, as it changes. The settings are held for the process, so a screen coming
-// back (Home, from a page) has them from its first frame, and is laid out as it was left.
+// back (Home, from a page) has them from its first frame, and is laid out as it was left. On a cold
+// start they are null until their first read, and Home draws neither *Sources* nor the genres until
+// then, as the layout is not known yet.
 @Composable
 private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val view by feed.view.collectAsState()
@@ -201,7 +203,9 @@ internal fun NowPlayingContent(
                 PlayerRow(playing.player, state.playback, actions)
                 ArtAndProgress(state.art, state.playback, header.duration)
                 KeyData(normalized, header, releaseYear(track))
-                Genres(track, settings, actions.openPage.takeIf { pages })
+                // Until the settings' first read, the layout is not known: neither item is drawn,
+                // rather than the boxes for a frame and then the pages (#447).
+                if (settings != null) Genres(track, settings, actions.openPage.takeIf { pages })
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
@@ -213,18 +217,30 @@ internal fun NowPlayingContent(
                     },
                     shown.details,
                 )
-                if (pages) {
-                    PageLink(
-                        stringResource(R.string.home_sources_title),
-                        SOURCES_PAGE_LINK_TAG,
-                        MaterialTheme.typography.titleSmall,
-                        heading = true,
-                    ) { actions.openPage(HomePage.Sources()) }
-                } else {
-                    SourcesSection(shown.sources(), focus, fold, actions.openSettings)
-                }
+                if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
             }
         }
+    }
+}
+
+// *Sources* on Home: `Sources ›`, the way to its page, under *Separate pages* ([pages]), else the box.
+@Composable
+private fun SourcesItem(
+    pages: Boolean,
+    shown: Showing,
+    focus: LineFocus,
+    fold: SourcesFold,
+    actions: NowPlayingActions,
+) {
+    if (pages) {
+        PageLink(
+            stringResource(R.string.home_sources_title),
+            SOURCES_PAGE_LINK_TAG,
+            MaterialTheme.typography.titleSmall,
+            heading = true,
+        ) { actions.openPage(HomePage.Sources()) }
+    } else {
+        SourcesSection(shown.sources(), focus, fold, actions.openSettings)
     }
 }
 

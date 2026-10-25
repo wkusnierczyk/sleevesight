@@ -344,6 +344,34 @@ class LayoutPagesTest {
         }
 
     @Test
+    fun untilTheSettingsAreReadHomeDrawsNeitherItemThenThePagesLayout() {
+        val read = state(long(), pages)
+        // As on a cold start, before the stored settings' first read.
+        show(NowPlayingState(read.view, read.playing, read.playback, settings = null)) { current ->
+            // Home itself is drawn: the insight shows, with no settings needed.
+            compose.onNodeWithText(text(R.string.home_insight_title)).assertExists()
+            assertEquals(0, count(SOURCES_FOLD_TAG))
+            assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
+            assertEquals(0, count(GENRES_FOLD_TAG))
+            assertEquals(0, count(GENRE_PREFIX + "track:folkpop"))
+
+            // The settings' first read, frame by frame: the pages' layout, never the boxes'.
+            compose.mainClock.autoAdvance = false
+            current.value = read
+            var drawn = false
+            repeat(BACK_FRAMES) {
+                compose.mainClock.advanceTimeByFrame()
+                assertEquals(0, count(SOURCES_FOLD_TAG))
+                assertEquals(0, count(GENRES_FOLD_TAG))
+                drawn = drawn || count(SOURCES_PAGE_LINK_TAG) > 0
+            }
+            assertTrue(drawn)
+            compose.mainClock.autoAdvance = true
+            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).assertExists()
+        }
+    }
+
+    @Test
     fun aDoubleTapOpensOnePageAndOneBackReturnsHome() =
         show(state(long(), pages)) {
             // Both taps land before the page comes in, as a quick double tap does.

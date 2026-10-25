@@ -237,7 +237,9 @@ class AppGraph(
      * The latest settings read, for the caches, which read them on every call, the pipeline and
      * the history's recorder and retention, and the home screen and its pages (#447), which come
      * back to them laid out as they were left. Nothing is read before the first run is
-     * acknowledged; null until the first read after it. The pipeline, the caches' only caller,
+     * acknowledged; null until the first read after it, so also for a while on each cold start
+     * (launch, or after process death), while the stored settings are read: the home screen draws
+     * neither *Sources* nor the genres until then. The pipeline, the caches' only caller,
      * starts after it, and the history's retention deletes nothing (and opens no `history.db`)
      * before it.
      */
