@@ -313,6 +313,7 @@
     <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>
     <string name="credits_libraries">Libraries</string>
     <string name="credits_libraries_text">The open-source code the app is built on, by licence. Each licence asks that its text, and some the library’s copyright notice, go with every copy of the app: each is here in full.</string>
+    <string name="credits_libraries_uses">What each library does in the app:</string>
     <string name="credits_libraries_apache">Under the Apache License 2.0</string>
     <string name="credits_show_licence">Show the licence</string>
     <string name="credits_hide_licence">Hide the licence</string>
