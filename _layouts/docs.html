@@ -10,7 +10,7 @@
   fonts are the page's own cut-down copies (`assets/fonts/make_page_font.py`), which hold printable
   ASCII, Latin-1 and the common punctuation, so a page's text needs no rebuild while it stays within
   them. A page with a diagram loads the diagram script from jsDelivr (`_includes/head-custom.html`),
-  and its footer says so.
+  and its footer says so. Keep its head and the AnchorJS lines in step with `_layouts/default.html`.
 {% endcomment %}
 <!DOCTYPE html>
 <html lang="{{ site.lang | default: "en-US" }}">
@@ -71,7 +71,8 @@ footer{margin-top:40px}
 {% endunless %}
 </main>
 {% if content contains 'language-mermaid' %}{% assign diagrams = true %}{% else %}{% assign diagrams = false %}{% endif %}
-{% include site-footer.html source=page.path diagrams=diagrams %}
+{% assign source = page.source_path | default: page.path %}
+{% include site-footer.html source=source diagrams=diagrams %}
 </div>
 {% include site-header-script.html %}
     <script src="{{ "/assets/js/anchor.min.js" | relative_url }}" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg="></script>
