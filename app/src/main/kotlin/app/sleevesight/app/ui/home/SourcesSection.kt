@@ -35,16 +35,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.LinkedText
-import app.sleevesight.app.ui.theme.linkStyles
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
@@ -354,17 +351,11 @@ private fun Where(
     scope: Scope,
     url: String?,
 ) {
-    val linkStyle = linkStyles()
-    val text =
-        buildAnnotatedString {
-            append(scopeText(scope))
-            val host = hostOf(url)
-            if (url != null && host != null) {
-                append(" · ")
-                withLink(LinkAnnotation.Url(url, linkStyle)) { append(host) }
-            }
-        }
-    LinkedText(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val host = hostOf(url)
+    val parts =
+        listOf(TextPart.Words(scopeText(scope))) +
+            if (url != null && host != null) listOf(TextPart.Words(" · "), TextPart.Link(host, url)) else emptyList()
+    LinkedText(parts, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 /** A line of a match that could not be verified: shown, never cited. */

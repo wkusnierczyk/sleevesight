@@ -8,9 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import app.sleevesight.app.R
-import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.LinkLabel
 
 /**
  * The privacy policy on the site (`privacy.md`, #57), with where the app stands under the GDPR and
@@ -47,7 +46,7 @@ internal fun rememberOpenUrl(url: String): () -> Unit {
 internal fun rememberOpenPrivacyPolicy(): () -> Unit = rememberOpenUrl(PRIVACY_POLICY_URL)
 
 /**
- * [url], shown without its scheme and marked as every link is ([LinkedText]), opening the page
+ * [url], shown without its scheme and marked as every link is ([LinkLabel]), opening the page
  * when tapped: a clickable text, the whole of it the link, with at least the minimum touch target,
  * and an action a screen reader names (`link_open`).
  */
@@ -57,10 +56,9 @@ internal fun WebLink(
     modifier: Modifier = Modifier,
 ) {
     val open = rememberOpenUrl(url)
-    LinkedText(
-        AnnotatedString(shownAddress(url)),
+    LinkLabel(
+        shownAddress(url),
         style = MaterialTheme.typography.bodyMedium,
-        whole = true,
         modifier =
             modifier
                 .clickable(onClickLabel = stringResource(R.string.link_open), onClick = open)

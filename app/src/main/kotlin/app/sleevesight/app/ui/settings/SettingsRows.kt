@@ -20,10 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.plainSwitchColors
 
 private const val DISABLED_ALPHA = 0.38f
@@ -113,7 +112,7 @@ internal fun ValueRow(
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
         if (link) {
-            LinkedText(AnnotatedString(value), style = MaterialTheme.typography.bodyMedium, color = color, whole = true)
+            LinkLabel(value, style = MaterialTheme.typography.bodyMedium, color = color)
         } else {
             Text(
                 value,

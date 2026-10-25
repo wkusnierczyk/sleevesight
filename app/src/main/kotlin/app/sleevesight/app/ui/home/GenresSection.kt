@@ -32,15 +32,12 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkedText
-import app.sleevesight.app.ui.theme.linkStyles
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
 import app.sleevesight.core.genres.LabelSource
@@ -248,7 +245,6 @@ private fun Credits(
     placed: PlacedLabel,
     several: Boolean,
 ) {
-    val linkStyle = linkStyles()
     val licence = stringResource(R.string.home_genre_licence)
     val label = placed.label
     val from =
@@ -265,21 +261,14 @@ private fun Credits(
                 ?: stringResource(from, label.genre.label),
         )
         for (credit in label.credits) {
-            val text =
-                buildAnnotatedString {
-                    val url = credit.url
-                    if (url != null) {
-                        withLink(LinkAnnotation.Url(url, linkStyle)) { append(credit.source.credit) }
-                    } else {
-                        append(credit.source.credit)
-                    }
-                    credit.source.licenceUrl?.let {
-                        append(" · ")
-                        withLink(LinkAnnotation.Url(it, linkStyle)) { append(licence) }
-                    }
-                }
+            val name = credit.source.credit
+            val parts =
+                listOf(credit.url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name)) +
+                    credit.source.licenceUrl
+                        ?.let { listOf(TextPart.Words(" · "), TextPart.Link(licence, it)) }
+                        .orEmpty()
             LinkedText(
-                text,
+                parts,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
