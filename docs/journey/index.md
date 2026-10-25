@@ -59,7 +59,7 @@ The settings are in sections, each folded under its name: a tap on a section's n
 
 - **Type it** into the *Key* field and tap *Save*.
 - **Scan QR code** fills the field from a QR code that holds the key, once the key has that service's form.
-- **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone, and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
+- **Type on a computer** connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone (the only device listed, as *Unknown or Unsupported Device* unless *Show this phone's name to the computer* is on), and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
 To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Before saving, it lists each key it found by its last four characters, and says which would replace a key already saved; *Save* saves them. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
 
