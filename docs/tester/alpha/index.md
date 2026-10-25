@@ -74,7 +74,7 @@ In brief: requests go from your phone straight to each service, none through a s
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.
 - **To us,** only a problem report you send from your mail app, which you see in full first; never your keys, the history or the settings. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a problem report to your mail app. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a problem report to your mail app; and while you type a key on a computer, devices nearby can see the phone's Bluetooth advertisement: a random identifier for that session, and the phone's name only with *Show this phone's name to the computer* on. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 

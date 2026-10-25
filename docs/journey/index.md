@@ -25,7 +25,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 - *What it reads*: what the players you follow report (the player, the title, artists, album, length and cover, whether it is playing and how far in, and the queue of tracks up next), and what it never reads: the notifications themselves, calls from the phone app, and the audio.
 - *What leaves the phone, and to whom*: the playing track's title and artists to the sources you switch on; the title, artists, album and what the sources found to the AI service you choose; each API key only to its own service; a request for a cover's image when a player gives the cover only as a web address; and to the developer, only if you send it from your mail app, a report of a problem with an insight; until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account. Each service also sees your phone's IP address.
-- *What stays on the phone*: everything else, apart from a problem report you hand to your mail app, including the history and your keys, which are stored encrypted.
+- *What stays on the phone*: everything else, apart from a diagnostics export you make yourself, a problem report you hand to your mail app, and, while you type a key on a computer, the phone's Bluetooth advertisement, which devices nearby can see; the history and your keys, which are stored encrypted, included.
 
 At the bottom, a link opens the privacy policy in your browser.
 
