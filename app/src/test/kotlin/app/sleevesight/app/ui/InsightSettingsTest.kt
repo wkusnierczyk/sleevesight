@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -42,7 +43,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On skip*;
- * *Proactive*, a switch; and the rows about writing fixed while *Show insights* is off.
+ * *Proactive*, a switch; *Tell an artist's facts once per session* (#407), a switch; and the rows
+ * about writing fixed while *Show insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)
 class InsightSettingsTest {
@@ -119,12 +121,26 @@ class InsightSettingsTest {
         }
 
     @Test
+    fun artistFactsOncePerSessionIsASwitchOnByDefault() =
+        show {
+            val once = compose.onNodeWithText(text(R.string.settings_artist_facts_once)).performScrollTo()
+            once.assertIsOn()
+            compose.onNodeWithText(text(R.string.settings_artist_facts_once_summary)).assertIsDisplayed()
+            once.performClick()
+            waitFor("facts on every track stored") { !settings.now().artistFactsOncePerSession }
+            once.assertIsOff()
+            once.performClick()
+            waitFor("facts once per session stored") { settings.now().artistFactsOncePerSession }
+        }
+
+    @Test
     fun withShowInsightsOffTheRowsAboutWritingAreFixed() {
         runBlocking { settings.update { it.copy(writeInsights = false) } }
         show {
             compose.onNodeWithText(text(R.string.settings_write_insights)).performScrollTo().assertIsOff()
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().assertIsNotEnabled()
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
+            compose.onNodeWithText(text(R.string.settings_artist_facts_once)).performScrollTo().assertIsNotEnabled()
         }
     }
 }
