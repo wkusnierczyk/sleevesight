@@ -84,6 +84,7 @@ class SettingsCodecTest {
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
                 developerMode = true,
+                reportButton = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
