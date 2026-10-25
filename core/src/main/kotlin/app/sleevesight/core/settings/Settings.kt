@@ -97,7 +97,8 @@ import kotlin.time.Duration.Companion.seconds
  * @property developerMode *Developer mode* (#444): whether the settings show their *Developer*
  *   section, the options a developer or tester may want and a listener will not. Turned on by seven
  *   taps on *Version*, off by its switch, which turns off every developer option with it
- *   ([withoutDeveloperMode]). Off by default.
+ *   ([withoutDeveloperMode]). Off by default here; a build for Play's testing tracks makes it on
+ *   by default (#451: `:app`'s `SettingsStore.BUILD_DEFAULTS`), so testers reach the diagnostics.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
