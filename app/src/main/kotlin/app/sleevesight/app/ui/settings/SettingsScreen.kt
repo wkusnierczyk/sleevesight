@@ -84,6 +84,7 @@ fun SettingsScreen(
     saves: CoroutineScope,
     onOpenCredits: () -> Unit = {},
     onOpenDiagnostics: () -> Unit = {},
+    onOpenWhatLeaves: () -> Unit = {},
     scanner: QrScanner = CameraQrScanner,
     keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
     playerLabel: (String) -> String,
@@ -103,15 +104,14 @@ fun SettingsScreen(
             changeFailures = if (failed) changeFailures + 1 else 0
         }
     val keys = KeysShown(secrets, offerReset = sealFailed || SecretState.UNREADABLE in secrets.values)
+    val navigation = Navigation(playerLabel, onOpenCredits, onOpenDiagnostics, onOpenWhatLeaves)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.safeDrawingPadding()) {
             // Above the list, so it shows wherever the list is scrolled to.
             Notices(changeFailures, clearing.ended)
             settings?.let { current ->
-                SettingsContent(current, keys, Navigation(playerLabel, onOpenCredits, onOpenDiagnostics), update) {
-                    dialog = it
-                }
+                SettingsContent(current, keys, navigation, update) { dialog = it }
             }
         }
     }
@@ -256,6 +256,7 @@ private class Navigation(
     val playerLabel: (String) -> String,
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
+    val openWhatLeaves: () -> Unit,
 )
 
 /** The saved keys' states, and whether to offer *Reset saved keys*. */
@@ -356,7 +357,7 @@ private fun SettingsContent(
         HistorySection(settings, update, open)
         AppearanceSection(settings, update, open)
         SavedKeysSection(keys, open)
-        AboutSection(navigation.openCredits)
+        AboutSection(navigation.openCredits, navigation.openWhatLeaves)
         DeveloperSection(settings, update, navigation.openDiagnostics)
     }
 }
