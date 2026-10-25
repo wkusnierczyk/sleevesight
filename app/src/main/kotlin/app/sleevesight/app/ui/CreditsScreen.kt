@@ -22,16 +22,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.LabelSource
 import java.io.IOException
 
@@ -246,10 +242,8 @@ private fun LibraryEntry(
     // takes the initial focus, and the screen would open scrolled down to it.
     val toggle = stringResource(if (open) R.string.credits_hide_licence else R.string.credits_show_licence)
     val state = stringResource(if (open) R.string.credits_licence_shown else R.string.credits_licence_hidden)
-    Text(
-        buildAnnotatedString {
-            withLink(LinkAnnotation.Clickable(library.notice, linkStyles()) { open = !open }) { append(toggle) }
-        },
+    LinkedText(
+        listOf(TextPart.Action(toggle, library.notice) { open = !open }),
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.semantics { stateDescription = state },
     )
@@ -263,13 +257,8 @@ private fun LibraryEntry(
 @Composable
 private fun LibraryUses() {
     val uses = stringResource(R.string.credits_libraries_uses)
-    val link = linkStyles()
-    Text(
-        buildAnnotatedString {
-            append(uses)
-            append(' ')
-            withLink(LinkAnnotation.Url(DEPENDENCIES_PAGE_URL, link)) { append(shownAddress(DEPENDENCIES_PAGE_URL)) }
-        },
+    LinkedText(
+        listOf(TextPart.Words("$uses "), TextPart.Link(shownAddress(DEPENDENCIES_PAGE_URL), DEPENDENCIES_PAGE_URL)),
         style = MaterialTheme.typography.bodyMedium,
     )
 }
@@ -283,16 +272,12 @@ private fun CreditEntry(credit: Credit) {
     )
     Text(stringResource(credit.text), style = MaterialTheme.typography.bodyMedium)
     credit.licence?.let { licence ->
-        Text(
-            buildAnnotatedString { withLink(LinkAnnotation.Url(licence.url, linkStyles())) { append(licence.name) } },
+        LinkedText(
+            listOf(TextPart.Link(licence.name, licence.url)),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
-
-@Composable
-private fun linkStyles(): TextLinkStyles =
-    TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
 
 @Preview(showBackground = true)
 @Composable
