@@ -41,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
+import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.SleevesightTheme
@@ -54,16 +55,17 @@ import kotlinx.coroutines.launch
  * way to turn it on. Everything under the header scrolls, so a citation can bring its evidence line
  * into view.
  *
- * With [onReport] (#452: developer mode and *Report button* on), a small report button floats at
- * the bottom end, on Home only; what scrolls ends far enough below it that, scrolled to the end,
- * the button covers none of it.
+ * With [report] (#452: developer mode on, and *Report button* at *Show* or *Auto*), a small
+ * report button floats at the bottom end, on Home only; what scrolls ends far enough below it that,
+ * scrolled to the end, the button covers none of it. Under *Auto* (#518) it is hidden while Home
+ * scrolls, and back once the scrolling stops ([TesterReportButton]).
  */
 @Composable
 fun HomeScreen(
     accessGranted: Boolean,
     onOpenFirstRun: () -> Unit,
     onOpenSettings: () -> Unit,
-    onReport: (() -> Unit)? = null,
+    report: ReportButtonState? = null,
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
@@ -74,16 +76,22 @@ fun HomeScreen(
                 // Animated under Compose's motion duration scale, which follows the phone's animator
                 // duration scale: with animations off, Home is at the top at once.
                 HomeHeader(scroll, onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } }, onOpenSettings)
-                HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = onReport != null, pipeline)
+                HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = report != null, pipeline)
             }
-            onReport?.let { TesterReportButton(it, Modifier.align(Alignment.BottomEnd).padding(REPORT_MARGIN)) }
+            report?.let {
+                TesterReportButton(
+                    it,
+                    scrolling = { scroll.isScrollInProgress },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(REPORT_MARGIN),
+                )
+            }
         }
     }
 }
 
 // What scrolls under the header: while access is on, what is playing and the way back to what
 // leaves the device; while it is off, the way to turn it on. It ends below the report button when
-// that shows.
+// that shows, under *Auto* too, so scrolled to the end, where the button is back, it covers nothing.
 @Composable
 private fun HomeBody(
     scroll: ScrollState,

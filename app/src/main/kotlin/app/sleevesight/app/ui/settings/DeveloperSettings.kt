@@ -3,6 +3,7 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 
 /**
@@ -17,8 +18,9 @@ import app.sleevesight.core.settings.Settings
  * - *Show grounding details* (#437), off by default: the grounding check's counts in full under
  *   each insight, where otherwise only a note shows, and only for a sentence the sources do not
  *   back (`Settings.showGroundingDetails`). #440 adds the full source statuses to it.
- * - *Report button* (#452): Home's button for a tester's report ([Settings.reportButton]), on by
- *   default in the test build and off in any other.
+ * - *Report button* (#452, #518): Home's button for a tester's report ([Settings.reportButton]):
+ *   *Show*, *Auto* (hidden while Home scrolls) or *Hide*; *Auto* by default in the test build and
+ *   *Hide* in any other.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -26,6 +28,7 @@ import app.sleevesight.core.settings.Settings
 internal fun DeveloperSection(
     settings: Settings,
     update: Update,
+    open: (SettingsDialog) -> Unit,
     openDiagnostics: () -> Unit,
 ) {
     SwitchRow(
@@ -46,11 +49,23 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_grounding_details_summary),
         checked = settings.showGroundingDetails,
     ) { on -> update { it.copy(showGroundingDetails = on) } }
-    SwitchRow(
+    val reportButtons =
+        listOf(
+            ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
+            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
+            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
+        )
+    ValueRow(
         title = stringResource(R.string.settings_report_button),
+        value = reportButtons.first { it.first == settings.reportButton }.second,
         summary = stringResource(R.string.settings_report_button_summary),
-        checked = settings.reportButton,
-    ) { on -> update { it.copy(reportButton = on) } }
+    ) {
+        open(
+            SettingsDialog.Choice(R.string.settings_report_button, reportButtons, settings.reportButton) { choice ->
+                update { it.copy(reportButton = choice) }
+            },
+        )
+    }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),

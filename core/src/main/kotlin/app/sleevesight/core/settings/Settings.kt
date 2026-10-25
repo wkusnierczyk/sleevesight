@@ -104,10 +104,11 @@ import kotlin.time.Duration.Companion.seconds
  *   taps on *Version*, off by its switch, which turns off every developer option with it
  *   ([withoutDeveloperMode]). Off by default here; a build for Play's testing tracks makes it on
  *   by default (#451: `:app`'s `SettingsStore.BUILD_DEFAULTS`), so testers reach the diagnostics.
- * @property reportButton *Report button* (#452), a developer setting: whether Home shows a small
- *   button that collects the app's state into a report for the tester to review, edit and send
- *   from their own mail app. Shown only in developer mode. Off by default here; on by default in a
- *   build for Play's testing tracks, as [developerMode] is (`:app`'s `SettingsStore.BUILD_DEFAULTS`).
+ * @property reportButton *Report button* (#452, #518), a developer setting: whether and when Home
+ *   shows a small button that collects the app's state into a report for the tester to review, edit
+ *   and send from their own mail app ([ReportButton]). Shown only in developer mode. *Hide* by
+ *   default here; *Auto* by default in a build for Play's testing tracks, where [developerMode] is on
+ *   by default (`:app`'s `SettingsStore.BUILD_DEFAULTS`).
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
@@ -144,7 +145,7 @@ data class Settings(
     val showDiagnostics: Boolean = false,
     val showGroundingDetails: Boolean = false,
     val developerMode: Boolean = false,
-    val reportButton: Boolean = false,
+    val reportButton: ReportButton = ReportButton.HIDE,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
@@ -231,11 +232,16 @@ data class Settings(
 
     /**
      * These settings with developer mode off, and with it every developer option ([showDiagnostics],
-     * [showGroundingDetails], [reportButton]), so nothing hidden keeps running. A developer option
-     * joins here with its setting.
+     * [showGroundingDetails], and [reportButton] at *Hide*), so nothing hidden keeps running. A
+     * developer option joins here with its setting.
      */
     fun withoutDeveloperMode(): Settings =
-        copy(developerMode = false, showDiagnostics = false, showGroundingDetails = false, reportButton = false)
+        copy(
+            developerMode = false,
+            showDiagnostics = false,
+            showGroundingDetails = false,
+            reportButton = ReportButton.HIDE,
+        )
 
     companion object {
         const val SPOTIFY: String = "com.spotify.music"
@@ -500,6 +506,22 @@ enum class ThemeChoice {
     SYSTEM,
     LIGHT,
     DARK,
+}
+
+/**
+ * *Report button* (#518): when Home shows the tester's report button (#452). A choice rather than
+ * a switch, since the button floats over what Home scrolls under it: *Auto* keeps it out of the way
+ * while Home scrolls, and *Hide* is what its own menu's *Hide* sets.
+ */
+enum class ReportButton {
+    /** Always shown, over whatever scrolls under it; at the end, Home scrolls clear of it. */
+    SHOW,
+
+    /** Hidden while Home scrolls, and back once the scrolling stops: the test build's default. */
+    AUTO,
+
+    /** Not shown: any build's default but the test build's. */
+    HIDE,
 }
 
 /** How the detail content is shown. */
