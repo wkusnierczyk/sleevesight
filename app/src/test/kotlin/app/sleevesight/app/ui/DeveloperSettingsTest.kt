@@ -141,6 +141,13 @@ class DeveloperSettingsTest {
             mode.performClick()
             compose.waitUntil(5_000) { !settings.now().developerMode && !developerShown }
             assertFalse("Diagnostics off with developer mode", settings.now().showDiagnostics)
+
+            // *About* still unfolded: the count starts afresh, and seven taps turn it on again.
+            repeat(4) { tapVersion() }
+            assertEquals(tapsLeft(3), ShadowToast.getTextOfLatestToast())
+            repeat(3) { tapVersion() }
+            assertEquals(text(R.string.settings_developer_on), ShadowToast.getTextOfLatestToast())
+            compose.waitUntil(5_000) { settings.now().developerMode && developerShown }
         }
 
     @Test

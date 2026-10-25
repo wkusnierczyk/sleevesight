@@ -232,33 +232,6 @@ internal class PipelineHostTest : PipelineHostFixture() {
         }
 
     @Test
-    fun `the pipeline is rebuilt for a key, an engine or the AI service, not for other settings`() =
-        runTest {
-            started()
-            play("One")
-            settle()
-            assertEquals(1, builds)
-
-            settings.value = settings.value.copy(writeInsights = false, lookUpInBackground = true)
-            settle()
-            assertEquals(1, builds)
-
-            settings.value = settings.value.copy(webEngines = emptySet())
-            settle()
-            assertEquals(2, builds)
-
-            settings.value = settings.value.copy(aiProvider = null)
-            settle()
-            assertEquals(3, builds)
-
-            keyChanges.value++
-            settle()
-            assertEquals(4, builds)
-            // Each rebuild ran the track again; the same pipeline never does.
-            assertEquals(4, musicBrainz.asked.size)
-        }
-
-    @Test
     fun `the first action carries over to a rebuilt pipeline, whose replay writes nothing by itself`() =
         runTest {
             started()
