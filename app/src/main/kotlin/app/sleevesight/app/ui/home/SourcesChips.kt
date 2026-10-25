@@ -161,7 +161,7 @@ private fun StatusChip(
     val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
     val shape = RoundedCornerShape(8.dp)
     // The chip's own text is what it says; the filter is its action and its state.
-    val action = stringResource(R.string.home_source_filter, sourceName(chip.source))
+    val action = stringResource(R.string.home_source_filter, chipName(chip.source))
     val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
     val toggle =
         if (filtering) {
@@ -229,7 +229,10 @@ private fun NameChip(
                     toggleableState = ToggleableState(shown)
                 }.padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(chip.source.tag, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = LETTER_ALPHA))
+        // Quieter than the name while its lines show; hidden, the name is already the quiet outline
+        // colour, and a letter fainter still would fall below a legible contrast.
+        val letter = if (shown) color.copy(alpha = LETTER_ALPHA) else color
+        Text(chip.source.tag, style = MaterialTheme.typography.labelSmall, color = letter)
         Text(name, style = MaterialTheme.typography.labelMedium, color = color)
     }
 }

@@ -639,27 +639,32 @@ class NowPlayingScreenTest {
 
     // Native graphics, on the phone's width and density: with Robolectric's default graphics every
     // chip lays out at one height, so a row could not be misaligned. A chip that filters reserves
-    // 48 dp for touch and draws centred in it; one that does not (L, no key) reserves nothing, and
-    // drew at the top of the row, above the others.
+    // 48 dp for touch and draws centred in it; one that does not (L, no key, under *Show grounding
+    // details*) reserves nothing, and drew at the top of the row, above the others. The chips by
+    // name (#440), a letter and a name of two sizes, share the row's centre too.
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w411dp-h891dp-420dpi")
-    fun theChipsOfARowShareACentre() =
-        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
-            unfold()
-            val chips =
-                listOf("MB", "W", "L").map {
-                    val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
-                    // Unclipped: a chip scrolled out of view has empty bounds in the root.
-                    node.positionInRoot.y to node.positionInRoot.y + node.size.height
-                }
-            // On one row, or the centres below would differ for another reason: chips of one row
-            // overlap in height (each is more than half the row's height), and the next row starts
-            // below them all.
-            assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
-            val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
-            assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
+    fun theChipsOfARowShareACentre() {
+        val details = Settings(showGroundingDetails = true)
+        for ((settings, tags) in listOf(details to listOf("MB", "W", "L"), Settings() to listOf("MB", "W"))) {
+            show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)), settings)) {
+                unfold()
+                val chips =
+                    tags.map {
+                        val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
+                        // Unclipped: a chip scrolled out of view has empty bounds in the root.
+                        node.positionInRoot.y to node.positionInRoot.y + node.size.height
+                    }
+                // On one row, or the centres below would differ for another reason: chips of one
+                // row overlap in height (each is more than half the row's height), and the next row
+                // starts below them all.
+                assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
+                val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
+                assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
+            }
         }
+    }
 
     @Test
     fun theSourcesSayWhatEachFoundNeedsOrRejected() {

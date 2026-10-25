@@ -86,7 +86,8 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
-                val openSettings = { navController.navigate(SettingsPage) }
+                // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
+                val openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } }
                 HomeScreen(
                     accessGranted = granted,
                     // Single top: a double tap opens it once, so one Continue comes back.
