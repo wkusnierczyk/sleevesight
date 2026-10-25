@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -416,7 +417,12 @@ class FirstRunFlowTest {
             compose.onNodeWithText(text(R.string.credits_intro)).assertIsDisplayed()
             // The icons' set, Material Symbols, with its licence (#445).
             compose.onNodeWithText(text(R.string.credits_material_symbols)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText("Apache License 2.0").performScrollTo().assertIsDisplayed()
+            // The first of them: the libraries' notices below name the license too (#488).
+            compose
+                .onAllNodesWithText("Apache License 2.0")
+                .onFirst()
+                .performScrollTo()
+                .assertIsDisplayed()
         }
     }
 
