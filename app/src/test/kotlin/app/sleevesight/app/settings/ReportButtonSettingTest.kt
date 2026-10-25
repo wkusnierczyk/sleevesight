@@ -1,10 +1,13 @@
 package app.sleevesight.app.settings
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import app.sleevesight.app.TestStores
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -55,17 +58,31 @@ class ReportButtonSettingTest {
             assertFalse(store(testBuild).settings.first().reportButton)
         }
 
+    // The stored *Report button*, or null with none stored.
+    private fun stored(): Boolean? =
+        runBlocking { stores.open("settings").data.first()[booleanPreferencesKey("developer.report_button")] }
+            .also { stores.close() }
+
     @Test
-    fun aChoiceStoredInOneBuildHoldsInTheOther() =
+    fun aChoiceStoredAgainstOneBuildsDefaultHoldsWhereTheDefaultDisagrees() =
         runBlocking {
-            // Turned off in the test build: off in the public build too.
-            store(testBuild).update { it.copy(reportButton = false) }
-            stores.close()
-            assertFalse(store(Settings()).settings.first().reportButton)
-            stores.close()
-            // Turned on in the public build: on in the test build too.
+            // Turned on in a public build, where it is off by default; then another setting changed in
+            // the test build, where it is on by default: back in the public build, it is still on.
             store(Settings()).update { it.copy(reportButton = true) }
             stores.close()
-            assertTrue(store(testBuild).settings.first().reportButton)
+            store(testBuild).update { it.copy(theme = ThemeChoice.DARK) }
+            stores.close()
+            assertEquals(true, stored())
+            assertTrue(store(Settings()).settings.first().reportButton)
+            stores.close()
+
+            // Turned off in the test build; then another setting changed in a public build: back in
+            // the test build, it is still off.
+            store(testBuild).update { it.copy(reportButton = false) }
+            stores.close()
+            store(Settings()).update { it.copy(theme = ThemeChoice.LIGHT) }
+            stores.close()
+            assertEquals(false, stored())
+            assertFalse(store(testBuild).settings.first().reportButton)
         }
 }
