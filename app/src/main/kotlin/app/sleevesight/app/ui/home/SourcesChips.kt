@@ -28,14 +28,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.model.Outcome
 
@@ -84,7 +80,6 @@ internal fun Notes(
 ) {
     if (notes.isEmpty()) return
     val settings = stringResource(R.string.home_source_note_settings)
-    val linkStyle = TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline))
     val sentences =
         notes.map { note ->
             val name = chipName(note.source)
@@ -94,22 +89,23 @@ internal fun Notes(
                 is SourceNote.Failed -> stringResource(R.string.home_source_note_failed, name)
             } to (note is SourceNote.NeedsKey)
         }
-    val text =
-        buildAnnotatedString {
-            sentences.forEachIndexed { index, (sentence, linked) ->
-                if (index > 0) append(" ")
-                val at = sentence.lastIndexOf(settings)
+    val parts =
+        sentences.flatMapIndexed { index, (sentence, linked) ->
+            val gap = if (index > 0) listOf(TextPart.Words(" ")) else emptyList()
+            val at = sentence.lastIndexOf(settings)
+            gap +
                 if (!linked || at < 0) {
-                    append(sentence)
-                    return@forEachIndexed
+                    listOf(TextPart.Words(sentence))
+                } else {
+                    listOf(
+                        TextPart.Words(sentence.substring(0, at)),
+                        TextPart.Action(settings, SETTINGS_LINK, openSettings),
+                        TextPart.Words(sentence.substring(at + settings.length)),
+                    )
                 }
-                append(sentence.substring(0, at))
-                withLink(LinkAnnotation.Clickable(SETTINGS_LINK, linkStyle) { openSettings() }) { append(settings) }
-                append(sentence.substring(at + settings.length))
-            }
         }
-    Text(
-        text,
+    LinkedText(
+        parts,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testTag(SOURCES_NOTE_TAG),
