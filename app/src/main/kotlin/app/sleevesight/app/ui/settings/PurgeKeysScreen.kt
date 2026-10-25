@@ -1,6 +1,5 @@
 package app.sleevesight.app.ui.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,7 +57,7 @@ internal fun PurgeKeysScreen(
     onDismiss: () -> Unit,
 ) {
     var busy by remember { mutableStateOf(false) }
-    var failure by remember { mutableStateOf<ShownFailure?>(null) }
+    var failure by remember { mutableStateOf<PurgeFailure?>(null) }
     // The keys listed when *Delete* was tapped: what the screen then says it deleted.
     var deleting by remember { mutableStateOf<List<ShownKey>?>(null) }
     var done by remember { mutableStateOf(false) }
@@ -80,8 +79,9 @@ internal fun PurgeKeysScreen(
                     deleting = listed
                     scope.launch {
                         try {
-                            val outcome = purgeFailure(onPurge(), listed.map { it.id })
-                            if (outcome == null) done = true else failure = shown(outcome, ending)
+                            // Read nothing more: what is left comes from the reset and the keys listed.
+                            val outcome = purgeFailure(onPurge(), listed)
+                            if (outcome == null) done = true else failure = outcome
                         } finally {
                             busy = false
                         }
@@ -100,19 +100,6 @@ private suspend fun shownKeys(
     inShownOrder(states.filterValues { it != SecretState.ABSENT }.keys)
         .map { ShownKey(it, if (states[it] == SecretState.SAVED) ending(it) else null) }
 
-/** [failure] as the screen shows it: each key left that still opens by its last characters ([ending]). */
-private suspend fun shown(
-    failure: PurgeFailure,
-    ending: suspend (SecretId) -> String?,
-): ShownFailure =
-    ShownFailure(failure.message, failure.left.map { ShownKey(it.id, if (it.readable) ending(it.id) else null) })
-
-/** What a deletion that did not finish says ([purgeFailure]), and the keys [left], as shown. */
-private class ShownFailure(
-    @StringRes val message: Int,
-    val left: List<ShownKey>,
-)
-
 /**
  * What *Purge keys* deletes, the [listed] keys stored now (null while they are read), and its
  * buttons: *Delete* calls [onDelete]. After a [failure], it says which step failed instead and
@@ -122,7 +109,7 @@ private class ShownFailure(
 @Composable
 private fun ColumnScope.PurgeStep(
     listed: List<ShownKey>?,
-    failure: ShownFailure?,
+    failure: PurgeFailure?,
     busy: Boolean,
     onCancel: () -> Unit,
     onDelete: () -> Unit,

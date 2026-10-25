@@ -14,7 +14,7 @@ import org.junit.Test
  * What *Purge keys* says after a reset ([purgeFailure], #446), over every combination of the
  * storage's step, the Keystore's step, what was read after them, and the keys listed before.
  */
-class PurgeOutcomeTest {
+class PurgeFailureTest {
     /** One combination, and what it should say and list (null: the deletion finished). */
     private class Row(
         val removed: Boolean,
@@ -28,24 +28,34 @@ class PurgeOutcomeTest {
 
     private enum class Before { NONE, SOME }
 
-    private fun read(left: Left): Map<SecretId, SecretState>? =
+    /** What the reset read after its steps: with the Keystore key deleted, no entry left opens. */
+    private fun read(
+        left: Left,
+        sealDeleted: Boolean,
+    ): Map<SecretId, SecretState>? =
         when (left) {
             Left.UNREAD -> null
             Left.EMPTY -> SecretId.entries.associateWith { SecretState.ABSENT }
-            // Exa absent, Last.fm still opening, Anthropic's entry that no longer opens.
-            Left.SOME ->
+            // Exa absent, Anthropic's entry that no longer opens, and Last.fm's, which still opens
+            // while its Keystore key is there.
+            Left.SOME -> {
+                val lastFm = if (sealDeleted) SecretState.UNREADABLE else SecretState.SAVED
                 SecretId.entries.associateWith { SecretState.ABSENT } +
-                    mapOf(ANTHROPIC to SecretState.UNREADABLE, LASTFM to SecretState.SAVED)
+                    mapOf(ANTHROPIC to SecretState.UNREADABLE, LASTFM to lastFm)
+            }
         }
 
-    private fun listed(before: Before): List<SecretId> = if (before == Before.NONE) emptyList() else listOf(LASTFM, EXA)
+    private val lastFm = ShownKey(LASTFM, "…1111")
+    private val exa = ShownKey(EXA, "…2222")
+
+    private fun listed(before: Before): List<ShownKey> = if (before == Before.NONE) emptyList() else listOf(lastFm, exa)
 
     private fun failure(
         message: Int,
-        vararg left: LeftKey,
+        vararg left: ShownKey,
     ) = PurgeFailure(message, left.toList())
 
-    private val readLeft = arrayOf(LeftKey(ANTHROPIC, readable = false), LeftKey(LASTFM, readable = true))
+    private fun unreadable(id: SecretId) = ShownKey(id, ending = null)
 
     private val rows =
         buildList {
@@ -57,6 +67,7 @@ class PurgeOutcomeTest {
                 add(Row(true, false, left, Before.SOME, failure(R.string.purge_keys_seal_not_deleted)))
             }
             // The Keystore key deleted, the entries not: those left can no longer be read.
+            val noneOpen = arrayOf(unreadable(ANTHROPIC), unreadable(LASTFM))
             add(Row(false, true, Left.UNREAD, Before.NONE, failure(R.string.purge_keys_storage_failed)))
             add(
                 Row(
@@ -64,28 +75,38 @@ class PurgeOutcomeTest {
                     true,
                     Left.UNREAD,
                     Before.SOME,
-                    failure(R.string.purge_keys_not_removed, LeftKey(LASTFM, false), LeftKey(EXA, false)),
+                    failure(R.string.purge_keys_not_removed, unreadable(LASTFM), unreadable(EXA)),
                 ),
             )
             for (before in Before.entries) {
                 add(Row(false, true, Left.EMPTY, before, failure(R.string.purge_keys_storage_failed)))
-                add(Row(false, true, Left.SOME, before, failure(R.string.purge_keys_not_removed, *readLeft)))
+                add(Row(false, true, Left.SOME, before, failure(R.string.purge_keys_not_removed, *noneOpen)))
             }
-            // Neither step done: unread, the keys listed still open.
+            // Neither step done: unread, the keys listed, as listed; read, each that opens with the
+            // last characters listed (none when it was not listed).
             add(Row(false, false, Left.UNREAD, Before.NONE, failure(R.string.purge_keys_both_failed_none)))
+            add(Row(false, false, Left.UNREAD, Before.SOME, failure(R.string.purge_keys_both_failed, lastFm, exa)))
+            for (before in Before.entries) {
+                add(Row(false, false, Left.EMPTY, before, failure(R.string.purge_keys_both_failed_none)))
+            }
             add(
                 Row(
                     false,
                     false,
-                    Left.UNREAD,
-                    Before.SOME,
-                    failure(R.string.purge_keys_both_failed, LeftKey(LASTFM, true), LeftKey(EXA, true)),
+                    Left.SOME,
+                    Before.NONE,
+                    failure(R.string.purge_keys_both_failed, unreadable(ANTHROPIC), unreadable(LASTFM)),
                 ),
             )
-            for (before in Before.entries) {
-                add(Row(false, false, Left.EMPTY, before, failure(R.string.purge_keys_both_failed_none)))
-                add(Row(false, false, Left.SOME, before, failure(R.string.purge_keys_both_failed, *readLeft)))
-            }
+            add(
+                Row(
+                    false,
+                    false,
+                    Left.SOME,
+                    Before.SOME,
+                    failure(R.string.purge_keys_both_failed, unreadable(ANTHROPIC), lastFm),
+                ),
+            )
         }
 
     @Test
@@ -95,11 +116,15 @@ class PurgeOutcomeTest {
         assertEquals(combinations.size, combinations.toSet().size)
     }
 
+    /** What [purgeFailure] makes of [row]. */
+    private fun outcome(row: Row) =
+        purgeFailure(ResetResult(row.removed, row.sealDeleted, read(row.left, row.sealDeleted)), listed(row.before))
+
     @Test
     fun eachCombinationSaysWhatItShouldAndListsTheKeysLeft() {
         val wrong =
             rows.mapNotNull { row ->
-                val got = purgeFailure(ResetResult(row.removed, row.sealDeleted, read(row.left)), listed(row.before))
+                val got = outcome(row)
                 val name = "removed=${row.removed} sealDeleted=${row.sealDeleted} left=${row.left} before=${row.before}"
                 "$name: got $got, expected ${row.expected}".takeIf { got != row.expected }
             }
@@ -116,8 +141,7 @@ class PurgeOutcomeTest {
                 R.string.purge_keys_both_failed,
             )
         for (row in rows) {
-            val got =
-                purgeFailure(ResetResult(row.removed, row.sealDeleted, read(row.left)), listed(row.before)) ?: continue
+            val got = outcome(row) ?: continue
             val noKeys = if (row.removed) row.before == Before.NONE else got.left.isEmpty()
             if (noKeys) assertEquals(row.toString(), false, got.message in namingKeys)
         }

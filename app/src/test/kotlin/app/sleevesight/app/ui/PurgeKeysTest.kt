@@ -306,15 +306,19 @@ class PurgeKeysTest {
         show(secretStore = failingSecrets) {
             openPurge()
             waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
-            // The edit fails, the Keystore key is not deleted, and the read after them fails.
+            // The edit fails, the Keystore key is not deleted, and the read after them fails, as
+            // would any read after it: two failures, the reset's read and one more.
             flaky.writeFailures.set(1)
-            flaky.failures.set(1)
+            flaky.failures.set(2)
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
-            // Unread, the key asked for is listed, and with its Keystore key it still opens.
+            // Unread, the key asked for is listed as it was, its last characters with it: the screen
+            // reads nothing more, so the second failure is still to come.
             waitForText(text(R.string.purge_keys_both_failed))
             compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
-            assertEquals(0, flaky.failures.get())
+            assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
+            assertEquals(1, flaky.failures.get())
+            flaky.failures.set(0)
 
             compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
             waitForText(text(R.string.purge_keys_done_title))

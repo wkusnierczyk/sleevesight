@@ -35,7 +35,7 @@ import app.sleevesight.app.secrets.SecretId
 internal const val SHOWN_END = 4
 
 /** A saved or read key as the key screens show it: its name, and its last characters, if it can be read. */
-internal class ShownKey(
+internal data class ShownKey(
     val id: SecretId,
     val ending: String?,
 )
