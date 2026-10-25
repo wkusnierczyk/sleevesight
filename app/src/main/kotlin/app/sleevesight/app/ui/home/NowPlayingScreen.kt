@@ -15,11 +15,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.report.MailHandoff
+import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
@@ -83,13 +86,17 @@ internal class NowPlayingState(
     val settings: Settings? = null,
 )
 
-/** How the screen names what it shows, and where its taps go. */
+/**
+ * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
+ * with the insight (#390); null is the phone's own mail apps ([PhoneMail]).
+ */
 internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
+    val mail: MailHandoff? = null,
 )
 
 /**
@@ -107,6 +114,8 @@ internal fun NowPlayingContent(
     actions: NowPlayingActions,
 ) {
     val playing = state.playing
+    val context = LocalContext.current
+    val mail = actions.mail ?: remember(context) { PhoneMail(context) }
     // Above the return, so the fold outlives a while with nothing playing.
     val foldMemory = rememberFoldMemory()
     if (playing == null) {
@@ -154,7 +163,7 @@ internal fun NowPlayingContent(
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
-                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, cite))
+                InsightCard(track?.insight ?: NOT_YET, insight, InsightActions(onWrite, onStop, cite, mail))
                 SourcesSection(
                     track = track,
                     chips = track?.let { sourceChips(it, view.needsKey, modelAllowed) }.orEmpty(),
