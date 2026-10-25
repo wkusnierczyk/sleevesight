@@ -85,6 +85,7 @@ class SettingsCodecTest {
                 keepSourcesUnfolded = true,
                 showPhoneName = true,
                 showDiagnostics = true,
+                showGroundingDetails = true,
                 developerMode = true,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
@@ -200,6 +201,17 @@ class SettingsCodecTest {
         assertEquals(mutablePreferencesOf(booleanPreferencesKey("keyboard.show_phone_name") to true), prefs)
         SettingsCodec.write(Settings(), prefs)
         assertTrue("turned off again, it is the default and has no key", prefs.asMap().isEmpty())
+    }
+
+    @Test
+    fun showGroundingDetailsIsStoredUnderItsKeyAndClearedWithDeveloperMode() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true), prefs)
+        assertEquals(true, prefs[booleanPreferencesKey("developer.grounding_details")])
+        assertTrue(SettingsCodec.read(prefs).showGroundingDetails)
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true).withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
+        assertFalse(SettingsCodec.read(prefs).showGroundingDetails)
     }
 
     @Test

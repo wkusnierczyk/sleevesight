@@ -64,6 +64,7 @@ internal object SettingsCodec {
     private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
+    private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
@@ -106,6 +107,7 @@ internal object SettingsCodec {
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
             showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
+            showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
             developerMode = developerModeOf(prefs),
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
@@ -210,6 +212,9 @@ internal object SettingsCodec {
         }
         if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
+        if (moved { it.showGroundingDetails }) {
+            prefs.put(GROUNDING_DETAILS, settings.showGroundingDetails, defaults.showGroundingDetails)
+        }
         // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
         // only where that would read otherwise; either moving can change which.
         if (moved { it.developerMode } || moved { it.showDiagnostics }) {
