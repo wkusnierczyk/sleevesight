@@ -356,7 +356,9 @@ private fun SettingsContent(
         FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
         FoldedSection(SettingsSection.APPEARANCE, folds) { AppearanceSection(settings, update, open) }
-        FoldedSection(SettingsSection.ABOUT, folds) { AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves) }
+        FoldedSection(SettingsSection.ABOUT, folds) {
+            AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
+        }
         if (settings.developerMode) {
             FoldedSection(SettingsSection.DEVELOPER, folds) {
                 DeveloperSection(settings, update, navigation.openDiagnostics)

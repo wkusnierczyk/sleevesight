@@ -43,8 +43,8 @@ private const val COUNTDOWN_FROM = 4
 /**
  * *About*: *Version*, whose seven taps turn developer mode on ([VersionRow]); the way to the
  * credits; the first-run screen's explanation of what leaves the device (#441), as Home's bottom
- * link opens it ([openWhatLeaves]); and the site's pages, each a row with its address, to type in where no browser opens,
- * and *Open website ↗*: the documentation's index (#421), through which the usage and settings
+ * link opens it ([openWhatLeaves]); and the site's pages, each a row with its address, to type in
+ * where no browser opens, and *Open website ↗*: the documentation's index (#421), through which the usage and settings
  * pages (#415, #416) and later ones are reached, the privacy policy, with where the app stands under
  * the GDPR and the EU AI Act (#295), the source code and its licence.
  */
