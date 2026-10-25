@@ -82,7 +82,8 @@ internal class InsightWriter(
                 emit(PipelineEvent.InsightCached(key))
                 // Against the whole evidence: a card is kept only when it cites no line its prompt
                 // left out (`finish`), so it reads as it read when it was written.
-                val shown = checked(kept, Prompted(evidence, evidence), cached = true, usage = null, complete = true)
+                val shown =
+                    checked(kept, Prompted(evidence, evidence), wanted, cached = true, usage = null, complete = true)
                 // Its artist facts, for the next tracks of the listening session (#239).
                 (shown as? InsightState.Written)?.let {
                     parts.sessionFacts.cite(key, ArtistFact.citedIn(it.grounded, evidence.lines))
@@ -232,7 +233,7 @@ internal class InsightWriter(
 
             else -> {
                 val complete = done.stopReason == StopReason.END
-                val written = checked(text, sent, cached = false, usage = done.usage, complete = complete)
+                val written = checked(text, sent, card, cached = false, usage = done.usage, complete = complete)
                 val keepable =
                     sent.leftOut.isEmpty() ||
                         (written as? InsightState.Written)
@@ -251,9 +252,12 @@ internal class InsightWriter(
     }
 
     // [text] checked against what was [sent]; a card from the cache against the whole evidence.
+    // Written, it carries what its [card]'s key says it was written with.
+    @Suppress("LongParameterList") // The reply, what its prompt held, its card, and how it came.
     private fun checked(
         text: String,
         sent: Prompted,
+        card: CardKey,
         cached: Boolean,
         usage: Usage?,
         complete: Boolean,
@@ -266,7 +270,8 @@ internal class InsightWriter(
 
             is InsightReply.Written -> {
                 emit(PipelineEvent.Grounded(key, reply.grounded.counts))
-                InsightState.Written(reply.grounded, cached, usage, complete, sent.held)
+                val by = WrittenBy(card.promptVersion, card.provider, card.model, card.effort)
+                InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by)
             }
         }
 
