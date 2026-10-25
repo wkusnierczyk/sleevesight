@@ -72,9 +72,9 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.
-- **To us,** only a problem report you send from your mail app, which you see in full first; never your keys, the history or the settings.
+- **To us,** only a problem report you send from your mail app, which you see in full first; never your keys, the history or the settings. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a problem report to your mail app. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 
