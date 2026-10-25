@@ -39,7 +39,7 @@ Sleevesight is under the [GNU General Public License, version 3](https://github.
 - **MPL-2.0**, for one file of data inside OkHttp, the Public Suffix List. It asks that recipients learn the file's licence and where its source is, and allows the file to be distributed in a larger work under the GPL (its section 3.3).
 - **Unicode-3.0**, for Unicode's IDNA mapping table, which OkHttp compiles into its code to read international host names. It asks that its copyright and permission notice go with each copy, as MIT does.
 
-The credits screen in the app (*Credits*, under *About* in *Settings*) lists the libraries too: by Maven group those under the Apache License alone, and by name each notice that goes further, with each licence's text in full. The build writes that list from the libraries' POMs and [`config/licence-notices.txt`](https://github.com/wkusnierczyk/sleevesight/blob/main/config/licence-notices.txt), and fails when a shipped library's licence needs a notice the app does not carry ([#488](https://github.com/wkusnierczyk/sleevesight/issues/488)).
+The credits screen in the app (*Credits*, under *About* in *Settings*) lists the libraries too: by Maven group those under the Apache License alone, and by name each notice that goes further, with each licence's text in full, and links to this page for what each library does. The build writes that list from the libraries' POMs and [`config/licence-notices.txt`](https://github.com/wkusnierczyk/sleevesight/blob/main/config/licence-notices.txt), and fails when a shipped library's licence needs a notice the app does not carry ([#488](https://github.com/wkusnierczyk/sleevesight/issues/488)).
 
 ## Shipped libraries
 

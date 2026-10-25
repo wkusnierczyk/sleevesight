@@ -38,7 +38,8 @@ import java.io.IOException
 /**
  * The credits (architecture, *UI*, *Licensing*): each data source the app uses, with its licence
  * and attribution, then the font it bundles, Roboto (#377), its icons' set, Material Symbols, and
- * the libraries it ships, by licence, each with the licence's text (#488). MusicBrainz is listed
+ * the libraries it ships, by licence, each with the licence's text (#488), and a link to the site's
+ * page on what each library does in the app (#502). MusicBrainz is listed
  * with both its licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a
  * genre label source (D12, #84).
  */
@@ -70,6 +71,7 @@ fun CreditsScreen() {
                 modifier = Modifier.padding(top = 16.dp),
             )
             Text(stringResource(R.string.credits_libraries_text), style = MaterialTheme.typography.bodyMedium)
+            LibraryUses()
             for (library in libraries) {
                 LibraryEntry(library) { read(LICENCES + it) }
             }
@@ -255,6 +257,21 @@ private fun LibraryEntry(
         val text = remember(library.notice) { read(library.notice)?.let(::reflow) }
         text?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
+}
+
+/** Where to read what each library does in the app: the site's dependencies page (#502). */
+@Composable
+private fun LibraryUses() {
+    val uses = stringResource(R.string.credits_libraries_uses)
+    val link = linkStyles()
+    Text(
+        buildAnnotatedString {
+            append(uses)
+            append(' ')
+            withLink(LinkAnnotation.Url(DEPENDENCIES_PAGE_URL, link)) { append(shownAddress(DEPENDENCIES_PAGE_URL)) }
+        },
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 @Composable
