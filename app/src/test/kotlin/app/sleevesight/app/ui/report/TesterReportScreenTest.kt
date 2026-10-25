@@ -307,7 +307,7 @@ class TesterReportScreenTest {
             compose.waitForIdle()
             send().assertIsNotEnabled()
             copy().assertIsNotEnabled()
-            assertTrue(preview(), preview().startsWith("The report is too long to hand to a mail app"))
+            assertTrue(preview(), preview().startsWith("The report is too long to send or copy"))
 
             app.performTextReplacement("Shorter.")
             compose.waitForIdle()

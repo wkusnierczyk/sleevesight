@@ -36,6 +36,7 @@ import app.sleevesight.app.report.TesterReport
 import app.sleevesight.app.report.TesterSnapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
 
 /**
  * The review of a tester's report (#452), through [ReportDialog], the path every report takes: what
@@ -84,7 +85,13 @@ internal fun TesterReportDialog(
         when {
             reading -> stringResource(R.string.tester_report_waits_for_history)
             !fits ->
-                stringResource(R.string.tester_report_too_long, mail.asText().length, TesterReport.MAX_CHARS)
+                NumberFormat.getIntegerInstance().let { count ->
+                    stringResource(
+                        R.string.tester_report_too_long,
+                        count.format(mail.asText().length),
+                        count.format(TesterReport.MAX_CHARS),
+                    )
+                }
             else -> null
         }
     ReportDialog(

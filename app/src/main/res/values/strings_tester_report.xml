@@ -7,7 +7,7 @@
 
     <string name="tester_report_title">Tester report</string>
     <!-- %1$s is the support address. -->
-    <string name="tester_report_intro">What Sleevesight knows right now, for the developer. It holds only what the app itself holds: its settings, what it received from the player, the sources and the AI service, and its diagnostics; never your API keys, and nothing else about your phone. Edit any part or leave it out, and say what you expected. Nothing is sent until you send it from your mail app, addressed to %1$s.</string>
+    <string name="tester_report_intro">What Sleevesight knows right now, for the developer. It holds only what the app itself holds: its settings, what it received from the player, the sources and the AI service, and its diagnostics; never your API keys, and nothing else about your phone. Leave out any part, or edit a short one, and say what you expected. Nothing is sent until you send it from your mail app, addressed to %1$s.</string>
     <string name="tester_report_note">What did you expect?</string>
     <string name="tester_report_parts">What it holds</string>
     <string name="tester_report_part_app">When you tapped, with the time zone, and the app\'s version and build.</string>
@@ -24,7 +24,7 @@
     <string name="tester_report_edit_done">Done</string>
     <string name="tester_report_waits_for_history">The report waits for the history, which is being read.</string>
     <!-- %1$d is the report's length, %2$d the most a mail app can be handed, both in characters. -->
-    <string name="tester_report_too_long">The report is too long to hand to a mail app (%1$d characters; at most %2$d). Leave out a part, or shorten one.</string>
+    <string name="tester_report_too_long">The report is too long to send or copy (%1$s characters; at most %2$s). Leave out a part, or shorten one.</string>
     <string name="tester_report_too_long_to_edit">Too long to edit here. Leave it out with its switch, or edit it in your mail app.</string>
     <string name="tester_report_preview_hint">Exactly this, as you left it above. Your mail app adds your email address as the sender.</string>
 </resources>
