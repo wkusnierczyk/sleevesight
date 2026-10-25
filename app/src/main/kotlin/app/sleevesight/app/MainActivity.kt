@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                                         graph.settingsSaves,
                                         links.openCredits,
                                         links.openDiagnostics,
+                                        onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

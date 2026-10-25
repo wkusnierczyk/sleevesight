@@ -1,7 +1,8 @@
 Material Symbols, by Google (https://github.com/google/material-design-icons)
 
 The icons in Sleevesight, such as the cogwheel, are Material Symbols outlines, licensed under the
-Apache License, Version 2.0. This license is copied below, and is also available at:
+Apache License, Version 2.0. So are most of the libraries the app is built on, which its credits
+list under this license. This license is copied below, and is also available at:
 https://www.apache.org/licenses/LICENSE-2.0
 
 

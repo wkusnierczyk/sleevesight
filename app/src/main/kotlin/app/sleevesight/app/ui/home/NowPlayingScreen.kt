@@ -94,7 +94,7 @@ internal class NowPlayingActions(
 
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
- * the playback position, the key data, the genre labels, *Why it's interesting* and *Sources*,
+ * the playback position, the key data, the genre labels, *Key insights* and *Sources*,
  * in the art's colours. Nothing playing in a followed player shows the idle line. A track the
  * pipeline has not reached yet shows at once, its evidence and insight to come.
  *

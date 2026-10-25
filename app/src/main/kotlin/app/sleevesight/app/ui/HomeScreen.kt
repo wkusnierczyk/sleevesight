@@ -47,9 +47,10 @@ import kotlinx.coroutines.launch
 
 /**
  * Where the first-run flow lands: a header that stays at the top ([HomeHeader]), and under it, while
- * notification access is on, what is playing ([pipeline], the now-playing content) and the way back
- * to what leaves the phone; while it is off, the way to turn it on. Everything under the header
- * scrolls, so a citation can bring its evidence line into view.
+ * notification access is on, what is playing ([pipeline], the now-playing content) and, at the
+ * bottom under a muted divider, the way back to what leaves the device (#441); while it is off, the
+ * way to turn it on. Everything under the header scrolls, so a citation can bring its evidence line
+ * into view.
  */
 @Composable
 fun HomeScreen(
@@ -74,6 +75,8 @@ fun HomeScreen(
             ) {
                 if (accessGranted) {
                     pipeline()
+                    // Reference, read once: under what the user came for, set apart by a muted line.
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
                     TextButton(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_what_leaves)) }
                 } else {
                     Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
@@ -135,6 +138,9 @@ private fun HomeHeader(
         HorizontalDivider(color = if (scroll.canScrollBackward) DividerDefaults.color else Color.Transparent)
     }
 }
+
+/** How much of the divider's colour shows above *What leaves the device?*. */
+private const val MUTED_ALPHA = 0.5f
 
 @Preview(showBackground = true)
 @Composable
