@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight brand sheet</title>
-<meta name="description" content="Sleevesight's brand: its fonts, the record, colours, logo, intros, feature graphic and merchandise.">
+<meta name="description" content="Sleevesight's brand: its fonts, the record, colours, logo, intros, feature graphic, link preview and merchandise.">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
 <!-- The brand sheet: the brand's fonts, the record and its story, the colours, the logo, the intros,
-     the feature graphic and merchandise. A design reference, linked from the site's footer (*Fonts*).
+     the feature graphic, the link preview and merchandise. A design reference, linked from the site's footer (*Fonts*).
      Its frame is the product page's (`index.html`): the same header, with the stacked logo and the
      menu, the same intros, played on the first visit, and the same three fonts, Roboto Flex for
      titles and labels, Roboto Slab for the running text and Roboto Mono for code, each a cut-down
@@ -59,8 +59,9 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
    small (`.sl-compact`, set by the script at the end). Where the menu does not fit on one line beside the
    logo, its items go on lines of their own under it (`.sl-stack`); scrolled down, a stacked menu is
    hidden until the top. Without the script, the header is large and scrolls away with the page, and
-   the menu stacks below 506 px, a little above where the script's own test stacks it (about 487 px
-   with the page's Flex). */
+   the menu stacks below 990 px, a little above where the script's own test stacks it (a window about
+   957 px wide, with the page's Flex); a menu entry added or renamed moves that width, so measure it
+   again. */
 header.top .row{display:flex;align-items:center;justify-content:space-between;gap:14px 24px;padding:20px 16px}
 .brand{display:flex;align-items:center;flex:none;text-decoration:none}
 /* The logo: the brand sheet's 8b mark, the words (`#words`) with the record (`#lp`) beside them, as
@@ -72,7 +73,7 @@ nav.top{flex:none}
 .sl-stack header.top .row{flex-direction:column;align-items:flex-start}
 .sl-stack nav.top ul{flex-direction:column;gap:0}
 .sl-stack nav.top a{display:block;padding:3px 0}
-@media (max-width:506px){
+@media (max-width:990px){
   html:not(.js) header.top .row{flex-direction:column;align-items:flex-start}
   html:not(.js) nav.top ul{flex-direction:column;gap:0}
   html:not(.js) nav.top a{display:block;padding:3px 0}
@@ -188,8 +189,8 @@ figure.side .sq{background:#fff}
 .cw svg{width:58%;height:auto;overflow:visible}
 /* The two colourways, light and dark: every pane that shows the logo, an intro or merchandise takes
    one of them as a class, and the switch flips it. The logo's generators read them too, with the
-   record's symbol, `lp`, below (`assets/logo/src/make_icon.py`, `make_feature_graphic.py`), so
-   each rule stays one line of plain values, starting the line. */
+   record's symbol, `lp`, below (`assets/logo/src/make_icon.py`, `make_feature_graphic.py`,
+   `make_og_image.py`), so each rule stays one line of plain values, starting the line. */
 .lt{--bg:#fff;--ink:#141a22;--red:#cf222e;--sight:#cf222e;--tile-ink:#141a22;--tile-bg:#fff;--tile-edge:#00000026;--rim:#1f2328;--core:none;--groove:inline;--eye-fill:none;--eye-stroke:#1f2328;--shirt:#fafafa;--seam:#e2e2e2}
 .dk{--bg:#000;--ink:#e5e8ee;--red:#cf222e;--sight:#cf222e;--tile-ink:#e5e8ee;--tile-bg:#000;--tile-edge:#ffffff26;--rim:#8b949e;--core:inline;--groove:none;--eye-fill:#fff;--eye-stroke:#8b949e;--shirt:#111;--seam:#262626}
 .cw{background:var(--bg)}
@@ -276,7 +277,7 @@ html:not(.js) .theme{display:none}
 .sz{display:grid;justify-items:center;gap:8px;color:var(--ink)}
 .sz svg{display:block;width:auto;overflow:visible}
 @media (max-width:880px){.icons{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* The feature graphic, as it is: its own red ground, whatever the switch. */
+/* The feature graphic and the link preview, as they are: their own red ground, whatever the switch. */
 .fg-fig{margin:20px 0 0}
 .fg-fig img{display:block;width:100%;height:auto;border-radius:12px}
 .fg-fig figcaption{text-align:left;font-size:14.5px;color:var(--muted);margin-top:8px}
@@ -519,7 +520,8 @@ document.documentElement.classList.add('js');
       <li><a href="#logo">Logo</a></li>
       <li><a href="#intros">Intros</a></li>
       <li><a href="#icons">Icons</a></li>
-      <li><a href="#feature">Feature graphic</a></li>
+      <li><a href="#feature">Banner</a></li>
+      <li><a href="#preview">Preview</a></li>
       <li><a href="#merch">Merchandise</a></li>
     </ul>
   </nav>
@@ -529,7 +531,7 @@ document.documentElement.classList.add('js');
 <main id="main">
 <section id="introduction" aria-labelledby="introduction-h">
   <h2 id="introduction-h">Introduction</h2>
-  <p>This page is Sleevesight's brand: the fonts it is set in, the record that stands for it and the story behind it, its colours, its logo and the intros that bring the logo in, its icons, the feature graphic of its Google Play listing, and the merchandise planned for later.</p>
+  <p>This page is Sleevesight's brand: the fonts it is set in, the record that stands for it and the story behind it, its colours, its logo and the intros that bring the logo in, its icons, the feature graphic of its Google Play listing and the product page's link preview, and the merchandise planned for later.</p>
   <p>It is the reference for anything made with the name, on the site, in the app, in the store or in print. The logo, the record and the colours on this page are the ones the site uses, and the app's icon and the site's favicon are drawn from them, so what is here is what they show.</p>
 </section>
 
@@ -780,6 +782,12 @@ document.documentElement.classList.add('js');
   <p>The feature graphic is the banner of the app's Google Play listing, 1024 &times; 500 pixels. Play shows it at the head of the listing, as the cover of a preview video, and in its collections and ads, where it may crop the edges.</p>
   <p>It is the label's red, with "Sleeve" in white over "sight" in the ink, the tagline "Insights on what's playing" under them, and the record beside "sight", large, running off the right and bottom edges, so that only the record is lost where Play crops.</p>
   <figure class="fg-fig"><img src="../listing/graphics/feature-graphic.svg" width="1024" height="500" loading="lazy" alt="On red: Sleeve in white over sight in ink, the tagline Insights on what's playing under them, and a large record beside sight, cut off by the right and bottom edges"><figcaption>The feature graphic, as on Google Play.</figcaption></figure>
+</section>
+
+<section id="preview" aria-labelledby="preview-h">
+  <h2 id="preview-h">Link preview</h2>
+  <p>The product page's link preview, its <code>og:image</code>, is what a chat or a social network shows with a link to the page: 1200 &times; 630 pixels, the shape most of them crop to. It is the stacked logo on the label's red, as the feature graphic is, "Sleeve" in white over "sight" in the ink, with the tagline under it, kept inside the middle square, so a service that crops the preview to a square thumbnail still shows the whole logo. The red stands apart from a chat's light and dark backgrounds alike, where white or black would merge with one of them (<code>assets/logo/src/make_og_image.py</code>).</p>
+  <figure class="fg-fig"><img src="../assets/og-image.svg" width="1200" height="630" loading="lazy" alt="On red: the stacked logo, Sleeve in white over sight in ink beside the record, and the tagline Insights on what's playing under it"><figcaption>The link preview, as the product page gives it.</figcaption></figure>
 </section>
 
 <div class="logos">

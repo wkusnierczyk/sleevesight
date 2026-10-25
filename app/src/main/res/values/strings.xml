@@ -194,7 +194,7 @@
     <string name="settings_remove_all_keys_title">Purge keys?</string>
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
-    <string name="settings_credits_value">The data sources, the font and the icons, with their licences</string>
+    <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
     <string name="settings_privacy">Privacy policy</string>
     <string name="settings_privacy_summary">What leaves the phone, and where Sleevesight stands under the GDPR and the EU AI Act. Opens in your browser.</string>
     <string name="settings_section_developer">Developer</string>
@@ -264,9 +264,9 @@
         <item quantity="other">%d hours</item>
     </plurals>
 
-    <!-- Credits: each data source, the font and the icons, with its licence and attribution (architecture, Licensing). -->
+    <!-- Credits: each data source, the font, the icons and the libraries, with its licence and attribution (architecture, Licensing). -->
     <string name="credits_title">Credits</string>
-    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, its text is set in this font, and its icons come from this set, each under its own terms.</string>
+    <string name="credits_intro">Sleevesight is free software, under the GNU General Public License, version 3. What it shows comes from these sources, its text is set in this font, its icons come from this set, and it is built on these libraries, each under its own terms.</string>
     <string name="credits_musicbrainz">MusicBrainz</string>
     <string name="credits_musicbrainz_text">Recordings, releases, artists, credits and dates, from MusicBrainz.</string>
     <string name="credits_musicbrainz_tags">MusicBrainz tags</string>
@@ -283,4 +283,11 @@
     <string name="credits_roboto_text">The app’s font, Roboto 3.016, from github.com/googlefonts/roboto-3-classic. Copyright 2011 The Roboto Project Authors.</string>
     <string name="credits_material_symbols">Material Symbols</string>
     <string name="credits_material_symbols_text">The icons in the app, such as the cogwheel, from Material Symbols by Google.</string>
+    <string name="credits_libraries">Libraries</string>
+    <string name="credits_libraries_text">The open-source code the app is built on, by licence. Each licence asks that its text, and some the library’s copyright notice, go with every copy of the app: each is here in full.</string>
+    <string name="credits_libraries_apache">Under the Apache License 2.0</string>
+    <string name="credits_show_licence">Show the licence</string>
+    <string name="credits_hide_licence">Hide the licence</string>
+    <string name="credits_licence_shown">Licence shown</string>
+    <string name="credits_licence_hidden">Licence hidden</string>
 </resources>
