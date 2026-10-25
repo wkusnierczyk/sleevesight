@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 
@@ -111,7 +112,8 @@ internal fun FoldedSection(
  * A section's heading: a divider above, then its name with the disclosure triangle (right while
  * folded, down while unfolded, as the home screen's folds have it), and its short description
  * under it; the whole of it toggles the fold. A screen reader reads it as a heading with its state,
- * "collapsed" or "expanded", and not the triangle. The one place the headings' style is set.
+ * "collapsed" or "expanded", and not the triangle. The one place the headings' style is set:
+ * bold, in the text colour, not the accent (#442).
  */
 @Composable
 internal fun SectionHeading(
@@ -133,16 +135,14 @@ internal fun SectionHeading(
                     stateDescription = state
                 }.padding(vertical = 8.dp),
     ) {
+        // Bold, in the text colour, not the accent (#442).
+        val style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
         Row {
-            Text(
-                stringResource(section.title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Text(stringResource(section.title), style = style, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 " " + stringResource(if (unfolded) R.string.home_fold_unfolded else R.string.home_fold_folded),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
+                style = style,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.clearAndSetSemantics {},
             )
         }
