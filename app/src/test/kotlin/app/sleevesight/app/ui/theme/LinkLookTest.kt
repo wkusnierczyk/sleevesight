@@ -37,7 +37,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import java.io.File
 
 /**
  * Every link in the app as drawn (#442): in the text colour, with a thin line a little below the
@@ -222,36 +221,6 @@ class LinkLookTest {
             val after = pictures.picture(TAG).all().count { it.near(tint, tolerance = 3) }
             assertTrue("tinted pixels: $before, then focused, $after", after > before + TINTED_PIXELS)
         }
-    }
-
-    @Test
-    fun linksAreMadeOnlyHere() {
-        // Every link is drawn by `LinkedText` or `LinkLabel`, so none takes another look or loses
-        // its line. The citations' chips are links of their own kind, styled as chips, and their
-        // file underlines the sentences it flags.
-        val made =
-            listOf(
-                """LinkAnnotation\.Url""",
-                """LinkAnnotation\.Clickable""",
-                """withLink\(""",
-                "TextLinkStyles",
-                """TextDecoration\.Underline""",
-            ).joinToString("|").toRegex()
-        val sources = File("src/main/kotlin").walk().filter { it.extension == "kt" }.toList()
-        assertTrue("sources found", sources.any { it.name == "Accents.kt" })
-        val elsewhere =
-            sources
-                .filter { it.name != "Accents.kt" }
-                .flatMap { file ->
-                    file
-                        .readLines()
-                        .withIndex()
-                        .filter { (_, line) ->
-                            made.containsMatchIn(line) &&
-                                !(file.name == "Citations.kt" && "LinkAnnotation.Url" !in line)
-                        }.map { (i, line) -> "${file.name}:${i + 1}: ${line.trim()}" }
-                }
-        assertEquals(emptyList<String>(), elsewhere)
     }
 
     private companion object {

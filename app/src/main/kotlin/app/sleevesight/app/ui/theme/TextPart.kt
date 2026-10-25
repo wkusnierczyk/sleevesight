@@ -4,6 +4,9 @@ package app.sleevesight.app.ui.theme
 internal sealed interface TextPart {
     val text: String
 
+    /** A piece that is a link: a [Link] or an [Action]; also a [LinkLabel] of its own. */
+    sealed interface Linked : TextPart
+
     /** Plain text. */
     data class Words(
         override val text: String,
@@ -13,12 +16,12 @@ internal sealed interface TextPart {
     data class Link(
         override val text: String,
         val url: String,
-    ) : TextPart
+    ) : Linked
 
-    /** A link that runs [onClick] in the app; [tag] names it to tests and to accessibility. */
+    /** A link that runs [onClick] in the app; [tag] names it to tests. */
     class Action(
         override val text: String,
         val tag: String,
         val onClick: () -> Unit,
-    ) : TextPart
+    ) : Linked
 }

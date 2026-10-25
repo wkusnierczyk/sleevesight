@@ -26,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +43,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.SleevesightTheme
+import app.sleevesight.app.ui.theme.TextPart
 import kotlinx.coroutines.launch
 
 /**
@@ -80,9 +80,9 @@ fun HomeScreen(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
                     // A link, as every link is (#442), with a full touch target.
                     LinkLabel(
-                        stringResource(R.string.home_what_leaves),
+                        TextPart.Action(stringResource(R.string.home_what_leaves), WHAT_LEAVES_TAG, onOpenFirstRun),
+                        onClickLabel = stringResource(R.string.home_what_leaves_open),
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.clickable(onClick = onOpenFirstRun).minimumInteractiveComponentSize(),
                     )
                 } else {
                     Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
@@ -144,6 +144,9 @@ private fun HomeHeader(
         HorizontalDivider(color = if (scroll.canScrollBackward) DividerDefaults.color else Color.Transparent)
     }
 }
+
+/** The link tag of *What leaves the device?* on Home. */
+const val WHAT_LEAVES_TAG: String = "what-leaves"
 
 /** How much of the divider's colour shows above *What leaves the device?*. */
 private const val MUTED_ALPHA = 0.5f

@@ -1,8 +1,6 @@
 package app.sleevesight.app.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -10,6 +8,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.theme.LinkLabel
+import app.sleevesight.app.ui.theme.TextPart
 
 /**
  * The privacy policy on the site (`privacy.md`, #57), with where the app stands under the GDPR and
@@ -46,23 +45,20 @@ internal fun rememberOpenUrl(url: String): () -> Unit {
 internal fun rememberOpenPrivacyPolicy(): () -> Unit = rememberOpenUrl(PRIVACY_POLICY_URL)
 
 /**
- * [url], shown without its scheme and marked as every link is ([LinkLabel]), opening the page
- * when tapped: a clickable text, the whole of it the link, with at least the minimum touch target,
- * and an action a screen reader names (`link_open`).
+ * [url], shown without its scheme, as a link of its own ([LinkLabel]) that opens the page in the
+ * browser: the whole text the link, with at least the minimum touch target, and an action a screen
+ * reader names (`link_open`).
  */
 @Composable
 internal fun WebLink(
     url: String,
     modifier: Modifier = Modifier,
 ) {
-    val open = rememberOpenUrl(url)
     LinkLabel(
-        shownAddress(url),
+        TextPart.Link(shownAddress(url), url),
+        onClickLabel = stringResource(R.string.link_open),
         style = MaterialTheme.typography.bodyMedium,
-        modifier =
-            modifier
-                .clickable(onClickLabel = stringResource(R.string.link_open), onClick = open)
-                .minimumInteractiveComponentSize(),
+        modifier = modifier,
     )
 }
 

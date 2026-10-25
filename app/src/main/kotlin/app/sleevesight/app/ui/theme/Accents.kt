@@ -1,20 +1,24 @@
 package app.sleevesight.app.ui.theme
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwitchColors
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -25,11 +29,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.sp
 
-// Links and switches without the palette's accent colour (#442): the system's dynamic accent (on
+// Links without the palette's accent colour (#442): the system's dynamic accent (on
 // Android 12 and later, from the wallpaper or the chosen colour theme) looked out of place, and
 // links were styled two ways. Every link in the app is drawn here, by [LinkedText] or [LinkLabel],
-// so none can take another look or lose its line (`LinkLookTest.linksAreMadeOnlyHere` holds the
-// rest of the app to that).
+// so none can take another look or lose its line (`LinkSourcesTest` holds the rest of the app to
+// that).
 
 /**
  * [parts] as one text, each link in it marked as every link in the app is (#442): in the text
@@ -54,29 +58,90 @@ internal fun LinkedText(
                 when (part) {
                     is TextPart.Words -> append(part.text)
                     is TextPart.Link -> withLink(LinkAnnotation.Url(part.url, styles)) { append(part.text) }
-                    is TextPart.Action ->
-                        withLink(LinkAnnotation.Clickable(part.tag, styles) { part.onClick() }) { append(part.text) }
+                    is TextPart.Action -> withLink(annotation(part, styles, part.onClick)) { append(part.text) }
                 }
-                if (part !is TextPart.Words) links += start until length
+                if (part is TextPart.Linked) links += start until length
             }
         }
     UnderlinedText(text, links, style, ink, color, modifier)
 }
 
 /**
- * [text] as a link of its own, marked as [LinkedText]'s are, which the caller makes clickable: a
- * link with a full touch target, its focus shown by the clickable's own indication.
+ * [link] as a text of its own, all of it the link, marked as [LinkedText]'s are: one link
+ * annotation over the whole text, so a screen reader finds it among the links and keyboard focus
+ * stops on it once, and a tap anywhere in its touch target, at least the minimum (48 dp), follows
+ * it. A screen reader names what a tap does with [onClickLabel].
  */
 @Composable
 internal fun LinkLabel(
-    text: String,
+    link: TextPart.Linked,
+    onClickLabel: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
-    UnderlinedText(AnnotatedString(text), listOf(text.indices), style, ink, color, modifier)
+    val follow by rememberUpdatedState(rememberFollow(link))
+    val text = buildAnnotatedString { withLink(annotation(link, linkStyles(ink)) { follow() }) { append(link.text) } }
+    // The text's node says what a tap does, and with the touch target around the text, outside
+    // it, takes taps; it takes no focus, so the link stays the one stop. A tap on the text itself
+    // is the link's.
+    val target =
+        modifier
+            .semantics {
+                onClick(label = onClickLabel) {
+                    follow()
+                    true
+                }
+            }.pointerInput(Unit) { detectTapGestures { follow() } }
+            .minimumInteractiveComponentSize()
+    UnderlinedText(text, listOf(link.text.indices), style, ink, color, target)
 }
+
+/**
+ * [text] drawn as a link is, inside a control that is itself what a tap and a screen reader act on
+ * (a settings row that opens a page): the look without a link of its own, which would be a second
+ * target inside the first.
+ */
+@Composable
+internal fun LinkLook(
+    text: String,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+) {
+    val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
+    UnderlinedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
+}
+
+/** What following [link] does: open its page in the browser, or run its action. */
+@Composable
+private fun rememberFollow(link: TextPart.Linked): () -> Unit {
+    val uriHandler = LocalUriHandler.current
+    return when (link) {
+        is TextPart.Link ->
+            remember(uriHandler, link.url) {
+                {
+                    try {
+                        uriHandler.openUri(link.url)
+                    } catch (_: IllegalArgumentException) {
+                        // No app opens web pages: the address is on the screen.
+                    }
+                }
+            }
+        is TextPart.Action -> link.onClick
+    }
+}
+
+/** [link]'s annotation, in [styles], running [follow] when it is followed. */
+private fun annotation(
+    link: TextPart.Linked,
+    styles: TextLinkStyles,
+    follow: () -> Unit,
+): LinkAnnotation =
+    when (link) {
+        is TextPart.Link -> LinkAnnotation.Url(link.url, styles) { follow() }
+        is TextPart.Action -> LinkAnnotation.Clickable(link.tag, styles) { follow() }
+    }
 
 /** The one style of the app's link annotations: the text's own look, tinted while in use. */
 private fun linkStyles(ink: Color): TextLinkStyles {
@@ -171,18 +236,3 @@ private val DEFAULT_FONT_SIZE = 14.sp
 private const val TOUCHING = 0.5f
 
 private const val IN_USE_ALPHA = 0.12f
-
-/**
- * A switch's colours (#442): on, the track in the text colour and the thumb in the surface's (black
- * and white, white and black in dark mode); off, and disabled, Material's own greys.
- */
-@Composable
-internal fun plainSwitchColors(): SwitchColors {
-    val colors = MaterialTheme.colorScheme
-    return SwitchDefaults.colors(
-        checkedThumbColor = colors.surface,
-        checkedTrackColor = colors.onSurface,
-        checkedBorderColor = colors.onSurface,
-        checkedIconColor = colors.onSurface,
-    )
-}
