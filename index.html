@@ -16,7 +16,16 @@ layout: null
 <meta property="og:title" content="Sleevesight: insights on what's playing">
 <meta property="og:description" content="Short, sourced insights about the artist, song, and album you are playing. Your sources, your AI service, your key.">
 <meta property="og:url" content="https://sleevesight.app/">
-<meta name="twitter:card" content="summary">
+<!-- The link preview: the stacked logo and the tagline on the label's red, 1200 x 630, built from the
+     logo's sources by `assets/logo/src/make_og_image.py` (the brand sheet, *Link preview*). Open
+     Graph asks for an absolute URL. -->
+<meta property="og:image" content="https://sleevesight.app/assets/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sleevesight logo on red: the words Sleeve and sight beside a vinyl record, and the tagline Insights on what's playing">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image:alt" content="The Sleevesight logo on red: the words Sleeve and sight beside a vinyl record, and the tagline Insights on what's playing">
 <!-- The landing page: no theme, no analytics, and short scripts, for the header and the intro. Its
      header logo is the brand sheet's 8b mark, the words and the record; its intro is one of those
      listed at `.sl-intro` in the style sheet, picked at random on each visit (`data-logo`). Its fonts
