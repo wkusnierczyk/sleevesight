@@ -321,7 +321,7 @@ internal class InsightWriter(
 
     private companion object {
         const val NO_STYLE = ""
-        const val WAITS_FOR_TAP = "waits for a tap on Write (Write insights automatically)"
+        const val WAITS_FOR_TAP = "waits for a tap on Write (Reactive)"
         const val INCOMPLETE = "incomplete"
         const val DECLINED = "declined"
         const val HEX = "0123456789abcdef"

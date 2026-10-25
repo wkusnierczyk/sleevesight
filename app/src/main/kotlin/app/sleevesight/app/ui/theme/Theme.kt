@@ -9,7 +9,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.ThemeChoice
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -79,9 +82,32 @@ private fun Typography.inFamily(family: FontFamily): Typography {
 }
 
 /**
- * Material 3, light or dark as the system is, with the system's dynamic colours where Android has
- * them (12 and later), and its text in [font] (*Font*, #377). The colours taken from the album art
- * (design, *User interface*) replace these on the now-playing screen, and keep the type.
+ * Whether the app is drawn dark, as [SleevesightTheme] was told; null outside it. Read through
+ * [isAppInDarkTheme].
+ */
+private val LocalDarkTheme = compositionLocalOf<Boolean?> { null }
+
+/**
+ * Whether the app is drawn dark: as *Theme* (#444) chooses, within [SleevesightTheme], else as the
+ * system is. What draws its own light or dark colours (the album art's, `ArtTheme`) asks this, not
+ * the system.
+ */
+@Composable
+fun isAppInDarkTheme(): Boolean = LocalDarkTheme.current ?: isSystemInDarkTheme()
+
+/** Whether [theme] is dark, where [systemDark] is whether the system's dark theme is on. */
+fun ThemeChoice.isDark(systemDark: Boolean): Boolean =
+    when (this) {
+        ThemeChoice.SYSTEM -> systemDark
+        ThemeChoice.LIGHT -> false
+        ThemeChoice.DARK -> true
+    }
+
+/**
+ * Material 3, light or dark as [darkTheme] says (by default as the system is), with the system's
+ * dynamic colours where Android has them (12 and later), and its text in [font] (*Font*, #377).
+ * The colours taken from the album art (design, *User interface*) replace these on the now-playing
+ * screen, and keep the type.
  */
 @Composable
 fun SleevesightTheme(
@@ -99,18 +125,23 @@ fun SleevesightTheme(
             else -> lightColorScheme()
         }
     val typography = remember(font) { typographyOf(font) }
-    MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
+    }
 }
 
 /**
- * [SleevesightTheme] in the font [fonts] holds, following each change to it, and starting in its
- * current value, so the first frame is already in it (`AppGraph.font`).
+ * [SleevesightTheme] in the font [fonts] holds and, when [themes] is given, light or dark as it
+ * holds (*Theme*, #444; else as the system is), following each change to them, and starting in
+ * their current values, so the first frame is already in them (`AppGraph.font`, `AppGraph.theme`).
  */
 @Composable
 fun SleevesightTheme(
     fonts: StateFlow<FontChoice>,
+    themes: StateFlow<ThemeChoice>? = null,
     content: @Composable () -> Unit,
 ) {
     val font by fonts.collectAsState()
-    SleevesightTheme(font = font, content = content)
+    val theme = themes?.collectAsState()?.value ?: ThemeChoice.SYSTEM
+    SleevesightTheme(darkTheme = theme.isDark(isSystemInDarkTheme()), font = font, content = content)
 }

@@ -29,6 +29,7 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.AiProvider
@@ -59,8 +60,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *AI service* on the settings screen (#227): per provider offered, a switch, its key, its model
- * and its reasoning effort, each named for the provider; a provider switched off keeps them.
+ * *AI services* on the settings screen (#227, #444): per provider offered, a switch, its model, by
+ * name, and its reasoning effort, each named for the provider; a provider switched off keeps them.
+ * The keys are under *Secrets*.
  */
 @RunWith(RobolectricTestRunner::class)
 class AiSettingsTest {
@@ -103,9 +105,13 @@ class AiSettingsTest {
     /** The text [id] in the open dialog, apart from the rows behind it. */
     private fun inDialog(id: Int) = hasText(text(id)) and hasAnyAncestor(isDialog())
 
-    /** The model row's value, and the dialog's option, for Anthropic's default model. */
-    private fun anthropicDefault() =
-        app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.ANTHROPIC))
+    /** The model row's value, and the dialog's option, for Anthropic's default model, by its name. */
+    private fun anthropicDefault() = app.getString(R.string.settings_ai_model_default, "Claude Haiku 5.5")
+
+    /** What a provider switched on without its key says, for the provider [name]. */
+    private fun needsKey(name: Int) = app.getString(R.string.settings_needs_key, text(name))
+
+    private fun absentText(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty()
 
     /** An Anthropic client that lists two models for any key, and records the key it was given. */
     private class FakeProvider : AiProvider {
@@ -142,6 +148,7 @@ class AiSettingsTest {
             }
             // The screen draws once the settings are read.
             waitForText(text(R.string.settings_title))
+            compose.openSection(SettingsSection.AI_SERVICES)
             scenario.block()
         }
     }
@@ -180,10 +187,15 @@ class AiSettingsTest {
             runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
             compose.onNodeWithText(anthropic(R.string.settings_ai_model_of)).performScrollTo().performClick()
             waitFor("the listed models") { compose.onAllNodesWithSubstring("Claude Opus 5.5").size == 1 }
-            compose.onNodeWithText("Claude Opus 5.5 (claude-opus-5-5)").performClick()
+            // Each by its name, with its id under it.
+            compose.onNode(hasText("claude-opus-5-5") and hasAnyAncestor(isDialog())).assertIsDisplayed()
+            compose.onNode(hasText("Claude Opus 5.5") and hasAnyAncestor(isDialog())).performClick()
 
             waitFor("the model stored") { current().aiModels[ProviderId.ANTHROPIC] == "claude-opus-5-5" }
             assertEquals("sk-test", provider.keyUsed)
+            // The row names it as the list did, not by its id.
+            waitForText("Claude Opus 5.5")
+            assertTrue(compose.onAllNodesWithSubstring("claude-opus-5-5").isEmpty())
         }
     }
 
@@ -244,23 +256,24 @@ class AiSettingsTest {
         show {
             val anthropic = compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo()
             anthropic.assertIsOff()
-            // Off, its choices are shown and kept.
+            // Off, its choices are shown and kept: a model no list has named yet, by its id.
             compose.onNodeWithText("claude-opus-5-5").performScrollTo().assertIsDisplayed()
             compose
                 .onNode(effortRow(anthropic(R.string.settings_ai_effort_of), R.string.settings_effort_high))
                 .performScrollTo()
                 .assertIsDisplayed()
-            assertTrue(absent(R.string.settings_ai_provider_needs_key))
+            val needsAnthropicKey = needsKey(R.string.settings_ai_provider_anthropic)
+            assertTrue(absentText(needsAnthropicKey))
 
             anthropic.performClick()
             waitFor("Anthropic switched on") { current().aiProvider == ProviderId.ANTHROPIC }
             assertEquals("claude-opus-5-5", current().model)
             assertEquals(ReasoningEffort.HIGH, current().effort)
-            // On with no key saved, it says that insights wait for one.
-            waitForText(text(R.string.settings_ai_provider_needs_key))
+            // On with no key saved, it says that it needs one, in *Secrets*.
+            waitForText(needsAnthropicKey)
 
             runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
-            waitFor("the key notice gone") { absent(R.string.settings_ai_provider_needs_key) }
+            waitFor("the key notice gone") { absentText(needsAnthropicKey) }
 
             anthropic.performClick()
             waitFor("Anthropic switched off") { current().aiProvider == null }
@@ -285,18 +298,19 @@ class AiSettingsTest {
         show(secretStore = SecretStore(unread, testCipher())) {
             compose.onNodeWithText(text(R.string.settings_ai_provider_anthropic)).performScrollTo().assertIsOn()
             compose.waitForIdle()
-            assertTrue(absent(R.string.settings_ai_provider_needs_key))
+            assertTrue(absentText(needsKey(R.string.settings_ai_provider_anthropic)))
         }
     }
 
     @Test
-    fun openAiIsOfferedWithItsOwnKeyModelAndEffortAndTheSwitchesAreExclusive() {
+    fun openAiIsOfferedWithItsOwnModelAndEffortAndTheSwitchesAreExclusive() {
         runBlocking { settings.update { it.copy(aiProvider = ProviderId.ANTHROPIC) } }
         show {
             val openAi = text(R.string.settings_ai_provider_openai)
-            compose.onNodeWithText(text(R.string.settings_key_name_openai)).performScrollTo().assertIsDisplayed()
-            val default =
-                app.getString(R.string.settings_ai_model_default, Settings.DEFAULT_MODELS.getValue(ProviderId.OPENAI))
+            // Its key is under *Secrets*, not here.
+            assertTrue(absent(R.string.settings_key_name_openai))
+            // Its default by the name the app knows it by: OpenAI's list names none.
+            val default = app.getString(R.string.settings_ai_model_default, "GPT-6 Luna")
             compose.onNodeWithText(default).performScrollTo().assertIsDisplayed()
             val effort = app.getString(R.string.settings_ai_effort_of, openAi)
             compose.onNodeWithText(effort).performScrollTo().assertIsDisplayed()
@@ -309,9 +323,10 @@ class AiSettingsTest {
             assertEquals(Settings.DEFAULT_MODELS.getValue(ProviderId.OPENAI), current().model)
             assertEquals(ReasoningEffort.LOW, current().effort)
             // Its key, not Anthropic's, is the one insights wait for.
-            waitForText(text(R.string.settings_ai_provider_needs_key))
+            val needsOpenAiKey = needsKey(R.string.settings_ai_provider_openai)
+            waitForText(needsOpenAiKey)
             runBlocking { secrets.set(SecretId.OPENAI, Secret("openai-key")) }
-            waitFor("the key notice gone") { absent(R.string.settings_ai_provider_needs_key) }
+            waitFor("the key notice gone") { absentText(needsOpenAiKey) }
         }
     }
 
@@ -350,8 +365,7 @@ class AiSettingsTest {
     @Test
     fun googleHasItsOwnRowsAndItsOwnScale() =
         show {
-            compose.onNodeWithText(text(R.string.settings_key_name_google)).performScrollTo().assertIsDisplayed()
-            val default = app.getString(R.string.settings_ai_model_default, "gemini-3.5-flash-lite")
+            val default = app.getString(R.string.settings_ai_model_default, "Gemini 3.5 Flash-Lite")
             compose.onNodeWithText(default).performScrollTo().assertIsDisplayed()
 
             compose.onNodeWithText(google(R.string.settings_ai_effort_of)).performScrollTo().performClick()

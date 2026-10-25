@@ -88,6 +88,28 @@ class MusicBrainzTagsTest {
         }
 
     @Test
+    fun `with genres off the recording's lookup asks for no tags, and the adapter keeps none, apart`() =
+        runTest {
+            val net = ReplayNetClient.ok(RECORDING)
+            var genres = false
+            MusicBrainzClient(net) { genres }.recording("rec")
+            genres = true
+            MusicBrainzClient(net) { genres }.recording("rec")
+            assertEquals(
+                listOf(
+                    "artist-credits+work-rels+artist-rels+url-rels",
+                    "artist-credits+work-rels+artist-rels+url-rels+tags",
+                ),
+                net.sent.map { it.query["inc"] },
+            )
+
+            val off = MusicBrainzSource(genres = false)
+            val result = off.lookup(TRACK, CompletableDeferred(RESOLVED.copy(recordingTags = listOf("folk"))))
+            assertEquals(null, result.recordingTags)
+            assertTrue(off.extractionVersion != MusicBrainzSource().extractionVersion)
+        }
+
+    @Test
     fun `the adapter keeps the first release's date, for a track later served from the cache`() =
         runTest {
             val released = RESOLVED.copy(firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"))

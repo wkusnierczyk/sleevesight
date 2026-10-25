@@ -102,9 +102,3 @@ internal fun engineKey(engine: WebEngine): SecretId =
     when (engine) {
         WebEngine.EXA -> SecretId.EXA
     }
-
-@StringRes
-internal fun engineName(engine: WebEngine): Int =
-    when (engine) {
-        WebEngine.EXA -> R.string.settings_engine_exa
-    }

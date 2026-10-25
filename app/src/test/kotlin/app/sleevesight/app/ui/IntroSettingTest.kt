@@ -21,6 +21,7 @@ import app.sleevesight.app.settings.LastIntro
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -71,6 +72,7 @@ class IntroSettingTest {
                 }
             }
             val title = text(R.string.settings_intro)
+            compose.openSection(SettingsSection.APPEARANCE)
             compose.waitUntil(5_000) { compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty() }
             val row = compose.onNodeWithText(title).performScrollTo()
             row.assertIsOn()

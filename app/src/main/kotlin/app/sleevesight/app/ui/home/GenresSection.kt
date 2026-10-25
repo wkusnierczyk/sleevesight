@@ -65,7 +65,8 @@ internal fun Genres(
     track: TrackState?,
     settings: Settings?,
 ) {
-    if (track == null || !track.gathered) return
+    // *Show genres* off (#444): no genres are asked for, and none shown, not even that they are off.
+    if (track == null || !track.gathered || settings?.showGenres == false) return
     val genres = track.genres
     // Folded again, and nothing selected, on each new track. The selection is kept by its level,
     // artist and genre, so it outlasts labels that land later, and the fold.

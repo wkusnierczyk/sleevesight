@@ -27,6 +27,7 @@ import app.sleevesight.app.settings.LastFont
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.app.ui.theme.Roboto
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.typographyOf
@@ -118,6 +119,7 @@ class FontSettingsTest {
             }
             val appFont = text(R.string.settings_font_app)
             val systemFont = text(R.string.settings_font_system)
+            compose.openSection(SettingsSection.APPEARANCE)
             compose.waitUntil(5_000) { shown(appFont) }
             assertEquals(Roboto, typography?.bodyLarge?.fontFamily)
 

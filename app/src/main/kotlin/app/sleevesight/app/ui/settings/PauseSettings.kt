@@ -8,57 +8,65 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 
 /**
- * *Pause automatic writing after* (#203): *Off*, or a number of track changes while Sleevesight is
- * not on screen; a value stored that is not among the choices is offered too. Fixed while nothing
- * is written automatically (*Write insights* off, or *Write insights automatically* under *Never*).
+ * *Saver* (#203, #444): a switch, on while automatic writing pauses after a number of track
+ * changes while Sleevesight is not on screen (`pauseAutoWriteAfter`), and under it, while on, that
+ * number, *n*; a value stored that is not among the choices is offered too. Switched on, it pauses
+ * after the default number ([Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER]). Fixed while nothing is
+ * written automatically (*Show insights* off, or *Reactive* under *Manual*).
  */
 @Composable
-internal fun PauseAutoWriteRow(
+internal fun SaverRows(
     settings: Settings,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val counts = (Settings.PAUSE_AUTO_WRITE_CHOICES + listOfNotNull(settings.pauseAutoWriteAfter)).distinct().sorted()
-    val options =
-        listOf<Pair<Int?, String>>(null to stringResource(R.string.settings_pause_auto_write_off)) +
-            counts.map { it to pauseLabel(it) }
-    ValueRow(
+    val writes = settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER
+    val count = settings.pauseAutoWriteAfter
+    SwitchRow(
         title = stringResource(R.string.settings_pause_auto_write),
-        value = options.first { it.first == settings.pauseAutoWriteAfter }.second,
-        summary = pauseSummary(settings.pauseAutoWriteAfter, settings.lookUpInBackground),
+        summary = stringResource(R.string.settings_pause_auto_write_summary),
+        checked = count != null,
+        onChange =
+            { on: Boolean ->
+                update { it.copy(pauseAutoWriteAfter = if (on) Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER else null) }
+            }.takeIf { writes },
+    )
+    if (count == null) return
+    val options = (Settings.PAUSE_AUTO_WRITE_CHOICES + count).distinct().sorted().map { it to pauseLabel(it) }
+    ValueRow(
+        title = stringResource(R.string.settings_pause_auto_write_after),
+        value = pauseLabel(count),
+        summary = pauseSummary(count, settings.lookUpInBackground),
+        indent = true,
         onClick =
             {
-                val chosen = settings.pauseAutoWriteAfter
                 open(
-                    SettingsDialog.Choice(R.string.settings_pause_auto_write, options, chosen) { n ->
+                    SettingsDialog.Choice(R.string.settings_pause_auto_write_after, options, count) { n ->
                         update { it.copy(pauseAutoWriteAfter = n) }
                     },
                 )
-            }.takeIf { settings.writeInsights && settings.writeAutomatically != WriteAutomatically.NEVER },
+            }.takeIf { writes },
     )
 }
 
 /**
- * What *Pause automatic writing after* counts, then what the count chosen, [count], does: none
- * under *Off*, which never pauses. With *Look up in the background* off ([background] false),
+ * What the count chosen, [count], does. With *Look up in the background* off ([background] false),
  * nothing is written away, so the count decides whether writing goes on once the app is back.
  */
 @Composable
 private fun pauseSummary(
-    count: Int?,
+    count: Int,
     background: Boolean,
 ): String {
-    val counted = stringResource(R.string.settings_pause_auto_write_summary)
-    if (count == null) return counted
     val plural =
         if (background) {
             R.plurals.settings_pause_auto_write_summary_count
         } else {
             R.plurals.settings_pause_auto_write_summary_count_foreground
         }
-    return "$counted ${pluralStringResource(plural, count, count)}"
+    return pluralStringResource(plural, count, count)
 }
 
-/** A choice of *Pause automatic writing after*: [count] track changes away. */
+/** A choice of *Saver*'s count: [count] track changes away. */
 @Composable
 private fun pauseLabel(count: Int): String = pluralStringResource(R.plurals.settings_track_changes_away, count, count)

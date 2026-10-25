@@ -1,18 +1,18 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -27,8 +27,10 @@ import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.genres.LabelSource
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
 import app.sleevesight.core.settings.WebEngine
@@ -40,16 +42,19 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /**
- * *Where to look*'s web search engines and *Genre labels* on the settings screen: a switch that
- * cannot act shows off, cannot be moved, and says why (#84, #140).
+ * *Sources* and *Genres* on the settings screen (#84, #140, #444): a source's switch, with what it
+ * is, its site, and the key it lacks; the web search engine as a source of its own; *Show genres*;
+ * and a genre source's switch that cannot act shows off, cannot be moved, and says why.
  */
 @RunWith(RobolectricTestRunner::class)
 class SourceSettingsTest {
@@ -75,9 +80,18 @@ class SourceSettingsTest {
 
     private fun text(id: Int) = app.getString(id)
 
-    private fun absent(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isEmpty()
+    /** A row whose text holds [id]'s, as a summary does among its lines. */
+    private fun holding(id: Int) = holding(text(id))
+
+    private fun holding(text: String) = hasText(text, substring = true)
+
+    private fun absent(matcher: SemanticsMatcher) = compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()
+
+    /** What a row needing the key of [service] says. */
+    private fun needsKey(service: Int) = app.getString(R.string.settings_needs_key, text(service))
 
     private fun show(
+        section: SettingsSection,
         secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -88,7 +102,8 @@ class SourceSettingsTest {
                 }
             }
             // The screen draws once the settings are read.
-            waitForText(text(R.string.settings_title))
+            waitForNode(hasText(text(R.string.settings_title)))
+            compose.openSection(section)
             scenario.block()
         }
     }
@@ -105,36 +120,29 @@ class SourceSettingsTest {
     private fun waitForNode(matcher: SemanticsMatcher) =
         waitFor("a node: ${matcher.description}") { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
 
-    private fun waitForText(text: String) = waitForNode(hasText(text))
-
     @Test
     fun theMusicBrainzLabelsAreASwitchOnByDefault() =
-        show {
-            val row = compose.onNodeWithText(text(R.string.settings_labels_musicbrainz_summary)).performScrollTo()
+        show(SettingsSection.GENRES) {
+            val row = compose.onNode(holding(R.string.settings_labels_musicbrainz_summary)).performScrollTo()
             row.assertIsOn()
             row.performClick()
             waitFor("only Last.fm labels stored") { current().labelSources == setOf(LabelSource.LASTFM) }
-            waitForNode(hasText(text(R.string.settings_labels_musicbrainz_summary)) and isOff())
+            waitForNode(holding(R.string.settings_labels_musicbrainz_summary) and isOff())
         }
 
     @Test
     fun lastFmsLabelsWaitForItsKey() =
-        show {
-            // Without the key, the switch shows off, cannot move, and says why.
-            val waiting = compose.onNodeWithText(text(R.string.settings_labels_needs_key)).performScrollTo()
+        show(SettingsSection.GENRES) {
+            // Without the key, the switch shows off, cannot move, and says where the key goes.
+            val needs = needsKey(R.string.settings_source_lastfm)
+            waitForNode(holding(needs))
+            val waiting = compose.onNode(holding(needs)).performScrollTo()
             waiting.assertIsOff()
             waiting.assertIsNotEnabled()
 
             runBlocking { secrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
-            waitFor("the Last.fm labels no longer waiting for the key") {
-                compose
-                    .onAllNodesWithText(
-                        text(R.string.settings_labels_needs_key),
-                    ).fetchSemanticsNodes()
-                    .isEmpty()
-            }
-            // Last.fm under *Where to look*, under *Genre labels*, and its cache lifetime.
-            val label = compose.onAllNodesWithText(text(R.string.settings_source_lastfm))[1].performScrollTo()
+            waitFor("the Last.fm labels no longer waiting for the key") { absent(holding(needs)) }
+            val label = compose.onNode(holding(R.string.settings_labels_lastfm_summary)).performScrollTo()
             label.assertIsOn()
             label.assertIsEnabled()
             label.performClick()
@@ -142,57 +150,31 @@ class SourceSettingsTest {
         }
 
     @Test
-    fun aLabelSourceOffUnderWhereToLookCannotBeSwitched() =
-        show {
+    fun aLabelSourceOffUnderSourcesCannotBeSwitched() =
+        show(SettingsSection.GENRES) {
             runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.MUSICBRAINZ) } }
-            waitFor("the MusicBrainz labels shown off under *Where to look*") {
-                compose
-                    .onAllNodesWithText(
-                        text(R.string.settings_labels_source_off),
-                    ).fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
-            compose.onNodeWithText(text(R.string.settings_labels_source_off)).performScrollTo().assertIsNotEnabled()
+            waitForNode(holding(R.string.settings_labels_source_off))
+            compose.onNode(holding(R.string.settings_labels_source_off)).performScrollTo().assertIsNotEnabled()
             // The choice itself is kept for when MusicBrainz is back on.
             assertEquals(Settings.DEFAULT_LABEL_SOURCES, current().labelSources)
         }
 
     @Test
-    fun aWebSearchEngineIsASwitchUnderWebSearch() =
-        show {
-            val exa = compose.onNodeWithText(text(R.string.settings_engine_exa)).performScrollTo()
-            exa.assertIsOn()
-            exa.performClick()
-            waitFor("no web engine stored") { current().webEngines.isEmpty() }
-            // *Web search* on with no engine on searches nothing, and says so.
-            waitForText(text(R.string.settings_source_web_no_engine))
+    fun showGenresOffAsksNoSourceAndGreysTheirSwitches() =
+        show(SettingsSection.GENRES) {
+            val show = compose.onNode(hasText(text(R.string.settings_show_genres))).performScrollTo()
+            show.assertIsOn()
+            show.performClick()
+            waitFor("genres stored off") { !current().showGenres }
+            // No source gives labels, whatever its own switch, and each says why.
+            assertTrue(LabelSource.entries.none { current().givesLabels(it) })
+            waitForNode(holding(R.string.settings_labels_genres_off))
+            compose.onNode(holding(R.string.settings_labels_musicbrainz_summary)).assertIsOff().assertIsNotEnabled()
+            assertEquals(Settings.DEFAULT_LABEL_SOURCES, current().labelSources)
 
-            compose.onAllNodesWithText(text(R.string.settings_source_web))[0].performScrollTo().performClick()
-            waitFor("web search stored off") { SourceSwitch.WEB !in current().enabledSources }
-            waitForNode(hasText(text(R.string.settings_engine_exa)) and isNotEnabled())
-            assertEquals(emptySet<WebEngine>(), current().webEngines)
-            assertTrue(
-                compose
-                    .onAllNodesWithText(text(R.string.settings_source_web_no_engine))
-                    .fetchSemanticsNodes()
-                    .isEmpty(),
-            )
-        }
-
-    @Test
-    fun anEngineShowsOffWhileWebSearchIsOffAndSaysWhy() =
-        show {
-            runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) } }
-            waitForText(text(R.string.settings_engine_web_off))
-            val exa = compose.onNodeWithText(text(R.string.settings_engine_web_off)).performScrollTo()
-            exa.assertIsOff()
-            exa.assertIsNotEnabled()
-            // The choice itself is kept for when web search is back on.
-            assertEquals(Settings.DEFAULT_WEB_ENGINES, current().webEngines)
-
-            runBlocking { settings.update { it.copy(enabledSources = it.enabledSources + SourceSwitch.WEB) } }
-            waitForNode(hasText(text(R.string.settings_engine_exa)) and isOn())
-            assertTrue(absent(R.string.settings_engine_web_off))
+            compose.onNode(hasText(text(R.string.settings_show_genres))).performScrollTo().performClick()
+            waitFor("genres stored on") { current().showGenres }
+            waitForNode(holding(R.string.settings_labels_musicbrainz_summary) and isOn())
         }
 
     @Test
@@ -200,12 +182,65 @@ class SourceSettingsTest {
         val dataStore = stores.open("unreadable-lastfm")
         runBlocking { SecretStore(dataStore, testCipher()).set(SecretId.LASTFM, Secret("lastfm-key")) }
         // Another key than the one that sealed it, as after the Keystore lost the first.
-        show(secretStore = SecretStore(dataStore, testCipher())) {
-            waitForText(text(R.string.settings_labels_key_unreadable))
-            val waiting = compose.onNodeWithText(text(R.string.settings_labels_key_unreadable)).performScrollTo()
+        show(SettingsSection.GENRES, secretStore = SecretStore(dataStore, testCipher())) {
+            val unreadable = app.getString(R.string.settings_key_unreadable_note, text(R.string.settings_source_lastfm))
+            waitForNode(holding(unreadable))
+            val waiting = compose.onNode(holding(unreadable)).performScrollTo()
             waiting.assertIsOff()
             waiting.assertIsNotEnabled()
-            assertTrue(absent(R.string.settings_labels_needs_key))
+            assertTrue(absent(holding(needsKey(R.string.settings_source_lastfm))))
         }
     }
+
+    @Test
+    fun exaWebSearchIsASourceOfItsOwn() =
+        show(SettingsSection.SOURCES) {
+            val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
+            exa.assertIsOn()
+            // No key yet: it says where the key goes.
+            waitForNode(holding(needsKey(R.string.settings_key_recipient_exa)))
+
+            exa.performClick()
+            waitFor("Exa stored off") { WebEngine.EXA !in current().webEngines }
+            assertFalse(current().isEnabled(SourceId.WEB))
+
+            exa.performClick()
+            waitFor("Exa stored on") { WebEngine.EXA in current().webEngines }
+            assertTrue(current().isEnabled(SourceId.WEB))
+        }
+
+    @Test
+    fun exaSwitchedOnTurnsWebSearchOnToo() {
+        // As an earlier version could leave it: *Web search* off, its engine on.
+        runBlocking { settings.update { it.copy(enabledSources = it.enabledSources - SourceSwitch.WEB) } }
+        show(SettingsSection.SOURCES) {
+            val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
+            exa.assertIsOff()
+            exa.performClick()
+            waitFor("web search on with Exa") { current().isEnabled(SourceId.WEB) }
+        }
+    }
+
+    @Test
+    fun aSourcesWebsiteOpensInTheBrowser() =
+        show(SettingsSection.SOURCES) {
+            val link = app.getString(R.string.settings_open_website_of, text(R.string.settings_source_musicbrainz))
+            compose.onNodeWithContentDescription(link).performScrollTo().performClick()
+
+            var started: Intent? = null
+            onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://musicbrainz.org/", started?.dataString)
+            // The AI service's knowledge has no site of its own.
+            val model = app.getString(R.string.settings_open_website_of, text(R.string.settings_source_model))
+            assertTrue(absent(hasContentDescription(model)))
+        }
+
+    @Test
+    fun aSourceSwitchedOffIsStored() =
+        show(SettingsSection.SOURCES) {
+            compose.onNode(holding(R.string.settings_source_wikipedia_summary)).performScrollTo().performClick()
+            waitFor("Wikipedia stored off") { SourceSwitch.WIKIPEDIA !in current().enabledSources }
+            assertEquals(Settings.DEFAULT_WEB_ENGINES, current().webEngines)
+        }
 }

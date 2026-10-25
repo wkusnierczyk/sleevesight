@@ -17,6 +17,7 @@ import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.PrepareNextTrack
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.SourceSwitch
+import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
@@ -67,6 +68,7 @@ class SettingsCodecTest {
                 enabledSources = setOf(SourceSwitch.MUSICBRAINZ, SourceSwitch.MODEL),
                 webEngines = emptySet(),
                 labelSources = setOf(LabelSource.LASTFM),
+                showGenres = false,
                 writeInsights = false,
                 writeAutomatically = WriteAutomatically.WHEN_I_SKIP,
                 pauseAutoWriteAfter = 10,
@@ -81,6 +83,8 @@ class SettingsCodecTest {
                 sessionGap = 10.minutes,
                 keepSourcesUnfolded = true,
                 showDiagnostics = true,
+                developerMode = true,
+                theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,
             )
@@ -126,6 +130,44 @@ class SettingsCodecTest {
     fun aFontThisVersionDoesNotKnowReadsAsTheAppFont() {
         val prefs = mutablePreferencesOf(stringPreferencesKey("display.font") to "SERIF")
         assertEquals(FontChoice.APP_FONT, SettingsCodec.read(prefs).font)
+    }
+
+    @Test
+    fun theThemeIsStoredByNameAndOneNotKnownReadsAsTheSystems() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(theme = ThemeChoice.LIGHT), prefs)
+        assertEquals(mutablePreferencesOf(stringPreferencesKey("display.theme") to "LIGHT"), prefs)
+        val later = mutablePreferencesOf(stringPreferencesKey("display.theme") to "SEPIA")
+        assertEquals(ThemeChoice.SYSTEM, SettingsCodec.read(later).theme)
+    }
+
+    @Test
+    fun showGenresOffIsStoredUnderItsKey() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(showGenres = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("genres.show") to false), prefs)
+    }
+
+    @Test
+    fun aFileFromBeforeDeveloperModeWithDiagnosticsOnReadsAsDeveloperModeOn() {
+        val before = mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true)
+        assertTrue(SettingsCodec.read(before).developerMode)
+        assertFalse(SettingsCodec.read(mutablePreferencesOf()).developerMode)
+    }
+
+    @Test
+    fun developerModeIsStoredOnlyWhereDiagnosticsWouldReadOtherwise() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.mode") to true), prefs)
+        // With *Diagnostics* on, which reads as developer mode on, its own key is not needed.
+        SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true), prefs)
+        // Turned off, with its options, nothing is left.
+        SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true).withoutDeveloperMode(), prefs)
+        assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
+        // A state no screen makes, kept as it is: developer mode off with *Diagnostics* on.
+        assertEquals(Settings(showDiagnostics = true), roundTrip(Settings(showDiagnostics = true)))
     }
 
     @Test

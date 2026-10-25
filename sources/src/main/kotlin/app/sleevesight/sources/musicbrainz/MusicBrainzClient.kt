@@ -39,9 +39,13 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  * Duration matching happens in `:core`, after the search, so the player's duration never leaves
  * the phone (R4).
+ *
+ * [tags] says, at each recording's lookup, whether its tags are asked for: not while *Show genres*
+ * is off (#444), when no genre information is asked for from any source.
  */
 class MusicBrainzClient(
     private val net: NetClient,
+    private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup,
     ArtistTags {
     override suspend fun searchRecordings(
@@ -65,7 +69,8 @@ class MusicBrainzClient(
     }
 
     override suspend fun recording(mbid: String): Lookup<MbRecordingDetail> {
-        val request = NetRequest("$BASE/recording/$mbid", query = mapOf("inc" to RECORDING_INC, "fmt" to "json"))
+        val inc = if (tags()) RECORDING_INC else RECORDING_INC_WITHOUT_TAGS
+        val request = NetRequest("$BASE/recording/$mbid", query = mapOf("inc" to inc, "fmt" to "json"))
         return net.lookup(request) { response ->
             val json = parseObject(response.body)
             val relations = json.array("relations")
@@ -165,6 +170,9 @@ class MusicBrainzClient(
 
         /** With `tags`, for the track's genre labels (#439), which only [MbRecordingDetail.tags] holds. */
         const val RECORDING_INC: String = "artist-credits+work-rels+artist-rels+url-rels+tags"
+
+        /** [RECORDING_INC] without `tags`, while no genre information is asked for (#444). */
+        const val RECORDING_INC_WITHOUT_TAGS: String = "artist-credits+work-rels+artist-rels+url-rels"
 
         const val WORK_INC: String = "artist-rels+url-rels+recording-rels+artist-credits"
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -47,6 +48,7 @@ import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.KeyDialogs
 import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
+import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
 import app.sleevesight.core.ai.ReasoningEffort
 import app.sleevesight.core.model.ProviderId
@@ -149,6 +151,7 @@ class SettingsScreenTest {
     @Test
     fun keepingWhatSourcesSaidAboutArtistsIsOffUntilSwitchedOn() =
         show {
+            compose.openSection(SettingsSection.HISTORY)
             val title = text(R.string.settings_keep_artists)
             compose.onNodeWithText(title).performScrollTo().assertIsOff()
             compose.onNodeWithText(text(R.string.settings_keep_artists_summary)).assertIsDisplayed()
@@ -161,9 +164,11 @@ class SettingsScreenTest {
     @Test
     fun aSwitchIsSavedAtOnce() =
         show {
+            compose.openSection(SettingsSection.INSIGHTS)
             compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
             waitFor("look-up in the background stored on") { current().lookUpInBackground }
 
+            compose.openSection(SettingsSection.PLAYERS)
             compose.onNodeWithText("Label of ${Settings.SPOTIFY}").performScrollTo().performClick()
             waitFor("Spotify stored off") { current().followedPlayers[Settings.SPOTIFY] == false }
         }
@@ -171,6 +176,7 @@ class SettingsScreenTest {
     @Test
     fun keepingTheSourcesAsLeftIsASwitchOffByDefault() =
         show {
+            compose.openSection(SettingsSection.APPEARANCE)
             val row = compose.onNodeWithText(text(R.string.settings_keep_sources)).performScrollTo()
             row.assertIsOff()
             row.performClick()
@@ -182,6 +188,7 @@ class SettingsScreenTest {
         val flaky = FlakyDataStore(stores.open("flaky-settings"))
         val store = SettingsStore(flaky)
         show(settingsStore = store) {
+            compose.openSection(SettingsSection.INSIGHTS)
             flaky.writeFailures.set(1)
             val row = compose.onNodeWithText(text(R.string.settings_background)).performScrollTo()
             row.performClick()
@@ -222,6 +229,7 @@ class SettingsScreenTest {
         val flaky = FlakyDataStore(stores.open("flaky-settings"))
         val store = SettingsStore(flaky)
         show(settingsStore = store) {
+            compose.openSection(SettingsSection.AI_SERVICES)
             flaky.writeFailures.set(1)
             compose.onNodeWithText(anthropic(R.string.settings_ai_effort_of)).performScrollTo().performClick()
             compose.onNode(hasText(text(R.string.settings_effort_high)) and hasAnyAncestor(isDialog())).performClick()
@@ -240,6 +248,7 @@ class SettingsScreenTest {
     @Test
     fun aSourceKeyIsSavedSealedAndNeverShown() =
         show {
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("  lastfm-key  ")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -264,6 +273,7 @@ class SettingsScreenTest {
                 }
             }
             waitForText(text(R.string.settings_title))
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -271,8 +281,8 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_key_save_failed))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
             assertEquals(null, runBlocking { failingSecrets.get(SecretId.EXA) })
-            // A key store that failed: *Reset saved keys* is offered.
-            waitForText(text(R.string.settings_reset_keys))
+            // A key store that failed: *Purge keys* says why to use it.
+            waitForText(text(R.string.settings_reset_keys_value))
         }
     }
 
@@ -282,6 +292,7 @@ class SettingsScreenTest {
         val flakySecrets = SecretStore(flaky, testCipher())
         show(secretStore = flakySecrets) {
             flaky.writeFailures.set(1)
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -289,8 +300,8 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_key_write_failed))
             compose.onNodeWithText(text(R.string.settings_save)).assertIsDisplayed()
             assertEquals(null, runBlocking { flakySecrets.get(SecretId.EXA) })
-            // The file could not be written, which a reset would not cure: none is offered.
-            for (absent in listOf(R.string.settings_reset_keys, R.string.settings_key_save_failed)) {
+            // The file could not be written, which a purge would not cure: none is offered.
+            for (absent in listOf(R.string.settings_reset_keys_value, R.string.settings_key_save_failed)) {
                 assertTrue(compose.onAllNodesWithText(text(absent)).fetchSemanticsNodes().isEmpty())
             }
         }
@@ -310,6 +321,7 @@ class SettingsScreenTest {
         val slowSecrets = SecretStore(stores.open("slow-secrets"), SecretCipher(slow), legacyKeystore = false)
         try {
             show(secretStore = slowSecrets) {
+                compose.openSection(SettingsSection.SECRETS)
                 compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
                 compose.onNode(hasSetTextAction()).performTextInput("exa-key")
                 compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -322,7 +334,7 @@ class SettingsScreenTest {
 
                 release.countDown()
                 waitForText(text(R.string.settings_key_save_failed))
-                waitForText(text(R.string.settings_reset_keys))
+                waitForText(text(R.string.settings_reset_keys_value))
             }
         } finally {
             // Also when a step above fails, so no I/O thread stays blocked for the rest of the run.
@@ -340,17 +352,18 @@ class SettingsScreenTest {
             }
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(keys), legacyKeystore = false)
         show(secretStore = failingSecrets) {
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitForText(text(R.string.settings_key_save_failed))
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
 
-            waitForText(text(R.string.settings_reset_keys))
-            compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
-            waitFor("Reset saved keys no longer offered") {
-                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
+            waitForText(text(R.string.settings_reset_keys_value))
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
+            waitFor("Purge keys no longer saying why") {
+                compose.onAllNodesWithText(text(R.string.settings_reset_keys_value)).fetchSemanticsNodes().isEmpty()
             }
             assertEquals(1, keys.deletions)
         }
@@ -361,8 +374,8 @@ class SettingsScreenTest {
         val flaky = FlakyDataStore(stores.open("gated-reset-secrets"))
         val gatedSecrets = SecretStore(flaky, testCipher())
         val gate = CompletableDeferred<Unit>()
-        // The screen's state, which outlives the dialog: *Reset saved keys* offered after a key
-        // store failure.
+        // The screen's state, which outlives the dialog: *Purge keys* saying why after a key store
+        // failure.
         var sealFailed by mutableStateOf(true)
         var dialogShown by mutableStateOf(true)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -370,7 +383,7 @@ class SettingsScreenTest {
                 activity.setContent {
                     if (dialogShown) {
                         KeyDialogs(
-                            SettingsDialog.ResetKeys,
+                            SettingsDialog.PurgeKeys,
                             emptyMap(),
                             gatedSecrets,
                             saves,
@@ -384,15 +397,15 @@ class SettingsScreenTest {
                 }
             }
             flaky.writeGate = gate
-            waitForText(text(R.string.settings_reset))
-            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
-            waitFor("the reset's write started") { flaky.writes.get() == 1 }
+            waitForText(text(R.string.settings_remove_all))
+            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
+            waitFor("the purge's write started") { flaky.writes.get() == 1 }
 
             // The dialog goes while the reset waits; the state that observes it stays.
             dialogShown = false
             compose.waitForIdle()
             gate.complete(Unit)
-            waitFor("Reset saved keys no longer offered") { !sealFailed }
+            waitFor("Purge keys no longer saying why") { !sealFailed }
         }
     }
 
@@ -405,12 +418,13 @@ class SettingsScreenTest {
         val legacySecrets =
             SecretStore(unreadable, SecretCipher(SoftwareKeySource(current = null)), legacyKeystore = true)
         show(secretStore = legacySecrets) {
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
 
             waitForText(text(R.string.settings_key_write_failed))
-            for (absent in listOf(R.string.settings_reset_keys, R.string.settings_key_save_failed)) {
+            for (absent in listOf(R.string.settings_reset_keys_value, R.string.settings_key_save_failed)) {
                 assertTrue(compose.onAllNodesWithText(text(absent)).fetchSemanticsNodes().isEmpty())
             }
         }
@@ -422,6 +436,7 @@ class SettingsScreenTest {
         val store = SettingsStore(flaky)
         val gate = CompletableDeferred<Unit>()
         show(settingsStore = store) {
+            compose.openSection(SettingsSection.INSIGHTS)
             flaky.writeGate = gate
             compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
             waitFor("the change's write started") { flaky.writes.get() == 1 }
@@ -441,6 +456,7 @@ class SettingsScreenTest {
         val gate = CompletableDeferred<Unit>()
         show(secretStore = gatedSecrets) {
             flaky.writeGate = gate
+            compose.openSection(SettingsSection.SECRETS)
             compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
             compose.onNode(hasSetTextAction()).performTextInput("exa-key")
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -455,7 +471,7 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun anUnreadableKeyOffersResetSavedKeys() {
+    fun anUnreadableKeyMakesPurgeKeysSayWhy() {
         val dataStore = stores.open("reset-secrets")
         runBlocking { SecretStore(dataStore, testCipher()).set(SecretId.LASTFM, Secret("lastfm-key")) }
         // Another key than the one that sealed it, as after the Keystore lost the first.
@@ -464,18 +480,18 @@ class SettingsScreenTest {
             scenario.onActivity { activity ->
                 activity.setContent { SettingsScreen(settings, resetting, emptyMap(), ::clearedAtOnce, saves) { it } }
             }
-            waitForText(text(R.string.settings_reset_keys))
+            compose.openSection(SettingsSection.SECRETS)
+            waitForText(text(R.string.settings_reset_keys_value))
             compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
             // A key that cannot be read can still be removed, alone or with the others.
             compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_lastfm)).assertExists()
-            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).assertExists()
 
-            compose.onNodeWithText(text(R.string.settings_reset_keys)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_reset)).performClick()
+            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
 
-            waitFor("Reset saved keys gone") {
-                compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty()
+            waitFor("Purge keys gone") {
+                compose.onAllNodesWithText(text(R.string.settings_remove_all_keys)).fetchSemanticsNodes().isEmpty()
             }
             assertEquals(SecretState.ABSENT, runBlocking { resetting.states.first() }.getValue(SecretId.LASTFM))
         }
@@ -489,6 +505,7 @@ class SettingsScreenTest {
             secrets.set(SecretId.EXA, Secret("exa-key"))
         }
         show {
+            compose.openSection(SettingsSection.SECRETS)
             val removeLastFm = removeKey(R.string.settings_key_name_lastfm)
             waitForNode(hasContentDescription(removeLastFm))
             // Only a row with a key stored offers it: not the Anthropic key's, with none saved.
@@ -521,6 +538,7 @@ class SettingsScreenTest {
     fun withNoServiceSwitchedOnASavedAiKeyKeepsItsRowToRemoveIt() {
         runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("anthropic-key")) }
         show {
+            compose.openSection(SettingsSection.SECRETS)
             val removeAnthropic = removeKey(R.string.settings_key_name_anthropic)
             waitForNode(hasContentDescription(removeAnthropic))
             assertEquals(null, current().aiProvider)
@@ -530,7 +548,7 @@ class SettingsScreenTest {
             compose.onNodeWithText(text(R.string.settings_remove)).performClick()
             waitFor("the Anthropic key removed") { runBlocking { secrets.get(SecretId.ANTHROPIC) } == null }
             waitFor("its button gone") { compose.onAllNodesWithContentDescription(removeAnthropic).isEmpty() }
-            // The row stays, under Anthropic's switch, to enter a key again.
+            // The row stays, under *Secrets*, to enter a key again.
             compose.onNodeWithText(text(R.string.settings_key_name_anthropic)).performScrollTo().assertIsDisplayed()
         }
     }
@@ -541,6 +559,7 @@ class SettingsScreenTest {
         val flakySecrets = SecretStore(flaky, testCipher())
         runBlocking { flakySecrets.set(SecretId.EXA, Secret("exa-key")) }
         show(secretStore = flakySecrets) {
+            compose.openSection(SettingsSection.SECRETS)
             val removeExa = removeKey(R.string.settings_key_name_exa)
             waitForNode(hasContentDescription(removeExa))
             flaky.writeFailures.set(1)
@@ -554,16 +573,18 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun removeAllApiKeysShowsWhileAnyKeyIsStored() =
+    fun purgeKeysShowsWhileAnyKeyIsStored() =
         show {
+            compose.openSection(SettingsSection.SECRETS)
             val row = text(R.string.settings_remove_all_keys)
-            compose.onNodeWithText(text(R.string.credits_title)).performScrollTo()
+            waitForText(text(R.string.settings_scan_keys))
             assertTrue(compose.onAllNodesWithText(row).fetchSemanticsNodes().isEmpty())
 
             runBlocking { secrets.set(SecretId.EXA, Secret("exa-key")) }
             waitForText(row)
-            // Not the row above the list, which a failure brings.
-            assertTrue(compose.onAllNodesWithText(text(R.string.settings_reset_keys)).fetchSemanticsNodes().isEmpty())
+            // Saying only what it does: no failure brought it.
+            compose.onNodeWithText(text(R.string.settings_remove_all_keys_value)).assertExists()
+            assertTrue(absent(R.string.settings_reset_keys_value))
 
             compose.onNodeWithText(row).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
@@ -578,7 +599,7 @@ class SettingsScreenTest {
         }
 
     @Test
-    fun removeAllApiKeysThatFailsSaysSo() {
+    fun purgeKeysThatFailsSaysSo() {
         val failing =
             object : SoftwareKeySource() {
                 override fun delete(): Unit = throw ProviderException("key store down")
@@ -586,6 +607,7 @@ class SettingsScreenTest {
         val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
         show(secretStore = failingSecrets) {
+            compose.openSection(SettingsSection.SECRETS)
             waitForText(text(R.string.settings_remove_all_keys))
             compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
@@ -599,8 +621,8 @@ class SettingsScreenTest {
     @Test
     fun aCacheLifetimeIsChosen() =
         show {
-            // Web search under *Where to look*, then its cache lifetime.
-            compose.onAllNodesWithText(text(R.string.settings_cache_web))[1].performScrollTo().performClick()
+            compose.openSection(SettingsSection.HISTORY)
+            compose.onNodeWithText(text(R.string.settings_cache_web)).performScrollTo().performClick()
             compose.onNodeWithText(app.resources.getQuantityString(R.plurals.settings_days, 3, 3)).performClick()
             waitFor("the web cache lifetime stored") { current().cacheLifetimes[SourceId.WEB]?.inWholeDays == 3L }
         }
@@ -608,6 +630,7 @@ class SettingsScreenTest {
     @Test
     fun theHistorysLifetimeAndSessionGapAreChosen() =
         show {
+            compose.openSection(SettingsSection.HISTORY)
             compose.onNodeWithText(text(R.string.settings_keep_history)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_keep_history_forever)).performClick()
             waitFor("the history kept forever") { current().historyLifetime == null }
@@ -618,14 +641,15 @@ class SettingsScreenTest {
         }
 
     @Test
-    fun thePauseOfAutomaticWritingIsChosen() =
+    fun theSaverAndItsCountAreChosen() =
         show {
+            compose.openSection(SettingsSection.INSIGHTS)
             // The cost of automatic writing is said where it is set.
             compose.onNodeWithText(text(R.string.settings_write_automatically_summary)).performScrollTo()
-            // The summary says what the count chosen does: the default, 5, at first, with nothing
-            // written away while *Look up in the background* is off.
+            // On by default, after 5, with nothing written away while *Look up in the background* is off.
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsOn()
             compose.onNodeWithText(pauseSummary(5, background = false)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write_after)).performScrollTo().performClick()
             val ten = app.resources.getQuantityString(R.plurals.settings_track_changes_away, 10, 10)
             compose.onNodeWithText(ten).performClick()
             waitFor("a pause after 10 track changes stored") { current().pauseAutoWriteAfter == 10 }
@@ -636,18 +660,21 @@ class SettingsScreenTest {
             waitFor("look-up in the background stored on") { current().lookUpInBackground }
             compose.onNodeWithText(pauseSummary(10, background = true)).performScrollTo().assertIsDisplayed()
 
+            // Off, nothing pauses, and no count is offered.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_pause_auto_write_off)).performClick()
-            waitFor("the pause off") { current().pauseAutoWriteAfter == null }
-            // Under *Off*, nothing pauses, so no count is explained.
-            compose.onNodeWithText(pauseSummary(null, background = true)).performScrollTo().assertIsDisplayed()
+            waitFor("the saver off") { current().pauseAutoWriteAfter == null }
+            waitFor("its count gone") { absent(R.string.settings_pause_auto_write_after) }
+            // On again, at the default.
+            compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().performClick()
+            waitFor("the saver on at 5") { current().pauseAutoWriteAfter == Settings.DEFAULT_PAUSE_AUTO_WRITE_AFTER }
         }
 
     @Test
     fun aPauseAfterOneTrackChangeIsSummedUpInTheSingular() {
         runBlocking { settings.update { it.copy(pauseAutoWriteAfter = 1, lookUpInBackground = true) } }
         show {
-            // "Up to": under *When I skip*, a natural end is counted but not written.
+            compose.openSection(SettingsSection.INSIGHTS)
+            // "Up to": under *On skip*, a natural end is counted but not written.
             val written = pauseSummary(1, background = true)
             assertTrue(written, written.contains("up to 1 track is written"))
             compose.onNodeWithText(written).performScrollTo().assertIsDisplayed()
@@ -660,27 +687,25 @@ class SettingsScreenTest {
         }
     }
 
-    // The summary of *Pause automatic writing after* for [count], or for *Off*, with *Look up in
-    // the background* as [background].
+    // What *Saver*'s count [count] does, with *Look up in the background* as [background].
     private fun pauseSummary(
-        count: Int?,
+        count: Int,
         background: Boolean,
     ): String {
-        val counted = text(R.string.settings_pause_auto_write_summary)
-        if (count == null) return counted
         val plural =
             if (background) {
                 R.plurals.settings_pause_auto_write_summary_count
             } else {
                 R.plurals.settings_pause_auto_write_summary_count_foreground
             }
-        return "$counted ${app.resources.getQuantityString(plural, count, count)}"
+        return app.resources.getQuantityString(plural, count, count)
     }
 
     @Test
     fun aStoredValueOutsideTheOptionsIsShownAsItIs() {
         runBlocking { settings.update { it.copy(historyLifetime = 12.hours, sessionGap = 45.minutes) } }
         show {
+            compose.openSection(SettingsSection.HISTORY)
             val twelveHours = app.resources.getQuantityString(R.plurals.settings_hours, 12, 12)
             compose.onNodeWithText(twelveHours).performScrollTo().assertIsDisplayed()
             val minutes = app.resources.getQuantityString(R.plurals.settings_minutes, 45, 45)
@@ -700,6 +725,7 @@ class SettingsScreenTest {
             CompletableDeferred(true)
         }
         show(clearHistory = clear) {
+            compose.openSection(SettingsSection.HISTORY)
             compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_clear_history_explained)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
@@ -721,6 +747,7 @@ class SettingsScreenTest {
     fun aFailedClearSaysSoUntilOneSucceeds() {
         var succeeds = false
         show(clearHistory = { CompletableDeferred(succeeds) }) {
+            compose.openSection(SettingsSection.HISTORY)
             compose.onNodeWithText(text(R.string.settings_clear_history)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.settings_clear)).performClick()
             waitForText(text(R.string.settings_clear_history_failed))
@@ -736,9 +763,10 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun theCreditsAreAtTheEnd() {
+    fun theCreditsAreUnderAbout() {
         var opened = false
         show(onOpenCredits = { opened = true }) {
+            compose.openSection(SettingsSection.ABOUT)
             compose.onNodeWithText(text(R.string.credits_title)).performScrollTo().performClick()
             assertTrue(opened)
         }
@@ -747,9 +775,11 @@ class SettingsScreenTest {
     @Test
     fun thePrivacyPolicyRowOpensThePolicyOnTheSiteInTheBrowser() {
         show {
+            compose.openSection(SettingsSection.ABOUT)
             compose.onNodeWithText(text(R.string.settings_privacy)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_privacy)).performClick()
+            compose.onNodeWithText(PRIVACY_POLICY_SHOWN).performScrollTo().assertIsDisplayed()
+            val link = app.getString(R.string.settings_open_page, text(R.string.settings_privacy))
+            compose.onNodeWithContentDescription(link).performScrollTo().performClick()
 
             var started: Intent? = null
             onActivity { started = shadowOf(it).nextStartedActivity }

@@ -27,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -49,7 +50,8 @@ class LastFmArtistCacheTest {
         net: NetClient = LastFmStubClient(),
         search: GordonSearch = GordonSearch(),
         kept: ArtistResults = ArtistResults.None,
-    ) = LastFmAdapter(net, search, Secret(KEY), vocabulary, JvmAccentFolder, clock, artists = kept)
+        genres: Boolean = true,
+    ) = LastFmAdapter(net, search, Secret(KEY), vocabulary, JvmAccentFolder, clock, artists = kept, genres = genres)
 
     private val sundown = normalizer.normalize("Sundown", "Gordon Lightfoot")
     private val carefree = normalizer.normalize("Carefree Highway", "Gordon Lightfoot")
@@ -128,6 +130,42 @@ class LastFmArtistCacheTest {
             adapter(LastFmStubClient(override = tagsFail), kept = kept).lookup(sundown, resolved())
 
             assertEquals(emptySet(), kept.keys(LastFmAdapter.ARTIST_PART))
+        }
+
+    @Test
+    fun `with genres off no top tags are asked for and no labels made, and results are kept apart`() =
+        runTest {
+            val net = LastFmStubClient()
+            val off = adapter(net, genres = false)
+            val lookup = off.lookupArtists(sundown, resolved())
+
+            assertEquals(listOf("artist.getinfo"), net.requests.map { it.query["method"] })
+            assertEquals(LastFmMatch.Verified, lookup.artists.single().match)
+            assertTrue(lookup.result.genres.isEmpty())
+            assertTrue(lookup.result.evidence.isNotEmpty(), "the evidence is as before")
+            assertNotEquals(adapter().extractionVersion, off.extractionVersion)
+        }
+
+    @Test
+    fun `an artist kept without its top tags is asked for again once genres are on`() =
+        runTest {
+            val kept = MemoryArtistResults()
+            adapter(kept = kept, genres = false).lookup(sundown, resolved())
+            assertEquals(setOf("Gordon Lightfoot"), kept.keys(LastFmAdapter.ARTIST_PART))
+
+            // While genres stay off, the kept answer serves.
+            val stillOff = LastFmStubClient()
+            adapter(stillOff, kept = kept, genres = false).lookup(carefree, resolved())
+            assertEquals(emptyList(), stillOff.requests)
+
+            // Once on, it is asked for whole, top tags included, and kept so.
+            val on = LastFmStubClient()
+            val again = adapter(on, kept = kept).lookupArtists(carefree, resolved())
+            assertEquals(setOf("artist.getinfo", "artist.gettoptags"), on.requests.map { it.query["method"] }.toSet())
+            assertTrue(again.result.genres.isNotEmpty())
+            val later = LastFmStubClient()
+            adapter(later, kept = kept).lookup(sundown, resolved())
+            assertEquals(emptyList(), later.requests)
         }
 
     @Test
