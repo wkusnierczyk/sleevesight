@@ -176,13 +176,24 @@ class SettingsCodecTest {
     }
 
     @Test
-    fun developerModeIsStoredOnlyWhereDiagnosticsWouldReadOtherwise() {
+    fun developerModeIsStoredWhereDiagnosticsWouldReadOtherwiseAndKeptOnceStored() {
+        // Turned on with *Diagnostics*, which reads as developer mode on, its own key is not needed.
+        val both = mutablePreferencesOf()
+        SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), both)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true), both)
+
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(Settings(developerMode = true), prefs)
         assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.mode") to true), prefs)
-        // With *Diagnostics* on, which reads as developer mode on, its own key is not needed.
+        // Once stored, it stays when *Diagnostics* moves: another build's default may need it.
         SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), prefs)
-        assertEquals(mutablePreferencesOf(booleanPreferencesKey("developer.diagnostics") to true), prefs)
+        assertEquals(
+            mutablePreferencesOf(
+                booleanPreferencesKey("developer.mode") to true,
+                booleanPreferencesKey("developer.diagnostics") to true,
+            ),
+            prefs,
+        )
         // Turned off, with its options, nothing is left.
         SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true).withoutDeveloperMode(), prefs)
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())

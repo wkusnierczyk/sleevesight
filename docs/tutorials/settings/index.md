@@ -194,7 +194,7 @@ Old entries go by the phone's clock. Each time Sleevesight starts, with the phon
 
 ## Developer
 
-Shown only in developer mode, which seven taps on *Version* turn on, last, with no description: its options are for a developer or a tester, not for listening. Developer mode is a setting kept with the others: it survives a restart, and clearing the app's data turns it off.
+Shown only in developer mode, which seven taps on *Version* turn on, last, with no description: its options are for a developer or a tester, not for listening. Developer mode is a setting kept with the others: it survives a restart, and clearing the app's data returns it to its default. That is off, except in the test build that Google Play's testing tracks get, which starts in developer mode, so testers find *Diagnostics* without the seven taps; turned off there, it stays off.
 
 - ***Diagnostics*** (**default: off**). *Shows the way to the diagnostics screen: what the pipeline did, and the track changes recorded.* While it is on, *Open diagnostics* appears under it.
 - ***Show grounding details*** (**default: off**). *Under each insight, the grounding check’s counts in full: how many sentences are grounded, and how many come from the model’s own knowledge, are uncited, or cite missing evidence.* On, the line under the insight reads as the check counts, such as *2 of 3 sentences grounded · 1 uncited*. Off, it shows only when a sentence is not backed by the sources (*1 sentence is not backed by the sources.*) or the insight was kept from before: the citations already show how each sentence is grounded.

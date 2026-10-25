@@ -50,6 +50,22 @@ jobs:
         id: version
         run: echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # The track the bundle is for: the environment's variable `PLAY_TRACK`, `internal` when unset.
+      # A bundle for a testing track starts in developer mode, so testers reach *Diagnostics* without
+      # seven taps on *Version*; one for `production` does not (#451). Play promotes a bundle from
+      # one track to the next as it is, so the production release is a bundle of its own, from a tag
+      # of its own on the tested code: `release-track.sh` refuses a production tag that changes more
+      # than release notes since the tag before it, and a track id it does not take
+      # (`design/release.md`, *Test and production builds*). The approval comes before this step,
+      # so the summary confirms the track; the check is what stops a `PLAY_TRACK` left at production.
+      - name: Track and developer mode
+        id: track
+        env:
+          TRACK: ${{ vars.PLAY_TRACK }}
+        run: |
+          git fetch --no-tags origin '+refs/tags/v*:refs/tags/v*'
+          .github/scripts/release-track.sh "$TRACK" "$GITHUB_REF_NAME" "$GITHUB_SHA"
+
       # Every release ships with its notes, reviewed with the change that ships: notes that are
       # missing, or that `check-release-notes.sh` refuses, stop the run before the build. A tag that
       # is no release version is named as such, since the notes' name is checked first.
@@ -88,7 +104,16 @@ jobs:
           SLEEVESIGHT_UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
           SLEEVESIGHT_UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
           VERSION: ${{ steps.version.outputs.name }}
-        run: ./gradlew :app:bundleRelease -Psleevesight.version="$VERSION" --no-build-cache --console=plain
+          DEVELOPER_MODE: ${{ steps.track.outputs.developer-mode }}
+        run: |
+          ./gradlew :app:bundleRelease -Psleevesight.version="$VERSION" \
+            -Psleevesight.developerMode="$DEVELOPER_MODE" --no-build-cache --console=plain
+
+      # The value the bundle was compiled with, read back from its build.
+      - name: Check developer mode
+        env:
+          DEVELOPER_MODE: ${{ steps.track.outputs.developer-mode }}
+        run: .github/scripts/check-developer-mode.sh release "$DEVELOPER_MODE"
 
       - name: Remove the upload key
         if: always()
@@ -159,13 +184,13 @@ jobs:
           create_credentials_file: false
           export_environment_variables: false
 
-      # The track is the environment's variable `PLAY_TRACK`, `internal` when unset, so the closed
+      # The track is the one the bundle was built for (*Track and developer mode*), so the closed
       # test (#58) can take its bundles from the same job. `PLAY_RELEASE_STATUS`, `completed` when
       # unset, can be `draft` while Play treats the app as a draft (`design/release.md`).
       - name: Upload to Google Play
         env:
           PLAY_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
-          TRACK: ${{ vars.PLAY_TRACK || 'internal' }}
+          TRACK: ${{ steps.track.outputs.name }}
           STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
           VERSION: ${{ steps.version.outputs.name }}
         run: |
