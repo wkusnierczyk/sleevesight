@@ -26,7 +26,7 @@ WHAT YOU NEED
 • Sleevesight has no minimum age of its own beyond the privacy policy’s, but an AI service’s terms may: Google’s Gemini API requires you to be 18 or older. Each key’s dialog says what its service’s terms require.
 
 PRIVACY
-Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a problem report from your mail app. Your keys are encrypted on the phone, and the settings remove any one of them, or all at once. The privacy policy: https://sleevesight.app/privacy.html
+Sleevesight has no server, no accounts, no ads, no analytics and no telemetry. The track's title and artists go straight from your phone to the sources you switch on (by default, the next track's title and artists also go to MusicBrainz, before it plays). The title, artists and album, with what the sources found, go to your AI service, on your own key. A cover given only as a web address is fetched from the server that address names. Nothing reaches the developer unless you send a report from your mail app. Your keys are encrypted on the phone, and the settings remove any one of them, or all at once. The privacy policy: https://sleevesight.app/privacy.html
 
 OPEN SOURCE
 The code is on GitHub: https://github.com/wkusnierczyk/sleevesight

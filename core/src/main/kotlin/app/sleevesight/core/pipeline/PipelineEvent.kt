@@ -130,8 +130,9 @@ sealed interface PipelineEvent {
     ) : PipelineEvent
 
     /**
-     * A paid call started. [leftOut] are the ids of the artist-level lines its prompt left out
-     * (#239, `PromptEvidence`).
+     * A paid call started. [leftOut] are the ids of the lines its prompt left out (`PromptEvidence`):
+     * artist-level lines (#239), and the player's release line when MusicBrainz's first-release line
+     * names that album (#424).
      */
     data class ModelCall(
         override val key: String,

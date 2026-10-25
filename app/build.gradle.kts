@@ -8,14 +8,27 @@ plugins {
 // passes as `-Psleevesight.version` (`design/release.md`, *Versioning*); other builds are 0.1.0.
 val appVersion = ReleaseVersion.parse(providers.gradleProperty("sleevesight.version").getOrElse("0.1.0"))
 
+// Developer mode's default (#451): on in a build for Play's testing tracks, which the release
+// workflow makes with `-Psleevesight.developerMode=true` (`design/release.md`, *Test and production
+// builds*), so testers reach *Diagnostics* without seven taps; off in every other build. Only the
+// default: a choice the user stored wins. Anything but `true` or `false` fails the build.
+val developerModeDefault =
+    when (val value = providers.gradleProperty("sleevesight.developerMode").getOrElse("false")) {
+        "true" -> true
+        "false" -> false
+        else -> throw GradleException("sleevesight.developerMode is `$value`, not `true` or `false`")
+    }
+
 android {
     namespace = "app.sleevesight.app"
-    // `BuildConfig.VERSION_NAME`, for the User-Agent the app's one `NetClient` sends (`:wiring`).
+    // `BuildConfig.VERSION_NAME`, for the User-Agent the app's one `NetClient` sends (`:wiring`), and
+    // `BuildConfig.DEVELOPER_MODE_DEFAULT`, the settings' default for developer mode.
     buildFeatures.buildConfig = true
     defaultConfig {
         applicationId = "app.sleevesight"
         versionCode = appVersion.code
         versionName = appVersion.name
+        buildConfigField("boolean", "DEVELOPER_MODE_DEFAULT", developerModeDefault.toString())
     }
     testOptions {
         // Robolectric reads the app's resources and manifest, and sets a `FileDescriptor`'s
