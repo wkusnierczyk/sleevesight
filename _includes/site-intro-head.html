@@ -1,0 +1,23 @@
+{% comment %}
+  The intro's first script, in the head of the product page and the documentation pages (#501):
+  before the first paint, it picks the intro and hides the page until the intro starts. The rest is
+  `site-header-script.html`.
+{% endcomment %}
+<script>
+document.documentElement.classList.add('js');
+// Set before the first paint: the intro (`data-logo`), and its wait, so the page never shows before
+// the intro starts.
+(function () {
+  var root = document.documentElement, all = ['c', 'd', 'f', 'g', 'h', 'i', 'r1', 'r2'];
+  root.setAttribute('data-logo', all[Math.floor(Math.random() * all.length)]);
+  // `location.hash` is empty for a bare `#`, so the address is read whole. A reload, or Back or Forward
+  // to the page, skips the intro (#368).
+  var nav = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null,
+      again = nav && (nav.type === 'reload' || nav.type === 'back_forward');
+  if (again || location.href.indexOf('#') !== -1 || !matchMedia('(prefers-reduced-motion: no-preference)').matches) return;
+  root.classList.add('sl-wait');
+  // The second script's `start()` takes the wait off; should it fail or never run, the page shows
+  // after three seconds all the same, without the intro.
+  setTimeout(function () { root.classList.remove('sl-wait'); }, 3000);
+})();
+</script>

@@ -17,7 +17,9 @@ import kotlin.time.Instant
  *
  * Per D4 an adapter looks up by name at once and awaits [Resolution] only to verify its match
  * against the resolved ids, so a slow MusicBrainz delays only its own lines. A match that cannot
- * be verified stays unverified (shown, not cited).
+ * be verified stays unverified (shown, not cited). Web search is the exception: a web page has no
+ * id to verify against, so its results are kept or dropped by `RecordingFilter` alone, and the kept
+ * ones may be cited (`ExaWebSearch`).
  *
  * The pipeline always completes the `Deferred<Resolution>` normally: with [Resolution.NONE] when
  * resolution fails, is switched off or is cancelled, never exceptionally, so `await()` never
@@ -78,11 +80,11 @@ val SourceAdapter.tag: String get() = id.tag
 /**
  * What one lookup gave: the typed outcome, the evidence lines without ids, and how long it took.
  *
- * [evidence] holds the lines of a verified match: they get ids and may be cited. [unverified] holds
- * the lines of a match that could not be verified against the [Resolution] (D4): shown, never
- * cited, so never given to the model. A match that failed the check gives neither, and an
- * [Outcome.Rejected]. The default is empty, so a line is cited only when an adapter puts it in
- * [evidence].
+ * [evidence] holds the lines of a verified match, or of a web search result its filter kept (no id
+ * to verify against): they get ids and may be cited. [unverified] holds the lines of a match that
+ * could not be verified against the [Resolution] (D4): shown, never cited, so never given to the
+ * model. A match that failed the check gives neither, and an [Outcome.Rejected]. The default is
+ * empty, so a line is cited only when an adapter puts it in [evidence].
  *
  * [outcome] says what the source found, not whether it was verified: [Outcome] has no unverified
  * case, so a result whose lines are all in [unverified] (and none in [evidence]) is the unverified

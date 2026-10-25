@@ -8,7 +8,7 @@ import app.sleevesight.core.model.SourceId
  * Phase 3. The order of the entries is the order their labels combine in ([combineLabels]).
  *
  * @property source the evidence source whose lookup brings the tags: a label source gives labels
- *   only while that source is switched on under *Where to look*, and Last.fm only with its key.
+ *   only while that source is switched on under *Sources*, and Last.fm only with its key.
  * @property credit how a label from it is credited, beside its link.
  * @property licenceUrl the licence of its tags, which the credit links; null where the tags come
  *   under the source's API terms and no licence of their own.

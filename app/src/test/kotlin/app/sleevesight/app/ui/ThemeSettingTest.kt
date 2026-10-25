@@ -1,6 +1,9 @@
 package app.sleevesight.app.ui
 
+import android.app.Activity
+import android.app.Application
 import android.app.UiModeManager
+import android.os.Bundle
 import android.util.TypedValue
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.hasAnyAncestor
@@ -135,20 +138,50 @@ class ThemeSettingTest {
 
     /**
      * A cold start with *Theme* last read as [theme] on a system of the other theme: the window and
-     * the bars are as chosen from the activity's creation, before Compose's first frame.
+     * the bars as they are right after the activity's `onCreate` (`onActivityPostCreated`), before
+     * Compose's first frame and its effects, which set the bars again (`SystemBarsFollowTheme`).
      */
     private fun coldStart(theme: ThemeChoice): Pair<Boolean, Boolean> {
         LastTheme(app).value = theme
         // The settings' first read held off, as in `aNewProcessStartsInTheThemeLastRead…`.
         val file = app.preferencesDataStoreFile("settings")
         assertTrue(file.mkdirs())
-        try {
-            var light: Pair<Boolean, Boolean>? = null
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                scenario.onActivity { light = windowLight(it) }
+        var light: Pair<Boolean, Boolean>? = null
+        val created =
+            object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityPostCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) {
+                    if (activity is MainActivity) light = windowLight(activity)
+                }
+
+                override fun onActivityCreated(
+                    activity: Activity,
+                    savedInstanceState: Bundle?,
+                ) = Unit
+
+                override fun onActivityStarted(activity: Activity) = Unit
+
+                override fun onActivityResumed(activity: Activity) = Unit
+
+                override fun onActivityPaused(activity: Activity) = Unit
+
+                override fun onActivityStopped(activity: Activity) = Unit
+
+                override fun onActivitySaveInstanceState(
+                    activity: Activity,
+                    outState: Bundle,
+                ) = Unit
+
+                override fun onActivityDestroyed(activity: Activity) = Unit
             }
+        app.registerActivityLifecycleCallbacks(created)
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { }
             return checkNotNull(light)
         } finally {
+            app.unregisterActivityLifecycleCallbacks(created)
             assertTrue(file.delete())
         }
     }
