@@ -179,7 +179,9 @@
     <string name="keyboard_code_unreadable">This keyboard code cannot be read: it may be of a later version. Update Sleevesight, or reload the page on the computer and scan again.</string>
     <string name="keyboard_code_used">This keyboard code was used already. Reload the page on the computer, and scan its new code.</string>
     <string name="keyboard_starting">Starting Bluetooth…</string>
-    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone.</string>
+    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Show this phone’s name to the computer” is on, under Secrets.</string>
+    <string name="keyboard_waiting_named">Waiting for the computer: on the page, choose “Connect” and pick this phone, listed as “%1$s”.</string>
+    <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name is too long to advertise, or not set, so it shows as “Unknown or Unsupported Device”.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>
     <string name="keyboard_off">Bluetooth is off. Turn it on, and the phone waits for the computer.</string>
     <string name="keyboard_refused">Sleevesight may not use Bluetooth. Allow “Nearby devices” for Sleevesight in the phone’s settings, or type the key here.</string>

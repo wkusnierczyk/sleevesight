@@ -18,6 +18,7 @@ import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeySetup
+import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 
@@ -59,12 +60,15 @@ internal fun KeyRow(
 /**
  * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268); *Purge
  * keys*, while any key is stored, readable or not, or after a failure ([KeysShown.offerReset]),
- * when it says why (what was *Reset saved keys*, which did the same); and each key's row, the AI
- * services' and the sources' alike.
+ * when it says why (what was *Reset saved keys*, which did the same); each key's row, the AI
+ * services' and the sources' alike; and *Show this phone's name to the computer* (#433), for the
+ * key dialogs' *Type on a computer*.
  */
 @Composable
 internal fun SecretsSection(
+    settings: Settings,
     keys: KeysShown,
+    update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     ValueRow(
@@ -81,6 +85,14 @@ internal fun SecretsSection(
         )
     }
     for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)
+    // A privacy choice, so its title is in the theme's error colour, as *Keep what sources said
+    // about each artist* is: on, anyone nearby can see the phone's name during a session.
+    SwitchRow(
+        title = stringResource(R.string.settings_show_phone_name),
+        summary = stringResource(R.string.settings_show_phone_name_summary),
+        checked = settings.showPhoneName,
+        highlight = true,
+    ) { on -> update { it.copy(showPhoneName = on) } }
 }
 
 /**
@@ -88,7 +100,8 @@ internal fun SecretsSection(
  * the dialog and the screen, so closing either does not cut it short; the dialog waits for the
  * result. [onSealFailed] hears, from within that work, so even if the dialog has gone, whether the
  * key store could not seal a key saved, and that it has not once every key is removed. [scanner]
- * reads QR codes, and [keyboard] runs *Type on a computer* (#394); *Scan keys* shows what a
+ * reads QR codes, and [keyboard] runs *Type on a computer* (#394), advertising the phone's name
+ * with [showPhoneName] (#433); *Scan keys* shows what a
  * setup code holds by [open]ing the next dialog, and saves nothing until the user confirms it there.
  */
 @Suppress("LongParameterList") // The dialog, the keys, where they are saved, and what the screen hears.
@@ -100,6 +113,7 @@ internal fun KeyDialogs(
     saves: CoroutineScope,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
+    showPhoneName: Boolean,
     onSealFailed: (Boolean) -> Unit,
     open: (SettingsDialog) -> Unit,
     onDismiss: () -> Unit,
@@ -118,6 +132,7 @@ internal fun KeyDialogs(
                 onRemove = { saves.async { store.clear(shown.id) }.await() },
                 scanner = scanner,
                 keyboard = keyboard,
+                showPhoneName = showPhoneName,
                 onDismiss = onDismiss,
             )
         }

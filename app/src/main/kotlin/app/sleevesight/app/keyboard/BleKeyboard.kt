@@ -54,6 +54,12 @@ enum class KeyboardState {
  * acknowledgements. A message longer than one packet comes as prepared writes, kept per computer
  * until executed.
  *
+ * The phone's Bluetooth name is advertised only with [showName] (*Show this phone's name to the
+ * computer*, #433), in the scan response, so the chooser lists the phone by it; without it, the
+ * chooser lists it as an unknown device. A name too long for the scan response is dropped, and the
+ * service advertised without it. [onName] hears, at each start of the advertising, the name it
+ * carries as a computer sees it ([advertisedName]), or null for none.
+ *
  * Each time the service is opened (at [start], and again when Bluetooth comes back on) it is an
  * [Opening] of its own: its server, its advertising, the devices linked to it and their writes.
  * Closing one makes everything it is still told, by Bluetooth or by work it posted, do nothing, so
@@ -72,6 +78,8 @@ class BleKeyboard(
     private val session: KeyboardSession,
     private val onText: (String) -> Unit,
     private val onState: (KeyboardState) -> Unit,
+    private val showName: Boolean = false,
+    private val onName: (String?) -> Unit = {},
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(BluetoothManager::class.java)
@@ -137,8 +145,10 @@ class BleKeyboard(
 
             else -> {
                 state(KeyboardState.STARTING)
+                // Read at each opening, as it is now; blank is none.
+                val name = if (showName) adapter.name?.takeIf { it.isNotBlank() } else null
                 // Current before it opens, so a failure while it opens ends it.
-                val opening = Opening(manager, advertiser)
+                val opening = Opening(manager, advertiser, name)
                 current = opening
                 opening.open()
             }
@@ -158,11 +168,13 @@ class BleKeyboard(
 
     /**
      * One opening of the service: its server, its advertising, the devices linked to it and their
-     * writes. Once [closed], what Bluetooth still tells it, and work it posted, does nothing.
+     * writes, and the phone's [name] to advertise, if any. Once [closed], what Bluetooth still tells
+     * it, and work it posted, does nothing.
      */
     private inner class Opening(
         private val manager: BluetoothManager,
         private val advertiser: BluetoothLeAdvertiser,
+        private val name: String?,
     ) {
         private val lock = Any()
 
@@ -175,6 +187,9 @@ class BleKeyboard(
         // has started at all, in this opening.
         private var advertising: AdvertiseCallback? = null
         private var advertised = false
+
+        // Whether the [name] still goes in the scan response: not once it did not fit.
+        private var named = name != null
 
         // Tries advertising again after a failed restart, while the opening is open, nothing
         // advertises since, and no computer is typing. One at a time: posting it again replaces it.
@@ -243,7 +258,8 @@ class BleKeyboard(
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
                     .setConnectable(true)
                     .build()
-            // The service's UUID alone: the phone's name is not advertised (a device that connects
+            // The service's UUID, with the flags Android adds: 21 of the advertisement's 31 bytes,
+            // which leave little room for a name. The phone's name is not in it (a device that connects
             // can still read it, from the Generic Access service Android keeps).
             val data =
                 AdvertiseData
@@ -252,13 +268,29 @@ class BleKeyboard(
                     .setIncludeTxPowerLevel(false)
                     .addServiceUuid(ParcelUuid(session.serviceUuid))
                     .build()
+            // The name, if shown, goes in the scan response, alone: the answer to a computer's scan
+            // request, 31 bytes of its own. Android shortens a name past 26 bytes there, but refuses
+            // one whose length in characters, with its field's 2 bytes, passes 31 (`totalBytes`).
+            val shown = name?.takeIf { named }
+            val response =
+                shown?.let {
+                    AdvertiseData
+                        .Builder()
+                        .setIncludeDeviceName(true)
+                        .setIncludeTxPowerLevel(false)
+                        .build()
+                }
             // One advertising at a time: the one before, if any, is stopped first.
             stopAdvertising()
-            val attempt = Advertising()
+            val attempt = Advertising(shown)
             advertising = attempt
             // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
             try {
-                advertiser.startAdvertising(settings, data, attempt)
+                if (response == null) {
+                    advertiser.startAdvertising(settings, data, attempt)
+                } else {
+                    advertiser.startAdvertising(settings, data, response, attempt)
+                }
             } catch (_: IllegalStateException) {
                 attempt.failed(bluetoothOff = manager.adapter?.isEnabled != true)
             }
@@ -279,18 +311,31 @@ class BleKeyboard(
             if (!closed && !stopped) onState(if (typing.isEmpty()) KeyboardState.WAITING else KeyboardState.CONNECTED)
         }
 
-        /** One start of the advertising; its results count only while it is the latest. */
-        private inner class Advertising : AdvertiseCallback() {
+        /**
+         * One start of the advertising, with the phone's name [shown] in its scan response, or none;
+         * its results count only while it is the latest.
+         */
+        private inner class Advertising(
+            private val shown: String?,
+        ) : AdvertiseCallback() {
             private fun latest() = !closed && advertising === this
 
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
                 if (!latest()) return
                 advertised = true
+                if (!stopped) onName(shown?.let(::advertisedName))
                 connection()
             }
 
             override fun onStartFailure(errorCode: Int) {
                 if (!latest()) return
+                // The name did not fit: advertised again without it, in this opening, at once.
+                if (errorCode == ADVERTISE_FAILED_DATA_TOO_LARGE && shown != null) {
+                    named = false
+                    advertising = null
+                    advertise()
+                    return
+                }
                 when (errorCode) {
                     ADVERTISE_FAILED_ALREADY_STARTED -> {}
                     // Once advertising has started in this opening, a restart's failure of any kind
@@ -424,14 +469,35 @@ class BleKeyboard(
         }
     }
 
-    private companion object {
+    internal companion object {
+        /** The most of the phone's name, in UTF-8 bytes, that Android puts in an advertisement. */
+        const val NAME_MAX_BYTES = 26
+
         // Web Bluetooth's largest write.
-        const val MAX_WRITE_BYTES = 512
+        private const val MAX_WRITE_BYTES = 512
 
         // An application error (ATT 0x80): the message was refused.
-        const val REFUSED = 0x80
+        private const val REFUSED = 0x80
 
         // How long after a failed restart the advertising is tried again.
-        const val ADVERTISE_RETRY_MS = 5_000L
+        private const val ADVERTISE_RETRY_MS = 5_000L
     }
+}
+
+// A UTF-8 byte's top two bits, and their value in a continuation byte (10xxxxxx).
+private const val UTF8_TOP_BITS = 0xC0
+private const val UTF8_CONTINUATION = 0x80
+
+/**
+ * The phone's Bluetooth [name] as a computer receives it: whole, or, past [BleKeyboard.NAME_MAX_BYTES]
+ * bytes of UTF-8, shortened to them, as Android's stack does (`AdvertiseHelper`, a *Shortened
+ * Local Name*), without the part of a character cut there.
+ */
+internal fun advertisedName(name: String): String {
+    val bytes = name.toByteArray(Charsets.UTF_8)
+    if (bytes.size <= BleKeyboard.NAME_MAX_BYTES) return name
+    // Back to the start of the character the cut falls in: a continuation byte is 10xxxxxx.
+    var end = BleKeyboard.NAME_MAX_BYTES
+    while (end > 0 && (bytes[end].toInt() and UTF8_TOP_BITS) == UTF8_CONTINUATION) end--
+    return String(bytes, 0, end, Charsets.UTF_8)
 }

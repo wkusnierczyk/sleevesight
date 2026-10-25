@@ -60,6 +60,7 @@ internal object SettingsCodec {
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
+    private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
     private val THEME = stringPreferencesKey("display.theme")
@@ -101,6 +102,7 @@ internal object SettingsCodec {
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             developerMode = developerModeOf(prefs),
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
@@ -201,6 +203,7 @@ internal object SettingsCodec {
         if (moved { it.keepSourcesUnfolded }) {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
+        if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
         // only where that would read otherwise; either moving can change which.

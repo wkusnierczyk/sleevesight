@@ -82,6 +82,7 @@ class SettingsCodecTest {
                 historyLifetime = 7.days,
                 sessionGap = 10.minutes,
                 keepSourcesUnfolded = true,
+                showPhoneName = true,
                 showDiagnostics = true,
                 developerMode = true,
                 theme = ThemeChoice.DARK,
@@ -168,6 +169,18 @@ class SettingsCodecTest {
         assertTrue(prefs.asMap().toString(), prefs.asMap().isEmpty())
         // A state no screen makes, kept as it is: developer mode off with *Diagnostics* on.
         assertEquals(Settings(showDiagnostics = true), roundTrip(Settings(showDiagnostics = true)))
+    }
+
+    @Test
+    fun thePhonesNameIsHiddenByDefaultAndShownUnderItsKey() {
+        // As stored before the setting existed (#433): other settings, and no name shown.
+        val before = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertFalse(SettingsCodec.read(before).showPhoneName)
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(showPhoneName = true), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("keyboard.show_phone_name") to true), prefs)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned off again, it is the default and has no key", prefs.asMap().isEmpty())
     }
 
     @Test

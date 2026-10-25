@@ -77,7 +77,7 @@ class KeyScanTest {
 
     private fun show(
         scanner: QrScanner,
-        keyboard: ComputerKeyboard = { _, _, _ -> },
+        keyboard: ComputerKeyboard = { _, _, _, _ -> },
         secretStore: SecretStore = secrets,
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -123,7 +123,7 @@ class KeyScanTest {
 
     /** A computer that types [text] as soon as the session starts. */
     private fun typing(text: String): ComputerKeyboard =
-        { session, onText, onStop ->
+        { session, _, onText, onStop ->
             DisposableEffect(session) {
                 running += session
                 onDispose { running -= session }

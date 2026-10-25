@@ -88,7 +88,8 @@ internal fun <T> ChoiceDialog(
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
- * on the phone is. The session ends when the user stops it or the dialog closes.
+ * on the phone is. The session ends when the user stops it or the dialog closes. The phone
+ * advertises its Bluetooth name meanwhile only with [showPhoneName] (#433).
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -99,6 +100,7 @@ internal fun KeyDialog(
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
+    showPhoneName: Boolean,
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
@@ -137,7 +139,7 @@ internal fun KeyDialog(
     }
     val running =
         session?.let { s ->
-            @Composable { key(s) { keyboard(s, { typed = it }, { session = null }) } }
+            @Composable { key(s) { keyboard(s, showPhoneName, { typed = it }, { session = null }) } }
         }
 
     AlertDialog(
