@@ -40,6 +40,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.keys.KeyShape
@@ -83,7 +84,7 @@ internal fun <T> ChoiceDialog(
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code, which holds several keys, is pointed to *Scan keys*. The window is
+ * field as it was. A setup code, which holds several keys, is pointed to *Load keys*. The window is
  * secure (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
@@ -124,7 +125,8 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        scanner(
+        QrScanDialog(
+            scanner,
             { text ->
                 scanning = null
                 val result = scanned(purpose, id, text.trim(), ledger)
@@ -248,8 +250,7 @@ internal class Confirmation(
 )
 
 /**
- * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Reset saved
- * keys*, *Remove all API keys*). [onConfirm] returns whether it succeeded: the dialog closes only
+ * Confirms the removal of a saved key. [onConfirm] returns whether it succeeded: the dialog closes only
  * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
  * second tap does not run it again.
  */

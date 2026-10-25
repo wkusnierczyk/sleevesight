@@ -83,7 +83,7 @@ class BusyDialogTest {
     private fun text(id: Int) = app.getString(id)
 
     private fun show(
-        scanner: QrScanner = { _, _ -> },
+        scanner: QrScanner = { },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -190,7 +190,7 @@ class BusyDialogTest {
         val lastFmKey = "0123456789abcdef0123456789abcdef"
         // The scanner reads the setup code at once, as the camera would on a code held up to it.
         val code = "sleevesight-keys:v1\nlastfm=$lastFmKey"
-        show(scanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(code) } }) {
+        show(scanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             waitForText(text(R.string.setup_title))
             val before = flaky.writes.get()

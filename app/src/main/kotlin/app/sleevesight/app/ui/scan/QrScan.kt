@@ -7,15 +7,18 @@ import android.view.Surface
 import android.view.SurfaceView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,11 +32,23 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -56,14 +71,15 @@ import com.google.zxing.qrcode.QRCodeReader
 // scanner, whose ML Kit reports usage to Google.
 
 /**
- * Shows a scan until a QR code is read, then calls `onScanned` once with its text, or `onDismiss`
- * when the user leaves without one. The settings screen takes it as a parameter, so its tests scan
- * without a camera.
+ * The camera's view for a QR scan, filling the space it is given, until a QR code is read: then it
+ * calls `onScanned` once with the code's text. The settings screen takes it as a parameter, so its
+ * tests scan without a camera. Where it is shown, [QrScanDialog] for one key's field or the *Load
+ * keys* screen, says what to do and offers *Cancel*.
  */
-typealias QrScanner = @Composable (onScanned: (String) -> Unit, onDismiss: () -> Unit) -> Unit
+typealias QrScanner = @Composable (onScanned: (String) -> Unit) -> Unit
 
 /** The phone's camera, as [QrScanner]. */
-val CameraQrScanner: QrScanner = { onScanned, onDismiss -> CameraQrScan(onScanned, onDismiss) }
+val CameraQrScanner: QrScanner = { onScanned -> CameraViewfinder(onScanned) }
 
 /** Decodes a QR code from a camera frame's luminance. */
 object QrDecoder {
@@ -102,15 +118,47 @@ object QrDecoder {
 }
 
 /**
- * The camera scan: asks for the camera when it opens, unless already allowed, and shows the
- * camera's view until a code is read. The window is secure (`FLAG_SECURE`): no screenshot or
- * screen recording shows the code, which may be the keys. Without the camera, it says why.
+ * A scan for one key's field (#268): [scanner]'s view over the screen, and under it what to do and
+ * *Cancel*, which calls [onDismiss], as Back does. The window is secure (`FLAG_SECURE`): no
+ * screenshot or screen recording shows the code, which may be the keys.
  */
 @Composable
-private fun CameraQrScan(
+internal fun QrScanDialog(
+    scanner: QrScanner,
     onScanned: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn),
+    ) {
+        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) { scanner(onScanned) }
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .safeDrawingPadding()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(stringResource(R.string.scan_hint), style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(R.string.settings_cancel))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The camera's view, as [QrScanner]: asks for the camera when it is first shown, unless already
+ * allowed, and shows the camera's view, with the frame to hold the code in ([ScanFrame]), until a
+ * code is read. Without the camera, it says why in its place.
+ */
+@Composable
+private fun CameraViewfinder(onScanned: (String) -> Unit) {
     val context = LocalContext.current
     val hasCamera = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
     var allowed by remember { mutableStateOf(granted(context)) }
@@ -131,43 +179,37 @@ private fun CameraQrScan(
         onPauseOrDispose {}
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn),
-    ) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            if (hasCamera && allowed && !failed) CameraView(onScanned, onUnavailable = { failed = true })
-            Column(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .safeDrawingPadding()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val message =
-                    when {
-                        !hasCamera || failed -> R.string.scan_no_camera
-                        refused -> R.string.scan_camera_refused
-                        else -> R.string.scan_hint
-                    }
-                Text(stringResource(message), style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.settings_cancel))
-                }
-            }
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        when {
+            !hasCamera || failed -> CameraMessage(R.string.scan_no_camera)
+            refused -> CameraMessage(R.string.scan_camera_refused)
+            allowed -> CameraView(onScanned, onUnavailable = { failed = true })
+            else -> {}
         }
     }
+}
+
+/** Why the camera's view is not shown, in its place. */
+@Composable
+private fun CameraMessage(
+    @StringRes message: Int,
+) {
+    Text(
+        stringResource(message),
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(24.dp),
+    )
 }
 
 private fun granted(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
 /**
- * The camera's view, as tall as the screen allows at the frames' proportions, its frames read by
- * [QrCamera]. [onUnavailable] hears that no camera could be opened.
+ * The camera's view, as large as its space allows at the frames' proportions, centred, its frames
+ * read by [QrCamera], with the [ScanFrame] over it. [onUnavailable] hears that no camera could be
+ * opened.
  */
 @Composable
 private fun CameraView(
@@ -188,8 +230,12 @@ private fun CameraView(
     // configuration change, which a turn of the display is.
     val view = LocalView.current
     val rotation = remember(LocalConfiguration.current) { view.display?.rotation ?: Surface.ROTATION_0 }
-    val ratio = size.width.toFloat() / size.height
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val frames = size.width.toFloat() / size.height
+    val ratio = if (camera.mounting.swapsSides(rotation)) 1 / frames else frames
+    BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // Fitted inside the space: the whole of the camera's picture shows, as the frame needs.
+        val width = minOf(maxWidth, maxHeight * ratio)
+        val fitted = Modifier.size(width, width / ratio)
         AndroidView(
             factory = {
                 SurfaceView(it).apply {
@@ -197,10 +243,37 @@ private fun CameraView(
                     holder.addCallback(camera)
                 }
             },
-            modifier =
-                Modifier.fillMaxWidth().aspectRatio(
-                    if (camera.mounting.swapsSides(rotation)) 1 / ratio else ratio,
-                ),
+            modifier = fitted,
         )
+        ScanFrame(fitted)
     }
 }
+
+/** The frame's side, as a share of the picture's shorter side. */
+private const val FRAME_SHARE = 0.7f
+
+/** How dark the picture is around the frame. */
+private const val DIM_ALPHA = 0.6f
+
+/**
+ * Where to hold the code (#446): a rounded square in the middle of the camera's picture, the
+ * picture around it dimmed. Not blurred: the picture is a `SurfaceView`'s, drawn by the system
+ * apart from the app's views, which neither `RenderEffect` nor Compose's `blur` reaches. A screen
+ * reader reads it as what it is for.
+ */
+@Composable
+internal fun ScanFrame(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.scan_view)
+    Canvas(modifier = modifier.semantics { contentDescription = description }) {
+        val side = size.minDimension * FRAME_SHARE
+        val corner = Offset((size.width - side) / 2, (size.height - side) / 2)
+        val square = Size(side, side)
+        val radius = CornerRadius(FRAME_CORNER.toPx())
+        val hole = Path().apply { addRoundRect(RoundRect(Rect(corner, square), radius)) }
+        clipPath(hole, ClipOp.Difference) { drawRect(Color.Black.copy(alpha = DIM_ALPHA)) }
+        drawRoundRect(Color.White, corner, square, radius, style = Stroke(FRAME_STROKE.toPx()))
+    }
+}
+
+private val FRAME_CORNER = 20.dp
+private val FRAME_STROKE = 3.dp

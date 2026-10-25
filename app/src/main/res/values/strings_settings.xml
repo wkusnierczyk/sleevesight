@@ -74,4 +74,29 @@
     <string name="settings_developer_already_on">Developer mode is already on</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
+
+    <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. -->
+    <string name="load_keys_make">1. Generate a QR code of your keys on your computer, as the instructions explain:</string>
+    <!-- What a screen reader says of the link to the instructions; the argument is their address. -->
+    <string name="load_keys_instructions_of">Open the instructions at %1$s</string>
+    <string name="load_keys_developers">For developers: the pipeline CLI’s keys-qr draws one in the terminal.</string>
+    <string name="load_keys_read">2. Read the QR code with the camera.</string>
+    <string name="load_keys_found">Keys read</string>
+    <string name="load_keys_problems">Problems</string>
+    <string name="load_keys_save_these">Save these</string>
+    <string name="load_keys_nothing_title">Nothing to save</string>
+    <string name="load_keys_saved_title">Keys saved</string>
+    <!-- A key by its name and its last four characters, as Anthropic API key, ending …a1B2. -->
+    <string name="key_ending">%1$s, ending %2$s</string>
+    <string name="key_unreadable">%1$s, which can no longer be read</string>
+    <string name="key_screen_done">Done</string>
+    <string name="purge_keys_listed">These saved keys are deleted from this phone:</string>
+    <string name="purge_keys_none">No key is saved. Deleting still deletes the phone’s key that sealed them, so the next key you save is sealed with a new one.</string>
+    <string name="purge_keys_delete">Delete</string>
+    <string name="purge_keys_try_again">Try again</string>
+    <string name="purge_keys_done_title">Keys deleted</string>
+    <string name="purge_keys_done">These keys have been safely deleted:</string>
+    <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>
+    <string name="purge_keys_more">More about safe delete</string>
+    <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Each key still works at its service until you revoke it there, on the service’s website.</string>
 </resources>

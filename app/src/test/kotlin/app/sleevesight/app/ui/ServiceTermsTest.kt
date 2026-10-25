@@ -77,7 +77,7 @@ class ServiceTermsTest {
         listOf(R.string.settings_terms_anthropic, R.string.settings_terms_openai, R.string.settings_terms_google)
 
     private fun show(
-        scanner: QrScanner = { _, _ -> },
+        scanner: QrScanner = { },
         keyboard: ComputerKeyboard = { _, _, _ -> },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
@@ -192,7 +192,7 @@ class ServiceTermsTest {
     }
 
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
-    private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
+    private fun scanning(text: String): QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(text) } }
 
     private companion object {
         const val SESSION_END = "The end of the keyboard session"

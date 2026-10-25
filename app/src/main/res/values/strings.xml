@@ -71,9 +71,7 @@
     <string name="settings_change_failed">The last change could not be saved: the phone’s storage failed. The setting keeps its saved value; try again.</string>
     <string name="settings_save">Save</string>
     <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved: delete all saved keys, then enter them again.</string>
-    <string name="settings_reset_keys_explained">Keys for all API services used by Sleevesight are irrecoverably deleted.</string>
     <string name="settings_remove">Remove</string>
-    <string name="settings_remove_all">Purge</string>
     <string name="settings_cancel">Cancel</string>
 
     <string name="settings_model_loading">Listing the service’s models…</string>
@@ -187,11 +185,11 @@
     <string name="keyboard_failed">Bluetooth could not be started. Stop, and try again.</string>
     <string name="keyboard_stop">Stop</string>
     <string name="scan_hint">Point the camera at the QR code.</string>
+    <string name="scan_view">Camera view: hold the QR code inside the frame.</string>
     <string name="scan_camera_refused">Sleevesight may not use the camera. Allow it in the phone’s settings for Sleevesight to scan, or type the key instead.</string>
     <string name="scan_no_camera">This phone has no camera Sleevesight can use. Type the key instead.</string>
     <string name="settings_remove_all_keys">Purge keys</string>
     <string name="settings_remove_all_keys_value">Safely delete all saved keys.</string>
-    <string name="settings_remove_all_keys_title">Purge keys?</string>
     <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font and the icons, with their licences</string>
