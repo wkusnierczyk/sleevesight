@@ -75,6 +75,7 @@ class SettingsCodecTest {
                 crossfade = Crossfade.Fixed(6.seconds),
                 prepareNextTrack = PrepareNextTrack.OFF,
                 lookUpInBackground = true,
+                artistFactsOncePerSession = false,
                 cacheLifetimes = Settings.DEFAULT_CACHE_LIFETIMES + (SourceId.WEB to 3.days),
                 keepArtistResults = true,
                 artistCacheLifetime = 30.days,
@@ -146,6 +147,24 @@ class SettingsCodecTest {
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(Settings(showGenres = false), prefs)
         assertEquals(mutablePreferencesOf(booleanPreferencesKey("genres.show") to false), prefs)
+    }
+
+    @Test
+    fun artistFactsAreToldOncePerSessionByDefaultAndForAnInstallFromBefore() {
+        assertEquals(true, Settings().artistFactsOncePerSession)
+        // As stored before the setting existed (#407), when the facts were told once per session unasked.
+        val before = mutablePreferencesOf(booleanPreferencesKey("lookups.background") to true)
+        assertEquals(true, SettingsCodec.read(before).artistFactsOncePerSession)
+    }
+
+    @Test
+    fun artistFactsOnEveryTrackAreStoredUnderTheirKey() {
+        val prefs = mutablePreferencesOf()
+        SettingsCodec.write(Settings(artistFactsOncePerSession = false), prefs)
+        assertEquals(mutablePreferencesOf(booleanPreferencesKey("insights.artist_facts_once") to false), prefs)
+        assertEquals(false, SettingsCodec.read(prefs).artistFactsOncePerSession)
+        SettingsCodec.write(Settings(), prefs)
+        assertTrue("turned on again, it is the default and has no key", prefs.asMap().isEmpty())
     }
 
     @Test

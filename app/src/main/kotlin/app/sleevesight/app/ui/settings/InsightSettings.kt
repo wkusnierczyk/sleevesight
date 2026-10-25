@@ -9,8 +9,8 @@ import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration.Companion.seconds
 
-// *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver* and *Look
-// up in the background*.
+// *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver*, *Look up in
+// the background* and *Tell an artist's facts once per session* (#407).
 
 private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
@@ -21,9 +21,10 @@ private val MAX_CROSSFADE_SECONDS =
  * (`writeAutomatically`, D5), which track changes write an insight without a tap, with *Crossfade*
  * under it while it is *On skip*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
  * D13), the next track's evidence ahead; *Saver* (`pauseAutoWriteAfter`, #203); and *Look up in the
- * background* (D6) beside it, since both govern what happens while Sleevesight is away. The rows
- * about writing cannot be changed while *Show insights* is off; *Proactive* can, as it writes
- * nothing.
+ * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Tell an
+ * artist's facts once per session* (`artistFactsOncePerSession`, #407), what an insight's prompt
+ * holds of the artist's facts. The rows about writing cannot be changed while *Show insights* is
+ * off; *Proactive* can, as it writes nothing.
  */
 @Composable
 internal fun InsightsSection(
@@ -75,6 +76,14 @@ internal fun InsightsSection(
         summary = stringResource(R.string.settings_background_summary),
         checked = settings.lookUpInBackground,
     ) { on -> update { it.copy(lookUpInBackground = on) } }
+
+    SwitchRow(
+        title = stringResource(R.string.settings_artist_facts_once),
+        summary = stringResource(R.string.settings_artist_facts_once_summary),
+        checked = settings.artistFactsOncePerSession,
+        onChange =
+            { on: Boolean -> update { it.copy(artistFactsOncePerSession = on) } }.takeIf { settings.writeInsights },
+    )
 }
 
 /**
