@@ -327,6 +327,10 @@ The detail content is one component mounted either way.
 
 Labelled by where they came from: "Played this session" by default, and "In this playlist · <name>" when the player names the playlist, as Spotify does in its metadata (see *Playlist context*); the optional Spotify account adds the tracks beyond the queue.
 
+### Key dialog
+
+A key's dialog (#432) says who gets the key, and holds its field, masked, with three trailing icons (Material Symbols, outlined, weight 400): an eye, then *Scan QR code* (`qr_code_scanner`) and *Type on a computer* (`keyboard_external_input`), each a 48 dp button whose name is its content description and its tooltip. The eye names what a tap does: the open eye (`visibility`, *Show key*) while the field is masked, the crossed one (`visibility_off`, *Hide key*) while it shows. The dialog never loads the saved key, so the eye can show only what was typed, scanned or typed on a computer in it; to keep that plain, the eye is there only while the field holds something, the hint says *A saved key is never shown again. You can only preview the key you enter before it's saved.*, and the field is masked again when it empties or the dialog closes. The eye comes first, so the other two keep their place when it appears; they are off while a keyboard session runs. A keyboard session's code scanned with the QR icon starts the session, since it cannot be a key. With three icons, the dialog is the screen's width less 16 dp at each side, up to Material's widest dialog, 560 dp: so on a screen narrower than 592 dp it is full width, and a wider one keeps that widest width.
+
 ## Settings
 
 | Group | Setting | Default |
