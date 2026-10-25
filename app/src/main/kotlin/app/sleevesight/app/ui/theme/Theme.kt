@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import app.sleevesight.app.R
 import app.sleevesight.core.settings.FontChoice
+import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,9 @@ internal val Roboto: FontFamily =
 
 /** *Font*'s default, the app's own. */
 private val DEFAULT_FONT: FontChoice = Settings().font
+
+/** *Link style*'s default, the underline. */
+private val DEFAULT_LINK_STYLE: LinkStyle = Settings().linkStyle
 
 /**
  * Material 3's type scale in [font]: Roboto for the app's font, and Material's own default for the
@@ -108,12 +112,14 @@ fun ThemeChoice.isDark(systemDark: Boolean): Boolean =
  * Material 3, light or dark as [darkTheme] says (by default as the system is), with the system's
  * dynamic colours where Android has them (12 and later), and its text in [font] (*Font*, #377).
  * The colours taken from the album art (design, *User interface*) replace these on the now-playing
- * screen, and keep the type.
+ * screen, and keep the type. Every link inside is marked as [linkStyle] says (*Link style*, #519,
+ * [LocalLinkStyle]).
  */
 @Composable
 fun SleevesightTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     font: FontChoice = DEFAULT_FONT,
+    linkStyle: LinkStyle = DEFAULT_LINK_STYLE,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =
@@ -126,23 +132,32 @@ fun SleevesightTheme(
             else -> lightColorScheme()
         }
     val typography = remember(font) { typographyOf(font) }
-    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme, LocalLinkStyle provides linkStyle) {
         MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
     }
 }
 
 /**
  * [SleevesightTheme] in the font [fonts] holds and, when [themes] is given, light or dark as it
- * holds (*Theme*, #444; else as the system is), following each change to them, and starting in
- * their current values, so the first frame is already in them (`AppGraph.font`, `AppGraph.theme`).
+ * holds (*Theme*, #444; else as the system is), and, when [linkStyles] is given, with links marked
+ * as it holds (*Link style*, #519; else underlined), following each change to them, and starting
+ * in their current values, so the first frame is already in them (`AppGraph.font`,
+ * `AppGraph.theme`, `AppGraph.linkStyle`).
  */
 @Composable
 fun SleevesightTheme(
     fonts: StateFlow<FontChoice>,
     themes: StateFlow<ThemeChoice>? = null,
+    linkStyles: StateFlow<LinkStyle>? = null,
     content: @Composable () -> Unit,
 ) {
     val font by fonts.collectAsState()
     val theme = themes?.collectAsState()?.value ?: ThemeChoice.SYSTEM
-    SleevesightTheme(darkTheme = theme.isDark(isSystemInDarkTheme()), font = font, content = content)
+    val linkStyle = linkStyles?.collectAsState()?.value ?: DEFAULT_LINK_STYLE
+    SleevesightTheme(
+        darkTheme = theme.isDark(isSystemInDarkTheme()),
+        font = font,
+        linkStyle = linkStyle,
+        content = content,
+    )
 }

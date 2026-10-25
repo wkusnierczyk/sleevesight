@@ -52,6 +52,14 @@ class SettingsTest {
     }
 
     @Test
+    fun `links are underlined by default, and turning developer mode off underlines them again`() {
+        assertEquals(LinkStyle.UNDERLINE, defaults.linkStyle)
+        val highlighted = Settings(developerMode = true, linkStyle = LinkStyle.HIGHLIGHT)
+        assertEquals(LinkStyle.UNDERLINE, highlighted.withoutDeveloperMode().linkStyle)
+        assertEquals(Settings(), highlighted.withoutDeveloperMode())
+    }
+
+    @Test
     fun `the app's own font is the default, not the system's`() {
         assertEquals(FontChoice.APP_FONT, defaults.font)
     }

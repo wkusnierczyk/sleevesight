@@ -82,6 +82,10 @@
     <string name="settings_report_button_show">Show</string>
     <string name="settings_report_button_auto">Auto</string>
     <string name="settings_report_button_hide">Hide</string>
+    <string name="settings_link_style">Link style</string>
+    <string name="settings_link_style_summary">How links are marked: a thin line below them, or a faint highlight behind them.</string>
+    <string name="settings_link_style_underline">Underline</string>
+    <string name="settings_link_style_highlight">Highlight</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
 </resources>
