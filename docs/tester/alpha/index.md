@@ -14,7 +14,7 @@ Thank you for testing Sleevesight. This page says what the app is, how to instal
 
 An Android app that notices what your music player is playing and shows a short insight about the song: a few sentences on why it is interesting, each tied to the source it came from. Beside it, the cover, title, artists, album and year, genre labels, and the sources themselves, with what each found, rejected or could not verify. An AI service of your choice writes the insight from what the sources found; the app checks every citation once the reply is complete, and marks a sentence that cites nothing. The [product page](https://sleevesight.app/) shows what a card looks like.
 
-The app runs no server and has no accounts: nothing you play reaches its developer. That also means we learn little unless you tell us: Google Play gives us only aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. That is why your reports matter.
+The app runs no server and has no accounts: nothing you play reaches its developer unless you send it. That also means we learn little unless you tell us: Google Play gives us only aggregated install statistics and, from phones that share usage and diagnostics with Google, crash reports that name no one. That is why your reports matter.
 
 ## Joining and installing
 
@@ -62,7 +62,7 @@ Anything that surprises you. In particular:
 
 With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds what the app did, and every track change recorded on the phone, with the tracks' titles and times. That is the whole history kept (90 days by default), not only the tracks around your report, so send it only if you are happy to.
 
-Send reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
+For an insight that is wrong or offensive, *Report a problem*, under the insight, composes the report for you: it shows what it holds (the track, the insight and its evidence, the AI service and model), and opens it in your mail app, addressed to us, to send from there. Send other reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
 
 ## What leaves your phone
 
@@ -72,8 +72,9 @@ In brief: requests go from your phone straight to each service, none through a s
 - **To the AI service:** the title, artists and album, and what the sources found, for the playing track only, with the key you saved.
 - **To the server a cover's web address names,** when a player gives the cover only as an address.
 - **Each of your API keys** is sent only to the corresponding service, with each request, over an encrypted (HTTPS) connection.
+- **To us,** only a problem report you send from your mail app, which you see in full first; never your keys, the history or the settings. Until you send it, your mail app handles it as any message you write, and may keep a draft in your mail account.
 
-Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
+Each of these services also sees your phone's IP address, as every service you connect to does. Everything else, the history included, stays on the phone, unless you export the diagnostics to a cloud folder or send the exported file yourself, or hand a problem report to your mail app. Google Play, not the app, may also send us crash reports that name no one, if your phone shares usage and diagnostics with Google. The [privacy policy](https://sleevesight.app/privacy.html) says it in full.
 
 ## Staying in the test
 

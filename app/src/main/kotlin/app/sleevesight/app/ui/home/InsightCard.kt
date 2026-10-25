@@ -2,7 +2,9 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -12,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -19,6 +22,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.synthesis.GroundedText
 
@@ -27,6 +31,9 @@ import app.sleevesight.core.synthesis.GroundedText
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
+ *
+ * A written insight offers *Report a problem* (#390), under it, which hands the
+ * insight and its track to [InsightActions.onReport].
  */
 @Composable
 internal fun InsightCard(
@@ -130,7 +137,12 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
-    Meta(insight.grounded, insight.cached)
+    // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
+    // the room whatever it holds, so the action keeps its place should the line show only at times.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { Meta(insight.grounded, insight.cached) }
+        context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
+    }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
     context.rewriteFailed?.let {
         if (it == PipelineHost.STOPPED) {
