@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +32,7 @@ import app.sleevesight.core.synthesis.GroundedText
  * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say.
  *
- * A written insight offers *Report a problem* (#390), beside the line under it, which hands the
+ * A written insight offers *Report a problem* (#390), under it, which hands the
  * insight and its track to [InsightActions.onReport].
  */
 @Composable
@@ -136,8 +137,10 @@ private fun Written(
     for (paragraph in paragraphs) {
         CheckedProse(paragraph, insight.grounded, context.track?.evidence, actions.onCite, insight.held)
     }
+    // The footer: the grounding line, then *Report a problem* at the row's end. The line's box takes
+    // the room whatever it holds, so the action keeps its place should the line show only at times.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Meta(insight.grounded, insight.cached, Modifier.weight(1f))
+        Box(Modifier.weight(1f)) { Meta(insight.grounded, insight.cached) }
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
@@ -163,7 +166,6 @@ private fun Written(
 private fun Meta(
     grounded: GroundedText,
     cached: Boolean,
-    modifier: Modifier,
 ) {
     val counts = grounded.counts
     val parts =
@@ -178,7 +180,6 @@ private fun Meta(
         parts.joinToString(" · "),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
     )
 }
 

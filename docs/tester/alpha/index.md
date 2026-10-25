@@ -62,7 +62,7 @@ Anything that surprises you. In particular:
 
 With each report, say which track was playing, when (roughly, with the time zone), and what you expected. For a track change or a skip, a diagnostics export helps us most: it holds what the app did, and every track change recorded on the phone, with the tracks' titles and times. That is the whole history kept (90 days by default), not only the tracks around your report, so send it only if you are happy to.
 
-For an insight that is wrong or offensive, *Report a problem*, beside the line under the insight, composes the report for you: it shows what it holds (the track, the insight and its evidence, the AI service and model), and opens it in your mail app, addressed to us, to send from there. Send other reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
+For an insight that is wrong or offensive, *Report a problem*, under the insight, composes the report for you: it shows what it holds (the track, the insight and its evidence, the AI service and model), and opens it in your mail app, addressed to us, to send from there. Send other reports to [support@sleevesight.app](mailto:support@sleevesight.app), or, if you use GitHub, open an issue at [github.com/wkusnierczyk/sleevesight/issues](https://github.com/wkusnierczyk/sleevesight/issues). An issue there is public.
 
 ## What leaves your phone
 
