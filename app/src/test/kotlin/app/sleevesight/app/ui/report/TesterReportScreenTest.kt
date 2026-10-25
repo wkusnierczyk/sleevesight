@@ -42,6 +42,7 @@ import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
 import app.sleevesight.core.pipeline.PipelineEvent
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.store.CacheStats
 import app.sleevesight.store.TableStats
@@ -69,9 +70,10 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 /**
- * Home's report button for testers (#452): shown only with developer mode and *Report button* on;
- * its review, with a switch per part, the history off until turned on and read only then, each part
- * editable, the note; and the mail handed over as the tester left it.
+ * Home's report button for testers (#452): shown only with developer mode on and *Report button*
+ * not at *Hide*; its review, opened from its menu's *Report* (#518), with a switch per part, the
+ * history off until turned on and read only then, each part editable, the note; and the mail handed
+ * over as the tester left it.
  */
 @RunWith(RobolectricTestRunner::class)
 class TesterReportScreenTest {
@@ -95,7 +97,7 @@ class TesterReportScreenTest {
 
     private val mail = FakeMail()
     private val at = Instant.parse("2026-10-25T12:00:00Z")
-    private val settings = MutableStateFlow(Settings(developerMode = true, reportButton = true))
+    private val settings = MutableStateFlow(Settings(developerMode = true, reportButton = ReportButton.SHOW))
     private var historyReads = 0
     private val scope = CoroutineScope(SupervisorJob())
 
@@ -146,8 +148,10 @@ class TesterReportScreenTest {
 
     private fun show(block: () -> Unit) =
         showContent(block) {
-            WithTesterReport(TesterReportFeed(settings, reports, mail)) { onReport ->
-                HomeScreen(true, onOpenFirstRun = {}, onOpenSettings = {}, onReport = onReport) {
+            WithTesterReport(
+                TesterReportFeed(settings, hide = { CompletableDeferred(true) }, reports, mail),
+            ) { report ->
+                HomeScreen(true, onOpenFirstRun = {}, onOpenSettings = {}, report = report) {
                     Text("What is playing")
                 }
             }
@@ -189,19 +193,22 @@ class TesterReportScreenTest {
 
     private fun part(part: TesterPart) = compose.onNodeWithTag(testerPartTag(part)).performScrollTo()
 
+    // The review, from the button's menu (#518).
     private fun open() {
         compose.onNodeWithTag(TESTER_REPORT_TAG).performClick()
+        compose.onNodeWithTag(TESTER_REPORT_MENU_REPORT_TAG).performClick()
         compose.waitForIdle()
     }
 
     @Test
-    fun theButtonShowsOnlyWithDeveloperModeAndReportButtonBothOn() =
+    fun theButtonShowsOnlyWithDeveloperModeOnAndReportButtonNotAtHide() =
         show {
             for (developer in listOf(true, false)) {
-                for (button in listOf(true, false)) {
+                for (button in ReportButton.entries) {
                     settings.value = Settings(developerMode = developer, reportButton = button)
                     compose.waitForIdle()
-                    assertEquals("developer $developer, button $button", if (developer && button) 1 else 0, buttons())
+                    val shown = developer && button != ReportButton.HIDE
+                    assertEquals("developer $developer, button $button", if (shown) 1 else 0, buttons())
                 }
             }
         }
@@ -339,7 +346,7 @@ class TesterReportScreenTest {
     fun theReportIsOfTheMomentOfTheTap() =
         show {
             open()
-            settings.value = Settings(developerMode = true, reportButton = true, writeInsights = false)
+            settings.value = Settings(developerMode = true, reportButton = ReportButton.SHOW, writeInsights = false)
             compose.waitForIdle()
             // The settings as they were at the tap.
             assertTrue(preview().contains("writeInsights: on"))

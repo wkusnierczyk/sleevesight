@@ -360,7 +360,7 @@ private fun SettingsContent(
         }
         if (settings.developerMode) {
             FoldedSection(SettingsSection.DEVELOPER, folds) {
-                DeveloperSection(settings, update, navigation.openDiagnostics)
+                DeveloperSection(settings, update, open, navigation.openDiagnostics)
             }
         }
     }

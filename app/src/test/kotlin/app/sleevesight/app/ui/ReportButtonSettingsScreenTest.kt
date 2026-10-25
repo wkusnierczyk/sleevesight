@@ -1,8 +1,9 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -20,6 +21,7 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.core.settings.ReportButton
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,14 +29,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** *Report button* (#452) under *Developer*: its switch, and *Developer mode* off turning it off. */
+/**
+ * *Report button* (#452, #518) under *Developer*: a row with its choice, *Show*, *Auto* or *Hide*,
+ * picked in a dialog as the other choices are; and *Developer mode* off setting *Hide*.
+ */
 @RunWith(RobolectricTestRunner::class)
 class ReportButtonSettingsScreenTest {
     @get:Rule
@@ -59,8 +64,17 @@ class ReportButtonSettingsScreenTest {
 
     private fun shown(id: Int) = compose.onAllNodesWithText(text(id)).fetchSemanticsNodes().isNotEmpty()
 
+    private fun choose(option: Int) {
+        compose.onNodeWithText(text(R.string.settings_report_button)).performScrollTo().performClick()
+        compose.onNode(hasText(text(option)) and hasAnyAncestor(isDialog())).performClick()
+    }
+
+    // The row's value: the choice's label, outside the dialog.
+    private fun rowShows(option: Int) =
+        compose.onAllNodes(hasText(text(option)) and !hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty()
+
     @Test
-    fun theSwitchSetsTheButtonAndDeveloperModeOffTurnsItOff() {
+    fun theRowPicksEachChoiceAndDeveloperModeOffSetsHide() {
         runBlocking { settings.update { it.copy(developerMode = true) } }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -71,16 +85,25 @@ class ReportButtonSettingsScreenTest {
             compose.openSection(SettingsSection.DEVELOPER)
             compose.waitUntil(5_000) { shown(R.string.settings_report_button) }
             compose.onNodeWithText(text(R.string.settings_report_button_summary)).assertExists()
-            val button = compose.onNodeWithText(text(R.string.settings_report_button)).performScrollTo()
-            button.assertIsOff()
+            // `:core`'s default, as in any build but the test build.
+            assertEquals(true, rowShows(R.string.settings_report_button_hide))
 
-            button.performClick()
-            compose.waitUntil(5_000) { settings.now().reportButton }
-            compose.onNodeWithText(text(R.string.settings_report_button)).assertIsOn()
+            for (
+            (option, choice) in
+            listOf(
+                R.string.settings_report_button_auto to ReportButton.AUTO,
+                R.string.settings_report_button_show to ReportButton.SHOW,
+                R.string.settings_report_button_hide to ReportButton.HIDE,
+                R.string.settings_report_button_show to ReportButton.SHOW,
+            )
+            ) {
+                choose(option)
+                compose.waitUntil(5_000) { settings.now().reportButton == choice && rowShows(option) }
+            }
 
             compose.onNodeWithText(text(R.string.settings_developer_mode)).performScrollTo().performClick()
             compose.waitUntil(5_000) { !settings.now().developerMode }
-            assertFalse("The button off with developer mode", settings.now().reportButton)
+            assertEquals("Hidden with developer mode off", ReportButton.HIDE, settings.now().reportButton)
         }
     }
 }

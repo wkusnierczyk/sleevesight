@@ -89,13 +89,13 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
-                WithTesterReport(testerReport) { onReport ->
+                WithTesterReport(testerReport) { report ->
                     HomeScreen(
                         accessGranted = granted,
                         // Single top: a double tap opens it once, so one Continue comes back.
                         onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
                         onOpenSettings = { navController.navigate(SettingsPage) },
-                        onReport = onReport,
+                        report = report,
                         pipeline = pipeline,
                     )
                 }
