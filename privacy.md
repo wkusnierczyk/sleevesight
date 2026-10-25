@@ -9,7 +9,7 @@ permalink: /privacy.html
 
 # Sleevesight privacy policy
 
-Last updated: 24 October 2026.
+Last updated: 25 October 2026.
 
 This policy covers Sleevesight, the Android app (package `app.sleevesight`), and this website. Sleevesight is open source: the code that does everything described here is on [GitHub](https://github.com/wkusnierczyk/sleevesight). Near the end, it says where Sleevesight stands under the EU's data protection law, [the GDPR](#the-gdpr), and its law on artificial intelligence, [the AI Act](#the-eu-ai-act).
 
@@ -23,6 +23,8 @@ Sleevesight needs notification access, which is how Android lets an app read wha
 
 If you scan an API key's QR code, Sleevesight asks for the camera then, and only then. It reads the code from the camera's frames on the phone; no frame is kept or sent. A code of several keys can be made on a computer at `sleevesight.app/api-keys`: the page draws it in the browser, makes no network request and stores nothing, so the keys do not leave the computer except in the code you scan.
 
+If you keep your API keys in a password manager, it can fill a key's field from your saved entries, as it fills a password in any app. Sleevesight never asks it to save a key: when the key's dialog goes, it ends the autofill request unsaved, so the password manager does not offer to keep the key as a new login. One case is Android's, not Sleevesight's: if you ask for a fill by hand (*Autofill* in the field's menu) while the field already holds a key, Android sends what the field holds to the password manager with that request, as it does in any app.
+
 If you type into a field from a computer (*Type on a computer*), Sleevesight asks for Bluetooth (*Nearby devices*) then, and only then. The page on the computer, `sleevesight.app/keyboard.html`, sends the text to the phone over Bluetooth, encrypted with a key it makes for that visit and shows only in its QR code; the page makes no network request, and nothing goes through a server. The phone forgets the key when you close the dialog; it keeps only the session's random identifier, so the same code cannot be used twice.
 
 ## What leaves the phone, and to whom
@@ -31,7 +33,7 @@ Requests go straight from your phone to each service. None passes through a serv
 
 - **To the sources you switch on** (MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search): the title and artists of the playing track, cleaned of tags such as "2006 Remaster"; Exa also gets the film or show a title says it is from. Wikidata gets only identifiers (from MusicBrainz or Wikipedia), never a name. For the genre labels, Last.fm also gets the album name, the only source that does: its tags for the track and for the album are asked for by the first artist's name with the title, and with the album name. While *Prepare the next track* is set to *Evidence*, as it is by default, the title and artists of the next track in the player's queue also go to MusicBrainz, if switched on, before that track plays.
 - **To the AI service you choose** (Anthropic, OpenAI or Google): the title, artists and album, and what the sources found. This is for the playing track only. Each insight is a request of its own, with no conversation kept between them. It is made with your API key, so the service handles it under its terms for your account.
-- **Your API keys** go only to the service each belongs to, with each request to it.
+- **Your API keys** go only to the service each belongs to, with each request to it; a fill you ask for by hand also passes the field's key to your password manager, on the phone ([above](#what-the-app-reads-on-the-phone)).
 - **To Spotify**, only if you connect a Spotify account, once the app offers that: requests for the playlist or album being played, made with your own token.
 - **To the server a cover's web address names**, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.
 - **To a file you choose**, only if you export the diagnostics: with the *Diagnostics* developer setting on, *Export* writes what the diagnostics screen shows (the latest events of the app's current run, the track changes recorded, what skip detection has learned, and the caches' sizes) to a file where you choose, which may be a cloud folder. That copy is yours, outside the app.
@@ -46,7 +48,7 @@ Nothing else leaves the phone.
 
 ## What stays on the phone
 
-- The length and cover of each track.
+- The length of each track. Its cover is held only in memory, for the current track, and never stored.
 - The history: the tracks Sleevesight has seen play, the record of track changes it uses to tell your skips from natural ends, and what it has learned from them for each player.
 - What the sources found for each track, kept for a while so the same track is not looked up again (the lifetimes are in the settings).
 - Only if you switch on *Keep what sources said about each artist* (off by default): what the sources said about each artist played (Last.fm's answers and tags, the Wikipedia artist article and its Wikidata facts, MusicBrainz's tags), and Last.fm's tags for each album played, kept per artist (and per album) and with each track's findings, for the same lifetimes, so another track by the same artist does not look the artist up again. Kept together, it amounts to a record of the artists you have played, which is why it is off unless you choose it. Off, none of it is kept (nor the sources' verdicts on artists' pages, nor the artists' MusicBrainz ids), and each track's artists are looked up again, so their names go to the sources you switch on with every track; of a track's findings, only the web search's findings (pages about the recording, which may name or describe its artists) and those of a lookup that found no artist to look up are kept, so a track played before is looked up again at MusicBrainz (its match held in memory for half an hour only), Wikipedia and Last.fm, unless it has no credited artist, and lookups are slower and more requests go out. Off keeps less on the phone and sends more out; on sends fewer requests about artists and keeps more. Either way, each track's own lookups send its artists' names, the history and the kept findings record which tracks you played, and the insights written may retell some of what the sources said. Turning it off deletes what was kept, and so did the first start of the version that added the switch, for what earlier versions kept without asking. MusicBrainz's answers, whatever the switch, are held in the app's memory for half an hour, for the track about to play, and never written to the phone's storage.
