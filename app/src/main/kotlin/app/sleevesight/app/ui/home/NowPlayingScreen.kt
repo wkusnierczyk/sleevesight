@@ -99,6 +99,7 @@ internal class NowPlayingState(
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440).
  */
+@Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
