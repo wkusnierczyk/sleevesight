@@ -103,13 +103,18 @@ class DeveloperModeDefaultTest {
     }
 
     @Test
-    fun aChoiceStoredInOneBuildSurvivesDiagnosticsMovedInTheOther() {
+    fun aChoiceStoredInOneBuildSurvivesDeveloperOptionsMovedInTheOther() {
         // Turned on in the public build, then *Diagnostics* turned on and off in the test build.
         val prefs = mutablePreferencesOf()
         SettingsCodec.write(onByDefault, prefs, Settings())
         SettingsCodec.write(Settings(developerMode = true, showDiagnostics = true), prefs, onByDefault)
         SettingsCodec.write(onByDefault, prefs, onByDefault)
         assertTrue(SettingsCodec.read(prefs, onByDefault).developerMode)
+        assertTrue(SettingsCodec.read(prefs, Settings()).developerMode)
+
+        // Likewise *Show grounding details* (#437), which developer mode's key does not depend on.
+        SettingsCodec.write(Settings(developerMode = true, showGroundingDetails = true), prefs, onByDefault)
+        SettingsCodec.write(onByDefault, prefs, onByDefault)
         assertTrue(SettingsCodec.read(prefs, Settings()).developerMode)
     }
 
