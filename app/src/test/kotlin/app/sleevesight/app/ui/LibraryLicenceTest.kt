@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /** The libraries' licences and notices ship with the app, and the credits show them (#488). */
 @RunWith(RobolectricTestRunner::class)
@@ -107,6 +109,12 @@ class LibraryLicenceTest {
                 listOf("https://sleevesight.app/docs/dependencies/"),
                 uses.getLinkAnnotations(0, uses.length).map { (it.item as LinkAnnotation.Url).url },
             )
+            // A tap opens the page in the browser.
+            compose.onNodeWithText(text(R.string.credits_libraries_uses), substring = true).performFirstLinkClick()
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals(DEPENDENCIES_PAGE_URL, started?.dataString)
             compose.onNodeWithText("SLF4J API").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("org.slf4j:slf4j-api").performScrollTo().assertIsDisplayed()
             compose
