@@ -72,9 +72,9 @@ import org.robolectric.Shadows.shadowOf
 
 /**
  * *Layout* (#447), through the app's navigation graph: under *Expandable boxes* each item of Home
- * expands in place; under *Separate pages* *Sources*, the genres' table, a genre label's
- * attribution and the insight each open on a page of their own, with a back arrow and a title a
- * screen reader reads as a heading, and back returns to Home where it was scrolled to.
+ * expands in place; under *Separate pages* *Sources* and the genres' table each open on a page of
+ * their own, with a back arrow and a title a screen reader reads as a heading, and back returns to
+ * Home where it was scrolled to. The insight shows in full on Home either way.
  */
 @RunWith(RobolectricTestRunner::class)
 class LayoutPagesTest {
@@ -220,7 +220,6 @@ class LayoutPagesTest {
         show(state(long(), boxes)) {
             assertEquals(0, count(SOURCES_PAGE_LINK_TAG))
             assertEquals(0, count(GENRES_PAGE_LINK_TAG))
-            assertEquals(0, count(INSIGHT_PAGE_LINK_TAG))
 
             compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
             compose.onNodeWithTag(LINE_PREFIX + "MB1").assertExists()
@@ -281,7 +280,7 @@ class LayoutPagesTest {
         }
 
     @Test
-    fun genresOpenTheirTableAndALabelWhereItComesFromOnPages() =
+    fun genresAndEachChipOpenTheTableOnItsPageWherePlainLabelsShow() =
         show(state(long(), pages)) {
             assertEquals(0, count(GENRES_FOLD_TAG))
             // Folded on Home: the track's chips after the way to the table.
@@ -292,42 +291,48 @@ class LayoutPagesTest {
             compose.waitForIdle()
             title(text(R.string.home_genres))
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertExists()
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:Gordon Lightfoot:rock").performClick()
-            compose.waitForIdle()
-            title("Rock")
-            compose.onNodeWithText(text(R.string.home_genre_from, "Rock")).assertIsDisplayed()
+            // On the page, the labels are plain: nothing opens from them.
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "artist:Gordon Lightfoot:rock")
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
-            back()
-            title(text(R.string.home_genres))
             back()
             onHome()
 
-            // A chip on Home opens its label's page at once.
+            // A chip on Home opens the table's page too.
             compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
             compose.waitForIdle()
-            title("Folk Pop")
-            compose.onNodeWithText(text(R.string.home_genre_from_track, "Folk Pop")).assertIsDisplayed()
+            title(text(R.string.home_genres))
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertExists()
         }
 
     @Test
-    fun aLabelsPageSaysSoOnceTheTrackPlayingLacksIt() =
-        show(state(long(), pages)) { current ->
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performScrollTo().performClick()
-            compose.waitForIdle()
-            current.value = state(long().copy(genres = TrackGenres()), pages)
-            compose.waitForIdle()
-            compose.onNodeWithText(text(R.string.home_genre_gone)).assertIsDisplayed()
+    fun withOneLevelTheChipsAreAllThereIsAndOpenNothing() =
+        show(state(long().copy(genres = TrackGenres(genres.rows.take(1))), pages)) {
+            assertEquals(0, count(GENRES_PAGE_LINK_TAG))
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
+                .performScrollTo()
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
         }
 
     @Test
-    fun theInsightOpensOnItsPageWithItsActions() =
-        show(state(long(insight = InsightState.Idle(canWrite = true)), pages)) {
-            compose.onNodeWithTag(INSIGHT_PAGE_LINK_TAG).performScrollTo().performClick()
-            compose.waitForIdle()
-            title(text(R.string.home_insight_title))
-            compose.onNodeWithTag(WRITE_TAG).performClick()
-            assertEquals(1, writes)
+    fun theInsightShowsInFullOnHomeUnderEitherLayoutAndOpensNoPage() {
+        for (layout in listOf(boxes, pages)) {
+            show(state(long(insight = InsightState.Idle(canWrite = true)), layout)) {
+                compose
+                    .onNodeWithText(text(R.string.home_insight_title))
+                    .performScrollTo()
+                    .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+                compose.onNodeWithTag(WRITE_TAG).performScrollTo().performClick()
+                onHome()
+            }
         }
+        assertEquals(2, writes)
+    }
 
     @Test
     fun eachPageOpensFreshWhateverKeepSourcesSays() =
@@ -370,17 +375,7 @@ class LayoutPagesTest {
                         listOf(text(R.string.home_genres)),
                     ),
                 ).assert(clickLabelled(open))
-            compose
-                .onNodeWithTag(INSIGHT_PAGE_LINK_TAG)
-                .performScrollTo()
-                .assertTouchHeightIsEqualTo(48.dp)
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        SemanticsProperties.ContentDescription,
-                        listOf(text(R.string.home_insight_title)),
-                    ),
-                ).assert(clickLabelled(open))
-            // A chip opens its page: a button, never selected.
+            // A chip opens the table's page: a button, never selected.
             compose
                 .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
                 .assert(clickLabelled(open))

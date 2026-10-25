@@ -18,14 +18,4 @@ sealed interface HomePage {
     /** The genre labels' table, a row per level. */
     @Serializable
     data object Genres : HomePage
-
-    /** Where a genre label comes from: the label kept by [key], its level, artist and genre. */
-    @Serializable
-    data class Genre(
-        val key: String,
-    ) : HomePage
-
-    /** *Key insights*: the insight, with its actions. */
-    @Serializable
-    data object Insight : HomePage
 }

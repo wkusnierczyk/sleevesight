@@ -67,7 +67,7 @@ A tap on a label shows where it came from: *… comes from the track's tags on:*
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
-With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›* opens the table on a page of its own, and a tap on a label opens where it came from on its own page, the label as its title ([Pages](#pages)).
+With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
 
 ### The insight
 
@@ -81,7 +81,7 @@ With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set
 - **The note under the insight** shows only when there is something to say. *1 sentence is not backed by the sources.* counts the sentences that cite nothing, cite a line that does not exist, or come from the model's own knowledge; a sentence the sources back needs no word, since its citations show it. *Kept from before.* says the insight was not written now but shown from what was written earlier. The check's full counts (*4 of 5 sentences grounded · 1 uncited*) are a developer option, [*Show grounding details*]({{ '/docs/tutorials/settings/' | relative_url }}#developer).
 - **Report a problem**, under the insight, is for an insight that is wrong or offensive. It asks what is wrong (*Offensive or inappropriate*, *Wrong* or *Other*), takes an optional note, and shows the whole report: the reason and the note; the track as the player reported it, with its MusicBrainz ids; the insight and the evidence lines it was written from; and the prompt version, AI service, model and effort it was written with. Never your keys, the history or the settings. *Open in mail app* hands it to your mail app, addressed to support@sleevesight.app, and it reaches the developer only if you send it from there; until then your mail app handles it as any message you write, which may keep a draft in your mail account. *Copy report* copies it instead, for any other way you write email; with no mail app on the phone, the dialog says so. The report stays of the insight it was opened on, even if the track changes meanwhile. The [privacy policy]({{ '/privacy.html' | relative_url }}) says what the developer does with it.
 
-With *Layout* set to *Separate pages*, the title reads *Key insights ›*, and a tap on it opens the insight on a page of its own, with the same buttons; a citation chip, here or there, opens *Sources* on its page, at the line it cites ([Pages](#pages)).
+With *Layout* set to *Separate pages*, the insight stays here in full, and a citation chip opens *Sources* on its page, at the line it cites ([Pages](#pages)).
 
 While the insight is being written, its text appears as it arrives, with its citation chips; the underlines wait for the check, which runs once the reply is complete.
 
@@ -139,11 +139,12 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
-- **Genres ›** opens the table of genre labels; a label, on the home screen or in the table, opens where it came from, with the label as the page's title.
-- **Key insights ›** opens the insight on its own, with *Write insight*, *Stop*, *Rewrite* and *Report a problem* as on the home screen.
-- A citation chip opens *Sources*' page at the line it cites, scrolled to and flashed.
+- **Genres ›**, or a label on the home screen, opens the table of genre labels.
+- A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
-The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track; a genre's page that the new track does not have says so. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads each of these as its name, and says that a double tap opens its page; a page's title is read as a heading.
+The insight itself stays on the home screen, in full, whichever layout is set.
+
+The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads each of these as its name, and says that a double tap opens its page; a page's title is read as a heading.
 
 ## Writing an insight
 

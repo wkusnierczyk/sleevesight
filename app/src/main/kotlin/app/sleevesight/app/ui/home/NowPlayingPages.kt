@@ -25,7 +25,6 @@ import app.sleevesight.core.pipeline.TrackState
  * its own ([PageFrame]), in the album art's colours, from the same [state] as Home, for the track
  * playing, with Home's [actions]; [onBack] goes back. Each page opens fresh: *Sources* at its
  * first screenful with every source's lines shown, whatever *Keep Sources as you left them* says.
- * A citation on the insight's page opens *Sources*' page at its line.
  */
 @Composable
 internal fun NowPlayingPageContent(
@@ -34,50 +33,28 @@ internal fun NowPlayingPageContent(
     actions: NowPlayingActions,
     onBack: () -> Unit,
 ) {
-    val report = rememberReport(actions.mail)
     val playing = state.playing
     val shown = playing?.let { Showing(state, it) }
     ArtTheme(state.art) {
-        PageFrame(pageTitle(page, shown?.track), onBack) {
+        PageFrame(pageTitle(page), onBack) {
             if (playing == null || shown == null) {
                 NothingPlaying()
                 return@PageFrame
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings, actions.openPage)
-                is HomePage.Genre -> GenrePage(shown.track, page.key)
-                HomePage.Insight -> {
-                    val cite = { id: String -> actions.openPage(HomePage.Sources(cite = id)) }
-                    InsightBody(
-                        shown.insight,
-                        shown.insightContext(),
-                        shown.insightActions(actions, cite, report),
-                        shown.details,
-                    )
-                }
+                HomePage.Genres -> GenresPage(shown.track, state.settings)
             }
         }
     }
 }
 
-/** A page's title: the item's name, or for a genre label's, the label as it shows on its chip. */
+/** A page's title: the item's name. */
 @Composable
-private fun pageTitle(
-    page: HomePage,
-    track: TrackState?,
-): String =
+private fun pageTitle(page: HomePage): String =
     when (page) {
         is HomePage.Sources -> stringResource(R.string.home_sources_title)
         HomePage.Genres -> stringResource(R.string.home_genres)
-        is HomePage.Genre ->
-            track
-                ?.let { labelOf(it.genres, page.key) }
-                ?.label
-                ?.genre
-                ?.label
-                ?: stringResource(R.string.home_genre_title)
-        HomePage.Insight -> stringResource(R.string.home_insight_title)
     }
 
 /**

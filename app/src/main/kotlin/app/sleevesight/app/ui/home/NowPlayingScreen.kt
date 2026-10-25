@@ -147,8 +147,9 @@ internal class NowPlayingActions(
  *
  * *Layout* (#447): under *Expandable boxes*, the default, *Sources* and the genres' table fold in
  * place, a chip's attribution shows under it, and a citation unfolds *Sources* to its line. Under
- * *Separate pages* each opens on a page of its own ([NowPlayingActions.openPage]): `Sources ›`,
- * `Genres ›`, a genre chip, `Key insights ›`, and a citation, which opens *Sources* at its line.
+ * *Separate pages* each opens on a page of its own ([NowPlayingActions.openPage]): `Sources ›`, and
+ * a citation, which opens *Sources* at its line; `Genres ›` and a genre chip, the genres' table.
+ * The insight shows in full on Home either way.
  */
 @Composable
 internal fun NowPlayingContent(
@@ -198,7 +199,6 @@ internal fun NowPlayingContent(
                     shown.insightContext(),
                     shown.insightActions(actions, cite, report),
                     shown.details,
-                    onOpen = if (pages) ({ actions.openPage(HomePage.Insight) }) else null,
                 )
                 if (pages) {
                     PageLink(

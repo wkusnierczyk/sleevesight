@@ -44,9 +44,6 @@
     <!-- A page's back arrow, as a screen reader says it. -->
     <string name="page_back">Back</string>
     <string name="home_page_open">open page</string>
-    <!-- A genre label's page: its title when the label is no longer the playing track's, and what it says then. -->
-    <string name="home_genre_title">Genre</string>
-    <string name="home_genre_gone">This genre is not among the playing track’s.</string>
     <!-- The genres' page, with Show genres off. -->
     <string name="home_genres_hidden">Show genres is off in Settings.</string>
     <!-- A fold's state, as a screen reader says it. -->

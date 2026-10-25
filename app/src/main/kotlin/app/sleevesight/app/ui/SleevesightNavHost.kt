@@ -121,8 +121,6 @@ fun SleevesightNavHost(
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>()) }
         composable<HomePage.Genres> { homePage(HomePage.Genres) }
-        composable<HomePage.Genre> { homePage(it.toRoute<HomePage.Genre>()) }
-        composable<HomePage.Insight> { homePage(HomePage.Insight) }
         composable<SettingsPage> {
             val links =
                 SettingsLinks(

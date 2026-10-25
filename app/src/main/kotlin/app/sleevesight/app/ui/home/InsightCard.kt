@@ -35,10 +35,6 @@ import app.sleevesight.core.pipeline.InsightState
  *
  * A written insight offers *Report a problem* (#390), under it, which hands the
  * insight and its track to [InsightActions.onReport].
- *
- * Under *Layout*'s *Separate pages* (#447), [onOpen] opens the insight on a page of its own, from
- * its title, `Key insights ›`; the card shows the insight in full either way, and the page mounts
- * [InsightBody], the same component.
  */
 @Composable
 internal fun InsightCard(
@@ -46,27 +42,20 @@ internal fun InsightCard(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean = false,
-    onOpen: (() -> Unit)? = null,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            val title = stringResource(R.string.home_insight_title)
-            if (onOpen == null) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-            } else {
-                PageLink(title, INSIGHT_PAGE_LINK_TAG, MaterialTheme.typography.titleMedium, onClick = onOpen)
-            }
+            Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
             InsightBody(insight, context, actions, groundingDetails)
         }
     }
 }
 
-/** The insight in its state, with its actions: the card's content, and the insight's page's (#447). */
 @Composable
-internal fun InsightBody(
+private fun InsightBody(
     insight: InsightState,
     context: InsightContext,
     actions: InsightActions,

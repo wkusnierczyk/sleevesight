@@ -80,5 +80,5 @@
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_boxes">Expandable boxes</string>
     <string name="settings_layout_pages">Separate pages</string>
-    <string name="settings_layout_summary">How Sources, the genres, where a genre comes from and the insight open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
+    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
 </resources>
