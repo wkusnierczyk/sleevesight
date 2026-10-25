@@ -285,7 +285,14 @@ private fun KeyEntry(
             onValueChange = onType,
             label = { Text(stringResource(R.string.settings_key_field)) },
             trailingIcon = {
-                KeyFieldIcons(typed.isNotEmpty(), shown, !busy, onShow, !busy && keyboard == null, onScan)
+                KeyFieldIcons(
+                    entered = typed.isNotEmpty(),
+                    shown = shown,
+                    showable = !busy,
+                    onShow = onShow,
+                    scans = !busy && keyboard == null,
+                    onScan = onScan,
+                )
             },
             singleLine = true,
             visualTransformation = if (shown) VisualTransformation.None else PasswordVisualTransformation(),
