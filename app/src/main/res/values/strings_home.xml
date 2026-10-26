@@ -33,11 +33,11 @@
          or the album's is not known (#556): "First released 1990". -->
     <string name="home_first_released">First released %1$s</string>
 
-    <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
+    <!-- Genre labels (#558): the chips, the genre's panel with its table, and where a genre comes from. -->
     <string name="home_genres">Genres</string>
     <string name="home_genres_none">None found.</string>
     <string name="home_genres_off">Every genre source is off in Settings.</string>
-    <!-- The disclosure triangles of the genres' and the sources' folds: folded, unfolded. -->
+    <!-- The disclosure triangles of the folds (Sources, the settings' sections): folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
     <!-- Under Layout's Separate pages (#447): drawn after an item's name on Home, as the way to its
@@ -54,20 +54,20 @@
     <!-- A fold's state, as a screen reader says it. -->
     <string name="home_fold_collapsed">collapsed</string>
     <string name="home_fold_expanded">expanded</string>
+    <!-- A genre chip's action, as a screen reader names it ("Double-tap to show genre"): it opens the
+         genre's panel, or, while that panel shows, closes it. -->
+    <string name="home_genre_show">show genre</string>
+    <string name="home_genre_close">close genre</string>
+    <!-- A row's name in the genre's panel where the player gave no track title, artist or album. -->
     <string name="home_genres_track">Track</string>
     <string name="home_genres_artist_row">Artist</string>
     <string name="home_genres_album">Album</string>
-    <!-- An artist's row: its name before its genres; %1$s is the artist. -->
-    <string name="home_genres_artist">%1$s:</string>
-    <!-- A row as a screen reader says it: %1$s the row's name, %2$s its genres. -->
-    <string name="home_genres_row_words">%1$s: %2$s</string>
-    <!-- An artist's row as a screen reader says it: %1$s the row's name, %2$s the artist, %3$s the genres. -->
-    <string name="home_genres_row_artist_words">%1$s, %2$s: %3$s</string>
-    <string name="home_genre_from_track">%1$s comes from the track’s tags on:</string>
-    <string name="home_genre_from">%1$s comes from the artist’s tags on:</string>
-    <!-- With several credited artists: %1$s the genre, %2$s the artist whose tags gave it. -->
-    <string name="home_genre_from_named">%1$s comes from %2$s’s tags on:</string>
-    <string name="home_genre_from_album">%1$s comes from the album’s tags on:</string>
+    <!-- Where the panel's genre comes from, before each source that gave it: a line per level. -->
+    <string name="home_genre_from_track">From the track’s tags:</string>
+    <string name="home_genre_from">From the artist’s tags:</string>
+    <!-- With several credited artists: %1$s the artist whose tags gave it. -->
+    <string name="home_genre_from_named">From %1$s’s tags:</string>
+    <string name="home_genre_from_album">From the album’s tags:</string>
     <string name="home_genre_licence">licence</string>
 
     <!-- The insight. -->

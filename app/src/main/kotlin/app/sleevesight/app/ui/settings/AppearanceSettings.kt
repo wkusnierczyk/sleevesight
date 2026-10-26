@@ -11,7 +11,7 @@ import app.sleevesight.core.settings.ThemeChoice
 /**
  * How the app looks: *Theme* (#444), light or dark as the system is, or always one of them;
  * *Font* (#377), the app's own font, Roboto, or the phone's system font; both showing at once, in
- * the whole app. *Layout* (#447): whether *Sources* and the genres' table open in place on Home
+ * the whole app. *Layout* (#447): whether *Sources* and a genre's panel open in place on Home
  * (*Expandable boxes*, the default) or each on a page of its own (*Separate pages*). *Keep Sources
  * as you left them* (#269), off by default, so the *Sources* list under each new track's insight
  * starts folded; under *Expandable boxes* only, so it is shown, but not offered, under *Separate

@@ -171,11 +171,10 @@ internal fun PageCloseButton(
 }
 
 /**
- * The test tags of a page's title, its back arrow and its closing button, and of the ways to each
- * page from Home.
+ * The test tags of a page's title, its back arrow and its closing button, and of the way to
+ * *Sources*' page from Home (the genres' page opens from a genre chip).
  */
 const val PAGE_TITLE_TAG: String = "page:title"
 const val PAGE_BACK_TAG: String = "page:back"
 const val PAGE_CLOSE_TAG: String = "page:close"
 const val SOURCES_PAGE_LINK_TAG: String = "page-link:sources"
-const val GENRES_PAGE_LINK_TAG: String = "page-link:genres"
