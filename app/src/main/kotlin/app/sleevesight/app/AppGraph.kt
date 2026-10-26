@@ -95,9 +95,14 @@ import kotlinx.coroutines.withContext
  * per process, held by [SleevesightApplication]. Components take what they need through their
  * constructors; nothing outside this class constructs a long-lived object.
  *
+ * The constructor is internal: only [SleevesightApplication] makes the graph, and the module's tests,
+ * through its `makeGraph`, with stand-ins.
+ *
  * @param settingsData the settings' file, made here unless a test passes a stand-in.
+ * @param secretCipher seals the keys; a test seam, since Robolectric has no Android Keystore.
+ * @param musicBrainzThrough wraps the MusicBrainz client; a test seam, to count its questions.
  */
-class AppGraph(
+class AppGraph internal constructor(
     context: Context,
     settingsData: DataStore<Preferences> =
         preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
