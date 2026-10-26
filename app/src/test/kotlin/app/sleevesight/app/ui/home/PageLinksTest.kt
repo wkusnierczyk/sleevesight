@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -61,7 +63,8 @@ import org.robolectric.annotation.Config
 /**
  * The ways to Home's pages under *Layout*'s *Separate pages* (#548), on a phone's screen, with Home
  * and its pages drawn as the app draws them, from a [HomeFeed]: *Genres ›* and a genre chip open the
- * genres' page, and back returns to Home where it was scrolled to. A link acts while its screen is
+ * genres' page, and back returns to Home where it was scrolled to; with one level of two artists'
+ * labels, a genre they share shows once, and opens a row per artist. A link acts while its screen is
  * the top of the back stack, whatever that screen's lifecycle says: after a back swipe started and
  * cancelled, which leaves the page short of resumed, and while Home comes back from a page; and a
  * double tap still opens one page.
@@ -113,8 +116,11 @@ class PageLinksTest {
     private lateinit var nav: NavHostController
     private lateinit var scenario: ActivityScenario<MainActivity>
 
-    /** The app's navigation graph under *Separate pages*, Sundown playing, with 20 lines and two levels of genres. */
-    private fun show(block: () -> Unit) {
+    /** The app's navigation graph under *Separate pages*, Sundown playing, with 20 lines and [genres]. */
+    private fun show(
+        genres: TrackGenres = this.genres,
+        block: () -> Unit,
+    ) {
         val lines = (1..20).map { draft(SourceId.MUSICBRAINZ, "Fact $it.") }
         val playing =
             track(
@@ -229,13 +235,41 @@ class PageLinksTest {
             open(GENRES_PAGE_LINK_TAG)
             onGenres()
             cancelledBackSwipe()
-            // Still on the page, and the page is on top of the stack, though not resumed.
+            // Still on the page, and the page is on top of the stack, though not resumed: what a
+            // check of the lifecycle refused.
             onGenres()
+            assertNotEquals(Lifecycle.State.RESUMED, nav.currentBackStackEntry?.lifecycle?.currentState)
             backArrow()
             onHome()
             // And Home's links work after it.
             open(folk)
             onGenres()
+        }
+
+    // An artist's row of [tags].
+    private fun artistRow(
+        artist: String,
+        vararg tags: String,
+    ) = GenreRow(GenreLevel.ARTIST, artist, tags.map { label(it, GenreLevel.ARTIST, artist) })
+
+    @Test
+    fun withOneLevelOfTwoArtistsAGenreTheyShareShowsOnceAndItsChipOpensARowPerArtist() =
+        show(TrackGenres(listOf(artistRow("Ike Turner", "soul"), artistRow("Tina Turner", "soul", "funk")))) {
+            val ike = GENRE_PREFIX + "artist:Ike Turner:soul"
+            val tina = GENRE_PREFIX + "artist:Tina Turner:soul"
+            // On Home, no `Genres ›`, and the shared genre once, under the first artist that gives it.
+            assertEquals(0, compose.onAllNodesWithTag(GENRES_PAGE_LINK_TAG).fetchSemanticsNodes().size)
+            assertEquals(1, compose.onAllNodesWithText("Soul").fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithTag(tina).fetchSemanticsNodes().size)
+
+            open(ike)
+            onGenres()
+            // A row per artist, each with its own chip of the genre.
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertExists()
+            compose.onNodeWithTag(ike).assertExists()
+            compose.onNodeWithTag(tina).assertExists()
+            compose.onNodeWithTag(GENRE_PREFIX + "artist:Tina Turner:funk").assertExists()
         }
 
     @Test

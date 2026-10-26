@@ -139,7 +139,7 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
-- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, there is no *Genres ›*, and a label opens the table, with its one row.
+- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, there is no *Genres ›*, and a label opens the table, with its one row (a row per artist for artists' labels).
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
 The insight itself stays on the home screen, in full, whichever layout is set.
