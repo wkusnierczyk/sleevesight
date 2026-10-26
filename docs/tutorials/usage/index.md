@@ -136,7 +136,7 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 
 <!-- screenshot: Sources as a page, with its back arrow, from the app version it is taken from -->
 
-With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
+With *Separate pages*, the home screen is shorter, and each part opens a page of its own, on the app's background like the home screen, its accents in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
 - **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, there is no *Genres ›*, and a label opens the table, with its one row (a row per artist for artists' labels).
@@ -178,7 +178,7 @@ After a call that was stopped or failed, *Key insights* offers *Write insight* a
 
 ### *Rewrite*
 
-An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. The card then keeps the insight written earlier, with *Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.* and *Rewrite*. Under it, *Sources* shows the lines that insight cites, found when it was written.
+An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. *Key insights* then keeps the insight written earlier, with *Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.* and *Rewrite*. Under it, *Sources* shows the lines that insight cites, found when it was written.
 
 Nothing is written again unless you tap *Rewrite*, which is one call, or two in the case above. If the rewrite fails, *Key insights* says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
 
@@ -195,7 +195,7 @@ By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) write
 Automatic writing needs a first tap:
 
 - **After the app starts afresh**, nothing is written until your first tap on *Write insight*, in every mode. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
-- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). The card then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
+- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). *Key insights* then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
 
 <!-- screenshot: Key insights with the automatic-writing-paused line and Write insight, from the app version it is taken from -->
 
