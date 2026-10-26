@@ -1,6 +1,9 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import androidx.activity.compose.setContent
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,7 +15,10 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -37,16 +43,20 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /**
- * *Show this phone's name to the computer* (#433): off by default, a switch under *Secrets*, and
+ * *Share phone's name with Type on a computer* (#433, #544): off by default, a switch under
+ * *Secrets*, its title in the text colour, its summary linking the page the computer opens, and
  * what *Type on a computer* is given; and what the session says while it waits, as the computer's
- * chooser lists the phone.
+ * chooser lists the phone, naming the setting by its title.
  */
 @RunWith(RobolectricTestRunner::class)
 class PhoneNameSettingTest {
@@ -75,7 +85,7 @@ class PhoneNameSettingTest {
             compose.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
 
-    /** What each keyboard session was given for *Show this phone's name*, in order. */
+    /** What each keyboard session was given for *Share phone's name*, in order. */
     private val given = mutableListOf<Boolean>()
 
     /** A keyboard that notes whether it was to show the phone's name, and says so. */
@@ -89,10 +99,14 @@ class PhoneNameSettingTest {
         LaunchedEffect(Unit) { onScanned(KeyboardVectors.freshCode()) }
     }
 
-    private fun show(block: () -> Unit) {
+    /** The scheme the screen was drawn in. */
+    private var scheme: ColorScheme? = null
+
+    private fun show(block: (ActivityScenario<MainActivity>) -> Unit) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
+                    scheme = MaterialTheme.colorScheme
                     SettingsScreen(
                         settings,
                         secrets,
@@ -106,7 +120,7 @@ class PhoneNameSettingTest {
             }
             waitForText(text(R.string.settings_title))
             compose.openSection(SettingsSection.SECRETS)
-            block()
+            block(scenario)
         }
     }
 
@@ -137,6 +151,45 @@ class PhoneNameSettingTest {
             typeOnAComputer()
             assertEquals(listOf(true), given)
         }
+
+    @Test
+    fun theTitleIsInTheTextColourNotTheErrorColour() =
+        show {
+            val title = text(R.string.settings_show_phone_name)
+            compose.onNodeWithText(title).performScrollTo()
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose
+                .onNodeWithText(title, useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult]
+                .action
+                ?.invoke(layouts)
+            val color = layouts.single().layoutInput.style.color
+            val drawn = checkNotNull(scheme)
+            assertNotEquals(drawn.error, color)
+            assertEquals(drawn.onSurface, color)
+        }
+
+    @Test
+    fun theSummaryLinksThePageTheComputerOpens() =
+        show { scenario ->
+            val address = "sleevesight.app/keyboard.html"
+            compose.onNodeWithText(text(R.string.settings_show_phone_name)).performScrollTo()
+            // The address, to type in on the computer.
+            compose.onNodeWithText(address, useUnmergedTree = true).assertIsDisplayed()
+            val link = app.getString(R.string.settings_open_page, address)
+            compose.onNodeWithContentDescription(link).performScrollTo().performClick()
+            var started: Intent? = null
+            scenario.onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://$address", started?.dataString)
+        }
+
+    @Test
+    fun theWaitingTextNamesTheSettingByItsTitle() {
+        val title = text(R.string.settings_show_phone_name)
+        assertTrue(text(R.string.keyboard_waiting), text(R.string.keyboard_waiting).contains("“$title”"))
+    }
 
     @Test
     fun waitingSaysHowTheComputerListsThePhone() {

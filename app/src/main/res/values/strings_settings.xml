@@ -10,8 +10,8 @@
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
     <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
     <string name="settings_keys_short">Private API keys enabling external services</string>
-    <string name="settings_show_phone_name">Show this phone’s name to the computer</string>
-    <string name="settings_show_phone_name_summary">For Type on a computer: while its session is open, the phone advertises its Bluetooth name, so the computer’s list shows the phone by it. Anyone nearby scanning for Bluetooth can see the name meanwhile. Off: the phone is the only device listed, as “Unknown or Unsupported Device”.</string>
+    <string name="settings_show_phone_name">Share phone’s name with Type on a computer</string>
+    <string name="settings_show_phone_name_summary">Type on a computer lets you type an API key on a computer’s keyboard, sent to the phone over Bluetooth: tap the keyboard icon in a key’s field, with the page below open on the computer. Sharing the name lets the computer list the phone by its Bluetooth name while a session is open, instead of as “Unknown or Unsupported Device”. Anyone nearby scanning for Bluetooth can see the name meanwhile.</string>
     <string name="settings_keys_long">Sleevesight uses external services that require authentication via API keys, obtained from each service’s own website. Your keys are stored encrypted on this phone, and each is sent only to its own service.</string>
     <string name="settings_genres_short">Current music genres</string>
     <string name="settings_genres_long">Sleevesight collects genre information from sources and compiles a short list of representative categories.</string>
