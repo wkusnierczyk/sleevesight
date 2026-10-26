@@ -239,11 +239,12 @@ private fun SetupContents(
         Text(stringResource(R.string.setup_explained), style = style)
         if (keys.keys.any { serviceTerms(it) != null }) Text(stringResource(R.string.setup_terms), style = style)
         StepHeading(stringResource(R.string.load_keys_found))
-        for ((id, key) in keys) {
-            val stored = (secrets[id] ?: SecretState.ABSENT) != SecretState.ABSENT
-            val line = if (stored) R.string.setup_replaces else R.string.setup_new
-            Text(stringResource(line, stringResource(keyName(id)), endingOf(key.reveal())), style = style)
-        }
+        KeyTable(
+            keys.map { (id, key) ->
+                val stored = (secrets[id] ?: SecretState.ABSENT) != SecretState.ABSENT
+                KeyRow(ShownKey(id, endingOf(key.reveal())), replaces = stored)
+            },
+        )
     }
     if (setup.refused.isNotEmpty() || setup.unknown.isNotEmpty() || setup.unreadable > 0) {
         StepHeading(stringResource(R.string.load_keys_problems))
@@ -277,7 +278,7 @@ private fun ColumnScope.SavedStep(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val style = MaterialTheme.typography.bodyMedium
-        for (key in keys) Text(shownKey(key), style = style)
+        KeyTable(keys.map(::KeyRow))
         Text(stringResource(R.string.setup_explained), style = style)
     }
     KeyScreenActions {
