@@ -107,7 +107,7 @@
         <item quantity="one">%1$d of %2$d sentence grounded</item>
         <item quantity="other">%1$d of %2$d sentences grounded</item>
     </plurals>
-    <string name="home_meta_model">%1$d from the model’s own knowledge</string>
+    <string name="home_meta_model">%1$d from the AI model’s own knowledge</string>
     <string name="home_meta_uncited">%1$d uncited</string>
     <plurals name="home_meta_unknown">
         <item quantity="one">%d cites missing evidence</item>
@@ -115,7 +115,7 @@
     </plurals>
     <string name="home_meta_kept">kept from before</string>
     <string name="home_cite">Source %1$s</string>
-    <string name="home_cite_model">From the model’s own knowledge, not verified</string>
+    <string name="home_cite_model">From the AI model’s own knowledge, not verified</string>
     <string name="home_cite_unknown">%1$s: no such evidence line</string>
     <!-- Said by a screen reader after a sentence that cites nothing, which the screen underlines. -->
     <string name="home_cite_none">not cited</string>

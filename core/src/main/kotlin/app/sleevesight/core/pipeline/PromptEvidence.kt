@@ -57,7 +57,7 @@ object PromptEvidence {
     /**
      * What to send of [evidence], given the facts [citedByOthers] cited in the session and the
      * [release] the player reports (`NowPlaying.album`, the `P` line's), null when it reports none.
-     * With [artistFactsOnce] off (*Tell an artist's facts once per session*, #407), every
+     * With [artistFactsOnce] off (*Don't repeat artist facts*, #407), every
      * artist-level line is sent, and only a restated release line is left out (#424).
      */
     fun of(

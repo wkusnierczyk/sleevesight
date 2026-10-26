@@ -34,7 +34,7 @@ import kotlin.time.Duration
 
 /**
  * The artist facts an insight cites are left out of the next tracks' prompts in its session (#239),
- * unless *Tell an artist's facts once per session* is off (#407).
+ * unless *Don't repeat artist facts* is off (#407).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PipelineSessionFactsTest {

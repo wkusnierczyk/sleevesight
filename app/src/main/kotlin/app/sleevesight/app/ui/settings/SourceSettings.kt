@@ -71,6 +71,8 @@ private val SOURCE_ROWS: List<SourceRow> =
             R.string.settings_engine_exa_summary,
             "https://exa.ai/",
         ),
+        // TODO(#538): link *AI services* in the description to that section, once Settings has the
+        // shared link that unfolds a section (#563).
         SourceRow.Source(
             SourceSwitch.MODEL,
             R.string.settings_source_model,

@@ -54,23 +54,7 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_grounding_details_summary),
         checked = settings.showGroundingDetails,
     ) { on -> update { it.copy(showGroundingDetails = on) } }
-    val reportButtons =
-        listOf(
-            ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
-            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
-            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
-        )
-    ValueRow(
-        title = stringResource(R.string.settings_report_button),
-        value = reportButtons.first { it.first == settings.reportButton }.second,
-        summary = stringResource(R.string.settings_report_button_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_report_button, reportButtons, settings.reportButton) { choice ->
-                update { it.copy(reportButton = choice) }
-            },
-        )
-    }
+    ReportButtonRow(settings, update, open)
     val linkStyles =
         listOf(
             LinkStyle.UNDERLINE to stringResource(R.string.settings_link_style_underline),
@@ -92,4 +76,41 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_developer_mode_summary),
         checked = settings.developerMode,
     ) { on -> update { if (on) it.copy(developerMode = true) else it.withoutDeveloperMode() } }
+}
+
+/** *Report button* (#452, #518): *Show*, *Auto* or *Hide*, each described in the dialog (#550). */
+@Composable
+private fun ReportButtonRow(
+    settings: Settings,
+    update: Update,
+    open: (SettingsDialog) -> Unit,
+) {
+    val reportButtons =
+        listOf(
+            ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
+            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
+            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
+        )
+    val reportButtonDetails =
+        mapOf(
+            ReportButton.SHOW to stringResource(R.string.settings_report_button_show_detail),
+            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto_detail),
+            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide_detail),
+        )
+    ValueRow(
+        title = stringResource(R.string.settings_report_button),
+        value = reportButtons.first { it.first == settings.reportButton }.second,
+        summary = stringResource(R.string.settings_report_button_summary),
+    ) {
+        open(
+            SettingsDialog.Choice(
+                R.string.settings_report_button,
+                reportButtons,
+                settings.reportButton,
+                details = reportButtonDetails,
+            ) { choice ->
+                update { it.copy(reportButton = choice) }
+            },
+        )
+    }
 }

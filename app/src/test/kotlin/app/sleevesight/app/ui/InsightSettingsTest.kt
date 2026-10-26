@@ -43,7 +43,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On skip*;
- * *Proactive*, a switch; *Tell an artist's facts once per session* (#407), a switch; and the rows
+ * *Proactive*, a switch; *Don't repeat artist facts* (#407, #546), a switch; and the rows
  * about writing fixed while *Show insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)

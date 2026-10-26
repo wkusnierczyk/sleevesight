@@ -531,13 +531,13 @@ class SettingsScreenTest {
             compose.openSection(SettingsSection.INSIGHTS)
             // "Up to": under *On skip*, a natural end is counted but not written.
             val written = pauseSummary(1, background = true)
-            assertTrue(written, written.contains("up to 1 track is written"))
+            assertTrue(written, written.contains("for up to 1 track change."))
             compose.onNodeWithText(written).performScrollTo().assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.settings_background)).performScrollTo().performClick()
             waitFor("look-up in the background stored off") { !current().lookUpInBackground }
             val away = pauseSummary(1, background = false)
-            assertTrue(away, away.contains("nothing is written while you are away"))
+            assertTrue(away, away.contains("within 1 track change,"))
             compose.onNodeWithText(away).performScrollTo().assertIsDisplayed()
         }
     }

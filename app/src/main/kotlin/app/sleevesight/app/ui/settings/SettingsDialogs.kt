@@ -58,7 +58,10 @@ import kotlinx.coroutines.launch
 
 private val DIALOG_LIST_HEIGHT = 360.dp
 
-/** Picks one of a setting's values; choosing one saves it and closes the dialog. */
+/**
+ * Picks one of a setting's values; choosing one saves it and closes the dialog. A value with a
+ * detail shows it under its label, within the same radio row, so a screen reader reads both.
+ */
 @Composable
 internal fun <T> ChoiceDialog(
     choice: SettingsDialog.Choice<T>,
@@ -70,7 +73,7 @@ internal fun <T> ChoiceDialog(
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
                 for ((value, label) in choice.options) {
-                    RadioRow(label = label, selected = value == choice.selected) {
+                    RadioRow(label = label, selected = value == choice.selected, detail = choice.details[value]) {
                         choice.onSelect(value)
                         onDismiss()
                     }
