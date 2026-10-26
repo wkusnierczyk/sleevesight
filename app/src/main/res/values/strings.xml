@@ -99,7 +99,7 @@
     <string name="settings_source_lastfm">Last.fm</string>
     <string name="settings_engine_exa">Exa web search</string>
     <string name="settings_source_model">AI service knowledge</string>
-    <string name="settings_source_model_summary">What the AI model you turn on under AI services learned in training, frozen at that time. At most one claim, marked unverified.</string>
+    <string name="settings_source_model_summary">What the AI model chosen under AI services learned in training, frozen at that time. At most one claim, marked unverified.</string>
 
     <string name="settings_section_labels">Genres</string>
     <string name="settings_labels_source_off">Off under “Sources”</string>
@@ -129,7 +129,7 @@
     <string name="settings_keep_sources">Keep Sources as you left them</string>
     <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive on On track change or On skip, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
+    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change or On skip, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
     <string name="settings_artist_facts_once_summary">When you play several tracks by the same artist, each insight would tell the artist’s background again. With this on, an insight leaves out what an earlier one in the same listening session already said about the artist, and focuses on the song when there is enough to say about it. A new session starts after a break in listening, set under New session idle trigger in History.</string>
     <string name="settings_cache_lifetimes">How long each source’s findings are kept</string>
