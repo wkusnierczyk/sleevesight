@@ -31,7 +31,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 ## What it does
 
 - Notices the track change in Spotify, or any other player you follow that publishes an Android media session.
-- Shows the cover, title, artists, album and release year, plus the genre labels of the track, its artists and its album, folded to the most specific level found, each telling where it came from.
+- Shows the cover, title, artists, and album with that release's year (and the year the song first came out, when it is earlier: a soundtrack or compilation keeps its own year), plus the genre labels of the track, its artists and its album, folded to the most specific level found, each telling where it came from.
 - Writes a few sentences on why the track is interesting. Every factual sentence links to the source it came from.
 - Shows the sources themselves, folded under their heading: each source that gave lines, the lines with a link to where they were found, what was found but could not be verified, and a note when a source needs your key, could not be reached or failed.
 - Opens the player with a tap on its name.

@@ -27,8 +27,11 @@
     <string name="home_progress">Playback position</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
-    <!-- The album, then the year of the first release: "Rubber Soul, 1965". -->
+    <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
+    <!-- Under the album, the year the recording first came out, when it is earlier than the album's
+         or the album's is not known (#556): "First released 1990". -->
+    <string name="home_first_released">First released %1$s</string>
 
     <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
     <string name="home_genres">Genres</string>
@@ -43,6 +46,8 @@
     <string name="home_page_symbol">›</string>
     <!-- A page's back arrow, as a screen reader says it. -->
     <string name="page_back">Back</string>
+    <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it. -->
+    <string name="page_close">Close</string>
     <string name="home_page_open">open page</string>
     <!-- The genres' page, with Show genres off. -->
     <string name="home_genres_hidden">Show genres is off in Settings.</string>
