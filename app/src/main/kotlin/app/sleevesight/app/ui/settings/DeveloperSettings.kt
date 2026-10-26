@@ -69,7 +69,12 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_link_style_summary),
     ) {
         open(
-            SettingsDialog.Choice(R.string.settings_link_style, linkStyles, settings.linkStyle) { style ->
+            SettingsDialog.Choice(
+                R.string.settings_link_style,
+                linkStyles,
+                settings.linkStyle,
+                developer = true,
+            ) { style ->
                 update { it.copy(linkStyle = style) }
             },
         )
@@ -116,6 +121,7 @@ private fun ReportButtonRow(
                 reportButtons,
                 settings.reportButton,
                 details = reportButtonDetails,
+                developer = true,
             ) { choice ->
                 update { it.copy(reportButton = choice) }
             },

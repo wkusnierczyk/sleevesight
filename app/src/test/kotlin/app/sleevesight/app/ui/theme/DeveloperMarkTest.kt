@@ -2,19 +2,31 @@ package app.sleevesight.app.ui.theme
 
 import android.graphics.Bitmap
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -109,6 +121,41 @@ class DeveloperMarkTest {
             assertEquals(unmarked, marked)
             assertTrue(marked.toString(), marked.none { it.contains(tag) })
             assertTrue(marked.toString(), PACKAGE in marked)
+        }
+    }
+
+    @Test
+    fun turningTheMarkOnOrOffKeepsTheContentsStateAndFocus() {
+        val marked = mutableStateOf(true)
+        val focus = FocusRequester()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity {
+                it.setContent {
+                    SleevesightTheme(darkTheme = false, developerMark = marked.value) {
+                        DeveloperMark {
+                            var taps by remember { mutableIntStateOf(0) }
+                            Text(
+                                "Tapped $taps",
+                                Modifier
+                                    .testTag(CONTENT)
+                                    .focusRequester(focus)
+                                    .focusable()
+                                    .clickable { taps++ },
+                            )
+                        }
+                    }
+                }
+            }
+            compose.onNodeWithTag(CONTENT).performClick()
+            compose.runOnIdle { focus.requestFocus() }
+            compose.onNodeWithTag(CONTENT).assertIsFocused()
+            for (on in listOf(false, true)) {
+                compose.runOnIdle { marked.value = on }
+                compose.waitForIdle()
+                assertEquals(if (on) 1 else 0, compose.onAllNodesWithTag(DEVELOPER_MARK_TAG).fetchSemanticsNodes().size)
+                compose.onNodeWithText("Tapped 1").assertExists()
+                compose.onNodeWithTag(CONTENT).assertIsFocused()
+            }
         }
     }
 

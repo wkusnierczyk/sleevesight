@@ -14,10 +14,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -47,12 +50,57 @@ internal val LocalDeveloperMark = staticCompositionLocalOf { false }
 internal fun developerMarkColor(): Color = Color(if (isAppInDarkTheme()) DEVELOPER_MARK_DARK else DEVELOPER_MARK_LIGHT)
 
 /**
+ * The *Developer* tag's text laid out (10 sp, the type scale's smallest label, in the mark's
+ * colour), and the room the mark adds above and below the content, which follow the font size.
+ */
+private class TagLayout(
+    val label: TextLayoutResult,
+    val box: Size,
+    val room: Dp,
+    val minWidth: Dp,
+)
+
+@Composable
+private fun rememberTagLayout(ink: Color): TagLayout {
+    val measurer = rememberTextMeasurer()
+    val tag = stringResource(R.string.developer_mark_tag)
+    val density = LocalDensity.current
+    val style = MaterialTheme.typography.labelSmall.copy(color = ink, fontSize = TAG_TEXT)
+    return remember(tag, style, density) {
+        val label = measurer.measure(tag, style)
+        with(density) {
+            val box =
+                Size(
+                    label.size.width + 2 * TAG_PADDING_H.toPx(),
+                    label.size.height + 2 * TAG_PADDING_V.toPx(),
+                )
+            // Half the tag above the outline, in room kept for it; the outline wide enough for it
+            // with the corners clear.
+            TagLayout(label, box, (box.height / 2).toDp(), box.width.toDp() + CORNER * 2)
+        }
+    }
+}
+
+/**
+ * How much taller the mark makes what it wraps, at the current font size: the room for the tag
+ * above the outline, the content's start below the tag, and the room at the bottom.
+ */
+@Composable
+internal fun developerMarkHeight(): Dp {
+    val tag = rememberTagLayout(developerMarkColor())
+    return tag.room + tag.room + TAG_CLEARANCE + PADDING_V
+}
+
+/**
  * [content], shown only in developer mode, in a column (its children [spacing] apart), marked as
  * such while [LocalDeveloperMark] is on: an outline ([OUTLINE] wide, rounded) in
  * [developerMarkColor], with a little room inside, and across its top edge near the end a small
  * *Developer* tag, in the mark's colour on the surface's, with a thin border of the mark's colour.
- * The tag is drawn, not composed: a screen reader reads the content as it would unmarked. Off, the
- * column alone, with no room kept for the mark.
+ * The content starts below the tag; the outline is at least as wide as the tag, with the content
+ * centred in it when narrower (the report button). The tag is drawn, not composed: a screen reader
+ * reads the content as it would unmarked. Off, the column alone, with no room kept for the mark.
+ * Marked or not, it is the same column, only its modifier changing, so turning the mark on or off
+ * keeps the content's state and focus.
  */
 @Composable
 internal fun DeveloperMark(
@@ -60,57 +108,64 @@ internal fun DeveloperMark(
     spacing: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val arrangement = Arrangement.spacedBy(spacing)
-    if (!LocalDeveloperMark.current) {
-        Column(modifier, verticalArrangement = arrangement, content = content)
-        return
-    }
+    val marked = LocalDeveloperMark.current
     val ink = developerMarkColor()
     val paper = MaterialTheme.colorScheme.surface
-    val measurer = rememberTextMeasurer()
-    val tag = stringResource(R.string.developer_mark_tag)
-    val density = LocalDensity.current
-    // The tag's text: the type scale's smallest label, at 10 sp, in the mark's colour.
-    val style = MaterialTheme.typography.labelSmall.copy(color = ink, fontSize = TAG_TEXT)
-    val label = remember(tag, style, density) { measurer.measure(tag, style) }
-    // The tag sits across the outline's top edge: half of it above, in room kept for it, and half
-    // below, where the content starts only under it, so the tag never covers it.
-    val room = with(density) { (label.size.height / 2f).toDp() + TAG_PADDING_V }
-    Column(
-        modifier
-            .testTag(DEVELOPER_MARK_TAG)
-            .padding(top = room)
-            .drawWithContent {
-                drawContent()
-                val stroke = OUTLINE.toPx()
-                drawRoundRect(
-                    ink,
-                    topLeft = Offset(stroke / 2, stroke / 2),
-                    size = Size(size.width - stroke, size.height - stroke),
-                    cornerRadius = CornerRadius(CORNER.toPx()),
-                    style = Stroke(stroke),
-                )
-                val padH = TAG_PADDING_H.toPx()
-                val padV = TAG_PADDING_V.toPx()
-                val box = Size(label.size.width + 2 * padH, label.size.height + 2 * padV)
-                val inset = TAG_INSET.toPx()
-                val left =
-                    when {
-                        // Too narrow to set it in from the end (the report button): centred.
-                        box.width + 2 * inset > size.width -> (size.width - box.width) / 2
-                        layoutDirection == LayoutDirection.Rtl -> inset
-                        else -> size.width - inset - box.width
-                    }
-                val top = -box.height / 2
-                val corner = CornerRadius(TAG_CORNER.toPx())
-                drawRoundRect(paper, Offset(left, top), box, corner)
-                drawRoundRect(ink, Offset(left, top), box, corner, style = Stroke(TAG_BORDER.toPx()))
-                drawText(label, topLeft = Offset(left + padH, top + padV))
-            }.padding(start = PADDING_H, end = PADDING_H, top = room + TAG_CLEARANCE, bottom = PADDING_V),
-        verticalArrangement = arrangement,
-        content = content,
-    )
+    val tag = rememberTagLayout(ink)
+    val mark =
+        if (marked) {
+            Modifier
+                .testTag(DEVELOPER_MARK_TAG)
+                .padding(top = tag.room)
+                .drawWithContent {
+                    drawContent()
+                    drawMark(ink, paper, tag)
+                }.centredIn(tag.minWidth)
+                .padding(start = PADDING_H, end = PADDING_H, top = tag.room + TAG_CLEARANCE, bottom = PADDING_V)
+        } else {
+            Modifier
+        }
+    Column(modifier.then(mark), verticalArrangement = Arrangement.spacedBy(spacing), content = content)
 }
+
+// The outline around the whole of the space drawn in, and the tag across its top edge near the end
+// (centred when there is no room to set it in from the end).
+private fun ContentDrawScope.drawMark(
+    ink: Color,
+    paper: Color,
+    tag: TagLayout,
+) {
+    val stroke = OUTLINE.toPx()
+    drawRoundRect(
+        ink,
+        topLeft = Offset(stroke / 2, stroke / 2),
+        size = Size(size.width - stroke, size.height - stroke),
+        cornerRadius = CornerRadius(CORNER.toPx()),
+        style = Stroke(stroke),
+    )
+    val box = tag.box
+    val inset = TAG_INSET.toPx()
+    val left =
+        when {
+            box.width + 2 * inset > size.width -> (size.width - box.width) / 2
+            layoutDirection == LayoutDirection.Rtl -> inset
+            else -> size.width - inset - box.width
+        }
+    val top = -box.height / 2
+    val corner = CornerRadius(TAG_CORNER.toPx())
+    drawRoundRect(paper, Offset(left, top), box, corner)
+    drawRoundRect(ink, Offset(left, top), box, corner, style = Stroke(TAG_BORDER.toPx()))
+    drawText(tag.label, topLeft = Offset(left + TAG_PADDING_H.toPx(), top + TAG_PADDING_V.toPx()))
+}
+
+// At least [minWidth] wide (as far as the constraints allow), with what is narrower centred in it.
+private fun Modifier.centredIn(minWidth: Dp): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minWidth = 0))
+        val width =
+            maxOf(placeable.width, minWidth.roundToPx(), constraints.minWidth).coerceAtMost(constraints.maxWidth)
+        layout(width, placeable.height) { placeable.place((width - placeable.width) / 2, 0) }
+    }
 
 /** The test tag of a marked column (only while marked). */
 const val DEVELOPER_MARK_TAG: String = "developer_mark"

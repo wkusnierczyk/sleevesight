@@ -269,7 +269,8 @@ private fun ResetDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.diagnostics_reset_title)) },
-        text = { Text(stringResource(R.string.diagnostics_reset_explained)) },
+        // A window of its own, outside the marked screen: marked too (#536).
+        text = { DeveloperMark { Text(stringResource(R.string.diagnostics_reset_explained)) } },
         confirmButton = { TextButton(onClick = onReset) { Text(stringResource(R.string.diagnostics_reset)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) } },
     )

@@ -180,7 +180,10 @@ private fun ReportButtonHiddenDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
-            Text(stringResource(if (saved) R.string.tester_report_hidden else R.string.tester_report_not_hidden))
+            // Only developer mode's button says this: marked as such (#536).
+            DeveloperMark {
+                Text(stringResource(if (saved) R.string.tester_report_hidden else R.string.tester_report_not_hidden))
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag(TESTER_REPORT_HIDDEN_DISMISS_TAG)) {
