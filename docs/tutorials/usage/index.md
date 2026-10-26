@@ -220,7 +220,7 @@ The history is left out of Android's backup, and the app never sends it anywhere
 
 With several players followed, the home screen shows the one playing; with none playing, the one most recently active.
 
-**Not followed.** A player that is not switched on is only checked for a title and an artist, to be listed; nothing of it is kept or sent, and the home screen does not show it. While only such players play, the home screen says *Nothing playing in a player you follow yet.*
+**Not followed.** To find your music players, Sleevesight looks for apps that are playing and checks whether they play music, a track with a title and an artist: from an app not switched on, it reads only what the app says it is playing, and only until the app reports music. A new player is added under *Players* switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, it keeps or sends none of it, and the home screen does not show it. While only such players play, the home screen says *Nothing playing in a player you follow yet.*
 
 **Not supported.**
 
