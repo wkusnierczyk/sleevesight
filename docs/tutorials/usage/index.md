@@ -160,8 +160,6 @@ flowchart TD
   D -- reply checked --> F[The insight]
   D -- Stop, or a failure --> G[Stopped or failed, with Write insight]
   G -- tap --> D
-  F -- evidence or service changed --> H[The insight, with Rewrite]
-  H -- tap --> D
 ```
 
 ### *Write insight*
@@ -170,17 +168,15 @@ flowchart TD
 
 ### *Stop*
 
-While the insight is being written, *Key insights* says *Writing…* and offers *Stop*. Stop ends the call: *Key insights* says *Stopped before the reply ended, so nothing was kept.* Nothing of the partial reply is kept, though the service may still bill what it had written before the stop, by its own terms.
+While the insight is being written, *Key insights* says *Writing from the sources. Tap Stop to stop it.* and offers *Stop*. Stop ends the call: *Key insights* says *Stopped before the reply ended, so nothing was kept.* Nothing of the partial reply is kept, though the service may still bill what it had written before the stop, by its own terms.
 
 ### Write again
 
 After a call that was stopped or failed, *Key insights* offers *Write insight* again, with *Write insight tries again, as a new call to your AI service.* Each try is a new call on your key, and it is never made on its own.
 
-### *Rewrite*
+### An insight kept from before
 
-An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. *Key insights* then keeps the insight written earlier, with *Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.* and *Rewrite*. Under it, *Sources* shows the lines that insight cites, found when it was written.
-
-Nothing is written again unless you tap *Rewrite*, which is one call, or two in the case above. If the rewrite fails, *Key insights* says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
+An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. *Key insights* then keeps the insight written earlier, with *Kept from before.* in the note under it, and under it *Sources* shows the lines that insight cites, found when it was written. It is not written again while the track plays, and nothing is paid for it.
 
 ### What costs nothing
 
@@ -190,16 +186,24 @@ Nothing is written again unless you tap *Rewrite*, which is one call, or two in 
 
 ### Automatic writing
 
-By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Manual* (only when you tap *Write insight*) offers *Write insight* on every track.
+By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On track skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Now* (only when you tap *Write insight*) offers *Write insight* on every track.
 
-**The toggle.** At the end of the *Key insights* heading's line, a toggle turns automatic writing on and off without opening the settings: an "A" in a circle while insights are written automatically, the circle struck through while they are not. It is the same setting as *Reactive*: turned off, *Reactive* is *Manual*; turned on again, it is the mode you used before (*On track change* if you never chose one), and a short message says *Each new track's insight is a paid call.* A change under *Reactive* shows on the toggle too. While the pause below holds, the toggle stays on and says *Paused* beside its symbol. With *Show insights* off it cannot be changed. A screen reader reads it as *Write insights automatically*, on, off, or on, paused; a long press shows the same.
+**The split button.** At the end of *Key insights*, under the insight, one button in two parts. The left part always says what a tap does, and the line above it says the same in words:
+
+- **No insight yet, under *Now*:** *Write insight*, greyed out until there is something to write from (while the evidence is still being gathered, for one).
+- **No insight yet, under *On track change* or *On track skip*:** *Write on change* or *Write on skip*. While automatic writing waits for a tap (no tap yet since the app started, or *Saver* has paused it), it can be tapped, with *Tap Write on change to write this track's insight and start writing automatically.* (*Write on skip* under *On track skip*); the tap writes this track's insight and starts automatic writing, or resumes it. While automatic writing goes on by itself, it is greyed out, with *Writing automatically on every track change.* or *Writing automatically when you skip a track.*
+- **A track automatic writing leaves** (under *On track skip*, one that followed another by itself), **or a write offered again** after a call that failed or was stopped: *Write insight*, which writes that one only.
+- **An insight shown**, written now or kept from before: the mode's write (*Write insight* under *Now*, *Write on change* or *Write on skip* otherwise), greyed out.
+- **While it is written:** *Stop*.
+
+The right part, an arrow, opens a menu of *Reactive*'s three choices by name, *Now*, *On track change* and *On track skip*, the current one checked, and, under a line, *See Settings for details*, which opens the settings at *Reactive*, where each is described. It is the same setting as *Reactive*: choosing in the menu sets it, and a change under *Reactive* shows in the menu. Choosing *On track change* or *On track skip* says, in a short message, *Each new track's insight is a paid call.*; choosing *Now* says nothing, and from then on nothing more is written without a tap, the track playing included. While the pause below holds, *Paused* shows beside the button. With *Show insights* off, both parts are greyed out. A screen reader reads the left part as its action, the right part as *Writing mode* with the current choice (and *paused* while paused), as a drop-down list, and the menu's choices as a list with one selected.
 
 Automatic writing needs a first tap:
 
-- **After the app starts afresh**, nothing is written until your first tap on *Write insight*, in every mode. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
-- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). *Key insights* then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
+- **After the app starts afresh**, nothing is written until your first tap, in every mode: on *Write on change* or *Write on skip* under the automatic modes, on *Write insight* under *Now*. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
+- **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). *Key insights* then offers *Write on change* (or *Write on skip*) with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write on change to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
 
-<!-- screenshot: Key insights with the automatic-writing-paused line and Write insight, from the app version it is taken from -->
+<!-- screenshot: Key insights with the automatic-writing-paused line and Write on change, from the app version it is taken from -->
 
 ### While the app is not on screen
 
