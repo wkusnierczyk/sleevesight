@@ -89,6 +89,11 @@ class SettingsKeyLinksTest {
     fun close() {
         saves.cancel()
         stores.close()
+        // The accessibility manager outlives the test: leave no screen reader on for the next one.
+        val manager = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        manager.setTouchExplorationEnabled(false)
+        manager.setEnabledAccessibilityServiceList(emptyList())
+        manager.setEnabled(false)
     }
 
     private fun text(id: Int) = app.getString(id)
@@ -141,7 +146,7 @@ class SettingsKeyLinksTest {
 
     private fun topOf(id: SecretId) =
         compose
-            .onNodeWithTag(SettingsTarget.key(id).tag)
+            .onNodeWithTag(SettingsTarget.key(id).tag, useUnmergedTree = true)
             .fetchSemanticsNode()
             .boundsInRoot.top
 
@@ -212,7 +217,7 @@ class SettingsKeyLinksTest {
         val focused = hasAnyAncestor(hasTestTag(target.tag)) and isFocused()
         waitForNode(focused)
         compose.onNode(focused).assertIsDisplayed()
-        compose.onNodeWithTag(target.tag).assertIsDisplayed()
+        compose.onNodeWithTag(target.tag, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -256,7 +261,7 @@ class SettingsKeyLinksTest {
             compose.waitForIdle()
             val focused = hasAnyAncestor(hasTestTag(SettingsTarget.key(SecretId.EXA).tag)) and isFocused()
             assertTrue(compose.onAllNodes(focused).fetchSemanticsNodes().isEmpty())
-            compose.onNodeWithTag(SettingsTarget.key(SecretId.EXA).tag).assertIsDisplayed()
+            compose.onNodeWithTag(SettingsTarget.key(SecretId.EXA).tag, useUnmergedTree = true).assertIsDisplayed()
         }
 
     @Test
@@ -278,9 +283,8 @@ class SettingsKeyLinksTest {
             landedOn(SecretId.LASTFM)
             compose.waitForIdle()
             val column = compose.onNode(hasScrollAction()).fetchSemanticsNode().boundsInRoot
-            val row = compose.onNodeWithTag(SettingsTarget.key(SecretId.LASTFM).tag).fetchSemanticsNode().boundsInRoot
             // Not at the bottom edge, as the least scroll that shows it would leave it.
-            assertEquals(column.top + column.height / 4, row.top, 2f)
+            assertEquals(column.top + column.height / 4, topOf(SecretId.LASTFM), 2f)
         }
 
     @Test
@@ -299,7 +303,7 @@ class SettingsKeyLinksTest {
         show(SettingsSection.AI_SERVICES) {
             follow(SecretId.ANTHROPIC)
             landedOn(SecretId.ANTHROPIC)
-            val landed = compose.onNodeWithTag(SettingsTarget.key(SecretId.ANTHROPIC).tag)
+            val landed = compose.onNodeWithTag(SettingsTarget.key(SecretId.ANTHROPIC).tag, useUnmergedTree = true)
             val top = landed.fetchSemanticsNode().boundsInRoot.top
             // Within the landing's flash: the next row, in view below, takes the focus, and the column
             // does not bring it to the landing's place.
