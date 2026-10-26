@@ -283,7 +283,7 @@ internal class ArtistCheck(
          * verdict is MusicBrainz's, so it lives for MusicBrainz's lifetime.
          */
         val OWNERSHIP_PART: ArtistPart =
-            ArtistPart("lastfm.ownership", LastFmAdapter.EXTRACTION_VERSION, 1, setOf(SourceId.MUSICBRAINZ))
+            ArtistPart("lastfm.ownership", LastFmAdapter.ANSWERS_VERSION, 1, setOf(SourceId.MUSICBRAINZ))
     }
 }
 
