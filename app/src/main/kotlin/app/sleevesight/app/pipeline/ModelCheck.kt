@@ -60,8 +60,9 @@ import java.util.concurrent.atomic.AtomicLong
  * @param providers the services' clients, as the pipeline and the settings use them.
  * @param key the saved key of a service, or null when none is saved or it cannot be read.
  * @param scope where the loop runs, as long as the process.
- * @param stored whether a key is stored for a service, readable or not: a read that found none
- *   while one is stored failed for now, and drops no mark.
+ * @param stored whether a key is stored for a service, readable or not, and true when that cannot
+ *   be told (`SecretStore.isStored`): a read that found none while one may be stored failed for now,
+ *   and drops no mark; only a confirmed absence does.
  */
 class ModelCheck(
     private val providers: Map<ProviderId, AiProvider>,
@@ -107,17 +108,26 @@ class ModelCheck(
     private val reads = AtomicLong()
 
     init {
-        scope.launch {
-            val book = ModelMarks(providers.keys)
-            for (event in events) {
-                when (event) {
-                    is Event.Selected -> book.selected(event.settings)
-                    is Event.KeyRead -> book.keyRead(event.provider, event.print, event.order, event.stored)
-                    is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
-                    is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
-                    is Event.Ask -> event.ticket.complete(book.ticket())
+        val loop =
+            scope.launch {
+                val book = ModelMarks(providers.keys)
+                for (event in events) {
+                    when (event) {
+                        is Event.Selected -> book.selected(event.settings)
+                        is Event.KeyRead -> book.keyRead(event.provider, event.print, event.order, event.stored)
+                        is Event.Listed -> with(event) { book.listed(provider, model, models, print, ticket) }
+                        is Event.Answered -> with(event) { book.answered(provider, model, print, ticket, this.event) }
+                        is Event.Ask -> event.ticket.complete(book.ticket())
+                    }
+                    found.value = book.marks
                 }
-                found.value = book.marks
+            }
+        // The loop ended (its scope cancelled, before it started too): nothing more is taken, and the
+        // tickets still asked for are given ones under which no answer counts.
+        loop.invokeOnCompletion {
+            events.close()
+            generateSequence { events.tryReceive().getOrNull() }.forEach { left ->
+                (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER)
             }
         }
     }
@@ -141,12 +151,12 @@ class ModelCheck(
     /**
      * The revisions now, for a request about to be issued: its answer, given back with them
      * ([listed], [answered]), counts only if they have not moved on. Every event sent before it is
-     * applied first, so this also waits for those.
+     * applied first, so this also waits for those. Once the loop has ended, a ticket under which no
+     * answer counts ([Ticket.NEVER]), at once.
      */
     suspend fun ticket(): Ticket {
         val asked = CompletableDeferred<Ticket>()
-        events.send(Event.Ask(asked))
-        return asked.await()
+        return if (events.trySend(Event.Ask(asked)).isSuccess) asked.await() else Ticket.NEVER
     }
 
     /**
@@ -204,7 +214,7 @@ class ModelCheck(
         launch { keyChanges.collect { providers.keys.forEach { readKey(it) } } }
         val target =
             settings
-                .onEach { events.send(Event.Selected(it)) }
+                .onEach { events.trySend(Event.Selected(it)) }
                 .map { s -> s.aiProvider?.takeIf { s.writeInsights }?.let { p -> s.model(p)?.let { p to it } } }
                 .distinctUntilChanged()
         combine(target, keyChanges) { chosen, _ -> chosen }
@@ -239,7 +249,7 @@ class ModelCheck(
         val order = reads.incrementAndGet()
         val secret = key(provider)
         val print = secret?.let(::fingerprint)
-        events.send(Event.KeyRead(provider, print, order, stored = print == null && stored(provider)))
+        events.trySend(Event.KeyRead(provider, print, order, stored = print == null && stored(provider)))
         return secret
     }
 

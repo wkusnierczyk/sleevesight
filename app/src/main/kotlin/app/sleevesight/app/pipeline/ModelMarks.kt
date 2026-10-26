@@ -37,24 +37,32 @@ class UnavailableMark(
 
 /**
  * The revisions of what an answer depends on, as they stood when its request was issued
- * ([ModelCheck.ticket]): each service's key, and the selection. An answer whose revisions have moved
- * on by the time it arrives counts for nothing.
+ * ([ModelCheck.ticket]): each service's key, and each service's selection (its model, and whether
+ * it is the one switched on). An answer whose service's revisions have moved on by the time it
+ * arrives counts for nothing; so does any answer under a ticket [never] to count, which is what a
+ * ticket asked for once the loop has ended is.
  */
 class Ticket internal constructor(
     internal val keys: Map<ProviderId, Long>,
-    internal val selection: Long,
-)
+    internal val selection: Map<ProviderId, Long>,
+    internal val never: Boolean = false,
+) {
+    internal companion object {
+        /** A ticket under which no answer counts. */
+        val NEVER = Ticket(emptyMap(), emptyMap(), never = true)
+    }
+}
 
 /**
  * What [ModelCheck]'s loop keeps, and the rules it applies, one event at a time: only the loop
  * touches it, so each rule reads and writes it at once, with nothing in between.
  *
- * - The selection ([selected]): each service's selected model, and the one switched on. Its
- *   revision moves when either changes.
+ * - The selection ([selected]): each service's selected model, and the one switched on. A
+ *   service's revision moves when its model changes, or when it is switched on or off.
  * - Each service's key ([keyRead]): the fingerprint of the key last read, and the revision, which
- *   moves when the fingerprint does. A read issued before the last one applied is stale and
- *   dropped; one that found no key while the key is still stored (a read that failed for now) keeps
- *   what was known.
+ *   moves when the fingerprint does. A read that found no key while the key is still stored (a read
+ *   that failed for now) is ignored, and counts as no read at all; of the others, one issued before
+ *   the last one applied is stale and dropped.
  * - The marks ([listed], [answered]): an answer counts only if it was made with the key known now
  *   (when one is known), for the model selected now (once the settings are read), and both
  *   revisions are those of its [Ticket].
@@ -71,13 +79,13 @@ internal class ModelMarks(
     )
 
     private var selection: Selection? = null
-    private var selectionRevision = 0L
+    private val selectionRevisions = HashMap<ProviderId, Long>()
     private val prints = HashMap<ProviderId, String?>()
     private val readOrder = HashMap<ProviderId, Long>()
     private val keyRevisions = HashMap<ProviderId, Long>()
 
     /** The revisions now, for a request about to be issued. */
-    fun ticket(): Ticket = Ticket(keyRevisions.toMap(), selectionRevision)
+    fun ticket(): Ticket = Ticket(keyRevisions.toMap(), selectionRevisions.toMap())
 
     /**
      * The settings read: the marks of a model no longer selected, and, once another service is
@@ -86,7 +94,13 @@ internal class ModelMarks(
     fun selected(settings: Settings) {
         val before = selection
         val now = Selection(settings.aiProvider, providers.associateWith { settings.model(it) })
-        if (before != null && (before.on != now.on || before.models != now.models)) selectionRevision++
+        if (before != null) {
+            for (provider in providers) {
+                val toggled = (before.on == provider) != (now.on == provider)
+                val moved = toggled || before.models[provider] != now.models[provider]
+                if (moved) selectionRevisions[provider] = (selectionRevisions[provider] ?: 0L) + 1
+            }
+        }
         selection = now
         val switched = before != null && before.on != now.on
         marks =
@@ -106,9 +120,10 @@ internal class ModelMarks(
         order: Long,
         stored: Boolean,
     ) {
+        // A read that failed for now says nothing, and must not stand in for the reads issued before it.
+        if (print == null && stored) return
         if (order <= (readOrder[provider] ?: 0L)) return
         readOrder[provider] = order
-        if (print == null && stored) return
         val known = provider in prints
         if (known && prints[provider] != print) keyRevisions[provider] = (keyRevisions[provider] ?: 0L) + 1
         prints[provider] = print
@@ -170,8 +185,9 @@ internal class ModelMarks(
         val now = selection
         val sameKey = provider !in prints || prints[provider] == print
         val sameRevisions =
-            (keyRevisions[provider] ?: 0L) == (ticket.keys[provider] ?: 0L) && selectionRevision == ticket.selection
-        return sameKey && sameRevisions && (now == null || now.models[provider] == model)
+            (keyRevisions[provider] ?: 0L) == (ticket.keys[provider] ?: 0L) &&
+                (selectionRevisions[provider] ?: 0L) == (ticket.selection[provider] ?: 0L)
+        return !ticket.never && sameKey && sameRevisions && (now == null || now.models[provider] == model)
     }
 
     companion object {

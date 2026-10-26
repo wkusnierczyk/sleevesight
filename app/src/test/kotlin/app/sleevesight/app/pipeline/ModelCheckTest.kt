@@ -438,8 +438,8 @@ class ModelCheckTest {
             keyChanges.value++
             runCurrent()
 
-            // Meanwhile the new key is saved, read (by the model choice's list, which reads it on its
-            // own while the scan waits), and its call refused.
+            // Meanwhile the new key is saved, read by a check (which reads it on its own while the
+            // scan waits), and its call refused.
             reader = { saved }
             saved = NEW_KEY
             check.check(ProviderId.ANTHROPIC, HAIKU)
