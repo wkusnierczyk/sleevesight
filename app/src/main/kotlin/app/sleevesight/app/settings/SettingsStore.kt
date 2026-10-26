@@ -97,6 +97,21 @@ class SettingsStore(
     }
 
     /**
+     * Drops [packageName] from *Players* once Android says the app is gone (#535;
+     * [PlayerRemovedReceiver]): reinstalled, it is listed again as any new player is, once it reports
+     * music, switched off ([playerSeen]). A player listed by default (Spotify) keeps its entry:
+     * dropping a default's `off` would switch it back on, against the user's choice, once it is
+     * installed again. Nothing else deletes an entry: an app the phone does not show this app is not
+     * proof it is uninstalled (package visibility), so *Players* only hides it.
+     */
+    suspend fun forgetPlayer(packageName: String) {
+        if (packageName in defaults.followedPlayers) return
+        update { s ->
+            if (packageName in s.followedPlayers) s.copy(followedPlayers = s.followedPlayers - packageName) else s
+        }
+    }
+
+    /**
      * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
      * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
      * result says whether it was saved: false after an I/O error, which leaves the setting as it was.
