@@ -160,6 +160,11 @@ object InsightPrompt {
      * answered `NO_EVIDENCE` for a track with one usable line; naming the title, artists and release
      * left most of the padding. The line is cited and true.
      *
+     * Such corrections in the open still happen with this wording (#597, on the phone, prompt
+     * version 6), rarely. They are taken out in code before the check (`SelfCorrection`), which
+     * keeps only the corrected version; a wording against them would need live runs on thinly
+     * documented tracks to show it costs less than they do.
+     *
      * The first rule keeps the simulator's "every factual sentence" and this rule its "Write no
      * sentence without a citation": asking for an id on every sentence, before its full stop, in
      * the first rule made the model reason at length on a few tracks of each album (#399).

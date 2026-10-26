@@ -79,6 +79,7 @@ private fun Meta(
             if (counts.unknown > 0) {
                 add(pluralStringResource(R.plurals.home_meta_unknown, counts.unknown, counts.unknown))
             }
+            if (grounded.withdrawn != null) add(stringResource(R.string.home_meta_self_corrected))
             if (cached) add(stringResource(R.string.home_meta_kept))
         }
     MetaLine(parts.joinToString(" · "), modifier)

@@ -58,6 +58,9 @@ class TesterReportTest {
     private fun TesterSnapshot.copy(build: AppBuild) =
         TesterSnapshot(at, zone, build, settings, playing, playback, position, view, events, learned)
 
+    private fun TesterSnapshot.copy(view: PipelineView) =
+        TesterSnapshot(at, zone, build, settings, playing, playback, position, view, events, learned)
+
     private fun allParts(snapshot: TesterSnapshot) =
         TesterPart.entries.mapNotNull { part -> TesterReport.part(part, snapshot)?.let { part to it } }
 
@@ -147,6 +150,26 @@ class TesterReportTest {
         )) {
             assertTrue("$line in:\n$text", text.lines().contains(line))
         }
+    }
+
+    @Test
+    fun theInsightTakenOutAsTheModelsCorrectionOfItsOwnReplyIsInTheReportAfterTheShownOne() {
+        val corrected =
+            written(
+                "It was recorded in 1973 [MB1]. It is great.\n\n" +
+                    "Wait, that second sentence is not supported, so I'll drop it. Here is the corrected insight:\n\n" +
+                    "It was recorded in 1973 [MB1].",
+            )
+        val view = PipelineView(track = track(insight = corrected), aiReady = true)
+        val snapshot = snapshot().let { it.copy(view = view) }
+        val lines = TesterReport.nowPlaying(snapshot).lines()
+        val shown = lines.indexOf("It was recorded in 1973 [MB1].")
+        assertTrue(lines.joinToString("\n"), shown >= 0)
+        assertEquals("Taken out, the model's correction of its own reply (not shown, not checked):", lines[shown + 1])
+        assertEquals("It was recorded in 1973 [MB1]. It is great.", lines[shown + 2])
+        assertTrue(lines.contains("Citation check: ok 1, model 0, hedge 0, uncited 0, unknown 0"))
+        // Without a correction, no such line.
+        assertFalse(TesterReport.nowPlaying(snapshot()).contains("Taken out"))
     }
 
     @Test

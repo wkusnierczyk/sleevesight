@@ -1,0 +1,183 @@
+package app.sleevesight.core.synthesis
+
+import app.sleevesight.fixtures.Fixtures
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * A reply that corrects itself in the open (#597) shows and is checked as its fresh version only;
+ * an insight's own text is never cut. The corrections are the phone's (#597) and the six found in
+ * the CLI's recorded replies of #399's and #424's measurements (917 distinct replies, 2026-10-21 to
+ * 2026-10-25, Claude Haiku 5.5), each as written.
+ */
+class SelfCorrectionTest {
+    private fun written(
+        reply: String,
+        ids: Set<String> = IDS,
+    ): GroundedText = assertIs<InsightReply.Written>(GroundingCheck.check(reply, ids, allowModel = false)).grounded
+
+    @Test
+    fun `the phone's reply shows only its corrected version, and its counts are that version's`() {
+        val grounded = written(PHONE)
+        assertEquals(PHONE_KEPT, grounded.text)
+        assertEquals(GroundingCounts(ok = 1, model = 0, hedge = 0, uncited = 0, unknown = 0), grounded.counts)
+        assertEquals(listOf(PHONE_KEPT), grounded.paragraphs.flatten().map { it.text })
+        val withdrawn = assertNotNull(grounded.withdrawn)
+        assertTrue(withdrawn.startsWith("Lara Rosseel released \"Andrew\""), withdrawn)
+        assertTrue(withdrawn.endsWith("Here is the corrected insight:"), withdrawn)
+    }
+
+    @Test
+    fun `each recorded correction keeps its last version, cited and uncommented`() {
+        for ((reply, kept) in RECORDED) {
+            val grounded = written(reply)
+            assertEquals(kept, grounded.text, reply)
+            assertEquals(0, grounded.counts.uncited, reply)
+            assertNotNull(grounded.withdrawn, reply)
+        }
+    }
+
+    @Test
+    fun `quotation marks around the whole corrected version are taken off, a title's kept`() {
+        val wrapped =
+            "It came out in 2022 [MB1]. It sets the album's tone.\n\n" +
+                "Wait, that second sentence is not supported, so here is the corrected insight:\n\n" +
+                "\"It came out in 2022 [MB1].\""
+        assertEquals("It came out in 2022 [MB1].", written(wrapped).text)
+        val curly = wrapped.replace("\"It came", "“It came").replace("[MB1].\"", "[MB1].”")
+        assertEquals("It came out in 2022 [MB1].", written(curly).text)
+        val citedAfter = wrapped.replace("[MB1].\"", "[MB1]\"")
+        assertEquals("It came out in 2022 [MB1]", written(citedAfter).text)
+        // Opens with a quoted title and ends with one, a stop inside: no marks around the whole.
+        val titles =
+            "It came out in 2022 [MB1]. It sets the tone.\n\n" +
+                "Wait, I'll drop the second sentence. Corrected reply:\n\n" +
+                "\"Andrew\" opens the album [MB1]. It is on \"Hert.\""
+        assertEquals("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", written(titles).text)
+    }
+
+    @Test
+    fun `a version corrected twice keeps its last`() {
+        val reply =
+            "A [MB1]. B.\n\nWait, the second sentence is uncited. Here is the corrected insight:\n\n" +
+                "A [MB1]. C.\n\nActually, that sentence is not in the evidence either, so I'll drop it.\n\nA [MB1]."
+        val grounded = written(reply)
+        assertEquals("A [MB1].", grounded.text)
+        val withdrawn = assertNotNull(grounded.withdrawn)
+        assertTrue(withdrawn.startsWith("A [MB1]. B.\n\nWait") && withdrawn.endsWith("so I'll drop it."), withdrawn)
+    }
+
+    @Test
+    fun `a sentence that opens with Actually or Wait, in a reply that does not correct itself, is kept`() {
+        val replies =
+            listOf(
+                // A sentence of the insight that opens with "Actually", cited or not.
+                "It was recorded in 1965 [MB1].\n\nActually, the band cut it in one take [W1].",
+                "It was recorded in 1965 [MB1].\n\nActually, the band cut it in one take.\n\n" +
+                    "It topped the charts [W1].",
+                // A title that is an opener.
+                "\"Wait\" first appeared on Rubber Soul [MB1].\n\nIt was written by Lennon and McCartney [MB2].",
+                "It was recorded in 1965 [MB1].\nWait is the album's sixth track.\nIt topped the charts [W1].",
+                // An aside with nothing after it: the reply shows as written, the aside flagged.
+                "It was recorded in 1965 [MB1]. It is great.\n\nWait, that second sentence is not supported.",
+                // A version after the aside that cites nothing.
+                "It was recorded in 1965 [MB1].\n\nWait, I'll drop the first sentence. Here is the insight:\n\n" +
+                    "It is great.",
+                // An aside as the reply's first line: no draft before it.
+                "Wait, here is the corrected insight:\n\nIt was recorded in 1965 [MB1].",
+                // An aside that shares its line with the version.
+                "It was recorded in 1965 [MB1]. It is great. Wait, I'll drop that. It topped the charts [W1].",
+            )
+        for (reply in replies) {
+            val grounded = written(reply)
+            assertEquals(reply.trim(), grounded.text, reply)
+            assertNull(grounded.withdrawn, reply)
+        }
+    }
+
+    @Test
+    fun `NO_EVIDENCE stays a reply of its own`() {
+        assertEquals(InsightReply.NoEvidence, GroundingCheck.check("NO_EVIDENCE", IDS, allowModel = false))
+    }
+
+    /** No stored reply of the grounding check's (`grounding/replies.json`) is read as a correction. */
+    @Test
+    fun `no stored reply is read as a correction`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val replies = json.decodeFromString<List<Stored>>(Fixtures.text("grounding/replies.json"))
+        assertTrue(replies.isNotEmpty())
+        for (reply in replies) assertNull(SelfCorrection.of(reply.reply), reply.name)
+    }
+
+    @Serializable
+    private data class Stored(
+        val name: String,
+        val reply: String,
+    )
+
+    private companion object {
+        val IDS = setOf("MB1", "MB2", "W1", "P1")
+
+        // The version the phone's reply should show.
+        const val PHONE_KEPT =
+            "\"Andrew\" is a track from Lara Rosseel's album \"Hert\", first released on 11 March 2022 [MB1]."
+
+        // As the phone showed it (#597), Lara Rosseel's "Andrew".
+        const val PHONE =
+            "Lara Rosseel released \"Andrew\" on 11 March 2022 as part of the album \"Hert\" [MB1]. The track is " +
+                "a good example of how the album sits together as a whole [MB1].\n\n" +
+                "Wait, that second sentence is not supported by the evidence, so I'll drop it. Here is the " +
+                "corrected insight:\n\n" + PHONE_KEPT
+
+        // The recorded replies that corrected themselves, each with the version the card shows.
+        val RECORDED: List<Pair<String, String>> =
+            listOf(
+                "The Veil Between Worlds by Die Hexen was first released on 22 July 2022 [MB1]. It is the opening " +
+                    "track of nothing in particular; the evidence only places it on the album \"You Are Not My " +
+                    "Mother\" [P1].\n\nWait, that second sentence adds a claim the evidence doesn't support, so " +
+                    "I'll correct it. Here is the insight:\n\nThe Veil Between Worlds by Die Hexen was first " +
+                    "released on 22 July 2022 [MB1]. This recording is on the album \"You Are Not My Mother\" [P1]." to
+                    "The Veil Between Worlds by Die Hexen was first released on 22 July 2022 [MB1]. This recording " +
+                    "is on the album \"You Are Not My Mother\" [P1].",
+                "The Veil Between Worlds by Die Hexen was first released on 22 July 2022, on the album You Are Not " +
+                    "My Mother [MB1]. The track is the opening number of that record, so it sets the tone for the " +
+                    "whole album. (Oops, that second sentence is not supported by the evidence.)\n\nLet me correct " +
+                    "that and give you the supported version:\n\nThe Veil Between Worlds by Die Hexen was first " +
+                    "released on 22 July 2022, on the album You Are Not My Mother [MB1]. The player data confirms " +
+                    "that this recording sits on that same release [P1]." to
+                    "The Veil Between Worlds by Die Hexen was first released on 22 July 2022, on the album You Are " +
+                    "Not My Mother [MB1]. The player data confirms that this recording sits on that same release [P1].",
+                "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1]. This " +
+                    "recording is on the release \"CV Home\" [P1].\n\nWait, the player metadata line only repeats " +
+                    "the release and should get no sentence of its own. So the reply is just the first point:\n\n" +
+                    "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1]." to
+                    "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1].",
+                "Alexander S.'s version of \"Here Comes The Sun\" was first released on 20 November 2023, as a " +
+                    "single bearing the same title [MB1]. The song itself is credited to this artist's release, so " +
+                    "the card can simply point to that date and single.\n\nWait, that second sentence adds nothing " +
+                    "the evidence supports and breaks the citation rule, so here is the corrected reply:\n\n" +
+                    "Alexander S.'s version of \"Here Comes The Sun\" was first released on 20 November 2023, as a " +
+                    "single with the same title [MB1]." to
+                    "Alexander S.'s version of \"Here Comes The Sun\" was first released on 20 November 2023, as a " +
+                    "single with the same title [MB1].",
+                "The Veil Between Worlds by Die Hexen was first released on 22 July 2022 on the album You Are Not " +
+                    "My Mother [MB1]. The album title is the only other detail the player confirms about this " +
+                    "recording [P1].\n\nWait, the second sentence repeats release info, which the rules say not to " +
+                    "give its own sentence. Corrected reply:\n\nThe Veil Between Worlds by Die Hexen was first " +
+                    "released on 22 July 2022 on the album You Are Not My Mother [MB1][P1]." to
+                    "The Veil Between Worlds by Die Hexen was first released on 22 July 2022 on the album You Are " +
+                    "Not My Mother [MB1][P1].",
+                "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1]. This " +
+                    "recording is on the release CV Home [P1].\n\nWait, I should correct the second sentence: player " +
+                    "metadata only repeats the release and gets no sentence of its own, so I drop it.\n\n" +
+                    "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1]." to
+                    "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1].",
+            )
+    }
+}

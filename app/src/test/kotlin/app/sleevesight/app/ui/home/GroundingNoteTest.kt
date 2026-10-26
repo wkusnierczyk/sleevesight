@@ -156,6 +156,26 @@ class GroundingNoteTest {
         }
     }
 
+    @Test
+    fun showGroundingDetailsSaysWhenTheModelsSelfCorrectionWasTakenOutAndCountsWhatIsShown() {
+        val details = Settings(developerMode = true, showGroundingDetails = true)
+        val reply =
+            "It was recorded in 1973 [MB1]. It is great.\n\n" +
+                "Wait, that second sentence is not supported, so I'll drop it. Here is the corrected insight:\n\n" +
+                "It was recorded in 1973 [MB1]."
+        show(written(reply), details) {
+            val grounded = plural(R.plurals.home_meta_grounded, 1, 1, 1)
+            compose.onNodeWithText("$grounded · ${text(R.string.home_meta_self_corrected)}").assertExists()
+            assertEquals(0, count("Wait,", substring = true))
+            assertEquals(0, count("It is great", substring = true))
+        }
+        // Without the details, no note: the version shown is cited throughout.
+        show(written(reply)) {
+            assertNoUnbackedNote()
+            assertEquals(0, count(text(R.string.home_meta_self_corrected), substring = true))
+        }
+    }
+
     private companion object {
         const val NOT_BACKED = "not backed by the sources"
     }

@@ -53,11 +53,16 @@ data class GroundingCounts(
  * `[M]` citations by that, not by the setting now, and not by whether any sentence came out
  * [SentenceStatus.MODEL]: a sentence citing `[M]` beside a line that does not exist is
  * [SentenceStatus.UNKNOWN] either way.
+ *
+ * [text] is what is shown and checked: the reply, or, when the model corrected itself in the open
+ * ([SelfCorrection], #597), only its fresh version, with the draft and the comment on it in
+ * [withdrawn] (null when there was none), for the developer details and the reports.
  */
 data class GroundedText(
     val text: String,
     val paragraphs: List<List<CheckedSentence>>,
     val allowModel: Boolean,
+    val withdrawn: String? = null,
 ) {
     val counts: GroundingCounts by lazy {
         val all = paragraphs.flatten().groupingBy { it.status }.eachCount()
@@ -89,6 +94,8 @@ sealed interface InsightReply {
  * Markdown mark ([splitSentences]; #46, #423, #574), and prompt version 2's fixed sentence for a gap,
  * [GAP_SENTENCE], is a hedge (#46). The tests
  * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
+ * Before it splits a reply, a correction the model made of it in the open is taken out, leaving
+ * the fresh version ([SelfCorrection], #597): the counts describe what the card shows.
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
  * valid citation passes. Hedge detection is English only, as the prompts are. Patterns are portable
@@ -124,8 +131,10 @@ object GroundingCheck {
         ids: Set<String>,
         allowModel: Boolean,
     ): InsightReply {
-        val text = reply.trimJs()
-        if (isNoEvidence(text)) return InsightReply.NoEvidence
+        val whole = reply.trimJs()
+        if (isNoEvidence(whole)) return InsightReply.NoEvidence
+        val correction = SelfCorrection.of(whole)
+        val text = correction?.kept ?: whole
         val paragraphs =
             text
                 .split(PARAGRAPH_BREAK)
@@ -134,7 +143,7 @@ object GroundingCheck {
                         classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
                     }
                 }.filter { it.isNotEmpty() }
-        return InsightReply.Written(GroundedText(text, paragraphs, allowModel))
+        return InsightReply.Written(GroundedText(text, paragraphs, allowModel, correction?.withdrawn))
     }
 
     /**
