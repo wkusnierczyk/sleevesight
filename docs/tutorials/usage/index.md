@@ -190,7 +190,7 @@ Nothing is written again unless you tap *Rewrite*, which is one call, or two in 
 
 ### Automatic writing
 
-By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Manual: only when I tap Write* offers *Write insight* on every track.
+By default, [*Reactive*]({{ '/docs/tutorials/settings/' | relative_url }}) writes an insight for every track (*On track change*), so each track change is a call. *On skip* writes only the tracks you skip to in your player; a track that ended on its own gets its sources and *Write insight*. Skips are told from natural ends by the time left on the track, and, for Spotify, by the playback states just before the change, with the player's [*Crossfade*]({{ '/docs/tutorials/settings/' | relative_url }}) detected by default. *Manual* (only when you tap *Write insight*) offers *Write insight* on every track.
 
 Automatic writing needs a first tap:
 
