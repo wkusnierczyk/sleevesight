@@ -1,5 +1,8 @@
 package app.sleevesight.app.ui.settings
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -103,15 +106,53 @@ internal data class Landing(
  */
 internal val LocalSettingsNavigator = staticCompositionLocalOf<SettingsNavigator?> { null }
 
-/** [content] with a [SettingsNavigator] over [folds], for this visit to the settings. */
+/**
+ * [content] with a [SettingsNavigator] over [folds], for this visit to the settings, and the way its
+ * scrolling column brings a landed row into view ([LandingScroll]). `LocalBringIntoViewSpec` is
+ * experimental in Compose; without it, a landed row would have to be scrolled by hand from its
+ * measured place in the column.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ProvideSettingsNavigator(
     folds: SectionFolds,
     content: @Composable () -> Unit,
 ) {
     val navigator = remember(folds) { SettingsNavigator(folds) }
-    CompositionLocalProvider(LocalSettingsNavigator provides navigator, content = content)
+    val usual = LocalBringIntoViewSpec.current
+    val scroll = remember(navigator, usual) { LandingScroll(navigator, usual) }
+    CompositionLocalProvider(
+        LocalSettingsNavigator provides navigator,
+        LocalBringIntoViewSpec provides scroll,
+        content = content,
+    )
 }
+
+/**
+ * How the settings' column brings a row into view: while a link lands ([SettingsNavigator.landing]),
+ * with the row a quarter of the way down ([LANDING_KEYLINE]), where the eye looks for it, rather than
+ * at the bottom edge, as the least scroll that shows it would leave it; else as [usual], so moving
+ * through the rows with a keyboard scrolls only as far as it needs. The column cannot scroll past
+ * its ends, so a row near the end of the list stays lower.
+ */
+private class LandingScroll(
+    private val navigator: SettingsNavigator,
+    private val usual: BringIntoViewSpec,
+) : BringIntoViewSpec {
+    override fun calculateScrollDistance(
+        offset: Float,
+        size: Float,
+        containerSize: Float,
+    ): Float =
+        if (navigator.landing != null) {
+            offset - containerSize * LANDING_KEYLINE
+        } else {
+            usual.calculateScrollDistance(offset, size, containerSize)
+        }
+}
+
+/** Where a landed row's top comes to rest, as a fraction of the column's height from its top. */
+private const val LANDING_KEYLINE = 0.25f
 
 /**
  * A link, [text], that unfolds [target]'s section and lands on [target] ([SettingsNavigator.go]),
@@ -147,7 +188,8 @@ internal fun sentenceWith(
 
 /**
  * [content], a row, as where a link to [target] lands (#539): when one is followed, the row is
- * scrolled into view once laid out, and takes the focus, so a keyboard, and a screen reader, which
+ * scrolled, once laid out, to a quarter of the way down the column ([LandingScroll]), and takes the
+ * focus, so a keyboard, and a screen reader, which
  * follows the focus, go on from it. The focus shows as the row's focus highlight; a row that would
  * take no focus while the phone is touched rather than driven by a keyboard (Compose's clickable
  * rows) is let take it for [LANDING], a moment to see where the link led, and then lets it go, as
@@ -203,7 +245,8 @@ private val LANDING = 1300.milliseconds
 /**
  * Under a service that needs the key [id] (#539): "Set your Anthropic API key here.", the key's name
  * a link that unfolds *Secrets* and lands on the key's row, shown whether or not a key is saved, so
- * the key is always one tap away; with one saved, the row there changes it.
+ * the key is always one tap away; with one saved, the row there changes it. A row that shows it
+ * says what is wrong with the key without naming *Secrets* ([keyNote] with `linked`).
  */
 @Composable
 internal fun KeyLink(id: SecretId) {

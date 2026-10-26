@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -168,7 +169,7 @@ class SettingsKeyLinksTest {
         show(SettingsSection.SOURCES) {
             waitForNode(hasText(sentence(SecretId.LASTFM)))
             // No note that the key is needed, but the way to it, which now changes it.
-            val needs = app.getString(R.string.settings_needs_key, text(R.string.settings_source_lastfm))
+            val needs = app.getString(R.string.settings_needs_key_linked, text(R.string.settings_source_lastfm))
             assertTrue(compose.onAllNodes(hasText(needs, substring = true)).fetchSemanticsNodes().isEmpty())
             follow(SecretId.LASTFM)
             landedOn(SecretId.LASTFM)
@@ -197,6 +198,28 @@ class SettingsKeyLinksTest {
             // To go on from: Enter opens the key's dialog, Tab goes to the next row.
             val focused = hasAnyAncestor(hasTestTag(SettingsTarget.key(SecretId.EXA).tag)) and isFocused()
             assertTrue(compose.onAllNodes(focused).fetchSemanticsNodes().isNotEmpty())
+        }
+
+    @Test
+    fun aLandedRowRestsAQuarterOfTheWayDown() =
+        show(SettingsSection.SOURCES) {
+            follow(SecretId.LASTFM)
+            landedOn(SecretId.LASTFM)
+            compose.waitForIdle()
+            val column = compose.onNode(hasScrollAction()).fetchSemanticsNode().boundsInRoot
+            val row = compose.onNodeWithTag(SettingsTarget.key(SecretId.LASTFM).tag).fetchSemanticsNode().boundsInRoot
+            // Not at the bottom edge, as the least scroll that shows it would leave it.
+            assertEquals(column.top + column.height / 4, row.top, 2f)
+        }
+
+    @Test
+    fun aRowWithTheLinkSaysTheKeyIsNeededWithoutNamingSecrets() =
+        show(SettingsSection.SOURCES) {
+            val lastFm = text(R.string.settings_source_lastfm)
+            waitForNode(hasText(app.getString(R.string.settings_needs_key_linked, lastFm), substring = true))
+            // The link under it says where the key is.
+            val named = app.getString(R.string.settings_needs_key, lastFm)
+            assertTrue(compose.onAllNodes(hasText(named, substring = true)).fetchSemanticsNodes().isEmpty())
         }
 
     @Test

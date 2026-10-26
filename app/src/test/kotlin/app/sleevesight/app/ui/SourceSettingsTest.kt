@@ -197,8 +197,9 @@ class SourceSettingsTest {
         show(SettingsSection.SOURCES) {
             val exa = compose.onNode(holding(R.string.settings_engine_exa_summary)).performScrollTo()
             exa.assertIsOn()
-            // No key yet: it says where the key goes.
-            waitForNode(holding(needsKey(R.string.settings_key_recipient_exa)))
+            // No key yet: it says so, above the link to where the key goes.
+            val exaName = text(R.string.settings_key_recipient_exa)
+            waitForNode(holding(app.getString(R.string.settings_needs_key_linked, exaName)))
 
             exa.performClick()
             waitFor("Exa stored off") { WebEngine.EXA !in current().webEngines }

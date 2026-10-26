@@ -41,6 +41,9 @@
     <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
     <string name="settings_set_key">Set your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
+    <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
+    <string name="settings_needs_key_linked">Needs your %1$s key.</string>
+    <string name="settings_key_unreadable_linked">Your %1$s key can no longer be read.</string>
 
     <!-- Genres. -->
     <string name="settings_show_genres">Show genres</string>

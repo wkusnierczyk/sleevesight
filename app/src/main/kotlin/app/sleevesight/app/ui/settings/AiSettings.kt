@@ -57,7 +57,7 @@ private fun ProviderRows(
     SwitchRow(
         title = name,
         // Switched on, it says when its key is missing or cannot be read: insights wait for it.
-        summary = keyId?.let { keyNote(it, secrets) }.takeIf { on },
+        summary = keyId?.let { keyNote(it, secrets, linked = true) }.takeIf { on },
         checked = on,
         below = keyId?.let { { KeyLink(it) } },
     ) { switchedOn ->
