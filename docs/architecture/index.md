@@ -67,7 +67,7 @@ Everything the app keeps is on the phone, and none of it is part of Android's ba
 
 ### The user interface
 
-One Android activity in Jetpack Compose: the first-run screen, the home screen with the now-playing card, the insight, its citations and *Sources*, the settings, the credits and the diagnostics. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Load keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
+One Android activity in Jetpack Compose: the first-run screen, the home screen with the playing track, the insight, its citations and *Sources*, the settings, the credits and the diagnostics. Its colours come from the album art, computed on the phone. Its font is bundled, so nothing is fetched to show text. API keys can be pasted, scanned from a QR code with the camera (*Load keys*), or typed on a computer (*Type on a computer*), over Bluetooth.
 
 ### The site's pages
 

@@ -84,22 +84,24 @@ internal fun PageLink(
  * first-run screen opened again (#549): a bar with the back arrow, which goes back to where the page
  * was opened from ([onBack]), as Android's back does, and a screen reader reads as *Back*, and
  * [title], which it reads as a heading; under it, [content], scrolling, [padding] in from the edges,
- * its items [spacing] apart. The bar and the page are in [containerColor]: for Home's pages, in the
- * colours they are drawn in (the album art's), the colour of Home's box, so the item reads as the box
- * opened to the whole screen.
+ * its items [spacing] apart. The bar and the page are in [containerColor]: for Home's pages, the
+ * app's own background, as Home's is (#609), with the album art's colours on the accents only.
  */
 @Suppress("LongParameterList") // The title and the way back; how the page looks, each with a default; its content.
 @Composable
 internal fun PageFrame(
     title: String,
     onBack: () -> Unit,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     padding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     spacing: Dp = 12.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
         containerColor = containerColor,
+        // Named, not `contentColorFor(containerColor)`: Home's pages pass the app's background under the
+        // art's scheme, which has no role of that colour, and the lookup would fall through.
+        contentColor = MaterialTheme.colorScheme.onSurface,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = { PageBar(title, onBack, containerColor) },
     ) { bars ->

@@ -1,14 +1,12 @@
 package app.sleevesight.app.ui.home
 
 import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -48,6 +46,8 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * @property playerLabel a player's name, from its package.
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
+ * @property playerLaunch the intent that opens a player from its launcher entry, by its package:
+ *   the row's way in when the session gives no usable screen (#596).
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  */
@@ -63,6 +63,7 @@ class HomeFeed(
     val playerActivity: () -> PendingIntent?,
     val write: (RunKey, NowPlaying) -> Unit,
     val stop: (CallId) -> Unit,
+    val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
 )
 
@@ -120,6 +121,7 @@ private fun HomeFeed.actions(
     normalize = normalizer::normalize,
     playerLabel = playerLabel,
     playerActivity = playerActivity,
+    playerLaunch = playerLaunch,
     write = write,
     stop = stop,
     openSettings = openSettings,
@@ -141,7 +143,8 @@ internal class NowPlayingState(
 )
 
 /**
- * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
+ * How the screen names what it shows, and where its taps go. The player row opens [playerActivity],
+ * else [playerLaunch] for the player's package (#596). [mail] takes a report of a problem
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
@@ -152,6 +155,7 @@ internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
+    val playerLaunch: (String) -> Intent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
     val mail: MailHandoff? = null,
@@ -163,8 +167,9 @@ internal class NowPlayingActions(
 /**
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
  * the playback position, the key data, the genre labels, *Key insights* and *Sources*,
- * in the art's colours. Nothing playing in a followed player shows the idle line. A track the
- * pipeline has not reached yet shows at once, its evidence and insight to come.
+ * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
+ * followed player shows the idle line. A track the pipeline has not reached yet shows at once, its
+ * evidence and insight to come.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
  * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
@@ -210,37 +215,33 @@ internal fun NowPlayingContent(
             { id -> focus.cite(id)?.let(fold::reach) }
         }
 
+    // Straight on Home's background, with no panel around it (#609): the art's scheme colours the
+    // parts drawn in its roles (the position bar, the chips, the buttons), not a ground of its own.
     ArtTheme(state.art) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                PlayerRow(playing.player, state.playback, actions)
-                ArtAndProgress(state.art, state.playback, header.duration)
-                KeyData(normalized, header, headerYears(track, header))
-                // Until the settings' first read, the layout is not known: neither item is drawn,
-                // rather than the boxes for a frame and then the pages (#447).
-                if (settings != null) Genres(track, settings, actions.openPage.takeIf { pages })
-                // A tap carries what it was shown for: the run Write is offered for, beside this track.
-                val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
-                val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
-                // The note of a model found unavailable opens *AI services* at that model's row (#581).
-                val onModelSettings: () -> Unit = {
-                    state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
-                        ?: actions.openSettings()
-                }
-                InsightCard(
-                    track?.insight ?: NOT_YET,
-                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
-                    InsightActions(onWrite, onStop, cite, onModelSettings) { reportedTrack, written ->
-                        reporting = Reported(reportedTrack, written)
-                    },
-                    shown.details,
-                )
-                if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            PlayerRow(playing.player, state.playback, actions)
+            ArtAndProgress(state.art, state.playback, header.duration)
+            KeyData(normalized, header, headerYears(track, header))
+            // Until the settings' first read, the layout is not known: neither item is drawn,
+            // rather than the boxes for a frame and then the pages (#447).
+            if (settings != null) Genres(track, settings, actions.openPage.takeIf { pages })
+            // A tap carries what it was shown for: the run Write is offered for, beside this track.
+            val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
+            val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
+            // The note of a model found unavailable opens *AI services* at that model's row (#581).
+            val onModelSettings: () -> Unit = {
+                state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
+                    ?: actions.openSettings()
             }
+            InsightCard(
+                track?.insight ?: NOT_YET,
+                insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
+                InsightActions(onWrite, onStop, cite, onModelSettings) { reportedTrack, written ->
+                    reporting = Reported(reportedTrack, written)
+                },
+                shown.details,
+            )
+            if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
     }
 }

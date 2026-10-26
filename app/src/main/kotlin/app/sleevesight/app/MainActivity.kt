@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
             normalizer = Normalizer(JvmAccentFolder),
             playerLabel = graph::playerLabel,
             playerActivity = graph.sessions::playerActivity,
+            playerLaunch = graph::playerLaunchIntent,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
             unavailableModel = graph.unavailableModel,
