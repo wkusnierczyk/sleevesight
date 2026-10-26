@@ -23,11 +23,17 @@ enum class SentenceStatus {
     UNKNOWN,
 }
 
-/** One sentence of a reply, its citations in order (`W1`, `M`), and its [status]. */
+/**
+ * One sentence of a reply, its citations in order (`W1`, `M`), and its [status]; [afterLineBreak]
+ * when a line break, not only spaces, came before it in its paragraph (#574), so a card shows a
+ * list's items and a heading on their own lines, as the reply wrote them. Never true of a
+ * paragraph's first sentence.
+ */
 data class CheckedSentence(
     val text: String,
     val cites: List<String>,
     val status: SentenceStatus,
+    val afterLineBreak: Boolean = false,
 )
 
 /** The count of sentences in each [SentenceStatus], for the log and the card's footer. */
@@ -123,8 +129,11 @@ object GroundingCheck {
         val paragraphs =
             text
                 .split(PARAGRAPH_BREAK)
-                .map { paragraph -> splitSentences(paragraph).map { classify(it, ids, allowModel) } }
-                .filter { it.isNotEmpty() }
+                .map { paragraph ->
+                    sentencesOf(paragraph).map { (sentence, afterLineBreak) ->
+                        classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
+                    }
+                }.filter { it.isNotEmpty() }
         return InsightReply.Written(GroundedText(text, paragraphs, allowModel))
     }
 
@@ -163,10 +172,14 @@ object GroundingCheck {
      * list's number at a line's start (`1.`) ends no sentence. The cost: a list item or a heading
      * with no stop of its own is joined to what follows, as a line break alone ends nothing.
      */
-    fun splitSentences(text: String): List<String> {
+    fun splitSentences(text: String): List<String> = sentencesOf(text).map { it.first }
+
+    // The sentences of [text] ([splitSentences]), each with whether a line break came before it.
+    private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
-        val sentences = mutableListOf<String>()
+        val sentences = mutableListOf<Pair<String, Boolean>>()
         var start = 0
+        var startsLine = false
         var i = 0
         while (i < t.length) {
             if (!isJsWhitespace(t[i])) {
@@ -182,13 +195,14 @@ object GroundingCheck {
             val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
             val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
             if (opens && endsSentence(t, i, listed)) {
-                sentences += t.substring(start, i)
+                sentences += t.substring(start, i) to startsLine
                 start = end
+                startsLine = lineBreak
             }
             i = end
         }
-        sentences += t.substring(start)
-        return sentences.filter { it.trimJs().isNotEmpty() }
+        sentences += t.substring(start) to startsLine
+        return sentences.filter { it.first.trimJs().isNotEmpty() }
     }
 
     private fun classify(
@@ -364,9 +378,6 @@ object GroundingCheck {
         return p.takeIf { letters > 0 && it >= 0 && t[it] == '[' }
     }
 
-    // The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
-    private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
-
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
     private const val WORD_OPENERS = "\"“("
     private const val CLOSING_QUOTES = "\"”'’"
@@ -384,3 +395,6 @@ object GroundingCheck {
                 "isn't much|is not much|nothing (else )?is (known|documented)",
         )
 }
+
+// The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
+private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")

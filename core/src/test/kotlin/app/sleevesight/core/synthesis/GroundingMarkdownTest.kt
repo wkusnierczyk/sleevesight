@@ -43,6 +43,28 @@ class GroundingMarkdownTest {
     }
 
     @Test
+    fun `a sentence says whether a line break came before it, so a card can keep the reply's lines`() {
+        fun breaks(reply: String) =
+            assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("MB1", "W1"), allowModel = false))
+                .grounded.paragraphs
+                .map { paragraph -> paragraph.map { it.afterLineBreak } }
+        assertEquals(
+            listOf(listOf(false, true, true)),
+            breaks("- It was recorded [MB1].\n- It charted [W1].\n- It is great."),
+        )
+        assertEquals(
+            listOf(listOf(false, true)),
+            breaks("# Sundown\nIt was recorded [MB1].\n## Reception\nIt is great."),
+        )
+        assertEquals(
+            listOf(listOf(false, false, true)),
+            breaks("It was recorded [MB1]. It charted [W1].\nIt is great."),
+        )
+        // A paragraph's first sentence comes after no line break of its own.
+        assertEquals(listOf(listOf(false), listOf(false)), breaks("It was recorded [MB1].\n\n- It is great."))
+    }
+
+    @Test
     fun `a heading opens a sentence after a stop, and is joined to the sentence after it`() {
         val reply = "# Sundown\nIt was recorded [MB1].\n## Reception\nIt is great."
         assertEquals(

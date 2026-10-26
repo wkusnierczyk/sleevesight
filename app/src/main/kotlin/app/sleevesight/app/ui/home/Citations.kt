@@ -81,7 +81,8 @@ internal fun CheckedProse(
     val text =
         buildAnnotatedString {
             paragraph.forEachIndexed { i, sentence ->
-                if (i > 0) append(' ')
+                // A sentence the reply began on a new line (a list's item, a heading) shows on one (#574).
+                if (i > 0) append(if (sentence.afterLineBreak) '\n' else ' ')
                 val doubtful = sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
                 appendSentence(sentence.text, policy, styles, onCite, if (doubtful) flagged else null)
             }
