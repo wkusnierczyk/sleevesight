@@ -22,12 +22,17 @@ import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.history.HistoryRecorder
 import app.sleevesight.app.history.HistoryRetention
 import app.sleevesight.app.pipeline.AppPipelineParts
+import app.sleevesight.app.pipeline.ModelCheck
 import app.sleevesight.app.pipeline.PipelineHost
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
+import app.sleevesight.app.pipeline.rebuilds
+import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
+import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
@@ -77,6 +82,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -257,6 +263,21 @@ class AppGraph(
     val aiProviders: Map<ProviderId, AiProvider> = wiring.aiProviders
 
     /**
+     * Whether each AI service's selected model can be used (#540): checked against the service's
+     * model list at start (once lookups are allowed) and at each opening of the model choice, and
+     * marked unavailable by a call the service answers that it does not know the model or refuses
+     * it. While the switched-on service's model is unavailable, no insight is written, and the
+     * settings and Home say so.
+     */
+    val modelCheck =
+        ModelCheck(
+            aiProviders,
+            key = { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } },
+            scope = pipelineScope,
+            stored = { provider -> SecretId.forProvider(provider)?.let { secrets.isStored(it) } == true },
+        )
+
+    /**
      * The latest settings read, for the caches, which read them on every call, the pipeline and
      * the history's recorder and retention, and the home screen and its pages (#447), which come
      * back to them laid out as they were left. Nothing is read before the first run is
@@ -268,6 +289,13 @@ class AppGraph(
      */
     val latestSettings: StateFlow<Settings?> =
         settings.settings.afterAcknowledged(firstRun.state).stateIn(mainScope, SharingStarted.Eagerly, null)
+
+    /**
+     * The switched-on service and its selected model, while that model is found unavailable
+     * ([modelCheck], #540), for Home and the pipeline's rebuilds; null otherwise.
+     */
+    val unavailableModel: StateFlow<UnavailableModel?> =
+        modelCheck.shown(latestSettings).stateIn(mainScope, SharingStarted.Eagerly, null)
 
     private val normalizer = Normalizer(JvmAccentFolder)
 
@@ -382,7 +410,9 @@ class AppGraph(
             changes = sessions.trackChanges,
             latestPlaying = { sessions.nowPlaying.value },
             settings = latestSettings.filterNotNull(),
-            keyChanges = secrets.changes,
+            // A rebuild too when the switched-on service's model is found unavailable, or no longer
+            // is (#540): the parts then leave out, or bring back, the AI access.
+            keyChanges = merge(secrets.changes, modelCheck.rebuilds(latestSettings)),
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.
@@ -391,6 +421,7 @@ class AppGraph(
                     wiring,
                     normalizer,
                     sessionFacts,
+                    modelCheck,
                 ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
@@ -438,6 +469,10 @@ class AppGraph(
             skipLearning.restore()
         }
         pipeline.start(pipelineScope)
+        // The selected model checked at start, and when the service, its model or a key changes (#540).
+        pipelineScope.launch {
+            modelCheck.run(latestSettings.filterNotNull(), secrets.changes, pipeline.lookupsAllowed)
+        }
         // What was kept about artists is deleted whenever *Keep what sources said about each
         // artist* reads off (#420): when it is turned off, and on start while it is off. The switch
         // reads off before the clear starts, so a lookup in progress keeps nothing after it.

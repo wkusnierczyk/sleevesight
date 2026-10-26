@@ -261,9 +261,9 @@ class LastFmArtistCacheTest {
         }
 
     @Test
-    fun `the kept parts' versions follow the adapter's extraction version`() {
-        assertEquals(LastFmAdapter.EXTRACTION_VERSION, LastFmAdapter.ARTIST_PART.extraction)
-        assertEquals(LastFmAdapter.EXTRACTION_VERSION, ArtistCheck.OWNERSHIP_PART.extraction)
+    fun `the kept parts have the answers' version, the results the adapter's extraction version`() {
+        assertEquals(LastFmAdapter.ANSWERS_VERSION, LastFmAdapter.ARTIST_PART.extraction)
+        assertEquals(LastFmAdapter.ANSWERS_VERSION, ArtistCheck.OWNERSHIP_PART.extraction)
         assertEquals(LastFmAdapter.EXTRACTION_VERSION, adapter().extractionVersion)
     }
 

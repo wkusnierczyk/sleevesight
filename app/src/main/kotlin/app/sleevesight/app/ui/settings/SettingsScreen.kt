@@ -29,6 +29,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.pipeline.ModelCheck
+import app.sleevesight.app.pipeline.UnavailableMark
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
@@ -44,6 +46,8 @@ import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -71,6 +75,8 @@ import java.io.IOException
  * names a player by its package, [playerLaunch] gives the intent that opens it, if any, and
  * [installedPlayers] its icon, and which players are installed (#535); null lists every stored
  * player, without an icon.
+ * [modelCheck] holds the services' models found unavailable (#540), which their rows say, and hears
+ * each model list the model choice fetches.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -87,9 +93,12 @@ fun SettingsScreen(
     keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
     playerLaunch: (String) -> Intent? = { null },
     installedPlayers: InstalledPlayers? = null,
+    modelCheck: ModelCheck? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
+    val marks by (modelCheck?.unavailable ?: NONE_UNAVAILABLE).collectAsState()
+    val unavailable = marks.mapValues { it.value.model }
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -120,7 +129,7 @@ fun SettingsScreen(
                         onOpenDiagnostics,
                         onOpenWhatLeaves,
                     )
-                SettingsContent(current, keys, navigation, update) { dialog = it }
+                SettingsContent(current, keys, navigation, unavailable, update) { dialog = it }
             }
         }
     }
@@ -159,8 +168,15 @@ fun SettingsScreen(
                 provider = shown.provider,
                 current = settings?.aiModels?.get(shown.provider),
                 load = {
-                    loadModels(shown.provider, secretStore, aiProviders).also { loaded ->
-                        if (loaded is ModelLoad.Listed) modelNames.learn(loaded.models)
+                    // The list checks the selected model too (#540), with the key it was made with
+                    // and the revisions as it was asked for.
+                    val ticket = modelCheck?.ticket()
+                    loadModels(shown.provider, secretStore, aiProviders) { key, models ->
+                        modelNames.learn(models)
+                        val selected = settings?.model(shown.provider)
+                        if (ticket != null && selected != null) {
+                            modelCheck?.listed(ticket, shown.provider, selected, models, key)
+                        }
                     }
                 },
                 modelName = modelNames::of,
@@ -170,6 +186,9 @@ fun SettingsScreen(
         }
     }
 }
+
+/** No model found unavailable, for a screen without a [ModelCheck]. */
+private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = MutableStateFlow(emptyMap())
 
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
@@ -331,12 +350,14 @@ private fun Notices(
     }
 }
 
-@Suppress("LongMethod") // One fold per section, in the order shown.
+// One fold per section, in the order shown, and what the sections show and change.
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 private fun SettingsContent(
     settings: Settings,
     keys: KeysShown,
     navigation: Navigation,
+    unavailable: Map<ProviderId, String>,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
@@ -353,7 +374,7 @@ private fun SettingsContent(
         FoldedSection(SettingsSection.PLAYERS, folds) { PlayersSection(settings, navigation.players, update) }
         FoldedSection(SettingsSection.SOURCES, folds) { SourcesSection(settings, secrets, update) }
         FoldedSection(SettingsSection.AI_SERVICES, folds) {
-            AiSection(settings, secrets, navigation.modelName, update, open)
+            AiSection(settings, secrets, navigation.modelName, update, open, unavailable)
         }
         FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
         FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }

@@ -15,9 +15,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * A smoke test against the real API, with the developer's key: skipped unless
- * `SLEEVESIGHT_ANTHROPIC_API_KEY` is set, which CI never does. It spends a few tokens of the
- * default model.
+ * A smoke test against the real API, with the developer's key, or the repository's in the scheduled
+ * check of the defaults (`default-models.yml`, #540): skipped unless `SLEEVESIGHT_ANTHROPIC_API_KEY`
+ * is set, which the build never does. It fails when the default model is not listed, is deprecated,
+ * or does not answer, and spends a few tokens of it.
  */
 class AnthropicLiveTest {
     private val key: String? = System.getenv(KEY_VARIABLE)?.takeIf { it.isNotBlank() }
@@ -34,7 +35,10 @@ class AnthropicLiveTest {
             NetClient(config).use { net ->
                 val provider = AnthropicProvider(net, config.retry)
                 val models = assertIs<ModelList.Listed>(provider.models(secret)).models
-                assertTrue(models.any { it.id == model }, "the default model $model is not listed")
+                val listed = models.firstOrNull { it.id == model }
+                assertTrue(listed != null, "the default model $model is not listed")
+                // A deprecated default still answers, but is closed to new users: time to change it.
+                assertTrue(listed.offered, "the default model $model is deprecated")
                 val events =
                     provider
                         .stream(

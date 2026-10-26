@@ -14,3 +14,9 @@ internal const val LICENCE_URL = "https://github.com/wkusnierczyk/sleevesight/bl
 
 /** The dependencies page on the site (`docs/dependencies/index.md`, #412), linked from *Credits* (#502). */
 internal const val DEPENDENCIES_PAGE_URL = "https://sleevesight.app/docs/dependencies/"
+
+/**
+ * The page a computer opens for *Type on a computer* (`keyboard.html`, #394), linked from
+ * *Share phone's name with Type on a computer* (#544).
+ */
+internal const val KEYBOARD_PAGE_URL = "https://sleevesight.app/keyboard.html"

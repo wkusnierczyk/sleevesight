@@ -355,6 +355,32 @@ class OpenAiProviderTest {
         }
 
     @Test
+    fun `a model the account may not stream is refused for the account, not a malformed request`() =
+        runTest {
+            val unverified =
+                """{"error":{"message":"Your organization must be verified to stream this model. Please go to: """ +
+                    """https://platform.openai.com/settings/organization/general and click on Verify """ +
+                    """Organization.","type":"invalid_request_error","param":"stream","code":"unsupported_value"}}"""
+            val (events, net) = events { response(400, unverified) }
+
+            assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_REFUSED)), events)
+            // Not sent again: no retry mends it.
+            assertEquals(1, net.requests.size)
+        }
+
+    @Test
+    fun `a model that does not exist or the key cannot use is a model not found`() =
+        runTest {
+            val gone =
+                """{"error":{"message":"The model `gpt-4.5-preview` does not exist or you do not have access """ +
+                    """to it.","type":"invalid_request_error","param":null,"code":"model_not_found"}}"""
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND)),
+                events { response(404, gone) }.first,
+            )
+        }
+
+    @Test
     fun `a rate limit passed on as a response keeps its Retry-After, and an account out of credit none`() =
         runTest {
             val wait = mapOf("Retry-After" to listOf("20"))
