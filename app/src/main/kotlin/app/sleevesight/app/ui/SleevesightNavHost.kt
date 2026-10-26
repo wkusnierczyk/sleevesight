@@ -167,6 +167,7 @@ fun SleevesightNavHost(
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
         composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
+        composable<HomePage.GenresAt> { homePage(it.toRoute<HomePage.GenresAt>(), it) }
         // The settings, all folded or at a setting (#581); either way, [settings] draws them.
         val settingsPage = @Composable { landOn: SettingsTarget? ->
             val links =
