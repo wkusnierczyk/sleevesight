@@ -34,7 +34,9 @@ data class PlaybackInfo(
     /**
      * The position at [now] as the home screen's bar shows it: [positionAt], except that a state that
      * says it plays at speed 0 (#595) moves at normal speed, as the player says it plays. For the bar
-     * alone: skip detection reads [positionAt].
+     * alone: skip detection reads [positionAt]. A guard, kept though the capture of Spotify Connect
+     * shows no such state: its remote session's `PAUSED` at speed 1 is read as `PLAYING` before this
+     * ([SessionMapping.effectiveState]), and its `PAUSED` at speed 0 stays still.
      */
     fun displayPositionAt(now: Long): Duration? = extrapolated(now, if (speed == 0f) 1f else speed)
 
