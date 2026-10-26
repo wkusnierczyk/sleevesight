@@ -25,12 +25,26 @@ data class PlaybackInfo(
 ) {
     /**
      * The position at [now] (`SystemClock.elapsedRealtime`), extrapolated from the last report while
-     * playing, as skip detection reads the time left (`design/design.md`, *Track changes*).
+     * playing, as skip detection reads the time left (`design/design.md`, *Track changes*). At the
+     * reported speed, as Android defines it: speed 0 does not move, even while `PLAYING` (Media3
+     * reports that during a passing loss of audio focus).
      */
-    fun positionAt(now: Long): Duration? =
+    fun positionAt(now: Long): Duration? = extrapolated(now, speed)
+
+    /**
+     * The position at [now] as the home screen's bar shows it: [positionAt], except that a state that
+     * says it plays at speed 0 (#595) moves at normal speed, as the player says it plays. For the bar
+     * alone: skip detection reads [positionAt].
+     */
+    fun displayPositionAt(now: Long): Duration? = extrapolated(now, if (speed == 0f) 1f else speed)
+
+    private fun extrapolated(
+        now: Long,
+        rate: Float,
+    ): Duration? =
         position?.let {
             val playing = status == PlaybackStatus.PLAYING && now > updatedAt
-            if (playing) it + ((now - updatedAt) * speed).toLong().milliseconds else it
+            if (playing) it + ((now - updatedAt) * rate).toLong().milliseconds else it
         }
 
     companion object {

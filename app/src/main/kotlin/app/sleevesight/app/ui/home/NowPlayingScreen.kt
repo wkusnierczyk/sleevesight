@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,8 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * @property playerLabel a player's name, from its package.
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
+ * @property playerLaunch the intent that opens a player from its launcher entry, by its package:
+ *   the row's way in when the session gives no usable screen (#596).
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
  */
@@ -63,6 +66,7 @@ class HomeFeed(
     val playerActivity: () -> PendingIntent?,
     val write: (RunKey, NowPlaying) -> Unit,
     val stop: (CallId) -> Unit,
+    val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
 )
 
@@ -120,6 +124,7 @@ private fun HomeFeed.actions(
     normalize = normalizer::normalize,
     playerLabel = playerLabel,
     playerActivity = playerActivity,
+    playerLaunch = playerLaunch,
     write = write,
     stop = stop,
     openSettings = openSettings,
@@ -141,7 +146,8 @@ internal class NowPlayingState(
 )
 
 /**
- * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
+ * How the screen names what it shows, and where its taps go. The player row opens [playerActivity],
+ * else [playerLaunch] for the player's package (#596). [mail] takes a report of a problem
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
@@ -152,6 +158,7 @@ internal class NowPlayingActions(
     val normalize: (NowPlaying) -> NormalizedTrack,
     val playerLabel: (String) -> String = { it },
     val playerActivity: () -> PendingIntent? = { null },
+    val playerLaunch: (String) -> Intent? = { null },
     val write: (RunKey, NowPlaying) -> Unit = { _, _ -> },
     val stop: (CallId) -> Unit = {},
     val mail: MailHandoff? = null,
