@@ -68,7 +68,9 @@ import java.io.IOException
  * [onOpenWhatLeaves] the first-run screen, from *About* (#441).
  * [scanner] reads an API key's QR code, or a setup code of several (#268): the camera, but for
  * tests; [keyboard] runs *Type on a computer* (#394): Bluetooth, but for tests. [playerLabel]
- * names a player by its package, and [playerLaunch] gives the intent that opens it, if any.
+ * names a player by its package, [playerLaunch] gives the intent that opens it, if any, and
+ * [installedPlayers] its icon, and which players are installed (#535); null lists every stored
+ * player, without an icon.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -84,6 +86,7 @@ fun SettingsScreen(
     scanner: QrScanner = CameraQrScanner,
     keyboard: ComputerKeyboard = BluetoothComputerKeyboard,
     playerLaunch: (String) -> Intent? = { null },
+    installedPlayers: InstalledPlayers? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -111,7 +114,7 @@ fun SettingsScreen(
             settings?.let { current ->
                 val navigation =
                     Navigation(
-                        PlayerApps(playerLabel, playerLaunch),
+                        PlayerApps(playerLabel, playerLaunch, installedPlayers),
                         modelNames::of,
                         onOpenCredits,
                         onOpenDiagnostics,
@@ -262,11 +265,13 @@ internal sealed interface SettingsDialog {
 /**
  * How the settings name a player and open it: [label] names it by its package; [launch] is the
  * intent that opens it from its launcher entry, or null for a player with none, which offers no
- * link.
+ * link; [installed] gives its icon, and whether it is installed (#535), or is null where that is
+ * not known (tests, previews).
  */
 internal class PlayerApps(
     val label: (String) -> String,
     val launch: (String) -> Intent? = { null },
+    val installed: InstalledPlayers? = null,
 )
 
 /** How the screen names players and models, and where it leads. */

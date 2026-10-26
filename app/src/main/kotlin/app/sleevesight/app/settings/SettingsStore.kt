@@ -97,6 +97,22 @@ class SettingsStore(
     }
 
     /**
+     * Drops from *Players* each player [present] says is no longer on the phone (#535), so an
+     * uninstalled app leaves the list; reinstalled, it is listed again as any new player is, once it
+     * reports music, switched off ([playerSeen]). A player listed by default (Spotify) keeps its
+     * entry, which *Players* hides while it is not installed: dropping a default's `off` would
+     * switch it back on, against the user's choice, once it is installed again. Writes nothing when
+     * no player goes.
+     */
+    suspend fun forgetPlayers(present: (String) -> Boolean) {
+        update { s ->
+            val listed = s.followedPlayers
+            val gone = listed.keys.filterTo(mutableSetOf()) { it !in defaults.followedPlayers && !present(it) }
+            if (gone.isEmpty()) s else s.copy(followedPlayers = listed - gone)
+        }
+    }
+
+    /**
      * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
      * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
      * result says whether it was saved: false after an I/O error, which leaves the setting as it was.
