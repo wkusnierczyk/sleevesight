@@ -175,6 +175,13 @@ enum class AiErrorKind {
     /** The model does not exist, or the key cannot use it. */
     MODEL_NOT_FOUND,
 
+    /**
+     * The model exists, but the account cannot use it as this client calls it: OpenAI's
+     * organization not verified to stream it, Google's tier with no quota at all for it (a limit
+     * of 0). Like [MODEL_NOT_FOUND], another model or service mends it, and no retry does.
+     */
+    MODEL_REFUSED,
+
     /** The service refused the request as malformed. */
     INVALID_REQUEST,
 
@@ -188,18 +195,27 @@ enum class AiErrorKind {
     UNEXPECTED_RESPONSE,
 }
 
-/** A model a provider offers. [createdAt] is its release, when the service says. */
+/**
+ * A model a provider offers. [createdAt] is its release, when the service says. [offered] is false
+ * for a model the service still answers for those who already use it but closes to a new choice
+ * (Anthropic's `lifecycle: deprecated`): it counts as listed for a model chosen before, and is not
+ * offered for a new one.
+ */
 data class ModelInfo(
     val id: String,
     val displayName: String,
     val createdAt: Instant?,
+    val offered: Boolean = true,
 )
 
 /** The result of [AiProvider.models]. */
 sealed interface ModelList {
     data class Listed(
         val models: List<ModelInfo>,
-    ) : ModelList
+    ) : ModelList {
+        /** Whether [model] is listed, offered for a new choice or not. */
+        fun has(model: String): Boolean = models.any { it.id == model }
+    }
 
     data class Failed(
         val kind: AiErrorKind,

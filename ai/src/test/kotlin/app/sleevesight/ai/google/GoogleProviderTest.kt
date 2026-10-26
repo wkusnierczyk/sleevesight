@@ -477,6 +477,44 @@ class GoogleProviderTest {
         }
 
     @Test
+    fun `a model the tier has no quota for is refused for the account at once, by its limit or its message`() =
+        runTest {
+            val byValue =
+                """{"error":{"code":429,"message":"You exceeded your current quota.","status":"RESOURCE_EXHAUSTED",""" +
+                    """"details":[{"@type":"type.googleapis.com/google.rpc.QuotaFailure",""" +
+                    """"violations":[{"quotaMetric":""" +
+                    """"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":""" +
+                    """"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaValue":"0"}]}]}}"""
+            val byMessage =
+                """{"error":{"code":429,"message":"You exceeded your current quota. Quota exceeded for metric: """ +
+                    """generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: """ +
+                    """gemini-4-argon","status":"RESOURCE_EXHAUSTED"}}"""
+            for (body in listOf(byValue, byMessage)) {
+                val (refused, once) = events { response(429, body) }
+                assertEquals(listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_REFUSED)), refused, body)
+                assertEquals(1, once.requests.size)
+            }
+            // A limit that is not none is the quota it was.
+            val some = byMessage.replace("limit: 0,", "limit: 20,")
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.RATE_LIMITED)),
+                events { response(429, some) }.first.map { (it as CompletionEvent.Error).copy(retryAfter = null) },
+            )
+        }
+
+    @Test
+    fun `a model the service no longer serves is a model not found`() =
+        runTest {
+            val gone =
+                """{"error":{"code":404,"message":"models/gemini-2.0-flash-lite is not found for API version v1, """ +
+                    """or is not supported for generateContent.","status":"NOT_FOUND"}}"""
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND)),
+                events { response(404, gone) }.first,
+            )
+        }
+
+    @Test
     fun `a monthly spending cap without details is billing at once, other 429s stay rate limits`() =
         runTest {
             fun exhausted(message: String) =

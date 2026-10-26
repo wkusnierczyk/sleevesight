@@ -209,6 +209,19 @@ class SecretStore(
     }
 
     /**
+     * Whether an entry is stored for the key [id], whether or not it can be opened (#540): what
+     * tells a key removed from one [get] could not read for now. True too when the file cannot be
+     * read, since nothing then says the entry is gone; false only when the file reads without it.
+     */
+    @Suppress("SwallowedException") // A file that cannot be read says nothing of the entry; it is kept.
+    suspend fun isStored(id: SecretId): Boolean =
+        try {
+            dataStore.data.first()[keyOf(id)] != null
+        } catch (e: IOException) {
+            true
+        }
+
+    /**
      * Saves [secret] as the key [id], replacing any before it: [SaveResult.NOT_SEALED] when it could
      * not be sealed (the key store failed, or may not make a key), [SaveResult.NOT_WRITTEN] when it
      * could not be written (DataStore failed), or, before API 31, when no key was found and the file
