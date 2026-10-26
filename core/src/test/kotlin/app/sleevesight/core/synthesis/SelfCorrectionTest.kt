@@ -13,9 +13,10 @@ import kotlin.test.assertTrue
 /**
  * A reply that corrects itself in the open (#597) shows and is checked as its fresh version only;
  * an insight's own text is never cut: not a sentence wrapped over lines, not a line of prose that
- * opens as an aside may, not a quotation. The corrections are the phone's (#597) and the six found in
- * the CLI's recorded replies of #399's and #424's measurements (917 distinct replies, 2026-10-21 to
- * 2026-10-25, Claude Haiku 5.5), each as written.
+ * opens as an aside may, not a quotation, not prose going on with evidence of its own. The
+ * corrections are the phone's (#597) and the six found in the CLI's recorded replies of #399's and
+ * #424's measurements (917 distinct replies, 2026-10-21 to 2026-10-25, Claude Haiku 5.5), each as
+ * written; five are taken out, and one, whose version cites a line its draft did not, is not.
  */
 class SelfCorrectionTest {
     private fun written(
@@ -57,7 +58,7 @@ class SelfCorrectionTest {
         assertEquals("It came out in 2022 [MB1]", written(citedAfter).text)
         // Opens with a quoted title and ends with one, a stop inside: no marks around the whole.
         val titles =
-            "It came out in 2022 [MB1]. It sets the tone.\n\n" +
+            "It came out in 2022 [MB1], as critics noted [W1]. It sets the tone.\n\n" +
                 "Wait, I'll drop the second sentence. Corrected reply:\n\n" +
                 "\"Andrew\" opens the album [MB1]. It is on \"Hert.\""
         assertEquals("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", written(titles).text)
@@ -66,6 +67,59 @@ class SelfCorrectionTest {
         assertEquals(PHRASE, written(phrase).text)
         val curlyPhrase = titles.replace("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", CURLY_PHRASE)
         assertEquals(CURLY_PHRASE, written(curlyPhrase).text)
+    }
+
+    @Test
+    fun `an introduction in bold counts, and a 12-inch mark opens no quotation`() {
+        val bold =
+            "It came out in 2022 [MB1]. It sets the tone.\n\n**Corrected insight:**\n\nIt came out in 2022 [MB1]."
+        assertEquals("It came out in 2022 [MB1].", written(bold).text)
+        val twelveInch =
+            "It came out as a 12\" single [MB1]. It was huge.\n\n" +
+                "Wait, that second sentence is not supported, so I'll drop it.\n\nIt came out as a 12\" single [MB1]."
+        assertEquals("It came out as a 12\" single [MB1].", written(twelveInch).text)
+    }
+
+    /**
+     * Recorded, and not taken out: its version cites the player's line, `[P1]`, which its draft
+     * did not, and a version that cites new evidence is read as prose going on, not a revision.
+     */
+    @Test
+    fun `a correction whose version cites a line its draft did not shows as written`() {
+        val grounded = written(NEW_EVIDENCE)
+        assertEquals(NEW_EVIDENCE, grounded.text)
+        assertNull(grounded.withdrawn)
+    }
+
+    @Test
+    fun `a line that reads like an aside, before text that only re-cites the draft, is kept when it is prose`() {
+        val draft = "It was written in 1964 [W1]. It was released in 1965 [MB1].\n\n"
+        val after = "\n\nIt reached the top ten [W1][MB1]."
+        val lines =
+            listOf(
+                // A quoted lyric inside prose.
+                "So \"I'll fix the roof\" sets up the closing pledge:",
+                "So the 12\" mix ends on \"Let me correct that line\" sung twice.",
+                // An introduction that is not a sentence of its own.
+                "The next verse is her revised reply:",
+                "Kitty Wells answered it in 1952, and here is the reply:",
+                // Lyric lines, in emphasis or not, that withdraw nothing of the reply.
+                "*Let me fix it tonight, I'll drop the act.*",
+                "So I'll cut you loose, I'll drop the act.",
+                // Openers before words that are the reply's making elsewhere, and music here.
+                "Here is the evidence the session was rushed:",
+                "Actually, the band broke every rule in the studio.",
+                "Actually, it quotes Monk's Evidence.",
+                "Corrected versions followed in 1966.",
+                // A sentence wrapped over two lines.
+                "Actually, the surviving evidence\nplaces the session in 1964, so I'll drop it from the set.",
+            )
+        for (line in lines) {
+            val reply = draft + line + after
+            val grounded = written(reply)
+            assertEquals(reply, grounded.text, line)
+            assertNull(grounded.withdrawn, line)
+        }
     }
 
     @Test
@@ -99,6 +153,9 @@ class SelfCorrectionTest {
                 "Wait, here is the corrected insight:\n\nIt was recorded in 1965 [MB1].",
                 // An aside that shares its line with the version.
                 "It was recorded in 1965 [MB1]. It is great. Wait, I'll drop that. It topped the charts [W1].",
+                // An aside before a version citing only new evidence: prose going on, not a revision.
+                "It was recorded in 1965 [MB1]. It is great.\n\n" +
+                    "Wait, that second sentence is not supported, so I'll drop it.\n\nIt topped the charts [W1].",
                 // A sentence wrapped over two lines, its first line opening with "Actually".
                 "The single was released in 1965 [MB1].\n\nActually, the surviving evidence\n" +
                     "places the recording session in 1964 [W1].",
@@ -148,6 +205,15 @@ class SelfCorrectionTest {
         const val PHRASE = "\"Andrew\" is described as \"a quiet farewell [W1].\""
         const val CURLY_PHRASE = "“Andrew” is described as “a quiet farewell [W1].”"
 
+        // A recorded correction whose version cites the player's line, which its draft did not.
+        const val NEW_EVIDENCE =
+            "The Veil Between Worlds by Die Hexen was first released on 22 July 2022, on the album You Are Not " +
+                "My Mother [MB1]. The track is the opening number of that record, so it sets the tone for the " +
+                "whole album. (Oops, that second sentence is not supported by the evidence.)\n\nLet me correct " +
+                "that and give you the supported version:\n\nThe Veil Between Worlds by Die Hexen was first " +
+                "released on 22 July 2022, on the album You Are Not My Mother [MB1]. The player data confirms " +
+                "that this recording sits on that same release [P1]."
+
         // The version the phone's reply should show.
         const val PHONE_KEPT =
             "\"Andrew\" is a track from Lara Rosseel's album \"Hert\", first released on 11 March 2022 [MB1]."
@@ -169,14 +235,6 @@ class SelfCorrectionTest {
                     "released on 22 July 2022 [MB1]. This recording is on the album \"You Are Not My Mother\" [P1]." to
                     "The Veil Between Worlds by Die Hexen was first released on 22 July 2022 [MB1]. This recording " +
                     "is on the album \"You Are Not My Mother\" [P1].",
-                "The Veil Between Worlds by Die Hexen was first released on 22 July 2022, on the album You Are Not " +
-                    "My Mother [MB1]. The track is the opening number of that record, so it sets the tone for the " +
-                    "whole album. (Oops, that second sentence is not supported by the evidence.)\n\nLet me correct " +
-                    "that and give you the supported version:\n\nThe Veil Between Worlds by Die Hexen was first " +
-                    "released on 22 July 2022, on the album You Are Not My Mother [MB1]. The player data confirms " +
-                    "that this recording sits on that same release [P1]." to
-                    "The Veil Between Worlds by Die Hexen was first released on 22 July 2022, on the album You Are " +
-                    "Not My Mother [MB1]. The player data confirms that this recording sits on that same release [P1].",
                 "The Ode to Newfoundland is the official provincial anthem of Newfoundland and Labrador [W1]. This " +
                     "recording is on the release \"CV Home\" [P1].\n\nWait, the player metadata line only repeats " +
                     "the release and should get no sentence of its own. So the reply is just the first point:\n\n" +
