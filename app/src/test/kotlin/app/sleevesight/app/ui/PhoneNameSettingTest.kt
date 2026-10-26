@@ -41,8 +41,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -177,7 +179,7 @@ class PhoneNameSettingTest {
     fun theSummaryLinksThePageTheComputerOpens() =
         show { scenario ->
             val address = "sleevesight.app/keyboard.html"
-            compose.onNodeWithText(text(R.string.settings_show_phone_name)).performScrollTo()
+            val row = compose.onNodeWithText(text(R.string.settings_show_phone_name)).performScrollTo()
             // The address, to type in on the computer.
             compose.onNodeWithText(address, useUnmergedTree = true).assertIsDisplayed()
             val link = app.getString(R.string.settings_open_page, address)
@@ -186,6 +188,14 @@ class PhoneNameSettingTest {
             scenario.onActivity { started = shadowOf(it).nextStartedActivity }
             assertEquals(Intent.ACTION_VIEW, started?.action)
             assertEquals("https://$address", started?.dataString)
+            // The link is inside the switch's row, but following it is not a tap on the switch. A
+            // toggle would start its save in `saves` during the tap, so once every save has ended,
+            // the setting would have changed.
+            compose.waitForIdle()
+            val pending = saves.coroutineContext.job
+            compose.waitUntil(5_000) { pending.children.none { it.isActive } }
+            assertFalse(settings.now().showPhoneName)
+            row.assertIsOff()
         }
 
     @Test
