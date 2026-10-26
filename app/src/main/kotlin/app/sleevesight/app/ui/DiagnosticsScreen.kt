@@ -5,18 +5,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -45,6 +44,7 @@ import app.sleevesight.app.diagnostics.DiagnosticsText
 import app.sleevesight.app.diagnostics.ExportResult
 import app.sleevesight.app.diagnostics.ExportState
 import app.sleevesight.app.diagnostics.LoggedEvent
+import app.sleevesight.app.ui.home.PageBar
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.store.CacheStats
 import kotlinx.coroutines.NonCancellable
@@ -62,10 +62,15 @@ import kotlin.time.toJavaInstant
  * sizes; the track changes recorded with their features (D15), newest first, a page at a time,
  * each opening on the playback states before it; and what skip detection has learned, with a reset
  * behind a confirmation. *Export* writes it all, every track change included, to a file the user
- * chooses; nothing else of it leaves the phone.
+ * chooses; nothing else of it leaves the phone. Opened from the settings, it has a bar with the back
+ * arrow, which goes back to them ([onBack]), as Android's back does, the title, and *Export* (#549);
+ * no *Close* at the end, since each tab is a list of its own.
  */
 @Composable
-fun DiagnosticsScreen(diagnostics: Diagnostics) {
+fun DiagnosticsScreen(
+    diagnostics: Diagnostics,
+    onBack: () -> Unit,
+) {
     var tab by rememberSaveable { mutableStateOf(DiagnosticsTab.EVENTS) }
     val scope = rememberCoroutineScope()
     val changes = remember(diagnostics) { ChangePages(diagnostics, scope) }
@@ -79,17 +84,12 @@ fun DiagnosticsScreen(diagnostics: Diagnostics) {
         }
     LaunchedEffect(changes) { changes.loadMore() }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.safeDrawingPadding()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 16.dp, top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.diagnostics_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.weight(1f),
-                )
+    val surface = MaterialTheme.colorScheme.surface
+    Scaffold(
+        containerColor = surface,
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            PageBar(stringResource(R.string.diagnostics_title), onBack, surface) {
                 TextButton(
                     onClick = { export.launch(exportName(Clock.System.now())) },
                     enabled = exportState != ExportState.Running,
@@ -97,6 +97,9 @@ fun DiagnosticsScreen(diagnostics: Diagnostics) {
                     Text(stringResource(R.string.diagnostics_export))
                 }
             }
+        },
+    ) { bars ->
+        Column(modifier = Modifier.padding(bars).consumeWindowInsets(bars)) {
             ExportNotice(exportState)
             PrimaryTabRow(selectedTabIndex = tab.ordinal, modifier = Modifier.padding(top = 8.dp)) {
                 for (shown in DiagnosticsTab.entries) {

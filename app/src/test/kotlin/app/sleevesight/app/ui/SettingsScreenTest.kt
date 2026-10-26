@@ -646,7 +646,7 @@ class SettingsScreenTest {
     @Test
     fun theCreditsListMusicBrainzWithBothLicences() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
+            scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_musicbrainz_tags)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("CC BY-NC-SA 3.0").performScrollTo().assertIsDisplayed()
             assertEquals(2, compose.onAllNodesWithText("CC0").fetchSemanticsNodes().size)
