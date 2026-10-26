@@ -6,10 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -36,8 +33,9 @@ import app.sleevesight.core.pipeline.InsightState
  * A written insight offers *Report a problem* (#390), under it, which hands the
  * insight and its track to [InsightActions.onReport].
  *
- * Beside the title, the toggle for automatic writing (#553, [AutoWriteToggle]), from [autoWriting];
- * none while it is null, before the settings' first read.
+ * No container of its own (#609): the heading and the text sit on Home's background with the rest.
+ * Beside the heading, the toggle for automatic writing (#553, [AutoWriteToggle]), from
+ * [autoWriting]; none while it is null, before the settings' first read.
  */
 @Composable
 internal fun InsightCard(
@@ -47,21 +45,16 @@ internal fun InsightCard(
     groundingDetails: Boolean = false,
     autoWriting: AutoWriting? = null,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.home_insight_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                autoWriting?.let { AutoWriteToggle(it) }
-            }
-            InsightBody(insight, context, actions, groundingDetails)
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.home_insight_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            autoWriting?.let { AutoWriteToggle(it) }
         }
+        InsightBody(insight, context, actions, groundingDetails)
     }
 }
 
