@@ -1,11 +1,9 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/tile-dark.svg">
-    <img src="assets/logo/tile-light.svg" alt="Sleevesight" width="112" height="112">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/mark-dark.svg">
+    <img src="assets/logo/mark-light.svg" alt="Sleevesight" width="208" height="112">
   </picture>
 </p>
-
-<h1 align="center">Sleevesight</h1>
 
 <p align="center"><b>Insights on what's playing.</b></p>
 
