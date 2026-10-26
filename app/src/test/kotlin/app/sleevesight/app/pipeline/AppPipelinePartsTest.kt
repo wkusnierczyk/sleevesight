@@ -122,13 +122,14 @@ class AppPipelinePartsTest {
 
     @Test
     fun noAiAccessWhileTheServicesSelectedModelIsUnavailable() {
-        val check = ModelCheck(wiring.aiProviders) { null }
+        val check = ModelCheck(wiring.aiProviders) { Secret("ai") }
         val checked = AppPipelineParts(wiring, Normalizer(JvmAccentFolder), models = check) { PipelineCache.None }
         val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
         val keys = PipelineKeys(ai = Secret("ai"))
         assertEquals(ProviderId.ANTHROPIC, checked(keys, anthropic).ai?.provider?.id)
 
-        check.listed(ProviderId.ANTHROPIC, checkNotNull(anthropic.model(ProviderId.ANTHROPIC)), emptyList())
+        val model = checkNotNull(anthropic.model(ProviderId.ANTHROPIC))
+        runBlocking { check.listed(ProviderId.ANTHROPIC, model, emptyList(), Secret("ai")) }
         assertNull("its model unavailable", checked(keys, anthropic).ai)
         // Another model chosen, or another service, is not held back by it.
         val other = anthropic.withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")

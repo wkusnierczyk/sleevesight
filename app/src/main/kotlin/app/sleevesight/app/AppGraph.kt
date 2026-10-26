@@ -27,6 +27,8 @@ import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.pipeline.afterAcknowledged
 import app.sleevesight.app.pipeline.online
 import app.sleevesight.app.pipeline.pipelineKeys
+import app.sleevesight.app.pipeline.rebuilds
+import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
@@ -76,7 +78,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -403,7 +404,7 @@ class AppGraph(
             settings = latestSettings.filterNotNull(),
             // A rebuild too when the switched-on service's model is found unavailable, or no longer
             // is (#540): the parts then leave out, or bring back, the AI access.
-            keyChanges = merge(secrets.changes, unavailableModel.drop(1).map {}),
+            keyChanges = merge(secrets.changes, modelCheck.rebuilds(latestSettings)),
             readKeys = secrets::pipelineKeys,
             // The caches only once a pipeline is built, after the first-run acknowledgement; the
             // database opens at its first query.

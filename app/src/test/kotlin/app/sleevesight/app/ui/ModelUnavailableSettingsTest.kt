@@ -107,7 +107,7 @@ class ModelUnavailableSettingsTest {
     @Test
     fun theRowAndTheChoiceSaySoAndOnlyUsableModelsAreOffered() {
         runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
-        val check = ModelCheck(mapOf(ProviderId.ANTHROPIC to provider)) { null }
+        val check = ModelCheck(mapOf(ProviderId.ANTHROPIC to provider)) { Secret("sk-test") }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
@@ -135,7 +135,7 @@ class ModelUnavailableSettingsTest {
             compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
 
             // The row says so, from the check the list made.
-            assertEquals(mapOf(ProviderId.ANTHROPIC to "claude-haiku-5-5"), check.unavailable.value)
+            assertEquals("claude-haiku-5-5", check.unavailable.value[ProviderId.ANTHROPIC]?.model)
             compose.onNodeWithText(said).performScrollTo()
 
             // Another model chosen: the row says nothing more.

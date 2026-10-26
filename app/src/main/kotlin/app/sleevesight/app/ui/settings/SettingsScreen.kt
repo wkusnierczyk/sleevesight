@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.ModelCheck
+import app.sleevesight.app.pipeline.UnavailableMark
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
@@ -93,7 +94,8 @@ fun SettingsScreen(
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
-    val unavailable by (modelCheck?.unavailable ?: NONE_UNAVAILABLE).collectAsState()
+    val marks by (modelCheck?.unavailable ?: NONE_UNAVAILABLE).collectAsState()
+    val unavailable = marks.mapValues { it.value.model }
     val secrets by secretStore.states.collectAsState(initial = emptyMap())
     val scope = rememberCoroutineScope()
     var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
@@ -163,13 +165,10 @@ fun SettingsScreen(
                 provider = shown.provider,
                 current = settings?.aiModels?.get(shown.provider),
                 load = {
-                    loadModels(shown.provider, secretStore, aiProviders).also { loaded ->
-                        if (loaded is ModelLoad.Listed) {
-                            modelNames.learn(loaded.models)
-                            // The list checks the selected model too (#540).
-                            val selected = settings?.model(shown.provider)
-                            selected?.let { modelCheck?.listed(shown.provider, it, loaded.models) }
-                        }
+                    loadModels(shown.provider, secretStore, aiProviders) { key, models ->
+                        modelNames.learn(models)
+                        // The list checks the selected model too (#540), with the key it was made with.
+                        settings?.model(shown.provider)?.let { modelCheck?.listed(shown.provider, it, models, key) }
                     }
                 },
                 modelName = modelNames::of,
@@ -181,7 +180,7 @@ fun SettingsScreen(
 }
 
 /** No model found unavailable, for a screen without a [ModelCheck]. */
-private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, String>> = MutableStateFlow(emptyMap())
+private val NONE_UNAVAILABLE: StateFlow<Map<ProviderId, UnavailableMark>> = MutableStateFlow(emptyMap())
 
 /** Saves a change to the settings. */
 internal typealias Update = ((Settings) -> Settings) -> Unit
