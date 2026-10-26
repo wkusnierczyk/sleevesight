@@ -118,6 +118,59 @@ class ShownRunTest {
     }
 
     @Test
+    fun codeShowsItsBackslashesAndAnEscapedBacktickOpensNoCode() {
+        assertEquals("Its paths are C:\\ and D:\\ [W1].", plain("Its paths are `C:\\` and `D:\\` [W1]."))
+        assertEquals("It is a\\b` [W1].", plain("It is `a\\`b` [W1]."))
+        assertEquals("It is `not code` [W1].", plain("It is \\`not code` [W1]."))
+    }
+
+    @Test
+    fun aBackslashBeforeACitationIsTakenOutAndTheCitationKept() =
+        assertEquals(listOf(text("It charted "), cite("W1"), text(".")), one("It charted \\[W1]."))
+
+    @Test
+    fun aWebAddressWrittenOutIsShownAsWritten() {
+        val two =
+            "It is https://en.wikipedia.org/wiki/Help!_(song) and https://en.wikipedia.org/wiki/Help!_(album) [W1]."
+        assertEquals(listOf(text(two.removeSuffix(" [W1].") + " "), cite("W1"), text(".")), one(two))
+        assertEquals(
+            listOf(
+                text("See https://x.org/a*b*c for "),
+                text("Title", italic = true),
+                text(" "),
+                cite("W1"),
+                text("."),
+            ),
+            one("See https://x.org/a*b*c for *Title* [W1]."),
+        )
+        assertEquals(
+            listOf(
+                text("It charted "),
+                cite("W1"),
+                text(" https://x.org/a_b_c and "),
+                text("Title", italic = true),
+                text("."),
+            ),
+            one("It charted [W1] https://x.org/a_b_c and _Title_."),
+        )
+        assertEquals(
+            listOf(
+                text("It charted "),
+                cite("W1"),
+                text("www.x.org/a_b_c and "),
+                text("Title", italic = true),
+                text("."),
+            ),
+            one("It charted [W1]www.x.org/a_b_c and _Title_."),
+        )
+        // The punctuation that ends an address is not part of it: here, the closing mark of italics.
+        assertEquals(
+            listOf(text("see www.x.org/a_b", italic = true), text(" "), cite("W1")),
+            one("*see www.x.org/a_b* [W1]"),
+        )
+    }
+
+    @Test
     fun aRunInsideAWordStays() {
         for (sentence in listOf(
             "M*A*S*H aired it [W1].",

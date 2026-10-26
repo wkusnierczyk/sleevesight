@@ -15,8 +15,9 @@ package app.sleevesight.app.ui.home
 // `5 * 3` and a lone `*` stay as written, and so do marks that do not pair. A run inside a word, a
 // letter or digit on both sides, does neither, so `snake_case`, `M*A*S*H` and a word with its
 // letters starred (`F**k`) stay too; the cost, `*Title*s` is not set in italics. A mark after a
-// backslash (`\*`) is shown as written, without the backslash, as in CommonMark. Runs pair across
-// the sentences of a paragraph, since the check may split a title (`*Help! I Need Somebody*`).
+// backslash (`\*`) is shown as written, without the backslash, as in CommonMark, and so are code
+// and a web address written out (`https://…/Help!_(song)`). Runs pair across the sentences of a
+// paragraph, since the check may split a title (`*Help! I Need Somebody*`).
 
 /** A run of a sentence as shown: its text, in italics or bold, or one of its citations. */
 internal sealed interface ShownRun {
@@ -37,9 +38,9 @@ internal sealed interface ShownRun {
  */
 internal fun shown(sentences: List<String>): List<List<ShownRun>> {
     val paragraph = Paragraph(sentences)
-    Escapes(paragraph).run()
-    CodeSpans(paragraph).run()
+    EscapesAndCode(paragraph).run()
     Links(paragraph).run()
+    BareAddresses(paragraph).run()
     LineMarks(paragraph).run()
     Emphasis(paragraph).run()
     return paragraph.output()
@@ -76,9 +77,6 @@ private class Paragraph(
 
     val length: Int = chars.length
     val removed = BooleanArray(length)
-
-    // The backslashes taken out as escapes, which code shows again.
-    val escapes = BooleanArray(length)
     val literal = BooleanArray(length)
     val italic = BooleanArray(length)
     val bold = BooleanArray(length)
@@ -170,64 +168,50 @@ private class Paragraph(
     }
 }
 
-// A backslash before ASCII punctuation (`\*`, `\_`, `\[`, `\\`) taken out, and the mark after it shown
-// as written: never a delimiter, a line's mark or a link's bracket. Inside code, both show.
-private class Escapes(
-    private val p: Paragraph,
-) {
-    fun run() {
-        var i = 0
-        while (i < p.length - 1) {
-            val escape = escapesNext(i)
-            if (escape) {
-                p.removed[i] = true
-                p.escapes[i] = true
-                p.literal[i + 1] = true
-            }
-            i += if (escape) 2 else 1
-        }
-    }
-
-    // Whether the backslash at [i] escapes the mark after it.
-    private fun escapesNext(i: Int): Boolean =
-        p[i] == '\\' && p.isPlain(i) && p[i + 1] in PUNCTUATION && p.isPlain(i + 1)
-
-    companion object {
-        const val PUNCTUATION: String = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-    }
-}
-
-// Code (`` `x` ``): its backticks taken out, each run paired with the next run as long, and what is
-// between them shown as written; a run with no pair stays.
-private class CodeSpans(
+// Escapes and code, read in one pass from the start, as CommonMark reads them, so that each
+// decides where the other applies. A backslash before ASCII punctuation (`\*`, `\_`, `\[`, `\\`) is
+// taken out and the mark after it shown as written: never a delimiter, a line's mark, a link's
+// bracket or code's backtick. A backslash before a citation (`\[W1]`) is taken out, the citation
+// kept. Code (`` `x` ``): its backticks taken out, each run paired with the next run as long, and
+// what is between them shown as written, backslashes included (`` `C:\` ``); a run with no pair
+// stays.
+private class EscapesAndCode(
     private val p: Paragraph,
 ) {
     fun run() {
         var i = 0
         while (i < p.length) {
-            val run = p.runAt(i, '`')
-            val close = if (run == 0) null else closing(i + run, run)
-            if (close == null) {
-                i += maxOf(run, 1)
-            } else {
-                code(i, run, close)
-                i = close + run
-            }
+            i =
+                when {
+                    escapesNext(i) -> escape(i)
+                    p.runAt(i, '`') > 0 -> code(i)
+                    else -> i + 1
+                }
         }
     }
 
-    // The code between the [run] backticks at [open] and those at [close].
-    private fun code(
-        open: Int,
-        run: Int,
-        close: Int,
-    ) {
+    // Whether the backslash at [i] escapes what follows it: a punctuation mark or a citation.
+    private fun escapesNext(i: Int): Boolean =
+        i + 1 < p.length &&
+            p[i] == '\\' &&
+            p.isPlain(i) &&
+            (p.isCite(i + 1) || (p[i + 1] in PUNCTUATION && p.isPlain(i + 1)))
+
+    // Takes out the backslash at [i]; the mark after it is shown as written. Where to read on.
+    private fun escape(i: Int): Int {
+        p.removed[i] = true
+        if (!p.isCite(i + 1)) p.literal[i + 1] = true
+        return i + 2
+    }
+
+    // The code that opens with the backticks at [open], if they have a pair. Where to read on.
+    private fun code(open: Int): Int {
+        val run = p.runAt(open, '`')
+        val close = closing(open + run, run) ?: return open + run
         p.remove(open until open + run)
-        for (k in open + run until close) {
-            p.literal[k] = true
-            if (p.escapes[k]) p.removed[k] = false
-        }
+        for (k in open + run until close) p.literal[k] = true
         p.remove(close until close + run)
+        return close + run
     }
 
     // Where the next run of exactly [run] backticks starts, from [from], or null.
@@ -242,6 +226,10 @@ private class CodeSpans(
             k += maxOf(next, 1)
         }
         return null
+    }
+
+    companion object {
+        const val PUNCTUATION: String = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
     }
 }
 
@@ -310,6 +298,56 @@ private class Links(
 
     companion object {
         val SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
+    }
+}
+
+// A web address written out (`https://…`, `www.…`) shown as written, so its `_`s and `*`s are no
+// emphasis (`…/Help!_(song)` and `…/Help!_(album)` in one paragraph): from its start, after no
+// letter or digit, to the next space or citation, less any punctuation that ends it (`.`, `!`,
+// `*`, a `)` it did not open), as GitHub's autolinks end. It stays text, never a link.
+private class BareAddresses(
+    private val p: Paragraph,
+) {
+    fun run() {
+        var i = 0
+        while (i < p.length) {
+            val end = if (starts(i)) end(i) else i
+            for (k in i until end) p.literal[k] = true
+            i = maxOf(end, i + 1)
+        }
+    }
+
+    private fun starts(i: Int): Boolean =
+        p.isPlain(i) &&
+            (i == 0 || !p[i - 1].isLetterOrDigit()) &&
+            START.containsMatchIn(p.text(i, minOf(p.length, i + START_LENGTH)))
+
+    private fun end(start: Int): Int {
+        var end = start
+        while (end < p.length && !p[end].isWhitespace() && !p.isCite(end)) end++
+        while (end > start && endsOff(start, end)) end--
+        return end
+    }
+
+    // Whether the last character before [end] ends the address from [start] off rather than in it.
+    private fun endsOff(
+        start: Int,
+        end: Int,
+    ): Boolean = p[end - 1] in TRAILING || (p[end - 1] == ')' && unbalanced(start, end))
+
+    // Whether the address from [start] to [end] closes more brackets than it opens.
+    private fun unbalanced(
+        start: Int,
+        end: Int,
+    ): Boolean {
+        val text = p.text(start, end)
+        return text.count { it == ')' } > text.count { it == '(' }
+    }
+
+    companion object {
+        val START = Regex("^(?:[hH][tT][tT][pP][sS]?://|[wW][wW][wW]\\.)")
+        const val START_LENGTH: Int = 8
+        const val TRAILING: String = "?!.,:;*_~'\""
     }
 }
 
