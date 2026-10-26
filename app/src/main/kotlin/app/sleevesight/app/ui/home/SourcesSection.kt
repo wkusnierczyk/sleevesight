@@ -29,15 +29,12 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.app.pipeline.PipelineView
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
-import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
-import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
 /**
@@ -52,9 +49,10 @@ import app.sleevesight.core.pipeline.TrackState
  * columns (#270): the tags right-aligned in the first, as wide as the widest, so every line's text
  * starts at the same place.
  *
- * With *Show grounding details* on ([details]), the chips are every source's, as [chips] has them,
- * each with its letter and its status ("W the song (kept)"), the model's own knowledge's `M` among
- * them, and the list ends with the matches the sources rejected, with their reasons.
+ * With *Show grounding details* on ([SourcesShown.details]), the chips are every source's, as
+ * [SourcesShown.chips] has them, each with its letter and its status ("W the song (kept)"), the
+ * model's own knowledge's `M` among them, and the list ends with the matches the sources rejected,
+ * with their reasons.
  *
  * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
  * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
@@ -63,32 +61,23 @@ import app.sleevesight.core.pipeline.TrackState
  * heading is a button a screen reader names *Sources*, collapsed or expanded, each control one it
  * names in words, and the list says how much of it shows.
  *
- * When the insight shown is the one written earlier ([cardKept]: the pipeline shows the card paid
+ * When the insight shown is the one written earlier ([SourcesShown.cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
  * a rewrite failed, or neither), the lines are those it cites, found when it was written, beside
  * the sources' states now.
- * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
- * sources are asked again once it is back online.
+ * While the phone is offline and a source is unreachable ([SourcesShown.offline], #192), it says
+ * so: those sources are asked again once it is back online.
+ *
+ * This is the section as a box (*Layout*'s *Expandable boxes*, #447): its heading, and under it,
+ * unfolded, [SourcesBody], which a page of its own mounts under *Separate pages*.
  */
-@Suppress("LongParameterList") // What the section shows, the states it is unfolded by, and its link.
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SourcesSection(
-    track: TrackState?,
-    chips: List<SourceChip>,
+    shown: SourcesShown,
     focus: LineFocus,
     fold: SourcesFold,
-    cardKept: Boolean,
-    offline: Boolean = false,
-    details: Boolean = false,
     openSettings: () -> Unit = {},
 ) {
-    val hidden = focus.hidden
-    val lines = track?.evidence?.lines.orEmpty()
-    val unverified = track?.let(::unverifiedLines).orEmpty()
-    val entries = entriesOf(track, hidden, details)
-    // The lines the chips hide: with every entry hidden, the count still shows.
-    val filtered = lines.count { it.source in hidden }
     val folded = fold.fold == Fold.Folded
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SourcesHeading(folded) {
@@ -96,28 +85,67 @@ internal fun SourcesSection(
                 fold.set(Fold.Folded)
             } else {
                 // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
-                if (entries.isEmpty()) focus.showAll()
+                if (entriesOf(shown.track, focus.hidden, shown.details).isEmpty()) focus.showAll()
                 fold.set(Fold.Pages(1))
             }
         }
-        if (folded) return@Column
+        if (!folded) SourcesBody(shown, focus, fold, openSettings)
+    }
+}
+
+/**
+ * What *Sources* shows of a [track]: its [chips] (every source's, the list cut to those with lines
+ * unless with grounding [details]), whether the insight shown is the card kept from before
+ * ([cardKept]), and whether the phone is [offline] with a source unreachable.
+ */
+internal class SourcesShown(
+    val track: TrackState?,
+    val chips: List<SourceChip>,
+    val cardKept: Boolean,
+    val offline: Boolean = false,
+    val details: Boolean = false,
+)
+
+/**
+ * The section's content (#447: one component, mounted in place under its heading or on a page of its
+ * own): the chips, the note, and the list as far as [fold] unfolds it, with its paging. Drawn as a
+ * column of its own, spaced as the section is.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun SourcesBody(
+    shown: SourcesShown,
+    focus: LineFocus,
+    fold: SourcesFold,
+    openSettings: () -> Unit = {},
+) {
+    val track = shown.track
+    val details = shown.details
+    val hidden = focus.hidden
+    val lines = track?.evidence?.lines.orEmpty()
+    val unverified = track?.let(::unverifiedLines).orEmpty()
+    val entries = entriesOf(track, hidden, details)
+    // The lines the chips hide: with every entry hidden, the count still shows.
+    val filtered = lines.count { it.source in hidden }
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Of every line, hidden ones too, so the column does not move when a chip hides some.
         val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
+        val chips = shown.chips
         SourceChips(if (details) chips else chipsWithLines(chips, track?.evidence), details, lines, focus, fold)
-        Notes(sourceNotes(chips, offline), openSettings)
-        if (offline) Small(stringResource(R.string.home_sources_offline))
+        Notes(sourceNotes(chips, shown.offline), openSettings)
+        if (shown.offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
             val empty = if (track?.gathered == true) R.string.home_evidence_empty else R.string.home_evidence_looking
             Small(stringResource(empty))
         }
         if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size
-        val shown = fold.fold.shown(total)
-        FoldStatus(fold, shown, total, filtered)
-        if (shown == 0) return@Column
-        if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
-        Entries(entries.take(shown), tagWidth, focus)
-        FoldControls(fold, shown, total)
+        val count = fold.fold.shown(total)
+        FoldStatus(fold, count, total, filtered)
+        if (count == 0) return@Column
+        if (shown.cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
+        Entries(entries.take(count), tagWidth, focus)
+        FoldControls(fold, count, total)
     }
 }
 
@@ -201,18 +229,6 @@ private fun Entries(
         }
     }
 }
-
-/**
- * Whether the *Sources* section says the phone is offline (#192): while it is ([view]'s
- * `offline`), for a [track] with a source unreachable, which is asked again once the phone is
- * back online.
- */
-internal fun offlineShown(
-    view: PipelineView,
-    track: TrackState?,
-): Boolean =
-    view.offline &&
-        track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
 
 /**
  * One evidence line: its id, its text, and its scope with a link to where it was found; flashed

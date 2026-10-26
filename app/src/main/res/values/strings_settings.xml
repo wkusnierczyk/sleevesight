@@ -88,6 +88,11 @@
     <string name="settings_link_style_highlight">Highlight</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
+    <!-- Appearance → Layout (#447): how an item of the home screen opens. -->
+    <string name="settings_layout">Layout</string>
+    <string name="settings_layout_boxes">Expandable boxes</string>
+    <string name="settings_layout_pages">Separate pages</string>
+    <string name="settings_layout_summary">How Sources and the genres open: in place on the home screen, or each on a page of its own, with a back arrow.</string>
 
     <!-- Load keys and Purge keys (#446): the screens that replace their dialogs. -->
     <string name="load_keys_make">1. Generate a QR code of your keys on your computer, as the instructions explain:</string>

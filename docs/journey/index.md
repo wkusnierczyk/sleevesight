@@ -126,7 +126,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 ## 7. Changing settings later, and clearing what is kept
 
-**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Keep Sources as you left them*, how long each source's findings are kept, *Font* and *Logo intro at start*.
+**Settings.** Every choice above can be changed later, and each change is saved at once. [Settings]({{ '/docs/tutorials/settings/' | relative_url }}) describes each one, with its default and what changing it sends or keeps; among those not met above are *Layout* (the sources and the genres in place on the home screen, or each on a page of its own), *Keep Sources as you left them*, how long each source's findings are kept, *Font* and *Logo intro at start*.
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 

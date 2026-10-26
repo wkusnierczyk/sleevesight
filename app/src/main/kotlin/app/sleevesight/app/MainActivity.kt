@@ -25,6 +25,7 @@ import app.sleevesight.app.ui.DiagnosticsScreen
 import app.sleevesight.app.ui.SleevesightNavHost
 import app.sleevesight.app.ui.home.HomeFeed
 import app.sleevesight.app.ui.home.NowPlayingHome
+import app.sleevesight.app.ui.home.NowPlayingPage
 import app.sleevesight.app.ui.logo.LocalLogoIntro
 import app.sleevesight.app.ui.logo.LogoIntro
 import app.sleevesight.app.ui.logo.LogoIntroOverlay
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
             nowPlaying = graph.sessions.nowPlaying,
             playback = graph.sessions.playback,
             art = graph.sessions.art,
-            settings = graph.settings.settings,
+            settings = graph.latestSettings,
             normalizer = Normalizer(JvmAccentFolder),
             playerLabel = graph::playerLabel,
             playerActivity = graph.sessions::playerActivity,
@@ -120,8 +121,11 @@ class MainActivity : ComponentActivity() {
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
-                                pipeline = { openSettings -> NowPlayingHome(homeFeed, openSettings) },
+                                pipeline = { links -> NowPlayingHome(homeFeed, links.openSettings, links.openPage) },
                                 diagnostics = { DiagnosticsScreen(graph.diagnostics) },
+                                page = { page, links ->
+                                    NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
+                                },
                                 testerReport = testerReport,
                             )
                         }

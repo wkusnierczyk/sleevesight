@@ -151,7 +151,11 @@ class NowPlayingScreenTest {
     @Test
     fun aNewTrackShowsAtOnceWithoutTheLastTracksInsight() =
         show(
-            NowPlayingState(PipelineView(track(insight = written("It was recorded in 1973 [MB1]."))), carefree),
+            NowPlayingState(
+                PipelineView(track(insight = written("It was recorded in 1973 [MB1]."))),
+                carefree,
+                settings = Settings(),
+            ),
         ) {
             compose.onNodeWithText("Carefree Highway").assertExists()
             assertEquals(0, compose.onAllNodesWithText("It was recorded", substring = true).fetchSemanticsNodes().size)

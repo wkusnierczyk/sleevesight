@@ -146,16 +146,18 @@ internal class FoldMemory(
 
 /**
  * The fold of the list shown beside [playing]: as it is kept while [playing] plays on the track
- * last shown ([TrackIdentity.playsOn]); for a new track, folded, or with [keep] (*Keep Sources as
- * you left them*) as it was left ([Fold.forNextTrack]); [keep] is null until the settings are
- * read, and a new track shows folded until then. Worked out as it is read, so a new track never
- * shows the last one's fold for a frame; [follow] then keeps it as the new track's, so a track
- * played again after others starts afresh too.
+ * last shown ([TrackIdentity.playsOn]); for a new track, [start] (folded on Home), or with [keep]
+ * (*Keep Sources as you left them*) as it was left ([Fold.forNextTrack]); [keep] is null until the
+ * settings are read, and a new track shows [start] until then. Worked out as it is read, so a new
+ * track never shows the last one's fold for a frame; [follow] then keeps it as the new track's, so
+ * a track played again after others starts afresh too. On a page of its own (#447) the list starts
+ * at its first screenful, and is never kept.
  */
 internal class SourcesFold(
     private val memory: FoldMemory,
     private val playing: NowPlaying,
     private val keep: Boolean?,
+    private val start: Fold = Fold.Folded,
 ) {
     val fold: Fold
         get() {
@@ -164,7 +166,7 @@ internal class SourcesFold(
             return when {
                 track != null && TrackIdentity.playsOn(track, playing) -> set
                 keep == true -> set.forNextTrack()
-                else -> Fold.Folded
+                else -> start
             }
         }
 
@@ -202,14 +204,18 @@ internal class SourcesFold(
 @Composable
 internal fun rememberFoldMemory(): FoldMemory = rememberSaveable(saver = FoldMemory.Saver) { FoldMemory() }
 
-/** The fold of the *Sources* list beside [playing], from [memory]; a new track's is kept as its own. */
+/**
+ * The fold of the *Sources* list beside [playing], from [memory], a new track's [start] unless
+ * [keep]; a new track's is kept as its own.
+ */
 @Composable
 internal fun sourcesFold(
     memory: FoldMemory,
     playing: NowPlaying,
     keep: Boolean?,
+    start: Fold = Fold.Folded,
 ): SourcesFold {
-    val fold = SourcesFold(memory, playing, keep)
+    val fold = SourcesFold(memory, playing, keep, start)
     SideEffect { fold.follow() }
     return fold
 }

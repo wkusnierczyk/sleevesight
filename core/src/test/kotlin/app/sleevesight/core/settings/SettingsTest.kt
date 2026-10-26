@@ -21,7 +21,7 @@ class SettingsTest {
 
     @Test
     fun `the defaults are the design's`() {
-        assertEquals(Layout.SEPARATE_PAGES, defaults.layout)
+        assertEquals(Layout.EXPANDABLE_BOXES, defaults.layout)
         assertNull(defaults.aiProvider)
         assertEquals(emptyMap(), defaults.aiModels)
         assertEquals(emptyMap(), defaults.aiEfforts)

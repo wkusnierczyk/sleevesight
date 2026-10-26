@@ -119,7 +119,7 @@
     <string name="settings_prepare_next_summary">Looks up the next track in the player’s queue ahead, so its sources come sooner when it plays. No insight is written ahead, and nothing is paid for.</string>
 
     <string name="settings_keep_sources">Keep Sources as you left them</string>
-    <string name="settings_keep_sources_summary">Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
+    <string name="settings_keep_sources_summary">With Expandable boxes. Off: the sources under each new track’s insight start folded. On: they stay folded, or unfolded, as you left them on the track before; shown past their first 8 entries but not in full, they come back at their first 8.</string>
     <string name="settings_background">Look up in the background</string>
     <string name="settings_background_summary">Off: lookups and insights only while Sleevesight is on screen. On: insights written automatically are paid calls on your key, made while Sleevesight is not on screen.</string>
     <string name="settings_artist_facts_once">Tell an artist’s facts once per session</string>

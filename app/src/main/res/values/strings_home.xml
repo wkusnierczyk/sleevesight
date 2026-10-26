@@ -37,6 +37,15 @@
     <!-- The disclosure triangles of the genres' and the sources' folds: folded, unfolded. -->
     <string name="home_fold_folded">▸</string>
     <string name="home_fold_unfolded">▾</string>
+    <!-- Under Layout's Separate pages (#447): drawn after an item's name on Home, as the way to its
+         page, in place of a fold's triangle; and its action, as a screen reader names it ("Double-tap
+         to open page"). -->
+    <string name="home_page_symbol">›</string>
+    <!-- A page's back arrow, as a screen reader says it. -->
+    <string name="page_back">Back</string>
+    <string name="home_page_open">open page</string>
+    <!-- The genres' page, with Show genres off. -->
+    <string name="home_genres_hidden">Show genres is off in Settings.</string>
     <!-- A fold's state, as a screen reader says it. -->
     <string name="home_fold_collapsed">collapsed</string>
     <string name="home_fold_expanded">expanded</string>

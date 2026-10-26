@@ -55,14 +55,23 @@ import app.sleevesight.core.settings.Settings
  * the level, and each label source, linking the page there, with MusicBrainz's licence (D12); a
  * label only MusicBrainz gives opens nothing more. The genre cards are Phase 2. Chips are plain,
  * told apart by their fill, not by a hue per genre family.
+ *
+ * That is the genres as boxes (*Layout*'s *Expandable boxes*, #447). With [openPage] (*Separate
+ * pages*), the table opens on a page of its own instead ([HomePage.Genres]): Home shows the folded
+ * chips after `Genres ›`, and `Genres ›` and each chip open the table's page.
  */
 @Composable
 internal fun Genres(
     track: TrackState?,
     settings: Settings?,
+    openPage: ((HomePage) -> Unit)? = null,
 ) {
     // *Show genres* off (#444): no genres are asked for, and none shown, not even that they are off.
     if (track == null || !track.gathered || settings?.showGenres == false) return
+    if (openPage != null) {
+        GenresLinks(track.genres, settings, openPage)
+        return
+    }
     val genres = track.genres
     // Folded again, and nothing selected, on each new track. The selection is kept by its level,
     // artist and genre, so it outlasts labels that land later, and the fold.
@@ -70,7 +79,7 @@ internal fun Genres(
     var selected by rememberSaveable(track.normalized.lookupKey) { mutableStateOf<String?>(null) }
     val view = GenresView(genres, unfolded, selected)
     val open = view.open
-    val off = settings != null && LabelSource.entries.none { settings.givesLabels(it) }
+    val off = labelsOff(settings)
     val select = { label: PlacedLabel -> selected = if (open?.key == label.key) null else label.key }
     val fold = {
         unfolded = false
@@ -78,8 +87,8 @@ internal fun Genres(
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when {
-            genres.isEmpty && off -> Small(stringResource(R.string.home_genres_off))
-            genres.isEmpty -> Small(stringResource(R.string.home_genres_none))
+            genres.isEmpty && off -> QuietLine(stringResource(R.string.home_genres_off))
+            genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
             genres.oneLevel -> Chips(view.folded, open, select)
             view.table -> {
                 Fold(unfolded = true, toggle = fold)
@@ -90,6 +99,10 @@ internal fun Genres(
         open?.let { Credits(it, several = track.normalized.artists.size > 1) }
     }
 }
+
+/** Whether every label source is off in [settings], as read. */
+internal fun labelsOff(settings: Settings?): Boolean =
+    settings != null && LabelSource.entries.none { settings.givesLabels(it) }
 
 // The fold's control: `Genres` and its disclosure triangle, a button a screen reader says is collapsed or expanded.
 @Composable
@@ -118,13 +131,18 @@ private fun Fold(
     )
 }
 
-// [labels] as chips, after [before], the fold's control when there is one.
+/**
+ * [labels] as chips, after [before], the fold's control or the way to the table's page when there is
+ * one; each chip selects its label ([select]), shown [open], or with [opensPage] opens the table's
+ * page. With no [select], the chips are plain labels, not buttons.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Chips(
+internal fun Chips(
     labels: List<PlacedLabel>,
     open: PlacedLabel?,
-    select: (PlacedLabel) -> Unit,
+    select: ((PlacedLabel) -> Unit)?,
+    opensPage: Boolean = false,
     before: (@Composable () -> Unit)? = null,
 ) {
     FlowRow(
@@ -133,21 +151,24 @@ private fun Chips(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         before?.invoke()
-        for (label in labels) GenreChip(label, selected = open?.key == label.key) { select(label) }
+        for (label in labels) {
+            GenreChip(label, selected = open?.key == label.key, opensPage, select?.let { { it(label) } })
+        }
     }
 }
 
 /**
  * The unfolded table: a row per level with labels, in [GenreLevel] order, its name right-aligned
  * in a column as wide as the widest, its chips left-aligned beside it; an artist's row names the
- * artist first. A screen reader reads each row as one, "Track: Baroque Pop, Ballad", then its chips.
+ * artist first. A screen reader reads each row as one, "Track: Baroque Pop, Ballad", then its chips,
+ * each selecting its label ([select]), shown [open]; with no [select], plain labels.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Table(
+internal fun Table(
     genres: TrackGenres,
     open: PlacedLabel?,
-    select: (PlacedLabel) -> Unit,
+    select: ((PlacedLabel) -> Unit)?,
 ) {
     val style = MaterialTheme.typography.bodySmall
     val names = genres.rows.map { levelName(it.level) }
@@ -187,7 +208,7 @@ private fun Table(
                     }
                     for (label in row.labels) {
                         val placed = PlacedLabel(row, label)
-                        GenreChip(placed, selected = open?.key == placed.key) { select(placed) }
+                        GenreChip(placed, selected = open?.key == placed.key, onClick = select?.let { { it(placed) } })
                     }
                 }
             }
@@ -216,15 +237,21 @@ private fun rowWords(
         ?: stringResource(R.string.home_genres_row_words, name, labels)
 }
 
-/** A plain chip (#439): a light fill in the text's colour, darker while its credits show. */
+/**
+ * A plain chip (#439): a light fill in the text's colour, darker while its credits show; with
+ * [opensPage] (#447) a button whose action a screen reader names "open page", never selected; with
+ * no [onClick], a label, not a button.
+ */
 @Composable
 private fun GenreChip(
     placed: PlacedLabel,
     selected: Boolean,
-    onClick: () -> Unit,
+    opensPage: Boolean = false,
+    onClick: (() -> Unit)?,
 ) {
     val content = MaterialTheme.colorScheme.onSurface
     val fill = content.copy(alpha = if (selected) SELECTED_FILL else FILL)
+    val openPage = stringResource(R.string.home_page_open)
     val shape = RoundedCornerShape(16.dp)
     Text(
         placed.label.genre.label,
@@ -236,8 +263,13 @@ private fun GenreChip(
                 .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(fill, shape)
-                .selectable(selected = selected, role = Role.Button, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .let {
+                    when {
+                        onClick == null -> it
+                        opensPage -> it.clickable(role = Role.Button, onClickLabel = openPage, onClick = onClick)
+                        else -> it.selectable(selected = selected, role = Role.Button, onClick = onClick)
+                    }
+                }.padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
 
@@ -257,7 +289,7 @@ private fun Credits(
     // With several credited artists, an artist's label names whose tags gave it.
     val artist = placed.row.artist?.takeIf { several }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Small(
+        QuietLine(
             artist?.let { stringResource(R.string.home_genre_from_named, label.genre.label, it) }
                 ?: stringResource(from, label.genre.label),
         )
@@ -297,11 +329,6 @@ private class GenresView(
 
 // What a selection is kept by: the chip's level, artist and genre, not its row's other labels.
 private val PlacedLabel.key: String get() = "${row.level}|${row.artist.orEmpty()}|${label.genre.identity}"
-
-@Composable
-private fun Small(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
 
 /**
  * The test tag of a genre label, before its level (`track`, `artist`, `album`), a colon, for an
