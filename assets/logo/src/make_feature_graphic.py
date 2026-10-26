@@ -21,7 +21,8 @@ playing" is outlined here from Roboto Flex. So every SVG renders without a font.
 The other designs are kept for the brand sheet, as `assets/logo/feature-graphic/<name>.svg`, SVG only.
 
 `make_og_image.py`, the product page's link preview, imports this script's code (the tagline, the
-record and the 8b mark's placement of it), so after a change to that code run it again too.
+record and the 8b mark's placement of it), and `make_mark.py`, the README's mark, its record and
+placement, so after a change to that code run them again too.
 
 Usage, from the repository root:
 
