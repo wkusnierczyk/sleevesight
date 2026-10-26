@@ -4,6 +4,7 @@ import android.content.res.Resources
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
@@ -68,7 +69,7 @@ internal fun CheckedProse(
     val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
     // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out.
-    val shown = paragraph.zip(shown(sentences)).filterNot { (_, runs) -> runs.isBlank() }
+    val shown = remember(paragraph) { paragraph.zip(shown(sentences)).filterNot { (_, runs) -> runs.isBlank() } }
     if (shown.isEmpty()) return
     val uncited = resources.getString(R.string.home_cite_none)
     val said =
@@ -107,7 +108,7 @@ internal fun UncheckedProse(
 ) {
     val styles = citeStyles()
     val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held)
-    val shown = shown(listOf(paragraph)).single()
+    val shown = remember(paragraph) { shown(listOf(paragraph)).single() }
     if (shown.isBlank()) return
     val text = buildAnnotatedString { appendSentence(shown, policy, styles, onCite, null) }
     Prose(ProseText(text, spoken(shown, policy, LocalResources.current), lines(listOf(paragraph), policy)), onCite)

@@ -12,8 +12,11 @@ package app.sleevesight.app.ui.home
 //
 // The rules are CommonMark's, simplified (no nested links, no HTML, no blocks beyond a line's
 // marks): a run of `*` or `_` opens when a word follows it and closes when one comes before it, so
-// `5 * 3`, a lone `*` and `snake_case` stay as written, and so do marks that do not pair. Runs pair
-// across the sentences of a paragraph, since the check may split a title (`*Help! I Need Somebody*`).
+// `5 * 3` and a lone `*` stay as written, and so do marks that do not pair. A run inside a word, a
+// letter or digit on both sides, does neither, so `snake_case`, `M*A*S*H` and a word with its
+// letters starred (`F**k`) stay too; the cost, `*Title*s` is not set in italics. A mark after a
+// backslash (`\*`) is shown as written, without the backslash, as in CommonMark. Runs pair across
+// the sentences of a paragraph, since the check may split a title (`*Help! I Need Somebody*`).
 
 /** A run of a sentence as shown: its text, in italics or bold, or one of its citations. */
 internal sealed interface ShownRun {
@@ -34,6 +37,7 @@ internal sealed interface ShownRun {
  */
 internal fun shown(sentences: List<String>): List<List<ShownRun>> {
     val paragraph = Paragraph(sentences)
+    Escapes(paragraph).run()
     CodeSpans(paragraph).run()
     Links(paragraph).run()
     LineMarks(paragraph).run()
@@ -72,6 +76,9 @@ private class Paragraph(
 
     val length: Int = chars.length
     val removed = BooleanArray(length)
+
+    // The backslashes taken out as escapes, which code shows again.
+    val escapes = BooleanArray(length)
     val literal = BooleanArray(length)
     val italic = BooleanArray(length)
     val bold = BooleanArray(length)
@@ -163,6 +170,33 @@ private class Paragraph(
     }
 }
 
+// A backslash before ASCII punctuation (`\*`, `\_`, `\[`, `\\`) taken out, and the mark after it shown
+// as written: never a delimiter, a line's mark or a link's bracket. Inside code, both show.
+private class Escapes(
+    private val p: Paragraph,
+) {
+    fun run() {
+        var i = 0
+        while (i < p.length - 1) {
+            val escape = escapesNext(i)
+            if (escape) {
+                p.removed[i] = true
+                p.escapes[i] = true
+                p.literal[i + 1] = true
+            }
+            i += if (escape) 2 else 1
+        }
+    }
+
+    // Whether the backslash at [i] escapes the mark after it.
+    private fun escapesNext(i: Int): Boolean =
+        p[i] == '\\' && p.isPlain(i) && p[i + 1] in PUNCTUATION && p.isPlain(i + 1)
+
+    companion object {
+        const val PUNCTUATION: String = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+    }
+}
+
 // Code (`` `x` ``): its backticks taken out, each run paired with the next run as long, and what is
 // between them shown as written; a run with no pair stays.
 private class CodeSpans(
@@ -176,12 +210,24 @@ private class CodeSpans(
             if (close == null) {
                 i += maxOf(run, 1)
             } else {
-                p.remove(i until i + run)
-                for (k in i + run until close) p.literal[k] = true
-                p.remove(close until close + run)
+                code(i, run, close)
                 i = close + run
             }
         }
+    }
+
+    // The code between the [run] backticks at [open] and those at [close].
+    private fun code(
+        open: Int,
+        run: Int,
+        close: Int,
+    ) {
+        p.remove(open until open + run)
+        for (k in open + run until close) {
+            p.literal[k] = true
+            if (p.escapes[k]) p.removed[k] = false
+        }
+        p.remove(close until close + run)
     }
 
     // Where the next run of exactly [run] backticks starts, from [from], or null.
@@ -226,22 +272,45 @@ private class Links(
         p.remove(close until end)
     }
 
-    // Where a link's address, `(…)` at [at] with no space in it, ends, or null; after a citation
-    // only a web address ([web]), so `[MB1](1973)` keeps its year.
+    // Where a link's address, `(…)` at [at] with no space in it, ends, or null: at the `)` that
+    // closes it, its own pairs of brackets inside (`…/Help!_(song)`), an escaped one (`\)`) shown as
+    // written. It must read as an address, a scheme (`https:`), a dot or a slash, so `[Live](1999)`
+    // keeps its year; after a citation ([web]) only a web address will do.
     private fun address(
         at: Int,
         web: Boolean,
     ): Int? {
-        val opens = at < p.length && p[at] == '(' && p.isPlain(at)
-        var k = at + 1
-        while (opens && inAddress(k)) k++
-        val target = if (opens && k < p.length && p[k] == ')') p.text(at + 1, k) else ""
+        val end = closing(at)
+        val target = end?.let { p.text(at + 1, it) }.orEmpty()
         val isWeb = "://" in target || target.startsWith("www.")
-        return (k + 1).takeIf { target.isNotEmpty() && (isWeb || !web) }
+        val isAddress = isWeb || SCHEME.containsMatchIn(target) || target.any { it == '.' || it == '/' }
+        return end?.let { it + 1 }?.takeIf { if (web) isWeb else isAddress && target.any(Char::isLetter) }
     }
 
-    // Whether [k] is a character of an address: plain, no space, and no `)` yet.
-    private fun inAddress(k: Int): Boolean = k < p.length && p[k] != ')' && !p[k].isWhitespace() && p.isPlain(k)
+    // Where the `)` closing the address that opens at [at] is, or null.
+    private fun closing(at: Int): Int? {
+        val opens = at < p.length && p[at] == '(' && p.isPlain(at)
+        var k = at + 1
+        var depth = 0
+        var end: Int? = null
+        while (opens && end == null && inAddress(k)) {
+            val bracket = if (p.isPlain(k)) p[k] else null
+            when {
+                bracket == '(' -> depth++
+                bracket == ')' && depth == 0 -> end = k
+                bracket == ')' -> depth--
+            }
+            k++
+        }
+        return end
+    }
+
+    // Whether [k] is a character an address may hold: no space, no citation.
+    private fun inAddress(k: Int): Boolean = k < p.length && !p[k].isWhitespace() && !p.isCite(k)
+
+    companion object {
+        val SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
+    }
 }
 
 // A line's marks, at the paragraph's start or after a line break: a heading's `#`s, a list's `-`,
@@ -260,13 +329,17 @@ private class LineMarks(
         var end = i
         while (end < p.length && p[end] != '\n') end++
         val line = p.text(i, end)
-        // A rule goes with its line break, so no empty line is left in its place.
-        val mark =
-            when {
-                RULE.matches(line) -> if (end < p.length) line.length + 1 else line.length
-                else -> LINE_MARK.find(line)?.value?.length ?: 0
-            }
-        if (mark > 0 && (i until i + mark).all(p::isPlain)) p.remove(start until i + mark)
+        val rule = RULE.matches(line)
+        val mark = if (rule) line.length else LINE_MARK.find(line)?.value?.length ?: 0
+        if (mark == 0 || !(i until i + mark).all(p::isPlain)) return
+        p.remove(start until i + mark)
+        // A rule goes with a line break, the one after it or, at the paragraph's end, the one
+        // before it, so no empty line is left in its place.
+        if (rule && end < p.length) {
+            p.remove(end..end)
+        } else if (rule && start > 0) {
+            p.remove(start - 1 until start)
+        }
     }
 
     companion object {
@@ -347,7 +420,8 @@ private class Emphasis(
     }
 
     // A run of [length] [c] at [start], which opens when a word follows it and closes when one
-    // comes before it; an `_` inside a word (`snake_case`) does neither.
+    // comes before it; a run inside a word (`snake_case`, `M*A*S*H`) does neither, and an `_` that
+    // touches a word on one side opens or closes only from punctuation on the other.
     private fun run(
         c: Char,
         start: Int,
@@ -355,12 +429,20 @@ private class Emphasis(
     ): Run {
         val before = p.neighbour(start, -1)
         val after = p.neighbour(start + length - 1, 1)
-        val left = !after.isWhitespace() && (!after.isPunct() || before.isWhitespace() || before.isPunct())
-        val right = !before.isWhitespace() && (!before.isPunct() || after.isWhitespace() || after.isPunct())
-        val opens = if (c == '*') left else left && (!right || before.isPunct())
-        val closes = if (c == '*') right else right && (!left || after.isPunct())
+        val left = flanks(after, before)
+        val right = flanks(before, after)
+        val inWord = before.isLetterOrDigit() && after.isLetterOrDigit()
+        val opens = !inWord && (if (c == '*') left else left && (!right || before.isPunct()))
+        val closes = !inWord && (if (c == '*') right else right && (!left || after.isPunct()))
         return Run(c, start, length, opens, closes)
     }
+
+    // CommonMark's flanking: a run flanks the side of [near] when that is no space, and is not
+    // punctuation unless [far], on the other side, is a space or punctuation too.
+    private fun flanks(
+        near: Char,
+        far: Char,
+    ): Boolean = !near.isWhitespace() && (!near.isPunct() || far.isWhitespace() || far.isPunct())
 
     private fun Char.isPunct(): Boolean = !isLetterOrDigit() && !isWhitespace()
 

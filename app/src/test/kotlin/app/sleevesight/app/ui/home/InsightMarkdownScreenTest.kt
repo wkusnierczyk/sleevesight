@@ -5,6 +5,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -145,14 +148,45 @@ class InsightMarkdownScreenTest {
     fun anInsightBeingWrittenShowsCleaned() = show(InsightState.Writing(reply)) { assertCleaned() }
 
     @Test
-    fun aHeadingAndAListShowAsTheirTextAndAnUncitedOneIsStillFlagged() =
+    fun aHeadingAndAListShowAsTheirText() =
         show(written("# Sundown\nIt topped the charts [W1].\n\n- It was recorded in 1973 [MB1].\n- It is great.")) {
             val first = textOf("Sundown")
             assertEquals("Sundown\nIt topped the charts ${chip("W1")}.", first.text)
             val second = textOf("It was recorded")
             assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great.", second.text)
             assertFalse('#' in first.text || '-' in second.text)
-            // The check read the reply as written, and its sentences are shown as it split them.
-            assertEquals(emptyList<String>(), styled(second) { it.textDecoration != null })
+        }
+
+    @Test
+    fun anUncitedSentenceWithBoldAndItalicsIsFlaggedAndSaidToBeSo() =
+        show(written("It topped the charts [W1]. It is **really** *great*.")) {
+            val prose = textOf("It topped the charts")
+            val flagged = lightColorScheme().error
+            val really = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "really" }.item
+            assertEquals(FontWeight.Bold, really.fontWeight)
+            assertEquals(TextDecoration.Underline, really.textDecoration)
+            assertEquals(flagged, really.color)
+            val great = prose.spanStyles.single { prose.text.substring(it.start, it.end) == "great" }.item
+            assertEquals(FontStyle.Italic, great.fontStyle)
+            assertEquals(TextDecoration.Underline, great.textDecoration)
+            assertEquals(flagged, great.color)
+            assertEquals(
+                listOf(
+                    "It topped the charts (${text(R.string.home_cite, "W1")}). " +
+                        "It is really great (${text(R.string.home_cite_none)}).",
+                ),
+                prose("It topped the charts").fetchSemanticsNode().config[SemanticsProperties.ContentDescription],
+            )
+        }
+
+    @Test
+    fun aRuleOnItsOwnShowsAsNothingAndIsNotCountedAsUnbacked() =
+        show(written("It charted [W1].\n\n---\n\nIt sold [MB1].")) {
+            // The check reads the rule as a paragraph and an uncited sentence; the card shows none of it.
+            val unbacked = app.resources.getQuantityString(R.plurals.home_note_unbacked, 1, 1)
+            assertEquals(0, compose.onAllNodesWithText(unbacked).fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithText("---", substring = true).fetchSemanticsNodes().size)
+            textOf("It charted")
+            textOf("It sold")
         }
 }

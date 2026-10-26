@@ -97,6 +97,53 @@ class ShownRunTest {
         assertEquals("They called it great [W1].", plain("> They called it great [W1]."))
         assertEquals("It charted [W1].\nIt sold.", plain("It charted [W1].\n---\nIt sold."))
         assertEquals("It charted [W1].\nIt sold.", plain("It charted [W1].\n* * *\nIt sold."))
+        // A rule that ends the paragraph takes the line break before it: no empty line is left.
+        assertEquals("It charted [W1].", plain("It charted [W1].\n---"))
+        assertEquals(listOf<ShownRun>(), one("---"))
+    }
+
+    @Test
+    fun aMarkAfterABackslashIsShownAsWrittenWithoutTheBackslash() {
+        assertEquals(
+            listOf(text("It was "), text("Star*Title", bold = true), text(" "), cite("W1"), text(".")),
+            one("It was **Star\\*Title** [W1]."),
+        )
+        assertEquals(listOf(text("It is *not italic* "), cite("W1"), text(".")), one("It is \\*not italic\\* [W1]."))
+        assertEquals("It is _raw_ and a \\ [W1].", plain("It is \\_raw\\_ and a \\\\ [W1]."))
+        assertEquals("[not a link](https://x.org) [W1].", plain("\\[not a link](https://x.org) [W1]."))
+        assertEquals("# no heading [W1].", plain("\\# no heading [W1]."))
+        // A backslash before a letter stays; inside code, both show.
+        assertEquals("C:\\Music [W1].", plain("C:\\Music [W1]."))
+        assertEquals("It is a\\*b [W1].", plain("It is `a\\*b` [W1]."))
+    }
+
+    @Test
+    fun aRunInsideAWordStays() {
+        for (sentence in listOf(
+            "M*A*S*H aired it [W1].",
+            "N*E*R*D covered it [W1].",
+            "F**k You by CeeLo, then F**k You again [W1].",
+            "Sh*t and B*tch are its titles [W1].",
+        )) {
+            assertEquals(sentence, plain(sentence))
+            assertEquals(
+                listOf(false),
+                one(sentence).filterIsInstance<ShownRun.Text>().map { it.italic || it.bold }.distinct(),
+            )
+        }
+    }
+
+    @Test
+    fun aLinksAddressMayHoldBracketsAndMustReadAsAnAddress() {
+        assertEquals(
+            "It covers Help! [W1].",
+            plain("It covers [Help!](https://en.wikipedia.org/wiki/Help!_(song)) [W1]."),
+        )
+        assertEquals("It covers Help! [W1].", plain("It covers [Help!](https://x.org/Help!_\\(song) [W1]."))
+        assertEquals("It covers Help! [W1].", plain("It covers [Help!](en.wikipedia.org/wiki/Help!) [W1]."))
+        // Not an address: a year, a word.
+        assertEquals("It is the single [Live](1999) [W1].", plain("It is the single [Live](1999) [W1]."))
+        assertEquals("It is the single [Live](encore) [W1].", plain("It is the single [Live](encore) [W1]."))
     }
 
     @Test

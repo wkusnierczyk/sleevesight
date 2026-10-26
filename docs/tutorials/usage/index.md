@@ -71,7 +71,7 @@ With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set
 
 ### The insight
 
-*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it. The AI service is asked not to format it; when it does anyway, a title it marks is set in italics, and its other formatting marks are left out.
+*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it. The AI service is asked not to format it; when it does anyway, a title it marks is set in italics, bold shows as bold, and its other formatting marks are left out.
 
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 

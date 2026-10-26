@@ -3,11 +3,13 @@ package app.sleevesight.app.ui.home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
 import app.sleevesight.core.synthesis.GroundedText
+import app.sleevesight.core.synthesis.SentenceStatus
 
 /**
  * The line under a written insight: with [details] (*Show grounding details*, a developer option,
@@ -32,6 +34,8 @@ internal fun GroundingLine(
  * the sources do not back (uncited, citing missing evidence, or from the model's own knowledge),
  * and that the insight was kept from before, which explains *Rewrite*. A sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
+ * A sentence that shows as nothing once its Markdown is cleaned (a rule on its own, #555) is not
+ * counted: the reader could not find it.
  */
 @Composable
 private fun Note(
@@ -39,8 +43,7 @@ private fun Note(
     cached: Boolean,
     modifier: Modifier,
 ) {
-    val counts = grounded.counts
-    val unbacked = counts.uncited + counts.unknown + counts.model
+    val unbacked = remember(grounded) { unbacked(grounded) }
     val parts =
         buildList {
             if (unbacked > 0) add(pluralStringResource(R.plurals.home_note_unbacked, unbacked, unbacked))
@@ -48,6 +51,16 @@ private fun Note(
         }
     if (parts.isNotEmpty()) MetaLine(parts.joinToString(" "), modifier)
 }
+
+// The sentences the sources do not back that show on the card.
+private fun unbacked(grounded: GroundedText): Int =
+    grounded.paragraphs.sumOf { paragraph ->
+        paragraph.zip(shown(paragraph.map { it.text })).count { (sentence, runs) ->
+            sentence.status in UNBACKED && !runs.isBlank()
+        }
+    }
+
+private val UNBACKED = setOf(SentenceStatus.UNCITED, SentenceStatus.UNKNOWN, SentenceStatus.MODEL)
 
 /** The grounding check's counts in full, as the simulator gives them (*Show grounding details*). */
 @Composable
