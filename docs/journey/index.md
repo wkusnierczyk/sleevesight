@@ -29,7 +29,7 @@ In short: you install the app, read what it sends where, and give it notificatio
 
 At the bottom, a link opens the privacy policy in your browser.
 
-**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings.
+**What you decide.** Nothing yet, apart from whether you are happy with this. The screen can be read again at any time from *What leaves the device?*, at the bottom of the home screen, or *What leaves the device* under *About* in the settings. Opened again, it has a back arrow at the top and *Close* at the bottom in place of *Continue*: both bring you back to where you opened it. Its introduction then leaves out "Before you start".
 
 <!-- screenshot: the first-run screen, top, under the app's name: the intro and "What it reads", from app version … -->
 
@@ -39,7 +39,7 @@ At the bottom, a link opens the privacy policy in your browser.
 
 **On the first-run screen**, under the text, it says *Notification access is off.* and offers *Open notification access*. That opens Android's settings, where you turn on Sleevesight and come back. If no such settings screen opens, the app says to look for it under Settings, Apps, Special app access. Once access is on, the screen says *Notification access is on.* and offers *Continue*.
 
-**What follows.** *Continue* takes you to the home screen, where the app opens from then on. If you turn notification access off later, the home screen says *Sleevesight needs notification access to see what is playing.* and offers *Turn on notification access*, which brings back the first-run screen.
+**What follows.** *Continue* takes you to the home screen, where the app opens from then on. If you turn notification access off later, the home screen says *Sleevesight needs notification access to see what is playing.* and offers *Turn on notification access*, which brings back the first-run screen, with its back arrow and *Close* to return to the home screen.
 
 With nothing playing yet, the home screen says *Nothing playing in a player you follow yet. Lookups run while Sleevesight is on screen.* At the top, the logo scrolls the screen back to the top, and the cogwheel opens *Settings*.
 
