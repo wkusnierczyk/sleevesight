@@ -19,10 +19,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.app.ui.theme.plainSwitchColors
 
 private const val DISABLED_ALPHA = 0.38f
@@ -50,8 +53,9 @@ internal fun Hint(
  * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
  * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
  * title and summary, as a link to the service the switch is for; a link there is a control of its
- * own, apart from the switch. [leading] goes at the row's start, before the title, [ROW_MARK] a side:
- * a player's icon (#535), a service's badge (#537).
+ * own, apart from the switch, and so is [summaryLink], a link set in the summary where it has the
+ * link's text ([sentenceWith]): another setting it names (#581). [leading] goes at the row's start,
+ * before the title, [ROW_MARK] a side: a player's icon (#535), a service's badge (#537).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -63,6 +67,7 @@ internal fun SwitchRow(
     highlight: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
+    summaryLink: TextPart.Linked? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
     val enabled = onChange != null
@@ -88,11 +93,25 @@ internal fun SwitchRow(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
-            summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }
+            summary?.let { Summary(it, summaryLink, color) }
             below?.invoke()
         }
         Spacer(Modifier.width(16.dp))
         Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = plainSwitchColors())
+    }
+}
+
+/** A row's [summary], in [color], with [link] set in it where it has the link's text. */
+@Composable
+private fun Summary(
+    summary: String,
+    link: TextPart.Linked?,
+    color: Color,
+) {
+    if (link == null) {
+        Text(summary, style = MaterialTheme.typography.bodySmall, color = color)
+    } else {
+        LinkedText(sentenceWith(summary, link), style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 

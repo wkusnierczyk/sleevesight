@@ -1,6 +1,6 @@
 {
   "query": "\"I Will Follow You Into The Dark\" by Yanjoco, song",
-  "type": "instant",
+  "type": "lite",
   "numResults": 10,
   "excludeDomains": [
     "wikipedia.org",

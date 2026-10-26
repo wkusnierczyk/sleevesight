@@ -23,7 +23,8 @@ private val MAX_CROSSFADE_SECONDS =
  * D13), the next track's evidence ahead; *Saver* (`pauseAutoWriteAfter`, #203); and *Look up in the
  * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Don't
  * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
- * session*), what an insight's prompt holds of the artist's facts. *Reactive*'s choices are
+ * session*), what an insight's prompt holds of the artist's facts, its description linking to *New
+ * session idle trigger* under *History* (#581). *Reactive*'s choices are
  * described in its dialog (#546). The rows about writing cannot be changed while *Show insights* is
  * off; *Proactive* can, as it writes nothing.
  */
@@ -85,12 +86,29 @@ internal fun InsightsSection(
         checked = settings.lookUpInBackground,
     ) { on -> update { it.copy(lookUpInBackground = on) } }
 
-    // TODO(#546): link *New session idle trigger* in the description to its row under *History*,
-    // once Settings has the shared link that unfolds a section at a row (#563).
+    ArtistFactsRow(settings, update)
+}
+
+/**
+ * *Don't repeat artist facts* (#407, #546), its description naming *New session idle trigger*, a
+ * link to that row under *History* (#581).
+ */
+@Composable
+private fun ArtistFactsRow(
+    settings: Settings,
+    update: Update,
+) {
+    val gap = stringResource(R.string.settings_session_gap)
     SwitchRow(
         title = stringResource(R.string.settings_artist_facts_once),
-        summary = stringResource(R.string.settings_artist_facts_once_summary),
+        summary =
+            stringResource(
+                R.string.settings_artist_facts_once_summary,
+                gap,
+                stringResource(R.string.settings_section_history),
+            ),
         checked = settings.artistFactsOncePerSession,
+        summaryLink = settingsLink(gap, SettingsTarget.sessionGap),
         onChange =
             { on: Boolean -> update { it.copy(artistFactsOncePerSession = on) } }.takeIf { settings.writeInsights },
     )

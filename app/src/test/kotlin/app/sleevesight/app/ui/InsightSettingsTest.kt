@@ -146,7 +146,13 @@ class InsightSettingsTest {
         show {
             val once = compose.onNodeWithText(text(R.string.settings_artist_facts_once)).performScrollTo()
             once.assertIsOn()
-            compose.onNodeWithText(text(R.string.settings_artist_facts_once_summary)).assertIsDisplayed()
+            val summary =
+                app.getString(
+                    R.string.settings_artist_facts_once_summary,
+                    text(R.string.settings_session_gap),
+                    text(R.string.settings_section_history),
+                )
+            compose.onNodeWithText(summary).assertIsDisplayed()
             once.performClick()
             waitFor("facts on every track stored") { !settings.now().artistFactsOncePerSession }
             once.assertIsOff()

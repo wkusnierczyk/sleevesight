@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /**
  * One live search, run only when `SLEEVESIGHT_EXA_API_KEY` is set (never in CI). It costs one
- * `instant` search on the key's credits.
+ * `lite` search on the key's credits ($0.004).
  */
 class ExaLiveTest {
     @Test

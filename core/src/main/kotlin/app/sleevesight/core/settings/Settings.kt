@@ -124,6 +124,11 @@ import kotlin.time.Duration.Companion.seconds
  * @property linkStyle *Link style* (#519), a developer setting: how every link in the app is
  *   marked, a thin line below it (the default) or a faint highlight behind it, so both can be tried
  *   on the phone over real album art before one is kept. See [LinkStyle].
+ * @property markDeveloperItems *Mark developer items* (#536), a developer setting: whether
+ *   everything only developer mode shows is outlined in teal with a small *Developer* tag, so a
+ *   tester's screenshots show what other users will not see ([marksDeveloperItems]). On by
+ *   default, and back on with developer mode off, as every developer option goes back to its
+ *   default.
  * @property theme *Theme* (#444): light or dark as the system is, or always one of them.
  * @property font *Font* (#377): the app's own font, Roboto, bundled with it, or the phone's system
  *   font. See [FontChoice].
@@ -163,6 +168,7 @@ data class Settings(
     val developerMode: Boolean = false,
     val reportButton: ReportButton = ReportButton.HIDE,
     val linkStyle: LinkStyle = LinkStyle.UNDERLINE,
+    val markDeveloperItems: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
     val font: FontChoice = FontChoice.APP_FONT,
     val introAtStart: Boolean = true,
@@ -280,10 +286,16 @@ data class Settings(
     fun givesLabels(source: LabelSource): Boolean = showGenres && source in labelSources && isEnabled(source.source)
 
     /**
+     * Whether what only developer mode shows is marked as such (#536): developer mode is on, and
+     * *Mark developer items* ([markDeveloperItems]) with it.
+     */
+    val marksDeveloperItems: Boolean get() = developerMode && markDeveloperItems
+
+    /**
      * These settings with developer mode off, and with it every developer option ([showDiagnostics],
-     * [showGroundingDetails], and [reportButton] at *Hide*) and [linkStyle] back to its default,
-     * so nothing hidden keeps running or changes the look. A developer option joins here with its
-     * setting.
+     * [showGroundingDetails], and [reportButton] at *Hide*) and [linkStyle] and [markDeveloperItems]
+     * back to their defaults, so nothing hidden keeps running or changes the look. A developer
+     * option joins here with its setting.
      */
     fun withoutDeveloperMode(): Settings =
         copy(
@@ -292,6 +304,7 @@ data class Settings(
             showGroundingDetails = false,
             reportButton = ReportButton.HIDE,
             linkStyle = LinkStyle.UNDERLINE,
+            markDeveloperItems = true,
         )
 
     companion object {

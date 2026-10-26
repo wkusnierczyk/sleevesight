@@ -29,6 +29,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceDraft
@@ -194,40 +195,51 @@ private sealed interface Entry {
     }
 }
 
-/** [entries], the unverified lines and the rejected matches each under their heading. */
+/**
+ * [entries], the unverified lines and the rejected matches each under their heading. The rejected
+ * matches, last, show only in developer mode, and are marked as such together (#536).
+ */
 @Composable
 private fun Entries(
     entries: List<Entry>,
     tagWidth: Dp,
     focus: LineFocus,
 ) {
-    entries.forEachIndexed { index, entry ->
-        val previous = entries.getOrNull(index - 1)
-        key(entry.key) {
-            when (entry) {
-                is Entry.Line -> {
-                    val line = entry.line
-                    val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
-                    EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
-                }
+    val rejected = entries.indexOfFirst { it is Entry.Rejected }.takeIf { it >= 0 } ?: entries.size
+    // The rows at [indices], each under its kind's heading when the one before is of another kind.
+    val rows: @Composable (IntRange) -> Unit = { indices ->
+        for (index in indices) {
+            val entry = entries[index]
+            val previous = entries.getOrNull(index - 1)
+            key(entry.key) {
+                when (entry) {
+                    is Entry.Line -> {
+                        val line = entry.line
+                        val flashed = focus.flash?.let { it.flashes && it.id == line.id } == true
+                        EvidenceRow(line, tagWidth, flashed, focus.requesters[line.id])
+                    }
 
-                is Entry.Unverified -> {
-                    if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
-                    UnverifiedRow(entry.line, tagWidth)
-                }
+                    is Entry.Unverified -> {
+                        if (previous !is Entry.Unverified) Small(stringResource(R.string.home_unverified))
+                        UnverifiedRow(entry.line, tagWidth)
+                    }
 
-                is Entry.Rejected -> {
-                    if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
-                    val match = entry.match
-                    val name = sourceName(match.source)
-                    Small(
-                        match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, match.reason) }
-                            ?: stringResource(R.string.home_rejected, name, match.reason),
-                    )
+                    is Entry.Rejected -> {
+                        if (previous !is Entry.Rejected) Small(stringResource(R.string.home_rejected_title))
+                        val match = entry.match
+                        val name = sourceName(match.source)
+                        val reason = match.reason
+                        Small(
+                            match.subject?.let { stringResource(R.string.home_rejected_subject, name, it, reason) }
+                                ?: stringResource(R.string.home_rejected, name, reason),
+                        )
+                    }
                 }
             }
         }
     }
+    rows(0 until rejected)
+    if (rejected < entries.size) DeveloperMark(spacing = 8.dp) { rows(rejected until entries.size) }
 }
 
 /**

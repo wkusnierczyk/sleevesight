@@ -32,6 +32,10 @@ dependencies {
 
 val fixturesDir = rootProject.layout.projectDirectory.dir("fixtures")
 
+// The API keys page's vectors (`assets/api-keys/make_vectors.mjs`), by which `KeysTest` checks that
+// the CLI reads a keys file by the page's names, as the page does.
+val apiKeysVectors = rootProject.layout.projectDirectory.file("app/src/test/resources/api-keys-vectors.properties")
+
 // Run from the repository root, so the default `fixtures/` and `.dev/` paths resolve there.
 tasks.named<JavaExec>("run") {
     workingDir = rootProject.projectDir
@@ -42,4 +46,6 @@ tasks.named<JavaExec>("run") {
 tasks.withType<Test>().configureEach {
     systemProperty("sleevesight.fixtures", fixturesDir.asFile.absolutePath)
     inputs.dir(fixturesDir).withPropertyName("fixtures").withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("sleevesight.apiKeysVectors", apiKeysVectors.asFile.absolutePath)
+    inputs.file(apiKeysVectors).withPropertyName("apiKeysVectors").withPathSensitivity(PathSensitivity.NONE)
 }

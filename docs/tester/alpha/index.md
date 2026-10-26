@@ -1,12 +1,16 @@
 ---
 # The tester brief for the closed test on Google Play (#158), at `/docs/tester/alpha/`: linked from
 # the invitation. Written from the build in the test, its first-run screen and settings, and the
-# privacy policy (`privacy.md`); a change to what testers install, see or send changes it too.
+# privacy policy (`privacy.md`); a change to what testers install, see or send changes it too, and
+# the one-page flyer linked at its top with it (`assets/flyer/tester-flyer.html`, rendered by
+# `assets/flyer/make_flyer.mjs` to the PDF and PNG the site serves; #566).
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
 ---
 
 # Testing Sleevesight
+
+**The short version:** the five steps of the test on one page, the [tester flyer]({{ '/assets/flyer/tester-flyer.pdf' | relative_url }}) (PDF, A4; also as an [image]({{ '/assets/flyer/tester-flyer.png' | relative_url }})). This page has the details.
 
 Thank you for testing Sleevesight. This page says what the app is, how to install it, what to try, what to tell us, and what leaves your phone while you test.
 
@@ -36,7 +40,7 @@ So that you need not pay for testing, we can give you an Anthropic key of your o
 
 - **Saving it.** In Settings, under *Secrets*, tap *Load keys* and point the camera at the code. The app lists what it found, by the key's last four characters; *Save* saves it. Then switch on *Anthropic* under *AI services*. The app asks for the camera only while you scan, and no frame is stored on the device.
 - **What it means for privacy.** With our key, your track's title, artists and album, and what the sources found, go to Anthropic under the project's account rather than your own. The developer still receives none of it: Anthropic's console shows how much each key is used, not what was sent. If you would rather keep it under your own account, use your own key instead.
-- **Cost.** Each insight is a paid call (now and then two). *Reactive*, *On track change* by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: the card says *The insight could not be written*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in.
+- **Cost.** Each insight is a paid call (now and then two). *Reactive*, *On track change* by default, writes one on every track change, and that is where the cost is. The keys share a spending limit. If it is reached before the test ends, insights stop: the card says *The insight could not be written*, with a short reason such as *the AI service account needs credit, or has reached its spending limit*. If every insight fails like that, tell us at [support@sleevesight.app](mailto:support@sleevesight.app), and keep the app installed and opted in. With your own keys, [What it costs you]({{ '/docs/costs/' | relative_url }}) says what each service charges.
 - **The key we give you is yours only.** Please do not share it. We can see each key's use, and can turn one off without touching the others.
 
 ## Using Sleevesight

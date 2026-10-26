@@ -44,8 +44,10 @@ import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
+import app.sleevesight.app.ui.theme.LocalDeveloperMark
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.developerMarkHeight
 import kotlinx.coroutines.launch
 
 /**
@@ -108,7 +110,13 @@ private fun HomeBody(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom = if (reportShown) REPORT_CLEARANCE else 8.dp,
+                    bottom =
+                        when {
+                            !reportShown -> 8.dp
+                            // Marked (#536), the button is taller by the mark, which follows the font size.
+                            LocalDeveloperMark.current -> REPORT_CLEARANCE + developerMarkHeight()
+                            else -> REPORT_CLEARANCE
+                        },
                 ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

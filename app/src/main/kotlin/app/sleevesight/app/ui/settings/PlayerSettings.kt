@@ -7,6 +7,8 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,28 +109,31 @@ private fun PlayerRow(
     val (name, launch, icon) = loaded ?: return
     SwitchRow(
         title = name,
-        summary = player.takeIf { developerMode },
+        summary = null,
         checked = followed,
         leading =
             icon?.let { bitmap ->
                 { Image(bitmap, contentDescription = null, modifier = Modifier.size(ROW_MARK)) }
             },
-        below =
+        below = {
+            // The package name, only in developer mode, and marked as such (#536).
+            if (developerMode) {
+                DeveloperMark { Text(player, style = MaterialTheme.typography.bodySmall) }
+            }
             launch?.let { intent ->
-                {
-                    ExternalLink(
-                        text = stringResource(R.string.settings_open_app),
-                        description = stringResource(R.string.settings_open_app_of, name),
-                        onClick = {
-                            try {
-                                context.startActivity(intent)
-                            } catch (_: ActivityNotFoundException) {
-                                // Uninstalled since the list was drawn: nothing to open.
-                            }
-                        },
-                    )
-                }
-            },
+                ExternalLink(
+                    text = stringResource(R.string.settings_open_app),
+                    description = stringResource(R.string.settings_open_app_of, name),
+                    onClick = {
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            // Uninstalled since the list was drawn: nothing to open.
+                        }
+                    },
+                )
+            }
+        },
     ) { on ->
         update { it.copy(followedPlayers = it.followedPlayers + (player to on)) }
     }
