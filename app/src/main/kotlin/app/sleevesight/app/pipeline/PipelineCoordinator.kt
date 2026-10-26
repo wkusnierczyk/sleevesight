@@ -101,6 +101,16 @@ sealed interface CoordinatorEvent {
         val after: Int?,
     ) : CoordinatorEvent
 
+    /**
+     * *Reactive* (D5) moved to or from *Manual* (#553: also the insight card's toggle): [automatic]
+     * while it writes automatically. It only narrows a run's settings, read when the run started:
+     * off, no run writes without a tap from then on; on, a run started under *Manual* still does
+     * not.
+     */
+    data class AutomaticWritingChanged(
+        val automatic: Boolean,
+    ) : CoordinatorEvent
+
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
     data object RebuildRequested : CoordinatorEvent
 
@@ -310,7 +320,9 @@ sealed interface CoordinatorEffect {
  * action, and once it passes [pauseAfter] (*Saver*; null for *Off*), at
  * the next change after that many, the first action, if made, expires: [acted] false and
  * [expired] true, until the user acts again, and a tap kept for the run (#192) is dropped. An
- * activity start resets [away], not [expired]. [ledger] is the insight of the current insight
+ * activity start resets [away], not [expired]. [automatic] is *Reactive* as last reported, writing
+ * automatically or not (#553): off, no decision writes without a tap, whatever the run's own
+ * settings, read when it started, say. [ledger] is the insight of the current insight
  * track ([Ledger]). [building] is the rebuild waiting to be swapped in, and [built] its outcome
  * once it is known. [next] is the track to prepare ahead (D13), [preparation] the preparation in progress, and [prepared] the
  * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
@@ -329,6 +341,7 @@ data class CoordinatorState(
     val pauseAfter: Int? = null,
     val away: Int = 0,
     val expired: Boolean = false,
+    val automatic: Boolean = true,
     val latest: Report? = null,
     val run: Run? = null,
     val ledger: Ledger? = null,
@@ -594,7 +607,8 @@ fun sameInsightTrack(
  * latest report's cause, which the current run holds, is one *Reactive* writes
  * on under the run's settings (`InsightAsked.writesOn`: every cause under *On track change*,
  * a skip in the player or an action in Sleevesight under *On skip*, none under *Manual* or with
- * *Show insights* off), the user has acted since the app started (a cold start: a return to the
+ * *Show insights* off) and *Reactive* still writes automatically now ([CoordinatorState.automatic],
+ * #553: turned to *Manual* since the run started, nothing writes without a tap), the user has acted since the app started (a cold start: a return to the
  * app keeps the first action) and that first action has not expired, and the ledger has not decided
  * this key (a rebuild's run of it again is not a track change, D5); else offer Write, marking the
  * run lapsed when only the expiry kept it from writing ([CoordinatorState.Run.lapsed]), so the
@@ -630,6 +644,7 @@ fun sameInsightTrack(
  * | any | ActivityStopped(c) | started − 1; restarting = c when none is left | none |
  * | any | BackgroundChanged(on) | background = on | none |
  * | any | PauseAutoWriteChanged(n) | the pause after n track changes away (none for *Off*) | none |
+ * | any | AutomaticWritingChanged(on) | automatic = on (#553) | none |
  * | any | Reported(key, cause) | latest = the report, with its cause; the run current only if it holds it; first action made if the cause is an action in Sleevesight; a preparation cancelled unless the report is of the insight track reported before | CancelPreparation (if one is cancelled), StartTimer |
  * | none visible (no activity started or restarting) | Reported(key, cause), of another insight track than the report before (or the first), not an action in Sleevesight | as above; one more track change away; past the pause's count (the change after that many), with the first action made: the first action expired (acted false), until the user acts again, and a tap kept for the run dropped (keepsTap and tapped cleared); with *Off*, never | as above |
  * | latest not this report | Settled | unchanged | none |
@@ -687,6 +702,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.ActivityStopped -> stopped(event.changingConfigurations)
             is CoordinatorEvent.BackgroundChanged -> state = state.copy(background = event.on)
             is CoordinatorEvent.PauseAutoWriteChanged -> state = state.copy(pauseAfter = event.after)
+            is CoordinatorEvent.AutomaticWritingChanged -> state = state.copy(automatic = event.automatic)
             else -> if (state.acknowledged) onAcknowledged(event)
         }
         if (state.acknowledged) {
@@ -1080,7 +1096,12 @@ class PipelineCoordinator(
     ): CoordinatorState.WouldWrite? {
         val cause = state.latest?.cause
         val first = before == null || before.key != run.key
-        val writes = cause != null && cause in settings.writesOn && state.acted && state.current?.id == run.id
+        val writes =
+            cause != null &&
+                cause in settings.writesOn &&
+                state.automatic &&
+                state.acted &&
+                state.current?.id == run.id
         val unreachable = run.gathered?.unreachable.orEmpty()
         return when {
             recorded.written -> null
@@ -1100,7 +1121,12 @@ class PipelineCoordinator(
     ): WriteSettings? {
         val cause = state.latest?.cause
         val first = before == null || before.key != run.key
-        val blocked = cause != null && cause in settings.writesOn && state.expired && state.current?.id == run.id
+        val blocked =
+            cause != null &&
+                cause in settings.writesOn &&
+                state.automatic &&
+                state.expired &&
+                state.current?.id == run.id
         return when {
             recorded.written -> null
             first -> settings.takeIf { blocked }
@@ -1159,7 +1185,8 @@ class PipelineCoordinator(
         run: CoordinatorState.Run,
         writesOn: Set<ChangeCause>,
     ): Boolean {
-        if (!state.expired) return false
+        // Under *Manual* now (#553), nothing would have written: no pause to tell of.
+        if (!state.expired || !state.automatic) return false
         val ledger = state.ledger?.takeIf { sameInsightTrack(it.track, run.nowPlaying) }
         val cause = state.latest?.cause
         val carried =
@@ -1184,7 +1211,8 @@ class PipelineCoordinator(
         // The cause of the latest report, which the run, being current, holds: the latest word
         // on how the user came to this track (a skip back to it during its run included).
         val cause = state.latest?.cause
-        val writes = cause != null && cause in writesOn && acted && !written
+        // *Reactive* turned to *Manual* since the run started (#553) answers no for it too.
+        val writes = cause != null && cause in writesOn && state.automatic && acted && !written
         // A key the ledger decided: a rebuild's run of it is not a track change (D5). A run that
         // asks again (#192) writes only as the decision for nothing to narrate would have, under
         // the same settings, once a source unreachable when it was made has returned lines.

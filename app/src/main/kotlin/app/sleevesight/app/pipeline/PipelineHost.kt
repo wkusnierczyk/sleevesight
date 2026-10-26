@@ -147,7 +147,9 @@ class PipelineKeys(
  * one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203).
+ * settings as *Look up in the background* does (#203), and *Reactive* to or from *Manual* as
+ * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
+ * change made while it runs.
  *
  * [online] is whether the phone is online (its default network has validated internet access),
  * collected after the acknowledgement: when it comes back, the playing track's run asks again the
@@ -306,6 +308,13 @@ class PipelineHost(
             launch {
                 latest.map { it.pauseAutoWriteAfter }.distinctUntilChanged().collect {
                     queue.send(CoordinatorEvent.PauseAutoWriteChanged(it))
+                }
+            }
+            launch {
+                // *Reactive* to or from *Manual* (#553, the insight card's toggle), so a run started
+                // before it was turned off does not write without a tap.
+                latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
                 }
             }
             launch {

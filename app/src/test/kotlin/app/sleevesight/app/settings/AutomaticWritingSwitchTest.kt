@@ -1,5 +1,6 @@
 package app.sleevesight.app.settings
 
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.sleevesight.app.TestStores
@@ -72,6 +73,24 @@ class AutomaticWritingSwitchTest {
         toggle(store, on = true)
         val read = runBlocking { store.settings.first() }
         assertEquals(WriteAutomatically.ON_EVERY_TRACK_CHANGE, read.writeAutomatically)
+    }
+
+    @Test
+    fun aFileFromBeforeTheToggleReadsItsModeAsTheLastAndKeepsItWhenTurnedOff() {
+        // On skip stored, no last automatic mode: as an install from before #553 left it.
+        runBlocking {
+            stores.open("settings").edit { it[stringPreferencesKey("insights.write_automatically")] = "WHEN_I_SKIP" }
+        }
+        stores.close()
+        val first = store()
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, runBlocking { first.settings.first() }.lastAutomaticMode)
+        toggle(first, on = false)
+        stores.close()
+
+        val second = store()
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, runBlocking { second.settings.first() }.lastAutomaticMode)
+        toggle(second, on = true)
+        assertEquals(WriteAutomatically.WHEN_I_SKIP, runBlocking { second.settings.first() }.writeAutomatically)
     }
 
     @Test
