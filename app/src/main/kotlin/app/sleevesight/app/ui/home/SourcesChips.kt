@@ -38,8 +38,8 @@ import app.sleevesight.core.model.Outcome
 // The *Sources* section's heading, its chips and its note (#440).
 
 /**
- * The section's heading, and its fold (#440): `Sources` and the disclosure triangle of the genres'
- * fold (#439), right while [folded], down while not; the whole line a button, which a screen
+ * The section's heading, and its fold (#440): `Sources` and the disclosure triangle of the folds,
+ * right while [folded], down while not; the whole line a button, which a screen
  * reader reads as the heading *Sources*, collapsed or expanded.
  */
 @Composable

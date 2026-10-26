@@ -6,7 +6,12 @@ import android.provider.Settings.Secure
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -18,6 +23,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.FirstRunAcknowledgement
@@ -52,6 +58,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.serializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,9 +69,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The ways to Home's pages under *Layout*'s *Separate pages* (#548), on a phone's screen, with Home
- * and its pages drawn as the app draws them, from a [HomeFeed]: *Genres ›* and a genre chip open the
- * genres' page, and back returns to Home where it was scrolled to; with one level of two artists'
- * labels, a genre they share shows once, and opens a row per artist. A link acts while its screen is
+ * and its pages drawn as the app draws them, from a [HomeFeed]: a genre chip opens the genres' page
+ * at its genre (#558), and back returns to Home where it was scrolled to; with one level of two
+ * artists' labels, a genre they share shows once, and opens a row per artist. A link acts while its screen is
  * the top of the back stack, whatever that screen's lifecycle says: after a back swipe started and
  * cancelled, which leaves the page short of resumed, and while Home comes back from a page; and a
  * double tap still opens one page.
@@ -87,7 +94,7 @@ class PageLinksTest {
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")))
     }
 
-    // Two levels, so Home shows `Genres ›` before the track's chips.
+    // Two levels: Home shows the track's chips, the page the table of both.
     private val genres =
         TrackGenres(
             listOf(
@@ -174,7 +181,8 @@ class PageLinksTest {
 
     private fun onHome() = assertEquals(home, route())
 
-    private fun onGenres() = assertEquals(genresPage, route())
+    // The genres' page, whatever genre it was opened at.
+    private fun onGenres() = assertTrue("on ${route()}", route()?.startsWith(genresPage) == true)
 
     private fun top(tag: String) =
         compose
@@ -208,31 +216,35 @@ class PageLinksTest {
     @Config(qualifiers = "w411dp-h480dp-420dpi")
     fun genresAndAChipOpenTheGenresPageAndBackReturnsToHomeWhereItWas() =
         show {
-            val unscrolled = top(GENRES_PAGE_LINK_TAG)
+            val unscrolled = top(folk)
             compose.onNodeWithTag(SOURCES_PAGE_LINK_TAG).performScrollTo()
-            val scrolled = top(GENRES_PAGE_LINK_TAG)
+            val scrolled = top(folk)
             assertNotEquals(unscrolled, scrolled)
-
-            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performClick()
-            compose.waitForIdle()
-            onGenres()
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertExists()
-            backArrow()
-            onHome()
-            assertEquals(scrolled, top(GENRES_PAGE_LINK_TAG))
 
             compose.onNodeWithTag(folk).performClick()
             compose.waitForIdle()
             onGenres()
+            assertEquals("folk", nav.currentBackStackEntry?.toRoute<HomePage.Genres>()?.genre)
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Gordon Lightfoot")
             backArrow()
             onHome()
-            assertEquals(scrolled, top(GENRES_PAGE_LINK_TAG))
+            assertEquals(scrolled, top(folk))
+
+            compose.onNodeWithTag(folk).performClick()
+            compose.waitForIdle()
+            onGenres()
+            // Android's back, as the system sends it.
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            compose.waitForIdle()
+            onHome()
+            assertEquals(scrolled, top(folk))
         }
 
     @Test
     fun afterABackSwipeStartedAndCancelledThePagesBackArrowStillReturnsHome() =
         show {
-            open(GENRES_PAGE_LINK_TAG)
+            open(folk)
             onGenres()
             cancelledBackSwipe()
             // Still on the page, and the page is on top of the stack, though not resumed: what a
@@ -257,25 +269,24 @@ class PageLinksTest {
         show(TrackGenres(listOf(artistRow("Ike Turner", "soul"), artistRow("Tina Turner", "soul", "funk")))) {
             val ike = GENRE_PREFIX + "artist:Ike Turner:soul"
             val tina = GENRE_PREFIX + "artist:Tina Turner:soul"
-            // On Home, no `Genres ›`, and the shared genre once, under the first artist that gives it.
-            assertEquals(0, compose.onAllNodesWithTag(GENRES_PAGE_LINK_TAG).fetchSemanticsNodes().size)
+            // On Home, the shared genre once, under the first artist that gives it.
             assertEquals(1, compose.onAllNodesWithText("Soul").fetchSemanticsNodes().size)
             assertEquals(0, compose.onAllNodesWithTag(tina).fetchSemanticsNodes().size)
 
             open(ike)
             onGenres()
-            // A row per artist, each with its own chip of the genre.
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
-            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertExists()
-            compose.onNodeWithTag(ike).assertExists()
-            compose.onNodeWithTag(tina).assertExists()
-            compose.onNodeWithTag(GENRE_PREFIX + "artist:Tina Turner:funk").assertExists()
+            // A row per artist, each with its own label of the genre, both marked.
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertTextEquals("Ike Turner")
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Tina Turner")
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Ike Turner:soul").assertIsSelected()
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Tina Turner:soul").assertIsSelected()
+            compose.onNodeWithTag(GENRE_CELL_PREFIX + "artist:Tina Turner:funk").assertExists()
         }
 
     @Test
     fun aTapOnHomeWhileItComesBackFromAPageOpensThePage() =
         show {
-            open(GENRES_PAGE_LINK_TAG)
+            open(folk)
             compose.mainClock.autoAdvance = false
             compose.onNodeWithTag(PAGE_BACK_TAG).performClick()
             compose.mainClock.advanceTimeByFrame()
@@ -283,7 +294,10 @@ class PageLinksTest {
             onHome()
             // Home is on top again but still coming in, short of resumed, when the tap lands.
             assertNotEquals(Lifecycle.State.RESUMED, nav.currentBackStackEntry?.lifecycle?.currentState)
-            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).performSemanticsAction(SemanticsActions.OnClick)
+            // Home's chip, not the page's, which is marked and still drawn as it leaves.
+            compose
+                .onNode(hasTestTag(folk) and SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+                .performSemanticsAction(SemanticsActions.OnClick)
             compose.mainClock.autoAdvance = true
             compose.waitForIdle()
             onGenres()
@@ -306,7 +320,7 @@ class PageLinksTest {
             }
             compose.waitForIdle()
             onHome()
-            compose.onNodeWithTag(GENRES_PAGE_LINK_TAG).assertExists()
+            compose.onNodeWithTag(folk).assertExists()
         }
 }
 

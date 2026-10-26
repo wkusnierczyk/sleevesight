@@ -15,7 +15,12 @@ sealed interface HomePage {
         val cite: String? = null,
     ) : HomePage
 
-    /** The genre labels' table, a row per level. */
+    /**
+     * The genres (#558): the chips, and the panel of [genre], by its identity, the chip tapped on
+     * Home, with the table, a row per level.
+     */
     @Serializable
-    data object Genres : HomePage
+    data class Genres(
+        val genre: String? = null,
+    ) : HomePage
 }

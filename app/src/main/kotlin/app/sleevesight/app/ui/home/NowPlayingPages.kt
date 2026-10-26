@@ -37,7 +37,7 @@ internal fun NowPlayingPageContent(
             }
             when (page) {
                 is HomePage.Sources -> SourcesPage(shown, playing, page.cite, actions.openSettings)
-                HomePage.Genres -> GenresPage(shown.track, state.settings)
+                is HomePage.Genres -> GenresPage(shown.track, state.settings, page.genre)
             }
         }
     }
@@ -48,7 +48,7 @@ internal fun NowPlayingPageContent(
 private fun pageTitle(page: HomePage): String =
     when (page) {
         is HomePage.Sources -> stringResource(R.string.home_sources_title)
-        HomePage.Genres -> stringResource(R.string.home_genres)
+        is HomePage.Genres -> stringResource(R.string.home_genres)
     }
 
 /**

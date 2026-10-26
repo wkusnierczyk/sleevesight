@@ -163,10 +163,10 @@ internal class NowPlayingActions(
  * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
  * transport controls and the handoff to the player (design, *Phase 2*).
  *
- * *Layout* (#447): under *Expandable boxes*, the default, *Sources* and the genres' table fold in
- * place, a chip's attribution shows under it, and a citation unfolds *Sources* to its line. Under
- * *Separate pages* each opens on a page of its own ([NowPlayingActions.openPage]): `Sources ›`, and
- * a citation, which opens *Sources* at its line; `Genres ›` and a genre chip, the genres' table.
+ * *Layout* (#447): under *Expandable boxes*, the default, *Sources* folds in place, a genre chip
+ * opens its genre's panel under the chips (#558), and a citation unfolds *Sources* to its line.
+ * Under *Separate pages* each opens on a page of its own ([NowPlayingActions.openPage]): `Sources ›`,
+ * and a citation, which opens *Sources* at its line; a genre chip, the genres' page at its genre.
  * The insight shows in full on Home either way.
  */
 @Composable

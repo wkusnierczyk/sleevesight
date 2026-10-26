@@ -61,13 +61,13 @@ A new track shows at once, with its sources and insight to come.
 
 Under the track come its genre labels: the tags Last.fm and MusicBrainz give the track, its artists and its album, kept only when they name a genre in a fixed list. With both on, Last.fm's labels come first on each level and MusicBrainz's fill the rest, five at most a level; a label both give is shown once.
 
-Folded, *Genres ▸* shows the labels of the most specific level found: the track's, else the album's, else the artists'. A tap unfolds it, *Genres ▾*, to a table with a row for each level that has labels: *Track*, one *Artist* row per artist, its name before its labels, and *Album*. When only one level has labels, they show on their own, with no fold. A screen reader says whether the fold is folded or unfolded, and reads each row of the table as one.
+The labels show as chips under the album, with no title: those of the most specific level found, the track's, else the album's, else the artists'. A tap on a chip opens that genre's panel under the chips: the genre's name, with *Close*, then a table with a row for each level that has labels, each row's name on a line of its own above its labels: the track's title (a little stronger), the artist's name (a row for each credited artist), and the album's title. A name too long for the line ends in an ellipsis. The genre you tapped is marked wherever it appears in the table. Under the table, where the genre came from, a line for each level that has it: *From the track's tags:* (or the album's, or the artist's, named when the track has several), then each source, linked to its page there, and for MusicBrainz a link to its licence. A tap on another chip switches the panel to its genre; a second tap on the same chip, or *Close*, closes it. Each new track starts with the panel closed.
 
-A tap on a label shows where it came from: *… comes from the track's tags on:* (or the album's, or the artist's, named when the track has several), then each source, linked to its page there, and for MusicBrainz a link to its licence. A second tap closes it. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
+A screen reader reads each chip as a button, says whether its genre's panel is open, and names what a double tap does ("show genre", "close genre"); it reads the panel's name as a heading, and each row's name in full, however much of it shows. Which sources give labels is set under [*Genres*]({{ '/docs/tutorials/settings/' | relative_url }}), and *Show genres* there turns them off altogether.
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
-With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; with labels of one level only, there is no *Genres ›*, and a tap on a label opens the page all the same. Where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
+With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, a tap on a chip opens the genres on a page of their own, with the same chips, the one you tapped marked, and its panel, with no *Close*: the back arrow returns to the home screen ([Pages](#pages)).
 
 ### The insight
 
@@ -139,12 +139,12 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
-- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, there is no *Genres ›*, and a label opens the table, with its one row (a row per artist for artists' labels).
+- A genre chip on the home screen opens the genres' page: the chips, the one tapped marked, and that genre's panel, with the table and where the genre came from. A tap on another chip there switches the panel to its genre.
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
 The insight itself stays on the home screen, in full, whichever layout is set.
 
-The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads each of these as its name, and says that a double tap opens its page; a page's title is read as a heading.
+The back arrow, or Android's back, returns to where the page was opened from: the home screen, where you left it. Each page shows the track playing, and follows a new track. Each page opens fresh, so *Keep Sources as you left them* applies only to *Expandable boxes*. On the home screen, a screen reader reads *Sources ›* and each genre chip by its name, and says that a double tap opens its page; a page's title is read as a heading.
 
 ## Writing an insight
 

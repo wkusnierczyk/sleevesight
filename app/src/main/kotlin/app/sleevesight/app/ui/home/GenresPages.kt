@@ -1,55 +1,34 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.core.genres.TrackGenres
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Settings
 
-// The genre labels under *Layout*'s *Separate pages* (#447): on Home, the folded chips and the way to
-// the table's page; and the table's page.
+// The genres' page under *Layout*'s *Separate pages* (#447, #558; frame C of the agreed mock-ups).
 
 /**
- * On Home, under *Separate pages*: the folded chips of [genres] (the most specific level's), after
- * `Genres ›` when there is more than one level; `Genres ›` and each chip open the table's page.
- * With one level there is no `Genres ›`, and each chip opens the page all the same (#548): a chip
- * that looks like a button and opens nothing reads as broken. With no labels, what the box says
- * ([labelsOff] in [settings], or none found).
- */
-@Composable
-internal fun GenresLinks(
-    genres: TrackGenres,
-    settings: Settings?,
-    openPage: (HomePage) -> Unit,
-) {
-    when {
-        genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
-        genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        else ->
-            Chips(genres.folded, open = null, select = { openPage(HomePage.Genres) }, opensPage = true) {
-                if (!genres.oneLevel) {
-                    PageLink(
-                        stringResource(R.string.home_genres),
-                        GENRES_PAGE_LINK_TAG,
-                        MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                    ) { openPage(HomePage.Genres) }
-                }
-            }
-    }
-}
-
-/**
- * The table's page ([HomePage.Genres]): the genre labels of [track] as the box's table, a row per
- * level, as plain labels; with one level, the table's one row (or a row per artist). While the
- * track's lookups run, and with *Show genres* off in [settings], it says so.
+ * The genres' page ([HomePage.Genres]): the chips Home shows, of [track], the one of the genre open
+ * marked, and that genre's panel ([GenrePanel]), with no *Close*: the back arrow closes the page. It
+ * opens at [genre], the chip tapped on Home; a chip switches the panel to its genre, and a tap on
+ * the marked one leaves it open. A genre the track does not have (a new track since) opens the first
+ * chip's. While the track's lookups run, and with *Show genres* off in [settings], it says so.
  */
 @Composable
 internal fun GenresPage(
     track: TrackState?,
     settings: Settings?,
+    genre: String?,
 ) {
     val genres = track?.genres
     when {
@@ -57,7 +36,26 @@ internal fun GenresPage(
         track == null || !track.gathered || genres == null -> QuietLine(stringResource(R.string.home_evidence_looking))
         genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
         genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        else -> Table(genres, open = null, select = null)
+        else -> GenresPageBody(track, genre)
+    }
+}
+
+@Composable
+private fun GenresPageBody(
+    track: TrackState,
+    start: String?,
+) {
+    val genres = track.genres
+    // Back to the chip tapped on Home on each new track, which falls back to the first chip.
+    var chosen by rememberSaveable(track.normalized.lookupKey) { mutableStateOf(start) }
+    val open =
+        chosen?.takeIf { id -> genres.all.any { it.genre.identity == id } }
+            ?: genres.folded
+                .first()
+                .label.genre.identity
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Chips(genres.folded, open, close = false) { chosen = it.label.genre.identity }
+        GenrePanel(track, open)
     }
 }
 

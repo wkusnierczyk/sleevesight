@@ -136,7 +136,7 @@ fun SleevesightNavHost(
             if (firstRun.acknowledged) page(route, homeLinks(navController, entry)) else FirstRunFirst(navController)
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
-        composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
+        composable<HomePage.Genres> { homePage(it.toRoute<HomePage.Genres>(), it) }
         composable<SettingsPage> {
             val links =
                 SettingsLinks(
