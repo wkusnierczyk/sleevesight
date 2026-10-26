@@ -26,7 +26,8 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * and its reasoning effort. The switches are exclusive: switching one on switches the one on before
  * off, and with all off no insight is written. A provider's model and effort can be set while it
  * is off, and stay when it is switched off, so switching back restores them. Its key is under
- * *Secrets*; switched on without it, the provider says so.
+ * *Secrets*, which a link under the switch leads to ([KeyLink]); switched on without it, the
+ * provider says so.
  */
 @Composable
 internal fun AiSection(
@@ -58,6 +59,7 @@ private fun ProviderRows(
         // Switched on, it says when its key is missing or cannot be read: insights wait for it.
         summary = keyId?.let { keyNote(it, secrets) }.takeIf { on },
         checked = on,
+        below = keyId?.let { { KeyLink(it) } },
     ) { switchedOn ->
         update {
             when {

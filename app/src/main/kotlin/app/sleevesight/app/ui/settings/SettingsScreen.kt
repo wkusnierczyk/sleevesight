@@ -326,7 +326,7 @@ private fun Notices(
     }
 }
 
-@Suppress("LongMethod") // One fold per section, in the order shown.
+/** The settings' sections, all folded at first, and the links between them ([SettingsNavigator]). */
 @Composable
 private fun SettingsContent(
     settings: Settings,
@@ -335,8 +335,22 @@ private fun SettingsContent(
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
-    val secrets = keys.states
     val folds = rememberSectionFolds()
+    ProvideSettingsNavigator(folds) { SettingsColumn(settings, keys, navigation, folds, update, open) }
+}
+
+/** The sections, in [folds], in the order shown. */
+@Suppress("LongParameterList", "LongMethod") // What the sections show and change; one fold per section.
+@Composable
+private fun SettingsColumn(
+    settings: Settings,
+    keys: KeysShown,
+    navigation: Navigation,
+    folds: SectionFolds,
+    update: Update,
+    open: (SettingsDialog) -> Unit,
+) {
+    val secrets = keys.states
     Column(
         modifier =
             Modifier

@@ -53,7 +53,7 @@ The first run does not ask for an AI service or a key. Without one, Sleevesight 
 
 The settings are in sections, each folded under its name: a tap on a section's name unfolds it.
 
-**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. A service switched off keeps its key, model and reasoning effort, so you can switch back. Until its key is saved, the service switched on says *Needs your Anthropic key, in Secrets.* (or OpenAI's, or Google's).
+**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. Switching off a service does not erase its key or the most recently used model and effort settings, so you can switch back. Under each service, *Set your Anthropic API key here.* (or OpenAI's, or Google Gemini's) links to its key under *Secrets*. Until its key is saved, the service switched on says *Needs your Anthropic key, in Secrets.* (or OpenAI's, or Google's).
 
 **The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key, the last two as icons in the *Key* field:
 

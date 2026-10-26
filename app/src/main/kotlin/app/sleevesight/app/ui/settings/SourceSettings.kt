@@ -80,8 +80,9 @@ private val SOURCE_ROWS: List<SourceRow> =
     )
 
 /**
- * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key
- * it lacks, where to save it ([keyNote]): the keys themselves are under *Secrets*. A web search
+ * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key,
+ * a link to it under *Secrets*, where the keys are ([KeyLink]), and, while it lacks the key, that
+ * it needs it ([keyNote]). A web search
  * engine's row is on while web search is on with that engine ([Settings.isEnabled] needs both):
  * switching it on turns both on, and off turns the engine off.
  */
@@ -107,7 +108,10 @@ internal fun SourcesSection(
             title = name,
             summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets) }),
             checked = checked,
-            below = row.url?.let { url -> { WebsiteLink(name, url) } },
+            below = {
+                key?.let { KeyLink(it) }
+                row.url?.let { WebsiteLink(name, it) }
+            },
         ) { on -> update { switched(it, row, on) } }
     }
 }

@@ -8,7 +8,7 @@
     <string name="settings_sources_short">External services providing information on artists and music.</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
-    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
+    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time. Switching off a service does not erase the most recently used model and effort settings.</string>
     <string name="settings_keys_short">Private API keys enabling external services</string>
     <string name="settings_show_phone_name">Show this phone’s name to the computer</string>
     <string name="settings_show_phone_name_summary">For Type on a computer: while its session is open, the phone advertises its Bluetooth name, so the computer’s list shows the phone by it. Anyone nearby scanning for Bluetooth can see the name meanwhile. Off: the phone is the only device listed, as “Unknown or Unsupported Device”.</string>
@@ -38,6 +38,8 @@
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
+    <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
+    <string name="settings_set_key">Set your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
 
     <!-- Genres. -->
