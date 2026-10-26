@@ -58,7 +58,8 @@ import app.sleevesight.core.settings.Settings
  *
  * That is the genres as boxes (*Layout*'s *Expandable boxes*, #447). With [openPage] (*Separate
  * pages*), the table opens on a page of its own instead ([HomePage.Genres]): Home shows the folded
- * chips after `Genres ›`, and `Genres ›` and each chip open the table's page.
+ * chips, after `Genres ›` when there is more than one level, and `Genres ›` and each chip, of one
+ * level too, open the table's page.
  */
 @Composable
 internal fun Genres(

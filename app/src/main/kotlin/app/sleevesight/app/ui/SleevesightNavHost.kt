@@ -5,9 +5,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.dropUnlessResumed
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -105,9 +104,9 @@ fun SleevesightNavHost(
                     },
             )
         }
-        composable<Home> {
+        composable<Home> { entry ->
             if (firstRun.acknowledged) {
-                val links = homeLinks(navController)
+                val links = homeLinks(navController, entry)
                 WithTesterReport(testerReport) { report ->
                     HomeScreen(
                         accessGranted = granted,
@@ -122,12 +121,12 @@ fun SleevesightNavHost(
                 FirstRunFirst(navController)
             }
         }
-        // Home's pages (#447), each drawn by [page] for the route it was opened with.
-        val homePage = @Composable { route: HomePage ->
-            if (firstRun.acknowledged) page(route, homeLinks(navController)) else FirstRunFirst(navController)
+        // Home's pages (#447), each drawn by [page] for the route it was opened with, from its entry.
+        val homePage = @Composable { route: HomePage, entry: NavBackStackEntry ->
+            if (firstRun.acknowledged) page(route, homeLinks(navController, entry)) else FirstRunFirst(navController)
         }
-        composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>()) }
-        composable<HomePage.Genres> { homePage(HomePage.Genres) }
+        composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
+        composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
         composable<SettingsPage> {
             val links =
                 SettingsLinks(
@@ -148,20 +147,23 @@ fun SleevesightNavHost(
 }
 
 /**
- * Where Home and its pages lead, through [navController]. A page opens, and back is taken, only
- * while the screen it is on is resumed: a second tap while the first one's page comes in, or while
- * the page leaves, does nothing, so one back always returns to the screen the page was opened from.
+ * Where Home and its pages lead, through [navController], from the screen of [entry]. A page opens,
+ * and back is taken, only while [entry] is the top of the back stack: a second tap once the first
+ * one's page is on the stack, or once the page has been popped, does nothing, so one back always
+ * returns to the screen the page was opened from. It asks the stack, not the entry's lifecycle
+ * (#548): an entry can be left short of resumed while it is on top, as a page is after a back
+ * swipe started and cancelled, and a tap then did nothing, its back arrow included.
  */
-@Composable
-private fun homeLinks(navController: NavHostController): HomeLinks {
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
+private fun homeLinks(
+    navController: NavHostController,
+    entry: NavBackStackEntry,
+): HomeLinks {
+    val onTop = { navController.currentBackStackEntry?.id == entry.id }
     return HomeLinks(
         // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
         openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } },
-        openPage = { page ->
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) navController.navigate(page)
-        },
-        back = dropUnlessResumed { navController.popBackStack() },
+        openPage = { page -> if (onTop()) navController.navigate(page) },
+        back = { if (onTop()) navController.popBackStack() },
     )
 }
 
