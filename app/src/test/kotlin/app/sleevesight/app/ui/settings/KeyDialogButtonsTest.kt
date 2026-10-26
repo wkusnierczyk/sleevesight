@@ -81,11 +81,12 @@ class KeyDialogButtonsTest {
         var dismissed by mutableIntStateOf(0)
     }
 
-    /** The dialog of the key [id], saved or not as [state] says, [dark] or not. */
+    /** The dialog of the key [id], saved or not as [state] says, [dark] or not; a removal ends as [removing] says. */
     private fun show(
         id: SecretId,
         state: SecretState = SecretState.SAVED,
         dark: Boolean = false,
+        removing: Boolean = true,
         block: (Shown) -> Unit = {},
     ) {
         val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned("") } }
@@ -104,7 +105,7 @@ class KeyDialogButtonsTest {
                                 onSave = { SaveResult.SAVED },
                                 onRemove = {
                                     shown.removed++
-                                    true
+                                    removing
                                 },
                                 scanner = scanner,
                                 keyboard = keyboard,
@@ -285,14 +286,34 @@ class KeyDialogButtonsTest {
                 compose.onNode(confirming and hasContentDescription(named)).assertIsDisplayed()
                 val picture = compose.onNode(confirming).captureToImage().asAndroidBitmap()
                 assertTrue("dark=$dark: in ${shown.error}", share(picture, shown.error) > MARKED)
+                // The content runs from where the title starts to as far in from the dialog's other edge.
+                val dialog = bounds(isDialog() and hasAnyDescendant(hasText(confirmTitle(SecretId.EXA))))
                 val title = bounds(hasText(confirmTitle(SecretId.EXA)))
                 val c = bounds(cancel and inConfirmation(SecretId.EXA))
                 val r = bounds(confirming)
                 assertEquals("Cancel at the start", title.left, c.left, 1f)
                 assertTrue("Remove after Cancel", r.left >= c.right)
+                assertEquals("Remove at the end", dialog.right - (title.left - dialog.left), r.right, 1f)
             }
         }
     }
+
+    @Test
+    fun aRemovalThatFailsSaysSoInTheConfirmationAndCancelGoesBackToTheKeyDialog() =
+        show(SecretId.LASTFM, removing = false) { shown ->
+            compose.onNode(remove and inKeyDialog).performClick()
+            waitFor(hasText(confirmTitle(SecretId.LASTFM)))
+            compose.onNode(remove and inConfirmation(SecretId.LASTFM)).performClick()
+            val failed = text(R.string.settings_key_remove_failed)
+            waitFor(hasText(failed) and inConfirmation(SecretId.LASTFM))
+            assertEquals(1, shown.removed)
+            assertEquals("the key dialog stays", 0, shown.dismissed)
+            compose.onNode(cancel and inConfirmation(SecretId.LASTFM)).performClick()
+            compose.waitForIdle()
+            assertEquals("the confirmation gone", 0, count(hasText(confirmTitle(SecretId.LASTFM))))
+            assertEquals(0, shown.dismissed)
+            compose.onNode(remove and inKeyDialog).assertIsDisplayed()
+        }
 
     /** The share of [picture]'s pixels near [colour]. */
     private fun share(

@@ -116,11 +116,11 @@ internal fun <T> ChoiceDialog(
  * what the field holds. The dialog never loads the saved key, so the eye shows only what was
  * entered here; it is there only while the field holds something, and the field is masked again
  * when it empties, when the dialog closes, and when the app is left or the screen locks (the
- * activity stops). The eye is off while a save or a removal runs, and stays on during a keyboard
- * session, to check what arrives. While shown, the field stays a password, to autofill and to
- * accessibility services alike: Compose marks it so from its keyboard type, which stays `Password`
- * so that the keyboard neither learns nor suggests the key. On a phone the dialog takes the
- * screen's width, less a margin ([keyDialogWidth]).
+ * activity stops). The eye is off while a save runs (a removal runs in the confirmation over the
+ * dialog), and stays on during a keyboard session, to check what arrives. While shown, the field
+ * stays a password, to autofill and to accessibility services alike: Compose marks it so from its
+ * keyboard type, which stays `Password` so that the keyboard neither learns nor suggests the key.
+ * On a phone the dialog takes the screen's width, less a margin ([keyDialogWidth]).
  *
  * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
  * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*, filled.
