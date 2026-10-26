@@ -32,10 +32,12 @@ import app.sleevesight.app.ui.theme.codeStyle
  * cell and aligned to the start: a row names the key's service ([keyService]), with, under it, a
  * note where there is one (new, replacing a saved key, or no longer readable), and its last
  * characters as code ([codeStyle]). A screen reader reads each row as one item ([spokenRow]):
- * "Anthropic, ending a 1 B 2"; the headers once.
+ * "Anthropic, ending a 1 B 2"; the headers once. With no [rows], nothing.
  */
 @Composable
 internal fun KeyTable(rows: List<KeyRow>) {
+    // No headers over no keys: a screen reader would read them as a table of nothing.
+    if (rows.isEmpty()) return
     val body = MaterialTheme.typography.bodyMedium
     val header = MaterialTheme.typography.labelLarge
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
@@ -116,8 +118,8 @@ private fun KeyGrid(content: @Composable () -> Unit) {
         layout(width, constraints.constrainHeight(height)) {
             var y = 0
             for (row in rows) {
-                row.first.place(0, y + row.firstDrop)
-                row.second.place(firstWidth + gap, y + row.secondDrop)
+                row.first.placeRelative(0, y + row.firstDrop)
+                row.second.placeRelative(firstWidth + gap, y + row.secondDrop)
                 y += row.height + rowGap
             }
         }

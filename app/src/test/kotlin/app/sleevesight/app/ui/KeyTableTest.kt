@@ -184,6 +184,28 @@ class KeyTableTest {
     }
 
     @Test
+    fun aFailureThatLeftNoKeysShowsNoTable() {
+        show {
+            SleevesightTheme(darkTheme = false) {
+                PurgeKeysScreen(
+                    secrets = mapOf(SecretId.EXA to SecretState.SAVED),
+                    ending = { endingOf(exaKey) },
+                    // The entries were removed; the Keystore key was not deleted.
+                    onPurge = { ResetResult(removed = true, sealDeleted = false, left = emptyMap()) },
+                    onDismiss = {},
+                )
+            }
+        }.use {
+            val header = text(R.string.key_table_name)
+            waitForText(header)
+            compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
+            waitForText(text(R.string.purge_keys_seal_not_deleted))
+            assertTrue(compose.onAllNodes(hasText(header)).fetchSemanticsNodes().isEmpty())
+            assertTrue(compose.onAllNodes(hasText(text(R.string.key_table_ending))).fetchSemanticsNodes().isEmpty())
+        }
+    }
+
+    @Test
     fun loadKeysListsTheKeysReadAndSavedInTheTable() {
         runBlocking { secrets.set(SecretId.EXA, Secret("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f")) }
         val code = "sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey"
