@@ -1,0 +1,10 @@
+What's new in 0.1.6:
+- Spotify playing on another device shows as playing.
+- Tapping the player opens Spotify.
+- Home: the track and insights sit straight on the screen.
+- Genres are chips; tap one to see where it comes from.
+- A toggle beside each insight turns automatic writing on or off.
+- An AI model's correction of its own reply is left out.
+- Settings: a badge on each service, and links to related settings.
+- A reinstalled player is listed again.
+- Developer mode marks what only it shows.
