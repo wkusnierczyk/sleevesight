@@ -124,11 +124,11 @@ class PurgeKeysTest {
         waitForText(text(R.string.purge_keys_delete))
     }
 
-    /** How the screen lists the key [name] ending in [key]'s last four characters. */
+    /** How a screen reader reads the row of the key of the service [name] ending in [key]'s last four characters. */
     private fun listed(
         name: Int,
         key: String,
-    ) = app.getString(R.string.key_ending, text(name), "…" + key.takeLast(4))
+    ) = app.getString(R.string.key_ending, text(name), key.takeLast(4))
 
     private fun allAbsent(store: SecretStore = secrets) =
         runBlocking { store.states.first() }.values.all { it == SecretState.ABSENT }
@@ -158,8 +158,8 @@ class PurgeKeysTest {
         }
         show {
             openPurge()
-            waitForText(listed(R.string.settings_key_name_exa, exaKey))
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            waitForText(listed(R.string.settings_key_recipient_exa, exaKey))
+            compose.onNodeWithText(listed(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
             compose.onNodeWithText(text(R.string.purge_keys_listed)).assertIsDisplayed()
             // No key is shown whole.
             assertTrue(compose.onAllNodes(hasText(exaKey, substring = true)).fetchSemanticsNodes().isEmpty())
@@ -192,14 +192,14 @@ class PurgeKeysTest {
         }
         show {
             openPurge()
-            waitForText(listed(R.string.settings_key_name_exa, exaKey))
+            waitForText(listed(R.string.settings_key_recipient_exa, exaKey))
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
             waitForText(text(R.string.purge_keys_done_title))
             compose.onNodeWithText(text(R.string.purge_keys_done)).assertIsDisplayed()
             // The keys it deleted, as listed before: the store no longer has them to read.
-            compose.onNodeWithText(listed(R.string.settings_key_name_exa, exaKey)).assertIsDisplayed()
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            compose.onNodeWithText(listed(R.string.settings_key_recipient_exa, exaKey)).assertIsDisplayed()
+            compose.onNodeWithText(listed(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
             assertTrue(allAbsent())
 
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()
@@ -248,20 +248,20 @@ class PurgeKeysTest {
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = failingSecrets) {
             openPurge()
-            waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            waitForText(listed(R.string.settings_source_lastfm, lastFmKey))
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
             // The API keys are gone; only the phone's key that sealed them is left, and it says so.
             waitForText(text(R.string.purge_keys_seal_not_deleted))
             assertTrue(allAbsent(failingSecrets))
             assertTrue(!shown(text(R.string.purge_keys_not_removed)))
-            assertTrue(!shown(listed(R.string.settings_key_name_lastfm, lastFmKey)))
+            assertTrue(!shown(listed(R.string.settings_source_lastfm, lastFmKey)))
 
             compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
             waitForText(text(R.string.purge_keys_done_title))
             assertEquals(1, failingOnce.deletions)
             // The confirmation lists the keys as they were before the first try.
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            compose.onNodeWithText(listed(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
         }
     }
 
@@ -272,20 +272,20 @@ class PurgeKeysTest {
         runBlocking { flakySecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = flakySecrets) {
             openPurge()
-            waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            waitForText(listed(R.string.settings_source_lastfm, lastFmKey))
             flaky.writeFailures.set(1)
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
 
             // The entry stays, and, its phone's key deleted, can no longer be read: listed as such.
             waitForText(text(R.string.purge_keys_not_removed))
-            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
+            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_source_lastfm))
             waitForText(unreadable)
             assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
 
             compose.onNodeWithText(text(R.string.purge_keys_try_again)).performClick()
             waitForText(text(R.string.purge_keys_done_title))
             assertTrue(allAbsent(flakySecrets))
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            compose.onNodeWithText(listed(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
         }
     }
 
@@ -305,7 +305,7 @@ class PurgeKeysTest {
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = failingSecrets) {
             openPurge()
-            waitForText(listed(R.string.settings_key_name_lastfm, lastFmKey))
+            waitForText(listed(R.string.settings_source_lastfm, lastFmKey))
             // The edit fails, the Keystore key is not deleted, and the read after them fails, as
             // would any read after it: two failures, the reset's read and one more.
             flaky.writeFailures.set(1)
@@ -315,7 +315,7 @@ class PurgeKeysTest {
             // Unread, the key asked for is listed as it was, its last characters with it: the screen
             // reads nothing more, so the second failure is still to come.
             waitForText(text(R.string.purge_keys_both_failed))
-            compose.onNodeWithText(listed(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            compose.onNodeWithText(listed(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
             assertTrue(!shown(text(R.string.purge_keys_seal_not_deleted)))
             assertEquals(1, flaky.failures.get())
             flaky.failures.set(0)
@@ -347,7 +347,7 @@ class PurgeKeysTest {
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = failingSecrets) {
             openPurge()
-            val lastFm = listed(R.string.settings_key_name_lastfm, lastFmKey)
+            val lastFm = listed(R.string.settings_source_lastfm, lastFmKey)
             waitForText(lastFm)
             // The first try removes the entries; the Keystore key is not deleted.
             keys.failures = 1
@@ -377,13 +377,13 @@ class PurgeKeysTest {
         runBlocking { failingSecrets.set(SecretId.LASTFM, Secret(lastFmKey)) }
         show(secretStore = failingSecrets) {
             openPurge()
-            val lastFm = listed(R.string.settings_key_name_lastfm, lastFmKey)
+            val lastFm = listed(R.string.settings_source_lastfm, lastFmKey)
             waitForText(lastFm)
             // The first try deletes the Keystore key; the entries stay, and no longer open.
             flaky.writeFailures.set(1)
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
             waitForText(text(R.string.purge_keys_not_removed))
-            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
+            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_source_lastfm))
             waitForText(unreadable)
 
             // The retry fails both steps and cannot read the file after them: the key it starts
@@ -416,7 +416,7 @@ class PurgeKeysTest {
             compose.onNodeWithContentDescription(removeLastFm).assertExists()
 
             openPurge()
-            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_key_name_lastfm))
+            val unreadable = app.getString(R.string.key_unreadable, text(R.string.settings_source_lastfm))
             waitForText(unreadable)
             compose.onNodeWithText(text(R.string.purge_keys_delete)).performClick()
             waitForText(text(R.string.purge_keys_done_title))
