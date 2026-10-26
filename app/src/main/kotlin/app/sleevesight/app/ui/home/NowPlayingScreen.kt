@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
@@ -35,6 +36,7 @@ import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -45,6 +47,8 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * @property playerLabel a player's name, from its package.
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
+ * @property unavailableModel the switched-on AI service's model, while it is found unavailable
+ *   (#540): no insight is written with it, and the card says so.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -58,6 +62,7 @@ class HomeFeed(
     val playerActivity: () -> PendingIntent?,
     val write: (RunKey, NowPlaying) -> Unit,
     val stop: (CallId) -> Unit,
+    val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
 )
 
 /**
@@ -100,7 +105,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val playback by feed.playback.collectAsState()
     val art by feed.art.collectAsState()
     val settings by feed.settings.collectAsState()
-    return NowPlayingState(view, playing, playback, art, settings)
+    val unavailable by feed.unavailableModel.collectAsState()
+    return NowPlayingState(view, playing, playback, art, settings, unavailable)
 }
 
 private fun HomeFeed.actions(
@@ -116,13 +122,17 @@ private fun HomeFeed.actions(
     openPage = openPage,
 )
 
-/** What the screen shows, as published: [settings] is null until the first read. */
+/**
+ * What the screen shows, as published: [settings] is null until the first read; [unavailable] is
+ * the switched-on AI service's model while it is found unavailable (#540).
+ */
 internal class NowPlayingState(
     val view: PipelineView,
     val playing: NowPlaying?,
     val playback: PlaybackInfo = PlaybackInfo.NONE,
     val art: Bitmap? = null,
     val settings: Settings? = null,
+    val unavailable: UnavailableModel? = null,
 )
 
 /**
@@ -211,8 +221,9 @@ internal fun NowPlayingContent(
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
                 InsightCard(
                     track?.insight ?: NOT_YET,
-                    insightContext(view, track, settings, shown.modelAllowed),
-                    InsightActions(onWrite, onStop, cite) { reportedTrack, written ->
+                    insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
+                    // TODO(#539): open *AI services* unfolded at the service, once Settings has that link.
+                    InsightActions(onWrite, onStop, cite, actions.openSettings) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)
                     },
                     shown.details,
@@ -250,6 +261,7 @@ private fun insightContext(
     track: TrackState?,
     settings: Settings?,
     modelAllowed: Boolean,
+    unavailable: UnavailableModel?,
 ) = InsightContext(
     track = track,
     aiReady = view.aiReady,
@@ -263,6 +275,7 @@ private fun insightContext(
             paused = view.lapsed && track != null,
         ),
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
+    unavailable = unavailable.takeIf { settings?.writeInsights != false },
 )
 
 // What a report is of: the insight, and the track it was written for.

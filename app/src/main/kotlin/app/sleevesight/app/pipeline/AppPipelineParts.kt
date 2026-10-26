@@ -27,13 +27,17 @@ import kotlinx.coroutines.flow.flow
  * switched on: Last.fm only with its key, web search only through an engine switched on
  * with its key. The AI access is the chosen service's client with its key, or none when no service
  * is chosen, it has no client yet, or its key is not saved or cannot be read: insights then wait,
- * and the evidence is still shown. [sessionFacts], the artist facts the listening session's
- * insights cited (#239), is one for the process, passed to every build.
+ * and the evidence is still shown. They wait too while [models] has the service's selected model
+ * found unavailable (#540), which no other model replaces until the user chooses one; and each call
+ * through the client is watched for a model the service does not know or refuses
+ * ([ModelCheck.watching]). [sessionFacts], the artist facts the listening session's insights cited
+ * (#239), is one for the process, passed to every build.
  */
 class AppPipelineParts(
     private val wiring: PipelineWiring,
     private val normalizer: Normalizer,
     private val sessionFacts: SessionFacts = SessionFacts.None,
+    private val models: ModelCheck? = null,
     private val cache: () -> PipelineCache,
 ) : (PipelineKeys, Settings) -> PipelineParts {
     override fun invoke(
@@ -45,7 +49,11 @@ class AppPipelineParts(
             adapters = wiring.adapters(keys.sources, settings),
             resolver = wiring.resolver,
             hasher = JvmHasher,
-            ai = settings.aiProvider?.let { wiring.aiProviders[it] }?.let { p -> keys.ai?.let { AiAccess(p, it) } },
+            ai =
+                settings.aiProvider
+                    ?.takeUnless { models?.blocks(settings) == true }
+                    ?.let { wiring.aiProviders[it] }
+                    ?.let { p -> keys.ai?.let { AiAccess(models?.watching(p) ?: p, it) } },
             cache = cache(),
             musicBrainzLabels = wiring.musicBrainzLabels,
             lastFmLabels = keys.sources.lastFm?.let(wiring::lastFmLabels),

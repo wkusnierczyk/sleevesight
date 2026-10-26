@@ -54,8 +54,8 @@ enum class KeyboardState {
  * acknowledgements. A message longer than one packet comes as prepared writes, kept per computer
  * until executed.
  *
- * The phone's Bluetooth name is advertised only with [showName] (*Show this phone's name to the
- * computer*, #433), in the scan response, so the chooser lists the phone by it; without it, the
+ * The phone's Bluetooth name is advertised only with [showName] (*Share phone's name with Type on
+ * a computer*, #433), in the scan response, so the chooser lists the phone by it; without it, the
  * chooser lists it as an unknown device. A start with the name that fails is made again without
  * it ([PhoneName]). [onName] hears, at each start of the advertising, the name it carries as the
  * chooser shows it ([advertisedName]), or null for none.

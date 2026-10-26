@@ -76,6 +76,11 @@
     <string name="home_insight_writing">Writing…</string>
     <string name="home_insight_off">Insights are off. Turn them on in Settings.</string>
     <string name="home_insight_unavailable">Choose an AI service and save its key in Settings to have insights written.</string>
+    <!-- The switched-on AI service's model is not listed for the key, or the service refused it
+         (#540): the service, the model's name, and home_model_unavailable_place, a link to the
+         settings. -->
+    <string name="home_model_unavailable">The currently selected %1$s model %2$s is not available. Please select another model or provider in %3$s.</string>
+    <string name="home_model_unavailable_place">AI services</string>
     <string name="home_insight_no_evidence">The sources give nothing to write an insight from.</string>
     <string name="home_insight_failed">The insight could not be written: %1$s.</string>
     <string name="home_insight_incomplete">The reply stopped early, so this is incomplete, and it was not kept.</string>
@@ -120,6 +125,7 @@
     <string name="home_failure_overloaded">the AI service is busy</string>
     <string name="home_failure_server">the AI service had a problem</string>
     <string name="home_failure_model_not_found">the AI service does not know the model</string>
+    <string name="home_failure_model_refused">the AI service does not let the model be used this way for your account</string>
     <string name="home_failure_request_too_large">the request was too large</string>
     <string name="home_failure_incomplete">the reply stopped before it ended</string>
     <string name="home_failure_declined">the model declined to write it</string>

@@ -4,7 +4,7 @@ import android.bluetooth.le.AdvertiseCallback
 
 /**
  * Whether the phone's Bluetooth name goes in a [BleKeyboard]'s scan response (#433), start by start,
- * for one opening of its service: with [show] (*Show this phone's name to the computer*), the name
+ * for one opening of its service: with [show] (*Share phone's name with Type on a computer*), the name
  * as [read] gives it at each start, so a name changed meanwhile is the one advertised; a blank or
  * unreadable name is none.
  *
