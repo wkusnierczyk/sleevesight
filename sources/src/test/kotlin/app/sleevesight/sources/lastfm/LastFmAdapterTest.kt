@@ -52,7 +52,8 @@ class LastFmAdapterTest {
     private fun adapter(
         net: NetClient = LastFmStubClient(),
         artists: ArtistSearchStub = musicBrainz,
-    ) = LastFmAdapter(net, artists, Secret(KEY), vocabulary, JvmAccentFolder, clock)
+        genres: Boolean = true,
+    ) = LastFmAdapter(net, artists, Secret(KEY), vocabulary, JvmAccentFolder, clock, genres = genres)
 
     private fun fixtureTrack(n: Int): NormalizedTrack =
         BelowSoundtrack.track(n).let { normalizer.normalize(it.title, it.artist) }
@@ -93,6 +94,22 @@ class LastFmAdapterTest {
             )
             assertTrue(lookup.result.evidence.all { it.source == SourceId.LASTFM && it.scope == Scope.ARTIST })
             assertTrue(lookup.result.evidence.all { it.retrievedAt == now })
+        }
+
+    @Test
+    fun `with Show genres off no line names the artist's tags, with it on one does`() =
+        runTest {
+            val tagged = "Last.fm listeners tag Gordon Lightfoot as: folk, singer-songwriter, 70s, canadian, acoustic."
+
+            suspend fun texts(genres: Boolean): List<String> {
+                val lookup = adapter(genres = genres).lookupArtists(fixtureTrack(1), gordonResolved())
+                return (lookup.result.evidence + lookup.result.unverified).map { it.text }
+            }
+            assertTrue(tagged in texts(genres = true))
+            val off = texts(genres = false)
+            assertTrue(off.none { it.startsWith("Last.fm listeners tag") }, "wrote $off")
+            // The rest of the artist's lines are as before.
+            assertTrue("Last.fm counts 683,942 listeners for Gordon Lightfoot." in off, "wrote $off")
         }
 
     @Test

@@ -67,7 +67,7 @@ Google Play, which distributes the app, handles your installation under [Google'
 
 ## Your choices
 
-- Each source is a switch, and *Show insights* off makes no AI calls at all. *Show genres* off asks no source for genres, and leaves Wikidata's genres out of what goes to the AI service.
+- Each source is a switch, and *Show insights* off makes no AI calls at all. *Show genres* off asks no source for genres, and leaves Last.fm's tags and Wikidata's genres out of what goes to the AI service.
 - *Reactive* sets whether an insight is written for every track, only when you skip, or only when you tap Write.
 - *Proactive* off sends nothing about the next track.
 - *Report a problem*, and the tester's report button, send nothing by themselves: each shows the report and hands it to your mail app, which handles it as any message you write (some keep a draft in your mail account) and sends it to the developer only if you do. A tester's report leaves out the track changes unless you turn them on, and any part you leave out. *Report button* at *Hide*, or developer mode off, removes the button.

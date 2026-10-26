@@ -349,8 +349,8 @@ class WikipediaSource(
         /**
          * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
-         * or the identity check's rejection, or nothing, when no Wikidata item has the id. With
-         * genres: without them, an adapter keeps its own at its [extractionVersion].
+         * or the identity check's rejection, or nothing, when no Wikidata item has the id; made with
+         * genres. Without genres, an adapter keeps its own, at its [extractionVersion].
          */
         val ARTIST_PART: ArtistPart =
             ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)

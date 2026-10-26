@@ -57,8 +57,9 @@ import kotlin.time.TimeSource
  * The user's API key goes in [NetSecrets] as `api_key`, never in the URL.
  *
  * Without [genres] (*Show genres* off, #444), no genre information is asked for: no
- * `artist.getTopTags`, and no genre labels; its results are kept apart ([WITHOUT_GENRES_VERSION]),
- * and an artist kept without its top tags is asked for again once they are wanted ([KeptArtists]).
+ * `artist.getTopTags`, no genre labels, and no line of the tags `artist.getInfo` gives (#545); its
+ * results are kept apart ([WITHOUT_GENRES_VERSION]), and an artist kept without its top tags is
+ * asked for again once they are wanted ([KeptArtists]).
  */
 @Suppress("LongParameterList") // Eight independent dependencies; the clocks and the cache are defaulted, for tests.
 class LastFmAdapter(
@@ -256,7 +257,10 @@ class LastFmAdapter(
         val aggregates: List<EvidenceDraft>,
     )
 
-    /** The lines for one artist, in a fixed order: bio sentences, listeners, tags, similar artists. */
+    /**
+     * The lines for one artist, in a fixed order: bio sentences, listeners, tags, similar artists;
+     * the tags only with [genres] (*Show genres* off writes none, #545).
+     */
     private fun lines(
         lookup: LastFmArtistLookup,
         retrievedAt: Instant,
@@ -277,7 +281,7 @@ class LastFmAdapter(
         artist.listeners?.takeIf { it > 0 }?.let {
             texts += "Last.fm counts ${grouped(it)} listeners for $name." to artist.url
         }
-        if (artist.tags.isNotEmpty()) {
+        if (genres && artist.tags.isNotEmpty()) {
             texts += "Last.fm listeners tag $name as: ${artist.tags.joinToString(", ")}." to artist.url
         }
         if (artist.similar.isNotEmpty()) {
