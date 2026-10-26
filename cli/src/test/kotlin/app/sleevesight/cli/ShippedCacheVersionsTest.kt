@@ -37,8 +37,7 @@ import kotlin.time.Duration
  */
 class ShippedCacheVersionsTest {
     private object Offline : NetClient {
-        override suspend fun send(request: NetRequest): NetResult<NetResponse> =
-            NetResult.Failure(NetError.Server(503))
+        override suspend fun send(request: NetRequest): NetResult<NetResponse> = NetResult.Failure(NetError.Server(503))
 
         override fun close() = Unit
     }
