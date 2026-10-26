@@ -47,6 +47,7 @@ import app.sleevesight.core.platform.JvmHasher
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.serializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Before
@@ -78,7 +79,8 @@ class PageLinksTest {
         level: GenreLevel,
         artist: String? = null,
     ): TrackLabel {
-        val genre = GenreLabel(tag, "family", tag.replaceFirstChar(Char::uppercase), tag, level = level, artist = artist)
+        val shown = tag.replaceFirstChar(Char::uppercase)
+        val genre = GenreLabel(tag, "family", shown, tag, level = level, artist = artist)
         return TrackLabel(genre, listOf(LabelCredit(LabelSource.LASTFM, "https://example.org/$tag")))
     }
 
@@ -121,9 +123,10 @@ class PageLinksTest {
                 mapOf(SourceId.MUSICBRAINZ to done(evidence = lines)),
                 EvidenceSet.of(lines, JvmHasher),
             ).copy(genres = genres)
+        val key = RunKey.of(normalizer, sundown)
         val feed =
             HomeFeed(
-                view = MutableStateFlow(PipelineView(playing, aiReady = true, writeKey = RunKey.of(normalizer, sundown))),
+                view = MutableStateFlow(PipelineView(playing, aiReady = true, writeKey = key)),
                 nowPlaying = MutableStateFlow(sundown),
                 playback = MutableStateFlow(PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING)),
                 art = MutableStateFlow(null),
@@ -159,9 +162,13 @@ class PageLinksTest {
 
     private fun route() = nav.currentDestination?.route
 
-    private fun onHome() = assertEquals(Home.serializer().descriptor.serialName, route())
+    // Each destination's route, as the navigation graph names it.
+    private val home = Home.serializer().descriptor.serialName
+    private val genresPage = serializer<HomePage.Genres>().descriptor.serialName
 
-    private fun onGenres() = assertEquals(HomePage.Genres.serializer().descriptor.serialName, route())
+    private fun onHome() = assertEquals(home, route())
+
+    private fun onGenres() = assertEquals(genresPage, route())
 
     private fun top(tag: String) =
         compose
@@ -258,7 +265,7 @@ class PageLinksTest {
             }
             compose.waitForIdle()
             onGenres()
-            assertEquals(Home.serializer().descriptor.serialName, nav.previousBackStackEntry?.destination?.route)
+            assertEquals(home, nav.previousBackStackEntry?.destination?.route)
             compose.onNodeWithTag(PAGE_BACK_TAG).performTouchInput {
                 click()
                 click()
