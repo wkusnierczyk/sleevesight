@@ -7,14 +7,14 @@ layout: null
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sleevesight: insights on what's playing</title>
-<meta name="description" content="A mobile app that knows what your music player is playing and shows short, sourced insights about the artist, song, and album.">
+<meta name="description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
 <link rel="canonical" href="https://sleevesight.app/">
 <link rel="icon" type="image/svg+xml" href="{{ '/assets/favicon.svg' | relative_url }}">
 <meta name="color-scheme" content="light dark">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sleevesight">
 <meta property="og:title" content="Sleevesight: insights on what's playing">
-<meta property="og:description" content="Short, sourced insights about the artist, song, and album you are playing. Your sources, your AI service, your key.">
+<meta property="og:description" content="Facts and stories about the song, artist and album you’re listening to, each linked to its source.">
 <meta property="og:url" content="https://sleevesight.app/">
 <!-- The link preview: the stacked logo and the tagline on the label's red, 1200 x 630, built from the
      logo's sources by `assets/logo/src/make_og_image.py` (the brand sheet, *Link preview*). Open
@@ -104,6 +104,8 @@ a:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;align-items:center;padding:32px 0 56px}
 .hero h1{margin:0 0 16px;font-size:clamp(36px,6vw,58px);line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.02em;text-wrap:balance}
 .lede{font-size:20px;color:var(--ink);margin:0;max-width:34em}
+/* The players it works with, a line of its own under the lede (#577): the lede's size, muted. */
+.players{font-size:20px;color:var(--muted);margin:12px 0 0}
 
 /* The mock: one card as the home screen is designed (design.md, User interface). */
 /* At the end of its column, so the phone's right edge lines up with the header menu's. */
@@ -202,8 +204,9 @@ section h2{margin:0 0 20px;font-size:clamp(26px,4vw,34px);line-height:1.15;font-
 <main id="main">
 <div class="hero">
   <div>
-    <h1>Insights on what's playing</h1>
-    <p class="lede">Sleevesight is a mobile app that knows what your music player is playing and shows short, sourced insights about the artist, song, and album. Every fact links to where it came from.</p>
+    <h1>Insights on what’s playing.</h1>
+    <p class="lede">Facts and stories about the song, artist and album you’re listening to, each linked to its source.</p>
+    <p class="players">Works with Spotify, YouTube Music and more.</p>
   </div>
 
   <!-- Until the app's home screen can be captured (#52), a mock in the simulator's style, with the
