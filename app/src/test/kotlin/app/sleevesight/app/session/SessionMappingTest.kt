@@ -1,6 +1,7 @@
 package app.sleevesight.app.session
 
 import android.graphics.Color
+import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import app.sleevesight.app.session.Sessions.SPOTIFY
 import app.sleevesight.app.session.Sessions.bitmap
@@ -17,8 +18,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class SessionMappingTest {
@@ -31,6 +34,40 @@ class SessionMappingTest {
         assertFalse(SessionMapping.reportsMusic(metadata(artist = "  ")))
         assertFalse(SessionMapping.reportsMusic(metadata(title = null)))
         assertFalse(SessionMapping.reportsMusic(null))
+    }
+
+    // 2026-10-26: a plausible year is 1800 to 2027.
+    private val clock =
+        object : Clock {
+            override fun now() = Instant.parse("2026-10-26T12:00:00Z")
+        }
+
+    private fun year(metadata: MediaMetadata) = SessionMapping.year(metadata, clock)
+
+    @Test
+    fun theReleasesYearIsYearElseTheYearDateBeginsWith() {
+        assertEquals(2026, SessionMapping.nowPlaying(SPOTIFY, metadata(year = 2026), null, clock)?.year)
+        assertEquals(2026, year(metadata(date = "20260320T000000")))
+        assertEquals(2026, year(metadata(date = "2026-03-20")))
+        assertEquals(2026, year(metadata(year = 2026, date = "1990")))
+        // No year (players send 0), or none plausible: the date's, else none.
+        assertEquals(1990, year(metadata(year = 0, date = "1990")))
+        assertEquals(1990, year(metadata(year = 90, date = "1990-11-06")))
+        assertNull(year(metadata(date = "0000")))
+        assertNull(year(metadata(date = "199")))
+        assertNull(year(metadata()))
+        assertNull(SessionMapping.nowPlaying(SPOTIFY, metadata(), null, clock)?.year)
+    }
+
+    @Test
+    fun aYearAfterNextYearIsNotPlausible() {
+        // Next year: a release announced ahead.
+        assertEquals(2027, year(metadata(year = 2027)))
+        assertNull(year(metadata(year = 2028)))
+        assertNull(year(metadata(date = "2099-01-01")))
+        // An implausible YEAR falls through to the DATE.
+        assertEquals(2026, year(metadata(year = 9999, date = "2026-10")))
+        assertEquals(1990, year(metadata(year = 2099, date = "1990")))
     }
 
     @Test

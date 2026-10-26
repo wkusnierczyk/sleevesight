@@ -24,7 +24,8 @@ import kotlin.time.TimeSource
  * ([SourceResult.recordingTags], #439), for the track's; it asks for no tags itself. The pipeline
  * asks for the artists', after the evidence, so the insight never waits for them; no tag reaches a
  * line. It also keeps the
- * date of the first release ([SourceResult.firstReleased]), for a track later served from the cache.
+ * date of the first release ([SourceResult.firstReleased]) and the dates of the releases' titles
+ * ([SourceResult.releaseDates], #556), for a track later served from the cache.
  */
 class MusicBrainzSource(
     private val clock: Clock = Clock.System,
@@ -36,7 +37,8 @@ class MusicBrainzSource(
     /**
      * 2: the result names the resolved artists, for the genre labels (#84). 3: and the date of the
      * first release, for the home screen's year (#52). 4: the artists by name too, and the
-     * recording's tags, for the genre rows (#439). Without [genres] (*Show genres* off, #444), it
+     * recording's tags, for the genre rows (#439). 5: and the dates of the releases' titles, for the
+     * year after the album (#556). Without [genres] (*Show genres* off, #444), it
      * keeps no tags, and its results are kept apart ([WITHOUT_GENRES_VERSION]).
      */
     override val extractionVersion: Int = EXTRACTION_VERSION + if (genres) 0 else WITHOUT_GENRES_VERSION
@@ -60,6 +62,7 @@ class MusicBrainzSource(
                     RecordingTags(it, resolved.recordingTags)
                 },
             firstReleased = resolved.firstReleaseDate,
+            releaseDates = resolved.releaseDates,
             // No recording and no artist: a result that names an artist, or rejects a recording by
             // another one, is about the artists (#420).
             trackOnly = resolved.outcome == Outcome.None && resolved.artists.isEmpty() && resolved.artistCredit == null,
@@ -67,4 +70,4 @@ class MusicBrainzSource(
     }
 }
 
-private const val EXTRACTION_VERSION = 4
+private const val EXTRACTION_VERSION = 5

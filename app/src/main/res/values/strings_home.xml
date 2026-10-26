@@ -27,8 +27,11 @@
     <string name="home_progress">Playback position</string>
     <string name="home_title_from">From %1$s</string>
     <string name="home_album_none">Album not reported</string>
-    <!-- The album, then the year of the first release: "Rubber Soul, 1965". -->
+    <!-- The album, then the year of the release being played: "Rubber Soul, 1965". -->
     <string name="home_album_year">%1$s, %2$s</string>
+    <!-- Under the album, the year the recording first came out, when it is earlier than the album's
+         or the album's is not known (#556): "First released 1990". -->
+    <string name="home_first_released">First released %1$s</string>
 
     <!-- Genre labels: the fold, its table's rows, and where a label comes from. -->
     <string name="home_genres">Genres</string>
