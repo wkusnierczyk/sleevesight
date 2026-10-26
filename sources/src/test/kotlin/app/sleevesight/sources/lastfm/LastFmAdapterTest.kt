@@ -19,6 +19,7 @@ import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.Fixtures
 import app.sleevesight.fixtures.RegressionCase
@@ -52,7 +53,8 @@ class LastFmAdapterTest {
     private fun adapter(
         net: NetClient = LastFmStubClient(),
         artists: ArtistSearchStub = musicBrainz,
-    ) = LastFmAdapter(net, artists, Secret(KEY), vocabulary, JvmAccentFolder, clock)
+        genres: Boolean = true,
+    ) = LastFmAdapter(net, artists, Secret(KEY), vocabulary, JvmAccentFolder, clock, genres = genres)
 
     private fun fixtureTrack(n: Int): NormalizedTrack =
         BelowSoundtrack.track(n).let { normalizer.normalize(it.title, it.artist) }
@@ -93,6 +95,22 @@ class LastFmAdapterTest {
             )
             assertTrue(lookup.result.evidence.all { it.source == SourceId.LASTFM && it.scope == Scope.ARTIST })
             assertTrue(lookup.result.evidence.all { it.retrievedAt == now })
+        }
+
+    @Test
+    fun `with Show genres off no line names the artist's tags, with it on one does`() =
+        runTest {
+            val tagged = "Last.fm listeners tag Gordon Lightfoot as: folk, singer-songwriter, 70s, canadian, acoustic."
+
+            suspend fun texts(genres: Boolean): List<String> {
+                val lookup = adapter(genres = genres).lookupArtists(fixtureTrack(1), gordonResolved())
+                return (lookup.result.evidence + lookup.result.unverified).map { it.text }
+            }
+            assertTrue(tagged in texts(genres = true))
+            val off = texts(genres = false)
+            assertTrue(off.none { it.startsWith("Last.fm listeners tag") }, "wrote $off")
+            // The rest of the artist's lines are as before.
+            assertTrue("Last.fm counts 683,942 listeners for Gordon Lightfoot." in off, "wrote $off")
         }
 
     @Test
@@ -655,8 +673,10 @@ class LastFmAdapterTest {
 
     @Test
     fun `the adapter's version and the sources it consults`() {
-        // Raised when the verification became structural (#75): results cached under 1 are missed.
-        assertEquals(2, adapter().extractionVersion)
+        // Raised when the verification became structural (#75): results cached under 1 are missed;
+        // and when the lines without genres lost the tags (#545): those cached under 2 + 1000 are.
+        assertEquals(3, adapter().extractionVersion)
+        assertEquals(3 + WITHOUT_GENRES_VERSION, adapter(genres = false).extractionVersion)
         assertEquals(setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ), adapter().consults)
     }
 

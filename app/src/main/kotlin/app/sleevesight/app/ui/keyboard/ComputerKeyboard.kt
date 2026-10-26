@@ -36,7 +36,7 @@ import app.sleevesight.app.keyboard.KeyboardState
 /**
  * Runs a session of *Type on a computer* (#394) while it is shown: says where it is, passes each
  * text the computer sends to `onText`, and offers *Stop*, which calls `onStop`. Leaving it ends the
- * session and forgets its key. `showName` is *Show this phone's name to the computer* (#433):
+ * session and forgets its key. `showName` is *Share phone's name with Type on a computer* (#433):
  * whether the phone advertises its Bluetooth name meanwhile. The settings screen takes it as a
  * parameter, so its tests type without Bluetooth.
  */

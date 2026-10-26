@@ -535,6 +535,35 @@ class AnthropicProviderTest {
         }
 
     @Test
+    fun `a deprecated model is listed but not offered for a new choice, and a retired one not listed`() =
+        runTest {
+            fun model(
+                id: String,
+                lifecycle: String?,
+            ) = """{"type":"model","id":"$id","display_name":"$id","created_at":"2026-01-01T00:00:00Z"""" +
+                (lifecycle?.let { ""","lifecycle":"$it"""" } ?: "") + "}"
+            val page =
+                """{"data":[${model("a", "active")},${model("d", "deprecated")},${model("r", "retired")},""" +
+                    """${model("n", null)}],"has_more":false,"last_id":"n"}"""
+            val listed = assertIs<ModelList.Listed>(provider(ReplayNetClient { ok(page) }).models(key))
+
+            assertEquals(listOf("a" to true, "d" to false, "n" to true), listed.models.map { it.id to it.offered })
+            assertTrue(listed.has("d"))
+            assertFalse(listed.has("r"))
+        }
+
+    @Test
+    fun `a model the service no longer serves is a model not found`() =
+        runTest {
+            val gone =
+                errorBody("""{"type":"not_found_error","message":"model: claude-3-sonnet-20240229"}""")
+            assertEquals(
+                listOf<CompletionEvent>(CompletionEvent.Error(AiErrorKind.MODEL_NOT_FOUND)),
+                events { ok(gone, 404) }.first,
+            )
+        }
+
+    @Test
     fun `a model list that fails says why`() =
         runTest {
             val provider = { answer: NetResult<NetResponse> -> provider(ReplayNetClient { answer }) }
