@@ -45,6 +45,19 @@ class SessionFactsTest {
         }
 
     @Test
+    fun `forgetting drops every fact, even with the session unchanged`() =
+        runTest {
+            // *Clear history* restarts the session numbers, so the session read next may be the same.
+            val facts = ListeningSessionFacts { 1L }
+
+            facts.cite("band|one", setOf(formed))
+            facts.forget()
+            assertEquals(emptySet(), facts.citedByOthers("band|two"))
+            facts.cite("band|two", setOf(label))
+            assertEquals(setOf(label), facts.citedByOthers("band|three"))
+        }
+
+    @Test
     fun `a session that cannot be read counts as the one last read`() =
         runTest {
             var failing = false

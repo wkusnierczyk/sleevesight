@@ -60,8 +60,8 @@ The model never decides what is true: resolution, matching, the choice of eviden
 
 Everything the app keeps is on the phone, and none of it is part of Android's backup or of a transfer to a new phone.
 
-- **The caches**, a database: what each source found for a track, kept for a while so the same track is not looked up again (the lifetimes are settings); the insights written, until newer ones push them out of the size limit; and, only with *Keep what sources said about each artist* on, what the sources said about each artist. Answers from MusicBrainz are also held in memory for half an hour, never on disk.
-- **The history**, a database of its own: the list of tracks seen playing (what the player said of each, and when it played) and the record of track changes that skip detection learns from, kept for as long as *Keep history for* says.
+- **The caches**, a database: what each source found for a track, kept for a while so the same track is not looked up again (the lifetimes are settings); the insights written, which have no lifetime, until the caches fill and the least recently used make room; and, only with *Keep what sources said about each artist* on, what the sources said about each artist. Answers from MusicBrainz are also held in memory for half an hour, never on disk.
+- **The history**, a database of its own: the list of tracks seen playing (what the player said of each, and when it played) and the record of track changes that skip detection learns from, kept for as long as *Keep history for* says. *Clear history* empties both databases, and forgets what is held in memory about the tracks, at once.
 - **Settings and API keys**, in Android's DataStore. The keys are encrypted with a key held in the phone's Android Keystore, are never shown again once saved, and are never logged.
 - **The diagnostics log**, in memory only, for the *Diagnostics* screen of the developer settings. It leaves the phone only if you *Export* it to a file you choose.
 

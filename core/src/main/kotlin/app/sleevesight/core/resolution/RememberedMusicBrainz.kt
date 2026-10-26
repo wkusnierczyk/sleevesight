@@ -56,6 +56,14 @@ class RememberedMusicBrainz(
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> =
         artists.answer(name) { musicBrainz.searchArtists(name) }
 
+    /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
+    suspend fun forget() {
+        searches.forget()
+        recordings.forget()
+        works.forget()
+        artists.forget()
+    }
+
     // One kind of question's answers, by what was asked.
     private inner class Memory<K : Any, T> {
         private inner class Kept(
@@ -77,6 +85,9 @@ class RememberedMusicBrainz(
             if (answer !is Lookup.Failed) keep(key, answer)
             return answer
         }
+
+        @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
+        suspend fun forget() = mutex.withLock { kept.clear() }
 
         @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
         private suspend fun kept(key: K): Lookup<T>? =

@@ -152,6 +152,19 @@ class ListeningSessionFacts(
         }
     }
 
+    /**
+     * Forgets every fact kept, and the session read, for *Clear history* (#547), which also
+     * restarts the history's session numbers: the next call reads the session afresh.
+     */
+    @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
+    suspend fun forget() {
+        mutex.withLock {
+            read = false
+            current = null
+            citers.clear()
+        }
+    }
+
     // The session now, or, when the read fails, the one last read.
     private suspend fun currentSession(): Result<Long?> =
         try {

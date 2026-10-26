@@ -65,6 +65,17 @@ class RememberedMusicBrainzTest {
         }
 
     @Test
+    fun `forgetting asks every question again`() =
+        runTest {
+            remembered.searchRecordings("Song", "Artist")
+            remembered.searchArtists("Artist")
+            remembered.forget()
+            remembered.searchRecordings("Song", "Artist")
+            remembered.searchArtists("Artist")
+            assertEquals(listOf("search Song", "artists Artist", "search Song", "artists Artist"), counting.asked)
+        }
+
+    @Test
     fun `an answer not obtained is not kept, and one MusicBrainz gave is, found or not`() =
         runTest {
             counting.failing = true

@@ -229,6 +229,31 @@ internal class HistoryRetentionTest : HistoryRecorderFixture() {
         assertEquals(listOf("Sundown"), changes())
     }
 
+    @Test
+    fun clearingThenForgetsTheRestEvenIfTheHistoryFailed() {
+        // *Clear history* deletes everything kept about the tracks (#547): the rest after the history.
+        val order = mutableListOf<String>()
+        var forgets = true
+        val clearing =
+            HistoryRetention(recorder, lifetime, scope) {
+                order += if (rows().isEmpty()) "forgot, the history empty" else "forgot, the history left"
+                forgets
+            }
+        played("Sundown", base)
+        assertTrue(clearing.clear().getCompleted())
+
+        played("Carefree Highway", base + 1.hours)
+        driver.failNext = "DELETE FROM played"
+        assertFalse("the history's failure", clearing.clear().getCompleted())
+
+        forgets = false
+        assertFalse("the rest's failure", clearing.clear().getCompleted())
+        assertEquals(
+            listOf("forgot, the history empty", "forgot, the history left", "forgot, the history empty"),
+            order,
+        )
+    }
+
     private companion object {
         const val SPOTIFY = "com.spotify.music"
         val GAP = Settings.DEFAULT_SESSION_GAP

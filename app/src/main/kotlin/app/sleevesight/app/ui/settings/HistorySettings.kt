@@ -126,7 +126,7 @@ private fun LifetimeRows(
 }
 
 /**
- * Confirms *Clear history*, which deletes the session history and the track changes. [onClear]
+ * Confirms *Clear history*, which deletes everything kept about the tracks played (#547). [onClear]
  * starts the clear; the dialog closes at once, and the screen says how it ended.
  */
 @Composable

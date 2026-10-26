@@ -284,7 +284,7 @@ class AppGraph(
      * evicted or rebuilt at the cost of the lookups and paid calls again; so one a newer version
      * left is rebuilt rather than failing ([RebuiltOnDowngrade]).
      */
-    private val caches by lazy {
+    internal val caches by lazy {
         Caches(
             AndroidSqliteDriver(
                 CacheDatabase.Schema,
@@ -354,9 +354,17 @@ class AppGraph(
             Dispatchers.IO,
         )
 
-    /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
+    /**
+     * *Keep history for* and *Clear history*, through the recorder, in the process's scope. *Clear
+     * history* also deletes everything else kept about the tracks played ([forgetTracks]).
+     */
     val historyRetention =
-        HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
+        HistoryRetention(
+            historyRecorder,
+            latestSettings.filterNotNull().map { it.historyLifetime },
+            mainScope,
+            forget = ::forgetTracks,
+        )
 
     /**
      * The artist facts the listening session's insights cited, which the next tracks' prompts leave
@@ -364,7 +372,7 @@ class AppGraph(
      * track starts, usually before its insight is asked for; a track whose insight comes first counts
      * in the session before it.
      */
-    private val sessionFacts = ListeningSessionFacts { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
+    internal val sessionFacts = ListeningSessionFacts { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
 
     /**
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
@@ -454,6 +462,24 @@ class AppGraph(
                 Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
             }
         }
+    }
+
+    /**
+     * The rest of *Clear history* (#547), after the history: every cache (the sources' findings,
+     * the artist resolutions and results, the insights and cards written), in one transaction and
+     * in turn with what is written about artists ([ArtistKeeping.clearWith]); MusicBrainz's answers
+     * held in memory; the artist facts the listening session cited; and the diagnostics' steps,
+     * which name the tracks. The API keys and the settings stay. A run or a preparation in progress
+     * may still keep what it finds about the track playing or the one up next, as any lookup after
+     * the clear would. Returns whether the caches were cleared; the rest cannot fail.
+     */
+    private suspend fun forgetTracks(): Boolean {
+        val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
+        if (!cleared) Log.w(TAG, "The caches could not be cleared")
+        wiring.forgetRemembered()
+        sessionFacts.forget()
+        diagnostics.log.clear()
+        return cleared
     }
 
     /**

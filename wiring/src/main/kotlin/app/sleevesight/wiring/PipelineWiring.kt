@@ -105,6 +105,14 @@ class PipelineWiring internal constructor(
     fun lastFmLabels(key: Secret): LastFmLabels =
         LastFmLabels(LastFmTags(net, key), vocabulary, Normalizer(accentFolder)::foldForKey, artists = artists)
 
+    /**
+     * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
+     * (#547); nothing to forget without [rememberMusicBrainz].
+     */
+    suspend fun forgetRemembered() {
+        (musicBrainz as? RememberedMusicBrainz)?.forget()
+    }
+
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =
         mapOf(
