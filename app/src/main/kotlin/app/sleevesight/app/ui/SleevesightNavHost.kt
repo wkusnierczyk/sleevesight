@@ -20,7 +20,10 @@ import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.report.WithTesterReport
 import kotlinx.serialization.Serializable
 
-/** What leaves the device, and the way to notification access; opened again from [Home] and [SettingsPage]. */
+/**
+ * What leaves the device, and the way to notification access; opened again from [Home] and
+ * [SettingsPage], as a page that closes back to them (#549).
+ */
 @Serializable
 data object FirstRun
 
@@ -32,11 +35,11 @@ data object Home
 @Serializable
 data object SettingsPage
 
-/** The data sources and their licences, opened from [SettingsPage]. */
+/** The data sources and their licences, opened from [SettingsPage], as a page that closes back to it (#549). */
 @Serializable
 data object CreditsPage
 
-/** The diagnostics screen, opened from [SettingsPage] while *Diagnostics* is on. */
+/** The diagnostics screen, opened from [SettingsPage] while *Diagnostics* is on, with a way back to it (#549). */
 @Serializable
 data object DiagnosticsPage
 
@@ -64,11 +67,11 @@ class SettingsLinks(
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, given the
- * way to the settings and to Home's pages, and, with a [testerReport] feed, the tester's report
- * button while its settings show it (#452); each of [HomePage]'s pages (#447) shows an item of it
- * on a page of its own, as [page] draws it, and goes back to where it was opened from, Home at the
- * place it was scrolled to, as Android's back does.
+ * which [diagnostics] draws, given the way back to the settings. [Home] shows the pipeline's state,
+ * as [pipeline] draws it, given the way to the settings and to Home's pages, and, with a
+ * [testerReport] feed, the tester's report button while its settings show it (#452); each of
+ * [HomePage]'s pages (#447) shows an item of it on a page of its own, as [page] draws it, and goes
+ * back to where it was opened from, Home at the place it was scrolled to, as Android's back does.
  */
 @Suppress("LongParameterList", "LongMethod") // The access and first-run seams, and each screen's content.
 @Composable
@@ -81,7 +84,7 @@ fun SleevesightNavHost(
     settings: @Composable (links: SettingsLinks) -> Unit = {},
     pipeline: @Composable (links: HomeLinks) -> Unit = { NothingPlaying() },
     page: @Composable (page: HomePage, links: HomeLinks) -> Unit = { _, _ -> },
-    diagnostics: @Composable () -> Unit = {},
+    diagnostics: @Composable (back: () -> Unit) -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
     // Chosen once: a change of access later does not move the user off the screen they are on.
@@ -89,9 +92,16 @@ fun SleevesightNavHost(
 
     NavHost(navController = navController, startDestination = start) {
         composable<FirstRun> {
+            // Opened from somewhere (Home, or the settings), it closes back to it (#549), with the
+            // back arrow or *Close*; at the start of the app, there is nowhere to go back to, and
+            // *Continue* goes on. Read once, as it opens, so it stays a page while it leaves, when
+            // the entry under it is the current one.
+            val reopened = remember { navController.previousBackStackEntry != null }
+            val close = dropUnlessResumed { navController.popBackStack() }
             FirstRunScreen(
                 accessGranted = granted,
                 openAccessSettings = openAccessSettings,
+                onClose = if (reopened) close else null,
                 // Once: a second tap while the screen leaves would pop the screen under it too.
                 onContinue =
                     dropUnlessResumed {
@@ -138,10 +148,14 @@ fun SleevesightNavHost(
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
         composable<CreditsPage> {
-            if (firstRun.acknowledged) CreditsScreen() else FirstRunFirst(navController)
+            // Once: a second tap while the page leaves would pop the screen under it too.
+            val close = dropUnlessResumed { navController.popBackStack() }
+            if (firstRun.acknowledged) CreditsScreen(onClose = close) else FirstRunFirst(navController)
         }
         composable<DiagnosticsPage> {
-            if (firstRun.acknowledged) diagnostics() else FirstRunFirst(navController)
+            // Once, as from the credits.
+            val back = dropUnlessResumed { navController.popBackStack() }
+            if (firstRun.acknowledged) diagnostics(back) else FirstRunFirst(navController)
         }
     }
 }

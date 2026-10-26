@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 },
                                 pipeline = { links -> NowPlayingHome(homeFeed, links.openSettings, links.openPage) },
-                                diagnostics = { DiagnosticsScreen(graph.diagnostics) },
+                                diagnostics = { back -> DiagnosticsScreen(graph.diagnostics, back) },
                                 page = { page, links ->
                                     NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
                                 },
