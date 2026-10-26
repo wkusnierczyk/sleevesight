@@ -196,6 +196,15 @@ class SessionRepository(
             ?.takeIf { it.gate.key !in afterCall }
             ?.let { shown -> shown.gate.read(shown::asCall) { it.sessionActivity } }
 
+    /**
+     * Drops [player] from [seenPlayers], once Android says its app was removed (#579): reinstalled,
+     * it is probed again and seen again once it reports music, as a new player is. On the main
+     * thread, as every change of the layer's state.
+     */
+    fun forgetSeen(player: String) {
+        seenState.update { it - player }
+    }
+
     private var gate: Job? = null
     private var listening = false
     private var followedPlayers: Set<String> = emptySet()

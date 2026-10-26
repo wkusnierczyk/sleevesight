@@ -13,10 +13,13 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
@@ -54,6 +57,23 @@ class TestStores(
         runBlocking { jobs.forEach { it.join() } }
         jobs.clear()
     }
+}
+
+/**
+ * A DataStore held in memory, for a test that needs the settings but not their file: an update is
+ * done, and seen by [data]'s collectors, on the caller's thread, with no thread of DataStore's own
+ * to wait on, so a wait for it does not depend on how busy the machine is.
+ */
+class MemoryStore(
+    initial: Preferences = emptyPreferences(),
+) : DataStore<Preferences> {
+    private val state = MutableStateFlow(initial)
+    private val writes = Mutex()
+
+    override val data: Flow<Preferences> = state
+
+    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
+        writes.withLock { transform(state.value).also { state.value = it } }
 }
 
 /** A software AES key, standing in for the Keystore's on the JVM. */
