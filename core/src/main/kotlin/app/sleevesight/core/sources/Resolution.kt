@@ -121,6 +121,23 @@ data class ReleaseDate(
 ) {
     companion object {
         /**
+         * Each title of [dated] (title and date pairs) once, as [key] reads it, written as the earliest
+         * release of it writes it, with the earliest date of a release of it; ordered by key, and with
+         * no title whose key is empty.
+         */
+        fun of(
+            dated: List<Pair<String, String>>,
+            key: (String) -> String,
+        ): List<ReleaseDate> =
+            dated
+                .groupBy { (title, _) -> key(title) }
+                .filterKeys { it.isNotEmpty() }
+                .entries
+                .sortedBy { it.key }
+                .map { (_, same) -> same.minWith(compareBy<Pair<String, String>> { it.second }.thenBy { it.first }) }
+                .map { (title, date) -> ReleaseDate(title, date) }
+
+        /**
          * The year of the release [album] names, as the player reports it, among [dates]: the year
          * of the earliest release whose title has [album]'s [key] (the same title, as sources write
          * it differently), or null when none has it or its date has no year. The title must be

@@ -182,7 +182,14 @@ class RecordingResolver(
                         ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList(), chosen.known[artist]))
                     },
                 firstRelease = firstRelease(recording),
-                releaseDates = releaseDates(pool.flatMap { it.recording.releases }),
+                releaseDates =
+                    ReleaseDate.of(
+                        pool.flatMap { it.recording.releases }.flatMap { release ->
+                            val titles = listOfNotNull(release.title, release.releaseGroup?.title)
+                            release.date?.let { date -> titles.map { it to date } }.orEmpty()
+                        },
+                        names::key,
+                    ),
             )
         val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
         return if (detail == null) base else withDetail(track, chosen, base, detail)
@@ -264,19 +271,6 @@ class RecordingResolver(
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),
         )
     }
-
-    // Each title [releases] go by, their own and their release groups', once per title as [NameMatcher.key]
-    // reads it (written as the earliest release of it writes it), with the earliest date of a release of it.
-    private fun releaseDates(releases: List<MbRelease>): List<ReleaseDate> =
-        releases
-            .mapNotNull { release -> release.date?.let { it to release } }
-            .flatMap { (date, release) -> listOfNotNull(release.title, release.releaseGroup?.title).map { it to date } }
-            .groupBy { (title, _) -> names.key(title) }
-            .filterKeys { it.isNotEmpty() }
-            .values
-            .map { same -> same.minWith(compareBy<Pair<String, String>> { it.second }.thenBy { it.first }) }
-            .map { (title, date) -> ReleaseDate(title, date) }
-            .sortedBy { names.key(it.title) }
 
     // Whether [credit] is [artist]'s, as written on the recording or as MusicBrainz names the artist: by
     // name, or, unless [byName], a band they lead ("Dick Dale and His Del-Tones", #77).
