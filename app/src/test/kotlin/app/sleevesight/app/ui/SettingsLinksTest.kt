@@ -28,10 +28,12 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.settings.sentenceWith
 import app.sleevesight.app.ui.theme.TextPart
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 
 /**
  * The links between settings (#539): a link to a section unfolds it and lands on its heading, and
@@ -90,7 +92,25 @@ class SettingsLinksTest {
         assertEquals(listOf(TextPart.Words("Set your key here.")), sentenceWith("Set your key here.", link))
     }
 
+    @Test
+    fun everyTranslationOfTheKeySentenceHasTheKeysNameForItsLink() {
+        // Without the name, `sentenceWith` finds no place for the link, and the sentence shows without it.
+        val sentences =
+            File("src/main/res")
+                .listFiles { dir -> dir.name.startsWith("values") }
+                .orEmpty()
+                .flatMap { dir -> dir.listFiles { f -> f.extension == "xml" }.orEmpty().toList() }
+                .flatMap { file ->
+                    val place = "${file.parentFile.name}/${file.name}"
+                    KEY_SENTENCE.findAll(file.readText()).map { "$place: ${it.groupValues[1]}" }
+                }
+        assertTrue("found in values", sentences.any { it.startsWith("values/") })
+        assertEquals(emptyList<String>(), sentences.filter { "%1\$s" !in it })
+    }
+
     private companion object {
+        val KEY_SENTENCE = Regex("""<string name="settings_set_key">(.*?)</string>""")
+
         const val ABOUT_ROWS = "About's rows"
     }
 }

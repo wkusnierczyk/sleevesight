@@ -1,10 +1,22 @@
 package app.sleevesight.app.ui
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityRecord
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
@@ -15,7 +27,9 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performFirstLinkClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -46,6 +60,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 
 /**
  * The links from *AI services* and *Sources* to the keys (#539): under each service that needs a
@@ -89,6 +104,28 @@ class SettingsKeyLinksTest {
 
     private fun sentence(id: SecretId) = app.getString(R.string.settings_set_key, keyName(id))
 
+    // The screen's saved state, as an activity keeps it: [restore] saves it, drops the content and
+    // composes it afresh from what was saved, as Android does for a recreated activity (a rotation).
+    private var emitted by mutableStateOf(true)
+    private var registry by mutableStateOf(SaveableStateRegistry(null) { true })
+
+    private fun restore() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.waitForIdle()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.waitForIdle()
+    }
+
+    /** Turns on a screen reader that explores by touch, as TalkBack does, for Compose to report to. */
+    private fun startScreenReader() {
+        val manager = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+        manager.setEnabled(true)
+        manager.setTouchExplorationEnabled(true)
+        manager.setEnabledAccessibilityServiceList(listOf(AccessibilityServiceInfo()))
+    }
+
     private fun show(
         section: SettingsSection,
         touch: Boolean = false,
@@ -102,7 +139,11 @@ class SettingsKeyLinksTest {
                 if (touch) enterTouchMode(activity.window.decorView)
                 activity.setContent {
                     inputModes = LocalInputModeManager.current
-                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                    if (emitted) {
+                        CompositionLocalProvider(LocalSaveableStateRegistry provides registry) {
+                            SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) { it }
+                        }
+                    }
                 }
             }
             waitForNode(hasText(text(R.string.settings_title)))
@@ -222,10 +263,73 @@ class SettingsKeyLinksTest {
             assertTrue(compose.onAllNodes(hasText(named, substring = true)).fetchSemanticsNodes().isEmpty())
         }
 
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun tabRightAfterALandingScrollsAsUsual() =
+        show(SettingsSection.AI_SERVICES) {
+            follow(SecretId.ANTHROPIC)
+            landedOn(SecretId.ANTHROPIC)
+            val landed = compose.onNodeWithTag(SettingsTarget.key(SecretId.ANTHROPIC).tag)
+            val top = landed.fetchSemanticsNode().boundsInRoot.top
+            // Within the landing's flash: the next row, in view below, takes the focus, and the column
+            // does not bring it to the landing's place.
+            compose
+                .onNode(hasAnyAncestor(hasTestTag(SettingsTarget.key(SecretId.ANTHROPIC).tag)) and isFocused())
+                .performKeyInput { pressKey(Key.Tab) }
+            waitForNode(hasAnyAncestor(hasTestTag(SettingsTarget.key(SecretId.OPENAI).tag)) and isFocused())
+            compose.waitForIdle()
+            assertEquals(top, landed.fetchSemanticsNode().boundsInRoot.top, 1f)
+        }
+
+    @Test
+    fun aLandingUnderWayLandsAgainOnceTheScreenIsRecreated() =
+        show(SettingsSection.SOURCES) {
+            follow(SecretId.EXA)
+            // Recreated before the landing has ended, as by a rotation.
+            restore()
+            landedOn(SecretId.EXA)
+        }
+
+    @Test
+    fun aScreenReaderFocusesTheLandedRowWhichKeepsTheFocus() {
+        startScreenReader()
+        show(SettingsSection.SOURCES, touch = true) {
+            val manager = shadowOf(app.getSystemService(AccessibilityManager::class.java))
+            val before = manager.sentAccessibilityEvents.size
+            follow(SecretId.EXA)
+            landedOn(SecretId.EXA)
+            compose.mainClock.advanceTimeBy(2_000)
+            compose.waitForIdle()
+            // Touch exploration follows the focus, so the row keeps it after the flash.
+            val focused = hasAnyAncestor(hasTestTag(SettingsTarget.key(SecretId.EXA).tag)) and isFocused()
+            waitForNode(focused)
+            // The screen reader's own focus moved to the row: Compose does not move it with the
+            // input focus, whose event comes from the whole view.
+            val row = compose.onNode(focused).fetchSemanticsNode().id
+            val told =
+                manager.sentAccessibilityEvents
+                    .drop(before)
+                    .filter { it.eventType == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED }
+                    .map(::virtualSource)
+            assertTrue("screen reader focus moved to $told, the row is $row", row in told)
+        }
+    }
+
+    /** The virtual view, a semantics node's id, that [event] comes from (`AccessibilityRecord`'s hidden source id). */
+    private fun virtualSource(event: AccessibilityEvent): Int {
+        val source = AccessibilityRecord::class.java.getMethod("getSourceNodeId").invoke(event) as Long
+        return (source shr VIRTUAL_ID_SHIFT).toInt()
+    }
+
     @Test
     fun aSwitchedOffServiceIsSaidToKeepItsSettings() =
         show(SettingsSection.AI_SERVICES) {
             val kept = "Switching off a service does not erase the most recently used model and effort settings."
             waitForNode(hasText(kept, substring = true))
         }
+
+    private companion object {
+        // An accessibility node id holds its virtual view's id in its upper half.
+        const val VIRTUAL_ID_SHIFT = 32
+    }
 }

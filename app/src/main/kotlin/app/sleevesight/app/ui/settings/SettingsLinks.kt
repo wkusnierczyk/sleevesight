@@ -1,11 +1,18 @@
 package app.sleevesight.app.ui.settings
 
+import android.view.View
+import android.view.accessibility.AccessibilityManager
+import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -15,6 +22,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
@@ -24,10 +33,16 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.node.RootForTest
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getAllSemanticsNodes
+import androidx.compose.ui.semantics.getOrNull
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.LinkedText
@@ -70,7 +85,9 @@ internal data class SettingsTarget(
 /**
  * Follows the settings' links (#539): [go] unfolds the target's section in [folds] and lands on the
  * target, which its [LandingSpot] then scrolls into view and focuses. One per visit to the
- * settings, given to the rows as [LocalSettingsNavigator] ([ProvideSettingsNavigator]).
+ * settings, given to the rows as [LocalSettingsNavigator] ([ProvideSettingsNavigator]); a landing
+ * under way is saved with the screen ([saver]) and lands again once the screen is recreated (a
+ * rotation), its section being saved unfolded with the folds.
  */
 @Stable
 internal class SettingsNavigator(
@@ -80,17 +97,56 @@ internal class SettingsNavigator(
     var landing: Landing? by mutableStateOf(null)
         private set
 
+    /**
+     * Whether the landing's own scroll is still to come or under way, which alone [LandingScroll]
+     * brings to a quarter of the way down; not its focus or flash after it. Read only when the column
+     * scrolls, so not state.
+     */
+    var scrolling: Boolean = false
+        private set
+
     private var count = 0
 
     /** Unfolds [target]'s section, if folded, and lands on [target]. */
     fun go(target: SettingsTarget) {
         folds.unfold(target.section)
+        resume(target)
+    }
+
+    /** Lands on [target], whose section is unfolded. */
+    private fun resume(target: SettingsTarget) {
         landing = Landing(target, ++count)
+        scrolling = true
+    }
+
+    /** Ends [done]'s own scroll, unless another landing has begun since. */
+    fun scrolled(done: Landing) {
+        if (landing == done) scrolling = false
     }
 
     /** Ends [done], unless another landing has begun since. */
     fun landed(done: Landing) {
-        if (landing == done) landing = null
+        if (landing == done) {
+            landing = null
+            scrolling = false
+        }
+    }
+
+    companion object {
+        /** Saves the target of a landing under way, for a navigator over [folds] to land on again. */
+        fun saver(folds: SectionFolds): Saver<SettingsNavigator, ArrayList<String>> =
+            Saver(
+                save = { navigator ->
+                    navigator.landing?.target?.let { arrayListOf(it.section.name, it.row.orEmpty()) }
+                },
+                restore = { saved ->
+                    SettingsNavigator(folds).also { navigator ->
+                        SettingsSection.entries
+                            .firstOrNull { it.name == saved[0] }
+                            ?.let { navigator.resume(SettingsTarget(it, saved[1].ifEmpty { null })) }
+                    }
+                },
+            )
     }
 }
 
@@ -106,34 +162,49 @@ internal data class Landing(
  */
 internal val LocalSettingsNavigator = staticCompositionLocalOf<SettingsNavigator?> { null }
 
-/**
- * [content] with a [SettingsNavigator] over [folds], for this visit to the settings, and the way its
- * scrolling column brings a landed row into view ([LandingScroll]). `LocalBringIntoViewSpec` is
- * experimental in Compose; without it, a landed row would have to be scrolled by hand from its
- * measured place in the column.
- */
-@OptIn(ExperimentalFoundationApi::class)
+/** [content] with a [SettingsNavigator] over [folds], for this visit to the settings. */
 @Composable
 internal fun ProvideSettingsNavigator(
     folds: SectionFolds,
     content: @Composable () -> Unit,
 ) {
-    val navigator = remember(folds) { SettingsNavigator(folds) }
-    val usual = LocalBringIntoViewSpec.current
-    val scroll = remember(navigator, usual) { LandingScroll(navigator, usual) }
-    CompositionLocalProvider(
-        LocalSettingsNavigator provides navigator,
-        LocalBringIntoViewSpec provides scroll,
-        content = content,
-    )
+    val navigator = rememberSaveable(folds, saver = SettingsNavigator.saver(folds)) { SettingsNavigator(folds) }
+    CompositionLocalProvider(LocalSettingsNavigator provides navigator, content = content)
 }
 
 /**
- * How the settings' column brings a row into view: while a link lands ([SettingsNavigator.landing]),
+ * The settings' scrolling column, [content] under [modifier] (which comes after the scroll), which
+ * brings a landed row a quarter of the way down ([LandingScroll]). Only the column itself scrolls
+ * so: anything in [content] that scrolls on its own does as usual. `LocalBringIntoViewSpec` is
+ * experimental in Compose; without it, a landed row would have to be scrolled by hand from its
+ * measured place in the column.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+internal fun SettingsScrollColumn(
+    modifier: Modifier,
+    verticalArrangement: Arrangement.Vertical,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val navigator = LocalSettingsNavigator.current
+    val usual = LocalBringIntoViewSpec.current
+    val landing = remember(navigator, usual) { navigator?.let { LandingScroll(it, usual) } ?: usual }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides landing) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).then(modifier),
+            verticalArrangement = verticalArrangement,
+        ) {
+            CompositionLocalProvider(LocalBringIntoViewSpec provides usual) { content() }
+        }
+    }
+}
+
+/**
+ * How the settings' column brings a row into view: for a link's landing ([SettingsNavigator.scrolling]),
  * with the row a quarter of the way down ([LANDING_KEYLINE]), where the eye looks for it, rather than
  * at the bottom edge, as the least scroll that shows it would leave it; else as [usual], so moving
- * through the rows with a keyboard scrolls only as far as it needs. The column cannot scroll past
- * its ends, so a row near the end of the list stays lower.
+ * through the rows with a keyboard, even during the landing's flash, scrolls only as far as it needs.
+ * The column cannot scroll past its ends, so a row near the end of the list stays lower.
  */
 private class LandingScroll(
     private val navigator: SettingsNavigator,
@@ -144,7 +215,7 @@ private class LandingScroll(
         size: Float,
         containerSize: Float,
     ): Float =
-        if (navigator.landing != null) {
+        if (navigator.scrolling) {
             offset - containerSize * LANDING_KEYLINE
         } else {
             usual.calculateScrollDistance(offset, size, containerSize)
@@ -189,11 +260,14 @@ internal fun sentenceWith(
 /**
  * [content], a row, as where a link to [target] lands (#539): when one is followed, the row is
  * scrolled, once laid out, to a quarter of the way down the column ([LandingScroll]), and takes the
- * focus, so a keyboard, and a screen reader, which
- * follows the focus, go on from it. The focus shows as the row's focus highlight; a row that would
- * take no focus while the phone is touched rather than driven by a keyboard (Compose's clickable
- * rows) is let take it for [LANDING], a moment to see where the link led, and then lets it go, as
- * Home's citations flash the line they lead to. The tag of a target with a row
+ * focus, so a keyboard goes on from it; while a screen reader explores by touch (TalkBack), the
+ * row also takes its focus, which Compose does not move with the input focus
+ * ([moveAccessibilityFocusToFocused]), so the screen reader reads the row and goes on from it. The
+ * focus shows as the row's focus highlight; a row that
+ * would take no focus while the phone is touched rather than driven by a keyboard (Compose's
+ * clickable rows) is let take it for [LANDING], a moment to see where the link led, and then lets it
+ * go, as Home's citations flash the line they lead to; it keeps it while a screen reader explores by
+ * touch. The tag of a target with a row
  * ([SettingsTarget.tag]) is on the spot, for tests.
  */
 @Composable
@@ -203,10 +277,12 @@ internal fun LandingSpot(
 ) {
     val navigator = LocalSettingsNavigator.current
     val landing = navigator?.landing?.takeIf { it.target == target }
-    val view = remember { BringIntoViewRequester() }
+    val relocation = remember { BringIntoViewRequester() }
+    val host = LocalView.current
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val inputModes = LocalInputModeManager.current
+    val accessibility = LocalContext.current.getSystemService(AccessibilityManager::class.java)
     // Whether the row holds the focus, read only by the landing, so a plain var.
     val held = remember { BooleanArray(1) }
     LaunchedEffect(navigator, landing) {
@@ -215,12 +291,22 @@ internal fun LandingSpot(
             // The row may have been folded away until the link was followed: it is laid out in
             // the next frame.
             withFrameNanos { }
-            view.bringIntoView()
+            try {
+                relocation.bringIntoView()
+            } finally {
+                navigator.scrolled(landing)
+            }
             focus.requestFocus()
+            if (accessibility?.isTouchExplorationEnabled == true) {
+                withFrameNanos { }
+                moveAccessibilityFocusToFocused(host)
+            }
             delay(LANDING)
             // Touched, the row lets the focus go, unless it has moved on meanwhile; driven by a
-            // keyboard, it keeps it, to go on from.
-            if (held[0] && inputModes.inputMode == InputMode.Touch) focusManager.clearFocus()
+            // keyboard, it keeps it, to go on from, and so it does while a screen reader explores by
+            // touch.
+            val exploring = accessibility?.isTouchExplorationEnabled == true
+            if (held[0] && inputModes.inputMode == InputMode.Touch && !exploring) focusManager.clearFocus()
         } finally {
             navigator.landed(landing)
         }
@@ -229,7 +315,7 @@ internal fun LandingSpot(
         modifier =
             Modifier
                 .let { if (target.row != null) it.testTag(target.tag) else it }
-                .bringIntoViewRequester(view)
+                .bringIntoViewRequester(relocation)
                 // Only while landing: otherwise the row's own focus rules hold.
                 .focusProperties { if (landing != null) canFocus = true }
                 .focusRequester(focus)
@@ -237,6 +323,22 @@ internal fun LandingSpot(
     ) {
         content()
     }
+}
+
+/**
+ * Gives the screen reader's focus to the node that holds the input focus in [host]'s composition,
+ * as a screen reader's own move would ([AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS] on its
+ * virtual view, which tells the screen reader with `TYPE_VIEW_ACCESSIBILITY_FOCUSED`). Compose has
+ * no API for this, so the node is found in the composition's semantics ([RootForTest], whose
+ * `semanticsOwner` is public) by its *focused* property; nothing happens if there is none.
+ */
+private fun moveAccessibilityFocusToFocused(host: View) {
+    val owner = (host as? RootForTest)?.semanticsOwner ?: return
+    val focused =
+        owner
+            .getAllSemanticsNodes(mergingEnabled = true)
+            .firstOrNull { it.config.getOrNull(SemanticsProperties.Focused) == true } ?: return
+    host.accessibilityNodeProvider?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
 }
 
 /** How long a landed row may keep the focus it takes in touch mode ([LandingSpot]). */
