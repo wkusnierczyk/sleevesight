@@ -81,6 +81,8 @@
     <string name="settings_model_loading">Listing the service’s models…</string>
     <string name="settings_model_unavailable">This build cannot list the service’s models yet; the default is used until it can.</string>
     <string name="settings_model_no_key">Save the API key to list the service’s models.</string>
+    <!-- Under a service's model row (#540): the service, and the model's name. -->
+    <string name="settings_model_not_available">The currently selected %1$s model %2$s is not available. Please select another model or provider.</string>
     <string name="settings_model_failed_unauthorized">The models could not be listed: the service refused the key.</string>
     <string name="settings_model_failed_offline">The models could not be listed: no connection.</string>
     <string name="settings_model_failed_quota_exhausted">The models could not be listed: the service’s quota is used up for now.</string>

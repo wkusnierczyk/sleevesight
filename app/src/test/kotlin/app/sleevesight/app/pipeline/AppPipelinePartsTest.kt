@@ -119,4 +119,20 @@ class AppPipelinePartsTest {
         assertEquals(ProviderId.GOOGLE, parts(PipelineKeys(ai = Secret("ai")), google).ai?.provider?.id)
         assertNull("no client yet", parts(PipelineKeys(ai = Secret("ai")), Settings(aiProvider = ProviderId.OLLAMA)).ai)
     }
+
+    @Test
+    fun noAiAccessWhileTheServicesSelectedModelIsUnavailable() {
+        val check = ModelCheck(wiring.aiProviders) { null }
+        val checked = AppPipelineParts(wiring, Normalizer(JvmAccentFolder), models = check) { PipelineCache.None }
+        val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
+        val keys = PipelineKeys(ai = Secret("ai"))
+        assertEquals(ProviderId.ANTHROPIC, checked(keys, anthropic).ai?.provider?.id)
+
+        check.listed(ProviderId.ANTHROPIC, checkNotNull(anthropic.model(ProviderId.ANTHROPIC)), emptyList())
+        assertNull("its model unavailable", checked(keys, anthropic).ai)
+        // Another model chosen, or another service, is not held back by it.
+        val other = anthropic.withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
+        assertEquals(ProviderId.ANTHROPIC, checked(keys, other).ai?.provider?.id)
+        assertEquals(ProviderId.OPENAI, checked(keys, Settings(aiProvider = ProviderId.OPENAI)).ai?.provider?.id)
+    }
 }
