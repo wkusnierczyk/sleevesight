@@ -148,7 +148,7 @@ The back arrow, or Android's back, returns to where the page was opened from: th
 
 ## Writing an insight
 
-Each insight written is a call to your AI service (now and then two, below), on your own API key, and the service bills you for it. A call that failed or was stopped is never made again without a tap from you, and the buttons below say when a tap is a new call. One case makes a second call on its own: to keep the prompt short, the first call may leave out lines about the artist, and if the service then answers that it has nothing to write from, the app asks once more at once, with every line, so that you get an insight rather than none. Each of the two calls is billed.
+Each insight written is a call to your AI service (now and then two, below), on your own API key, and the service bills you for it. A call that failed or was stopped is never made again without a tap from you, and the buttons below say when a tap is a new call. One case makes a second call on its own: to keep the prompt short, the first call may leave out lines about the artist, and if the service then answers that it has nothing to write from, the app asks once more at once, with every line, so that you get an insight rather than none. Each of the two calls is billed. [What it costs you]({{ '/docs/costs/' | relative_url }}) says what a call costs.
 
 ```mermaid
 flowchart TD
@@ -243,7 +243,7 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 | **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
 | **A source fails** | *Sources* says so (*MusicBrainz failed.*, or *… could not be reached.*); the other sources' lines are used. |
 | **The AI service refuses or fails** | *The insight could not be written:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, and the like. *Write insight* tries again, as a new call. |
-| **The selected model is not available** | *The currently selected Anthropic model Claude Haiku 5.5 is not available. Please select another model or provider in AI services.*, when the service no longer lists the model for your key, or answers a call that it does not know the model or does not let your account use it. *AI services* opens the settings; no insight is written until you choose another model or service. |
+| **The selected model is not available** | *The currently selected Anthropic model Claude Haiku 5.5 is not available. Please select another model or provider in AI services.*, when the service no longer lists the model for your key, or answers a call that it does not know the model or does not let your account use it. *AI services* opens the settings at that service's model, under *AI services*; no insight is written until you choose another model or service. |
 | **The reply stopped early** | The insight shows with *The reply stopped early, so this is incomplete, and it was not kept.* |
 | **The app itself fails while writing** | *The insight could not be written: something went wrong.*, with no Write; the next track runs as usual. |
 

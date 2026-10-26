@@ -190,6 +190,18 @@ class AppGraph internal constructor(
             .stateIn(mainScope, SharingStarted.Eagerly, Settings().linkStyle)
 
     /**
+     * Whether what only developer mode shows is marked (#536, `Settings.marksDeveloperItems`):
+     * developer mode on, with *Mark developer items*, for the theme, as it changes, held for the
+     * process. Before the settings' first read in a new process, unmarked, as [linkStyle] is not
+     * kept either: what only developer mode shows waits for the same read.
+     */
+    val developerMark: StateFlow<Boolean> =
+        settings.settings
+            .map { it.marksDeveloperItems }
+            .distinctUntilChanged()
+            .stateIn(mainScope, SharingStarted.Eagerly, Settings().marksDeveloperItems)
+
+    /**
      * Gives [theme] to the system as the app's night mode (Android 12 and later), which it keeps
      * across restarts and applies to the app's configuration: *System* follows the system's dark
      * theme (`MODE_NIGHT_AUTO`, as AndroidX's own night mode maps it), *Light* and *Dark* are fixed.

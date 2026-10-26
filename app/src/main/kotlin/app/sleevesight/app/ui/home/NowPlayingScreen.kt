@@ -29,6 +29,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.ui.report.InsightReportDialog
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.normalizer.Normalizer
@@ -71,16 +72,17 @@ class HomeFeed(
 
 /**
  * The now-playing part of the home screen, from [feed]; a link to the settings goes to
- * [openSettings], and an item opened on a page of its own (*Layout*'s *Separate pages*, #447) to
- * [openPage].
+ * [openSettings], or, to a setting, to [openSettingsAt] (#581), and an item opened on a page of its
+ * own (*Layout*'s *Separate pages*, #447) to [openPage].
  */
 @Composable
 fun NowPlayingHome(
     feed: HomeFeed,
     openSettings: () -> Unit = {},
     openPage: (HomePage) -> Unit = {},
+    openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) {
-    NowPlayingContent(nowPlayingState(feed), feed.actions(openSettings, openPage))
+    NowPlayingContent(nowPlayingState(feed), feed.actions(openSettings, openPage, openSettingsAt))
 }
 
 /**
@@ -116,6 +118,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
 private fun HomeFeed.actions(
     openSettings: () -> Unit,
     openPage: (HomePage) -> Unit,
+    // Home's pages show no note that links to a setting: only Home's insight card does (#581).
+    openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 ) = NowPlayingActions(
     normalize = normalizer::normalize,
     playerLabel = playerLabel,
@@ -125,6 +129,7 @@ private fun HomeFeed.actions(
     stop = stop,
     openSettings = openSettings,
     openPage = openPage,
+    openSettingsAt = openSettingsAt,
 )
 
 /**
@@ -144,8 +149,9 @@ internal class NowPlayingState(
  * How the screen names what it shows, and where its taps go. The player row opens [playerActivity],
  * else [playerLaunch] for the player's package (#596). [mail] takes a report of a problem
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
- * the settings, from *Sources*' note of a source that needs its key (#440). [openPage] opens an
- * item on a page of its own, under *Layout*'s *Separate pages* (#447).
+ * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
+ * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
+ * an item on a page of its own, under *Layout*'s *Separate pages* (#447).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -158,6 +164,7 @@ internal class NowPlayingActions(
     val mail: MailHandoff? = null,
     val openSettings: () -> Unit = {},
     val openPage: (HomePage) -> Unit = {},
+    val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 )
 
 /**
@@ -226,11 +233,15 @@ internal fun NowPlayingContent(
                 // A tap carries what it was shown for: the run Write is offered for, beside this track.
                 val onWrite: () -> Unit = { view.writeKey?.let { actions.write(it, playing) } }
                 val onStop: () -> Unit = { view.stopCall?.let(actions.stop) }
+                // The note of a model found unavailable opens *AI services* at that model's row (#581).
+                val onModelSettings: () -> Unit = {
+                    state.unavailable?.let { actions.openSettingsAt(SettingsTarget.model(it.provider)) }
+                        ?: actions.openSettings()
+                }
                 InsightCard(
                     track?.insight ?: NOT_YET,
                     insightContext(view, track, settings, shown.modelAllowed, state.unavailable),
-                    // TODO(#539): open *AI services* unfolded at the service, once Settings has that link.
-                    InsightActions(onWrite, onStop, cite, actions.openSettings) { reportedTrack, written ->
+                    InsightActions(onWrite, onStop, cite, onModelSettings) { reportedTrack, written ->
                         reporting = Reported(reportedTrack, written)
                     },
                     shown.details,

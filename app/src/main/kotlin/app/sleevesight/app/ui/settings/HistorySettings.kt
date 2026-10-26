@@ -80,16 +80,19 @@ internal fun HistorySection(
 
     val gap = settings.sessionGap
     val gaps = (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
-    ValueRow(
-        title = stringResource(R.string.settings_session_gap),
-        value = durationLabel(gap),
-        summary = stringResource(R.string.settings_session_gap_summary),
-    ) {
-        open(
-            SettingsDialog.Choice(R.string.settings_session_gap, gaps, gap) { chosen ->
-                update { it.copy(sessionGap = chosen) }
-            },
-        )
+    // Where *Don't repeat artist facts* links to (#581).
+    LandingSpot(SettingsTarget.sessionGap) {
+        ValueRow(
+            title = stringResource(R.string.settings_session_gap),
+            value = durationLabel(gap),
+            summary = stringResource(R.string.settings_session_gap_summary),
+        ) {
+            open(
+                SettingsDialog.Choice(R.string.settings_session_gap, gaps, gap) { chosen ->
+                    update { it.copy(sessionGap = chosen) }
+                },
+            )
+        }
     }
 
     LifetimeRows(settings, update, open)

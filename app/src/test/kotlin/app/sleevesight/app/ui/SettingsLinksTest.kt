@@ -80,6 +80,33 @@ class SettingsLinksTest {
     }
 
     @Test
+    fun aLandingOnARowNoSpotIsDrawnForIsDropped() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            var navigator: SettingsNavigator? = null
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    val folds = remember { SectionFolds() }
+                    ProvideSettingsNavigator(folds) {
+                        navigator = LocalSettingsNavigator.current
+                        Column { FoldedSection(SettingsSection.ABOUT, folds) { Text(ABOUT_ROWS) } }
+                    }
+                }
+            }
+            compose.waitForIdle()
+            // A row no longer shown, as a route or a saved state from an earlier version could name.
+            compose.runOnUiThread { navigator!!.go(SettingsTarget(SettingsSection.ABOUT, "gone")) }
+            // A frame for the section to unfold and its spots to claim their targets, another to drop it.
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            assertNull(navigator!!.landing)
+            assertFalse(navigator!!.scrolling)
+            // Its section is unfolded all the same.
+            compose.onNodeWithText(ABOUT_ROWS).assertExists()
+        }
+    }
+
+    @Test
     fun onlyALandingStillScrollingIsSaved() {
         val folds = SectionFolds()
         val navigator = SettingsNavigator(folds)

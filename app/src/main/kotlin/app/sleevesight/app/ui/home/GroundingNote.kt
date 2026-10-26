@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.synthesis.GroundedText
 import app.sleevesight.core.synthesis.SentenceStatus
 
@@ -26,7 +27,8 @@ internal fun GroundingLine(
     details: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    if (details) Meta(grounded, cached, modifier) else Note(grounded, cached, modifier)
+    // The full counts show only in developer mode, and are marked as such (#536).
+    if (details) DeveloperMark { Meta(grounded, cached, modifier) } else Note(grounded, cached, modifier)
 }
 
 /**

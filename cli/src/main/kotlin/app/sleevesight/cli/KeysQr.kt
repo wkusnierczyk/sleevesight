@@ -57,7 +57,8 @@ class KeysQr(
 
                 keys.isEmpty() -> {
                     "No keys found: set ${Keys.ANTHROPIC}, ${Keys.OPENAI}, ${Keys.GOOGLE}, ${Keys.EXA} " +
-                        "or ${Keys.LASTFM}, or give --<name>-from."
+                        "or ${Keys.LASTFM} (in a keys file, also the providers' usual names, " +
+                        "such as ANTHROPIC_API_KEY), or give --<name>-from."
                 }
 
                 else -> {
@@ -142,7 +143,14 @@ class KeysQr(
               --keys and --<name>-from cannot be combined.
               Nothing is written to a file or sent anywhere. Do not make the code with an online QR
               generator: it would receive the keys.
-            """.trimIndent()
+
+              A keys file has NAME=value lines, and may name each key as Sleevesight does or as its
+              provider usually does; of the names a file gives one key under, the first listed below wins.
+              The environment is read by the SLEEVESIGHT_ names alone.
+            """.trimIndent() +
+                Keys.FILE_NAMES.values.joinToString("") {
+                    "\n    " + it.joinToString(", ")
+                }
 
         /** The QR code for [text], at error correction M (15 %), with the standard quiet zone. */
         fun encode(text: String): BitMatrix =

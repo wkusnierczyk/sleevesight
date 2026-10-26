@@ -49,6 +49,7 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.keys.KeyShape
@@ -71,14 +72,18 @@ internal fun <T> ChoiceDialog(
         onDismissRequest = onDismiss,
         title = { Text(choice.titleArg?.let { stringResource(choice.title, it) } ?: stringResource(choice.title)) },
         text = {
-            Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
-                for ((value, label) in choice.options) {
-                    RadioRow(label = label, selected = value == choice.selected, detail = choice.details[value]) {
-                        choice.onSelect(value)
-                        onDismiss()
+            val list: @Composable () -> Unit = {
+                Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
+                    for ((value, label) in choice.options) {
+                        RadioRow(label = label, selected = value == choice.selected, detail = choice.details[value]) {
+                            choice.onSelect(value)
+                            onDismiss()
+                        }
                     }
                 }
             }
+            // A choice only developer mode offers opens in a window of its own: marked there too.
+            if (choice.developer) DeveloperMark { list() } else list()
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
     )

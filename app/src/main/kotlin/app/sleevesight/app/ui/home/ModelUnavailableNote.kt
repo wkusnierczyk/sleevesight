@@ -28,7 +28,8 @@ internal fun withoutInsight(insight: InsightState): Boolean =
 /**
  * The switched-on service's model is found unavailable (#540): "The currently selected Anthropic
  * model Claude Haiku 5.5 is not available. Please select another model or provider in AI
- * services.", with *AI services* a link to the settings ([onSettings]).
+ * services.", with *AI services* a link to the settings ([onSettings]), which Home opens at the
+ * service's model row (#581).
  */
 @Composable
 internal fun ModelUnavailable(

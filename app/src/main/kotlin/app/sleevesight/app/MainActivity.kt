@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
         val intro = if (playsIntro(savedInstanceState)) LogoIntro.random(animatorDurationScale()) else null
         this.intro = intro
         setContent {
-            SleevesightTheme(fonts = graph.font, themes = graph.theme, linkStyles = graph.linkStyle) {
+            SleevesightTheme(graph.font, graph.theme, graph.linkStyle, graph.developerMark) {
                 SystemBarsFollowTheme()
                 CompositionLocalProvider(LocalLogoIntro provides intro) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
@@ -128,10 +128,13 @@ class MainActivity : ComponentActivity() {
                                                 graph.sessions.seenPlayers,
                                             ),
                                         modelCheck = graph.modelCheck,
+                                        landOn = links.landOn,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
-                                pipeline = { links -> NowPlayingHome(homeFeed, links.openSettings, links.openPage) },
+                                pipeline = { links ->
+                                    NowPlayingHome(homeFeed, links.openSettings, links.openPage, links.openSettingsAt)
+                                },
                                 diagnostics = { back -> DiagnosticsScreen(graph.diagnostics, back) },
                                 page = { page, links ->
                                     NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
