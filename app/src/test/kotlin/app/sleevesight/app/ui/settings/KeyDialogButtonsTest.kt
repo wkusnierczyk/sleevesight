@@ -81,12 +81,15 @@ class KeyDialogButtonsTest {
         var dismissed by mutableIntStateOf(0)
     }
 
-    /** The dialog of the key [id], saved or not as [state] says, [dark] or not; a removal ends as [removing] says. */
+    /**
+     * The dialog of the key [id], saved or not as [state] says, [dark] or not; [removes] is what
+     * `onRemove` returns, whether a removal succeeds.
+     */
     private fun show(
         id: SecretId,
         state: SecretState = SecretState.SAVED,
         dark: Boolean = false,
-        removing: Boolean = true,
+        removes: Boolean = true,
         block: (Shown) -> Unit = {},
     ) {
         val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned("") } }
@@ -105,7 +108,7 @@ class KeyDialogButtonsTest {
                                 onSave = { SaveResult.SAVED },
                                 onRemove = {
                                     shown.removed++
-                                    removing
+                                    removes
                                 },
                                 scanner = scanner,
                                 keyboard = keyboard,
@@ -300,7 +303,7 @@ class KeyDialogButtonsTest {
 
     @Test
     fun aRemovalThatFailsSaysSoInTheConfirmationAndCancelGoesBackToTheKeyDialog() =
-        show(SecretId.LASTFM, removing = false) { shown ->
+        show(SecretId.LASTFM, removes = false) { shown ->
             compose.onNode(remove and inKeyDialog).performClick()
             waitFor(hasText(confirmTitle(SecretId.LASTFM)))
             compose.onNode(remove and inConfirmation(SecretId.LASTFM)).performClick()
