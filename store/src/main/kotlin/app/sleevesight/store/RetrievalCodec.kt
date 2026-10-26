@@ -71,7 +71,7 @@ internal object RetrievalCodec {
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
                 firstReleased = result.firstReleased,
-                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date) },
+                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date, it.group) },
                 trackOnly = result.trackOnly,
             ),
         )
@@ -101,7 +101,7 @@ internal object RetrievalCodec {
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
                 firstReleased = stored.firstReleased,
-                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date) },
+                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date, it.group) },
                 trackOnly = stored.trackOnly,
             )
         } catch (_: IllegalArgumentException) {
@@ -173,6 +173,7 @@ internal object RetrievalCodec {
     private data class ReleaseDateJson(
         val title: String,
         val date: String,
+        val group: String,
     )
 
     @Serializable

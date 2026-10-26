@@ -85,7 +85,7 @@ class RecordingResolver(
             chosen == null ->
                 (if (fitting.isEmpty()) byVariant(track, duration, candidates, leaders) else null)
                     ?: unmatched(track, candidates)
-            else -> accept(track, chosen, leaders.details[chosen.recording.mbid], credited)
+            else -> accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
         }
     }
 
@@ -107,7 +107,7 @@ class RecordingResolver(
                 .map { it.copy(named = it.variants, led = emptyMap()).identified(emptyMap()) }
         val accepted = narrowed(fitting, duration)
         val chosen = accepted.minWithOrNull(PREFERENCE) ?: return null
-        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid], fitting)
+        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
     }
 
     private fun candidate(
@@ -162,8 +162,9 @@ class RecordingResolver(
         )
     }
 
-    // [pool]: every candidate whose title and length fit and that credits the track's artists, whose
-    // releases give the album's year (#556).
+    // [pool]: the candidates the choice was made from (title and length fit, the track's artists
+    // credited, narrowed by length as the choice is), whose releases give the album's year (#556), of
+    // those only the ones whose credits are [chosen]'s artists: never a namesake's recording.
     private suspend fun accept(
         track: NormalizedTrack,
         chosen: Candidate,
@@ -171,6 +172,11 @@ class RecordingResolver(
         pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
+        // Each dated release, by its own title, in its release group (else alone).
+        val releases =
+            pool.filter { it.sameArtists(chosen) }.flatMap { it.recording.releases }.mapNotNull { release ->
+                release.date?.let { ReleaseDate(release.title, it, release.releaseGroup?.mbid ?: release.mbid) }
+            }
         val base =
             Resolution(
                 outcome = Outcome.SongArticle,
@@ -182,14 +188,7 @@ class RecordingResolver(
                         ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList(), chosen.known[artist]))
                     },
                 firstRelease = firstRelease(recording),
-                releaseDates =
-                    ReleaseDate.of(
-                        pool.flatMap { it.recording.releases }.flatMap { release ->
-                            val titles = listOfNotNull(release.title, release.releaseGroup?.title)
-                            release.date?.let { date -> titles.map { it to date } }.orEmpty()
-                        },
-                        names::key,
-                    ),
+                releaseDates = ReleaseDate.collapse(releases, names::key),
             )
         val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
         return if (detail == null) base else withDetail(track, chosen, base, detail)
@@ -340,6 +339,10 @@ class RecordingResolver(
          */
         val known: Map<String, String?> get() =
             ids.mapValues { (_, ids) -> ids.singleOrNull()?.takeUnless { it.startsWith(BAND) } }
+
+        /** Whether every artist this credits is one [other] credits too, by the same ids. */
+        fun sameArtists(other: Candidate): Boolean =
+            ids.all { (artist, mine) -> mine.all { it in other.ids[artist].orEmpty() } }
 
         /** The credits that stand for the track's artists: by name, or a band whose leader is confirmed. */
         val credited: Set<String> get() = named.values.flatten().toSet() + bands

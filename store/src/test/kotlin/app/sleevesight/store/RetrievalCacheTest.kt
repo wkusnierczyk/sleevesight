@@ -399,7 +399,8 @@ class RetrievalCacheTest {
                 ),
             recordingTags = RecordingTags("mb-sundown", listOf("folk rock", "soft rock")),
             firstReleased = "1974-01-01",
-            releaseDates = listOf(ReleaseDate("Sundown", "1974-01-01"), ReleaseDate("Gord's Gold", "1975")),
+            releaseDates =
+                listOf(ReleaseDate("Sundown", "1974-01-01", "rg-1"), ReleaseDate("Gord's Gold", "1975", "rg-2")),
         )
     }
 

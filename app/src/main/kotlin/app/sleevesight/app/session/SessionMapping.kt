@@ -5,6 +5,8 @@ import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import app.sleevesight.core.model.NowPlaying
+import java.time.ZoneOffset
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -23,12 +25,14 @@ object SessionMapping {
      * normalizer splits, and empty when the player sends none (a player that sends only a title
      * still runs the pipeline). Blank values are absent. [queueItemId] is the active queue item, as
      * the repository settles it with the metadata. The year is `YEAR`, else the year `DATE` begins
-     * with (`20260320T000000`, `2026-03-20`), absent when neither holds a plausible one ([year]).
+     * with (`20260320T000000`, `2026-03-20`), absent when neither holds a plausible one by [clock]'s
+     * date ([year]).
      */
     fun nowPlaying(
         player: String,
         metadata: MediaMetadata?,
         queueItemId: Long?,
+        clock: Clock = Clock.System,
     ): NowPlaying? {
         metadata ?: return null
         return title(metadata)?.let {
@@ -41,7 +45,7 @@ object SessionMapping {
                 mediaId = metadata.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
                 queueItemId = queueItemId,
                 artUri = artUris(metadata).firstOrNull(),
-                year = year(metadata),
+                year = year(metadata, clock),
             )
         }
     }
@@ -56,24 +60,31 @@ object SessionMapping {
 
     /**
      * The release's year as the player sends it: `YEAR`, else the four digits `DATE` begins with;
-     * either only when it is a plausible year, from [FIRST_YEAR] (players send none as 0).
+     * either only when it is a plausible year, from [FIRST_YEAR] (players send none as 0) to the year
+     * after [clock]'s (a release announced for next year), so a tag's 2099 or 9999 is not shown.
      */
-    fun year(metadata: MediaMetadata): Int? {
+    fun year(
+        metadata: MediaMetadata,
+        clock: Clock = Clock.System,
+    ): Int? {
         val dated =
             metadata
                 .text(MediaMetadata.METADATA_KEY_DATE)
                 ?.take(YEAR_DIGITS)
                 ?.takeIf { it.length == YEAR_DIGITS && it.all(Char::isDigit) }
                 ?.toLong()
+        val thisYear =
+            java.time.Instant
+                .ofEpochMilli(clock.now().toEpochMilliseconds())
+                .atZone(ZoneOffset.UTC)
+                .year
         return listOfNotNull(metadata.getLong(MediaMetadata.METADATA_KEY_YEAR), dated)
-            .firstOrNull { it in FIRST_YEAR..LAST_YEAR }
+            .firstOrNull { it in FIRST_YEAR..thisYear + 1L }
             ?.toInt()
     }
 
     /** The earliest year taken as a release's: earlier ones are a tag's mistake, not a recording's. */
     private const val FIRST_YEAR = 1800L
-
-    private const val LAST_YEAR = 9999L
 
     private const val YEAR_DIGITS = 4
 

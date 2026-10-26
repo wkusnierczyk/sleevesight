@@ -109,8 +109,8 @@ val SourceAdapter.tag: String get() = id.tag
  * [firstReleased] is the date of the recording's first release, as MusicBrainz's resolution gives
  * it (`Resolution.firstReleaseDate`), on MusicBrainz's result only: kept with it in the retrieval
  * cache, so a track served from the cache, which makes no resolution, still shows its year.
- * [releaseDates] are the titles the releases of the track's recordings go by, with their dates
- * (`Resolution.releaseDates`, #556), kept the same way, for the year after the album the player
+ * [releaseDates] are the releases of the track's recordings, by title and release group, with their
+ * dates (`Resolution.releaseDates`, #556), kept the same way, for the year after the album the player
  * names: the cache's key does not hold the album, so the album is found among them when shown.
  *
  * [provisional] marks a result that a failed request of the verification left unverified, where a

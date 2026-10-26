@@ -1,6 +1,7 @@
 package app.sleevesight.core.sources
 
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.normalizer.Edition
 
 /**
  * What entity resolution established about a track, which adapters verify their matches against
@@ -21,12 +22,12 @@ import app.sleevesight.core.model.Outcome
  *   relationship), null otherwise. Empty when no recording was accepted.
  * @property firstRelease the earliest release of the recording; the player's release stays
  *   separate (`P` evidence).
- * @property releaseDates the titles the releases of the track's recordings go by, each with the
- *   earliest date MusicBrainz gives a release of that title (#556): of every recording whose title
- *   and length fit and that credits the track's artists, not only the accepted one, since a
- *   soundtrack or compilation often has a recording of its own. The home screen finds the album
- *   the player names among them, for the year after it ([ReleaseDate.yearOf]). Empty when no
- *   recording was accepted.
+ * @property releaseDates the releases of the track's recordings, one per title and release group
+ *   with its earliest date ([ReleaseDate.collapse], #556): of every recording the resolution would
+ *   accept, whose title and length fit and whose credits are the accepted artists (not a
+ *   namesake's), not only the accepted one, since a soundtrack or compilation often has a
+ *   recording of its own. The home screen finds the album the player names among them, for the
+ *   year after it ([ReleaseDate.albumYear]). Empty when no recording was accepted.
  * @property work the work the recording performs, when MusicBrainz links one.
  * @property original the work's earliest dated recording by another artist, when this recording
  *   is a cover or version (step 4) and that recording predates every dated one by the track's
@@ -112,48 +113,84 @@ data class FirstRelease(
 )
 
 /**
- * A title the releases of a track's recordings go by (a release's own, or its release group's), and
- * the earliest [date] MusicBrainz gives a release of that title, at the precision it has (#556).
+ * A release of a track's recording, for the year after the album the player names (#556): its own
+ * [title] (never its release group's, which an edition does not carry), the [date] MusicBrainz gives
+ * it, at the precision it has, and its release [group] (the release group's id, else the release's
+ * own), so a title several release groups share (two compilations named "Love Songs") keeps each
+ * one's year. As kept, one per title and release group, with the earliest date of that title in
+ * the group ([collapse]): a reissue under the same title in the same group has the group's year.
  */
 data class ReleaseDate(
     val title: String,
     val date: String,
+    val group: String,
 ) {
     companion object {
         /**
-         * Each title of [dated] (title and date pairs) once, as [key] reads it, written as the earliest
-         * release of it writes it, with the earliest date of a release of it; ordered by key, and with
-         * no title whose key is empty.
+         * [releases] one per title, as [key] reads it, and release group: the earliest of them,
+         * written as it writes the title; ordered by key, then date, and none whose key is empty.
          */
-        fun of(
-            dated: List<Pair<String, String>>,
+        fun collapse(
+            releases: List<ReleaseDate>,
             key: (String) -> String,
         ): List<ReleaseDate> =
-            dated
-                .groupBy { (title, _) -> key(title) }
-                .filterKeys { it.isNotEmpty() }
-                .entries
-                .sortedBy { it.key }
-                .map { (_, same) -> same.minWith(compareBy<Pair<String, String>> { it.second }.thenBy { it.first }) }
-                .map { (title, date) -> ReleaseDate(title, date) }
+            releases
+                .filter { key(it.title).isNotEmpty() }
+                .groupBy { key(it.title) to it.group }
+                .values
+                .map { same -> same.minWith(compareBy<ReleaseDate> { it.date }.thenBy { it.title }) }
+                .sortedWith(compareBy<ReleaseDate> { key(it.title) }.thenBy { it.date }.thenBy { it.group })
 
         /**
-         * The year of the release [album] names, as the player reports it, among [dates]: the year
-         * of the earliest release whose title has [album]'s [key] (the same title, as sources write
-         * it differently), or null when none has it or its date has no year. The title must be
-         * the same: an album named with an edition the releases do not name ("Crazy World
-         * (Remastered 2009)") is not found, rather than given another edition's year.
+         * The year after [album], the player's name for it, from [dates] and [playerYear], the year
+         * the player sends (already checked as plausible), in this order (design, *Key data*):
+         *
+         * 1. The releases [album] names: those whose title has [album]'s [key]; when none has, those
+         *    whose title has the key of [album] without its bracketed edition ([Edition.strip]:
+         *    "Abbey Road (Remastered)" names "Abbey Road"). Their years are one per release group
+         *    ([yearsOf]).
+         * 2. [playerYear], when it is one of those years: the player knows which edition it plays.
+         * 3. The one year, when they have one.
+         * 4. [playerYear], when no release is named; else null.
+         * 5. Null when they have several years and [playerYear] is none of them: two releases of one
+         *    name in different years, and nothing to tell which is playing.
          */
-        fun yearOf(
+        fun albumYear(
+            album: String,
+            dates: List<ReleaseDate>,
+            playerYear: String?,
+            key: (String) -> String,
+        ): String? {
+            val years = yearsOf(album, dates, key)
+            return when {
+                playerYear != null && playerYear in years -> playerYear
+                years.size == 1 -> years.single()
+                years.isEmpty() -> playerYear
+                else -> null
+            }
+        }
+
+        /**
+         * The distinct years, earliest first, of the releases of [dates] whose title has [album]'s
+         * [key], else, when none has, of those whose title has the key of [album] without its
+         * bracketed edition; empty when neither names one.
+         */
+        fun yearsOf(
             album: String,
             dates: List<ReleaseDate>,
             key: (String) -> String,
-        ): String? {
-            val wanted = key(album).takeIf { it.isNotEmpty() } ?: return null
-            return dates
-                .filter { key(it.title) == wanted }
-                .minOfOrNull { it.date }
-                ?.let(::yearIn)
+        ): List<String> {
+            fun named(name: String): List<String> {
+                val wanted = key(name).takeIf { it.isNotEmpty() } ?: return emptyList()
+                return dates
+                    .filter { key(it.title) == wanted }
+                    .mapNotNull { yearIn(it.date) }
+                    .distinct()
+                    .sorted()
+            }
+            val exact = named(album)
+            val stripped = Edition.strip(album)
+            return if (exact.isEmpty() && stripped != album.trim()) named(stripped) else exact
         }
 
         /** The year [date] begins with (`1974` of `1974-03-25`), or null when it has none. */

@@ -41,9 +41,9 @@ internal data class HeaderYears(
 
 /**
  * The years [header]'s album and recording show ([HeaderYears]). The first release is as
- * MusicBrainz's resolution gives it (`plan.md`, *Release-date semantics*). The album's is the year of
- * the earliest release of the title the player names among the releases of the track's recordings
- * ([ReleaseDate.yearOf]), else the player's own year ([NowPlaying.year]), else none; with no album
+ * MusicBrainz's resolution gives it (`plan.md`, *Release-date semantics*). The album's is chosen from
+ * the releases of the track's recordings that the player's album names and the player's own year
+ * ([NowPlaying.year]), by [ReleaseDate.albumYear]'s rules (design, *Key data*); with no album
  * reported, none. Both from MusicBrainz's result, which keeps them in the retrieval cache, so a
  * track served from the cache (which makes no resolution) shows the same years; else from the
  * run's resolution.
@@ -57,7 +57,7 @@ internal fun headerYears(
     val dates = kept?.releaseDates?.ifEmpty { null } ?: track?.resolution?.releaseDates.orEmpty()
     val album =
         header.album?.takeIf(String::isNotBlank)?.let { named ->
-            ReleaseDate.yearOf(named, dates, NAMES::key) ?: header.year?.toString()
+            ReleaseDate.albumYear(named, dates, header.year?.toString(), NAMES::key)
         }
     return HeaderYears(album = album, firstReleased = first?.takeIf { album == null || it < album })
 }

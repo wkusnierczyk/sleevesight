@@ -113,7 +113,7 @@ class MusicBrainzTagsTest {
     @Test
     fun `the adapter keeps the release dates, for a track later served from the cache`() =
         runTest {
-            val dates = listOf(ReleaseDate("Gord's Gold", "1975"), ReleaseDate("Sundown", "1974-01"))
+            val dates = listOf(ReleaseDate("Gord's Gold", "1975", "rg-2"), ReleaseDate("Sundown", "1974-01", "rg-1"))
             val released =
                 RESOLVED.copy(
                     firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"),
