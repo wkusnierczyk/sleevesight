@@ -53,21 +53,21 @@ The first run does not ask for an AI service or a key. Without one, Sleevesight 
 
 The settings are in sections, each folded under its name: a tap on a section's name unfolds it.
 
-**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. A service switched off keeps its key, model and reasoning effort, so you can switch back. Until its key is saved, the service switched on says *Needs your Anthropic key, in Secrets.* (or OpenAI's, or Google's).
+**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. Switching off a service does not erase its key or the most recently used model and effort settings, so you can switch back. Under each service, *Set your Anthropic API key here.* (or OpenAI's, or Google Gemini's) links to its key under *Secrets*. Until its key is saved, the service switched on says *Needs your Anthropic key.* (or OpenAI's, or Google's), above that link.
 
 **The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key, the last two as icons in the *Key* field:
 
 - **Type it** into the *Key* field and tap *Save*. Once something is entered, an eye in the field shows it, to check it before it is saved; a saved key is never shown again.
-- **Scan QR code** (the QR code icon) fills the field from a QR code that holds the key, once the key has that service's form.
-- **Type on a computer** (the keyboard icon) connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth: you scan the code the page shows, choose *Connect* on the page and pick the phone (the only device listed, as *Unknown or Unsupported Device* unless *Share phone's name with Type on a computer* is on), and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
+- **Scan QR code** (the QR code icon) opens a screen that says what code to scan, one of this key alone, and where to make it, [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}), above the camera's view; it fills the field from the code, once the key has that service's form.
+- **Type on a computer** (the keyboard icon) connects the phone to [sleevesight.app/keyboard.html]({{ '/keyboard.html' | relative_url }}), opened in Chrome or Edge on a computer with Bluetooth. Its screen says what it is and the steps, with a link to the page: you scan the code the page shows, choose *Connect* on the page and pick the phone (the only device listed, as *Unknown or Unsupported Device* unless *Share phone's name with Type on a computer* is on), and what you type on the computer appears in the field. The app asks for Bluetooth (*Nearby devices*) only then.
 
 If you keep the key in a password manager, it offers its saved entries on the *Key* field, as on any password field; it is not asked to save the key.
 
-To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}). Its screen says how: make the code on the computer, then read it with the camera. Before saving, it lists each key it found by its last four characters, says which would replace a key already saved, and names every problem with the code; *Save* saves them, and the screen then says which were saved. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
+To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of several keys, made on a computer at [sleevesight.app/api-keys]({{ '/api-keys.html' | relative_url }}), which its row links, with the guide to loading keys. Its screen says how: make the code on the computer, then read it with the camera. Before saving, it lists each key it found by its last four characters, says which would replace a key already saved, and names every problem with the code; *Save* saves them, and the screen then says which were saved. The camera is asked for only while you scan, and no frame is kept or sent. A key is stored encrypted on the phone, sent only to its own service, and never shown again once saved.
 
 **What it costs.** Each insight written is a paid call on your key (now and then two; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
 
-<!-- screenshot: Settings, the "AI services" section, with Anthropic switched on and its key not set ("Needs your Anthropic key, in Secrets."), from app version … -->
+<!-- screenshot: Settings, the "AI services" section, with Anthropic switched on and its key not set ("Needs your Anthropic key." and "Set your Anthropic API key here."), from app version … -->
 <!-- screenshot: the key dialog: the masked "Key" field with its QR code, keyboard and eye icons, from app version … -->
 <!-- screenshot: "Save these keys?" after "Load keys", listing keys by their last four characters, from app version … (with test keys only) -->
 
@@ -118,7 +118,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call, or two. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
 
-**The history.** Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default) and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
+**The history.** Sleevesight keeps, on the phone only, information about the tracks it has seen play (titles, artists, albums, and when they played), never the music, and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default), with *Clear history* under it, and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
 <!-- screenshot: the insight card waiting for the first tap: "Tap Write insight…" with the Write insight button, from app version … -->
 <!-- screenshot: an insight written earlier, shown after the evidence changed, with "Written earlier…" and "Rewrite", from app version … -->
@@ -130,12 +130,12 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 
-- **The history:** *Clear history*, under *History*, deletes the tracks played and the track changes, once you confirm with *Clear*. *Keep history for* sets how far back it reaches.
+- **The history:** *Clear history*, under *Keep history for* in *History*, deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights written and what the sources found), once you confirm with *Clear*; your API keys and settings stay, and your music is not touched. *Keep history for* sets how far back it reaches.
 - **What sources said about artists:** *Keep what sources said about each artist* is off by default; turning it off after turning it on deletes what was kept.
 - **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Purge keys*, under *Secrets*, lists them and deletes them all. If a saved key can no longer be read, *Purge keys* says so, as the way to enter the keys afresh.
 - **Everything:** Android's *Clear storage* for Sleevesight, or uninstalling it, deletes all it kept, the insights written and the sources' findings included. Findings also expire on their own, on the lifetimes the settings show.
 
 What a service keeps of the requests it received, such as the AI service for your account, is between you and that service; the [privacy policy]({{ '/privacy.html' | relative_url }}) says more.
 
-<!-- screenshot: Settings, "History": Keep history for, New session idle trigger, Clear history, from app version … -->
+<!-- screenshot: Settings, "History": Keep history for, Clear history, New session idle trigger, from app version … -->
 <!-- screenshot: the "Clear history?" dialog, from app version … -->

@@ -48,7 +48,6 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
-import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
@@ -94,8 +93,9 @@ internal fun <T> ChoiceDialog(
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code, which holds several keys, is pointed to *Load keys*; a keyboard
- * session's code starts that session, as *Type on a computer* would. The window is secure
+ * field as it was. A setup code of this key alone fills it too (#541); one with other keys is
+ * pointed to *Load keys*; a keyboard session's code starts that session, as *Type on a computer*
+ * would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load keys* is. The window is secure
  * (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
@@ -175,7 +175,7 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        QrScanDialog(scanner, onDismiss = { scanning = null }) { text ->
+        KeyScanScreen(purpose, scanner, onDismiss = { scanning = null }) { text ->
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed

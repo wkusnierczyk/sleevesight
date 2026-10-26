@@ -1,5 +1,7 @@
 package app.sleevesight.core.resolution
 
+import app.sleevesight.core.pipeline.ClearEpoch
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration
@@ -30,12 +32,16 @@ import kotlin.time.TimeSource
  * A recording is kept by its id and by whether its tags were asked for ([tags], as [musicBrainz]
  * asks: not while *Show genres* is off, #444), so one looked up without them is not served once
  * they are wanted.
+ *
+ * *Clear history* forgets every answer ([forget]); an answer asked for by work started before it
+ * ([epoch]) is not kept once it arrives.
  */
 class RememberedMusicBrainz(
     private val musicBrainz: MusicBrainzLookup,
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val lifetime: Duration = LIFETIME,
     private val capacity: Int = CAPACITY,
+    private val epoch: ClearEpoch = ClearEpoch(),
     private val tags: () -> Boolean = { true },
 ) : MusicBrainzLookup {
     private val searches = Memory<Pair<String, String>, List<MbRecording>>()
@@ -55,6 +61,14 @@ class RememberedMusicBrainz(
 
     override suspend fun searchArtists(name: String): Lookup<MbArtistSearch> =
         artists.answer(name) { musicBrainz.searchArtists(name) }
+
+    /** Forgets every answer kept, for *Clear history* (#547): the next question asks again. */
+    suspend fun forget() {
+        searches.forget()
+        recordings.forget()
+        works.forget()
+        artists.forget()
+    }
 
     // One kind of question's answers, by what was asked.
     private inner class Memory<K : Any, T> {
@@ -79,6 +93,9 @@ class RememberedMusicBrainz(
         }
 
         @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
+        suspend fun forget() = mutex.withLock { kept.clear() }
+
+        @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
         private suspend fun kept(key: K): Lookup<T>? =
             mutex.withLock {
                 val entry = kept.remove(key)
@@ -94,10 +111,14 @@ class RememberedMusicBrainz(
         private suspend fun keep(
             key: K,
             answer: Lookup<T>,
-        ) = mutex.withLock {
-            kept.remove(key)
-            kept[key] = Kept(answer, timeSource.markNow())
-            while (kept.size > capacity) kept.remove(kept.keys.first())
+        ) {
+            epoch.ifCurrent(currentCoroutineContext()) {
+                mutex.withLock {
+                    kept.remove(key)
+                    kept[key] = Kept(answer, timeSource.markNow())
+                    while (kept.size > capacity) kept.remove(kept.keys.first())
+                }
+            }
         }
     }
 

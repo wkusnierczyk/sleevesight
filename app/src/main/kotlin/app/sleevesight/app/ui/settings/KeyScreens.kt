@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -87,10 +88,12 @@ private const val ENDING_MARK = "\uFFFC"
  * A key screen: [title] at the top, then [content], filling the screen. It is a window of its own,
  * secure (`FLAG_SECURE`), so no screenshot or screen recording shows it, as the key dialogs are.
  * Back calls [onDismiss], except while [busy]: a save or a deletion then ends as its result says.
+ * With no [title], [content] shows it itself ([KeyScreenTitle]), as a guided scan does inside what
+ * scrolls, so that a short window leaves the camera's view as much room as it can (#541).
  */
 @Composable
 internal fun KeyScreen(
-    @StringRes title: Int,
+    @StringRes title: Int?,
     busy: Boolean,
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
@@ -104,15 +107,23 @@ internal fun KeyScreen(
                 modifier = Modifier.safeDrawingPadding().padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    stringResource(title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { heading() },
-                )
+                title?.let { KeyScreenTitle(it) }
                 content()
             }
         }
     }
+}
+
+/** A key screen's [title], which a screen reader reads as a heading. */
+@Composable
+internal fun KeyScreenTitle(
+    @StringRes title: Int,
+) {
+    Text(
+        stringResource(title),
+        style = MaterialTheme.typography.headlineMedium,
+        modifier = Modifier.semantics { heading() },
+    )
 }
 
 /**
@@ -135,12 +146,21 @@ internal fun StepHeading(
     )
 }
 
-/** A key screen's buttons, at the end of its line, wrapping where the screen is narrow. */
+/**
+ * A key screen's buttons: [cancel], if any, at the start of the line, as in the key dialog (#541,
+ * #543), and the others ([content]) at its end, wrapping where the screen is narrow.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun KeyScreenActions(content: @Composable () -> Unit) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-    ) { content() }
+internal fun KeyScreenActions(
+    cancel: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit = {},
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        cancel?.invoke()
+        FlowRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        ) { content() }
+    }
 }

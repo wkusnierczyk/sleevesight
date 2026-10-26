@@ -37,6 +37,11 @@ class DiagnosticsLog(
         kept.update { (it + entry).takeLast(capacity) }
     }
 
+    /** Drops every event kept, for *Clear history* (#547): the steps name the tracks. */
+    fun clear() {
+        kept.value = emptyList()
+    }
+
     /** Keeps each of [events] as it comes, until cancelled. */
     suspend fun follow(events: Flow<PipelineEvent>) {
         events.collect(::record)

@@ -104,6 +104,12 @@ sealed interface CoordinatorEvent {
     /** A key, a web engine or the AI service changed: a new pipeline is needed. */
     data object RebuildRequested : CoordinatorEvent
 
+    /**
+     * *Clear history* (#547): what is known of the tracks played goes, the insight shown and its
+     * ledger included, and the track playing is not looked up again until another one plays.
+     */
+    data object Cleared : CoordinatorEvent
+
     /** Build [build] ended; [built] is false when it failed. */
     data class RebuildFinished(
         val build: Long,
@@ -310,7 +316,9 @@ sealed interface CoordinatorEffect {
  * track whose preparation ended on the live pipeline, so it is not prepared again. [online] is
  * the phone's connection as last reported (online until told otherwise), and [returns] counts its
  * returns, from offline to online, so a run knows whether the network came back after its lookups
- * were granted (#192).
+ * were granted (#192). [clears] counts *Clear history*'s clears (#547), and [cleared] is the track
+ * playing at the last one, which gets no run (nor a rebuild's) until a report of another insight
+ * track settles: no lookup, and no paid call, follows the clear on its own.
  */
 data class CoordinatorState(
     val acknowledged: Boolean = false,
@@ -334,6 +342,8 @@ data class CoordinatorState(
     val prepared: NowPlaying? = null,
     val online: Boolean = true,
     val returns: Long = 0,
+    val clears: Long = 0,
+    val cleared: NowPlaying? = null,
 ) {
     /**
      * The insight ledger: one entry, for the current insight track ([sameInsightTrack]), saying
@@ -630,6 +640,7 @@ fun sameInsightTrack(
  * | the run holds latest | Settled | as above | none |
  * | otherwise | Settled | as above; a new run of it (of the ledger's key and report, for its written track); a preparation cancelled, the next track kept | CancelRun (old), CancelPreparation (if one is cancelled), StartRun |
  * | any | RebuildRequested | building = a new build; no run is current; a preparation cancelled, and nothing prepared on the new pipeline yet | CancelPreparation (if one is cancelled), Build |
+ * | any | Cleared (#547) | no run, no preparation, nothing prepared, the ledger empty; one more clear; the latest report's track cleared: it starts no run, nor does a swap, until a report of another insight track settles; a pending swap goes ahead | CancelRun (if a run), CancelPreparation (if one), Swap (if pending) |
  * | build not the one pending | RebuildFinished | unchanged | none |
  * | the pending build, the run's model call under way | RebuildFinished | built known; waits for the call | none |
  * | the pending build, no model call under way | RebuildFinished | the new pipeline live (or none); run cleared; the ledger kept | CancelRun (old), Swap; StartRun of latest if settled (of the ledger's key and report, for its written track) |
@@ -691,6 +702,7 @@ class PipelineCoordinator(
             is CoordinatorEvent.Reported -> reported(event)
             is CoordinatorEvent.Settled -> settled(event.report)
             CoordinatorEvent.RebuildRequested -> rebuild()
+            CoordinatorEvent.Cleared -> cleared()
             is CoordinatorEvent.RebuildFinished -> finished(event)
             is CoordinatorEvent.WriteTapped -> tapped(event.key)
             is CoordinatorEvent.StopTapped -> stopTapped(event.call)
@@ -790,14 +802,36 @@ class PipelineCoordinator(
                     it.copy(orphaned = true)
                 }
             }
-        state = state.copy(latest = latest.copy(settled = true), ledger = kept, run = run)
+        // Another insight track ends the clear's hold on the one playing at it (#547).
+        val cleared = state.cleared?.takeIf { sameInsightTrack(it, latest.nowPlaying) }
+        state = state.copy(latest = latest.copy(settled = true), ledger = kept, run = run, cleared = cleared)
         if (startsNow(latest)) startRun(latest)
     }
+
+    // *Clear history* (#547): the run and the preparation cancelled, the ledger emptied, and the
+    // track playing held until another one plays; a swap that waited for a call goes ahead.
+    private fun cleared() {
+        state.run?.let { effects += CoordinatorEffect.CancelRun(it.id) }
+        cancelPreparation()
+        state =
+            state.copy(
+                run = null,
+                ledger = null,
+                prepared = null,
+                clears = state.clears + 1,
+                cleared = state.latest?.nowPlaying,
+            )
+        swap()
+    }
+
+    // Whether [report] is of the track the last clear held (#547).
+    private fun held(report: CoordinatorState.Report): Boolean =
+        state.cleared?.let { sameInsightTrack(it, report.nowPlaying) } == true
 
     // Whether the settled [latest] report starts a run now: not without a live pipeline or with a
     // rebuild pending (the swap starts it), and not when the run holds it.
     private fun startsNow(latest: CoordinatorState.Report): Boolean =
-        state.live && state.building == null && state.run?.let { state.holds(it, latest) } != true
+        state.live && state.building == null && state.run?.let { state.holds(it, latest) } != true && !held(latest)
 
     private fun startRun(report: CoordinatorState.Report) {
         state.run?.let { effects += CoordinatorEffect.CancelRun(it.id) }
@@ -868,7 +902,7 @@ class PipelineCoordinator(
         state = state.copy(building = null, built = null, live = built)
         val latest = state.latest
         state = state.copy(run = null)
-        if (built && latest != null && latest.settled) begin(latest)
+        if (built && latest?.settled == true && !held(latest)) begin(latest)
     }
 
     private fun tapped(key: RunKey) {

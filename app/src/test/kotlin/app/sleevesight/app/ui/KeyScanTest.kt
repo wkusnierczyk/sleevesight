@@ -182,8 +182,8 @@ class KeyScanTest {
         }
 
     @Test
-    fun aSetupCodeScannedIntoOneKeysFieldPointsToLoadKeys() =
-        show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey")) {
+    fun aSetupCodeOfSeveralKeysScannedIntoOneKeysFieldPointsToLoadKeys() =
+        show(scanner = scanning("sleevesight-keys:v1\nlastfm=$lastFmKey\nexa=$exaKey")) {
             compose.onNodeWithText(text(R.string.settings_key_name_lastfm)).performScrollTo().performClick()
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_setup))

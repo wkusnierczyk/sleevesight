@@ -15,11 +15,13 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -105,12 +107,18 @@ internal class CountingProvider : AiProvider {
 
 /**
  * A cache that keeps written cards, as the store's synthesis cache would; and, when
- * [keepsResults], the sources' results too, by source, lookup key and whole seconds.
+ * [keepsResults], the sources' results too, by source, lookup key and whole seconds. Like the
+ * store's, it keeps nothing from work started before the last clear of [epoch] (#547).
  */
-internal class CardCache : PipelineCache {
+internal class CardCache(
+    private val epoch: ClearEpoch = ClearEpoch(),
+) : PipelineCache {
     private val cards = mutableMapOf<CardKey, String>()
     private val results = mutableMapOf<Triple<SourceId, String, Long?>, SourceResult>()
     var keepsResults = false
+
+    /** How many cards, and results, it holds. */
+    val held: Int get() = cards.size + results.size
 
     /** Forgets every card, as an eviction would. */
     fun clearCards() = cards.clear()
@@ -128,7 +136,10 @@ internal class CardCache : PipelineCache {
         duration: Duration?,
         result: SourceResult,
     ) {
-        if (keepsResults) results[Triple(adapter.id, track.lookupKey, duration?.inWholeSeconds)] = result
+        if (!keepsResults) return
+        epoch.ifCurrent(currentCoroutineContext()) {
+            results[Triple(adapter.id, track.lookupKey, duration?.inWholeSeconds)] = result
+        }
     }
 
     override suspend fun card(key: CardKey): String? = cards[key]
@@ -137,6 +148,6 @@ internal class CardCache : PipelineCache {
         key: CardKey,
         text: String,
     ) {
-        cards[key] = text
+        epoch.ifCurrent(currentCoroutineContext()) { cards[key] = text }
     }
 }
