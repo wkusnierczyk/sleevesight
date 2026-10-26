@@ -352,9 +352,13 @@ internal fun kindOf(error: NetError): AiErrorKind =
  * The kind of an error response that `:net` passes on as a response (400, 404, 429 and the like):
  * by the body's `error.code`, else its `error.type`, else the status. `invalid_request_error`, the
  * type of most of them, says less than a 404 or 413 does, so for it the status decides.
+ *
+ * A 400 naming `stream` as the parameter at fault ([STREAM_PARAM]) is [AiErrorKind.MODEL_REFUSED]:
+ * the model is listed for the key, but the account may not stream it, which this client needs.
  */
 internal fun kindOf(response: NetResponse): AiErrorKind {
     val error = decode<WireErrorBody>(response.body)?.error
+    if (response.status == BAD_REQUEST && error?.param == STREAM_PARAM) return AiErrorKind.MODEL_REFUSED
     return error?.code?.let(::kindOfCode)
         ?: error?.type?.takeIf { it != INVALID_REQUEST_TYPE }?.let(::kindOfType)
         ?: when (response.status) {
@@ -393,6 +397,14 @@ internal fun rejectsEffort(response: NetResponse): Boolean =
         decode<WireErrorBody>(response.body)?.error?.param in EFFORT_PARAMS
 
 private val EFFORT_PARAMS = setOf("reasoning.effort", "reasoning")
+
+/**
+ * The parameter a 400 names when the account may not stream the model: "Your organization must be
+ * verified to stream this model" (`unsupported_value`), as developers have reported it for o3 and
+ * the GPT-5 models from 2025 on, on OpenAI's forum; OpenAI's model list does not say which models
+ * need the verification. Verifying the organization, or another model, mends it.
+ */
+private const val STREAM_PARAM = "stream"
 
 private const val INVALID_REQUEST_TYPE = "invalid_request_error"
 
