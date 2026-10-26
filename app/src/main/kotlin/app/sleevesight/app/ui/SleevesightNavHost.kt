@@ -34,21 +34,28 @@ data object FirstRun
 data object Home
 
 /**
- * The settings screen, opened from [Home]: all folded, or, with a [section] (a [SettingsSection]'s
- * name), unfolded and landed on it, at its row [row] if one is named ([SettingsTarget]), as Home's
- * note of a model found unavailable opens them (#581).
+ * The settings screen, opened from [Home], all folded. Kept as it was before [SettingsAt] (#581): a
+ * back stack saved by an earlier version, with the settings on it, is restored by its destination.
  */
 @Serializable
-data class SettingsPage(
-    val section: String? = null,
+data object SettingsPage
+
+/**
+ * The settings screen opened at a setting (#581): unfolded at [section] (a [SettingsSection]'s
+ * name) and landed on it, at its row [row] if one is named ([SettingsTarget]), as Home's note of a
+ * model found unavailable opens them. A route of its own beside [SettingsPage], which stays as it was.
+ */
+@Serializable
+data class SettingsAt(
+    val section: String,
     val row: String? = null,
 ) {
-    /** Where the settings open; null for all folded. */
+    /** Where the settings open; null for a section no longer known, which opens them all folded. */
     val target: SettingsTarget? get() = SettingsTarget.named(section, row)
 
     companion object {
         /** The settings opened at [target]. */
-        fun at(target: SettingsTarget): SettingsPage = SettingsPage(target.section.name, target.row)
+        fun of(target: SettingsTarget): SettingsAt = SettingsAt(target.section.name, target.row)
     }
 }
 
@@ -160,17 +167,20 @@ fun SleevesightNavHost(
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
         composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
-        composable<SettingsPage> { entry ->
+        // The settings, all folded or at a setting (#581); either way, [settings] draws them.
+        val settingsPage = @Composable { landOn: SettingsTarget? ->
             val links =
                 SettingsLinks(
                     openCredits = { navController.navigate(CreditsPage) },
                     openDiagnostics = { navController.navigate(DiagnosticsPage) },
                     // Single top, as from Home.
                     openWhatLeaves = { navController.navigate(FirstRun) { launchSingleTop = true } },
-                    landOn = entry.toRoute<SettingsPage>().target,
+                    landOn = landOn,
                 )
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
+        composable<SettingsPage> { settingsPage(null) }
+        composable<SettingsAt> { settingsPage(it.toRoute<SettingsAt>().target) }
         composable<CreditsPage> {
             // Once: a second tap while the page leaves would pop the screen under it too.
             val close = dropUnlessResumed { navController.popBackStack() }
@@ -199,11 +209,11 @@ private fun homeLinks(
     val onTop = { navController.currentBackStackEntry?.id == entry.id }
     return HomeLinks(
         // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
-        openSettings = { navController.navigate(SettingsPage()) { launchSingleTop = true } },
+        openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } },
         openPage = { page -> if (onTop()) navController.navigate(page) },
         back = { if (onTop()) navController.popBackStack() },
-        // Single top too: the settings on top are not opened again over themselves.
-        openSettingsAt = { target -> navController.navigate(SettingsPage.at(target)) { launchSingleTop = true } },
+        // Single top too: a double tap opens them once.
+        openSettingsAt = { target -> navController.navigate(SettingsAt.of(target)) { launchSingleTop = true } },
     )
 }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -135,6 +136,28 @@ internal class SettingsNavigator(
 
     private var count = 0
 
+    // The targets a [LandingSpot] is drawn for, which a landing can reach; read only by [dropUnclaimed].
+    private val spots = mutableSetOf<SettingsTarget>()
+
+    /** [target]'s [LandingSpot] is drawn, until [release]d. */
+    fun claim(target: SettingsTarget) {
+        spots += target
+    }
+
+    /** [target]'s [LandingSpot] is no longer drawn. */
+    fun release(target: SettingsTarget) {
+        spots -= target
+    }
+
+    /**
+     * Ends [pending], unless another landing has begun since, where no [LandingSpot] is drawn for
+     * its target once its section is unfolded: a route or a saved state naming a row no longer shown
+     * (#581) would otherwise leave it pending, and [scrolling] set, for the rest of the visit.
+     */
+    fun dropUnclaimed(pending: Landing) {
+        if (pending.target !in spots) landed(pending)
+    }
+
     /** Unfolds [target]'s section, if folded, and lands on [target]. */
     fun go(target: SettingsTarget) {
         folds.unfold(target.section)
@@ -204,6 +227,13 @@ internal fun ProvideSettingsNavigator(
     content: @Composable () -> Unit,
 ) {
     val navigator = rememberSaveable(folds, saver = SettingsNavigator.saver(folds)) { SettingsNavigator(folds) }
+    val landing = navigator.landing
+    LaunchedEffect(navigator, landing) {
+        if (landing == null) return@LaunchedEffect
+        // The section unfolded and its rows drawn, each spot has claimed its target by the next frame.
+        withFrameNanos { }
+        navigator.dropUnclaimed(landing)
+    }
     CompositionLocalProvider(LocalSettingsNavigator provides navigator, content = content)
 }
 
@@ -321,6 +351,10 @@ internal fun LandingSpot(
     // Whether the row holds the focus, and where it is laid out: read only by the landing, so plain.
     val held = remember { BooleanArray(1) }
     val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(navigator, target) {
+        navigator?.claim(target)
+        onDispose { navigator?.release(target) }
+    }
     LaunchedEffect(navigator, landing) {
         if (navigator == null || landing == null) return@LaunchedEffect
         try {
