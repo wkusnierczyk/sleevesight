@@ -32,7 +32,7 @@ When you open Sleevesight from the launcher while it is not open, it plays one o
 
 ## The home screen
 
-<!-- screenshot: the home screen with a track playing, header to genre labels, in the cover's colours, from the app version it is taken from -->
+<!-- screenshot: the home screen with a track playing, header to genre labels, its accents in the cover's colours, from the app version it is taken from -->
 
 ### The header
 
@@ -45,9 +45,9 @@ At the bottom of the home screen, under a thin line, *What leaves the device?* o
 
 ### The playing track
 
-The track is shown on a card in colours taken from its cover: the app picks the cover's most suitable colour and builds the card's colour scheme from it, light or dark as the phone is. Without a cover, the app's own colours are used. While no player you follow has a track, the screen says *Nothing playing in a player you follow yet.*
+The track is shown straight on the home screen, with no box around it, its accents (the playback position, the labels, the buttons, the citation chips) in colours taken from its cover: the app picks the cover's most suitable colour and builds a colour scheme from it, light or dark as the phone is. Without a cover, the app's own colours are used. While no player you follow has a track, the screen says *Nothing playing in a player you follow yet.*
 
-From top to bottom, the card shows:
+From top to bottom, the screen shows:
 
 - **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen; a player that has none says so.
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
@@ -89,7 +89,7 @@ When little is documented about a track, the insight is short rather than filled
 
 ### Sources
 
-*Sources*, at the bottom of the card, shows what the insight was written from.
+*Sources*, at the bottom of the screen, shows what the insight was written from.
 
 <!-- screenshot: Sources unfolded, with chips, a note and evidence lines, from the app version it is taken from -->
 
@@ -170,22 +170,22 @@ flowchart TD
 
 ### *Stop*
 
-While the insight is being written, the card says *Writing…* and offers *Stop*. Stop ends the call: the card says *Stopped before the reply ended, so nothing was kept.* Nothing of the partial reply is kept, though the service may still bill what it had written before the stop, by its own terms.
+While the insight is being written, *Key insights* says *Writing…* and offers *Stop*. Stop ends the call: *Key insights* says *Stopped before the reply ended, so nothing was kept.* Nothing of the partial reply is kept, though the service may still bill what it had written before the stop, by its own terms.
 
 ### Write again
 
-After a call that was stopped or failed, the card offers *Write insight* again, with *Write insight tries again, as a new call to your AI service.* Each try is a new call on your key, and it is never made on its own.
+After a call that was stopped or failed, *Key insights* offers *Write insight* again, with *Write insight tries again, as a new call to your AI service.* Each try is a new call on your key, and it is never made on its own.
 
 ### *Rewrite*
 
 An insight already written stays when the track is looked up again and the insight would now be written differently: after you save, replace or remove a key, switch a web search engine, or choose another AI service, the sources may find other evidence, or another service would write it. The card then keeps the insight written earlier, with *Written earlier, from the evidence under Sources. Rewrite writes it again from what the sources find now, with your current AI service.* and *Rewrite*. Under it, *Sources* shows the lines that insight cites, found when it was written.
 
-Nothing is written again unless you tap *Rewrite*, which is one call, or two in the case above. If the rewrite fails, the card says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
+Nothing is written again unless you tap *Rewrite*, which is one call, or two in the case above. If the rewrite fails, *Key insights* says *Rewriting failed:* and the reason, and keeps the insight written earlier; if you stop it, *Rewriting stopped. This is the insight written earlier.* *Rewrite* is offered again either way.
 
 ### What costs nothing
 
 - **A track played again.** When a track you played before comes back, the sources find the same evidence, and the AI service, model, reasoning effort and *AI service knowledge* are as they were, the insight written then is shown again, marked *Kept from before.*, with no call. Otherwise it is written afresh, as for a new track. Kept insights are dropped, least recently shown first, once they pass the cache's size limit.
-- **Nothing to write from.** When the sources give nothing to write an insight from, the card says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
+- **Nothing to write from.** When the sources give nothing to write an insight from, *Key insights* says *The sources give nothing to write an insight from.*, and no call is made. The same line can also follow a call, when the AI service finds nothing in the evidence to write from. With the model's own knowledge on, the album the player reports is enough for a call, once the player has also reported the artists; the model may then add what it knows, marked unverified.
 - **The next track.** The track next in the player's queue is looked up ahead (by default, at MusicBrainz), so its sources come sooner when it plays. No insight is written ahead.
 
 ### Automatic writing
@@ -197,7 +197,7 @@ Automatic writing needs a first tap:
 - **After the app starts afresh**, nothing is written until your first tap on *Write insight*, in every mode. That tap lasts as long as the app's process, which the notification listener usually keeps alive after you leave the app, often for days: coming back to the app, from the player, the launcher or the screen turned on again, keeps it, and writing goes on without a new tap. A restart of the phone, an update of the app, or the system ending the process (on some phones, a swipe from Recents) starts afresh.
 - **The pause.** So that one tap does not keep paying for days, automatic writing pauses once the app has not been on screen for more track changes than [*Saver*]({{ '/docs/tutorials/settings/' | relative_url }}) names (5 by default). The card then offers *Write insight* with *Automatic writing paused: tracks changed while Sleevesight was not on screen. Tap Write insight to write this one and resume.* A tap writes the track and resumes. Each time you open the app the count starts again.
 
-<!-- screenshot: the insight card with the automatic-writing-paused line and Write insight, from the app version it is taken from -->
+<!-- screenshot: Key insights with the automatic-writing-paused line and Write insight, from the app version it is taken from -->
 
 ### While the app is not on screen
 
