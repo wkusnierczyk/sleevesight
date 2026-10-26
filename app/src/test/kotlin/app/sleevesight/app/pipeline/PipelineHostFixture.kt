@@ -8,6 +8,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
 import app.sleevesight.core.pipeline.AiAccess
 import app.sleevesight.core.pipeline.ChangeCause
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineParts
 import app.sleevesight.core.pipeline.TrackChange
 import app.sleevesight.core.pipeline.TrackResolver
@@ -48,7 +49,10 @@ internal abstract class PipelineHostFixture {
     protected val musicBrainz = CountingAdapter(SourceId.MUSICBRAINZ)
     protected val lastFm = CountingAdapter(SourceId.LASTFM)
     protected val provider = CountingProvider()
-    protected val cache = CardCache()
+
+    /** *Clear history*'s boundary (#547), which the host marks its runs with and the cache keeps by. */
+    protected val epoch = ClearEpoch()
+    protected val cache = CardCache(epoch)
 
     /** The next item in the queue (D13), and each resolution asked: the lookup key and the length. */
     protected val next = MutableStateFlow<NowPlaying?>(null)
@@ -76,6 +80,7 @@ internal abstract class PipelineHostFixture {
             onAction = { actions++ },
             next = next,
             online = online,
+            epoch = epoch,
             normalizer = Normalizer(JvmAccentFolder),
             parts = { keys, _ ->
                 builds++

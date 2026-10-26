@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -42,6 +43,21 @@ class SessionFactsTest {
             facts.cite("band|two", setOf(label))
             session = 2L
             assertEquals(emptySet(), facts.citedByOthers("band|three"))
+        }
+
+    @Test
+    fun `a fact cited by work started before a clear is not kept`() =
+        runTest {
+            val epoch = ClearEpoch()
+            val facts = ListeningSessionFacts(epoch) { 1L }
+            val before = epoch.mark()
+
+            epoch.advance()
+            facts.forget()
+            withContext(before) { facts.cite("band|one", setOf(formed)) }
+            facts.cite("band|two", setOf(label))
+
+            assertEquals(setOf(label), facts.citedByOthers("band|three"))
         }
 
     @Test

@@ -2,9 +2,11 @@ package app.sleevesight.store
 
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.pipeline.CardKey
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.PipelineCache
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration
@@ -21,11 +23,14 @@ import kotlin.time.Duration
  * [keeping] is on (*Keep what sources said about each artist*, #420), in turn with its clear; while
  * it is off, that source is asked again for each track, as the artist-level cache is, and one kept
  * before is not read.
+ *
+ * Nothing found by work started before *Clear history* is kept after it ([epoch], #547).
  */
 class StorePipelineCache(
     private val caches: Caches,
     private val io: CoroutineContext,
     private val keeping: ArtistKeeping,
+    private val epoch: ClearEpoch = ClearEpoch(),
 ) : PipelineCache {
     override suspend fun result(
         adapter: SourceAdapter,
@@ -44,7 +49,11 @@ class StorePipelineCache(
         duration: Duration?,
         result: SourceResult,
     ) {
-        val put = suspend { withContext(io) { caches.retrieval.put(adapter, track, duration, result) } }
+        val work = currentCoroutineContext()
+        val put =
+            suspend {
+                epoch.ifCurrent(work) { withContext(io) { caches.retrieval.put(adapter, track, duration, result) } }
+            }
         if (RetrievalCodec.aboutArtists(result)) keeping.ifOn { put() } else put()
     }
 
@@ -54,7 +63,8 @@ class StorePipelineCache(
         key: CardKey,
         text: String,
     ) {
-        withContext(io) { caches.synthesis.put(key.toStore(), text) }
+        val work = currentCoroutineContext()
+        epoch.ifCurrent(work) { withContext(io) { caches.synthesis.put(key.toStore(), text) } }
     }
 
     private fun CardKey.toStore(): SynthesisKey =

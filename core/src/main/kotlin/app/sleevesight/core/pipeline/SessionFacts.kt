@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.synthesis.GroundedText
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
@@ -128,6 +129,7 @@ interface SessionFacts {
  * slow read of the session before cannot clear what a later read's session kept.
  */
 class ListeningSessionFacts(
+    private val epoch: ClearEpoch = ClearEpoch(),
     private val session: suspend () -> Long?,
 ) : SessionFacts {
     private val mutex = Mutex()
@@ -146,9 +148,11 @@ class ListeningSessionFacts(
         facts: Set<ArtistFact>,
     ) {
         if (facts.isEmpty()) return
+        val citing = currentCoroutineContext()
         mutex.withLock {
             follow(currentSession())
-            facts.forEach { citers.getOrPut(it) { mutableSetOf() } += track }
+            // Not from work started before *Clear history* (#547).
+            epoch.ifCurrent(citing) { facts.forEach { citers.getOrPut(it) { mutableSetOf() } += track } }
         }
     }
 

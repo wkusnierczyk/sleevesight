@@ -140,7 +140,7 @@
     <string name="settings_clear_history_title">Clear history?</string>
     <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights written and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>
-    <string name="settings_clear_history_failed">The history could not be cleared. Try again.</string>
+    <string name="settings_clear_history_failed">Not everything could be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_font">Font</string>
