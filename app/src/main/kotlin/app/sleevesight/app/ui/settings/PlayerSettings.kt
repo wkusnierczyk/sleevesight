@@ -75,12 +75,14 @@ internal fun PlayersSection(
     val seen = (installed?.seen ?: NONE_SEEN).collectAsState().value
     val players = settings.followedPlayers.keys
     // Asked again on each resume, so a player installed while *Players* is open shows on return (#579).
-    var resumes by remember { mutableIntStateOf(0) }
+    // The effect also runs on the first resume after the first draw, which needs no second ask: -1 to 0.
+    var resumes by remember { mutableIntStateOf(-1) }
     LifecycleResumeEffect(Unit) {
         resumes++
         onPauseOrDispose {}
     }
-    val visible = installed?.let { remember(players, resumes) { players.filterTo(mutableSetOf(), it.visible) } }
+    val asked = maxOf(resumes, 0)
+    val visible = installed?.let { remember(players, asked) { players.filterTo(mutableSetOf(), it.visible) } }
     val listed = settings.followedPlayers.toSortedMap().filterKeys { visible == null || it in visible || it in seen }
     if (listed.isEmpty()) Hint(R.string.settings_players_none)
     for ((player, followed) in listed) {
