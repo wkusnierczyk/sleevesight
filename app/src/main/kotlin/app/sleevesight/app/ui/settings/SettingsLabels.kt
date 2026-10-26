@@ -74,6 +74,17 @@ internal fun keyName(id: SecretId): Int =
         SecretId.EXA -> R.string.settings_key_name_exa
     }
 
+/** A key's service, as the key screens' tables name it ([KeyTable], #542): "Anthropic", "Google Gemini". */
+@StringRes
+internal fun keyService(id: SecretId): Int =
+    when (id) {
+        SecretId.ANTHROPIC -> R.string.settings_ai_provider_anthropic
+        SecretId.OPENAI -> R.string.settings_ai_provider_openai
+        SecretId.GOOGLE -> R.string.key_service_google
+        SecretId.LASTFM -> R.string.settings_source_lastfm
+        SecretId.EXA -> R.string.settings_key_recipient_exa
+    }
+
 /** Who a key is sent to. */
 @StringRes
 internal fun keyRecipient(id: SecretId): Int =
