@@ -559,7 +559,8 @@ class AppGraph(
 
     /**
      * The intent that opens a player from its launcher entry, for *Open the app ↗* under its name in
-     * the settings (#444); null for one with none, or not visible to this app.
+     * the settings (#444), and for Home's player row when the session gives no usable screen (#596);
+     * null for one with none, or not visible to this app.
      */
     fun playerLaunchIntent(packageName: String): Intent? =
         appContext.packageManager.getLaunchIntentForPackage(packageName)

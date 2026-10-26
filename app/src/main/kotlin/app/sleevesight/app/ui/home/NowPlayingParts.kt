@@ -2,7 +2,9 @@ package app.sleevesight.app.ui.home
 
 import android.app.ActivityOptions
 import android.app.PendingIntent
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.SystemClock
@@ -62,7 +64,10 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/** The player's name and state; a tap opens the player's own screen (its session activity). */
+/**
+ * The player's name and state; a tap opens the player's own screen (its session activity), else
+ * the player from its launcher entry (#596), and says so only when there is neither.
+ */
 @Composable
 internal fun PlayerRow(
     player: String,
@@ -83,7 +88,7 @@ internal fun PlayerRow(
                 .minimumInteractiveComponentSize()
                 .clip(RoundedCornerShape(8.dp))
                 .clickable(onClickLabel = open, role = Role.Button) {
-                    if (!openPlayerScreen(context, actions.playerActivity())) {
+                    if (!openPlayer(context, actions.playerActivity(), actions.playerLaunch(player))) {
                         Toast.makeText(context, none, Toast.LENGTH_SHORT).show()
                     }
                 }.padding(4.dp),
@@ -94,6 +99,28 @@ internal fun PlayerRow(
         )
         Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, modifier = Modifier.size(16.dp))
     }
+}
+
+/**
+ * Opens the player: its session's screen ([activity], [openPlayerScreen]), else its launcher entry
+ * ([launch]), for a session that names no screen or whose intent the player has cancelled (#596).
+ * False when neither opens.
+ */
+internal fun openPlayer(
+    context: Context,
+    activity: PendingIntent?,
+    launch: Intent?,
+): Boolean {
+    if (openPlayerScreen(context, activity)) return true
+    return launch != null &&
+        try {
+            // As the launcher starts it (`getLaunchIntentForPackage` sets a new task): the player as it was left.
+            context.startActivity(launch)
+            true
+        } catch (_: ActivityNotFoundException) {
+            // Uninstalled since the intent was read: nothing to open.
+            false
+        }
 }
 
 /**

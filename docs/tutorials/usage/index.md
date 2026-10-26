@@ -49,7 +49,7 @@ The track is shown on a card in colours taken from its cover: the app picks the 
 
 From top to bottom, the card shows:
 
-- **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen; a player that has none says so.
+- **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen, or, for a player that names none (as Spotify), the app as its launcher icon opens it; a player that has neither says so.
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
 - **The title**, large and bold, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
 - **The artists**, each credited one, featured artists included.
