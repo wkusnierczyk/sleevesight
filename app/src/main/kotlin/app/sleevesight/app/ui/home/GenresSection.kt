@@ -37,7 +37,7 @@ import app.sleevesight.core.settings.Settings
  * its album. On Home, the chips alone, with no title: those of the most specific level
  * ([TrackGenres.folded]). A chip opens the genre's panel ([GenrePanel]): under *Expandable boxes*,
  * under the chips, where a second tap on the same chip, or *Close*, closes it and another chip
- * switches it; under *Separate pages* ([openPage], #447), on the genres' page ([HomePage.Genres]),
+ * switches it; under *Separate pages* ([openPage], #447), on the genres' page ([HomePage.GenresAt]),
  * the chip's genre open there. Chips are plain, told apart by their fill, not by a hue per genre
  * family.
  */
@@ -56,7 +56,7 @@ internal fun Genres(
         // Each chip opens the page, of one level too (#548): a chip that looks like a button and
         // opens nothing reads as broken.
         openPage != null ->
-            Chips(genres.folded, open = null, opensPage = true) { openPage(HomePage.Genres(it.label.genre.identity)) }
+            Chips(genres.folded, open = null, opensPage = true) { openPage(HomePage.GenresAt(it.label.genre.identity)) }
         else -> GenresBox(track)
     }
 }
@@ -84,7 +84,8 @@ private fun GenresBox(track: TrackState) {
 /**
  * [labels] as chips, the one of the genre [open] marked; each chip a button that [tap]s it: with
  * [opensPage], to open the genres' page (a screen reader names the action "open page"), else to
- * show the genre's panel, or, the one [open], to close it, unless it does not [close].
+ * show the genre's panel, or, the one [open], to close it; unless it does not [close], when the one
+ * [open] is not a button.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -106,10 +107,11 @@ internal fun Chips(
         for (label in labels) {
             // A chip that opens the page is never selected: it opens the page, not a panel beside it.
             val selected = if (opensPage) null else label.label.genre.identity == open
+            // On the genres' page the marked chip has nothing to do: not a button there.
             val action =
                 when {
                     opensPage -> pageAction
-                    selected == true && close -> closeAction
+                    selected == true -> closeAction.takeIf { close }
                     else -> showAction
                 }
             GenreChip(label, selected, action) { tap(label) }
@@ -121,13 +123,13 @@ internal fun Chips(
  * A chip on Home and the genres' page (#439, #558): a light fill in the text's colour; while
  * [selected], the text's colour, with the box's colour for the text. A button whose action a screen
  * reader names [action], and says is selected while its genre's panel shows; with [selected] null
- * (a chip that opens the page), neither.
+ * (a chip that opens the page), neither; with no [action], not a button, and a tap does nothing.
  */
 @Composable
 private fun GenreChip(
     placed: PlacedLabel,
     selected: Boolean?,
-    action: String,
+    action: String?,
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(16.dp)
@@ -142,8 +144,9 @@ private fun GenreChip(
                 .minimumInteractiveComponentSize()
                 .clip(shape)
                 .background(fill, shape)
-                .clickable(role = Role.Button, onClickLabel = action, onClick = onClick)
-                .let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip }
+                .let { chip ->
+                    action?.let { chip.clickable(role = Role.Button, onClickLabel = it, onClick = onClick) } ?: chip
+                }.let { chip -> selected?.let { chip.semantics { this.selected = it } } ?: chip }
                 .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }

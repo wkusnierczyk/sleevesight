@@ -30,9 +30,9 @@ import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.genres.GenreLevel
 import app.sleevesight.core.genres.GenreRow
+import app.sleevesight.core.genres.LabelSource
 import app.sleevesight.core.genres.PlacedLabel
 import app.sleevesight.core.genres.TrackGenres
-import app.sleevesight.core.genres.TrackLabel
 import app.sleevesight.core.pipeline.TrackState
 
 // The genre's panel (#558): its heading, the table, and where the genre comes from.
@@ -41,7 +41,7 @@ import app.sleevesight.core.pipeline.TrackState
  * The panel of [genre] (#558; frame B of the agreed mock-ups): its name as a heading, with *Close*
  * when there is [onClose]; then the table, a row per level in [GenreLevel] order, each row's name
  * (the track's title, the artist's name, the album's title) on one line above its labels, [genre]
- * marked wherever it shows; then where [genre] comes from, a line per row that has it, each source
+ * marked wherever it shows; then where the table's labels come from, a line per row, each source
  * linked to its page there, and MusicBrainz's licence (D12). Nothing when no row has [genre].
  */
 @Composable
@@ -90,7 +90,7 @@ internal fun GenrePanel(
         Column(modifier = Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = RULE))
             Table(track, genre)
-            Credits(genres, genre, several = track.normalized.artists.size > 1)
+            Credits(genres, several = track.normalized.artists.size > 1)
         }
     }
 }
@@ -171,20 +171,21 @@ private fun Cell(
 }
 
 /**
- * Where [genre] comes from: a line for each row that has it, naming the level ("From the track's
- * tags:"; with [several] credited artists, the artist), then each source, linked to its page there,
- * and for MusicBrainz its licence.
+ * Where the table's labels come from (D12: each label from MusicBrainz's tags credits it, with its
+ * licence): a line for each row, naming the level ("From the track's tags:"; with [several]
+ * credited artists, the artist), then each source that gave any of the row's labels, once, linked
+ * to the row's page there, and for MusicBrainz its licence.
  */
 @Composable
 private fun Credits(
     genres: TrackGenres,
-    genre: String,
     several: Boolean,
 ) {
     val licence = stringResource(R.string.home_genre_licence)
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         for (row in genres.rows) {
-            val label = row.labels.firstOrNull { it.genre.identity == genre } ?: continue
+            val parts = sourceParts(row, licence)
+            if (parts.isEmpty()) continue
             val from =
                 when (row.level) {
                     GenreLevel.TRACK -> stringResource(R.string.home_genre_from_track)
@@ -194,7 +195,7 @@ private fun Credits(
                             ?: stringResource(R.string.home_genre_from)
                 }
             LinkedText(
-                listOf(TextPart.Words("$from ")) + sourceParts(label, licence),
+                listOf(TextPart.Words("$from ")) + parts,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -202,20 +203,25 @@ private fun Credits(
     }
 }
 
-// Each source that gave [label], linked to its page there where it has one, then its licence, if any.
+// Each source that gave any of [row]'s labels, once, in [LabelSource] order, linked to the row's page
+// there where it has one, then its licence, if any.
 private fun sourceParts(
-    label: TrackLabel,
+    row: GenreRow,
     licence: String,
-): List<TextPart> =
-    label.credits
-        .map { credit ->
-            val name = credit.source.credit
-            listOf(credit.url?.let { TextPart.Link(name, it) } ?: TextPart.Words(name)) +
-                credit.source.licenceUrl
+): List<TextPart> {
+    val credits = row.labels.flatMap { it.credits }
+    return LabelSource.entries
+        .mapNotNull { source ->
+            val given = credits.filter { it.source == source }
+            if (given.isEmpty()) return@mapNotNull null
+            val url = given.firstNotNullOfOrNull { it.url }
+            listOf(url?.let { TextPart.Link(source.credit, it) } ?: TextPart.Words(source.credit)) +
+                source.licenceUrl
                     ?.let { listOf(TextPart.Words(SEPARATOR), TextPart.Link(licence, it)) }
                     .orEmpty()
         }.reduceOrNull { all, next -> all + TextPart.Words(SEPARATOR) + next }
         .orEmpty()
+}
 
 /** The test tags of the genre's panel, its heading and its *Close*. */
 const val GENRE_PANEL_TAG: String = "genre-panel"

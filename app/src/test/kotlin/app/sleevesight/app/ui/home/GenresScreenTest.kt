@@ -273,6 +273,46 @@ class GenresScreenTest {
     }
 
     @Test
+    fun thePanelCreditsEverySourceOfEveryLabelInTheTableNotOnlyTheOpenGenres() {
+        // Pop only from Last.fm, on the track; Rock only from MusicBrainz, on the artist; the album's
+        // two labels from one source each.
+        val rock = label("rock", GenreLevel.ARTIST, "Gordon Lightfoot", LabelSource.MUSICBRAINZ)
+        val albumRow =
+            GenreRow(
+                GenreLevel.ALBUM,
+                null,
+                listOf(
+                    label("folk rock", GenreLevel.ALBUM),
+                    label("country", GenreLevel.ALBUM, source = LabelSource.MUSICBRAINZ),
+                ),
+            )
+        val genres =
+            TrackGenres(
+                listOf(
+                    row(GenreLevel.TRACK, "pop"),
+                    GenreRow(GenreLevel.ARTIST, "Gordon Lightfoot", listOf(rock)),
+                    albumRow,
+                ),
+            )
+        show(genres) {
+            tap(GENRE_PREFIX + "track:pop")
+            val licence = " · " + text(R.string.home_genre_licence)
+            compose
+                .onNodeWithText(text(R.string.home_genre_from_track) + " " + LabelSource.LASTFM.credit)
+                .assertExists()
+            compose
+                .onNodeWithText(text(R.string.home_genre_from) + " " + LabelSource.MUSICBRAINZ.credit + licence)
+                .assertExists()
+            // Each source once a row, in the sources' order.
+            compose
+                .onNodeWithText(
+                    text(R.string.home_genre_from_album) + " " + LabelSource.LASTFM.credit + " · " +
+                        LabelSource.MUSICBRAINZ.credit + licence,
+                ).assertExists()
+        }
+    }
+
+    @Test
     fun withSeveralArtistsTheLineNamesTheArtistWhoseTagsGaveIt() {
         val two = track(HomeFixtures.sundown.copy(artists = "The Beatles, Billy Preston"))
         show(TrackGenres(listOf(beatles)), playing = two) {

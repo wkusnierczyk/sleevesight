@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.home
 
 import android.app.NotificationManager
 import android.content.ComponentName
+import android.os.Bundle
 import android.provider.Settings.Secure
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
@@ -150,34 +151,42 @@ class PageLinksTest {
                 write = { _, _ -> },
                 stop = {},
             )
+        this.feed = feed
         ActivityScenario.launch(MainActivity::class.java).use { launched ->
             scenario = launched
-            launched.onActivity { activity ->
-                val graph = (activity.application as SleevesightApplication).graph
-                activity.setContent {
-                    nav = rememberNavController()
-                    SleevesightNavHost(
-                        graph.notificationAccess,
-                        graph.firstRun,
-                        { true },
-                        nav,
-                        pipeline = { links -> NowPlayingHome(feed, links.openSettings, links.openPage) },
-                        page = { page, links ->
-                            NowPlayingPage(feed, page, links.openSettings, links.openPage, links.back)
-                        },
-                    )
-                }
-            }
-            compose.waitForIdle()
+            drawGraph(restored = null)
             block()
         }
+    }
+
+    private lateinit var feed: HomeFeed
+
+    // The navigation graph drawn from [feed], its controller new, restored from [restored] if given.
+    private fun drawGraph(restored: Bundle?) {
+        scenario.onActivity { activity ->
+            val graph = (activity.application as SleevesightApplication).graph
+            activity.setContent {
+                nav = rememberNavController().apply { restored?.let(::restoreState) }
+                SleevesightNavHost(
+                    graph.notificationAccess,
+                    graph.firstRun,
+                    { true },
+                    nav,
+                    pipeline = { links -> NowPlayingHome(feed, links.openSettings, links.openPage) },
+                    page = { page, links ->
+                        NowPlayingPage(feed, page, links.openSettings, links.openPage, links.back)
+                    },
+                )
+            }
+        }
+        compose.waitForIdle()
     }
 
     private fun route() = nav.currentDestination?.route
 
     // Each destination's route, as the navigation graph names it.
     private val home = Home.serializer().descriptor.serialName
-    private val genresPage = serializer<HomePage.Genres>().descriptor.serialName
+    private val genresPage = serializer<HomePage.GenresAt>().descriptor.serialName
 
     private fun onHome() = assertEquals(home, route())
 
@@ -224,7 +233,7 @@ class PageLinksTest {
             compose.onNodeWithTag(folk).performClick()
             compose.waitForIdle()
             onGenres()
-            assertEquals("folk", nav.currentBackStackEntry?.toRoute<HomePage.Genres>()?.genre)
+            assertEquals("folk", nav.currentBackStackEntry?.toRoute<HomePage.GenresAt>()?.genre)
             compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
             compose.onNodeWithTag(GENRES_ROW_PREFIX + "1").assertTextEquals("Gordon Lightfoot")
             backArrow()
@@ -239,6 +248,33 @@ class PageLinksTest {
             compose.waitForIdle()
             onHome()
             assertEquals(scrolled, top(folk))
+        }
+
+    // The genres' page as 0.1.5 saved it on a back stack: the object `HomePage.Genres`, whose
+    // destination id is the hash of its serial name and whose route is that name alone. Written out
+    // here, not read from the code under test, so a change to the object fails this test.
+    @Test
+    fun theGenresRouteOfEarlierVersionsIsKeptSoASavedBackStackRestores() =
+        show {
+            val name = "app.sleevesight.app.ui.home.HomePage.Genres"
+            scenario.onActivity { nav.navigate(HomePage.Genres) }
+            compose.waitForIdle()
+            compose.runOnUiThread {
+                assertEquals(GENRES_PAGE_ID, nav.currentDestination?.id)
+                assertEquals(name.hashCode(), nav.currentDestination?.id)
+                assertEquals(name, nav.currentDestination?.route)
+            }
+            // With no genre given, the first chip's panel.
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+
+            // A back stack saved with the page on it is restored into a new controller.
+            lateinit var saved: Bundle
+            compose.runOnUiThread { saved = nav.saveState()!! }
+            drawGraph(restored = saved)
+            compose.runOnUiThread { assertEquals(name, nav.currentDestination?.route) }
+            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk")
+            backArrow()
+            onHome()
         }
 
     @Test
@@ -327,3 +363,6 @@ class PageLinksTest {
 // Where the test's back swipe starts, down the screen's edge, and how far in it is drawn, in pixels.
 private const val EDGE_Y = 900f
 private const val SWIPE_X = 300f
+
+// The destination id 0.1.5 gave the genres' page: the hash of `HomePage.Genres`'s serial name.
+private const val GENRES_PAGE_ID = -1366372184

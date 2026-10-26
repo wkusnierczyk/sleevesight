@@ -16,11 +16,20 @@ sealed interface HomePage {
     ) : HomePage
 
     /**
-     * The genres (#558): the chips, and the panel of [genre], by its identity, the chip tapped on
-     * Home, with the table, a row per level.
+     * The genres' page with no genre given: the chips, and the first chip's panel. Kept as it was
+     * before [GenresAt] (#558): a back stack saved by an earlier version, with the genres' page on
+     * it, is restored by its destination, whose id is the hash of this serial name.
      */
     @Serializable
-    data class Genres(
-        val genre: String? = null,
+    data object Genres : HomePage
+
+    /**
+     * The genres' page opened at a genre (#558), by its identity, [genre], the chip tapped on Home:
+     * the chips, and that genre's panel, with the table, a row per level. A route of its own beside
+     * [Genres], which stays as it was.
+     */
+    @Serializable
+    data class GenresAt(
+        val genre: String,
     ) : HomePage
 }

@@ -18,10 +18,11 @@ import app.sleevesight.core.settings.Settings
 // The genres' page under *Layout*'s *Separate pages* (#447, #558; frame C of the agreed mock-ups).
 
 /**
- * The genres' page ([HomePage.Genres]): the chips Home shows, of [track], the one of the genre open
- * marked, and that genre's panel ([GenrePanel]), with no *Close*: the back arrow closes the page. It
- * opens at [genre], the chip tapped on Home; a chip switches the panel to its genre, and a tap on
- * the marked one leaves it open. A genre the track does not have (a new track since) opens the first
+ * The genres' page ([HomePage.GenresAt], or [HomePage.Genres] from a back stack an earlier version
+ * saved): the chips Home shows, of [track], the one of the genre open marked, and that genre's
+ * panel ([GenrePanel]), with no *Close*: the back arrow closes the page. It opens at [genre], the
+ * chip tapped on Home; a chip switches the panel to its genre, and the marked one is not a button.
+ * With no [genre], or one the track does not have (a new track since), it opens at the first
  * chip's. While the track's lookups run, and with *Show genres* off in [settings], it says so.
  */
 @Composable

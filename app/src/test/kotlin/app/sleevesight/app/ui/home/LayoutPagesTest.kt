@@ -431,9 +431,10 @@ class LayoutPagesTest {
             compose
                 .onNodeWithTag(GENRE_CELL_PREFIX + "artist:Gordon Lightfoot:rock")
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
-            // A second tap on the marked chip leaves the panel open.
-            compose.onNodeWithTag(GENRE_PREFIX + "track:folkpop").performClick()
-            compose.onNodeWithTag(GENRE_PANEL_HEADING_TAG).assertTextEquals("Folk Pop")
+            // The marked chip has nothing to do on the page: not a button, so a screen reader offers no action.
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
 
             back()
             onHome()
