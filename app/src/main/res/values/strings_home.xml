@@ -127,6 +127,8 @@
         <item quantity="other">%d cite missing evidence</item>
     </plurals>
     <string name="home_meta_kept">kept from before</string>
+    <!-- The model corrected its own reply in the open; only the corrected version is shown (#597). -->
+    <string name="home_meta_self_corrected">AI model’s self-correction taken out</string>
     <string name="home_cite">Source %1$s</string>
     <string name="home_cite_model">From the AI model’s own knowledge, not verified</string>
     <string name="home_cite_unknown">%1$s: no such evidence line</string>

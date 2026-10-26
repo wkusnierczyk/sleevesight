@@ -348,6 +348,10 @@ private fun StringBuilder.appendWritten(insight: InsightState.Written) {
     insight.usage?.let { appendLine("Tokens: ${it.inputTokens} in, ${it.outputTokens} out") }
     insight.held?.let { appendLine("Lines the prompt held: ${it.sorted().joinToString()}") }
     appendLine(insight.grounded.text.trim())
+    insight.grounded.withdrawn?.let {
+        appendLine("Taken out, the model's correction of its own reply (not shown, not checked):")
+        appendLine(it.trim())
+    }
     val counts = insight.grounded.counts
     appendLine(
         "Citation check: ok ${counts.ok}, model ${counts.model}, hedge ${counts.hedge}, " +

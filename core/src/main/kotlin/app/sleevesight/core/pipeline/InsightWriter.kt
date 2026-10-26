@@ -276,7 +276,7 @@ internal class InsightWriter(
             }
 
             is InsightReply.Written -> {
-                emit(PipelineEvent.Grounded(key, reply.grounded.counts))
+                emit(PipelineEvent.Grounded(key, reply.grounded.counts, reply.grounded.withdrawn != null))
                 val by = WrittenBy(card.promptVersion, card.provider, card.model, card.effort)
                 InsightState.Written(reply.grounded, cached, usage, complete, sent.held, by)
             }

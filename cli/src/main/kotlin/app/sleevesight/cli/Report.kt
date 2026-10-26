@@ -515,6 +515,12 @@ private class TrackSection(
                 }
             appendLine("> $text")
         }
+        insight.grounded.withdrawn?.let { withdrawn ->
+            appendLine()
+            appendLine("Taken out, the model's correction of its own reply (#597):")
+            appendLine()
+            withdrawn.lines().filter { it.isNotBlank() }.forEach { appendLine("> ${it.trim()}") }
+        }
     }
 
     private companion object {

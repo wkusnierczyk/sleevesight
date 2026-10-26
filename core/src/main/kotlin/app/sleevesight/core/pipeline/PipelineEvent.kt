@@ -162,10 +162,14 @@ sealed interface PipelineEvent {
         override val key: String,
     ) : PipelineEvent
 
-    /** The grounding check's counts for the written insight. */
+    /**
+     * The grounding check's counts for the written insight, and whether the model's correction of
+     * its own reply was taken out first ([selfCorrected], `SelfCorrection`, #597).
+     */
     data class Grounded(
         override val key: String,
         val counts: GroundingCounts,
+        val selfCorrected: Boolean = false,
     ) : PipelineEvent
 
     /** The model replied `NO_EVIDENCE`, or the evidence had nothing to narrate (`EvidenceSet.nothingToNarrate`). */
