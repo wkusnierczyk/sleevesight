@@ -2,6 +2,7 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -35,8 +37,8 @@ internal fun Hint(
  * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
  * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
  * title and summary, as a link to the service the switch is for; a link there is a control of its
- * own, apart from the switch. [leading] goes at the row's start, before the title: a player's icon
- * (#535).
+ * own, apart from the switch. [leading] goes at the row's start, before the title, [ROW_MARK] a side:
+ * a player's icon (#535), a service's badge (#537).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -67,7 +69,8 @@ internal fun SwitchRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         leading?.let {
-            it()
+            // Dimmed with the row's text when the switch cannot be moved.
+            Box(Modifier.alpha(alpha)) { it() }
             Spacer(Modifier.width(16.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
