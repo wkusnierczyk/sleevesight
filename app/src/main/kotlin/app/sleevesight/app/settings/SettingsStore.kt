@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -103,13 +104,17 @@ class SettingsStore(
      * entry, which *Players* hides while it is not installed: dropping a default's `off` would
      * switch it back on, against the user's choice, once it is installed again. Writes nothing when
      * no player goes.
+     *
+     * [present] is asked on the caller's thread, before the write, never inside DataStore's
+     * transform, which would hold the write while it asks the package manager. Only the players
+     * listed at that read can go, so one listed in between ([playerSeen]) stays. A read or write
+     * that fails throws [IOException].
      */
     suspend fun forgetPlayers(present: (String) -> Boolean) {
-        update { s ->
-            val listed = s.followedPlayers
-            val gone = listed.keys.filterTo(mutableSetOf()) { it !in defaults.followedPlayers && !present(it) }
-            if (gone.isEmpty()) s else s.copy(followedPlayers = listed - gone)
-        }
+        val listed = stored.first().followedPlayers.keys
+        val gone = listed.filterTo(mutableSetOf()) { it !in defaults.followedPlayers && !present(it) }
+        if (gone.isEmpty()) return
+        update { s -> s.copy(followedPlayers = s.followedPlayers - gone) }
     }
 
     /**
