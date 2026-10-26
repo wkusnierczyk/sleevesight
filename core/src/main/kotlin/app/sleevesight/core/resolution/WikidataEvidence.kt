@@ -11,7 +11,9 @@ import kotlin.time.Instant
  * of first publication or inception. Each line links the item, in the scope the check gave it, so
  * an original song's facts are never credited to a cover. Wikidata is CC0.
  *
- * The lines come in a fixed order for the same item: genres, labels, awards, date.
+ * The lines come in a fixed order for the same item: genres, labels, awards, date. With *Show
+ * genres* off, the check drops the item's genres as it reads it ([IdentityCheck.genres], #545), so
+ * no genre line is written.
  */
 object WikidataEvidence {
     /** The properties whose values are items the lines name, so their labels are fetched with the check. */

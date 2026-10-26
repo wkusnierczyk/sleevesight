@@ -319,9 +319,9 @@ Wikidata's lines carry a source of their own, `WIKIDATA` with the tag `WD`, apar
 | Source | Evidence lines |
 |---|---|
 | MusicBrainz | Templated from structured data: first release, writers, producers, performers, work and cover relationships |
-| Wikidata | Templated: genre, record label, notable awards, inception |
+| Wikidata | Templated: genre (not with *Show genres* off, #545), record label, notable awards, inception |
 | Wikipedia | Selected sentences from the article's lead, verbatim, attributed (CC BY-SA 4.0), at most a fixed number per article, filtered to those that name the entity |
-| Last.fm | Templated: listeners, tags, similar artists. Bio: selected sentences, verbatim, attributed (CC BY-SA) |
+| Last.fm | Templated: listeners, tags (not with *Show genres* off, #545), similar artists. Bio: selected sentences, verbatim, attributed (CC BY-SA) |
 | Discogs | Templated: personnel, labels, formats |
 | Web search | One line per result: the provider's snippet, verbatim, with its URL. Exa first (D11): its highlight, whitespace collapsed; at most five results, kept only when they name the title, the work it is from when the player gives one, and a credited artist (a distinctive one when there is one), and their own title does not name the artist without the song (`RecordingFilter`, shared by any later provider; design, *Web search provider (D11)*) |
 

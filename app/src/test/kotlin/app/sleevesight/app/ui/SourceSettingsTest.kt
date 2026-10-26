@@ -238,6 +238,19 @@ class SourceSettingsTest {
         }
 
     @Test
+    fun lastFmsGenresRowOpensItsWebsite() =
+        show(SettingsSection.GENRES) {
+            // As under *Sources* (#545); offered before its key is saved, as MusicBrainz's is.
+            val link = app.getString(R.string.settings_open_website_of, text(R.string.settings_source_lastfm))
+            compose.onNodeWithContentDescription(link).performScrollTo().performClick()
+
+            var started: Intent? = null
+            onActivity { started = shadowOf(it).nextStartedActivity }
+            assertEquals(Intent.ACTION_VIEW, started?.action)
+            assertEquals("https://www.last.fm/", started?.dataString)
+        }
+
+    @Test
     fun aSourceSwitchedOffIsStored() =
         show(SettingsSection.SOURCES) {
             compose.onNode(holding(R.string.settings_source_wikipedia_summary)).performScrollTo().performClick()

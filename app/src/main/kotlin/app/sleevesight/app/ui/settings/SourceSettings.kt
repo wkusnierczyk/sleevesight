@@ -183,10 +183,10 @@ internal fun keyNote(
 /**
  * *Genres* (D12, #84, #444): *Show genres*, off for none at all, not asked for from any source
  * ([Settings.givesLabels]), nor shown; then which sources' tags give genre labels, each with where
- * its tags come from. A source gives labels only while *Show genres* is on and the source is on
- * under *Sources*, and Last.fm only with its key saved and readable, so until then its switch shows
- * off and cannot be moved, and says why: a key saved but no longer readable
- * ([SecretState.UNREADABLE]) is told apart from no key.
+ * its tags come from and *Open website ↗* (#545). A source gives labels only while *Show genres*
+ * is on and the source is on under *Sources*, and Last.fm only with its key saved and readable, so
+ * until then its switch shows off and cannot be moved, and says why: a key saved but no longer
+ * readable ([SecretState.UNREADABLE]) is told apart from no key.
  */
 @Composable
 internal fun GenresSection(
@@ -216,7 +216,7 @@ internal fun GenresSection(
             summary = lines(stringResource(labelSourceSummary(source)), why),
             checked = offered && source in settings.labelSources,
             indent = true,
-            below = labelSourcePage(source)?.let { url -> { WebsiteLink(name, url) } },
+            below = { WebsiteLink(name, labelSourcePage(source)) },
             onChange =
                 { on: Boolean ->
                     update { it.copy(labelSources = if (on) it.labelSources + source else it.labelSources - source) }
@@ -240,12 +240,12 @@ private fun labelSourceSummary(source: LabelSource): Int =
     }
 
 /**
- * The page where a source explains its tags, for *Open website ↗*: MusicBrainz's on its tags, their
- * votes and its genre list. Last.fm has a page per tag, but none that explains its tags (checked
- * 2026-10-25), so it has no link.
+ * The page a source's *Open website ↗* opens: MusicBrainz's on its tags, their votes and its genre
+ * list; for Last.fm, which has a page per tag but none that explains its tags (checked 2026-10-25),
+ * its home page, as its row under *Sources* has (#545).
  */
-private fun labelSourcePage(source: LabelSource): String? =
+private fun labelSourcePage(source: LabelSource): String =
     when (source) {
-        LabelSource.LASTFM -> null
+        LabelSource.LASTFM -> "https://www.last.fm/"
         LabelSource.MUSICBRAINZ -> "https://musicbrainz.org/doc/Folksonomy_Tagging"
     }
