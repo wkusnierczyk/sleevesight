@@ -1,0 +1,9 @@
+What's new in 0.1.5:
+- Settings say what each one does, with links to keys and sections.
+- Clear history deletes everything kept about the tracks played.
+- Insights: no stray asterisks; uncited list items are flagged.
+- The header shows the album's own year.
+- Players show their icons; uninstalled ones leave the list.
+- An AI model no longer offered is caught, with a choice.
+- Keys: guided QR and keyboard screens; Remove asks first.
+- Genres open their page; Credits close one way.
