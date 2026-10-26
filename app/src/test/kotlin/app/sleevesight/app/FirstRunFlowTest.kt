@@ -392,7 +392,7 @@ class FirstRunFlowTest {
             launch().use {
                 compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
                 // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
-                compose.onNodeWithText(text(R.string.first_run_intro)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_intro_again)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
             }
         } finally {
@@ -453,7 +453,7 @@ class FirstRunFlowTest {
                 }
                 compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().performClick()
                 // At the top, as from Home: the intro and the heading, unscrolled.
-                compose.onNodeWithText(text(R.string.first_run_intro)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_intro_again)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.page_close)).performScrollTo().performClick()
                 // Back on the settings, not Home.

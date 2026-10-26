@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,11 +16,11 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -87,7 +88,6 @@ internal fun PageLink(
  * colours they are drawn in (the album art's), the colour of Home's box, so the item reads as the box
  * opened to the whole screen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Suppress("LongParameterList") // The title and the way back; how the page looks, each with a default; its content.
 @Composable
 internal fun PageFrame(
@@ -101,27 +101,7 @@ internal fun PageFrame(
     Scaffold(
         containerColor = containerColor,
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.testTag(PAGE_TITLE_TAG).semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack, modifier = Modifier.testTag(PAGE_BACK_TAG)) {
-                        Icon(
-                            painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = stringResource(R.string.page_back),
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
-            )
-        },
+        topBar = { PageBar(title, onBack, containerColor) },
     ) { bars ->
         Column(
             modifier =
@@ -138,6 +118,41 @@ internal fun PageFrame(
 }
 
 /**
+ * A page's bar, in [containerColor]: the back arrow ([onBack]), which a screen reader reads as
+ * *Back*; [title], which it reads as a heading; and at the end, [actions], if any (the diagnostics'
+ * *Export*).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PageBar(
+    title: String,
+    onBack: () -> Unit,
+    containerColor: Color,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    TopAppBar(
+        title = {
+            Text(
+                title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(PAGE_TITLE_TAG).semantics { heading() },
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onBack, modifier = Modifier.testTag(PAGE_BACK_TAG)) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = stringResource(R.string.page_back),
+                )
+            }
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+    )
+}
+
+/**
  * At the end of a page opened from somewhere (#549), the button that closes it ([onClose]) and says
  * so, *Close*, as the back arrow at its top does, across the page's width.
  */
@@ -146,7 +161,9 @@ internal fun PageCloseButton(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(onClick = onClose, modifier = modifier.fillMaxWidth().testTag(PAGE_CLOSE_TAG)) {
+    // Outlined: it only closes the page, and a filled button above it (the first-run screen's
+    // *Open notification access*) stays the one that stands out.
+    OutlinedButton(onClick = onClose, modifier = modifier.fillMaxWidth().testTag(PAGE_CLOSE_TAG)) {
         Text(stringResource(R.string.page_close))
     }
 }

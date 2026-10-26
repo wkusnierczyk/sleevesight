@@ -40,7 +40,7 @@ data object SettingsPage
 @Serializable
 data object CreditsPage
 
-/** The diagnostics screen, opened from [SettingsPage] while *Diagnostics* is on. */
+/** The diagnostics screen, opened from [SettingsPage] while *Diagnostics* is on, with a way back to it (#549). */
 @Serializable
 data object DiagnosticsPage
 
@@ -68,11 +68,11 @@ class SettingsLinks(
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, given the
- * way to the settings and to Home's pages, and, with a [testerReport] feed, the tester's report
- * button while its settings show it (#452); each of [HomePage]'s pages (#447) shows an item of it
- * on a page of its own, as [page] draws it, and goes back to where it was opened from, Home at the
- * place it was scrolled to, as Android's back does.
+ * which [diagnostics] draws, given the way back to the settings. [Home] shows the pipeline's state,
+ * as [pipeline] draws it, given the way to the settings and to Home's pages, and, with a
+ * [testerReport] feed, the tester's report button while its settings show it (#452); each of
+ * [HomePage]'s pages (#447) shows an item of it on a page of its own, as [page] draws it, and goes
+ * back to where it was opened from, Home at the place it was scrolled to, as Android's back does.
  */
 @Suppress("LongParameterList", "LongMethod") // The access and first-run seams, and each screen's content.
 @Composable
@@ -85,7 +85,7 @@ fun SleevesightNavHost(
     settings: @Composable (links: SettingsLinks) -> Unit = {},
     pipeline: @Composable (links: HomeLinks) -> Unit = { NothingPlaying() },
     page: @Composable (page: HomePage, links: HomeLinks) -> Unit = { _, _ -> },
-    diagnostics: @Composable () -> Unit = {},
+    diagnostics: @Composable (back: () -> Unit) -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
     // Chosen once: a change of access later does not move the user off the screen they are on.
@@ -154,7 +154,9 @@ fun SleevesightNavHost(
             if (firstRun.acknowledged) CreditsScreen(onClose = close) else FirstRunFirst(navController)
         }
         composable<DiagnosticsPage> {
-            if (firstRun.acknowledged) diagnostics() else FirstRunFirst(navController)
+            // Once, as from the credits.
+            val back = dropUnlessResumed { navController.popBackStack() }
+            if (firstRun.acknowledged) diagnostics(back) else FirstRunFirst(navController)
         }
     }
 }

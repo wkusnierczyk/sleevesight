@@ -36,10 +36,12 @@ import app.sleevesight.app.ui.theme.SleevesightTheme
  * returns false when no settings screen for it could be opened.
  *
  * During the first run ([onClose] null), it opens under the app's name, and once access is on,
- * *Continue* ([onContinue]) goes on. Opened again from somewhere ([onClose]: Home, or the settings),
- * it is a page (#549): a bar with the back arrow and the page's name, *What leaves the device?*, and
- * at its end *Close*, which both go back to where it was opened from, as Android's back does; there is
- * nothing to continue, so no *Continue*.
+ * *Continue* ([onContinue]) goes on. Opened again from somewhere ([onClose]: Home's *What leaves the
+ * device?*, or its *Turn on notification access* once access is off, or the settings' *About*), it is
+ * a page (#549): a bar with the back arrow and the page's name, *What leaves the device?*, and at its
+ * end *Close*, which both go back to where it was opened from, as Android's back does; there is
+ * nothing to continue, so no *Continue*, and its introduction leaves out the first run's "Before you
+ * start".
  *
  * It opens at the top in touch mode. Out of touch mode (a keyboard or a D-pad), the first thing on it
  * that takes focus does so as it opens and is scrolled into view, so the focus shows: during the first
@@ -63,7 +65,7 @@ fun FirstRunScreen(
                 verticalArrangement = Arrangement.spacedBy(SPACING),
             ) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
-                FirstRunText(accessGranted, openAccessSettings, onContinue)
+                FirstRunText(R.string.first_run_intro, accessGranted, openAccessSettings, onContinue)
             }
         }
     } else {
@@ -74,7 +76,7 @@ fun FirstRunScreen(
             padding = PADDING,
             spacing = SPACING,
         ) {
-            FirstRunText(accessGranted, openAccessSettings, onContinue = null)
+            FirstRunText(R.string.first_run_intro_again, accessGranted, openAccessSettings, onContinue = null)
             PageCloseButton(onClose, Modifier.padding(top = 8.dp))
         }
     }
@@ -84,17 +86,18 @@ private val PADDING = PaddingValues(horizontal = 24.dp, vertical = 16.dp)
 private val SPACING = 12.dp
 
 /**
- * The screen's text, the way to notification access, and the link to the privacy policy; once access
- * is on, *Continue* ([onContinue]) when there is one.
+ * The screen's text, from its introduction ([intro]), the way to notification access, and the link to
+ * the privacy policy; once access is on, *Continue* ([onContinue]) when there is one.
  */
 @Composable
 private fun FirstRunText(
+    @StringRes intro: Int,
     accessGranted: Boolean,
     openAccessSettings: () -> Boolean,
     onContinue: (() -> Unit)?,
 ) {
     var noSettingsScreen by rememberSaveable { mutableStateOf(false) }
-    Text(stringResource(R.string.first_run_intro), style = MaterialTheme.typography.bodyLarge)
+    Text(stringResource(intro), style = MaterialTheme.typography.bodyLarge)
 
     Heading(R.string.first_run_reads_title)
     Body(R.string.first_run_reads)
