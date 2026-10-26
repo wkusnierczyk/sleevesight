@@ -167,7 +167,8 @@
     <string name="settings_key_scan_setup_more">This QR code holds more than this key, and Sleevesight cannot read the rest. “Load keys”, in Settings under Secrets, shows what it holds.</string>
     <string name="settings_key_scan_setup_none">This QR code holds no key this version of Sleevesight can read. “Load keys”, in Settings under Secrets, shows what it holds.</string>
     <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
-    <string name="settings_key_scan_duplicate">The QR code holds this key twice, so which one is meant cannot be told.</string>
+    <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
+    <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>
     <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
     <!-- What a screen reader says of a row of the table of the keys read (#542). -->

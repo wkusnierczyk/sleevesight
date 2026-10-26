@@ -55,7 +55,7 @@ internal fun scanned(
  * alone, as the API keys page makes it from one key; and otherwise what to say. That key alone
  * refused says why, as a bare key would; a code that names another service points to *Load keys*,
  * which shows what it holds, as does one with lines this version cannot read; a code of a later
- * version asks for an update, and an empty one says so.
+ * version asks for an update, and one of no keys says so.
  */
 private fun setupKey(
     id: SecretId,
@@ -84,10 +84,11 @@ private fun setupFailure(
         read is SetupRead.Unsupported -> R.string.settings_key_scan_setup_newer
         setup == null -> R.string.settings_key_scan_setup
         named.any { it != id.keyName } -> R.string.settings_key_scan_setup
+        id.keyName in setup.refused -> problemOf(setup.refused.getValue(id.keyName))
         unread && id.keyName in named -> R.string.settings_key_scan_setup_more
         unread -> R.string.settings_key_scan_setup_none
-        named.isEmpty() -> R.string.settings_key_scan_empty
-        else -> setup.refused[id.keyName]?.let(::problemOf)
+        named.isEmpty() -> R.string.settings_key_scan_setup_empty
+        else -> null
     }
 }
 

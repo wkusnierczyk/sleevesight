@@ -85,10 +85,13 @@ internal fun LoadKeysScreen(
 ) {
     var step by remember { mutableStateOf<LoadStep>(LoadStep.Scanning) }
     var busy by remember { mutableStateOf(false) }
-    KeyScreen(R.string.settings_scan_keys, busy, onDismiss) {
+    // While scanning, the title is the guided scan's, inside what scrolls (#541).
+    val title = R.string.settings_scan_keys.takeIf { step != LoadStep.Scanning }
+    KeyScreen(title, busy, onDismiss) {
         when (val shown = step) {
             LoadStep.Scanning -> {
                 GuidedScan(
+                    title = R.string.settings_scan_keys,
                     make = stringResource(R.string.load_keys_make),
                     url = API_KEYS_URL,
                     linkDescription = R.string.load_keys_instructions_of,
@@ -153,8 +156,9 @@ private fun ColumnScope.FoundStep(
             is SetupRead.Setup -> SetupContents(read, keys, before, unsaved)
         }
     }
-    KeyScreenActions {
-        TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+    KeyScreenActions(
+        cancel = { TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) } },
+    ) {
         if (offer != SetupOffer.ALL) {
             TextButton(onClick = onScanAgain, enabled = !busy) { Text(stringResource(R.string.setup_scan_again)) }
         }

@@ -294,7 +294,11 @@ class KeyGuidesTest {
         scannedSays("sleevesight-keys:v2\nlastfm=$lastFmKey", R.string.settings_key_scan_setup_newer)
 
     @Test
-    fun anEmptySetupCodeSaysItHoldsNothing() = scannedSays("sleevesight-keys:v1\n", R.string.settings_key_scan_empty)
+    fun aSetupCodeOfNoKeysSaysSo() = scannedSays("sleevesight-keys:v1\n", R.string.settings_key_scan_setup_empty)
+
+    @Test
+    fun aRefusedKeyBesideAnUnknownLineSaysWhyTheKeyIsRefused() =
+        scannedSays("sleevesight-keys:v1\nlastfm=not-a-key\nmistral=abc", R.string.settings_key_scan_shape)
 
     @Test
     fun aScanCancelledLeavesWhatWasTypedInTheField() =

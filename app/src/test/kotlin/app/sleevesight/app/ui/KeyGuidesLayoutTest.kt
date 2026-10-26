@@ -9,6 +9,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -44,11 +46,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The guided scans (#541) in a short window with large text, as in landscape: the camera's view
- * keeps a usable height, the steps scroll, and *Cancel* stays on the screen.
+ * The guided scans (#541) in a short window (320 dp, shorter than a phone in landscape) with text at
+ * twice its size: the camera's view
+ * keeps a usable height and can be scrolled wholly onto the screen, the title and the steps scroll,
+ * and *Cancel* stays on the screen.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w411dp-h360dp", fontScale = 2f)
+@Config(qualifiers = "w411dp-h320dp", fontScale = 2f)
 class KeyGuidesLayoutTest {
     @get:Rule
     val compose = createEmptyComposeRule()
@@ -107,18 +111,28 @@ class KeyGuidesLayoutTest {
         }
     }
 
-    /** The camera's view is at least [GUIDED_CAMERA_MIN_HEIGHT] tall, and *Cancel*, by [shown], is on screen. */
+    /**
+     * The camera's view is at least [GUIDED_CAMERA_MIN_HEIGHT] tall, scrolls wholly onto the screen,
+     * inside what scrolls and above *Cancel*, and *Cancel*, on the screen showing [shown], stays on it.
+     */
     private fun cameraUsableAndCancelReachable(shown: Int) {
-        val height =
-            compose
-                .onNodeWithTag(CAMERA)
-                .fetchSemanticsNode()
-                .size.height
+        val onScreen = hasAnyAncestor(hasAnyDescendant(hasText(text(shown))))
+        val cancel = compose.onNode(hasText(text(R.string.settings_cancel)) and onScreen)
+        compose.onNodeWithTag(CAMERA).performScrollTo()
+        val view = compose.onNodeWithTag(CAMERA).fetchSemanticsNode()
         val least = GUIDED_CAMERA_MIN_HEIGHT.value * app.resources.displayMetrics.density
-        assertTrue("camera $height px, at least $least px", height >= least - 1)
-        compose
-            .onNode(hasText(text(R.string.settings_cancel)) and hasAnyAncestor(hasAnyDescendant(hasText(text(shown)))))
-            .assertIsDisplayed()
+        assertTrue("camera ${view.size.height} px, at least $least px", view.size.height >= least - 1)
+
+        val scrolled = compose.onNode(hasScrollAction() and hasAnyDescendant(hasTestTag(CAMERA))).fetchSemanticsNode()
+        val camera = view.boundsInWindow
+        val port = scrolled.boundsInWindow
+        val below = cancel.fetchSemanticsNode().boundsInWindow
+        // The bounds on the screen are clipped to what scrolls: the whole view shows only when they
+        // are as tall as the view itself.
+        assertTrue("camera shows $camera of ${view.size.height} px", camera.height >= view.size.height - 1)
+        assertTrue("camera $camera within $port", camera.top >= port.top - 1 && camera.bottom <= port.bottom + 1)
+        assertTrue("camera $camera above Cancel $below", camera.bottom <= below.top + 1)
+        cancel.assertIsDisplayed()
     }
 
     @Test

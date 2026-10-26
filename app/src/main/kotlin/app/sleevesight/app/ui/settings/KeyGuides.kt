@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,19 +38,22 @@ internal val GUIDED_CAMERA_MIN_HEIGHT = 200.dp
 private val GUIDED_GAP = 8.dp
 
 /**
- * A guided scan's steps on a key screen: [intro], if any, then [make], a step's heading, with the
+ * A guided scan's steps on a key screen: its [title] ([KeyScreenTitle]; the screen shows none of its
+ * own), [intro], if any, then [make], a step's heading, with the
  * link to [url] under it, which a screen reader reads as [linkDescription] (`%1$s`, its address);
  * then [scanner]'s view; then [read], the step that reads the code, and [then], a step after it, if
  * any; and *Cancel*, which calls [onCancel], at the start of its line, as in the key dialog (#543).
  * [onScanned] hears the code read.
  *
  * The camera's view fills the height the steps leave, but never less than
- * [GUIDED_CAMERA_MIN_HEIGHT]: in a short window, in landscape or with large text, the steps and the
- * view scroll instead ([CameraFill]), and *Cancel* stays on the screen under them.
+ * [GUIDED_CAMERA_MIN_HEIGHT]: in a short window, in landscape or with large text, the title, the
+ * steps and the view scroll instead ([CameraFill]), so the whole view can be scrolled onto the
+ * screen, and only *Cancel* stays fixed under them.
  */
 @Suppress("LongParameterList") // The steps, the link, and the camera.
 @Composable
 internal fun ColumnScope.GuidedScan(
+    @StringRes title: Int,
     intro: String? = null,
     make: String,
     url: String,
@@ -67,6 +69,7 @@ internal fun ColumnScope.GuidedScan(
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             CameraFill(space) {
                 Column(verticalArrangement = Arrangement.spacedBy(GUIDED_GAP)) {
+                    KeyScreenTitle(title)
                     intro?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     StepHeading(make)
                     val address = shownAddress(url)
@@ -84,9 +87,7 @@ internal fun ColumnScope.GuidedScan(
             }
         }
     }
-    Row(modifier = Modifier.fillMaxWidth()) {
-        TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
-    }
+    KeyScreenActions(cancel = { TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) } })
 }
 
 /**
@@ -133,8 +134,9 @@ internal fun KeyScanScreen(
 ) {
     when (purpose) {
         ScanFor.KEY -> {
-            KeyScreen(R.string.settings_key_scan, busy = false, onDismiss) {
+            KeyScreen(title = null, busy = false, onDismiss) {
                 GuidedScan(
+                    title = R.string.settings_key_scan,
                     make = stringResource(R.string.key_scan_make),
                     url = API_KEYS_URL,
                     linkDescription = R.string.load_keys_instructions_of,
@@ -147,8 +149,9 @@ internal fun KeyScanScreen(
         }
 
         ScanFor.KEYBOARD -> {
-            KeyScreen(R.string.settings_key_type, busy = false, onDismiss) {
+            KeyScreen(title = null, busy = false, onDismiss) {
                 GuidedScan(
+                    title = R.string.settings_key_type,
                     intro = stringResource(R.string.keyboard_explained),
                     make = stringResource(R.string.keyboard_open),
                     url = KEYBOARD_PAGE_URL,
