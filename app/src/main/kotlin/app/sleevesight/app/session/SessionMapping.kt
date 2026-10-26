@@ -145,6 +145,18 @@ object SessionMapping {
     /** Whether [state] is playing or about to, which makes its player the one shown. */
     fun isActive(state: PlaybackState?): Boolean = state?.state in ACTIVE
 
+    /**
+     * How strongly [state] says its session is the one playing, for the choice of the session shown
+     * (#595): 2 playing or about to ([isActive]); 1 paused, yet at a speed other than 0, a position
+     * that moves; else 0.
+     */
+    fun playingRank(state: PlaybackState?): Int =
+        when {
+            isActive(state) -> 2
+            state?.state == PlaybackState.STATE_PAUSED && state.playbackSpeed != 0f -> 1
+            else -> 0
+        }
+
     /** The published queue, or null when the player publishes neither a queue nor its title. */
     fun queue(
         items: List<MediaSession.QueueItem>?,

@@ -42,8 +42,9 @@ import kotlin.time.Duration.Companion.seconds
  * **Players followed** come from [followed], package names: in the app, the settings'
  * `SettingsStore.followedPlayers`, which `AppGraph` hands it (#126); with none given, `Settings`'
  * default (Spotify). Sessions of other players are dropped, and each newly seen one is logged as
- * ignored. A player with several sessions is followed through the first, the one the system ranks
- * highest.
+ * ignored. A player with several sessions has each of them followed (#595): Spotify playing to
+ * another device (Spotify Connect) may keep a paused session beside the one that plays, and the
+ * system need not list the playing one first, nor list the sessions again when it starts.
  *
  * **Phone calls are never read** (#435): a session whose package is a call's (`Settings.isCall`:
  * telecom, the dialers) or that marks itself a call ([PlayerSession.marksCall]) is dropped whatever
@@ -67,7 +68,12 @@ import kotlin.time.Duration.Companion.seconds
  * player's session is read, nothing of its metadata is kept, and a player seen has nothing more read.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
- * else the first followed session: the system lists the most recently active first.
+ * else the first whose position moves (a speed other than 0, [SessionMapping.playingRank]), else
+ * the first followed session: the system lists the most recently active first. When none plays and
+ * the first is of the player already shown, that player's session already shown stays (#595): a
+ * pause on another device does not hand the row to the player's other, idle session. Every report
+ * of every followed session publishes again, so a session of the same player that starts playing
+ * is shown at once.
  *
  * **Settling.** [nowPlaying] is mapped from a session's metadata and playback state once they
  * have settled for [SETTLE]: at most [MAX_SETTLE] after the first of them, or after the first that
@@ -274,7 +280,9 @@ class SessionRepository(
         ignored = ignoredNow
         watchForMusic(readable)
 
-        val wanted = readable.filter { it.player in followedPlayers }.distinctBy(PlayerSession::player)
+        // Every session of a followed player (#595), in the system's order: which one is shown is
+        // decided as each publishes ([choose]).
+        val wanted = readable.filter { it.player in followedPlayers }
         val keys = wanted.map(PlayerSession::key).toSet()
         attached.values.filter { it.gate.key !in keys }.forEach { it.release() }
         val next = wanted.associateBy(PlayerSession::key) { attached[it.key] ?: Attached(it) }
@@ -404,7 +412,7 @@ class SessionRepository(
     private fun publish(settled: Attached? = null) {
         // A session seen as a call is not shown until it is read again ([afterCall]).
         val eligible = attached.values.filter { it.gate.key !in afterCall }
-        val shown = eligible.firstOrNull { SessionMapping.isActive(it.state) } ?: eligible.firstOrNull()
+        val shown = choose(eligible)
         playbackState.value =
             shown?.let { SessionMapping.playbackInfo(it.gate.player, it.state) } ?: PlaybackInfo.NONE
         queueState.value = shown?.let { SessionMapping.queue(it.queue, it.queueTitle) }
@@ -438,6 +446,24 @@ class SessionRepository(
         // After the change, so a collector that sees a new track playing finds its change.
         publishPlaying(shown)
         updateArt(previous, track, if (track == null) emptyList() else SessionMapping.artSources(shown.trackMetadata))
+    }
+
+    /**
+     * The session shown of [eligible], in the system's order: the first that plays, else the first
+     * whose position moves ([SessionMapping.playingRank]); with neither, the first, unless the
+     * session already shown is of the same player (#595), which then stays.
+     */
+    private fun choose(eligible: List<Attached>): Attached? {
+        // The first of the highest rank: `maxByOrNull` keeps the first of equals.
+        val best = eligible.maxByOrNull { SessionMapping.playingRank(it.state) }
+        val stays =
+            lastShown?.takeIf { shown ->
+                best != null &&
+                    SessionMapping.playingRank(best.state) == 0 &&
+                    shown.gate.player == best.gate.player &&
+                    eligible.any { it === shown }
+            }
+        return stays ?: best
     }
 
     /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */

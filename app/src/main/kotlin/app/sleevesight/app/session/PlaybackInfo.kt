@@ -26,11 +26,15 @@ data class PlaybackInfo(
     /**
      * The position at [now] (`SystemClock.elapsedRealtime`), extrapolated from the last report while
      * playing, as skip detection reads the time left (`design/design.md`, *Track changes*).
+     *
+     * A state that says it plays at speed 0 (#595), which Android's documentation calls paused, is
+     * taken at its word that it plays, at normal speed: the bar moves as the player says it plays.
      */
     fun positionAt(now: Long): Duration? =
         position?.let {
             val playing = status == PlaybackStatus.PLAYING && now > updatedAt
-            if (playing) it + ((now - updatedAt) * speed).toLong().milliseconds else it
+            val rate = if (speed == 0f) 1f else speed
+            if (playing) it + ((now - updatedAt) * rate).toLong().milliseconds else it
         }
 
     companion object {

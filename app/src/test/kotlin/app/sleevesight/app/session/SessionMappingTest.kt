@@ -183,6 +183,38 @@ class SessionMappingTest {
         assertEquals(10.seconds, paused.positionAt(99_000))
     }
 
+    // #595: a state that says it plays at speed 0 (a remote session may report one) moves at normal
+    // speed, as the player says it plays; an unknown position stays unknown, and the bar at its start.
+    @Test
+    fun aStatePlayingAtSpeedZeroMovesAtNormalSpeed() {
+        val playing =
+            SessionMapping.playbackInfo(
+                SPOTIFY,
+                state(PlaybackState.STATE_PLAYING, positionMs = 10_000, speed = 0f, updatedAt = 5_000),
+            )
+        assertEquals(12.seconds, playing.positionAt(7_000))
+        val unknown =
+            SessionMapping.playbackInfo(
+                SPOTIFY,
+                state(
+                    PlaybackState.STATE_PLAYING,
+                    positionMs = PlaybackState.PLAYBACK_POSITION_UNKNOWN,
+                    updatedAt = 5_000,
+                ),
+            )
+        assertNull(unknown.positionAt(7_000))
+    }
+
+    @Test
+    fun aStateRanksPlayingThenMovingThenTheRest() {
+        assertEquals(2, SessionMapping.playingRank(state(PlaybackState.STATE_PLAYING)))
+        assertEquals(2, SessionMapping.playingRank(state(PlaybackState.STATE_BUFFERING, speed = 0f)))
+        assertEquals(1, SessionMapping.playingRank(state(PlaybackState.STATE_PAUSED, speed = 1f)))
+        assertEquals(0, SessionMapping.playingRank(state(PlaybackState.STATE_PAUSED, speed = 0f)))
+        assertEquals(0, SessionMapping.playingRank(state(PlaybackState.STATE_STOPPED, speed = 1f)))
+        assertEquals(0, SessionMapping.playingRank(null))
+    }
+
     @Test
     fun theQueueAndItsTitleMapWherePublished() {
         val queue =
