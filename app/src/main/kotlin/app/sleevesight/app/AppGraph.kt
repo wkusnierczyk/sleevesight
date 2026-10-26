@@ -87,7 +87,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 /**
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
@@ -455,11 +454,6 @@ class AppGraph(
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
         mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
-        // And each one uninstalled leaves it, checked on start once the settings are read (#535).
-        mainScope.launch {
-            latestSettings.filterNotNull().first()
-            forgetUninstalledPlayers()
-        }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
@@ -524,8 +518,8 @@ class AppGraph(
     /**
      * A player's own launcher icon, as the phone has it (#535; an adaptive icon is drawn under the
      * phone's mask), for its row under *Players*: nothing bundled or fetched. Null for a player not
-     * installed, or not visible to this app (package visibility: one with neither a launcher entry
-     * nor a media browser service), which *Players* does not list.
+     * installed, or not visible to this app (package visibility: [playerVisible]), whose row, if
+     * shown, has no icon. A package-manager call: not for the main thread.
      */
     fun playerIcon(packageName: String): Drawable? =
         try {
@@ -535,20 +529,12 @@ class AppGraph(
         }
 
     /**
-     * Drops from *Players* each player no longer installed (#535; [SettingsStore.forgetPlayers]):
-     * one the phone does not know, as [playerIcon] does not, and that has not reported music since
-     * the process started, which only an installed app can. Run on start and as *Players* is drawn.
-     * A failure to write is logged, and the next run tries again.
+     * Whether the phone shows this app [packageName] (#535): installed, and visible through the
+     * manifest's `<queries>` (a launcher entry, a media browser service, or a media-button
+     * receiver). Not seeing one is no proof it is uninstalled, so nothing is deleted on it:
+     * *Players* only hides it ([SettingsStore.forgetPlayer] deletes on Android's word).
      */
-    suspend fun forgetUninstalledPlayers() {
-        try {
-            settings.forgetPlayers { it in sessions.seenPlayers.value || playerInstalled(it) }
-        } catch (_: IOException) {
-            Log.w(TAG, "Uninstalled players could not be dropped from Players")
-        }
-    }
-
-    private fun playerInstalled(packageName: String): Boolean =
+    fun playerVisible(packageName: String): Boolean =
         try {
             appContext.packageManager.getApplicationInfo(packageName, 0)
             true

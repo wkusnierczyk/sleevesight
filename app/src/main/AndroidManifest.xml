@@ -50,13 +50,14 @@
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
-    <!-- The apps with a launcher icon, and those that offer a media browser service (a player
-         with no launcher entry may still have one), so *Players* can name a player (its label)
-         rather than show its package (#435), show its icon, and drop one no longer installed
-         (#535): from Android 11 on, another app is hidden without this, and one visible neither
-         way is taken as not installed. Only the label and icon of a player that reported music
-         are read, and whether it is still installed; the list of apps is neither kept nor sent.
-         Not QUERY_ALL_PACKAGES, which Play restricts and the app does not need. -->
+    <!-- The apps with a launcher icon, and those that offer a media browser service or take media
+         buttons (most media apps do, including those with no launcher entry), so *Players* can
+         name a player (its label) rather than show its package (#435), show its icon, and hear
+         when one is uninstalled (#535): from Android 11 on, another app is hidden without this.
+         One that is still hidden is not taken as uninstalled: *Players* hides it and keeps its
+         switch. Only the label and icon of a player that reported music are read; the list of
+         apps is neither kept nor sent. Not QUERY_ALL_PACKAGES, which Play restricts and the app
+         does not need. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -64,6 +65,9 @@
         </intent>
         <intent>
             <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MEDIA_BUTTON" />
         </intent>
     </queries>
 
@@ -104,6 +108,18 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Drops an uninstalled player from *Players* (#535). PACKAGE_FULLY_REMOVED is exempt
+             from Android 8's limit on manifest receivers of implicit broadcasts, and only the
+             system sends it, which reaches a receiver that is not exported. -->
+        <receiver
+            android:name=".settings.PlayerRemovedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

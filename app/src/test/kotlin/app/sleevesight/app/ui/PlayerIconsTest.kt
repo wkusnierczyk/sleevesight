@@ -2,6 +2,8 @@ package app.sleevesight.app.ui
 
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.os.Looper
 import androidx.activity.compose.setContent
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -12,6 +14,8 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -33,19 +37,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
- * *Players* (#535): each player listed with its app's icon at the row's start; one not installed,
- * Spotify included, is not listed, and the others' entries are dropped as the section is drawn.
+ * *Players* (#535): each player the phone shows, or that reported music, listed with its app's
+ * icon at the row's start once it has loaded, off the main thread; one neither shown nor seen,
+ * Spotify included, is hidden, and no entry is deleted for it.
  */
 @RunWith(RobolectricTestRunner::class)
 class PlayerIconsTest {
@@ -67,12 +77,19 @@ class PlayerIconsTest {
         stores.close()
     }
 
-    /** The phone with only [players] installed, each with a plain icon; the drop goes to the store. */
-    private fun phoneWith(vararg players: String) =
-        InstalledPlayers(
-            icon = { if (it in players) ColorDrawable(Color.RED) else null },
-            forgetUninstalled = { settings.forgetPlayers { it in players } },
-        )
+    /**
+     * The phone showing this app only [visible], each with a plain icon given by [icon]; [seen]
+     * reported music since the process started.
+     */
+    private fun phone(
+        visible: Set<String>,
+        seen: Set<String> = emptySet(),
+        icon: (String) -> Drawable? = { ColorDrawable(Color.RED) },
+    ) = InstalledPlayers(
+        icon = { if (it in visible) icon(it) else null },
+        visible = { it in visible },
+        seen = MutableStateFlow(seen),
+    )
 
     private fun stored(vararg players: Pair<String, Boolean>) =
         runBlocking { settings.update { it.copy(followedPlayers = it.followedPlayers + players) } }
@@ -101,34 +118,79 @@ class PlayerIconsTest {
 
     private fun shown(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
 
-    @Test
-    fun anInstalledPlayerShowsItsIconAndAnUninstalledOneLeavesTheList() {
-        stored(INSTALLED to false, UNINSTALLED to true)
-        showPlayers(phoneWith(INSTALLED)) {
-            compose.waitUntil(5_000) { shown("Example") }
-            assertTrue("Spotify, not installed, is not listed", !shown("Spotify"))
-            assertTrue("an uninstalled player is not listed", !shown("Gone"))
+    private fun row(name: String) = compose.onNode(isToggleable() and hasText(name))
 
-            // The uninstalled player's entry is dropped; Spotify's, a default, is kept.
-            idleUntil("the uninstalled player dropped") { UNINSTALLED !in settings.now().followedPlayers }
-            assertEquals(mapOf(Settings.SPOTIFY to true, INSTALLED to false), settings.now().followedPlayers)
+    /** How far [name] starts from its row's start: 0 without an icon, 56 dp with one. */
+    private fun indent(name: String): Dp =
+        compose.onNodeWithText(name, useUnmergedTree = true).getBoundsInRoot().left - row(name).getBoundsInRoot().left
+
+    @Test
+    fun aShownPlayerHasItsIconAndOneNeitherShownNorSeenIsHiddenWithItsEntryKept() {
+        stored(VISIBLE to false, HIDDEN to true)
+        showPlayers(phone(visible = setOf(VISIBLE))) {
+            compose.waitUntil(5_000) { shown("Example") }
+            assertTrue("Spotify, not shown, is not listed", !shown("Spotify"))
+            assertTrue("a player neither shown nor seen is not listed", !shown("Hidden"))
 
             // The icon is at the row's start, before the name: 40 dp and a 16 dp gap.
-            val row = compose.onNode(isToggleable() and hasText("Example"))
-            val name = compose.onNodeWithText("Example", useUnmergedTree = true).getBoundsInRoot()
-            assertTrue("the name follows the icon", name.left - row.getBoundsInRoot().left >= 56.dp)
+            compose.waitUntil(5_000) { indent("Example") >= 56.dp }
             // And is decorative: the row is read by its name alone, as before.
-            row.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+            row("Example").assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
             assertEquals(
                 listOf("Example"),
-                row.fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text },
+                row("Example").fetchSemanticsNode().config[SemanticsProperties.Text].map { it.text },
+            )
+
+            // Not being shown deletes nothing: Spotify's and the hidden player's entries stay.
+            compose.waitForIdle()
+            assertEquals(
+                mapOf(Settings.SPOTIFY to true, VISIBLE to false, HIDDEN to true),
+                settings.now().followedPlayers,
             )
         }
     }
 
     @Test
-    fun withNoPlayerInstalledTheSectionSaysHowOneIsAdded() {
-        showPlayers(phoneWith()) {
+    fun aPlayerSeenButNotShownIsListedByNameAndCanBeSwitchedOnAndOff() {
+        stored(HIDDEN to false)
+        showPlayers(phone(visible = emptySet(), seen = setOf(HIDDEN))) {
+            compose.waitUntil(5_000) { shown("Hidden") }
+            // No icon to give: the name starts the row.
+            assertTrue(indent("Hidden") < 16.dp)
+
+            row("Hidden").performClick()
+            idleUntil("switched on") { settings.now().followedPlayers[HIDDEN] == true }
+            row("Hidden").performClick()
+            idleUntil("switched off") { settings.now().followedPlayers[HIDDEN] == false }
+        }
+    }
+
+    @Test
+    fun aRowShowsAtOnceAndItsIconLoadsOffTheMainThread() {
+        stored(VISIBLE to false)
+        val release = CountDownLatch(1)
+        val loadedOn = AtomicReference<Thread>()
+        val slow = { _: String ->
+            loadedOn.set(Thread.currentThread())
+            release.await(5, TimeUnit.SECONDS)
+            ColorDrawable(Color.RED)
+        }
+        try {
+            showPlayers(phone(visible = setOf(VISIBLE), icon = slow)) {
+                compose.waitUntil(5_000) { shown("Example") }
+                assertTrue("no icon yet", indent("Example") < 16.dp)
+                release.countDown()
+                compose.waitUntil(5_000) { indent("Example") >= 56.dp }
+                assertNotSame(Looper.getMainLooper().thread, loadedOn.get())
+            }
+        } finally {
+            release.countDown()
+        }
+    }
+
+    @Test
+    fun withNoPlayerShownTheSectionSaysHowOneIsAdded() {
+        showPlayers(phone(visible = emptySet())) {
             val none = app.getString(R.string.settings_players_none)
             compose.waitUntil(5_000) { shown(none) }
             assertTrue(!shown("Spotify"))
@@ -138,8 +200,8 @@ class PlayerIconsTest {
     }
 
     private companion object {
-        const val INSTALLED = "com.example.player"
-        const val UNINSTALLED = "com.example.gone"
-        val NAMES = mapOf(Settings.SPOTIFY to "Spotify", INSTALLED to "Example", UNINSTALLED to "Gone")
+        const val VISIBLE = "com.example.player"
+        const val HIDDEN = "com.example.hidden"
+        val NAMES = mapOf(Settings.SPOTIFY to "Spotify", VISIBLE to "Example", HIDDEN to "Hidden")
     }
 }

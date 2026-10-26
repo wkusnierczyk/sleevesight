@@ -7,8 +7,10 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -20,27 +22,42 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.core.settings.Settings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 
 /** A player's icon under *Players*, as Android's own app lists draw it (#535). */
 private val PLAYER_ICON = 40.dp
 
+/** The players seen, where they are not known (tests, previews). */
+private val NONE_SEEN: StateFlow<Set<String>> = MutableStateFlow(emptySet())
+
 /**
- * The players' apps as the phone has them (#535): [icon] is a player's own icon, null for a
- * player not installed (or not visible to this app), which *Players* does not list; and
- * [forgetUninstalled] drops such players from the stored list, run as *Players* is drawn.
+ * The players' apps as the phone has them (#535): [icon] is a player's own icon, null for one the
+ * phone does not show this app, asked off the main thread; [visible] says whether the phone shows
+ * it (installed, and visible through the manifest's `<queries>`); [seen] holds the players that
+ * reported music since the process started, which are on the phone whether or not it shows them.
  */
 class InstalledPlayers(
     val icon: (String) -> Drawable?,
-    val forgetUninstalled: suspend () -> Unit,
+    val visible: (String) -> Boolean,
+    val seen: StateFlow<Set<String>>,
 )
 
 /**
- * *Players* (#444): a switch per player that has reported music and is installed, with its app's
- * icon at the row's start (#535), by its name, and under the name *Open the app ↗*, which opens
- * the player, for one that has a launcher entry (visible through the manifest's `<queries>`, #435).
- * The package name shows under the name only in developer mode. The icon is decorative: the name
- * beside it says which app it is. A player not installed is not listed, Spotify (listed by default)
- * included, and drawing the section drops the others' entries. With no [PlayerApps.installed]
+ * *Players* (#444): a switch per player that has reported music, with its app's icon at the row's
+ * start (#535), by its name, and under the name *Open the app ↗*, which opens the player, for one
+ * that has a launcher entry (visible through the manifest's `<queries>`, #435). The package name
+ * shows under the name only in developer mode. The icon is decorative: the name beside it says
+ * which app it is.
+ *
+ * Listed: each stored player the phone shows this app, or that reported music since the process
+ * started, so a followed player that plays always has its switch. One that is neither, Spotify
+ * (listed by default) on a phone without it included, is hidden, and its entry kept: not being
+ * shown is no proof the app is gone (`PlayerRemovedReceiver` drops an uninstalled one). A row's
+ * icon loads off the main thread, once per row while the section is drawn; the row shows without
+ * it until then, and for good when the phone has none to give. With no [PlayerApps.installed]
  * (tests, previews), every stored player is listed, without an icon.
  */
 @Composable
@@ -50,23 +67,20 @@ internal fun PlayersSection(
     update: Update,
 ) {
     val installed = apps.installed
-    installed?.let { LaunchedEffect(it) { it.forgetUninstalled() } }
-    val size = with(LocalDensity.current) { PLAYER_ICON.roundToPx() }
+    val seen = (installed?.seen ?: NONE_SEEN).collectAsState().value
     val players = settings.followedPlayers.keys
-    val icons = installed?.let { remember(players, size) { players.associateWith { p -> it.icon(p)?.bitmap(size) } } }
-    val listed = settings.followedPlayers.toSortedMap().filterKeys { icons == null || icons[it] != null }
+    val visible = installed?.let { remember(players) { players.filterTo(mutableSetOf(), it.visible) } }
+    val listed = settings.followedPlayers.toSortedMap().filterKeys { visible == null || it in visible || it in seen }
     if (listed.isEmpty()) Hint(R.string.settings_players_none)
     for ((player, followed) in listed) {
-        key(player) { PlayerRow(player, followed, icons?.get(player), settings.developerMode, apps, update) }
+        key(player) { PlayerRow(player, followed, settings.developerMode, apps, update) }
     }
 }
 
-@Suppress("LongParameterList") // The row's player, its switch and icon, and what names and opens it.
 @Composable
 private fun PlayerRow(
     player: String,
     followed: Boolean,
-    icon: ImageBitmap?,
     developerMode: Boolean,
     apps: PlayerApps,
     update: Update,
@@ -74,11 +88,19 @@ private fun PlayerRow(
     val context = LocalContext.current
     val name = apps.label(player)
     val launch = remember(player) { apps.launch(player) }
+    val size = with(LocalDensity.current) { PLAYER_ICON.roundToPx() }
+    val icon by produceState<ImageBitmap?>(null, player, size) {
+        val load = apps.installed?.icon ?: return@produceState
+        value = withContext(Dispatchers.IO) { load(player)?.bitmap(size) }
+    }
     SwitchRow(
         title = name,
         summary = player.takeIf { developerMode },
         checked = followed,
-        leading = icon?.let { { Image(it, contentDescription = null, modifier = Modifier.size(PLAYER_ICON)) } },
+        leading =
+            icon?.let { loaded ->
+                { Image(loaded, contentDescription = null, modifier = Modifier.size(PLAYER_ICON)) }
+            },
         below =
             launch?.let { intent ->
                 {
@@ -102,7 +124,8 @@ private fun PlayerRow(
 
 /**
  * The icon drawn at [size] pixels a side, as the launcher draws it: an adaptive icon under the
- * phone's mask, which `AdaptiveIconDrawable` applies as it draws.
+ * phone's mask, which `AdaptiveIconDrawable` applies as it draws. Off the main thread: a drawable of
+ * its own, drawn into a bitmap of its own.
  */
 private fun Drawable.bitmap(size: Int): ImageBitmap {
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)

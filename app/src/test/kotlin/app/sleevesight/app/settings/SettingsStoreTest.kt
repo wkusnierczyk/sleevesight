@@ -134,38 +134,39 @@ class SettingsStoreTest {
         }
 
     @Test
-    fun anUninstalledPlayerIsDroppedAndComesBackOffWhileSpotifyKeepsItsSwitch() =
+    fun aRemovedPlayerIsDroppedAndComesBackOffWhileSpotifyKeepsItsSwitch() =
         runBlocking {
             val store = store()
             store.playerSeen(OTHER_PLAYER)
             store.playerSeen(VIDEO_APP)
             store.update {
-                it.copy(followedPlayers = it.followedPlayers + (OTHER_PLAYER to true) + (Settings.SPOTIFY to false))
+                it.copy(followedPlayers = it.followedPlayers + (VIDEO_APP to true) + (Settings.SPOTIFY to false))
             }
 
-            // Only the other player is still installed; Spotify, listed by default, is not either.
-            store.forgetPlayers { it == OTHER_PLAYER }
+            // Android says both apps are gone; Spotify, listed by default, keeps its entry, off.
+            store.forgetPlayer(VIDEO_APP)
+            store.forgetPlayer(Settings.SPOTIFY)
             stores.close()
             val restarted = store()
             assertEquals(
-                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to true),
+                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to false),
                 restarted.settings.first().followedPlayers,
             )
-            assertEquals(setOf(OTHER_PLAYER), restarted.followedPlayers.first())
+            assertEquals(emptySet<String>(), restarted.followedPlayers.first())
 
             // Reinstalled, the dropped one is listed again as any new player is: switched off.
             restarted.playerSeen(VIDEO_APP)
             assertEquals(
-                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to true, VIDEO_APP to false),
+                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to false, VIDEO_APP to false),
                 restarted.settings.first().followedPlayers,
             )
         }
 
     @Test
-    fun spotifyNotInstalledKeepsItsDefault() =
+    fun spotifyRemovedKeepsItsDefault() =
         runBlocking {
             val store = store()
-            store.forgetPlayers { false }
+            store.forgetPlayer(Settings.SPOTIFY)
             assertEquals(mapOf(Settings.SPOTIFY to true), store.settings.first().followedPlayers)
             assertEquals(setOf(Settings.SPOTIFY), store.followedPlayers.first())
         }

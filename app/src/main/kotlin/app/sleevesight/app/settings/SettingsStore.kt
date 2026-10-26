@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -98,23 +97,18 @@ class SettingsStore(
     }
 
     /**
-     * Drops from *Players* each player [present] says is no longer on the phone (#535), so an
-     * uninstalled app leaves the list; reinstalled, it is listed again as any new player is, once it
-     * reports music, switched off ([playerSeen]). A player listed by default (Spotify) keeps its
-     * entry, which *Players* hides while it is not installed: dropping a default's `off` would
-     * switch it back on, against the user's choice, once it is installed again. Writes nothing when
-     * no player goes.
-     *
-     * [present] is asked on the caller's thread, before the write, never inside DataStore's
-     * transform, which would hold the write while it asks the package manager. Only the players
-     * listed at that read can go, so one listed in between ([playerSeen]) stays. A read or write
-     * that fails throws [IOException].
+     * Drops [packageName] from *Players* once Android says the app is gone (#535;
+     * [PlayerRemovedReceiver]): reinstalled, it is listed again as any new player is, once it reports
+     * music, switched off ([playerSeen]). A player listed by default (Spotify) keeps its entry:
+     * dropping a default's `off` would switch it back on, against the user's choice, once it is
+     * installed again. Nothing else deletes an entry: an app the phone does not show this app is not
+     * proof it is uninstalled (package visibility), so *Players* only hides it.
      */
-    suspend fun forgetPlayers(present: (String) -> Boolean) {
-        val listed = stored.first().followedPlayers.keys
-        val gone = listed.filterTo(mutableSetOf()) { it !in defaults.followedPlayers && !present(it) }
-        if (gone.isEmpty()) return
-        update { s -> s.copy(followedPlayers = s.followedPlayers - gone) }
+    suspend fun forgetPlayer(packageName: String) {
+        if (packageName in defaults.followedPlayers) return
+        update { s ->
+            if (packageName in s.followedPlayers) s.copy(followedPlayers = s.followedPlayers - packageName) else s
+        }
     }
 
     /**

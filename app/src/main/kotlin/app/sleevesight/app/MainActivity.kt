@@ -121,7 +121,11 @@ class MainActivity : ComponentActivity() {
                                         onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLaunch = graph::playerLaunchIntent,
                                         installedPlayers =
-                                            InstalledPlayers(graph::playerIcon, graph::forgetUninstalledPlayers),
+                                            InstalledPlayers(
+                                                graph::playerIcon,
+                                                graph::playerVisible,
+                                                graph.sessions.seenPlayers,
+                                            ),
                                         modelCheck = graph.modelCheck,
                                         playerLabel = graph::playerLabel,
                                     )
