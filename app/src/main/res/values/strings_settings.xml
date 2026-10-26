@@ -42,7 +42,7 @@
 
     <!-- Genres. -->
     <string name="settings_show_genres">Show genres</string>
-    <string name="settings_show_genres_summary">With genres on, Sleevesight asks the sources below for the track’s, the artists’ and the album’s genres and shows them on the home screen. When off, no genre information is sought from any source.</string>
+    <string name="settings_show_genres_summary">When on, Sleevesight asks the sources below for genres of the track, its artists and its album, and shows them on the home screen. When off, no genre information is sought from any source.</string>
     <string name="settings_labels_genres_off">Off while “Show genres” is off</string>
     <string name="settings_labels_lastfm_summary">Tags added freely by listeners, unmoderated; Sleevesight keeps those that name a genre.</string>
 
