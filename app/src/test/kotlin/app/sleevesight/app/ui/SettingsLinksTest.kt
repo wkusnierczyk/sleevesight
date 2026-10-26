@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.SaverScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.settings.FoldedSection
 import app.sleevesight.app.ui.settings.LocalSettingsNavigator
 import app.sleevesight.app.ui.settings.ProvideSettingsNavigator
@@ -28,6 +30,8 @@ import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.app.ui.settings.sentenceWith
 import app.sleevesight.app.ui.theme.TextPart
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -73,6 +77,32 @@ class SettingsLinksTest {
             // Unfolded: its rows are drawn, under the heading.
             compose.onNodeWithText(ABOUT_ROWS).assertExists()
         }
+    }
+
+    @Test
+    fun onlyALandingStillScrollingIsSaved() {
+        val folds = SectionFolds()
+        val navigator = SettingsNavigator(folds)
+        val saver = SettingsNavigator.saver(folds)
+        val scope = SaverScope { true }
+        val target = SettingsTarget.key(SecretId.EXA)
+        assertNull(with(saver) { scope.save(navigator) })
+        navigator.go(target)
+        assertEquals(arrayListOf("SECRETS", "key_EXA"), with(saver) { scope.save(navigator) })
+        navigator.scrolled(navigator.landing!!)
+        // Scrolled: the row is being focused, or flashing; nothing to land on again.
+        assertNull(with(saver) { scope.save(navigator) })
+    }
+
+    @Test
+    fun aSavedLandingWhoseSectionIsFoldedIsDropped() {
+        val saved = arrayListOf("SECRETS", "key_EXA")
+        val folded = SettingsNavigator.saver(SectionFolds()).restore(saved)!!
+        assertNull(folded.landing)
+        assertFalse(folded.scrolling)
+        val unfolded = SettingsNavigator.saver(SectionFolds(setOf(SettingsSection.SECRETS))).restore(saved)!!
+        assertEquals(SettingsTarget.key(SecretId.EXA), unfolded.landing?.target)
+        assertTrue(unfolded.scrolling)
     }
 
     @Test

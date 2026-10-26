@@ -33,6 +33,9 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.node.RootForTest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -85,9 +88,10 @@ internal data class SettingsTarget(
 /**
  * Follows the settings' links (#539): [go] unfolds the target's section in [folds] and lands on the
  * target, which its [LandingSpot] then scrolls into view and focuses. One per visit to the
- * settings, given to the rows as [LocalSettingsNavigator] ([ProvideSettingsNavigator]); a landing
- * under way is saved with the screen ([saver]) and lands again once the screen is recreated (a
- * rotation), its section being saved unfolded with the folds.
+ * settings, given to the rows as [LocalSettingsNavigator] ([ProvideSettingsNavigator]). Only a
+ * landing still scrolling is saved with the screen ([saver]), to scroll and land once the screen is
+ * recreated (a rotation); once the row has the focus nothing is pending, so leaving the settings
+ * and coming back, or a recreation after it, lands on nothing.
  */
 @Stable
 internal class SettingsNavigator(
@@ -133,16 +137,23 @@ internal class SettingsNavigator(
     }
 
     companion object {
-        /** Saves the target of a landing under way, for a navigator over [folds] to land on again. */
+        /**
+         * Saves the target of a landing still scrolling ([scrolling]), for a navigator over [folds]
+         * to land on again, if its section is still unfolded there; nothing otherwise.
+         */
         fun saver(folds: SectionFolds): Saver<SettingsNavigator, ArrayList<String>> =
             Saver(
                 save = { navigator ->
-                    navigator.landing?.target?.let { arrayListOf(it.section.name, it.row.orEmpty()) }
+                    navigator.landing
+                        ?.takeIf { navigator.scrolling }
+                        ?.target
+                        ?.let { arrayListOf(it.section.name, it.row.orEmpty()) }
                 },
                 restore = { saved ->
                     SettingsNavigator(folds).also { navigator ->
                         SettingsSection.entries
                             .firstOrNull { it.name == saved[0] }
+                            ?.takeIf { folds.isUnfolded(it) }
                             ?.let { navigator.resume(SettingsTarget(it, saved[1].ifEmpty { null })) }
                     }
                 },
@@ -283,8 +294,9 @@ internal fun LandingSpot(
     val focusManager = LocalFocusManager.current
     val inputModes = LocalInputModeManager.current
     val accessibility = LocalContext.current.getSystemService(AccessibilityManager::class.java)
-    // Whether the row holds the focus, read only by the landing, so a plain var.
+    // Whether the row holds the focus, and where it is laid out: read only by the landing, so plain.
     val held = remember { BooleanArray(1) }
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
     LaunchedEffect(navigator, landing) {
         if (navigator == null || landing == null) return@LaunchedEffect
         try {
@@ -296,10 +308,14 @@ internal fun LandingSpot(
             } finally {
                 navigator.scrolled(landing)
             }
+            // The scroll's end is not its arrival: a drag can cut it short. Unless the landing is still
+            // this one and the row is in view, it gives up, and the focus stays where it was.
+            if (navigator.landing != landing || !inView(placed[0])) return@LaunchedEffect
             focus.requestFocus()
             if (accessibility?.isTouchExplorationEnabled == true) {
                 withFrameNanos { }
-                moveAccessibilityFocusToFocused(host)
+                // Only once the row has the input focus, which the screen reader's then follows.
+                if (held[0]) moveAccessibilityFocusToFocused(host)
             }
             delay(LANDING)
             // Touched, the row lets the focus go, unless it has moved on meanwhile; driven by a
@@ -319,7 +335,8 @@ internal fun LandingSpot(
                 // Only while landing: otherwise the row's own focus rules hold.
                 .focusProperties { if (landing != null) canFocus = true }
                 .focusRequester(focus)
-                .onFocusChanged { held[0] = it.hasFocus },
+                .onFocusChanged { held[0] = it.hasFocus }
+                .onGloballyPositioned { placed[0] = it },
     ) {
         content()
     }
@@ -333,13 +350,27 @@ internal fun LandingSpot(
  * `semanticsOwner` is public) by its *focused* property; nothing happens if there is none.
  */
 private fun moveAccessibilityFocusToFocused(host: View) {
-    val owner = (host as? RootForTest)?.semanticsOwner ?: return
-    val focused =
-        owner
-            .getAllSemanticsNodes(mergingEnabled = true)
-            .firstOrNull { it.config.getOrNull(SemanticsProperties.Focused) == true } ?: return
-    host.accessibilityNodeProvider?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+    // A walk through Compose's semantics from outside: should it ever fail, the screen reader's focus
+    // stays where it was, and the screen goes on.
+    runCatching {
+        val owner = (host as? RootForTest)?.semanticsOwner ?: return
+        val focused =
+            owner
+                .getAllSemanticsNodes(mergingEnabled = true)
+                .firstOrNull { it.config.getOrNull(SemanticsProperties.Focused) == true } ?: return
+        host.accessibilityNodeProvider
+            ?.performAction(focused.id, AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null)
+    }
 }
+
+/**
+ * Whether the row laid out at [coordinates] is in view, whole: its bounds, clipped by its ancestors'
+ * (the settings' column among them), as tall as the row.
+ */
+private fun inView(coordinates: LayoutCoordinates?): Boolean =
+    coordinates != null &&
+        coordinates.isAttached &&
+        coordinates.boundsInRoot().height >= coordinates.size.height - 1
 
 /** How long a landed row may keep the focus it takes in touch mode ([LandingSpot]). */
 private val LANDING = 1300.milliseconds

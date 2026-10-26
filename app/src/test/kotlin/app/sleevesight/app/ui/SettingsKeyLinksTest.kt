@@ -29,7 +29,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -118,6 +120,31 @@ class SettingsKeyLinksTest {
         compose.waitForIdle()
     }
 
+    /** [restore], with the clock stopped, a frame for each step. */
+    private fun restoreFrameByFrame() {
+        val saved = registry.performSave()
+        emitted = false
+        compose.mainClock.advanceTimeByFrame()
+        registry = SaveableStateRegistry(saved) { true }
+        emitted = true
+        compose.mainClock.advanceTimeByFrame()
+    }
+
+    /** Lets any landing run its course, the flash too. */
+    private fun settle() {
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+    }
+
+    /** A node in the key [id]'s row that holds the focus. */
+    private fun focusedIn(id: SecretId) = hasAnyAncestor(hasTestTag(SettingsTarget.key(id).tag)) and isFocused()
+
+    private fun topOf(id: SecretId) =
+        compose
+            .onNodeWithTag(SettingsTarget.key(id).tag)
+            .fetchSemanticsNode()
+            .boundsInRoot.top
+
     /** Turns on a screen reader that explores by touch, as TalkBack does, for Compose to report to. */
     private fun startScreenReader() {
         val manager = shadowOf(app.getSystemService(AccessibilityManager::class.java))
@@ -168,12 +195,15 @@ class SettingsKeyLinksTest {
         }
 
     /** Follows the link to the key [id] in the sentence under its service. */
-    private fun follow(id: SecretId) {
+    private fun follow(
+        id: SecretId,
+        stopClock: Boolean = false,
+    ) {
         val target = SettingsTarget.key(id)
-        compose
-            .onNode(hasText(sentence(id)), useUnmergedTree = true)
-            .performScrollTo()
-            .performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == target.linkTag }
+        val sentence = compose.onNode(hasText(sentence(id)), useUnmergedTree = true).performScrollTo()
+        // With the clock stopped from the tap on, the landing goes no further than the test lets it.
+        if (stopClock) compose.mainClock.autoAdvance = false
+        sentence.performFirstLinkClick { (it.item as? LinkAnnotation.Clickable)?.tag == target.linkTag }
     }
 
     /** The key [id]'s row is unfolded under *Secrets*, in view, and holds the focus. */
@@ -282,12 +312,55 @@ class SettingsKeyLinksTest {
         }
 
     @Test
-    fun aLandingUnderWayLandsAgainOnceTheScreenIsRecreated() =
+    fun aLandingStillScrollingLandsAgainOnceTheScreenIsRecreated() =
+        show(SettingsSection.SOURCES) {
+            // Frame by frame, so the screen is recreated (as by a rotation) before the landing has
+            // scrolled.
+            follow(SecretId.EXA, stopClock = true)
+            restoreFrameByFrame()
+            compose.mainClock.autoAdvance = true
+            landedOn(SecretId.EXA)
+        }
+
+    @Test
+    fun aRecreationAfterALandingAndATabLandsOnNothing() =
+        show(SettingsSection.AI_SERVICES) {
+            follow(SecretId.ANTHROPIC)
+            landedOn(SecretId.ANTHROPIC)
+            compose.onNode(focusedIn(SecretId.ANTHROPIC)).performKeyInput { pressKey(Key.Tab) }
+            waitForNode(focusedIn(SecretId.OPENAI))
+            val top = topOf(SecretId.ANTHROPIC)
+            restore()
+            settle()
+            // No new scroll, and the landed row does not take the focus again.
+            assertEquals(top, topOf(SecretId.ANTHROPIC), 1f)
+            assertTrue(compose.onAllNodes(focusedIn(SecretId.ANTHROPIC)).fetchSemanticsNodes().isEmpty())
+        }
+
+    @Test
+    fun leavingAndComingBackAfterALandingLandsOnNothing() =
         show(SettingsSection.SOURCES) {
             follow(SecretId.EXA)
-            // Recreated before the landing has ended, as by a rotation.
-            restore()
             landedOn(SecretId.EXA)
+            val top = topOf(SecretId.EXA)
+            // Leaving for another screen (*Credits*) and coming back saves the settings' state and
+            // composes them afresh from it, as this does; still within the landing's flash.
+            restore()
+            settle()
+            assertEquals(top, topOf(SecretId.EXA), 1f)
+            assertTrue(compose.onAllNodes(focusedIn(SecretId.EXA)).fetchSemanticsNodes().isEmpty())
+        }
+
+    @Test
+    fun aDragDuringTheLandingsScrollLeavesTheFocusAlone() =
+        show(SettingsSection.SOURCES) {
+            follow(SecretId.EXA, stopClock = true)
+            // A few frames in, the scroll has begun; the listener drags the other way.
+            repeat(SCROLL_FRAMES) { compose.mainClock.advanceTimeByFrame() }
+            compose.onNode(hasScrollAction()).performTouchInput { swipeDown(durationMillis = 200) }
+            compose.mainClock.autoAdvance = true
+            settle()
+            assertTrue(compose.onAllNodes(focusedIn(SecretId.EXA)).fetchSemanticsNodes().isEmpty())
         }
 
     @Test
@@ -331,5 +404,8 @@ class SettingsKeyLinksTest {
     private companion object {
         // An accessibility node id holds its virtual view's id in its upper half.
         const val VIRTUAL_ID_SHIFT = 32
+
+        // Frames into a landing's scroll, which takes several hundred milliseconds.
+        const val SCROLL_FRAMES = 3
     }
 }
