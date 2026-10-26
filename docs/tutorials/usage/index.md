@@ -49,7 +49,7 @@ The track is shown straight on the home screen, with no box around it, its accen
 
 From top to bottom, the screen shows:
 
-- **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen; a player that has none says so.
+- **The player and its state**, such as "Spotify · Playing", or *Paused*, *Stopped*, *Buffering*. A tap opens the player's own screen, or, for a player that names none (as Spotify), the app as its launcher icon opens it; a player that has neither says so.
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
 - **The title**, large and bold, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
 - **The artists**, each credited one, featured artists included.
@@ -218,7 +218,7 @@ The history is left out of Android's backup, and the app never sends it anywhere
 
 **Followed.** Spotify is followed by default. Any player whose media session reports music, a track with a title and an artist, can be followed: once it has reported music (playing or paused) while Sleevesight has notification access, it appears by its name, switched off, under [*Players*]({{ '/docs/tutorials/settings/' | relative_url }}), and switching it on follows it at once. Following Spotify needs no Spotify account in Sleevesight and no developer app, whichever Spotify plan you have: the app reads the phone's media session, not Spotify's Web API.
 
-With several players followed, the home screen shows the one playing; with none playing, the one most recently active.
+With several players followed, the home screen shows the one playing; with none playing, the one most recently active. A player that keeps more than one media session, as Spotify may while it plays to another device through Spotify Connect, is shown through the one playing, with its state and position; when it pauses, it stays shown, rather than the player's idle session.
 
 **Not followed.** To find your music players, Sleevesight looks at apps that report what they play (playing or paused) and checks whether it is music, a track with a title and an artist: from an app not switched on, it reads what the app says it is playing only until the app reports music, and then nothing more of what it plays until Sleevesight starts afresh (not each time you open it), or the app is uninstalled and installed again. A new player is added under *Players* switched off. Sleevesight does not follow a player that is off: it does not track what the player plays, it keeps or sends none of it, and the home screen does not show it. While only such players play, the home screen says *Nothing playing in a player you follow yet.*
 

@@ -93,6 +93,7 @@ class NowPlayingScreenTest {
     private fun show(
         state: NowPlayingState,
         activity: () -> PendingIntent? = { null },
+        launch: (String) -> Intent? = { null },
         block: (MainActivity) -> Unit,
     ) {
         val actions =
@@ -100,6 +101,7 @@ class NowPlayingScreenTest {
                 normalizer::normalize,
                 { "Spotify" },
                 activity,
+                launch,
                 write = { key, shown ->
                     writes++
                     tapped = key to shown
@@ -712,12 +714,40 @@ class NowPlayingScreenTest {
         show(state(PipelineView(track())), activity = { opened }) {
             compose.onNodeWithTag(PLAYER_TAG).performClick()
             val started = shadowOf(it).nextStartedActivity ?: shadowOf(app).nextStartedActivity
-            assertTrue(started != null)
-        }
-        show(state(PipelineView(track()))) {
-            compose.onNodeWithTag(PLAYER_TAG).performClick()
-            assertEquals(text(R.string.home_player_no_screen, "Spotify"), ShadowToast.getTextOfLatestToast())
+            assertEquals(Intent.ACTION_VIEW, started?.action)
         }
         assertFalse(openPlayerScreen(app, null))
+    }
+
+    // #596: a session with no screen of its own, or one whose intent the player has cancelled, opens
+    // the player from its launcher entry, for the shown player's package; the toast says nothing opened.
+    @Test
+    fun withoutASessionScreenThePlayerRowOpensThePlayersLauncherEntry() {
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(Settings.SPOTIFY)
+        val asked = mutableListOf<String>()
+        val launch = { pkg: String -> launcher.also { asked += pkg } }
+        val cancelled = PendingIntent.getActivity(app, 1, Intent(Intent.ACTION_VIEW), PendingIntent.FLAG_IMMUTABLE)
+        cancelled.cancel()
+        for (activity in listOf<PendingIntent?>(null, cancelled)) {
+            ShadowToast.reset()
+            show(state(PipelineView(track())), activity = { activity }, launch = launch) {
+                compose.onNodeWithTag(PLAYER_TAG).performClick()
+                val started = shadowOf(it).nextStartedActivity ?: shadowOf(app).nextStartedActivity
+                assertEquals("with $activity", Intent.ACTION_MAIN, started?.action)
+                assertEquals(Settings.SPOTIFY, started?.`package`)
+                assertEquals(null, ShadowToast.getTextOfLatestToast())
+            }
+        }
+        assertEquals(listOf(Settings.SPOTIFY, Settings.SPOTIFY), asked)
+    }
+
+    @Test
+    fun aPlayerWithNeitherASessionScreenNorALauncherEntrySaysSo() {
+        show(state(PipelineView(track()))) {
+            compose.onNodeWithTag(PLAYER_TAG).performClick()
+            assertEquals(null, shadowOf(it).nextStartedActivity ?: shadowOf(app).nextStartedActivity)
+            assertEquals(text(R.string.home_player_no_screen, "Spotify"), ShadowToast.getTextOfLatestToast())
+        }
+        assertFalse(openPlayer(app, null, null))
     }
 }

@@ -183,6 +183,46 @@ class SessionMappingTest {
         assertEquals(10.seconds, paused.positionAt(99_000))
     }
 
+    // #595: a state that says it plays at speed 0 (a remote session may report one) moves on the
+    // home screen's bar at normal speed, as the player says it plays; an unknown position stays
+    // unknown there, and the bar at its start.
+    @Test
+    fun theBarMovesAStatePlayingAtSpeedZeroAtNormalSpeed() {
+        val playing =
+            SessionMapping.playbackInfo(
+                SPOTIFY,
+                state(PlaybackState.STATE_PLAYING, positionMs = 10_000, speed = 0f, updatedAt = 5_000),
+            )
+        assertEquals(12.seconds, playing.displayPositionAt(7_000))
+        val unknown =
+            SessionMapping.playbackInfo(
+                SPOTIFY,
+                state(
+                    PlaybackState.STATE_PLAYING,
+                    positionMs = PlaybackState.PLAYBACK_POSITION_UNKNOWN,
+                    speed = 0f,
+                    updatedAt = 5_000,
+                ),
+            )
+        assertNull(unknown.displayPositionAt(7_000))
+    }
+
+    // Skip detection reads the position as Android defines the speed: `PLAYING` at speed 0 (Media3,
+    // during a passing loss of audio focus) does not move, so the time left at a change is as before.
+    @Test
+    fun skipDetectionReadsAStatePlayingAtSpeedZeroAsStill() {
+        val before =
+            SessionMapping.playbackInfo(
+                SPOTIFY,
+                state(PlaybackState.STATE_PLAYING, positionMs = 10_000, speed = 0f, updatedAt = 5_000),
+            )
+        assertEquals(10.seconds, before.positionAt(7_000))
+        val from = NowPlaying(title = "Sundown", artists = "Gordon Lightfoot", duration = 100.seconds, player = SPOTIFY)
+        val change =
+            SessionChange(from.copy(title = "Carefree Highway"), changedAt = 25_000, before = before, from = from)
+        assertEquals(90.seconds, change.timeLeft)
+    }
+
     @Test
     fun theQueueAndItsTitleMapWherePublished() {
         val queue =
