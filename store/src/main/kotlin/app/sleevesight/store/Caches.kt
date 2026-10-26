@@ -87,6 +87,17 @@ class Caches(
                 queries.retrievalDeleteAboutArtists(RetrievalCodec.TRACK_ONLY_MARKER).value
         }
 
+    /**
+     * Deletes everything the caches keep, for *Clear history* (#547): the retrieval entries, the
+     * artist resolutions, the artist-level results and the written insights and cards, in one
+     * transaction, so a failure leaves them as they were. Returns how many entries it deleted.
+     */
+    fun clearAll(): Long =
+        queries.transactionWithResult {
+            queries.retrievalDeleteAll().value + queries.artistDeleteAll().value +
+                queries.artistResultDeleteAll().value + queries.synthesisDeleteAll().value
+        }
+
     // Rows holding a source tag the app no longer knows, as the adapter's source or among the
     // sources of its lines or consulted (or, for an artist-level result, depended on); a read
     // treats them as misses. Reads the small `sources` column of every row, once per purge.

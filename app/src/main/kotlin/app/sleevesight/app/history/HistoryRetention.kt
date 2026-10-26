@@ -13,7 +13,9 @@ import kotlin.time.Duration.Companion.hours
 /**
  * Keeps the session history and the track changes for the user's *Keep history for* ([lifetime];
  * null keeps them for ever), and clears them on *Clear history*. Both go through [recorder]'s
- * queue, so they are ordered with the history's writes.
+ * queue, so they are ordered with the history's writes. *Clear history* then runs [forget], which
+ * deletes everything else kept about the tracks played (#547: the caches, and what is held in
+ * memory about them), and returns whether it did.
  *
  * [run] deletes what is older than the lifetime ([HistoryRecorder.deleteOlderThan]) once the
  * settings are first read, which is at each start of the process, again each time the lifetime
@@ -28,6 +30,7 @@ class HistoryRetention(
     private val recorder: HistoryRecorder,
     private val lifetime: Flow<Duration?>,
     private val scope: CoroutineScope,
+    private val forget: suspend () -> Boolean = { true },
 ) {
     // The lifetime now, for the deletions already queued: they run on the I/O dispatcher.
     @Volatile
@@ -48,9 +51,16 @@ class HistoryRetention(
 
     /**
      * *Clear history*, in [scope], which lives as long as the process: once confirmed, a clear is
-     * made even if the screen that asked goes away. The result says whether it succeeded.
+     * made even if the screen that asked goes away. The history is cleared, then [forget] runs,
+     * even if the history's clear failed, so as much as can be is deleted. The result says whether
+     * both succeeded.
      */
-    fun clear(): Deferred<Boolean> = scope.async { recorder.clear() }
+    fun clear(): Deferred<Boolean> =
+        scope.async {
+            val history = recorder.clear()
+            val rest = forget()
+            history && rest
+        }
 
     companion object {
         /**

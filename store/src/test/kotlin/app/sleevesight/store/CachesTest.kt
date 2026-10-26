@@ -33,6 +33,23 @@ class CachesTest {
     }
 
     @Test
+    fun `clearing all empties every cache, and they keep working`() {
+        caches.retrieval.put(SourceId.MUSICBRAINZ, "a|x", 1, result())
+        caches.artists.put("a", ArtistResolution.None)
+        caches.artistResults.put(LASTFM_PART, "a", "v")
+        caches.synthesis.put(key("a|x"), "text")
+
+        assertEquals(4, caches.clearAll())
+
+        val empty = TableStats(0, 0)
+        assertEquals(CacheStats(empty, empty, empty, empty), caches.stats())
+        fixture.assertTotals()
+        assertNull(caches.synthesis.get(key("a|x")))
+        caches.synthesis.put(key("b|y"), "again")
+        assertEquals("again", caches.synthesis.get(key("b|y"))?.text)
+    }
+
+    @Test
     fun `purging deletes the expired entries and keeps the rest`() {
         caches.retrieval.put(SourceId.DISCOGS, "a|x", 1, result())
         caches.retrieval.put(SourceId.MUSICBRAINZ, "a|x", 1, result())

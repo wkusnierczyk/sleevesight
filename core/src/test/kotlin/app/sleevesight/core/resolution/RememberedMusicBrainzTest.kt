@@ -1,5 +1,9 @@
 package app.sleevesight.core.resolution
 
+import app.sleevesight.core.pipeline.ClearEpoch
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,11 +22,15 @@ class RememberedMusicBrainzTest {
         val asked = mutableListOf<String>()
         var failing = false
 
+        /** While set, a search waits for it before it answers. */
+        var hold: CompletableDeferred<Unit>? = null
+
         override suspend fun searchRecordings(
             title: String,
             artist: String,
         ): Lookup<List<MbRecording>> {
             asked += "search $title"
+            hold?.await()
             return if (failing) Lookup.Failed("unreachable") else inner.searchRecordings(title, artist)
         }
 
@@ -62,6 +70,37 @@ class RememberedMusicBrainzTest {
             remembered.searchArtists("Artist")
             remembered.searchArtists("Artist")
             assertEquals(listOf("search Song", "artists Artist"), counting.asked)
+        }
+
+    @Test
+    fun `an answer to work started before a clear is not kept when it arrives`() =
+        runTest {
+            val epoch = ClearEpoch()
+            val gated = RememberedMusicBrainz(counting, time, lifetime = 30.minutes, capacity = 2, epoch = epoch)
+            val hold = CompletableDeferred<Unit>()
+            counting.hold = hold
+            val asking = async(epoch.mark()) { gated.searchRecordings("Song", "Artist") }
+            runCurrent()
+
+            epoch.advance()
+            gated.forget()
+            hold.complete(Unit)
+            asking.await()
+            counting.hold = null
+            gated.searchRecordings("Song", "Artist")
+
+            assertEquals(listOf("search Song", "search Song"), counting.asked)
+        }
+
+    @Test
+    fun `forgetting asks every question again`() =
+        runTest {
+            remembered.searchRecordings("Song", "Artist")
+            remembered.searchArtists("Artist")
+            remembered.forget()
+            remembered.searchRecordings("Song", "Artist")
+            remembered.searchArtists("Artist")
+            assertEquals(listOf("search Song", "artists Artist", "search Song", "artists Artist"), counting.asked)
         }
 
     @Test

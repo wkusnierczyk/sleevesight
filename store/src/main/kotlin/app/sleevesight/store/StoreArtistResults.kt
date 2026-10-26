@@ -1,8 +1,10 @@
 package app.sleevesight.store
 
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.sources.ArtistPart
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.core.sources.KeptPart
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
@@ -22,11 +24,14 @@ import kotlin.coroutines.cancellation.CancellationException
  * It does not throw, as [ArtistResults] asks: a database that fails to open, read or write misses
  * and keeps nothing, so the adapter asks its source each time (with no cache, the adapters keep
  * some answers in memory instead; [persists] stays true here). Cancellation is rethrown.
+ *
+ * Nothing found by work started before *Clear history* is kept after it ([epoch], #547).
  */
 class StoreArtistResults(
     private val caches: () -> Caches,
     private val io: CoroutineContext,
     private val keeping: ArtistKeeping,
+    private val epoch: ClearEpoch = ClearEpoch(),
 ) : ArtistResults {
     override suspend fun get(
         part: ArtistPart,
@@ -42,7 +47,8 @@ class StoreArtistResults(
         key: String,
         value: String,
     ) {
-        keeping.ifOn { failingAs(false) { caches().artistResults.put(part, key, value) } }
+        val work = currentCoroutineContext()
+        keeping.ifOn { epoch.ifCurrent(work) { failingAs(false) { caches().artistResults.put(part, key, value) } } }
     }
 
     // [call] in [io], or [failed] when it throws anything but cancellation.
