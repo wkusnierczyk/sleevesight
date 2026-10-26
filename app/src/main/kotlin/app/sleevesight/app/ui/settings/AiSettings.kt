@@ -22,14 +22,14 @@ import app.sleevesight.core.settings.Settings
 internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, ProviderId.OPENAI, ProviderId.GOOGLE)
 
 /**
- * The AI services: per provider offered, a switch, and under it its model, by name ([modelName]),
- * and its reasoning effort. The switches are exclusive: switching one on switches the one on before
- * off, and with all off no insight is written. A provider's model and effort can be set while it
- * is off, and stay when it is switched off, so switching back restores them. Its key is under
- * *Secrets*, which a link under the switch leads to ([KeyLink]); switched on without it, the
- * provider says so. A provider whose selected model was found unavailable ([unavailable], by
- * provider; #540) says so under its model, and asks for another; Home's note of it links to the
- * model's row ([SettingsTarget.model], #581).
+ * The AI services: per provider offered, a switch with its badge ([ServiceBadge]), and under it
+ * its model, by name ([modelName]), and its reasoning effort. The switches are exclusive: switching
+ * one on switches the one on before off, and with all off no insight is written. A provider's
+ * model and effort can be set while it is off, and stay when it is switched off, so switching back
+ * restores them. Its key is under *Secrets*, which a link under the switch leads to ([KeyLink]);
+ * switched on without it, the provider says so. A provider whose selected model was found
+ * unavailable ([unavailable], by provider; #540) says so under its model, and asks for another;
+ * Home's note of it links to the model's row ([SettingsTarget.model], #581).
  */
 @Suppress("LongParameterList") // What the rows show, and what they change.
 @Composable
@@ -67,6 +67,7 @@ private fun ProviderRows(
         // Switched on, it says when its key is missing or cannot be read: insights wait for it.
         summary = keyId?.let { keyNote(it, secrets, linked = true) }.takeIf { on },
         checked = on,
+        leading = { ServiceBadge(providerBadge(name)) },
         below = keyId?.let { { KeyLink(it) } },
     ) { switchedOn ->
         update {
@@ -92,7 +93,7 @@ private fun ProviderRows(
                     else -> ""
                 },
             summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
-            indent = true,
+            underBadge = true,
             onClick = { open(SettingsDialog.Model(provider)) },
         )
     }
@@ -117,7 +118,7 @@ private fun EffortRow(
         title = stringResource(R.string.settings_ai_effort_of, name),
         value = efforts.first { it.first == current }.second,
         summary = stringResource(R.string.settings_ai_effort_summary),
-        indent = true,
+        underBadge = true,
     ) {
         open(
             SettingsDialog.Choice(R.string.settings_ai_effort_of, efforts, current, titleArg = name) { effort ->

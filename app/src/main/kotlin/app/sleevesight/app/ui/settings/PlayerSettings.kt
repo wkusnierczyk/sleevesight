@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.core.settings.Settings
@@ -26,9 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-
-/** A player's icon under *Players*, as Android's own app lists draw it (#535). */
-private val PLAYER_ICON = 40.dp
 
 /** The players seen, where they are not known (tests, previews). */
 private val NONE_SEEN: StateFlow<Set<String>> = MutableStateFlow(emptySet())
@@ -88,7 +84,7 @@ private fun PlayerRow(
     val context = LocalContext.current
     val name = apps.label(player)
     val launch = remember(player) { apps.launch(player) }
-    val size = with(LocalDensity.current) { PLAYER_ICON.roundToPx() }
+    val size = with(LocalDensity.current) { ROW_MARK.roundToPx() }
     val icon by produceState<ImageBitmap?>(null, player, size) {
         val load = apps.installed?.icon ?: return@produceState
         value = withContext(Dispatchers.IO) { load(player)?.bitmap(size) }
@@ -99,7 +95,7 @@ private fun PlayerRow(
         checked = followed,
         leading =
             icon?.let { loaded ->
-                { Image(loaded, contentDescription = null, modifier = Modifier.size(PLAYER_ICON)) }
+                { Image(loaded, contentDescription = null, modifier = Modifier.size(ROW_MARK)) }
             },
         below =
             launch?.let { intent ->
