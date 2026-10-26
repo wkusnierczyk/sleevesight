@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -112,17 +111,10 @@ class Pipeline(
             extraBufferCapacity = EVENT_BUFFER,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
-    private val stateFlow = MutableStateFlow<TrackState?>(null)
 
-    // What [state] shows, with *Clear history*'s count (#547), changed together in one atomic
-    // update: a run started before the last [forget] publishes nothing, and emits no event, after
-    // it. Not a data class, so each update is a new value. [stateFlow] then copies the latest.
-    private class Published(
-        val forgets: Long,
-        val state: TrackState?,
-    )
-
-    private val published = MutableStateFlow(Published(0, null))
+    // What [state] shows, with *Clear history*'s count (#547): a run started before the last
+    // [forget] publishes nothing, and emits no event, after it.
+    private val shown = ShownState()
     private val runs = MutableStateFlow(0L)
     private val taps = MutableStateFlow(0L)
     private val acted = MutableStateFlow(false)
@@ -131,17 +123,13 @@ class Pipeline(
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
     /** The current track's state, null before the first track. */
-    val state: StateFlow<TrackState?> = stateFlow.asStateFlow()
+    val state: StateFlow<TrackState?> = shown.state
 
     /**
      * Forgets the current track's state, for *Clear history* (#547): [state] is null again, and no
      * run or preparation started before publishes a state or an event after it.
      */
-    fun forget() {
-        published.update { Published(it.forgets + 1, null) }
-        // Each change copies what was published last, whichever wins a race.
-        stateFlow.value = published.value.state
-    }
+    fun forget() = shown.forget()
 
     /** The user acted in the app (after it started, nothing is written until they do; D5). */
     fun userActed() {
@@ -202,9 +190,9 @@ class Pipeline(
         next: NowPlaying,
         control: RunControl,
     ) {
-        val since = published.value.forgets
+        val since = shown.forgets
         Preparation(parts, time, settings(), parts.normalizer.normalize(next), control) {
-            if (published.value.forgets == since) eventFlow.tryEmit(it)
+            if (shown.forgets == since) eventFlow.tryEmit(it)
         }.run()
     }
 
@@ -228,17 +216,14 @@ class Pipeline(
         again: Gathered? = null,
     ): TrackRun {
         val token = runs.updateAndGetValue()
-        val since = published.value.forgets
+        val since = shown.forgets
         return TrackRun(
             parts = parts,
             time = time,
             input = RunInput(current, nowPlaying, track, again),
             control = control,
-            onEvent = { if (published.value.forgets == since) eventFlow.tryEmit(it) },
-            publish = { state ->
-                published.update { if (runs.value == token && it.forgets == since) Published(since, state) else it }
-                stateFlow.value = published.value.state
-            },
+            onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
+            publish = { state -> shown.publish(state, since) { runs.value == token } },
         )
     }
 

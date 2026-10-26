@@ -529,6 +529,8 @@ class AppGraph(
     private suspend fun forgetTracks(): Boolean {
         clearEpoch.advance()
         pipeline.forget()
+        // Again just before the caches' clear, so it waits for the writes under way then too.
+        clearEpoch.advance()
         val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
         if (!cleared) Log.w(TAG, "The caches could not be cleared")
         wiring.forgetRemembered()
