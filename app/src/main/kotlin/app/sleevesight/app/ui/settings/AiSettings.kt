@@ -28,7 +28,8 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * model and effort can be set while it is off, and stay when it is switched off, so switching back
  * restores them. Its key is under *Secrets*, which a link under the switch leads to ([KeyLink]);
  * switched on without it, the provider says so. A provider whose selected model was found
- * unavailable ([unavailable], by provider; #540) says so under its model, and asks for another.
+ * unavailable ([unavailable], by provider; #540) says so under its model, and asks for another;
+ * Home's note of it links to the model's row ([SettingsTarget.model], #581).
  */
 @Suppress("LongParameterList") // What the rows show, and what they change.
 @Composable
@@ -79,20 +80,23 @@ private fun ProviderRows(
     }
     val default = Settings.DEFAULT_MODELS[provider]
     val chosen = settings.aiModels[provider]
-    ValueRow(
-        // Each row and dialog names its provider: with several providers, a screen reader reads
-        // each row on its own.
-        title = stringResource(R.string.settings_ai_model_of, name),
-        value =
-            when {
-                chosen != null && chosen != default -> modelName(chosen)
-                default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
-                else -> ""
-            },
-        summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
-        underBadge = true,
-        onClick = { open(SettingsDialog.Model(provider)) },
-    )
+    // Where Home's note of a model found unavailable links to (#581).
+    LandingSpot(SettingsTarget.model(provider)) {
+        ValueRow(
+            // Each row and dialog names its provider: with several providers, a screen reader reads
+            // each row on its own.
+            title = stringResource(R.string.settings_ai_model_of, name),
+            value =
+                when {
+                    chosen != null && chosen != default -> modelName(chosen)
+                    default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
+                    else -> ""
+                },
+            summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
+            underBadge = true,
+            onClick = { open(SettingsDialog.Model(provider)) },
+        )
+    }
     EffortRow(provider, name, settings, update, open)
 }
 

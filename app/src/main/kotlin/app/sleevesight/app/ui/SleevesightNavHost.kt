@@ -18,6 +18,8 @@ import app.sleevesight.app.ui.home.HomePage
 import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.report.WithTesterReport
+import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.settings.SettingsTarget
 import kotlinx.serialization.Serializable
 
 /**
@@ -31,9 +33,31 @@ data object FirstRun
 @Serializable
 data object Home
 
-/** The settings screen, opened from [Home]. */
+/**
+ * The settings screen, opened from [Home], all folded. Kept as it was before [SettingsAt] (#581): a
+ * back stack saved by an earlier version, with the settings on it, is restored by its destination.
+ */
 @Serializable
 data object SettingsPage
+
+/**
+ * The settings screen opened at a setting (#581): unfolded at [section] (a [SettingsSection]'s
+ * name) and landed on it, at its row [row] if one is named ([SettingsTarget]), as Home's note of a
+ * model found unavailable opens them. A route of its own beside [SettingsPage], which stays as it was.
+ */
+@Serializable
+data class SettingsAt(
+    val section: String,
+    val row: String? = null,
+) {
+    /** Where the settings open; null for a section no longer known, which opens them all folded. */
+    val target: SettingsTarget? get() = SettingsTarget.named(section, row)
+
+    companion object {
+        /** The settings opened at [target]. */
+        fun of(target: SettingsTarget): SettingsAt = SettingsAt(target.section.name, target.row)
+    }
+}
 
 /** The data sources and their licences, opened from [SettingsPage], as a page that closes back to it (#549). */
 @Serializable
@@ -44,20 +68,26 @@ data object CreditsPage
 data object DiagnosticsPage
 
 /**
- * Where Home and its pages lead: the settings ([openSettings]), a page of Home's ([openPage], under
- * *Layout*'s *Separate pages*, #447), and, from a page, back ([back]) to where it was opened from.
+ * Where Home and its pages lead: the settings ([openSettings]), or the settings at a setting
+ * ([openSettingsAt], #581), a page of Home's ([openPage], under *Layout*'s *Separate pages*, #447),
+ * and, from a page, back ([back]) to where it was opened from.
  */
 class HomeLinks(
     val openSettings: () -> Unit,
     val openPage: (HomePage) -> Unit,
     val back: () -> Unit,
+    val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 )
 
-/** Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen. */
+/**
+ * Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen;
+ * and where it opens ([landOn]: a setting, as its route names it, or null for all folded; #581).
+ */
 class SettingsLinks(
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
+    val landOn: SettingsTarget? = null,
 )
 
 /**
@@ -137,16 +167,20 @@ fun SleevesightNavHost(
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
         composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
-        composable<SettingsPage> {
+        // The settings, all folded or at a setting (#581); either way, [settings] draws them.
+        val settingsPage = @Composable { landOn: SettingsTarget? ->
             val links =
                 SettingsLinks(
                     openCredits = { navController.navigate(CreditsPage) },
                     openDiagnostics = { navController.navigate(DiagnosticsPage) },
                     // Single top, as from Home.
                     openWhatLeaves = { navController.navigate(FirstRun) { launchSingleTop = true } },
+                    landOn = landOn,
                 )
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
+        composable<SettingsPage> { settingsPage(null) }
+        composable<SettingsAt> { settingsPage(it.toRoute<SettingsAt>().target) }
         composable<CreditsPage> {
             // Once: a second tap while the page leaves would pop the screen under it too.
             val close = dropUnlessResumed { navController.popBackStack() }
@@ -178,6 +212,8 @@ private fun homeLinks(
         openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } },
         openPage = { page -> if (onTop()) navController.navigate(page) },
         back = { if (onTop()) navController.popBackStack() },
+        // Single top too: a double tap opens them once.
+        openSettingsAt = { target -> navController.navigate(SettingsAt.of(target)) { launchSingleTop = true } },
     )
 }
 
