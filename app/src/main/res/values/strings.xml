@@ -159,6 +159,7 @@
     <string name="settings_key_scan_setup">This QR code holds several keys: use “Load keys” in Settings, under Secrets.</string>
     <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
+    <!-- What a screen reader says of a row of the table of the keys read (#542). -->
     <string name="setup_new">%1$s, ending %2$s: new</string>
     <string name="setup_replaces">%1$s, ending %2$s: replaces the saved key</string>
     <string name="setup_refused">%1$s: not saved. %2$s</string>
