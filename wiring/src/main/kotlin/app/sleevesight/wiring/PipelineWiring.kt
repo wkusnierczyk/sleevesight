@@ -121,10 +121,10 @@ class PipelineWiring internal constructor(
      * key is in [keys] ([web]). A source switched off under *Sources* still gets its adapter:
      * the pipeline reads the switch for each track.
      *
-     * The keys, the web engines and *Show genres* (#444), unlike those switches, are read here, when
-     * the list is built: a key saved or removed, an engine switched, or *Show genres* switched, takes
-     * a new list, and so a new pipeline. Each call
-     * builds new adapters, so whatever state one holds in memory starts again: Last.fm's check of an
+     * The keys, the web engines and *Show genres* (#444; for MusicBrainz, Last.fm and Wikidata, #545),
+     * unlike those switches, are read here, when the list is built: a key saved or removed, an engine
+     * switched, or *Show genres* switched, takes a new list, and so a new pipeline. Each call builds
+     * new adapters, so whatever state one holds in memory starts again: Last.fm's check of an
      * artist's name (`ArtistCheck` in `LastFmMatch.kt`) keeps its verdicts in the artist cache, which
      * outlives the adapters, or, without one, in memory for up to 1024 names, which does not.
      */
@@ -134,7 +134,7 @@ class PipelineWiring internal constructor(
     ): List<SourceAdapter> =
         listOfNotNull(
             musicBrainz(settings.showGenres),
-            wikipedia(),
+            wikipedia(settings.showGenres),
             keys.lastFm?.let { lastFm(it, settings.showGenres) },
             web(keys.web.filterKeys { it in settings.webEngines }),
         )
@@ -142,9 +142,14 @@ class PipelineWiring internal constructor(
     /** MusicBrainz's templated lines, from the resolution; with the recording's tags only with [genres]. */
     fun musicBrainz(genres: Boolean = true): SourceAdapter = MusicBrainzSource(genres = genres)
 
-    /** Wikipedia's lead sentences, with Wikidata's identity check. */
-    fun wikipedia(): SourceAdapter =
-        WikipediaSource(WikipediaClient(net), IdentityCheck(WikidataClient(net), names), names, artists = artists)
+    /** Wikipedia's lead sentences, with Wikidata's identity check; Wikidata's genres only with [genres]. */
+    fun wikipedia(genres: Boolean = true): SourceAdapter =
+        WikipediaSource(
+            WikipediaClient(net),
+            IdentityCheck(WikidataClient(net), names, genres),
+            names,
+            artists = artists,
+        )
 
     /** Last.fm on the user's [key]; asking for the artists' top tags only with [genres]. */
     fun lastFm(
