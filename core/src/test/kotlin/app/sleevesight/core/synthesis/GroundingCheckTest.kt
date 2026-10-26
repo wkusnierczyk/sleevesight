@@ -144,21 +144,23 @@ class GroundingCheckTest {
     }
 
     @Test
-    fun `etc ends a sentence before a word that opens one, as initials do`() {
-        assertEquals(
-            listOf("It has guitars, drums, etc.", "It charted. [W1]"),
-            GroundingCheck.splitSentences("It has guitars, drums, etc. It charted. [W1]"),
-        )
-        assertEquals(
-            listOf("It has guitars, drums, etc.", "*It* charted. [W1]"),
-            GroundingCheck.splitSentences("It has guitars, drums, etc. *It* charted. [W1]"),
-        )
-        val joined =
+    fun `etc ends a sentence before a capital, as in the simulator, so an uncited one shows`() {
+        val replies =
             listOf(
-                "It has guitars, etc. Billboard named it. [W1]",
-                "It has guitars, etc. *Rolling Stone* named it. [W1]",
+                "The arrangement uses guitars, strings, etc. Lightfoot recorded it in Toronto. [W1]",
+                "The arrangement uses guitars, strings, etc. It was recorded in Toronto. [W1]",
+                "The arrangement uses guitars, strings, etc. *Rolling Stone* praised it. [W1]",
             )
-        for (reply in joined) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), reply)
+        for (reply in replies) {
+            val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("W1"), allowModel = false))
+            assertEquals(
+                listOf(SentenceStatus.UNCITED, SentenceStatus.OK),
+                written.grounded.paragraphs
+                    .flatten()
+                    .map { it.status },
+                reply,
+            )
+        }
     }
 
     @Test
