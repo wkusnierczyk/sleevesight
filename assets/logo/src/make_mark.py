@@ -18,7 +18,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # its neighbour, under `python -I` too
-from make_feature_graphic import REC_SIDE, REC_X, REC_Y, brand_sheet, here, need, num, record  # noqa: E402
+from make_feature_graphic import (  # noqa: E402
+    REC_SIDE, REC_X, REC_Y, brand_sheet, here, need, num, record, root)
 
 SCHEMES = {'light': 'lt', 'dark': 'dk'}
 out_dir = os.path.dirname(here)
@@ -45,7 +46,7 @@ def main():
         path = os.path.join(out_dir, f'mark-{name}.svg')
         with open(path, 'w') as f:
             f.write(build(tile, symbol, schemes, scheme))
-        print(os.path.relpath(path))
+        print(os.path.relpath(path, root))
 
 
 if __name__ == '__main__':
