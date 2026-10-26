@@ -172,7 +172,7 @@ internal object RetrievalCodec {
     @Serializable
     private data class ReleaseDateJson(
         val title: String,
-        val date: String,
+        val date: String? = null,
         val group: String,
     )
 

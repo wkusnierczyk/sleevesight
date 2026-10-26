@@ -163,8 +163,9 @@ class RecordingResolver(
     }
 
     // [pool]: the candidates the choice was made from (title and length fit, the track's artists
-    // credited, narrowed by length as the choice is), whose releases give the album's year (#556), of
-    // those only the ones whose credits are [chosen]'s artists: never a namesake's recording.
+    // credited, narrowed by length as the choice is), whose releases give the album's year (#556). The
+    // same-name check passed over them, so each artist they credit has one identity among them, the
+    // accepted one: never a namesake's recording.
     private suspend fun accept(
         track: NormalizedTrack,
         chosen: Candidate,
@@ -172,10 +173,10 @@ class RecordingResolver(
         pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
-        // Each dated release, by its own title, in its release group (else alone).
+        // Each release, by its own title, in its release group (else alone); undated ones too.
         val releases =
-            pool.filter { it.sameArtists(chosen) }.flatMap { it.recording.releases }.mapNotNull { release ->
-                release.date?.let { ReleaseDate(release.title, it, release.releaseGroup?.mbid ?: release.mbid) }
+            pool.flatMap { it.recording.releases }.map { release ->
+                ReleaseDate(release.title, release.date, release.releaseGroup?.mbid ?: release.mbid)
             }
         val base =
             Resolution(
@@ -339,10 +340,6 @@ class RecordingResolver(
          */
         val known: Map<String, String?> get() =
             ids.mapValues { (_, ids) -> ids.singleOrNull()?.takeUnless { it.startsWith(BAND) } }
-
-        /** Whether every artist this credits is one [other] credits too, by the same ids. */
-        fun sameArtists(other: Candidate): Boolean =
-            ids.all { (artist, mine) -> mine.all { it in other.ids[artist].orEmpty() } }
 
         /** The credits that stand for the track's artists: by name, or a band whose leader is confirmed. */
         val credited: Set<String> get() = named.values.flatten().toSet() + bands

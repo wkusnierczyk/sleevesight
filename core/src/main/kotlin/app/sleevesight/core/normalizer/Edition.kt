@@ -13,10 +13,42 @@ object Edition {
      * as something is left: "Sundown (Remastered (2024)) [Deluxe]" is "Sundown", "(Untitled)
      * (Deluxe)" is "(Untitled)". An unbalanced closing bracket ends the stripping.
      */
-    fun strip(release: String): String {
+    fun strip(release: String): String = strip(release) { true }
+
+    /**
+     * [release] less its closing bracketed parts as [strip] takes them, but only while each reads as
+     * an edition of the same recordings ([isEdition]): "Abbey Road (Remastered 2019) [Super Deluxe]"
+     * is "Abbey Road", but "Sundown (Live)", "Interstellar (Original Motion Picture Soundtrack)" and
+     * "Sundown (Live) [Remastered]" keep their names, since a live album or a soundtrack is another
+     * release than the studio one of that name. For the header's year (#556).
+     */
+    fun stripEditions(release: String): String = strip(release, ::isEdition)
+
+    /**
+     * Whether a bracketed [part] ("(Remastered 2019)") names an edition: a word of [EDITION_WORDS],
+     * or a year alone ("(2011)"), and no word of [OTHER_RECORDINGS] ("(Live 2011 Remaster)" is not).
+     */
+    fun isEdition(part: String): Boolean {
+        val words =
+            part
+                .lowercase()
+                .map { if (it.isLetterOrDigit()) it else ' ' }
+                .joinToString("")
+                .split(' ')
+                .filter { it.isNotEmpty() }
+        if (words.any { word -> OTHER_RECORDINGS.any { word.startsWith(it) } }) return false
+        return words.any { word -> EDITION_WORDS.any { word.startsWith(it) } } ||
+            (words.size == 1 && YEAR.matches(words.single()))
+    }
+
+    // [release] less its closing bracketed parts while [take] accepts each.
+    private fun strip(
+        release: String,
+        take: (String) -> Boolean,
+    ): String {
         var name = release.trim()
         var rest = less(name)
-        while (rest != null) {
+        while (rest != null && take(name.substring(rest.length))) {
             name = rest
             rest = less(name)
         }
@@ -44,4 +76,14 @@ object Edition {
 
     private val OPENERS = setOf('(', '[')
     private val CLOSERS = setOf(')', ']')
+
+    /** The beginnings of the words that name an edition: remaster(ed), deluxe, expanded, … */
+    private val EDITION_WORDS =
+        listOf("remaster", "deluxe", "expanded", "anniversary", "edition", "bonus", "special", "reissue")
+
+    /** The beginnings of the words that name another recording or another kind of release. */
+    private val OTHER_RECORDINGS =
+        listOf("live", "demo", "soundtrack", "acoustic", "instrumental", "mix", "remix", "session", "unplugged")
+
+    private val YEAR = Regex("(1[89]|20)[0-9]{2}")
 }

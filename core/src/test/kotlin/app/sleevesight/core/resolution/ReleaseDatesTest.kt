@@ -62,6 +62,8 @@ class ReleaseDatesTest {
                 listOf(
                     ReleaseDate("Crazy World", "1990-11-06", "group-crazy-world"),
                     ReleaseDate(soundtrack, "2026-03-20", "group-phm"),
+                    // Undated, kept: it says the album is named.
+                    ReleaseDate("Undated Hits", null, "group-undated"),
                 ),
                 resolution.releaseDates,
             )
@@ -120,6 +122,39 @@ class ReleaseDatesTest {
         // A release named with its edition is taken first.
         val remaster = dates + ReleaseDate("Abbey Road (Remastered)", "2009-09-09", "g-remaster")
         assertEquals("2009", year("Abbey Road (Remastered)", remaster))
+        // A year alone is an edition too.
+        assertEquals("1969", year("Abbey Road (2019)", dates))
+    }
+
+    @Test
+    fun `rule 1, only an edition is stripped, never a live album's or a soundtrack's name`() {
+        val dates =
+            listOf(ReleaseDate("Sundown", "1974-01", "g-sundown"), ReleaseDate("Interstellar", "2014", "g-inter"))
+        assertNull(year("Sundown (Live)", dates))
+        assertNull(year("Sundown (Live) [Remastered]", dates))
+        assertNull(year("Sundown (Demo Version)", dates))
+        assertNull(year("Interstellar (Original Motion Picture Soundtrack)", dates))
+        // Not named: the player's year, if it sends one.
+        assertEquals("1981", year("Sundown (Live)", dates, playerYear = "1981"))
+        assertEquals("1974", year("Sundown [Deluxe Edition]", dates))
+    }
+
+    @Test
+    fun `rule 1, an undated release of the exact name gives no year, and the name is not stripped`() {
+        val dates =
+            listOf(
+                ReleaseDate("Sundown (Remastered)", null, "g-remaster"),
+                ReleaseDate("Sundown", "1974-01", "g-sundown"),
+            )
+        assertNull(year("Sundown (Remastered)", dates))
+        assertEquals("2004", year("Sundown (Remastered)", dates, playerYear = "2004"))
+        // In one release group, a dated release is kept over an undated one.
+        val collapsed =
+            ReleaseDate.collapse(
+                listOf(ReleaseDate("Sundown", null, "g"), ReleaseDate("Sundown", "1974", "g")),
+                names::key,
+            )
+        assertEquals(listOf(ReleaseDate("Sundown", "1974", "g")), collapsed)
     }
 
     @Test
