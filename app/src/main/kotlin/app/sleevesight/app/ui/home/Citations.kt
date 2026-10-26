@@ -69,8 +69,16 @@ internal fun CheckedProse(
     val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
     // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out;
-    // a line break before it passes to the sentence shown next (#574).
-    val shown = remember(paragraph) { shownSentences(paragraph, shown(sentences)) }
+    // a line break before it passes to the sentence shown next (#574). Each shown sentence with its
+    // runs and whether it starts a line.
+    val shown =
+        remember(paragraph) {
+            var newLine = false
+            paragraph.zip(shown(sentences)).mapNotNull { (sentence, runs) ->
+                newLine = newLine || sentence.afterLineBreak
+                if (runs.isBlank()) null else Triple(sentence, runs, newLine).also { newLine = false }
+            }
+        }
     if (shown.isEmpty()) return
     val uncited = resources.getString(R.string.home_cite_none)
     val said =
@@ -95,19 +103,6 @@ internal fun CheckedProse(
             }
         }
     Prose(ProseText(text, said, lines(sentences, policy)), onCite)
-}
-
-// The sentences of a paragraph that show, each with its [runs] and whether it starts a line: a
-// line break came before it, or before a sentence between it and the last shown that shows nothing.
-private fun shownSentences(
-    paragraph: List<CheckedSentence>,
-    runs: List<List<ShownRun>>,
-): List<Triple<CheckedSentence, List<ShownRun>, Boolean>> {
-    var newLine = false
-    return paragraph.zip(runs).mapNotNull { (sentence, its) ->
-        newLine = newLine || sentence.afterLineBreak
-        if (its.isBlank()) null else Triple(sentence, its, newLine).also { newLine = false }
-    }
 }
 
 /**
