@@ -52,7 +52,7 @@ The pipeline turns a track into an insight. It is plain Kotlin with no Android i
 - **Source adapters.** One for each source: MusicBrainz, Wikipedia and Wikidata, Last.fm, and web search through Exa. Each asks its source and returns a typed outcome (found, nothing, rejected, unreachable) with the lines of evidence it found.
 - **Evidence.** The lines that may be cited: the verified lines, and the web search lines that passed its filter, each with an id such as `MB1` or `W2`, given the same way every time for the same answers.
 - **Synthesis.** Builds the prompt from the evidence (data only, fenced and labelled as such) and asks the AI service you chose, streaming its reply. The model has no tools: it gets a prompt and returns text.
-- **Grounding check.** Splits the reply into sentences and checks each citation against the evidence sent. A sentence that cites nothing is underlined; a citation of a line that does not exist is flagged. The model's own knowledge is used only if you switch it on, and its sentences then carry an *M* chip in place of a source's.
+- **Grounding check.** Splits the reply into sentences and checks each citation against the evidence sent. A sentence that cites nothing is underlined; a citation of a line that does not exist is flagged. A reply in which the model corrects itself ("Wait, that sentence is not supported... Here is the corrected insight:") shows only its corrected version. The model's own knowledge is used only if you switch it on, and its sentences then carry an *M* chip in place of a source's.
 
 The model never decides what is true: resolution, matching, the choice of evidence and the citation check are all deterministic code, tested against fixtures.
 
