@@ -1,0 +1,79 @@
+name: Default models
+
+# Checks that each AI service's default model (`Settings.DEFAULT_MODELS`) is still listed for a key
+# and answers (#540): a default the service has retired would fail every insight of a user who
+# never chose a model, until an app update. Each provider's live test (`:ai`'s `*LiveTest`) lists
+# the models once and sends one short request, a few tokens, with a spend-limited key stored as a
+# repository secret; it fails when the default is gone, or (Anthropic) deprecated, which flags the
+# default for an update. A provider whose secret is absent (a fork, a secret removed) is skipped
+# with a notice, and the job passes.
+
+on:
+  schedule:
+    # Mondays, 06:17 UTC: off the hour, when scheduled runs queue the longest.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: default-models
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Which keys are set, without printing any: each absent one is a notice, and with none set
+      # there is nothing to check. The keys reach only this step and the tests, not the actions.
+      - name: Keys present
+        id: keys
+        env:
+          SLEEVESIGHT_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLEEVESIGHT_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SLEEVESIGHT_GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          tests=()
+          for pair in "ANTHROPIC_API_KEY:SLEEVESIGHT_ANTHROPIC_API_KEY:anthropic.AnthropicLiveTest" \
+                      "OPENAI_API_KEY:SLEEVESIGHT_OPENAI_API_KEY:openai.OpenAiLiveTest" \
+                      "GOOGLE_API_KEY:SLEEVESIGHT_GOOGLE_API_KEY:google.GoogleLiveTest"; do
+            IFS=: read -r secret variable test <<< "$pair"
+            if [ -n "${!variable}" ]; then
+              tests+=("--tests" "app.sleevesight.ai.$test")
+            else
+              echo "::notice title=Default models::The repository secret $secret is not set: its default model is not checked."
+            fi
+          done
+          if [ "${#tests[@]}" -eq 0 ]; then
+            echo "No AI service key is set: nothing to check." >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "tests=${tests[*]}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.keys.outputs.run == 'true'
+
+      - uses: actions/setup-java@v6
+        if: steps.keys.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+        if: steps.keys.outputs.run == 'true'
+        with:
+          cache-read-only: true
+
+      # `--rerun`: the test task's inputs do not include the keys, so a cached result would
+      # otherwise stand for a run that never asked the services.
+      - name: Default models listed and answering
+        if: steps.keys.outputs.run == 'true'
+        env:
+          SLEEVESIGHT_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLEEVESIGHT_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SLEEVESIGHT_GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: ./gradlew :ai:test --rerun ${{ steps.keys.outputs.tests }} --console=plain
