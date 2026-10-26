@@ -242,7 +242,7 @@ private fun SetupContents(
         for ((id, key) in keys) {
             val stored = (secrets[id] ?: SecretState.ABSENT) != SecretState.ABSENT
             val line = if (stored) R.string.setup_replaces else R.string.setup_new
-            Text(stringResource(line, stringResource(keyName(id)), endingOf(key.reveal())), style = style)
+            Text(keyLine(line, stringResource(keyName(id)), endingOf(key.reveal())), style = style)
         }
     }
     if (setup.refused.isNotEmpty() || setup.unknown.isNotEmpty() || setup.unreadable > 0) {

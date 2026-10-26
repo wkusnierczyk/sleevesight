@@ -128,7 +128,7 @@ class PurgeKeysTest {
     private fun listed(
         name: Int,
         key: String,
-    ) = app.getString(R.string.key_ending, text(name), "…" + key.takeLast(4))
+    ) = app.getString(R.string.key_ending, text(name), key.takeLast(4))
 
     private fun allAbsent(store: SecretStore = secrets) =
         runBlocking { store.states.first() }.values.all { it == SecretState.ABSENT }

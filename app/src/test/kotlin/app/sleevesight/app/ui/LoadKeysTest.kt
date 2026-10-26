@@ -142,7 +142,7 @@ class LoadKeysTest {
 
     private fun stored(id: SecretId): String? = runBlocking { secrets.get(id) }?.reveal()
 
-    private fun ending(key: String) = "…" + key.takeLast(4)
+    private fun ending(key: String) = key.takeLast(4)
 
     /** What the confirmation says of the saved key [id] whose value is [key]. */
     private fun saved(
