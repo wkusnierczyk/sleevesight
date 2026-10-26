@@ -80,10 +80,15 @@ class ClearHistoryWiringTest {
         app.makeGraph = { AppGraph(it, secretCipher = testCipher(), musicBrainzThrough = { musicBrainz }) }
     }
 
-    /** The first run acknowledged and the settings read, with *Keep history for* at a week. */
+    /**
+     * The first run acknowledged and the settings read, with *Keep history for* at a week and *Keep
+     * what sources said about each artist* on, both stored before the acknowledgement: with the
+     * switch read off, the graph clears what is kept about artists at start, which could race with
+     * what a test keeps.
+     */
     private fun ready() {
+        runBlocking { graph.settings.update { it.copy(historyLifetime = 7.days, keepArtistResults = true) } }
         FirstRunAcknowledgement(app).acknowledge()
-        runBlocking { graph.settings.update { it.copy(historyLifetime = 7.days) } }
         idleUntil("the settings read") { graph.latestSettings.value?.historyLifetime == 7.days }
     }
 
