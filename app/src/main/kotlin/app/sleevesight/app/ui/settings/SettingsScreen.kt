@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -75,7 +77,9 @@ import java.io.IOException
  * [installedPlayers] its icon, whether the phone shows it, and the players seen (#535); null lists
  * every stored player, without an icon.
  * [modelCheck] holds the services' models found unavailable (#540), which their rows say, and hears
- * each model list the model choice fetches.
+ * each model list the model choice fetches. [landOn] is where the settings open, unfolded and
+ * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
+ * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable
@@ -93,6 +97,7 @@ fun SettingsScreen(
     playerLaunch: (String) -> Intent? = { null },
     installedPlayers: InstalledPlayers? = null,
     modelCheck: ModelCheck? = null,
+    landOn: SettingsTarget? = null,
     playerLabel: (String) -> String,
 ) {
     val settings by settingsStore.settings.collectAsState(initial = null)
@@ -128,7 +133,7 @@ fun SettingsScreen(
                         onOpenDiagnostics,
                         onOpenWhatLeaves,
                     )
-                SettingsContent(current, keys, navigation, unavailable, update) { dialog = it }
+                SettingsContent(current, keys, navigation, unavailable, landOn, update) { dialog = it }
             }
         }
     }
@@ -350,7 +355,10 @@ private fun Notices(
     }
 }
 
-/** The settings' sections, all folded at first, and the links between them ([SettingsNavigator]). */
+/**
+ * The settings' sections, all folded at first, and the links between them ([SettingsNavigator]);
+ * opened at [landOn], if any, once per visit (a rotation does not land again).
+ */
 @Suppress("LongParameterList") // What the sections show and change.
 @Composable
 private fun SettingsContent(
@@ -358,11 +366,22 @@ private fun SettingsContent(
     keys: KeysShown,
     navigation: Navigation,
     unavailable: Map<ProviderId, String>,
+    landOn: SettingsTarget?,
     update: Update,
     open: (SettingsDialog) -> Unit,
 ) {
     val folds = rememberSectionFolds()
-    ProvideSettingsNavigator(folds) { SettingsColumn(settings, keys, navigation, unavailable, folds, update, open) }
+    ProvideSettingsNavigator(folds) {
+        val navigator = LocalSettingsNavigator.current
+        var opened by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(navigator) {
+            if (!opened) {
+                opened = true
+                landOn?.let { navigator?.go(it) }
+            }
+        }
+        SettingsColumn(settings, keys, navigation, unavailable, folds, update, open)
+    }
 }
 
 /** The sections, in [folds], in the order shown. */

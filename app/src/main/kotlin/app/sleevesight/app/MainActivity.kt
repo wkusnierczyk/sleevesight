@@ -132,10 +132,13 @@ class MainActivity : ComponentActivity() {
                                                 graph.sessions.seenPlayers,
                                             ),
                                         modelCheck = graph.modelCheck,
+                                        landOn = links.landOn,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
-                                pipeline = { links -> NowPlayingHome(homeFeed, links.openSettings, links.openPage) },
+                                pipeline = { links ->
+                                    NowPlayingHome(homeFeed, links.openSettings, links.openPage, links.openSettingsAt)
+                                },
                                 diagnostics = { back -> DiagnosticsScreen(graph.diagnostics, back) },
                                 page = { page, links ->
                                     NowPlayingPage(homeFeed, page, links.openSettings, links.openPage, links.back)
