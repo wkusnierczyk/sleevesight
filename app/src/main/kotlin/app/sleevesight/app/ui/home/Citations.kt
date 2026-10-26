@@ -68,12 +68,21 @@ internal fun CheckedProse(
     val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
     val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
-    // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out.
-    val shown = remember(paragraph) { paragraph.zip(shown(sentences)).filterNot { (_, runs) -> runs.isBlank() } }
+    // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out;
+    // a line break before it passes to the sentence shown next (#574). Each shown sentence with its
+    // runs and whether it starts a line.
+    val shown =
+        remember(paragraph) {
+            var newLine = false
+            paragraph.zip(shown(sentences)).mapNotNull { (sentence, runs) ->
+                newLine = newLine || sentence.afterLineBreak
+                if (runs.isBlank()) null else Triple(sentence, runs, newLine).also { newLine = false }
+            }
+        }
     if (shown.isEmpty()) return
     val uncited = resources.getString(R.string.home_cite_none)
     val said =
-        shown.joinToString(" ") { (sentence, runs) ->
+        shown.joinToString(" ") { (sentence, runs, _) ->
             val words = spoken(runs, policy, resources)
             // An uncited sentence is said to be so before its final punctuation, where a citation
             // would be: "It is great (not cited)." A closing quote keeps the note out of the
@@ -86,8 +95,9 @@ internal fun CheckedProse(
         }
     val text =
         buildAnnotatedString {
-            shown.forEachIndexed { i, (sentence, runs) ->
-                if (i > 0) append(' ')
+            shown.forEachIndexed { i, (sentence, runs, newLine) ->
+                // A sentence the reply began on a new line (a list's item, a heading) shows on one (#574).
+                if (i > 0) append(if (newLine) '\n' else ' ')
                 val doubtful = sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
                 appendSentence(runs, policy, styles, onCite, if (doubtful) flagged else null)
             }

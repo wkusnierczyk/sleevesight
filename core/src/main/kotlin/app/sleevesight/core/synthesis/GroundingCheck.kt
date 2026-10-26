@@ -23,11 +23,17 @@ enum class SentenceStatus {
     UNKNOWN,
 }
 
-/** One sentence of a reply, its citations in order (`W1`, `M`), and its [status]. */
+/**
+ * One sentence of a reply, its citations in order (`W1`, `M`), and its [status]; [afterLineBreak]
+ * when a line break, not only spaces, came before it in its paragraph (#574), so a card shows a
+ * list's items and a heading on their own lines, as the reply wrote them. Never true of a
+ * paragraph's first sentence.
+ */
 data class CheckedSentence(
     val text: String,
     val cites: List<String>,
     val status: SentenceStatus,
+    val afterLineBreak: Boolean = false,
 )
 
 /** The count of sentences in each [SentenceStatus], for the log and the card's footer. */
@@ -78,9 +84,10 @@ sealed interface InsightReply {
 /**
  * The grounding check, run in code on every reply before it is shown (`design/architecture.md`,
  * *Synthesis and grounding*). A port of the simulator's `groundCheck` and `splitSentences`, and of
- * its `NO_EVIDENCE` test, rule for rule but for three deviations: an abbreviation does not end a
- * sentence, a stop inside closing quotes and before citations does ([splitSentences]; #46, #423),
- * and prompt version 2's fixed sentence for a gap, [GAP_SENTENCE], is a hedge (#46). The tests
+ * its `NO_EVIDENCE` test, rule for rule but for four deviations: an abbreviation does not end a
+ * sentence, a stop inside closing quotes and before citations does, a sentence may open with a
+ * Markdown mark ([splitSentences]; #46, #423, #574), and prompt version 2's fixed sentence for a gap,
+ * [GAP_SENTENCE], is a hedge (#46). The tests
  * check it on stored replies, against their stored results (`core/src/test/resources/grounding/`).
  *
  * It cannot tell whether a cited line supports its sentence: a plausible false sentence with a
@@ -122,8 +129,11 @@ object GroundingCheck {
         val paragraphs =
             text
                 .split(PARAGRAPH_BREAK)
-                .map { paragraph -> splitSentences(paragraph).map { classify(it, ids, allowModel) } }
-                .filter { it.isNotEmpty() }
+                .map { paragraph ->
+                    sentencesOf(paragraph).map { (sentence, afterLineBreak) ->
+                        classify(sentence, ids, allowModel).copy(afterLineBreak = afterLineBreak)
+                    }
+                }.filter { it.isNotEmpty() }
         return InsightReply.Written(GroundedText(text, paragraphs, allowModel))
     }
 
@@ -134,12 +144,13 @@ object GroundingCheck {
      *
      * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
      * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials
-     * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`). The simulator split
-     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. Initials before a
-     * word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit in the U.S. It ...`) still
-     * end one. The cost: a sentence that ends in initials before another word (`... toured the U.S.
-     * Billboard named ...`), or in one of [ABBREVIATIONS], is joined to the next, and if it was
-     * uncited, the next one's citation hides that.
+     * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`, `e.g.`, `i.e.`;
+     * #574). The simulator split `the U.S. Billboard Hot 100` into two sentences, the first of them
+     * uncited. Initials before a word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit
+     * in the U.S. It ...`) still end one. The cost: a sentence that ends in initials before another
+     * word (`... toured the U.S. Billboard named ...`), or in one of [ABBREVIATIONS], is joined to
+     * the next, and if it was uncited, the next one's citation hides that. `etc.`, which ends
+     * sentences as often as not, is no abbreviation here: before a capital it ends one.
      *
      * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
      * `'`, `’`) and then citations ends a sentence, as it does with the citations straight after it
@@ -148,12 +159,28 @@ object GroundingCheck {
      * quotes, it ends nothing, as in the simulator: a title that ends in a stop sits mid-sentence
      * (`On "Help!" Lennon sang ...`, `"DAMN." (2017) won ...`). The cost: an uncited sentence that
      * ends in a quoted stop (`He called it "Sundown." It charted. [W1]`) is joined to the next, and
-     * that one's citation hides it.
+     * that one's citation hides it. Closing emphasis marks (`*`, `_`) count as closing quotes here
+     * (`... the album *Sundown.* [MB1] It ...`; #574).
+     *
+     * A third (#574): a sentence may open with Markdown, which the model is asked not to write but
+     * sometimes does (#555), and the mark is part of the sentence it opens. After a line break, a
+     * list's marker (`-`, `*`, `+`, `1.`, `1)`), a heading's `#`s or a quotation's `>`, each before
+     * a space ([MarkdownMarks.isLineMark]), opens one whatever follows it, and a stop before the
+     * line break ends the sentence even if it ends an abbreviation. Anywhere, an opening run of `*`
+     * or `_` before a capital, `"`, `“` or `(` opens one as that character would (`... [W1] *Abbey
+     * Road* was ...`). The simulator joined such a sentence to the one before, so an uncited list
+     * item, or a sentence opening with an italic title, passed under the citation before it. A
+     * list's number at a line's start (`1.`) ends no sentence. The cost: a list item or a heading
+     * with no stop of its own is joined to what follows, as a line break alone ends nothing.
      */
-    fun splitSentences(text: String): List<String> {
+    fun splitSentences(text: String): List<String> = sentencesOf(text).map { it.first }
+
+    // The sentences of [text] ([splitSentences]), each with whether a line break came before it.
+    private fun sentencesOf(text: String): List<Pair<String, Boolean>> {
         val t = text.replace(SPACES_AND_TABS, " ").trimJs()
-        val sentences = mutableListOf<String>()
+        val sentences = mutableListOf<Pair<String, Boolean>>()
         var start = 0
+        var startsLine = false
         var i = 0
         while (i < t.length) {
             if (!isJsWhitespace(t[i])) {
@@ -161,15 +188,22 @@ object GroundingCheck {
                 continue
             }
             var end = i
-            while (end < t.length && isJsWhitespace(t[end])) end++
-            if (end < t.length && t[end] in OPENERS && endsSentence(t, i)) {
-                sentences += t.substring(start, i)
+            var lineBreak = false
+            while (end < t.length && isJsWhitespace(t[end])) {
+                if (t[end] == '\n') lineBreak = true
+                end++
+            }
+            val listed = lineBreak && MarkdownMarks.isLineMark(t, end)
+            val opens = listed || MarkdownMarks.opens(t, end, OPENERS)
+            if (opens && endsSentence(t, i, listed)) {
+                sentences += t.substring(start, i) to startsLine
                 start = end
+                startsLine = lineBreak
             }
             i = end
         }
-        sentences += t.substring(start)
-        return sentences.filter { it.trimJs().isNotEmpty() }
+        sentences += t.substring(start) to startsLine
+        return sentences.filter { it.first.trimJs().isNotEmpty() }
     }
 
     private fun classify(
@@ -214,25 +248,29 @@ object GroundingCheck {
     /**
      * Whether the text before [end] ends a sentence: the simulator's lookbehind
      * `(?<=[.!?](?:\s*\[[A-Z]{1,2}\d*\])*)`, read backwards over the citations.
-     * An abbreviation's `.` directly before [end] does not end one, and closing quotes may come
-     * between the stop and the citations ([splitSentences]).
+     * An abbreviation's `.` directly before [end] does not end one, unless a line mark follows on a
+     * new line ([listed]), nor does a list's number at a line's start; closing quotes and emphasis
+     * marks may come between the stop and the citations ([splitSentences]).
      */
     private fun endsSentence(
         t: String,
         end: Int,
+        listed: Boolean,
     ): Boolean {
         var k = end
         var ends: Boolean? = null
         while (ends == null) {
-            // A stop may sit inside closing quotes, from [stop] to [k], when citations follow (#423).
+            // A stop may sit inside closing quotes or emphasis marks, from [stop] to [k], when
+            // citations follow (#423, #574).
             var stop = k
-            if (k != end) while (stop > 0 && t[stop - 1] in CLOSING_QUOTES) stop--
+            if (k != end) while (stop > 0 && t[stop - 1] in CLOSING_MARKS) stop--
             val c = t.getOrNull(stop - 1)
             val open = citationBefore(t, k)
             when {
                 c != null && c in ".!?" -> {
-                    // An abbreviation's `.` ends nothing, unless citations follow it (#46).
-                    ends = k != end || !endsAbbreviation(t, end)
+                    // An abbreviation's `.` ends nothing, unless citations or a line mark follow it
+                    // (#46, #574); a list's number never ends a sentence (#574).
+                    ends = k != end || (!MarkdownMarks.isListNumber(t, end) && (listed || !endsAbbreviation(t, end)))
                 }
 
                 open == null -> {
@@ -251,7 +289,7 @@ object GroundingCheck {
     /**
      * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
      * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
-     * not followed by one of [SENTENCE_OPENERS].
+     * not followed by one of [SENTENCE_OPENERS], which may be in emphasis marks (#574).
      */
     private fun endsAbbreviation(
         t: String,
@@ -262,13 +300,14 @@ object GroundingCheck {
         while (start > 0 && !isJsWhitespace(t[start - 1])) start--
         while (start < end && t[start] in WORD_OPENERS) start++
         val word = t.substring(start, end)
-        // The next word, after the whitespace and any opening `(`, `"` or `“`.
+        // The next word, after the whitespace and any opening `(`, `"`, `“` or emphasis marks.
         var next = end
-        while (next < t.length && (isJsWhitespace(t[next]) || t[next] in WORD_OPENERS)) next++
+        while (next < t.length && (isJsWhitespace(t[next]) || t[next] in NEXT_WORD_OPENERS)) next++
         var stop = next
         while (stop < t.length && !isJsWhitespace(t[stop])) stop++
         // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
-        val opens = t.substring(next, stop).trimEnd(',', ';', ':').replace('’', '\'') in SENTENCE_OPENERS
+        val nextWord = t.substring(next, stop).trimEnd { it in WORD_CLOSERS }
+        val opens = nextWord.replace('’', '\'') in SENTENCE_OPENERS
         return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
     }
 
@@ -319,10 +358,11 @@ object GroundingCheck {
     /**
      * Words that end in `.` without ending a sentence, as written before a name or a title: the
      * replies name people (`Dr. Dre`), places (`St. John's`) and featured artists (`feat. Van
-     * Morrison`). Matched with their case.
+     * Morrison`), and give examples (`e.g. *Thriller*`, `i.e. the B-side`; #574), the stop that
+     * ends the sentence never being theirs. Matched with their case, without their last `.`.
      */
     private val ABBREVIATIONS: Set<String> =
-        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs")
+        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs", "e.g", "E.g", "i.e", "I.e")
 
     /** Where the citation (`[W1]`, `[MB12]`, `[M]`) that ends just before [end] starts, or null. */
     private fun citationBefore(
@@ -340,12 +380,12 @@ object GroundingCheck {
         return p.takeIf { letters > 0 && it >= 0 && t[it] == '[' }
     }
 
-    // The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
-    private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
-
     private const val OPENERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"“("
     private const val WORD_OPENERS = "\"“("
     private const val CLOSING_QUOTES = "\"”'’"
+    private const val CLOSING_MARKS = CLOSING_QUOTES + MarkdownMarks.EMPHASIS
+    private const val NEXT_WORD_OPENERS = WORD_OPENERS + MarkdownMarks.EMPHASIS
+    private const val WORD_CLOSERS = ",;:" + MarkdownMarks.EMPHASIS
     private val INITIALS = Regex("(?:[A-Z]\\.)+")
     private val SPACES_AND_TABS = Regex("[ \\t]+")
     private val PARAGRAPH_BREAK = Regex("\\n$JS_WHITESPACE_CLASS*\\n")
@@ -357,3 +397,6 @@ object GroundingCheck {
                 "isn't much|is not much|nothing (else )?is (known|documented)",
         )
 }
+
+// The simulator's hedge pattern is matched with `/i` and no `u`, which folds ASCII letters only.
+private fun String.asciiLowercase(): String = map { if (it in 'A'..'Z') it + ('a' - 'A') else it }.joinToString("")
