@@ -74,15 +74,16 @@ class PipelineWiringTest {
     }
 
     @Test
-    fun `with Show genres off the MusicBrainz and Last fm adapters are built without genres`() {
-        val keys = SourceKeys(lastFm = lastFm)
+    fun `with Show genres off the MusicBrainz, Wikipedia and Last fm adapters are built without genres`() {
+        val keys = SourceKeys(lastFm = lastFm, web = mapOf(WebEngine.EXA to exa))
         val on = wiring.adapters(keys, Settings()).associate { it.id to it.extractionVersion }
         val off = wiring.adapters(keys, Settings(showGenres = false)).associate { it.id to it.extractionVersion }
-        for (source in listOf(SourceId.MUSICBRAINZ, SourceId.LASTFM)) {
+        // Wikipedia's adapter writes Wikidata's lines, genres among them (#545).
+        for (source in listOf(SourceId.MUSICBRAINZ, SourceId.WIKIPEDIA, SourceId.LASTFM)) {
             assertEquals(on.getValue(source) + WITHOUT_GENRES_VERSION, off.getValue(source), "$source")
         }
-        // A source with no tags is built the same either way.
-        assertEquals(on.getValue(SourceId.WIKIPEDIA), off.getValue(SourceId.WIKIPEDIA))
+        // A source with no genres is built the same either way.
+        assertEquals(on.getValue(SourceId.WEB), off.getValue(SourceId.WEB))
     }
 
     @Test
