@@ -152,6 +152,25 @@ class ModelCheckLoopTest {
         }
 
     @Test
+    fun aTicketHandedToTheWaitingLoopAsItIsCancelledStillComes() =
+        runTest {
+            val loop = CoroutineScope(Job() + StandardTestDispatcher(testScheduler))
+            val check = check(Fake(), loop)
+            // The loop runs, and waits for its next event.
+            runCurrent()
+            // The ask is handed to it, and the loop cancelled before it resumes to take it.
+            val waiting = async(start = CoroutineStart.UNDISPATCHED) { check.ticket() }
+            loop.cancel()
+            runCurrent()
+            val ticket = waiting.await()
+
+            val refused = CompletionEvent.Error(AiErrorKind.MODEL_REFUSED)
+            check.answered(ticket, ProviderId.ANTHROPIC, HAIKU, OLD_KEY, refused)
+            runCurrent()
+            assertFalse(check.blocks(anthropic))
+        }
+
+    @Test
     fun aScopeCancelledBeforeTheCheckIsMadeEndsTheLoopAtOnce() =
         runTest {
             val loop = CoroutineScope(Job())

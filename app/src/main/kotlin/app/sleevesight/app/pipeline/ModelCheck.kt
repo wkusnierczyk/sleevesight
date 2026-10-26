@@ -103,7 +103,10 @@ class ModelCheck(
         ) : Event
     }
 
-    private val events = Channel<Event>(Channel.UNLIMITED)
+    // A ticket asked for and never taken by the loop (left in the queue when it ends, or handed to
+    // it as it was cancelled) is answered with one under which nothing counts, so no one waits.
+    private val events =
+        Channel<Event>(Channel.UNLIMITED) { left -> (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER) }
     private val found = MutableStateFlow<Map<ProviderId, UnavailableMark>>(emptyMap())
     private val reads = AtomicLong()
 
@@ -122,14 +125,9 @@ class ModelCheck(
                     found.value = book.marks
                 }
             }
-        // The loop ended (its scope cancelled, before it started too): nothing more is taken, and the
-        // tickets still asked for are given ones under which no answer counts.
-        loop.invokeOnCompletion {
-            events.close()
-            generateSequence { events.tryReceive().getOrNull() }.forEach { left ->
-                (left as? Event.Ask)?.ticket?.complete(Ticket.NEVER)
-            }
-        }
+        // The loop ended (its scope cancelled, before it started too): nothing more is taken, and
+        // what is left in the queue goes to the channel's handler of undelivered events.
+        loop.invokeOnCompletion { events.cancel() }
     }
 
     /** Each service's model found unavailable, by service, as the loop keeps them. */
