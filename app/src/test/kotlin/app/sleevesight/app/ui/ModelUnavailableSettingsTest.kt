@@ -38,7 +38,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -107,7 +106,7 @@ class ModelUnavailableSettingsTest {
     @Test
     fun theRowAndTheChoiceSaySoAndOnlyUsableModelsAreOffered() {
         runBlocking { secrets.set(SecretId.ANTHROPIC, Secret("sk-test")) }
-        val check = ModelCheck(mapOf(ProviderId.ANTHROPIC to provider)) { Secret("sk-test") }
+        val check = ModelCheck(mapOf(ProviderId.ANTHROPIC to provider), { Secret("sk-test") }, saves)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
@@ -135,7 +134,9 @@ class ModelUnavailableSettingsTest {
             compose.onNodeWithText(app.getString(R.string.settings_cancel)).performClick()
 
             // The row says so, from the check the list made.
-            assertEquals("claude-haiku-5-5", check.unavailable.value[ProviderId.ANTHROPIC]?.model)
+            compose.waitUntil(timeoutMillis = 5_000) {
+                check.unavailable.value[ProviderId.ANTHROPIC]?.model == "claude-haiku-5-5"
+            }
             compose.onNodeWithText(said).performScrollTo()
 
             // Another model chosen: the row says nothing more.

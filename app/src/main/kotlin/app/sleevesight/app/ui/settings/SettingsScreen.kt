@@ -165,10 +165,15 @@ fun SettingsScreen(
                 provider = shown.provider,
                 current = settings?.aiModels?.get(shown.provider),
                 load = {
+                    // The list checks the selected model too (#540), with the key it was made with
+                    // and the revisions as it was asked for.
+                    val ticket = modelCheck?.ticket()
                     loadModels(shown.provider, secretStore, aiProviders) { key, models ->
                         modelNames.learn(models)
-                        // The list checks the selected model too (#540), with the key it was made with.
-                        settings?.model(shown.provider)?.let { modelCheck?.listed(shown.provider, it, models, key) }
+                        val selected = settings?.model(shown.provider)
+                        if (ticket != null && selected != null) {
+                            modelCheck?.listed(ticket, shown.provider, selected, models, key)
+                        }
                     }
                 },
                 modelName = modelNames::of,

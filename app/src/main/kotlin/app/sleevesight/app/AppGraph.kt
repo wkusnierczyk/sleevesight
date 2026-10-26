@@ -32,6 +32,7 @@ import app.sleevesight.app.pipeline.shown
 import app.sleevesight.app.secrets.AndroidKeystoreKey
 import app.sleevesight.app.secrets.SecretCipher
 import app.sleevesight.app.secrets.SecretId
+import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.session.ArtLoader
 import app.sleevesight.app.session.DataStoreLearningMark
@@ -267,7 +268,15 @@ class AppGraph(
      * it. While the switched-on service's model is unavailable, no insight is written, and the
      * settings and Home say so.
      */
-    val modelCheck = ModelCheck(aiProviders) { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } }
+    val modelCheck =
+        ModelCheck(
+            aiProviders,
+            key = { provider -> SecretId.forProvider(provider)?.let { secrets.get(it) } },
+            scope = pipelineScope,
+            stored = { provider ->
+                SecretId.forProvider(provider)?.let { secrets.states.first()[it] } == SecretState.SAVED
+            },
+        )
 
     /**
      * The latest settings read, for the caches, which read them on every call, the pipeline and

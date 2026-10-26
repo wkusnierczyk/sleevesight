@@ -16,8 +16,10 @@ import app.sleevesight.core.settings.WebEngine
 import app.sleevesight.core.sources.ArtistResults
 import app.sleevesight.wiring.SourceKeys
 import app.sleevesight.wiring.appPipelineWiring
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -122,18 +124,24 @@ class AppPipelinePartsTest {
 
     @Test
     fun noAiAccessWhileTheServicesSelectedModelIsUnavailable() {
-        val check = ModelCheck(wiring.aiProviders) { Secret("ai") }
+        val loop = CoroutineScope(Dispatchers.Default)
+        val check = ModelCheck(wiring.aiProviders, { Secret("ai") }, loop)
         val checked = AppPipelineParts(wiring, Normalizer(JvmAccentFolder), models = check) { PipelineCache.None }
         val anthropic = Settings(aiProvider = ProviderId.ANTHROPIC)
         val keys = PipelineKeys(ai = Secret("ai"))
         assertEquals(ProviderId.ANTHROPIC, checked(keys, anthropic).ai?.provider?.id)
 
         val model = checkNotNull(anthropic.model(ProviderId.ANTHROPIC))
-        runBlocking { check.listed(ProviderId.ANTHROPIC, model, emptyList(), Secret("ai")) }
+        runBlocking {
+            check.listed(check.ticket(), ProviderId.ANTHROPIC, model, emptyList(), Secret("ai"))
+            // Applied once the loop has taken it, before the next ticket.
+            check.ticket()
+        }
         assertNull("its model unavailable", checked(keys, anthropic).ai)
         // Another model chosen, or another service, is not held back by it.
         val other = anthropic.withModel(ProviderId.ANTHROPIC, "claude-opus-5-5")
         assertEquals(ProviderId.ANTHROPIC, checked(keys, other).ai?.provider?.id)
         assertEquals(ProviderId.OPENAI, checked(keys, Settings(aiProvider = ProviderId.OPENAI)).ai?.provider?.id)
+        loop.cancel()
     }
 }
