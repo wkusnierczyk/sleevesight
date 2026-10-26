@@ -33,7 +33,7 @@ import app.sleevesight.app.R
  * always shown under it, and the fuller explanation shown once it is unfolded, where one is
  * needed. [DEVELOPER] shows only in developer mode, and has neither.
  */
-internal enum class SettingsSection(
+enum class SettingsSection(
     @StringRes val title: Int,
     @StringRes val summary: Int?,
     @StringRes val details: Int?,

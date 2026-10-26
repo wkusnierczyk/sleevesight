@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -50,6 +51,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -66,10 +68,11 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Where a link in the settings leads (#539): [section], unfolded, and in it the row [row] names, or,
  * for none, the section's heading. A row is named by an id of its own, unique among the screen's
- * rows; the factories in the companion name the rows that are linked to.
+ * rows; the factories in the companion name the rows that are linked to. Public, as Home opens the
+ * settings at one (#581: [SettingsScreen]'s `landOn`, through the settings' route).
  */
 @Immutable
-internal data class SettingsTarget(
+data class SettingsTarget(
     val section: SettingsSection,
     val row: String? = null,
 ) {
@@ -81,7 +84,29 @@ internal data class SettingsTarget(
 
     companion object {
         /** The key [id]'s row under *Secrets* ([KeyRow]). */
-        fun key(id: SecretId): SettingsTarget = SettingsTarget(SettingsSection.SECRETS, "key_${id.name}")
+        internal fun key(id: SecretId): SettingsTarget = SettingsTarget(SettingsSection.SECRETS, "key_${id.name}")
+
+        /** The section *AI services* itself, its heading (#581). */
+        internal val aiServices: SettingsTarget = SettingsTarget(SettingsSection.AI_SERVICES)
+
+        /** [provider]'s model row under *AI services* (#581), where another model is chosen. */
+        internal fun model(provider: ProviderId): SettingsTarget =
+            SettingsTarget(SettingsSection.AI_SERVICES, "model_${provider.name}")
+
+        /** *New session idle trigger*'s row under *History* (#581). */
+        internal val sessionGap: SettingsTarget = SettingsTarget(SettingsSection.HISTORY, "session_gap")
+
+        /**
+         * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
+         * state carries it; null for no section, or a name no section has.
+         */
+        internal fun named(
+            section: String?,
+            row: String?,
+        ): SettingsTarget? =
+            SettingsSection.entries
+                .firstOrNull { it.name == section }
+                ?.let { SettingsTarget(it, row?.ifEmpty { null }) }
     }
 }
 
@@ -110,6 +135,28 @@ internal class SettingsNavigator(
         private set
 
     private var count = 0
+
+    // The targets a [LandingSpot] is drawn for, which a landing can reach; read only by [dropUnclaimed].
+    private val spots = mutableSetOf<SettingsTarget>()
+
+    /** [target]'s [LandingSpot] is drawn, until [release]d. */
+    fun claim(target: SettingsTarget) {
+        spots += target
+    }
+
+    /** [target]'s [LandingSpot] is no longer drawn. */
+    fun release(target: SettingsTarget) {
+        spots -= target
+    }
+
+    /**
+     * Ends [pending], unless another landing has begun since, where no [LandingSpot] is drawn for
+     * its target once its section is unfolded: a route or a saved state naming a row no longer shown
+     * (#581) would otherwise leave it pending, and [scrolling] set, for the rest of the visit.
+     */
+    fun dropUnclaimed(pending: Landing) {
+        if (pending.target !in spots) landed(pending)
+    }
 
     /** Unfolds [target]'s section, if folded, and lands on [target]. */
     fun go(target: SettingsTarget) {
@@ -151,10 +198,10 @@ internal class SettingsNavigator(
                 },
                 restore = { saved ->
                     SettingsNavigator(folds).also { navigator ->
-                        SettingsSection.entries
-                            .firstOrNull { it.name == saved[0] }
-                            ?.takeIf { folds.isUnfolded(it) }
-                            ?.let { navigator.resume(SettingsTarget(it, saved[1].ifEmpty { null })) }
+                        SettingsTarget
+                            .named(saved[0], saved[1])
+                            ?.takeIf { folds.isUnfolded(it.section) }
+                            ?.let { navigator.resume(it) }
                     }
                 },
             )
@@ -180,6 +227,13 @@ internal fun ProvideSettingsNavigator(
     content: @Composable () -> Unit,
 ) {
     val navigator = rememberSaveable(folds, saver = SettingsNavigator.saver(folds)) { SettingsNavigator(folds) }
+    val landing = navigator.landing
+    LaunchedEffect(navigator, landing) {
+        if (landing == null) return@LaunchedEffect
+        // The section unfolded and its rows drawn, each spot has claimed its target by the next frame.
+        withFrameNanos { }
+        navigator.dropUnclaimed(landing)
+    }
     CompositionLocalProvider(LocalSettingsNavigator provides navigator, content = content)
 }
 
@@ -297,6 +351,10 @@ internal fun LandingSpot(
     // Whether the row holds the focus, and where it is laid out: read only by the landing, so plain.
     val held = remember { BooleanArray(1) }
     val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(navigator, target) {
+        navigator?.claim(target)
+        onDispose { navigator?.release(target) }
+    }
     LaunchedEffect(navigator, landing) {
         if (navigator == null || landing == null) return@LaunchedEffect
         try {
