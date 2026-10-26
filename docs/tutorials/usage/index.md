@@ -71,7 +71,7 @@ With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set
 
 ### The insight
 
-*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it.
+*Key insights* holds the insight: a few sentences written by the AI service you chose, from what the sources found. The insight is plain text with citation chips in it. The AI service is asked not to format it; when it does anyway, a title it marks is set in italics, bold shows as bold, and its other formatting marks are left out.
 
 <!-- screenshot: the insight with its citation chips and the grounded-sentences line, from the app version it is taken from -->
 
@@ -205,11 +205,11 @@ While Sleevesight is not on screen, it looks nothing up and sends nothing, the c
 
 ## The history
 
-Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes between them, from which skip detection learns. There is no history screen in the app yet: the history is not shown as a list.
+Sleevesight keeps, on the phone only, information about the tracks it has seen play (their titles, artists and albums, and when they played) and the track changes between them, from which skip detection learns. It keeps information about the tracks, never the music itself. There is no history screen in the app yet: the history is not shown as a list.
 
 What there is:
 
-- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends, and *Clear history*, which deletes the tracks played and the track changes together, once you confirm.
+- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default); *Clear history*, right under it, which deletes everything kept about the tracks you played (the list of tracks played and the track changes, the insights written and what the sources found) together, once you confirm, and keeps your API keys and settings and leaves your music untouched; and [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends.
 - **The diagnostics screen**, under the developer settings, which lists the track changes recorded, with what skip detection learns from them, and can export them to a file you choose.
 
 The history is left out of Android's backup, and the app never sends it anywhere; only an export you make from the diagnostics screen takes a copy of the track changes off the app.

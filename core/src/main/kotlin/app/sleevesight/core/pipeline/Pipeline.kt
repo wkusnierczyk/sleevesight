@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -112,7 +111,10 @@ class Pipeline(
             extraBufferCapacity = EVENT_BUFFER,
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
-    private val stateFlow = MutableStateFlow<TrackState?>(null)
+
+    // What [state] shows, with *Clear history*'s count (#547): a run started before the last
+    // [forget] publishes nothing, and emits no event, after it.
+    private val shown = ShownState()
     private val runs = MutableStateFlow(0L)
     private val taps = MutableStateFlow(0L)
     private val acted = MutableStateFlow(false)
@@ -121,7 +123,13 @@ class Pipeline(
     val events: SharedFlow<PipelineEvent> = eventFlow.asSharedFlow()
 
     /** The current track's state, null before the first track. */
-    val state: StateFlow<TrackState?> = stateFlow.asStateFlow()
+    val state: StateFlow<TrackState?> = shown.state
+
+    /**
+     * Forgets the current track's state, for *Clear history* (#547): [state] is null again, and no
+     * run or preparation started before publishes a state or an event after it.
+     */
+    fun forget() = shown.forget()
 
     /** The user acted in the app (after it started, nothing is written until they do; D5). */
     fun userActed() {
@@ -181,8 +189,12 @@ class Pipeline(
     suspend fun prepare(
         next: NowPlaying,
         control: RunControl,
-    ) = Preparation(parts, time, settings(), parts.normalizer.normalize(next), control) { eventFlow.tryEmit(it) }
-        .run()
+    ) {
+        val since = shown.forgets
+        Preparation(parts, time, settings(), parts.normalizer.normalize(next), control) {
+            if (shown.forgets == since) eventFlow.tryEmit(it)
+        }.run()
+    }
 
     /**
      * Runs the pipeline for [nowPlaying] once and returns its final state: with the insight written
@@ -204,13 +216,14 @@ class Pipeline(
         again: Gathered? = null,
     ): TrackRun {
         val token = runs.updateAndGetValue()
+        val since = shown.forgets
         return TrackRun(
             parts = parts,
             time = time,
             input = RunInput(current, nowPlaying, track, again),
             control = control,
-            onEvent = { eventFlow.tryEmit(it) },
-            publish = { state -> if (runs.value == token) stateFlow.value = state },
+            onEvent = { if (shown.forgets == since) eventFlow.tryEmit(it) },
+            publish = { state -> shown.publish(state, since) { runs.value == token } },
         )
     }
 

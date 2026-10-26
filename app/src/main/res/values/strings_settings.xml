@@ -9,7 +9,7 @@
     <string name="settings_sources_short">External services providing information on artists and music.</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
-    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
+    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time. Switching off a service does not erase the most recently used model and effort settings.</string>
     <string name="settings_keys_short">Private API keys enabling external services</string>
     <string name="settings_show_phone_name">Share phone’s name with Type on a computer</string>
     <string name="settings_show_phone_name_summary">Type on a computer lets you type an API key on a computer’s keyboard, sent to the phone over Bluetooth: tap the keyboard icon in a key’s field, with the page below open on the computer. Sharing the name lets the computer list the phone by its Bluetooth name while a session is open, instead of as “Unknown or Unsupported Device”; a name the phone cannot advertise is left out, and the session says so. Anyone nearby scanning for Bluetooth can see the name meanwhile.</string>
@@ -19,7 +19,7 @@
     <string name="settings_insights_short">Generated current track summaries.</string>
     <string name="settings_insights_long">Sleevesight collects track, artist, and album information from sources and uses AI to generate readable descriptions based on the sourced evidence.</string>
     <string name="settings_history_short">Listening history, kept on this phone.</string>
-    <string name="settings_history_long">Sleevesight keeps the tracks you play on this phone, to avoid repeating itself within a listening session and to learn which track changes are your skips. Nothing of it leaves the phone.</string>
+    <string name="settings_history_long">Sleevesight keeps information about the tracks you play on this phone (titles, artists, albums, and when they played), to avoid repeating itself within a listening session and to learn which track changes are your skips. Nothing of it leaves the phone.</string>
     <string name="settings_appearance_short">App customisation</string>
     <string name="settings_appearance_long">Sleevesight appearance options</string>
     <string name="settings_about_short">Product and technology information</string>
@@ -39,7 +39,12 @@
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
+    <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
+    <string name="settings_set_key">Set your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
+    <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
+    <string name="settings_needs_key_linked">Needs your %1$s key.</string>
+    <string name="settings_key_unreadable_linked">Your %1$s key can no longer be read.</string>
 
     <!-- Genres. -->
     <string name="settings_show_genres">Show genres</string>
@@ -99,8 +104,16 @@
     <string name="load_keys_make">1. Generate a QR code of your keys on your computer, as the instructions explain:</string>
     <!-- What a screen reader says of the link to the instructions; the argument is their address. -->
     <string name="load_keys_instructions_of">Open the instructions at %1$s</string>
-    <string name="load_keys_developers">For developers: the pipeline CLI’s keys-qr draws one in the terminal.</string>
     <string name="load_keys_read">2. Read the QR code with the camera.</string>
+    <!-- The guided screens of the key field's icons (#541), laid out as Load keys is. Scan QR code: -->
+    <string name="key_scan_make">1. Generate a QR code of this one key on your computer, as the instructions explain:</string>
+    <!-- Type on a computer: what it is, then its steps. -->
+    <string name="keyboard_explained">Type the key on a computer’s keyboard instead of the phone’s. A page on the computer sends what you type to this phone over Bluetooth, encrypted, and it appears in the key’s field. The computer needs Bluetooth, and Chrome or Edge.</string>
+    <string name="keyboard_open">1. On the computer, open the keyboard page:</string>
+    <!-- What a screen reader says of the link to the keyboard page; the argument is its address. -->
+    <string name="keyboard_page_of">Open the keyboard page at %1$s</string>
+    <string name="keyboard_scan">2. Read the QR code the page shows with the camera.</string>
+    <string name="keyboard_connect">3. Then, on the page, choose “Connect” and pick this phone.</string>
     <string name="load_keys_found">Keys read</string>
     <string name="load_keys_problems">Problems</string>
     <string name="load_keys_save_these">Save these</string>

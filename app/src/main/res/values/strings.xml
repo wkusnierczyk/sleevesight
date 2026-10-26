@@ -63,10 +63,10 @@
     <!-- The eye in a key's field, named for what a tap does. -->
     <string name="settings_key_show">Show key</string>
     <string name="settings_key_hide">Hide key</string>
-    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. -->
-    <string name="settings_terms_anthropic">Using this key means agreeing to Anthropic’s Commercial Terms of Service. They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
-    <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
-    <string name="settings_terms_google">Using this key means agreeing to Google’s Gemini API terms. They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
+    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. The agreement, a commitment, is in bold (#543); the rest is plain. -->
+    <string name="settings_terms_anthropic"><b>Using this key means agreeing to Anthropic’s Commercial Terms of Service.</b> They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
+    <string name="settings_terms_openai"><b>Using this key means agreeing to the OpenAI Services Agreement.</b> It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
+    <string name="settings_terms_google"><b>Using this key means agreeing to Google’s Gemini API terms.</b> They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
     <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Purge keys” in Secrets.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>
@@ -133,18 +133,18 @@
     <string name="settings_cache_wikidata">Wikidata</string>
     <string name="settings_cache_web">Web search</string>
     <string name="settings_keep_artists">Keep what sources said about each artist</string>
-    <string name="settings_keep_artists_summary">Off: nothing MusicBrainz, Wikipedia or Last.fm say about an artist is kept, so each track’s artists are looked up again, and their names go to the sources you switch on with every track. Of a track’s findings, only the web search’s findings (pages about the recording, which may name or describe its artists) and those of a lookup that found no artist to look up are kept, so a track played before is looked up again at MusicBrainz (its match held in memory for half an hour only), Wikipedia and Last.fm, unless it has no credited artist, and lookups are slower and more requests go out. On: what they say about each artist you play stays on this phone for as long as its sources’ findings, so fewer requests leave it; each track’s own lookups still send its artists’ names. Turning this off deletes what was kept.</string>
+    <string name="settings_keep_artists_summary">Keeps what MusicBrainz, Wikipedia and Last.fm said about each artist on this phone, so an artist is not looked up again for every track. This keeps a list of the artists you have heard on the phone. When disabled, each track’s artists are looked up again. Each track’s own lookups send its artists’ names either way. Turning it off deletes what was kept.</string>
     <string name="settings_section_history">History</string>
     <string name="settings_keep_history">Keep history for</string>
     <string name="settings_keep_history_forever">Forever</string>
     <string name="settings_session_gap">New session idle trigger</string>
-    <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions are kept. Within a session, each artist fact is told once, unless “Tell an artist’s facts once per session” is off. A change applies from the next track that starts.</string>
+    <string name="settings_session_gap_summary">A track that starts after a longer break begins a new listening session, counted from when the last track was heard. Earlier sessions stay in your history, for as long as “Keep history for” is set. Within a session, each artist fact is told once, unless “Tell an artist’s facts once per session” is off. A change applies from the next track that starts.</string>
     <string name="settings_clear_history">Clear history</string>
-    <string name="settings_clear_history_value">Deletes the tracks played and the track changes</string>
+    <string name="settings_clear_history_value">Deletes everything Sleevesight kept about the tracks you played</string>
     <string name="settings_clear_history_title">Clear history?</string>
-    <string name="settings_clear_history_explained">Every track Sleevesight has seen play, and every track change it recorded to learn your skips, is deleted from this phone. This cannot be undone.</string>
+    <string name="settings_clear_history_explained">The list of tracks you played, the track changes recorded to learn your skips, the insights written and what the sources found are deleted from this phone. Your API keys and settings stay. Your music is not touched. This cannot be undone.</string>
     <string name="settings_clear">Clear</string>
-    <string name="settings_clear_history_failed">The history could not be cleared. Try again.</string>
+    <string name="settings_clear_history_failed">Not everything could be cleared. Try again.</string>
     <string name="settings_clear_history_done">History cleared.</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_font">Font</string>
@@ -155,12 +155,22 @@
     <string name="settings_intro_summary">When you open Sleevesight while it is not already open, its logo plays a few seconds of animation first; a tap, Back or any key skips it. It never plays while your phone’s Remove animations or TalkBack is on.</string>
     <string name="settings_section_keys">Secrets</string>
     <string name="settings_scan_keys">Load keys</string>
-    <string name="settings_scan_keys_value">Read multiple secrets from a QR code.</string>
+    <string name="settings_scan_keys_value">Save several API keys at once from one QR code.</string>
+    <!-- Under Load keys (#541): %1$s is the address of the page that makes the code, a link; %2$s
+         is settings_scan_keys_docs, a link to the documentation. -->
+    <string name="settings_scan_keys_more">Make the QR code on a computer, at %1$s: the page sends your keys nowhere. More in %2$s.</string>
+    <string name="settings_scan_keys_docs">the guide to loading keys</string>
     <string name="settings_key_scan">Scan QR code</string>
     <string name="settings_key_scan_empty">The QR code holds nothing.</string>
     <string name="settings_key_scan_characters">The QR code holds a space or a character no such key has: it is not this key.</string>
     <string name="settings_key_scan_shape">The QR code does not hold a key of this service’s form.</string>
-    <string name="settings_key_scan_setup">This QR code holds several keys: use “Load keys” in Settings, under Secrets.</string>
+    <string name="settings_key_scan_setup">This QR code holds keys other than this one: use “Load keys”, in Settings under Secrets, which shows what it holds.</string>
+    <!-- A setup code scanned into one key's field (#541) that cannot fill it. -->
+    <string name="settings_key_scan_setup_more">This QR code holds more than this key, and Sleevesight cannot read the rest. “Load keys”, in Settings under Secrets, shows what it holds.</string>
+    <string name="settings_key_scan_setup_none">This QR code holds no key this version of Sleevesight can read. “Load keys”, in Settings under Secrets, shows what it holds.</string>
+    <string name="settings_key_scan_setup_newer">This QR code is of a later version than this app reads. Update Sleevesight, then scan it again.</string>
+    <string name="settings_key_scan_duplicate">The QR code holds this key on two lines, so which one to use cannot be told.</string>
+    <string name="settings_key_scan_setup_empty">This setup code holds no keys.</string>
     <string name="setup_title">Save these keys?</string>
     <string name="setup_explained">Each is stored encrypted on this phone, and sent only to its own service.</string>
     <!-- What a screen reader says of a row of the table of the keys read (#542). -->

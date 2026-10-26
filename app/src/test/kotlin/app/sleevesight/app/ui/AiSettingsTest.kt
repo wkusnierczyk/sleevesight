@@ -108,8 +108,8 @@ class AiSettingsTest {
     /** The model row's value, and the dialog's option, for Anthropic's default model, by its name. */
     private fun anthropicDefault() = app.getString(R.string.settings_ai_model_default, "Claude Haiku 5.5")
 
-    /** What a provider switched on without its key says, for the provider [name]. */
-    private fun needsKey(name: Int) = app.getString(R.string.settings_needs_key, text(name))
+    /** What a provider switched on without its key says, for the provider [name], above its link to the key. */
+    private fun needsKey(name: Int) = app.getString(R.string.settings_needs_key_linked, text(name))
 
     private fun absentText(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty()
 

@@ -3,7 +3,6 @@ package app.sleevesight.app.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -49,7 +48,6 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
-import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.ai.ModelInfo
@@ -86,16 +84,18 @@ internal fun <T> ChoiceDialog(
 /**
  * Enters, replaces or removes the key [id]. The saved key is never shown, and what is typed lives
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
- * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
- * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
- * only a key the key store could not seal suggests *Purge keys*, which cannot cure a file that
- * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
- * result says.
+ * Spaces around the key, as a paste often brings, are dropped. [onSave] says whether it succeeded:
+ * the dialog closes only then, and otherwise says why and keeps what was typed; only a key the key
+ * store could not seal suggests *Purge keys*, which cannot cure a file that cannot be written.
+ * While it runs, the dialog cannot be cancelled or dismissed: it ends as the result says. *Remove*
+ * asks first, with the key row's own confirmation ([ConfirmDialog], #543), which runs [onRemove]
+ * and says there if it failed; once the key is removed, both close.
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
- * field as it was. A setup code, which holds several keys, is pointed to *Load keys*; a keyboard
- * session's code starts that session, as *Type on a computer* would. The window is secure
+ * field as it was. A setup code of this key alone fills it too (#541); one with other keys is
+ * pointed to *Load keys*; a keyboard session's code starts that session, as *Type on a computer*
+ * would. Each icon's scan is a guided screen of its own ([KeyScanScreen]), as *Load keys* is. The window is secure
  * (`FLAG_SECURE`), so no screenshot or screen recording shows what is typed or scanned.
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
@@ -116,11 +116,14 @@ internal fun <T> ChoiceDialog(
  * what the field holds. The dialog never loads the saved key, so the eye shows only what was
  * entered here; it is there only while the field holds something, and the field is masked again
  * when it empties, when the dialog closes, and when the app is left or the screen locks (the
- * activity stops). The eye is off while a save or a removal runs, and stays on during a keyboard
- * session, to check what arrives. While shown, the field stays a password, to autofill and to
- * accessibility services alike: Compose marks it so from its keyboard type, which stays `Password`
- * so that the keyboard neither learns nor suggests the key. On a phone the dialog takes the
- * screen's width, less a margin ([keyDialogWidth]).
+ * activity stops). The eye is off while a save runs (a removal runs in the confirmation over the
+ * dialog), and stays on during a keyboard session, to check what arrives. While shown, the field
+ * stays a password, to autofill and to accessibility services alike: Compose marks it so from its
+ * keyboard type, which stays `Password` so that the keyboard neither learns nor suggests the key.
+ * On a phone the dialog takes the screen's width, less a margin ([keyDialogWidth]).
+ *
+ * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
+ * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*, filled.
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -172,7 +175,7 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        QrScanDialog(scanner, onDismiss = { scanning = null }) { text ->
+        KeyScanScreen(purpose, scanner, onDismiss = { scanning = null }) { text ->
             scanning = null
             val result = scanned(purpose, id, text.trim(), ledger)
             failed = result.failed
@@ -197,22 +200,19 @@ internal fun KeyDialog(
                 scanning = it
             }
         },
+        // All three in the one slot: Material's dialog puts its dismissal next to its confirmation,
+        // and *Cancel* keeps to the start here, away from them (#543).
         confirmButton = {
-            TextButton(
-                onClick = { run { saveFailure(onSave(value)) } },
-                enabled = value.isNotEmpty() && !busy,
-            ) { Text(stringResource(R.string.settings_save)) }
-        },
-        dismissButton = {
-            Row {
-                if (state != SecretState.ABSENT) {
-                    TextButton(
-                        onClick = { run { R.string.settings_key_remove_failed.takeUnless { onRemove() } } },
-                        enabled = !busy,
-                    ) { Text(stringResource(R.string.settings_remove)) }
-                }
-                TextButton(onClick = ::close, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
-            }
+            KeyEntryButtons(
+                id = id,
+                stored = state != SecretState.ABSENT,
+                savable = value.isNotEmpty(),
+                busy = busy,
+                onCancel = ::close,
+                onRemove = onRemove,
+                onRemoved = ::close,
+                onSave = { run { saveFailure(onSave(value)) } },
+            )
         },
     )
     // The dialog can also go without closing itself, when the screen does. After the dialog in
@@ -249,9 +249,10 @@ private fun stillShown(
 
 /**
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
- * service's terms with a link to them (#409), the field showing [typed], masked unless [shown],
- * with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and what [failed], if
- * anything; the eye is off while [busy], and the scans while [busy] or while a session runs.
+ * service's terms, the agreement in bold (#543), with a link to them (#409), the field showing
+ * [typed], masked unless [shown], with its icons ([KeyFieldIcons]), the [keyboard] session when one
+ * runs, and what [failed], if anything; the eye is off while [busy], and the scans while [busy] or
+ * while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
@@ -277,7 +278,7 @@ private fun KeyEntry(
             style = MaterialTheme.typography.bodyMedium,
         )
         serviceTerms(id)?.let { terms ->
-            Text(stringResource(terms.note), style = MaterialTheme.typography.bodyMedium)
+            Text(boldStringResource(terms.note), style = MaterialTheme.typography.bodyMedium)
             WebLink(terms.url)
         }
         OutlinedTextField(
@@ -319,24 +320,30 @@ private fun saveFailure(result: SaveResult): Int? =
         SaveResult.NOT_WRITTEN -> R.string.settings_key_write_failed
     }
 
-/** What a [ConfirmDialog] says: its [title], what the action does, its button, and its failure. */
+/**
+ * What a [ConfirmDialog] says: its [title], what the action does, its button, the button's name to
+ * a screen reader ([named]), and its failure.
+ */
 internal class Confirmation(
     val title: String,
     val explained: String,
     val confirm: String,
+    val named: String,
     val failed: String,
 )
 
 /**
- * Confirms the removal of a saved key. [onConfirm] returns whether it succeeded: the dialog closes only
- * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
- * second tap does not run it again.
+ * Confirms the removal of a saved key, from its row or its dialog. [onConfirm] returns whether it
+ * succeeded: only then does the dialog end, with [onDone], and otherwise it says so. While it runs,
+ * the dialog cannot be cancelled or dismissed, and a second tap does not run it again. Its buttons
+ * are the key dialog's ([KeyDialogButtons], #543): *Cancel* at the start, and the red *Remove*.
  */
 @Composable
 internal fun ConfirmDialog(
     confirmation: Confirmation,
     onConfirm: suspend () -> Boolean,
     onDismiss: () -> Unit,
+    onDone: () -> Unit = onDismiss,
 ) {
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -357,23 +364,19 @@ internal fun ConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
+            KeyDialogButtons(busy = busy, onCancel = onDismiss) {
+                RemoveKeyButton(confirmation.confirm, confirmation.named, enabled = !busy) {
                     // As in [KeyDialog]: a second tap in the same frame finds the button still enabled.
-                    if (busy) return@TextButton
+                    if (busy) return@RemoveKeyButton
                     busy = true
                     failed = false
                     scope.launch {
                         val done = onConfirm()
                         busy = false
-                        if (done) onDismiss() else failed = true
+                        if (done) onDone() else failed = true
                     }
-                },
-                enabled = !busy,
-            ) { Text(confirmation.confirm) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+                }
+            }
         },
     )
 }
