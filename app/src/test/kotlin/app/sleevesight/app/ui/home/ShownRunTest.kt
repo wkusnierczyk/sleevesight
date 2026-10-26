@@ -295,15 +295,39 @@ class ShownRunTest {
     }
 
     @Test
+    fun aLinesMarkThatOpensASentenceTheCheckSplitOffIsTakenOut() {
+        for (mark in listOf("-", "*", "+", ">", "1.", "2)", "##")) {
+            val sentences = GroundingCheck.splitSentences("$mark It was recorded [MB1].\n$mark It is great.")
+            assertEquals(2, sentences.size)
+            assertEquals(
+                listOf(listOf(text("It was recorded "), cite("MB1"), text(".")), listOf(text("It is great."))),
+                shown(sentences),
+            )
+        }
+        // A sentence opening with emphasis keeps it.
+        assertEquals(
+            listOf(
+                listOf(text("It charted "), cite("W1"), text(".")),
+                listOf(text("Sundown", italic = true), text(" is great.")),
+            ),
+            shown(GroundingCheck.splitSentences("It charted [W1]. *Sundown* is great.")),
+        )
+    }
+
+    @Test
     fun theGroundingCheckReadsTheReplyAsWrittenAndTheShownTextKeepsItsSentencesAndCitations() {
         val reply = "It covers *Title* [MB1]. It was **huge**. _Other_ is cited [M]."
         val grounded = (GroundingCheck.check(reply, setOf("MB1"), allowModel = false) as InsightReply.Written).grounded
         val paragraph = grounded.paragraphs.single()
         assertEquals(
-            listOf("It covers *Title* [MB1].", "It was **huge**. _Other_ is cited [M]."),
+            listOf("It covers *Title* [MB1].", "It was **huge**.", "_Other_ is cited [M]."),
             paragraph.map { it.text },
         )
-        assertEquals(listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN), paragraph.map { it.status })
+        // A sentence opening with emphasis is a sentence of its own, so the uncited one shows (#574).
+        assertEquals(
+            listOf(SentenceStatus.OK, SentenceStatus.UNCITED, SentenceStatus.UNKNOWN),
+            paragraph.map { it.status },
+        )
         val runs = shown(paragraph.map { it.text })
         assertEquals(paragraph.size, runs.size)
         assertEquals(
@@ -312,17 +336,7 @@ class ShownRunTest {
                 sentence.filterIsInstance<ShownRun.Cite>().map { it.id }
             },
         )
-        assertEquals(
-            listOf(
-                text("It was "),
-                text("huge", bold = true),
-                text(". "),
-                text("Other", italic = true),
-                text(" is cited "),
-                cite("M"),
-                text("."),
-            ),
-            runs[1],
-        )
+        assertEquals(listOf(text("It was "), text("huge", bold = true), text(".")), runs[1])
+        assertEquals(listOf(text("Other", italic = true), text(" is cited "), cite("M"), text(".")), runs[2])
     }
 }

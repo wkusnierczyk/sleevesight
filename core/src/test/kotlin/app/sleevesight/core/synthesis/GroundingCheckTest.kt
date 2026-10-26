@@ -128,6 +128,41 @@ class GroundingCheckTest {
         }
     }
 
+    /** The simulator splits after `e.g.` before a capital; the check does not, nor with marks (#574). */
+    @Test
+    fun `e g and i e do not end a sentence, with or without emphasis marks after them`() {
+        val replies =
+            listOf(
+                "He covered several hits, e.g. Thriller and Billie Jean. [W1]",
+                "He covered several hits, e.g. *Thriller* and *Billie Jean*. [W1]",
+                "He covered several hits, e.g. **Thriller** and _Billie Jean_. [W1]",
+                "It opens the B-side, i.e. The Wreck. [W1]",
+                "It opens the B-side, i.e. *The Wreck*. [W1]",
+                "E.g. *Thriller* sold well. [W1]",
+            )
+        for (reply in replies) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), reply)
+    }
+
+    @Test
+    fun `etc ends a sentence before a capital, as in the simulator, so an uncited one shows`() {
+        val replies =
+            listOf(
+                "The arrangement uses guitars, strings, etc. Lightfoot recorded it in Toronto. [W1]",
+                "The arrangement uses guitars, strings, etc. It was recorded in Toronto. [W1]",
+                "The arrangement uses guitars, strings, etc. *Rolling Stone* praised it. [W1]",
+            )
+        for (reply in replies) {
+            val written = assertIs<InsightReply.Written>(GroundingCheck.check(reply, setOf("W1"), allowModel = false))
+            assertEquals(
+                listOf(SentenceStatus.UNCITED, SentenceStatus.OK),
+                written.grounded.paragraphs
+                    .flatten()
+                    .map { it.status },
+                reply,
+            )
+        }
+    }
+
     @Test
     fun `a stop after an ordinary word still ends a sentence`() {
         val reply = "It went gold in the US. Plans changed. [W1] Then it went to No. 1 (vs. two). [W2]"

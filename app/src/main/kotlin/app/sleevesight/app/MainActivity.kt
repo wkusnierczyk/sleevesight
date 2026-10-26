@@ -31,6 +31,7 @@ import app.sleevesight.app.ui.logo.LogoIntro
 import app.sleevesight.app.ui.logo.LogoIntroOverlay
 import app.sleevesight.app.ui.logo.endsOnKeys
 import app.sleevesight.app.ui.report.TesterReportFeed
+import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.isAppInDarkTheme
@@ -119,6 +120,12 @@ class MainActivity : ComponentActivity() {
                                         links.openDiagnostics,
                                         onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLaunch = graph::playerLaunchIntent,
+                                        installedPlayers =
+                                            InstalledPlayers(
+                                                graph::playerIcon,
+                                                graph::playerVisible,
+                                                graph.sessions.seenPlayers,
+                                            ),
                                         modelCheck = graph.modelCheck,
                                         playerLabel = graph::playerLabel,
                                     )
