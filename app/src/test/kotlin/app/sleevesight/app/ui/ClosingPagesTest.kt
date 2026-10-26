@@ -5,11 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.provider.Settings
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -43,6 +39,7 @@ import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.home.PAGE_CLOSE_TAG
 import app.sleevesight.app.ui.home.PAGE_TITLE_TAG
 import app.sleevesight.app.ui.settings.SettingsSection
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -165,10 +162,8 @@ class ClosingPagesTest {
         assertEquals(0, count(PAGE_CLOSE_TAG))
     }
 
-    /** The app on its own navigation controller, [nav], with [settings] and [diagnostics] stand-ins. */
-    private fun ActivityScenario<MainActivity>.withController(
-        diagnostics: @Composable (back: () -> Unit) -> Unit = {},
-    ): NavHostController {
+    /** The app on its own navigation controller, with a stand-in for the settings. */
+    private fun ActivityScenario<MainActivity>.withController(): NavHostController {
         lateinit var nav: NavHostController
         onActivity { activity ->
             activity.setContent {
@@ -179,7 +174,6 @@ class ClosingPagesTest {
                     { true },
                     nav,
                     settings = { Text(SETTINGS_DRAWN) },
-                    diagnostics = diagnostics,
                 )
             }
         }
@@ -351,19 +345,21 @@ class ClosingPagesTest {
     }
 
     @Test
-    fun theDiagnosticsWayBackReturnsToTheSettingsOnce() {
-        launchOnHome().use { scenario ->
-            val nav =
-                scenario.withController { back ->
-                    Button(onClick = back, modifier = Modifier.testTag(PAGE_BACK_TAG)) { Text("Back") }
-                }
-            scenario.onActivity {
-                nav.navigate(SettingsPage)
-                nav.navigate(DiagnosticsPage)
-            }
+    fun theDiagnosticsBackArrowReturnsToTheSettingsOnce() {
+        // The way in: developer mode with *Diagnostics* on, through the app's own screens.
+        runBlocking { app.graph.settings.update { it.copy(developerMode = true, showDiagnostics = true) } }
+        launchOnHome().use {
+            compose.onNodeWithContentDescription(text(R.string.home_settings)).performClick()
+            compose.openSection(SettingsSection.DEVELOPER)
+            val open = text(R.string.settings_diagnostics_open)
+            compose.waitUntil(5_000) { compose.onAllNodesWithText(open).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText(open).performScrollTo().performClick()
             compose.waitForIdle()
+            assertBar(R.string.diagnostics_title)
             doubleTap(PAGE_BACK_TAG)
-            compose.onNodeWithText(SETTINGS_DRAWN).assertIsDisplayed()
+            // The settings, not Home under them.
+            compose.onNodeWithText(open).performScrollTo().assertIsDisplayed()
+            assertEquals(0, count(PAGE_BACK_TAG))
         }
     }
 
