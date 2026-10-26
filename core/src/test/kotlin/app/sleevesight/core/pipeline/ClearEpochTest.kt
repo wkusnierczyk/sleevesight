@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
@@ -14,6 +15,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** *Clear history*'s boundary (#547): work started before it writes nothing after it. */
+@OptIn(ExperimentalCoroutinesApi::class) // `runCurrent`, to run what is due now.
 class ClearEpochTest {
     private val epoch = ClearEpoch()
 

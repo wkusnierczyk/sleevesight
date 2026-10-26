@@ -27,6 +27,7 @@ class ClearEpoch {
     fun mark(): CoroutineContext.Element = Started(this, generation.value)
 
     /** Ends the current generation, once the writes in progress have ended. */
+    @Suppress("RedundantSuspendModifier") // Detekt 1.23.8 does not see `Mutex.withLock` as suspending; it is.
     suspend fun advance() {
         lock.withLock { generation.update { it + 1 } }
     }
