@@ -1,12 +1,19 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -19,6 +26,8 @@ import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.diagnostics.Diagnostics
 import app.sleevesight.app.diagnostics.DiagnosticsLog
 import app.sleevesight.app.diagnostics.SkipLearning
+import app.sleevesight.app.ui.home.PAGE_BACK_TAG
+import app.sleevesight.app.ui.home.PAGE_TITLE_TAG
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.core.pipeline.PipelineEvent
 import app.sleevesight.store.CacheStats
@@ -121,7 +130,7 @@ class DiagnosticsScreenTest {
         block: () -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics) } }
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics, onBack = {}) } }
             compose.waitForIdle()
             block()
         }
@@ -137,6 +146,24 @@ class DiagnosticsScreenTest {
             .onNodeWithText(text)
             .fetchSemanticsNode()
             .positionInRoot.y
+
+    @Test
+    fun theBarHasTheBackArrowTheTitleAndExport() {
+        var backs = 0
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics(), onBack = { backs++ }) } }
+            compose
+                .onNodeWithTag(PAGE_TITLE_TAG)
+                .assertTextEquals(text(R.string.diagnostics_title))
+                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            compose.onNodeWithText(text(R.string.diagnostics_export)).assertIsDisplayed()
+            compose
+                .onNodeWithTag(PAGE_BACK_TAG)
+                .assertContentDescriptionEquals(text(R.string.page_back))
+                .performClick()
+            assertEquals(1, backs)
+        }
+    }
 
     @Test
     fun showsTheCachesAndTheEventsNewestFirst() {
@@ -245,13 +272,13 @@ class DiagnosticsScreenTest {
             )
         val out = ByteArrayOutputStream()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics) } }
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics, onBack = {}) } }
             // As the file picker's result would start it.
             scenario.onActivity { diagnostics.export { out } }
             waitForText(text(R.string.diagnostics_exporting))
 
             scenario.recreate()
-            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics) } }
+            scenario.onActivity { it.setContent { DiagnosticsScreen(diagnostics, onBack = {}) } }
             waitForText(text(R.string.diagnostics_exporting))
             gate.countDown()
 
