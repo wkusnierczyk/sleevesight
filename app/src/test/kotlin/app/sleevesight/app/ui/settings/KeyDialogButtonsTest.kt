@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -14,11 +17,16 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpRect
@@ -46,9 +54,9 @@ import kotlin.math.abs
 
 /**
  * The key dialog's terms and buttons (#543): an AI service's agreement in bold; *Cancel* at the
- * start, and *Remove*, while a key is saved, and *Save* at the end, in every key's dialog; *Remove*
- * in the error colour, named for the key it removes. Drawn with native graphics on a phone's width
- * and density, to see the colour.
+ * start, and *Remove*, while a key is saved, and *Save*, filled, at the end, in every key's dialog;
+ * *Remove* in the error colour, named for the key it removes, and asking first, in a confirmation
+ * laid out the same. Drawn with native graphics on a phone's width and density, to see the colour.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h891dp-420dpi")
@@ -65,38 +73,61 @@ class KeyDialogButtonsTest {
     private val remove get() = hasText(text(R.string.settings_remove)) and hasClickAction()
     private val save get() = hasText(text(R.string.settings_save)) and hasClickAction()
 
-    /** The dialog of the key [id], saved or not as [state] says, [dark] or not; [block] hears the error colour. */
+    /** What the dialog heard, and the theme's colours it was drawn in. */
+    private class Shown {
+        var error = Color.Unspecified
+        var primary = Color.Unspecified
+        var removed = 0
+        var dismissed by mutableIntStateOf(0)
+    }
+
+    /** The dialog of the key [id], saved or not as [state] says, [dark] or not. */
     private fun show(
         id: SecretId,
         state: SecretState = SecretState.SAVED,
         dark: Boolean = false,
-        block: (Color) -> Unit = {},
+        block: (Shown) -> Unit = {},
     ) {
         val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned("") } }
         val keyboard: ComputerKeyboard = { _, _, _, _ -> }
-        var error = Color.Unspecified
+        val shown = Shown()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
                     SleevesightTheme(darkTheme = dark) {
-                        error = MaterialTheme.colorScheme.error
-                        KeyDialog(
-                            id = id,
-                            state = state,
-                            onSave = { SaveResult.SAVED },
-                            onRemove = { true },
-                            scanner = scanner,
-                            keyboard = keyboard,
-                            showPhoneName = false,
-                            onDismiss = {},
-                        )
+                        shown.error = MaterialTheme.colorScheme.error
+                        shown.primary = MaterialTheme.colorScheme.primary
+                        if (shown.dismissed == 0) {
+                            KeyDialog(
+                                id = id,
+                                state = state,
+                                onSave = { SaveResult.SAVED },
+                                onRemove = {
+                                    shown.removed++
+                                    true
+                                },
+                                scanner = scanner,
+                                keyboard = keyboard,
+                                showPhoneName = false,
+                                onDismiss = { shown.dismissed++ },
+                            )
+                        }
                     }
                 }
             }
             waitFor(hasText(text(R.string.settings_key_field)))
-            block(error)
+            block(shown)
         }
     }
+
+    /** The confirmation's title, for the key [id]. */
+    private fun confirmTitle(id: SecretId) = app.getString(R.string.settings_key_remove_title, text(keyName(id)))
+
+    /** A node of the confirmation of the key [id]'s removal. */
+    private fun inConfirmation(id: SecretId) = hasAnyAncestor(hasAnyDescendant(hasText(confirmTitle(id))))
+
+    /** A node of the key dialog, not of the confirmation over it. */
+    private val inKeyDialog get() = hasAnyAncestor(hasAnyDescendant(hasSetTextAction()))
 
     private fun waitFor(matcher: SemanticsMatcher) =
         compose.waitUntil(timeoutMillis = 5_000) { compose.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
@@ -141,12 +172,12 @@ class KeyDialogButtonsTest {
     fun everyKeysDialogHasCancelAtTheStartThenRemoveAndSaveAtTheEnd() {
         for (id in SHOWN_KEYS) {
             show(id) {
-                val dialog = bounds(isDialog())
+                val field = bounds(hasSetTextAction())
                 val (c, r, s) = listOf(cancel, remove, save).map(::bounds)
                 assertTrue("$id: Cancel before Remove", c.right <= r.left)
                 assertTrue("$id: Remove before Save", r.right <= s.left)
-                assertTrue("$id: Cancel at the start", c.left - dialog.left < r.left - c.right)
-                assertTrue("$id: Save at the end", dialog.right - s.right < r.left - c.right)
+                assertEquals("$id: Cancel at the start", field.left, c.left, 1f)
+                assertEquals("$id: Save at the end", field.right, s.right, 1f)
                 assertEquals("$id: one line", c.center.y, s.center.y, 1f)
             }
         }
@@ -156,9 +187,10 @@ class KeyDialogButtonsTest {
     fun withNoKeySavedThereIsNoRemoveAndCancelStaysAtTheStart() =
         show(SecretId.LASTFM, SecretState.ABSENT) {
             assertEquals(0, count(remove))
+            val field = bounds(hasSetTextAction())
             val (c, s) = listOf(cancel, save).map(::bounds)
-            val dialog = bounds(isDialog())
-            assertTrue("Cancel at the start", c.left - dialog.left < s.left - c.right)
+            assertEquals("Cancel at the start", field.left, c.left, 1f)
+            assertEquals("Save at the end", field.right, s.right, 1f)
         }
 
     @Test
@@ -174,11 +206,15 @@ class KeyDialogButtonsTest {
     @Test
     fun removeIsDrawnInTheErrorColourAndSaveIsNot() {
         for (dark in listOf(false, true)) {
-            show(SecretId.EXA, dark = dark) { error ->
+            show(SecretId.EXA, dark = dark) { shown ->
+                compose.onNode(hasSetTextAction()).performTextInput("0c6d1e2f-3a4b-5c6d")
+                compose.waitForIdle()
                 val removing = compose.onNode(remove).captureToImage().asAndroidBitmap()
                 val saving = compose.onNode(save).captureToImage().asAndroidBitmap()
-                assertTrue("dark=$dark: Remove in $error", share(removing, error) > MARKED)
-                assertEquals("dark=$dark: Save not", 0f, share(saving, error), 0f)
+                assertTrue("dark=$dark: Remove in ${shown.error}", share(removing, shown.error) > MARKED)
+                assertEquals("dark=$dark: Save not", 0f, share(saving, shown.error), 0f)
+                // *Save*, the main action, is filled with the primary colour.
+                assertTrue("dark=$dark: Save filled in ${shown.primary}", share(saving, shown.primary) > FILLED)
             }
         }
     }
@@ -188,14 +224,73 @@ class KeyDialogButtonsTest {
         RuntimeEnvironment.setQualifiers("w320dp-h640dp")
         RuntimeEnvironment.setFontScale(2f)
         show(SecretId.ANTHROPIC) {
+            // The dialog's content, from its start, where the title starts, to its end, as far in
+            // from the dialog's edge (the field, scrolled out of the short window, has no bounds).
             val dialog = bounds(isDialog())
+            val title = bounds(hasText(text(keyName(SecretId.ANTHROPIC))))
+            val field = Rect(title.left, title.top, dialog.right - (title.left - dialog.left), title.bottom)
             val (c, r, s) = listOf(cancel, remove, save).map(::bounds)
-            for (b in listOf(c, r, s)) assertTrue("$b inside $dialog", b.left >= dialog.left && b.right <= dialog.right)
-            assertTrue("Cancel first", c.right <= r.left || c.bottom <= r.top)
-            assertTrue("Remove before Save", r.right <= s.left || r.bottom <= s.top)
-            assertTrue("each button whole", listOf(c, r, s).all { it.width > 0f && it.height > 0f })
+            assertTrue("the line breaks: Save below Cancel", s.top >= c.bottom)
+            assertEquals("Cancel at the start", field.left, c.left, 1f)
+            assertEquals("Save at the end of its line", field.right, s.right, 1f)
+            if (r.top < s.top) {
+                // Remove, on a line above Save's, ends it too, unless it shares Cancel's.
+                assertTrue("Remove after Cancel", r.top >= c.bottom || r.left >= c.right)
+                if (r.top >= c.bottom) assertEquals("Remove at the end of its line", field.right, r.right, 1f)
+            } else {
+                assertEquals("Remove beside Save", s.left - 8f, r.right, 1f)
+            }
+            val inside = listOf(c, r, s).all { it.left >= field.left - 1f && it.right <= field.right + 1f }
+            assertTrue("each inside", inside)
             // Remove's text fits on one line: it is no taller than Save.
             assertEquals(s.height, r.height, 1f)
+        }
+    }
+
+    @Test
+    fun removeAsksFirstAndTheConfirmationRemovesTheKeyAndClosesBoth() =
+        show(SecretId.LASTFM) { shown ->
+            compose.onNode(remove and inKeyDialog).performClick()
+            waitFor(hasText(confirmTitle(SecretId.LASTFM)))
+            assertEquals("nothing removed before it is confirmed", 0, shown.removed)
+            compose.onNode(remove and inConfirmation(SecretId.LASTFM)).performClick()
+            compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
+            assertEquals(1, shown.removed)
+            compose.waitForIdle()
+            assertEquals("the confirmation gone", 0, count(hasText(confirmTitle(SecretId.LASTFM))))
+            assertEquals("the key dialog gone", 0, count(hasSetTextAction()))
+        }
+
+    @Test
+    fun cancellingTheConfirmationKeepsTheKeyAndTheKeyDialog() =
+        show(SecretId.ANTHROPIC) { shown ->
+            compose.onNode(remove and inKeyDialog).performClick()
+            waitFor(hasText(confirmTitle(SecretId.ANTHROPIC)))
+            compose.onNode(cancel and inConfirmation(SecretId.ANTHROPIC)).performClick()
+            compose.waitForIdle()
+            assertEquals(0, count(hasText(confirmTitle(SecretId.ANTHROPIC))))
+            assertEquals("the key kept", 0, shown.removed)
+            assertEquals("the key dialog still open", 0, shown.dismissed)
+            compose.onNode(remove and inKeyDialog).assertIsDisplayed()
+        }
+
+    @Test
+    fun theConfirmationsRemoveIsRedNamedAndAfterCancel() {
+        for (dark in listOf(false, true)) {
+            show(SecretId.EXA, dark = dark) { shown ->
+                compose.onNode(remove and inKeyDialog).performClick()
+                waitFor(hasText(confirmTitle(SecretId.EXA)))
+                val confirming = remove and inConfirmation(SecretId.EXA)
+                val named = app.getString(R.string.settings_key_remove, text(keyName(SecretId.EXA)))
+                compose.onNode(confirming and hasContentDescription(named)).assertIsDisplayed()
+                val picture = compose.onNode(confirming).captureToImage().asAndroidBitmap()
+                assertTrue("dark=$dark: in ${shown.error}", share(picture, shown.error) > MARKED)
+                val title = bounds(hasText(confirmTitle(SecretId.EXA)))
+                val c = bounds(cancel and inConfirmation(SecretId.EXA))
+                val r = bounds(confirming)
+                assertEquals("Cancel at the start", title.left, c.left, 1f)
+                assertTrue("Remove after Cancel", r.left >= c.right)
+            }
         }
     }
 
@@ -223,5 +318,8 @@ class KeyDialogButtonsTest {
 
         /** The share of a button's pixels in the error colour that marks it: its outline alone is more. */
         const val MARKED = 0.02f
+
+        /** The share of a filled button's pixels in its fill, less its text and rounded corners. */
+        const val FILLED = 0.5f
     }
 }

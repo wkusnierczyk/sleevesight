@@ -84,11 +84,12 @@ internal fun <T> ChoiceDialog(
 /**
  * Enters, replaces or removes the key [id]. The saved key is never shown, and what is typed lives
  * only in this dialog's memory: not in saved instance state, which the system may keep on disk.
- * Spaces around the key, as a paste often brings, are dropped. [onSave] and [onRemove] say whether
- * they succeeded: the dialog closes only then, and otherwise says why and keeps what was typed;
- * only a key the key store could not seal suggests *Purge keys*, which cannot cure a file that
- * cannot be written. While one runs, the dialog cannot be cancelled or dismissed: it ends as the
- * result says.
+ * Spaces around the key, as a paste often brings, are dropped. [onSave] says whether it succeeded:
+ * the dialog closes only then, and otherwise says why and keeps what was typed; only a key the key
+ * store could not seal suggests *Purge keys*, which cannot cure a file that cannot be written.
+ * While it runs, the dialog cannot be cancelled or dismissed: it ends as the result says. *Remove*
+ * asks first, with the key row's own confirmation ([ConfirmDialog], #543), which runs [onRemove]
+ * and says there if it failed; once the key is removed, both close.
  *
  * *Scan QR code* reads the key from a QR code with [scanner] (#268) and fills the field with it, as
  * if typed, once it has the service's shape ([KeyShape]); otherwise it says why and leaves the
@@ -121,7 +122,7 @@ internal fun <T> ChoiceDialog(
  * screen's width, less a margin ([keyDialogWidth]).
  *
  * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
- * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*.
+ * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*, filled.
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -201,13 +202,14 @@ internal fun KeyDialog(
         // All three in the one slot: Material's dialog puts its dismissal next to its confirmation,
         // and *Cancel* keeps to the start here, away from them (#543).
         confirmButton = {
-            KeyDialogButtons(
-                name = stringResource(keyName(id)),
+            KeyEntryButtons(
+                id = id,
                 stored = state != SecretState.ABSENT,
                 savable = value.isNotEmpty(),
                 busy = busy,
                 onCancel = ::close,
-                onRemove = { run { R.string.settings_key_remove_failed.takeUnless { onRemove() } } },
+                onRemove = onRemove,
+                onRemoved = ::close,
                 onSave = { run { saveFailure(onSave(value)) } },
             )
         },
@@ -317,24 +319,30 @@ private fun saveFailure(result: SaveResult): Int? =
         SaveResult.NOT_WRITTEN -> R.string.settings_key_write_failed
     }
 
-/** What a [ConfirmDialog] says: its [title], what the action does, its button, and its failure. */
+/**
+ * What a [ConfirmDialog] says: its [title], what the action does, its button, the button's name to
+ * a screen reader ([named]), and its failure.
+ */
 internal class Confirmation(
     val title: String,
     val explained: String,
     val confirm: String,
+    val named: String,
     val failed: String,
 )
 
 /**
- * Confirms the removal of a saved key. [onConfirm] returns whether it succeeded: the dialog closes only
- * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
- * second tap does not run it again.
+ * Confirms the removal of a saved key, from its row or its dialog. [onConfirm] returns whether it
+ * succeeded: only then does the dialog end, with [onDone], and otherwise it says so. While it runs,
+ * the dialog cannot be cancelled or dismissed, and a second tap does not run it again. Its buttons
+ * are the key dialog's ([KeyDialogButtons], #543): *Cancel* at the start, and the red *Remove*.
  */
 @Composable
 internal fun ConfirmDialog(
     confirmation: Confirmation,
     onConfirm: suspend () -> Boolean,
     onDismiss: () -> Unit,
+    onDone: () -> Unit = onDismiss,
 ) {
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -355,23 +363,19 @@ internal fun ConfirmDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
+            KeyDialogButtons(busy = busy, onCancel = onDismiss) {
+                RemoveKeyButton(confirmation.confirm, confirmation.named, enabled = !busy) {
                     // As in [KeyDialog]: a second tap in the same frame finds the button still enabled.
-                    if (busy) return@TextButton
+                    if (busy) return@RemoveKeyButton
                     busy = true
                     failed = false
                     scope.launch {
                         val done = onConfirm()
                         busy = false
-                        if (done) onDismiss() else failed = true
+                        if (done) onDone() else failed = true
                     }
-                },
-                enabled = !busy,
-            ) { Text(confirmation.confirm) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+                }
+            }
         },
     )
 }
