@@ -4,15 +4,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -36,6 +40,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 
@@ -74,21 +79,26 @@ internal fun PageLink(
 }
 
 /**
- * A page of Home's (#447): a bar with the back arrow, which goes back to where the page was opened
- * from ([onBack]), as Android's back does, and [title], which a screen reader reads as a heading;
- * under it, [content], scrolling. In the colours it is drawn in (the album art's), the bar and the
- * page in the colour of Home's box, so the item reads as the box opened to the whole screen.
+ * A page of Home's (#447), or another page opened from somewhere, such as the credits and the
+ * first-run screen opened again (#549): a bar with the back arrow, which goes back to where the page
+ * was opened from ([onBack]), as Android's back does, and a screen reader reads as *Back*, and
+ * [title], which it reads as a heading; under it, [content], scrolling, [padding] in from the edges,
+ * its items [spacing] apart. The bar and the page are in [containerColor]: for Home's pages, in the
+ * colours they are drawn in (the album art's), the colour of Home's box, so the item reads as the box
+ * opened to the whole screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PageFrame(
     title: String,
     onBack: () -> Unit,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    padding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+    spacing: Dp = 12.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
     Scaffold(
-        containerColor = colors.surfaceContainer,
+        containerColor = containerColor,
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             TopAppBar(
@@ -108,26 +118,44 @@ internal fun PageFrame(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surfaceContainer),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
             )
         },
-    ) { padding ->
+    ) { bars ->
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .consumeWindowInsets(padding)
+                    .padding(bars)
+                    .consumeWindowInsets(bars)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(padding),
+            verticalArrangement = Arrangement.spacedBy(spacing),
             content = content,
         )
     }
 }
 
-/** The test tags of a page's title and its back arrow, and of the ways to each page from Home. */
+/**
+ * At the end of a page opened from somewhere (#549), the button that closes it ([onClose]) and says
+ * so, *Close*, as the back arrow at its top does, across the page's width.
+ */
+@Composable
+internal fun PageCloseButton(
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Button(onClick = onClose, modifier = modifier.fillMaxWidth().testTag(PAGE_CLOSE_TAG)) {
+        Text(stringResource(R.string.page_close))
+    }
+}
+
+/**
+ * The test tags of a page's title, its back arrow and its closing button, and of the ways to each
+ * page from Home.
+ */
 const val PAGE_TITLE_TAG: String = "page:title"
 const val PAGE_BACK_TAG: String = "page:back"
+const val PAGE_CLOSE_TAG: String = "page:close"
 const val SOURCES_PAGE_LINK_TAG: String = "page-link:sources"
 const val GENRES_PAGE_LINK_TAG: String = "page-link:genres"

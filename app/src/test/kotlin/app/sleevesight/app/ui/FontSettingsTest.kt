@@ -233,7 +233,7 @@ class FontSettingsTest {
     @Test
     fun theCreditsListTheFontWithItsLicence() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
+            scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_roboto)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("SIL Open Font License 1.1").performScrollTo().assertIsDisplayed()
         }

@@ -26,6 +26,7 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -45,6 +46,7 @@ import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.PRIVACY_POLICY_SHOWN
 import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.openSection
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.flow.first
@@ -367,10 +369,11 @@ class FirstRunFlowTest {
         setAccess(granted = true)
         launch().use { scenario ->
             compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
-            // Robolectric runs out of touch mode, so Continue takes focus and is scrolled into view
-            // when Home opens the first-run screen; the heading is scrolled back to.
+            // Robolectric runs out of touch mode, so the back arrow, at the top, takes focus when Home
+            // opens the first-run screen again (#549).
+            compose.onNodeWithTag(PAGE_BACK_TAG).assertIsFocused()
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+            compose.onNodeWithText(text(R.string.page_close)).performScrollTo().performClick()
             compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
             // Back on the Home it came from, not a second one over it: nothing left for Back to pop.
             var handlesBack = true
@@ -389,7 +392,7 @@ class FirstRunFlowTest {
             launch().use {
                 compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
                 // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
-                compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+                compose.onNodeWithText(text(R.string.first_run_intro)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
             }
         } finally {
@@ -435,7 +438,7 @@ class FirstRunFlowTest {
     }
 
     @Test
-    fun theSettingsOpenWhatLeavesTheDeviceAtItsTopAndContinueComesBack() {
+    fun theSettingsOpenWhatLeavesTheDeviceAtItsTopAndCloseComesBack() {
         acknowledgeFirstRun()
         setAccess(granted = true)
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -449,10 +452,10 @@ class FirstRunFlowTest {
                     compose.onAllNodesWithText(text(R.string.settings_what_leaves)).fetchSemanticsNodes().isNotEmpty()
                 }
                 compose.onNodeWithText(text(R.string.settings_what_leaves)).performScrollTo().performClick()
-                // At the top, as from Home: the app's name and the heading, unscrolled.
-                compose.onNodeWithText(text(R.string.app_name)).assertIsDisplayed()
+                // At the top, as from Home: the intro and the heading, unscrolled.
+                compose.onNodeWithText(text(R.string.first_run_intro)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
-                compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
+                compose.onNodeWithText(text(R.string.page_close)).performScrollTo().performClick()
                 // Back on the settings, not Home.
                 compose.onNodeWithText(text(R.string.settings_what_leaves)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.home_placeholder)).assertDoesNotExist()
