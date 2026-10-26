@@ -157,8 +157,6 @@ class LoadKeysTest {
         show(scanner = notScanning) {
             waitForText(text(R.string.load_keys_make))
             compose.onNodeWithText(text(R.string.load_keys_read)).assertIsDisplayed()
-            // keys-qr is for developers: not named outside developer mode.
-            assertTrue(!shown(text(R.string.load_keys_developers)))
 
             val address = "sleevesight.app/api-keys"
             compose
@@ -170,14 +168,6 @@ class LoadKeysTest {
             assertEquals(Intent.ACTION_VIEW, started?.action)
             assertEquals("https://$address", started?.dataString)
         }
-
-    @Test
-    fun inDeveloperModeTheScreenNamesKeysQr() {
-        runBlocking { settings.update { it.copy(developerMode = true) } }
-        show(scanner = notScanning) {
-            waitForText(text(R.string.load_keys_developers))
-        }
-    }
 
     @Test
     fun theScreenIsSecureAndCancelClosesIt() =

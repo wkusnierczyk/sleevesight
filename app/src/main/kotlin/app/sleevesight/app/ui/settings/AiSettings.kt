@@ -26,9 +26,9 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * and its reasoning effort. The switches are exclusive: switching one on switches the one on before
  * off, and with all off no insight is written. A provider's model and effort can be set while it
  * is off, and stay when it is switched off, so switching back restores them. Its key is under
- * *Secrets*; switched on without it, the provider says so. A provider whose selected model was
- * found unavailable ([unavailable], by provider; #540) says so under its model, and asks for
- * another.
+ * *Secrets*, which a link under the switch leads to ([KeyLink]); switched on without it, the
+ * provider says so. A provider whose selected model was found unavailable ([unavailable], by
+ * provider; #540) says so under its model, and asks for another.
  */
 @Suppress("LongParameterList") // What the rows show, and what they change.
 @Composable
@@ -64,8 +64,9 @@ private fun ProviderRows(
     SwitchRow(
         title = name,
         // Switched on, it says when its key is missing or cannot be read: insights wait for it.
-        summary = keyId?.let { keyNote(it, secrets) }.takeIf { on },
+        summary = keyId?.let { keyNote(it, secrets, linked = true) }.takeIf { on },
         checked = on,
+        below = keyId?.let { { KeyLink(it) } },
     ) { switchedOn ->
         update {
             when {

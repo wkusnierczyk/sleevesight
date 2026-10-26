@@ -146,8 +146,9 @@ private fun ColumnScope.PurgeStep(
         }
         MoreAboutSafeDelete()
     }
-    KeyScreenActions {
-        TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
+    KeyScreenActions(
+        cancel = { TextButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) } },
+    ) {
         TextButton(onClick = onDelete, enabled = !busy && listed != null) {
             Text(stringResource(if (failure != null) R.string.purge_keys_try_again else R.string.purge_keys_delete))
         }

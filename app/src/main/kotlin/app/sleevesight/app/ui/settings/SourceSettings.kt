@@ -82,8 +82,9 @@ private val SOURCE_ROWS: List<SourceRow> =
     )
 
 /**
- * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key
- * it lacks, where to save it ([keyNote]): the keys themselves are under *Secrets*. A web search
+ * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key,
+ * a link to it under *Secrets*, where the keys are ([KeyLink]), and, while it lacks the key, that
+ * it needs it ([keyNote]). A web search
  * engine's row is on while web search is on with that engine ([Settings.isEnabled] needs both):
  * switching it on turns both on, and off turns the engine off.
  */
@@ -107,9 +108,12 @@ internal fun SourcesSection(
         val name = stringResource(row.name)
         SwitchRow(
             title = name,
-            summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets) }),
+            summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) }),
             checked = checked,
-            below = row.url?.let { url -> { WebsiteLink(name, url) } },
+            below = {
+                key?.let { KeyLink(it) }
+                row.url?.let { WebsiteLink(name, it) }
+            },
         ) { on -> update { switched(it, row, on) } }
     }
 }
@@ -159,21 +163,24 @@ internal fun lines(
 
 /**
  * What a row that needs the key [id] says of it, where the key is not saved and readable: that it
- * is needed, in *Secrets*, or that the one saved can no longer be read. Nothing before the keys'
+ * is needed, or that the one saved can no longer be read. A row [linked] to the key ([KeyLink])
+ * leaves where the key is to the link under it; any other names *Secrets*. Nothing before the keys'
  * states are read, which would show it, for a moment, beside a saved key.
  */
 @Composable
 internal fun keyNote(
     id: SecretId,
     secrets: Map<SecretId, SecretState>,
-): String? =
-    when (secrets[id]) {
+    linked: Boolean,
+): String? {
+    val needs = if (linked) R.string.settings_needs_key_linked else R.string.settings_needs_key
+    val unreadable = if (linked) R.string.settings_key_unreadable_linked else R.string.settings_key_unreadable_note
+    return when (secrets[id]) {
         null, SecretState.SAVED -> null
-        SecretState.ABSENT -> stringResource(R.string.settings_needs_key, stringResource(keyRecipient(id)))
-        SecretState.UNREADABLE -> {
-            stringResource(R.string.settings_key_unreadable_note, stringResource(keyRecipient(id)))
-        }
+        SecretState.ABSENT -> stringResource(needs, stringResource(keyRecipient(id)))
+        SecretState.UNREADABLE -> stringResource(unreadable, stringResource(keyRecipient(id)))
     }
+}
 
 /**
  * *Genres* (D12, #84, #444): *Show genres*, off for none at all, not asked for from any source
@@ -199,7 +206,8 @@ internal fun GenresSection(
             when {
                 !settings.showGenres -> stringResource(R.string.settings_labels_genres_off)
                 !settings.isEnabled(source.source) -> stringResource(R.string.settings_labels_source_off)
-                source == LabelSource.LASTFM -> keyNote(SecretId.LASTFM, secrets)
+                // No link to the key here: the note names *Secrets*.
+                source == LabelSource.LASTFM -> keyNote(SecretId.LASTFM, secrets, linked = false)
                 else -> null
             }
         // Last.fm's switch is offered only with its key saved, so not before the keys' states are read.
