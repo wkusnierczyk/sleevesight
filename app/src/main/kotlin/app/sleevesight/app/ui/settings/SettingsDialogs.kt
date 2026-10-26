@@ -386,8 +386,8 @@ internal fun ConfirmDialog(
  * else from [modelName].
  *
  * Once the list is had, only models the key can use are offered (#540): those listed and open to a
- * new choice ([ModelInfo.offered]); the default and the model chosen earlier only if listed (a
- * deprecated one too, which still answers for an account that uses it). The selected model, if not
+ * new choice ([ModelInfo.offered]), the default among them, and the model selected now if listed
+ * (a deprecated one too, which still answers for an account that uses it). The selected model, if not
  * listed, is said to be unavailable, and not offered. When the list cannot be had, the default and
  * a model chosen earlier stay offered, as nothing says they are not usable.
  */
@@ -479,12 +479,11 @@ internal fun modelChoice(
     }
     val listed = loaded.models
     val has = { id: String -> listed.any { it.id == id } }
-    val others =
-        listed
-            .filter { it.id != default && (it.offered || it.id == current) }
-            .map { it.id }
+    // Offered for a new choice, or the model selected now, which an account using it keeps.
+    val open = { model: ModelInfo -> model.offered || model.id == selected }
+    val others = listed.filter { it.id != default && open(it) }.map { it.id }
     return ModelChoice(
-        default = default?.takeIf(has),
+        default = default?.takeIf { d -> listed.any { it.id == d && open(it) } },
         others = others,
         gone = selected?.takeUnless(has),
         listed = listed,

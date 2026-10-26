@@ -50,6 +50,19 @@ class ModelChoiceTest {
     }
 
     @Test
+    fun aDeprecatedDefaultIsOfferedOnlyWhileItIsTheSelectedModel() {
+        val load = listed(model(default, offered = false), model("claude-opus-5-5"))
+
+        val other = modelChoice(ProviderId.ANTHROPIC, "claude-opus-5-5", load)
+        assertNull("closed to a new choice", other.default)
+        assertEquals(listOf("claude-opus-5-5"), other.others)
+
+        // Selected (no choice of the user's own), it stays offered, as any model in use does.
+        assertEquals(default, modelChoice(ProviderId.ANTHROPIC, null, load).default)
+        assertEquals(default, modelChoice(ProviderId.ANTHROPIC, default, load).default)
+    }
+
+    @Test
     fun withoutAListTheDefaultAndTheModelChosenEarlierStayOffered() {
         for (load in listOf(ModelLoad.NoKey, ModelLoad.Unavailable, ModelLoad.Failed(AiErrorKind.OFFLINE))) {
             val choice = modelChoice(ProviderId.ANTHROPIC, "claude-opus-4-1", load)
