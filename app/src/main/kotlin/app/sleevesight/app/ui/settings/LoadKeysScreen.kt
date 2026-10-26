@@ -2,11 +2,9 @@ package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -25,10 +23,7 @@ import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
-import app.sleevesight.app.ui.ExternalLink
-import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.scan.QrScanner
-import app.sleevesight.app.ui.shownAddress
 import app.sleevesight.core.Secret
 import app.sleevesight.core.keys.KeyProblem
 import app.sleevesight.core.keys.KeySetup
@@ -71,8 +66,8 @@ private sealed interface LoadStep {
 
 /**
  * *Load keys*, a screen of its own ([KeyScreen], secure). First, how to make a setup code (the
- * instructions at [API_KEYS_URL], and, in [developerMode], the CLI's `keys-qr`), the camera's view
- * ([scanner]) to read it, and *Cancel*. Once a code is read, its view gives way to what the code
+ * instructions at [API_KEYS_URL]), the camera's view ([scanner]) to read it, and *Cancel*
+ * ([GuidedScan], as the key field's scans, #541). Once a code is read, its view gives way to what the code
  * holds, before anything is saved: each key in its service's shape, by its last four characters,
  * and whether it is new or replaces a key stored ([secrets]); then every problem: a key refused and
  * why, a name this version does not know, a line that could not be read, a code that is not a setup
@@ -85,7 +80,6 @@ private sealed interface LoadStep {
 internal fun LoadKeysScreen(
     secrets: Map<SecretId, SecretState>,
     scanner: QrScanner,
-    developerMode: Boolean,
     onSave: suspend (Map<SecretId, Secret>) -> List<SecretId>,
     onDismiss: () -> Unit,
 ) {
@@ -94,7 +88,15 @@ internal fun LoadKeysScreen(
     KeyScreen(R.string.settings_scan_keys, busy, onDismiss) {
         when (val shown = step) {
             LoadStep.Scanning -> {
-                ScanStep(scanner, developerMode, { step = LoadStep.Found(KeySetup.read(it)) }, onDismiss)
+                GuidedScan(
+                    make = stringResource(R.string.load_keys_make),
+                    url = API_KEYS_URL,
+                    linkDescription = R.string.load_keys_instructions_of,
+                    read = stringResource(R.string.load_keys_read),
+                    scanner = scanner,
+                    onScanned = { step = LoadStep.Found(KeySetup.read(it)) },
+                    onCancel = onDismiss,
+                )
             }
 
             is LoadStep.Found -> {
@@ -113,35 +115,6 @@ internal fun LoadKeysScreen(
                 SavedStep(shown.keys, onDismiss)
             }
         }
-    }
-}
-
-/** The first two steps: how to make the code, and the camera's view to read it. */
-@Composable
-private fun ColumnScope.ScanStep(
-    scanner: QrScanner,
-    developerMode: Boolean,
-    onScanned: (String) -> Unit,
-    onCancel: () -> Unit,
-) {
-    StepHeading(stringResource(R.string.load_keys_make))
-    val address = shownAddress(API_KEYS_URL)
-    ExternalLink(
-        text = address,
-        description = stringResource(R.string.load_keys_instructions_of, address),
-        onClick = rememberOpenUrl(API_KEYS_URL),
-    )
-    if (developerMode) {
-        Text(
-            stringResource(R.string.load_keys_developers),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp)) { scanner(onScanned) }
-    StepHeading(stringResource(R.string.load_keys_read))
-    KeyScreenActions {
-        TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
     }
 }
 

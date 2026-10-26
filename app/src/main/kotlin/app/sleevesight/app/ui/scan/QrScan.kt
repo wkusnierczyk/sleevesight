@@ -10,18 +10,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,9 +46,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
@@ -73,8 +65,8 @@ import com.google.zxing.qrcode.QRCodeReader
 /**
  * The camera's view for a QR scan, filling the space it is given, until a QR code is read: then it
  * calls `onScanned` once with the code's text. The settings screen takes it as a parameter, so its
- * tests scan without a camera. Where it is shown, [QrScanDialog] for one key's field or the *Load
- * keys* screen, says what to do and offers *Cancel*.
+ * tests scan without a camera. Where it is shown, the key settings' guided screens (one key's
+ * field, *Type on a computer*, *Load keys*), says what to do and offers *Cancel*.
  */
 typealias QrScanner = @Composable (onScanned: (String) -> Unit) -> Unit
 
@@ -115,41 +107,6 @@ object QrDecoder {
         } catch (_: RuntimeException) {
             null
         }
-}
-
-/**
- * A scan for one key's field (#268): [scanner]'s view over the screen, whose frame says where to
- * hold the code (or, without the camera, why not), and under it *Cancel*, which calls [onDismiss],
- * as Back does. The window is secure (`FLAG_SECURE`): no
- * screenshot or screen recording shows the code, which may be the keys.
- */
-@Composable
-internal fun QrScanDialog(
-    scanner: QrScanner,
-    onDismiss: () -> Unit,
-    onScanned: (String) -> Unit,
-) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn),
-    ) {
-        Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) { scanner(onScanned) }
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .safeDrawingPadding()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text(stringResource(R.string.settings_cancel))
-                }
-            }
-        }
-    }
 }
 
 /**
@@ -249,8 +206,12 @@ private fun CameraView(
     }
 }
 
-/** The frame's side, as a share of the picture's shorter side. */
-private const val FRAME_SHARE = 0.7f
+/**
+ * The frame's side, as a share of the picture's shorter side: large, so that a code on a computer's
+ * screen fits it from a comfortable distance, with a narrow dimmed margin around it (#541; 0.7
+ * before, which left wide margins).
+ */
+private const val FRAME_SHARE = 0.9f
 
 /** How dark the picture is around the frame. */
 private const val DIM_ALPHA = 0.6f
@@ -265,14 +226,18 @@ private const val DIM_ALPHA = 0.6f
 internal fun ScanFrame(modifier: Modifier = Modifier) {
     val description = stringResource(R.string.scan_view)
     Canvas(modifier = modifier.semantics { contentDescription = description }) {
-        val side = size.minDimension * FRAME_SHARE
-        val corner = Offset((size.width - side) / 2, (size.height - side) / 2)
-        val square = Size(side, side)
+        val frame = scanFrame(size)
         val radius = CornerRadius(FRAME_CORNER.toPx())
-        val hole = Path().apply { addRoundRect(RoundRect(Rect(corner, square), radius)) }
+        val hole = Path().apply { addRoundRect(RoundRect(frame, radius)) }
         clipPath(hole, ClipOp.Difference) { drawRect(Color.Black.copy(alpha = DIM_ALPHA)) }
-        drawRoundRect(Color.White, corner, square, radius, style = Stroke(FRAME_STROKE.toPx()))
+        drawRoundRect(Color.White, frame.topLeft, frame.size, radius, style = Stroke(FRAME_STROKE.toPx()))
     }
+}
+
+/** Where [ScanFrame] draws its square in a picture of [picture]'s size: centred, [FRAME_SHARE] of its shorter side. */
+internal fun scanFrame(picture: Size): Rect {
+    val side = picture.minDimension * FRAME_SHARE
+    return Rect(Offset((picture.width - side) / 2, (picture.height - side) / 2), Size(side, side))
 }
 
 private val FRAME_CORNER = 20.dp

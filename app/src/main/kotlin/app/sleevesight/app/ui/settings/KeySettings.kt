@@ -2,20 +2,28 @@ package app.sleevesight.app.ui.settings
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.ui.LOAD_KEYS_DOCS_URL
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.shownAddress
+import app.sleevesight.app.ui.theme.LinkedText
+import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.app.ui.theme.linkedParts
 import app.sleevesight.core.Secret
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
@@ -58,8 +66,8 @@ internal fun KeyRow(
 
 /**
  * *Secrets*: *Load keys*, which saves several keys from one QR code, a setup code (#268), on a
- * screen of its own that, in developer mode ([Settings.developerMode]), names the CLI's `keys-qr`
- * too ([LoadKeysScreen]); *Purge keys*, while any key is stored, readable or not, or after a failure
+ * screen of its own ([LoadKeysScreen]), with, under it, where the code is made and the guide to it
+ * (#541); *Purge keys*, while any key is stored, readable or not, or after a failure
  * ([KeysShown.offerReset]), when it says why (what was *Reset saved keys*, which did the same), on a
  * screen of its own ([PurgeKeysScreen]); each key's row, the AI services' and the sources' alike;
  * and *Show this phone's name to the computer* (#433), for the key dialogs' *Type on a computer*.
@@ -74,8 +82,9 @@ internal fun SecretsSection(
     ValueRow(
         title = stringResource(R.string.settings_scan_keys),
         value = stringResource(R.string.settings_scan_keys_value),
-        onClick = { open(SettingsDialog.LoadKeys(settings.developerMode)) },
+        onClick = { open(SettingsDialog.LoadKeys) },
     )
+    LoadKeysMore()
     if (keys.anyStored || keys.offerReset) {
         val why = if (keys.offerReset) R.string.settings_reset_keys_value else R.string.settings_remove_all_keys_value
         ValueRow(
@@ -93,6 +102,27 @@ internal fun SecretsSection(
         checked = settings.showPhoneName,
         highlight = true,
     ) { on -> update { it.copy(showPhoneName = on) } }
+}
+
+/**
+ * Under *Load keys* (#541): where its QR code is made, [API_KEYS_URL], and the documentation's guide
+ * to loading keys, [LOAD_KEYS_DOCS_URL], each a link. Apart from the row, which opens the screen, so
+ * that each link is a target of its own.
+ */
+@Composable
+private fun LoadKeysMore() {
+    val parts =
+        linkedParts(
+            stringResource(R.string.settings_scan_keys_more),
+            TextPart.Link(shownAddress(API_KEYS_URL), API_KEYS_URL),
+            TextPart.Link(stringResource(R.string.settings_scan_keys_docs), LOAD_KEYS_DOCS_URL),
+        )
+    LinkedText(
+        parts,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
 }
 
 /**
@@ -137,11 +167,10 @@ internal fun KeyDialogs(
             )
         }
 
-        is SettingsDialog.LoadKeys -> {
+        SettingsDialog.LoadKeys -> {
             LoadKeysScreen(
                 secrets = secrets,
                 scanner = scanner,
-                developerMode = shown.developerMode,
                 onSave = { keys -> saves.async { saveAll(store, keys, onSealFailed) }.await() },
                 onDismiss = onDismiss,
             )
