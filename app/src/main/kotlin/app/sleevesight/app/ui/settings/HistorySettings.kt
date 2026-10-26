@@ -16,8 +16,10 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-// *History* (#148, #444): *Keep history for*, *New session idle trigger*, how long each source's
-// findings are kept (D9), *Keep what sources said about each artist* (#420), and *Clear history*.
+// *History* (#148, #444): *Keep history for*, then *Clear history* under it, so how long the history
+// is kept and the way to wipe it sit together, since *Forever* is offered (#547); *New session idle
+// trigger*, how long each source's findings are kept (D9), and *Keep what sources said about each
+// artist* (#420).
 
 /**
  * The history's lifetimes offered, in days, and *Forever*; a stored one outside them is offered
@@ -70,6 +72,11 @@ internal fun HistorySection(
             },
         )
     }
+    ValueRow(
+        title = stringResource(R.string.settings_clear_history),
+        value = stringResource(R.string.settings_clear_history_value),
+        onClick = { open(SettingsDialog.ClearHistory) },
+    )
 
     val gap = settings.sessionGap
     val gaps = (SESSION_GAP_MINUTES.map { it.minutes } + gap).distinct().sorted().map { it to durationLabel(it) }
@@ -95,12 +102,6 @@ internal fun HistorySection(
         checked = settings.keepArtistResults,
         highlight = true,
     ) { on -> update { it.copy(keepArtistResults = on) } }
-
-    ValueRow(
-        title = stringResource(R.string.settings_clear_history),
-        value = stringResource(R.string.settings_clear_history_value),
-        onClick = { open(SettingsDialog.ClearHistory) },
-    )
 }
 
 /** How long each source's findings are kept (D9), a row per source with an adapter. */
@@ -125,7 +126,7 @@ private fun LifetimeRows(
 }
 
 /**
- * Confirms *Clear history*, which deletes the session history and the track changes. [onClear]
+ * Confirms *Clear history*, which deletes everything kept about the tracks played (#547). [onClear]
  * starts the clear; the dialog closes at once, and the screen says how it ended.
  */
 @Composable

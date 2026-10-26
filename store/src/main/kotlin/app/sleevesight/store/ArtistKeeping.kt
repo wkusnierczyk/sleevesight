@@ -41,7 +41,15 @@ class ArtistKeeping(
      * after it. Returns whether it did: false when the database failed, and then a read while the
      * switch is off tries again ([retryClear]). It does not throw, but for cancellation.
      */
-    suspend fun clear(): Boolean = turns.withLock { clearHeld() }
+    suspend fun clear(): Boolean = turns.withLock { clearHeld(clearAll) }
+
+    /**
+     * Runs [clearEverything], which deletes what is kept about artists among the rest (*Clear
+     * history*, #547: [Caches.clearAll]), in turn with the writes, as [clear] does. Returns whether
+     * it did; when it did, a clear that failed before is no longer pending. It does not throw, but
+     * for cancellation.
+     */
+    suspend fun clearWith(clearEverything: suspend () -> Unit): Boolean = turns.withLock { clearHeld(clearEverything) }
 
     /**
      * Clears again if the switch is off and the last clear failed; for the stores' reads. Both are
@@ -51,14 +59,14 @@ class ArtistKeeping(
      */
     suspend fun retryClear() {
         if (!uncleared || keeps()) return
-        turns.withLock { if (uncleared && !keeps()) clearHeld() }
+        turns.withLock { if (uncleared && !keeps()) clearHeld(clearAll) }
     }
 
-    // The clear, with [turns] held.
-    private suspend fun clearHeld(): Boolean {
+    // The clear, [clear], with [turns] held.
+    private suspend fun clearHeld(clear: suspend () -> Unit): Boolean {
         val cleared =
             try {
-                clearAll()
+                clear()
                 true
             } catch (e: CancellationException) {
                 throw e

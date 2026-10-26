@@ -43,6 +43,17 @@ class DiagnosticsLogTest {
     }
 
     @Test
+    fun clearingDropsEveryEventAndKeepsTheNext() {
+        val log = DiagnosticsLog(capacity = 10, clock = Ticking())
+        log.record(event(1))
+        log.record(event(2))
+        log.clear()
+        assertEquals(emptyList<LoggedEvent>(), log.entries.value)
+        log.record(event(3))
+        assertEquals(listOf(event(3)), log.entries.value.map { it.event })
+    }
+
+    @Test
     fun followsAStreamOfEvents() {
         val log = DiagnosticsLog(capacity = 10, clock = Ticking())
         runBlocking { log.follow(flowOf(event(1), event(2), event(3))) }

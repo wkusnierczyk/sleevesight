@@ -12,6 +12,7 @@ import app.sleevesight.core.genres.MusicBrainzLabels
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.AccentFolder
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.TrackResolver
 import app.sleevesight.core.resolution.IdentityCheck
 import app.sleevesight.core.resolution.MusicBrainzLookup
@@ -58,6 +59,10 @@ import app.sleevesight.sources.wikipedia.WikipediaSource
  * MusicBrainz recording's lookup, whose tags are asked for only then; the adapters take it from
  * the settings they are built with ([adapters]).
  *
+ * [epoch] is *Clear history*'s boundary (#547): an answer MusicBrainz gives to work started before
+ * it is not remembered. [musicBrainzThrough] stands between the remembered answers and
+ * MusicBrainz's client: the app's tests put a stand-in there, so they ask nothing of the network.
+ *
  * [close] closes the client when the wiring made it ([ownsNet], [appPipelineWiring]'s), and does
  * nothing otherwise: the CLI closes its own. The app closes it only from `Application.onTerminate`,
  * which a phone never calls (the client lives as long as the process) and Robolectric calls after
@@ -72,12 +77,16 @@ class PipelineWiring internal constructor(
     private val ownsNet: Boolean = false,
     private val artists: ArtistResults = ArtistResults.None,
     genres: () -> Boolean = { true },
+    epoch: ClearEpoch = ClearEpoch(),
+    musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
 ) : AutoCloseable {
     private val names = NameMatcher(accentFolder)
 
     // MusicBrainz's core data, for the resolver and Last.fm's check; the tags are asked apart.
     private val musicBrainz: MusicBrainzLookup =
-        MusicBrainzClient(net, genres).let { if (rememberMusicBrainz) RememberedMusicBrainz(it, tags = genres) else it }
+        MusicBrainzClient(net, genres).let(musicBrainzThrough).let {
+            if (rememberMusicBrainz) RememberedMusicBrainz(it, tags = genres, epoch = epoch) else it
+        }
     private val vocabulary by lazy { GenreVocabulary.load(resources) }
     private val artFetcher = ArtFetcher(net)
 
@@ -104,6 +113,14 @@ class PipelineWiring internal constructor(
      */
     fun lastFmLabels(key: Secret): LastFmLabels =
         LastFmLabels(LastFmTags(net, key), vocabulary, Normalizer(accentFolder)::foldForKey, artists = artists)
+
+    /**
+     * Forgets MusicBrainz's answers kept in memory ([RememberedMusicBrainz]), for *Clear history*
+     * (#547); nothing to forget without [rememberMusicBrainz].
+     */
+    suspend fun forgetRemembered() {
+        (musicBrainz as? RememberedMusicBrainz)?.forget()
+    }
 
     /** The AI services with a client, by service. */
     val aiProviders: Map<ProviderId, AiProvider> =

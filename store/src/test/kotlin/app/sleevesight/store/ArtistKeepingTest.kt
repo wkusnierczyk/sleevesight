@@ -260,6 +260,22 @@ class ArtistKeepingTest {
         }
 
     @Test
+    fun `a clear with everything else ends a pending retry, and one that fails leaves it pending`() =
+        runBlocking {
+            var clears = 0
+            val counted = ArtistKeeping({ false }) { clears++.also { error("the database could not be written") } }
+            assertFalse(counted.clear())
+
+            assertTrue(counted.clearWith {})
+            counted.retryClear()
+            assertEquals(1, clears, "nothing pending after the clear with everything else")
+
+            assertFalse(counted.clearWith { error("the database could not be written") })
+            counted.retryClear()
+            assertEquals(2, clears, "the failed clear left a retry pending")
+        }
+
+    @Test
     fun `a clear that failed is tried again by a track's read alone while off`() =
         runBlocking {
             keeps = true
