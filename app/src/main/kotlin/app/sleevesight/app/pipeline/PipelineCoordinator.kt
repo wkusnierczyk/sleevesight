@@ -558,8 +558,11 @@ data class CoordinatorState(
     /**
      * Whether the Write offered is offered only because the first action expired (#203): the
      * current run's decision would have written had it stood, and the user has not acted since.
+     * Never under *Manual* ([automatic], #553): a tap there resumes nothing. [expired] alone says
+     * whether automatic writing is paused, for the insight card's toggle.
      */
-    val lapsed: Boolean get() = expired && current?.takeIf { it.offered && !it.calling }?.lapsed == true
+    val lapsed: Boolean
+        get() = expired && automatic && current?.takeIf { it.offered && !it.calling }?.lapsed == true
 }
 
 /** The same insight track: [TrackIdentity.playsOn], the session history's rule for a track that plays on. */
