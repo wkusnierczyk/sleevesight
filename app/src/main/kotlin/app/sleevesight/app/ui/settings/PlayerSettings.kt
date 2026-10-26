@@ -25,7 +25,7 @@ import app.sleevesight.core.settings.Settings
 private val PLAYER_ICON = 40.dp
 
 /**
- * The players' apps as the phone has them (#535): [icon] is a player's launcher icon, null for a
+ * The players' apps as the phone has them (#535): [icon] is a player's own icon, null for a
  * player not installed (or not visible to this app), which *Players* does not list; and
  * [forgetUninstalled] drops such players from the stored list, run as *Players* is drawn.
  */

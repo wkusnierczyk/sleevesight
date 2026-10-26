@@ -465,7 +465,8 @@ class AppGraph(
 
     /**
      * A player's name as the phone knows it, else as the design knows it, else its package. A
-     * player with a launcher icon is visible to the app through the manifest's `<queries>` (#435).
+     * player with a launcher icon (#435) or a media browser service (#535) is visible to the app
+     * through the manifest's `<queries>`.
      */
     fun playerLabel(packageName: String): String {
         val pm = appContext.packageManager
@@ -473,7 +474,7 @@ class AppGraph(
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (_: PackageManager.NameNotFoundException) {
             // Not installed, or not visible to this app (package visibility, Android 11 and later):
-            // a player with no launcher icon.
+            // a player with neither a launcher icon nor a media browser service.
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
@@ -488,8 +489,8 @@ class AppGraph(
     /**
      * A player's own launcher icon, as the phone has it (#535; an adaptive icon is drawn under the
      * phone's mask), for its row under *Players*: nothing bundled or fetched. Null for a player not
-     * installed, or not visible to this app (package visibility: one with no launcher entry), which
-     * *Players* does not list.
+     * installed, or not visible to this app (package visibility: one with neither a launcher entry
+     * nor a media browser service), which *Players* does not list.
      */
     fun playerIcon(packageName: String): Drawable? =
         try {

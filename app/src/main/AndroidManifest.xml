@@ -50,16 +50,20 @@
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
-    <!-- The apps with a launcher icon, so *Players* can name a player (its label) rather
-         than show its package (#435), show its icon, and drop one no longer installed (#535):
-         from Android 11 on, another app is hidden without this. Only the label and icon of a player
-         that reported music are read, and whether it is still installed; the list of apps is
-         neither kept nor sent. Not QUERY_ALL_PACKAGES, which Play restricts and the app does not
-         need. -->
+    <!-- The apps with a launcher icon, and those that offer a media browser service (a player
+         with no launcher entry may still have one), so *Players* can name a player (its label)
+         rather than show its package (#435), show its icon, and drop one no longer installed
+         (#535): from Android 11 on, another app is hidden without this, and one visible neither
+         way is taken as not installed. Only the label and icon of a player that reported music
+         are read, and whether it is still installed; the list of apps is neither kept nor sent.
+         Not QUERY_ALL_PACKAGES, which Play restricts and the app does not need. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
         </intent>
     </queries>
 
