@@ -5,6 +5,7 @@ import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.resolution.MusicBrainzEvidence
 
 /**
@@ -86,7 +87,7 @@ object PromptEvidence {
      * first-release line says the song first came out on an album of the same name
      * ([MusicBrainzEvidence.firstReleaseAlbum]). The names are compared whole, folded as an
      * [ArtistFact]'s text is ([ArtistFact.matchKey]: case, spacing, quotation marks, apostrophes,
-     * dashes and a closing full stop), the player's less its closing bracketed parts ([edition]: its
+     * dashes and a closing full stop), the player's less its closing bracketed parts ([Edition.strip]: its
      * "Rubber Soul (Remastered)" is MusicBrainz's “Rubber Soul”). MusicBrainz's name is taken as it
      * is: a song first released on “Sundown (Live)” came out on another edition than the studio
      * "Sundown" the player reports, so its line stays.
@@ -103,7 +104,7 @@ object PromptEvidence {
         evidence: EvidenceSet,
         release: String?,
     ): (EvidenceLine) -> Boolean {
-        val wanted = release?.let { ArtistFact.matchKey(edition(it)) }?.takeIf { it.isNotEmpty() }
+        val wanted = release?.let { ArtistFact.matchKey(Edition.strip(it)) }?.takeIf { it.isNotEmpty() }
         val named =
             wanted != null &&
                 evidence.lines.any { line ->
@@ -113,42 +114,4 @@ object PromptEvidence {
                 }
         return { line -> named && line.source == SourceId.PLAYER }
     }
-
-    /**
-     * [release] less its closing bracketed parts, `(…)` or `[…]`, each balanced (nested ones
-     * included) and with any white space before it (no-break spaces too), one after another, as long
-     * as something is left: "Sundown (Remastered (2024)) [Deluxe]" is "Sundown", "(Untitled)
-     * (Deluxe)" is "(Untitled)". An unbalanced closing bracket ends the stripping.
-     */
-    internal fun edition(release: String): String {
-        var name = release.trim()
-        var rest = less(name)
-        while (rest != null) {
-            name = rest
-            rest = less(name)
-        }
-        return name
-    }
-
-    // [name] less the bracketed part it ends with and the white space before it; null when it ends
-    // with none, or nothing would be left.
-    private fun less(name: String): String? =
-        openerOfLast(name)?.let { name.substring(0, it).trim() }?.takeIf { it.isNotEmpty() }
-
-    // The index of the bracket that opens the one [name] ends with, or null when it ends with none or
-    // it is not balanced.
-    private fun openerOfLast(name: String): Int? {
-        if (name.isEmpty() || name.last() !in CLOSERS) return null
-        var depth = 0
-        return name.indices.reversed().firstOrNull { i ->
-            when (name[i]) {
-                in CLOSERS -> depth++
-                in OPENERS -> depth--
-            }
-            depth == 0
-        }
-    }
-
-    private val OPENERS = setOf('(', '[')
-    private val CLOSERS = setOf(')', ']')
 }
