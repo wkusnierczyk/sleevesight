@@ -17,7 +17,9 @@ import androidx.core.view.WindowCompat
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import app.sleevesight.app.AppGraph
 import app.sleevesight.app.MainActivity
+import app.sleevesight.app.MemoryStore
 import app.sleevesight.app.R
 import app.sleevesight.app.SleevesightApplication
 import app.sleevesight.app.TestStores
@@ -42,7 +44,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -197,15 +199,22 @@ class ThemeSettingTest {
         assertEquals(true to true, coldStart(ThemeChoice.LIGHT))
     }
 
+    /**
+     * The settings in memory ([MemoryStore]), changed on the main thread as the settings screen
+     * changes them (in [AppGraph.settingsSaves]): with their file, the wait for each choice to
+     * arrive depended on DataStore's own threads finishing within [idleUntil]'s real-time limit.
+     * The one failure seen (#579, in CI) was that wait timing out, not a wrong night mode.
+     */
     @Test
     fun theThemeIsGivenToTheSystemAsTheAppsNightMode() {
+        app.makeGraph = { AppGraph(it, settingsData = MemoryStore()) }
         val uiMode = shadowOf(app.getSystemService(UiModeManager::class.java))
         for ((theme, mode) in listOf(
             ThemeChoice.DARK to UiModeManager.MODE_NIGHT_YES,
             ThemeChoice.LIGHT to UiModeManager.MODE_NIGHT_NO,
             ThemeChoice.SYSTEM to UiModeManager.MODE_NIGHT_AUTO,
         )) {
-            runBlocking { app.graph.settings.update { it.copy(theme = theme) } }
+            app.graph.settingsSaves.launch { app.graph.settings.update { it.copy(theme = theme) } }
             idleUntil("$theme applied") { app.graph.theme.value == theme }
             assertEquals(theme.name, mode, uiMode.applicationNightMode)
         }
