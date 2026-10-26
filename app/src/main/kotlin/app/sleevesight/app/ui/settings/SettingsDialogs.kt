@@ -51,6 +51,7 @@ import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
+import app.sleevesight.core.ai.ModelInfo
 import app.sleevesight.core.keys.KeyShape
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
@@ -383,9 +384,15 @@ internal fun ConfirmDialog(
 /**
  * The model for [provider]: its default, stored as no choice so that it follows the default if a
  * later version revises it, or one of the models its service lists for the saved key, fetched by
- * [load] when the dialog opens. A model chosen earlier stays offered when the list cannot be had.
- * Each is offered by its name, with its id under it, smaller ([RadioRow]); one the service names
- * by its id alone, by its id. The names come from the list, else from [modelName].
+ * [load] when the dialog opens. Each is offered by its name, with its id under it, smaller
+ * ([RadioRow]); one the service names by its id alone, by its id. The names come from the list,
+ * else from [modelName].
+ *
+ * Once the list is had, only models the key can use are offered (#540): those listed and open to a
+ * new choice ([ModelInfo.offered]), the default among them, and the model selected now if listed
+ * (a deprecated one too, which still answers for an account that uses it). The selected model, if not
+ * listed, is said to be unavailable, and not offered. When the list cannot be had, the default and
+ * a model chosen earlier stay offered, as nothing says they are not usable.
  */
 @Suppress("LongParameterList") // The provider, its model, the list, and what the dialog does.
 @Composable
@@ -398,19 +405,26 @@ internal fun ModelDialog(
     onDismiss: () -> Unit,
 ) {
     val loaded by produceState<ModelLoad>(ModelLoad.Loading, provider) { value = load() }
-    val default = Settings.DEFAULT_MODELS[provider]
-    val listed = (loaded as? ModelLoad.Listed)?.models.orEmpty()
-    val earlier = current?.takeIf { c -> c != default && listed.none { it.id == c } }
-    val named = { id: String -> listed.firstOrNull { it.id == id }?.displayName ?: modelName(id) }
-    val others =
-        listed.filter { it.id != default }.map { it.id to it.displayName } +
-            listOfNotNull(earlier?.let { it to modelName(it) })
+    val choice = modelChoice(provider, current, loaded)
+    val named = choice.named(modelName)
+    val default = choice.default
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_ai_model_of, stringResource(providerName(provider)))) },
         text = {
             Column(modifier = Modifier.heightIn(max = DIALOG_LIST_HEIGHT).verticalScroll(rememberScrollState())) {
+                choice.gone?.let {
+                    Text(
+                        stringResource(
+                            R.string.settings_model_not_available,
+                            stringResource(providerName(provider)),
+                            modelName(it),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
                 modelStatus(loaded)?.let {
                     Text(
                         stringResource(it),
@@ -425,7 +439,8 @@ internal fun ModelDialog(
                         onDismiss()
                     }
                 }
-                for ((id, label) in others) {
+                for (id in choice.others) {
+                    val label = named(id)
                     RadioRow(label, selected = current == id, detail = id.takeIf { it != label }) {
                         onSelect(id)
                         onDismiss()
@@ -434,6 +449,47 @@ internal fun ModelDialog(
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_cancel)) } },
+    )
+}
+
+/**
+ * What [ModelDialog] offers for [provider] once [loaded]: the [default], if offered; the [others],
+ * by id; and the selected model, [gone], when the list was had without it.
+ */
+internal class ModelChoice(
+    val default: String?,
+    val others: List<String>,
+    val gone: String?,
+    private val listed: List<ModelInfo>,
+) {
+    /** A model's name: as the list gives it, else [modelName]'s. */
+    fun named(modelName: (String) -> String): (String) -> String =
+        { id -> listed.firstOrNull { it.id == id }?.displayName ?: modelName(id) }
+}
+
+/** The models [ModelDialog] offers for [provider], whose model is [current] (null, the default), from [loaded]. */
+internal fun modelChoice(
+    provider: ProviderId,
+    current: String?,
+    loaded: ModelLoad,
+): ModelChoice {
+    val default = Settings.DEFAULT_MODELS[provider]
+    val selected = current ?: default
+    if (loaded !is ModelLoad.Listed) {
+        // Nothing says which models the key can use: the default, and a model chosen earlier.
+        val earlier = current?.takeIf { it != default }
+        return ModelChoice(default, listOfNotNull(earlier), gone = null, listed = emptyList())
+    }
+    val listed = loaded.models
+    val has = { id: String -> listed.any { it.id == id } }
+    // Offered for a new choice, or the model selected now, which an account using it keeps.
+    val open = { model: ModelInfo -> model.offered || model.id == selected }
+    val others = listed.filter { it.id != default && open(it) }.map { it.id }
+    return ModelChoice(
+        default = default?.takeIf { d -> listed.any { it.id == d && open(it) } },
+        others = others,
+        gone = selected?.takeUnless(has),
+        listed = listed,
     )
 }
 

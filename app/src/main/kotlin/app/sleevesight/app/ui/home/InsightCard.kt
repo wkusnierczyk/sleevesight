@@ -61,6 +61,13 @@ private fun InsightBody(
     actions: InsightActions,
     groundingDetails: Boolean,
 ) {
+    // A model found unavailable (#540): said in place of why nothing is written, or of the failure
+    // it caused, with no Write, which would fail again.
+    val unavailable = context.unavailable
+    if (unavailable != null && withoutInsight(insight)) {
+        ModelUnavailable(unavailable, actions.onSettings)
+        return
+    }
     when (insight) {
         is InsightState.Idle -> {
             if (insight.canWrite) {
