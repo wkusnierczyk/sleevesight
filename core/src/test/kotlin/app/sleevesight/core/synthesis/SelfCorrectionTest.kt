@@ -12,7 +12,8 @@ import kotlin.test.assertTrue
 
 /**
  * A reply that corrects itself in the open (#597) shows and is checked as its fresh version only;
- * an insight's own text is never cut. The corrections are the phone's (#597) and the six found in
+ * an insight's own text is never cut: not a sentence wrapped over lines, not a line of prose that
+ * opens as an aside may, not a quotation. The corrections are the phone's (#597) and the six found in
  * the CLI's recorded replies of #399's and #424's measurements (917 distinct replies, 2026-10-21 to
  * 2026-10-25, Claude Haiku 5.5), each as written.
  */
@@ -60,6 +61,11 @@ class SelfCorrectionTest {
                 "Wait, I'll drop the second sentence. Corrected reply:\n\n" +
                 "\"Andrew\" opens the album [MB1]. It is on \"Hert.\""
         assertEquals("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", written(titles).text)
+        // Opens with a quoted title and ends quoting a phrase, after its citation: marks kept, balanced.
+        val phrase = titles.replace("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", PHRASE)
+        assertEquals(PHRASE, written(phrase).text)
+        val curlyPhrase = titles.replace("\"Andrew\" opens the album [MB1]. It is on \"Hert.\"", CURLY_PHRASE)
+        assertEquals(CURLY_PHRASE, written(curlyPhrase).text)
     }
 
     @Test
@@ -93,6 +99,21 @@ class SelfCorrectionTest {
                 "Wait, here is the corrected insight:\n\nIt was recorded in 1965 [MB1].",
                 // An aside that shares its line with the version.
                 "It was recorded in 1965 [MB1]. It is great. Wait, I'll drop that. It topped the charts [W1].",
+                // A sentence wrapped over two lines, its first line opening with "Actually".
+                "The single was released in 1965 [MB1].\n\nActually, the surviving evidence\n" +
+                    "places the recording session in 1964 [W1].",
+                // Openers before words that are the reply's making elsewhere, and music here.
+                "The session was rushed [MB1].\n\nHere is the evidence the session was rushed:\n\n" +
+                    "It was cut in one day [W1].",
+                "It was recorded in 1965 [MB1].\n\nActually, the band broke every rule in the studio.\n\n" +
+                    "It topped the charts [W1].",
+                "It opens the set [MB1].\nActually, it quotes Monk's Evidence.\nThe band recorded it live [W1].",
+                "It was a hit [MB1].\nCorrected versions followed in 1966.\nIt topped the charts [W1].",
+                // A quotation over several lines, one of them a first-person correction.
+                "He told the press [W1]:\n\"Wait, the evidence is all there.\nI'll fix the sentence in the mix.\n" +
+                    "Let me correct the reply later.\"\nIt came out in 1965 [MB1].",
+                "He told the press [W1]:\n“Wait, the evidence is all there.\nI'll fix the sentence in the mix.”\n" +
+                    "It came out in 1965 [MB1].",
             )
         for (reply in replies) {
             val grounded = written(reply)
@@ -123,6 +144,9 @@ class SelfCorrectionTest {
 
     private companion object {
         val IDS = setOf("MB1", "MB2", "W1", "P1")
+
+        const val PHRASE = "\"Andrew\" is described as \"a quiet farewell [W1].\""
+        const val CURLY_PHRASE = "“Andrew” is described as “a quiet farewell [W1].”"
 
         // The version the phone's reply should show.
         const val PHONE_KEPT =
