@@ -436,13 +436,26 @@ class LayoutPagesTest {
         }
 
     @Test
-    fun withOneLevelTheChipsAreAllThereIsAndOpenNothing() =
+    fun withOneLevelThereIsNoGenresLinkAndEachChipOpensTheTableOfItsOneRow() =
         show(state(long().copy(genres = TrackGenres(genres.rows.take(1))), pages)) {
             assertEquals(0, count(GENRES_PAGE_LINK_TAG))
+            // A button a screen reader names "open page", never selected, as with more levels (#548).
             compose
                 .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
                 .performScrollTo()
+                .assert(clickLabelled(text(R.string.home_page_open)))
+                .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Selected))
+                .performClick()
+            compose.waitForIdle()
+            title(text(R.string.home_genres))
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
+            assertEquals(0, count(GENRES_ROW_PREFIX + "1"))
+            compose
+                .onNodeWithTag(GENRE_PREFIX + "track:folkpop")
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))
+
+            back()
+            onHome()
         }
 
     @Test
@@ -498,10 +511,11 @@ class LayoutPagesTest {
             compose.onNodeWithTag(GENRE_PREFIX + "album:bebop").assertExists()
             assertEquals(0, count(GENRE_PREFIX + "artist:Gordon Lightfoot:rock"))
 
-            // One level: its chips, plain.
+            // One level: the table's one row, its chips plain.
             current.value = state(next.copy(genres = TrackGenres(jazz.rows.take(1))), pages)
             compose.waitForIdle()
-            assertEquals(0, count(GENRES_ROW_PREFIX + "0"))
+            compose.onNodeWithTag(GENRES_ROW_PREFIX + "0").assertExists()
+            assertEquals(0, count(GENRES_ROW_PREFIX + "1"))
             compose
                 .onNodeWithTag(GENRE_PREFIX + "track:jazz")
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnClick))

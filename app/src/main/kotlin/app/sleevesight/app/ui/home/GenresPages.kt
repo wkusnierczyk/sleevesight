@@ -14,9 +14,10 @@ import app.sleevesight.core.settings.Settings
 
 /**
  * On Home, under *Separate pages*: the folded chips of [genres] (the most specific level's), after
- * `Genres ›`, when there is more than one level; `Genres ›` and each chip open the table's page.
- * With one level the chips are all there is, plain labels with nothing to open. With no labels,
- * what the box says ([labelsOff] in [settings], or none found).
+ * `Genres ›` when there is more than one level; `Genres ›` and each chip open the table's page.
+ * With one level there is no `Genres ›`, and each chip opens the page all the same (#548): a chip
+ * that looks like a button and opens nothing reads as broken. With no labels, what the box says
+ * ([labelsOff] in [settings], or none found).
  */
 @Composable
 internal fun GenresLinks(
@@ -27,22 +28,23 @@ internal fun GenresLinks(
     when {
         genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
         genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        genres.oneLevel -> Chips(genres.folded, open = null, select = null)
         else ->
             Chips(genres.folded, open = null, select = { openPage(HomePage.Genres) }, opensPage = true) {
-                PageLink(
-                    stringResource(R.string.home_genres),
-                    GENRES_PAGE_LINK_TAG,
-                    MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                ) { openPage(HomePage.Genres) }
+                if (!genres.oneLevel) {
+                    PageLink(
+                        stringResource(R.string.home_genres),
+                        GENRES_PAGE_LINK_TAG,
+                        MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    ) { openPage(HomePage.Genres) }
+                }
             }
     }
 }
 
 /**
  * The table's page ([HomePage.Genres]): the genre labels of [track] as the box's table, a row per
- * level (or one level's chips), as plain labels. While the track's lookups run, and with *Show
- * genres* off in [settings], it says so.
+ * level, as plain labels; with one level, the table's one row (or a row per artist). While the
+ * track's lookups run, and with *Show genres* off in [settings], it says so.
  */
 @Composable
 internal fun GenresPage(
@@ -55,7 +57,6 @@ internal fun GenresPage(
         track == null || !track.gathered || genres == null -> QuietLine(stringResource(R.string.home_evidence_looking))
         genres.isEmpty && labelsOff(settings) -> QuietLine(stringResource(R.string.home_genres_off))
         genres.isEmpty -> QuietLine(stringResource(R.string.home_genres_none))
-        genres.oneLevel -> Chips(genres.folded, open = null, select = null)
         else -> Table(genres, open = null, select = null)
     }
 }
