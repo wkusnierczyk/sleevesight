@@ -205,11 +205,11 @@ While Sleevesight is not on screen, it looks nothing up and sends nothing, the c
 
 ## The history
 
-Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes between them, from which skip detection learns. There is no history screen in the app yet: the history is not shown as a list.
+Sleevesight keeps, on the phone only, information about the tracks it has seen play (their titles, artists and albums, and when they played) and the track changes between them, from which skip detection learns. It keeps information about the tracks, never the music itself. There is no history screen in the app yet: the history is not shown as a list.
 
 What there is:
 
-- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default), [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends, and *Clear history*, which deletes the tracks played and the track changes together, once you confirm.
+- **The settings' *History* group**: [*Keep history for*]({{ '/docs/tutorials/settings/' | relative_url }}) (90 days by default); *Clear history*, right under it, which deletes what Sleevesight recorded about the tracks you played and the track changes together, once you confirm, and leaves your music untouched; and [*New session idle trigger*]({{ '/docs/tutorials/settings/' | relative_url }}), which decides where one listening session ends.
 - **The diagnostics screen**, under the developer settings, which lists the track changes recorded, with what skip detection learns from them, and can export them to a file you choose.
 
 The history is left out of Android's backup, and the app never sends it anywhere; only an export you make from the diagnostics screen takes a copy of the track changes off the app.

@@ -118,7 +118,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Rewrite.** An insight is kept on the phone once written, so a track played again shows it at once, with no new call, as long as the sources find the same evidence and the AI service, model, effort and *AI service knowledge* are as they were; otherwise it is written afresh, as for a new track. While a track plays, when you save, replace or remove a key or switch a web search engine and the sources then find something different, or you choose another AI service, the kept insight is still shown, with *Written earlier, from the evidence under Sources.* and *Rewrite*, which writes it again from what the sources find now, with your current AI service, as a new paid call, or two. If an insight could not be written, the card says why (for example, *the AI service did not accept the key*), and *Write insight* tries again.
 
-**The history.** Sleevesight keeps, on the phone only, the tracks it has seen play and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default) and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
+**The history.** Sleevesight keeps, on the phone only, information about the tracks it has seen play (titles, artists, albums, and when they played), never the music, and the track changes it uses to tell your skips from natural ends. *Keep history for* (90 days by default), with *Clear history* under it, and *New session idle trigger* (30 minutes) are under *History*. There is no screen that lists the history yet; the track changes recorded can be seen on the diagnostics screen (*Diagnostics*, under *Developer*, which seven taps on *Version*, under *About*, show).
 
 <!-- screenshot: the insight card waiting for the first tap: "Tap Write insight…" with the Write insight button, from app version … -->
 <!-- screenshot: an insight written earlier, shown after the evidence changed, with "Written earlier…" and "Rewrite", from app version … -->
@@ -130,12 +130,12 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 
-- **The history:** *Clear history*, under *History*, deletes the tracks played and the track changes, once you confirm with *Clear*. *Keep history for* sets how far back it reaches.
+- **The history:** *Clear history*, under *Keep history for* in *History*, deletes what Sleevesight recorded about the tracks you played, and the track changes, once you confirm with *Clear*; your music is not touched. *Keep history for* sets how far back it reaches.
 - **What sources said about artists:** *Keep what sources said about each artist* is off by default; turning it off after turning it on deletes what was kept.
 - **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Purge keys*, under *Secrets*, lists them and deletes them all. If a saved key can no longer be read, *Purge keys* says so, as the way to enter the keys afresh.
 - **Everything:** Android's *Clear storage* for Sleevesight, or uninstalling it, deletes all it kept, the insights written and the sources' findings included. Findings also expire on their own, on the lifetimes the settings show.
 
 What a service keeps of the requests it received, such as the AI service for your account, is between you and that service; the [privacy policy]({{ '/privacy.html' | relative_url }}) says more.
 
-<!-- screenshot: Settings, "History": Keep history for, New session idle trigger, Clear history, from app version … -->
+<!-- screenshot: Settings, "History": Keep history for, Clear history, New session idle trigger, from app version … -->
 <!-- screenshot: the "Clear history?" dialog, from app version … -->
