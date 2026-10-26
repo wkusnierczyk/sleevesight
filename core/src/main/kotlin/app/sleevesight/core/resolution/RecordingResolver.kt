@@ -6,6 +6,7 @@ import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
+import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
@@ -75,7 +76,8 @@ class RecordingResolver(
         // Every candidate whose title and length fit and that names one of the track's artists, by
         // name or as a band's leader, confirmed or not: the same-name check weighs them all.
         val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.ids.isNotEmpty() }
-        val accepted = narrowed(fitting.filter { it.creditedArtists > 0 }, duration)
+        val credited = fitting.filter { it.creditedArtists > 0 }
+        val accepted = narrowed(credited, duration)
         val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
@@ -83,7 +85,7 @@ class RecordingResolver(
             chosen == null ->
                 (if (fitting.isEmpty()) byVariant(track, duration, candidates, leaders) else null)
                     ?: unmatched(track, candidates)
-            else -> accept(track, chosen, leaders.details[chosen.recording.mbid])
+            else -> accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
         }
     }
 
@@ -105,7 +107,7 @@ class RecordingResolver(
                 .map { it.copy(named = it.variants, led = emptyMap()).identified(emptyMap()) }
         val accepted = narrowed(fitting, duration)
         val chosen = accepted.minWithOrNull(PREFERENCE) ?: return null
-        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid])
+        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid], accepted)
     }
 
     private fun candidate(
@@ -160,12 +162,22 @@ class RecordingResolver(
         )
     }
 
+    // [pool]: the candidates the choice was made from (title and length fit, the track's artists
+    // credited, narrowed by length as the choice is), whose releases give the album's year (#556). The
+    // same-name check passed over them, so each artist they credit has one identity among them, the
+    // accepted one: never a namesake's recording.
     private suspend fun accept(
         track: NormalizedTrack,
         chosen: Candidate,
         fetched: MbRecordingDetail?,
+        pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
+        // Each release, by its own title, in its release group (else alone); undated ones too.
+        val releases =
+            pool.flatMap { it.recording.releases }.map { release ->
+                ReleaseDate(release.title, release.date, release.releaseGroup?.mbid ?: release.mbid)
+            }
         val base =
             Resolution(
                 outcome = Outcome.SongArticle,
@@ -177,6 +189,7 @@ class RecordingResolver(
                         ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList(), chosen.known[artist]))
                     },
                 firstRelease = firstRelease(recording),
+                releaseDates = ReleaseDate.collapse(releases, names::key),
             )
         val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
         return if (detail == null) base else withDetail(track, chosen, base, detail)
