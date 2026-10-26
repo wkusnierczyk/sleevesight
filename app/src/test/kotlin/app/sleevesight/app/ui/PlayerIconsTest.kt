@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.MainActivity
@@ -48,6 +50,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -70,6 +74,7 @@ class PlayerIconsTest {
     private val settings by lazy { SettingsStore(stores.open("settings")) }
     private val secrets by lazy { SecretStore(stores.open("secrets"), testCipher()) }
     private val saves = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var launch: (String) -> Intent? = { null }
 
     @After
     fun close() {
@@ -82,7 +87,7 @@ class PlayerIconsTest {
      * reported music since the process started.
      */
     private fun phone(
-        visible: Set<String>,
+        visible: Collection<String>,
         seen: Set<String> = emptySet(),
         icon: (String) -> Drawable? = { ColorDrawable(Color.RED) },
     ) = InstalledPlayers(
@@ -96,7 +101,8 @@ class PlayerIconsTest {
 
     private fun showPlayers(
         installed: InstalledPlayers,
-        test: () -> Unit,
+        label: (String) -> String = NAMES::getValue,
+        test: (ActivityScenario<MainActivity>) -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
@@ -108,11 +114,13 @@ class PlayerIconsTest {
                         { CompletableDeferred(true) },
                         saves,
                         installedPlayers = installed,
-                    ) { NAMES.getValue(it) }
+                        playerLaunch = launch,
+                        playerLabel = label,
+                    )
                 }
             }
             compose.openSection(SettingsSection.PLAYERS)
-            test()
+            test(scenario)
         }
     }
 
@@ -185,6 +193,42 @@ class PlayerIconsTest {
             }
         } finally {
             release.countDown()
+        }
+    }
+
+    /** #579: a player's name and the intent that opens it are asked off the main thread too. */
+    @Test
+    fun aRowsNameAndLinkAreAskedOffTheMainThread() {
+        stored(VISIBLE to false)
+        val asked = ConcurrentHashMap<String, Thread>()
+        launch = {
+            asked["launch"] = Thread.currentThread()
+            null
+        }
+        val label = { player: String ->
+            asked["label"] = Thread.currentThread()
+            NAMES.getValue(player)
+        }
+        showPlayers(phone(visible = setOf(VISIBLE)), label) {
+            compose.waitUntil(5_000) { shown("Example") }
+            assertEquals(setOf("label", "launch"), asked.keys)
+            assertTrue(asked.values.none { it == Looper.getMainLooper().thread })
+        }
+    }
+
+    /** #579: a player installed while *Players* is open shows once the screen resumes. */
+    @Test
+    fun aPlayerInstalledWhileTheSectionIsOpenShowsOnResume() {
+        stored(VISIBLE to false)
+        val visible = CopyOnWriteArraySet<String>()
+        showPlayers(phone(visible = visible)) { scenario ->
+            compose.waitUntil(5_000) { shown(app.getString(R.string.settings_players_none)) }
+            assertTrue(!shown("Example"))
+
+            visible += VISIBLE
+            scenario.moveToState(Lifecycle.State.CREATED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            compose.waitUntil(5_000) { shown("Example") }
         }
     }
 

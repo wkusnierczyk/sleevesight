@@ -1,5 +1,6 @@
 package app.sleevesight.app.settings
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -43,6 +44,44 @@ class SeenPlayersRecorderTest {
             seen.value = setOf(OTHER, SPOTIFY)
             assertEquals(setOf(OTHER, SPOTIFY), recorded.toSet())
             assertEquals(2, recorded.size)
+            job.cancel()
+        }
+
+    @Test
+    fun aForgottenPlayerIsRecordedAgainWhenSeenAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            val recorder = SeenPlayersRecorder(seen, { recorded += it }, { warnings += it })
+            val job = launch { recorder.run() }
+
+            seen.value = setOf(OTHER)
+            recorder.forget(OTHER)
+            seen.value = emptySet()
+            seen.value = setOf(OTHER)
+
+            assertEquals(listOf(OTHER, OTHER), recorded)
+            job.cancel()
+        }
+
+    /** #579: a player forgotten while its record is under way is recorded again when seen again. */
+    @Test
+    fun aPlayerForgottenWhileItsRecordIsUnderWayIsRecordedAgainWhenSeenAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            val write = CompletableDeferred<Unit>()
+            val record: suspend (String) -> Unit = {
+                write.await()
+                recorded += it
+            }
+            val recorder = SeenPlayersRecorder(seen, record, { warnings += it })
+            val job = launch { recorder.run() }
+
+            seen.value = setOf(OTHER)
+            // The write is held: the player is forgotten (its app removed) before it ends.
+            recorder.forget(OTHER)
+            write.complete(Unit)
+            seen.value = emptySet()
+            seen.value = setOf(OTHER)
+
+            assertEquals(listOf(OTHER, OTHER), recorded)
             job.cancel()
         }
 
