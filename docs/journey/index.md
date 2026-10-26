@@ -130,7 +130,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Clearing what is kept.** Everything Sleevesight keeps stays on the phone and is left out of Android's backup. To remove it:
 
-- **The history:** *Clear history*, under *Keep history for* in *History*, deletes what Sleevesight recorded about the tracks you played, and the track changes, once you confirm with *Clear*; your music is not touched. *Keep history for* sets how far back it reaches.
+- **The history:** *Clear history*, under *Keep history for* in *History*, deletes the list of tracks you played and the track changes, once you confirm with *Clear*; your music is not touched, and the insights written and the sources' findings stay until they expire. *Keep history for* sets how far back it reaches.
 - **What sources said about artists:** *Keep what sources said about each artist* is off by default; turning it off after turning it on deletes what was kept.
 - **The keys:** the delete button beside a saved key's row, or *Remove* in its dialog, deletes that key; *Purge keys*, under *Secrets*, lists them and deletes them all. If a saved key can no longer be read, *Purge keys* says so, as the way to enter the keys afresh.
 - **Everything:** Android's *Clear storage* for Sleevesight, or uninstalling it, deletes all it kept, the insights written and the sources' findings included. Findings also expire on their own, on the lifetimes the settings show.
