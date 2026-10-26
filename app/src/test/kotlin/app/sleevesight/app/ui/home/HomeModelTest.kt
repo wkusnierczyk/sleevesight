@@ -13,10 +13,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.platform.JvmHasher
-import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.Rejection
-import app.sleevesight.core.sources.Resolution
-import app.sleevesight.core.sources.SourceResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -38,34 +35,6 @@ class HomeModelTest {
         // The next track is shown at once, without the last one's evidence or insight.
         assertNull(trackFor(view, carefree))
         assertNull(trackFor(PipelineView(), sundown))
-    }
-
-    @Test
-    fun theReleaseYearIsTheFirstReleasesFromMusicBrainz() {
-        fun released(date: String?) =
-            track().copy(
-                resolution = date?.let { Resolution(firstRelease = FirstRelease(it, "Sundown", null, "rel", "Album")) },
-            )
-        assertEquals("1974", releaseYear(released("1974-03-25")))
-        assertEquals("1974", releaseYear(released("1974")))
-        assertNull(releaseYear(released("19")))
-        // No resolution (every source from the cache), or none found.
-        assertNull(releaseYear(released(null)))
-        assertNull(releaseYear(null))
-    }
-
-    @Test
-    fun aFreshRunAndAFullyCachedRunShowTheSameYear() {
-        val date = "1974-03-25"
-        val result = SourceResult(Outcome.SongArticle, emptyList(), 1.seconds, firstReleased = date)
-        val fresh =
-            track(sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = false))).copy(
-                resolution = Resolution(firstRelease = FirstRelease(date, "Sundown", null, "rel", "Album")),
-            )
-        // Every source from the cache: no resolution, MusicBrainz's result as it was kept.
-        val cached = track(sources = mapOf(SourceId.MUSICBRAINZ to SourceState.Done(result, cached = true)))
-        assertEquals("1974", releaseYear(fresh))
-        assertEquals(releaseYear(fresh), releaseYear(cached))
     }
 
     @Test
