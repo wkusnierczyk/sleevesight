@@ -52,22 +52,42 @@ internal fun scanned(
 
 /**
  * What a setup code [read] gives the key [id]'s field (#541): its key, when the code holds that key
- * alone, as the API keys page makes it from one key; what is wrong with it, when that key alone is
- * refused; and otherwise *Load keys*, which shows what a code of other keys holds.
+ * alone, as the API keys page makes it from one key; and otherwise what to say. That key alone
+ * refused says why, as a bare key would; a code that names another service points to *Load keys*,
+ * which shows what it holds, as does one with lines this version cannot read; a code of a later
+ * version asks for an update, and an empty one says so.
  */
 private fun setupKey(
     id: SecretId,
     read: SetupRead,
 ): Scanned {
-    val setup = read as? SetupRead.Setup
-    // Nothing in the code but one line, that of this key.
-    val alone = setup != null && setup.unknown.isEmpty() && setup.unreadable == 0
-    val keys = setup?.keys?.takeIf { alone }.orEmpty()
-    val refused = setup?.refused?.takeIf { alone }.orEmpty()
+    val failure = setupFailure(id, read)
+    // No failure: the code holds this key alone, and it was not refused.
+    val key = (read as? SetupRead.Setup)?.keys?.get(id.keyName)
     return when {
-        keys.keys == setOf(id.keyName) && refused.isEmpty() -> Scanned(key = keys.getValue(id.keyName).reveal())
-        refused.keys == setOf(id.keyName) && keys.isEmpty() -> Scanned(failed = problemOf(refused.getValue(id.keyName)))
+        failure != null -> Scanned(failed = failure)
+        key != null -> Scanned(key = key.reveal())
         else -> Scanned(failed = R.string.settings_key_scan_setup)
+    }
+}
+
+/** What the key [id]'s field says of the setup code [read] ([setupKey]); null when it fills the field. */
+@StringRes
+private fun setupFailure(
+    id: SecretId,
+    read: SetupRead,
+): Int? {
+    val setup = read as? SetupRead.Setup
+    val named = setup?.let { it.keys.keys + it.refused.keys }.orEmpty()
+    val unread = setup != null && (setup.unknown.isNotEmpty() || setup.unreadable > 0)
+    return when {
+        read is SetupRead.Unsupported -> R.string.settings_key_scan_setup_newer
+        setup == null -> R.string.settings_key_scan_setup
+        named.any { it != id.keyName } -> R.string.settings_key_scan_setup
+        unread && id.keyName in named -> R.string.settings_key_scan_setup_more
+        unread -> R.string.settings_key_scan_setup_none
+        named.isEmpty() -> R.string.settings_key_scan_empty
+        else -> setup.refused[id.keyName]?.let(::problemOf)
     }
 }
 
@@ -84,7 +104,8 @@ private fun problemOf(problem: KeyProblem): Int =
     when (problem) {
         KeyProblem.EMPTY -> R.string.settings_key_scan_empty
         KeyProblem.BAD_CHARACTERS -> R.string.settings_key_scan_characters
-        KeyProblem.WRONG_SHAPE, KeyProblem.DUPLICATE -> R.string.settings_key_scan_shape
+        KeyProblem.WRONG_SHAPE -> R.string.settings_key_scan_shape
+        KeyProblem.DUPLICATE -> R.string.settings_key_scan_duplicate
     }
 
 /** What the key dialog says of [scanned], a QR code's text that is not a keyboard session's. */

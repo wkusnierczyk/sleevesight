@@ -1,16 +1,24 @@
 package app.sleevesight.app.ui.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
@@ -24,15 +32,27 @@ import app.sleevesight.app.ui.shownAddress
 // on a screen laid out the same way: what to do first, with a link to where, the camera's view,
 // what to do with it, and *Cancel*.
 
+/** The least height of a guided scan's camera view, so a code can still be framed in a short window. */
+internal val GUIDED_CAMERA_MIN_HEIGHT = 200.dp
+
+/** The space between a guided scan's instructions, its camera view and the steps under it. */
+private val GUIDED_GAP = 8.dp
+
 /**
- * A guided scan's steps on a key screen: [make], a step's heading, with the link to [url] under it,
- * which a screen reader reads as [linkDescription] (`%1$s`, its address); then [scanner]'s view,
- * filling the space left; then [read], the step that reads the code, and [then], a step after it,
- * if any; and *Cancel*, which calls [onCancel]. [onScanned] hears the code read.
+ * A guided scan's steps on a key screen: [intro], if any, then [make], a step's heading, with the
+ * link to [url] under it, which a screen reader reads as [linkDescription] (`%1$s`, its address);
+ * then [scanner]'s view; then [read], the step that reads the code, and [then], a step after it, if
+ * any; and *Cancel*, which calls [onCancel], at the start of its line, as in the key dialog (#543).
+ * [onScanned] hears the code read.
+ *
+ * The camera's view fills the height the steps leave, but never less than
+ * [GUIDED_CAMERA_MIN_HEIGHT]: in a short window, in landscape or with large text, the steps and the
+ * view scroll instead ([CameraFill]), and *Cancel* stays on the screen under them.
  */
 @Suppress("LongParameterList") // The steps, the link, and the camera.
 @Composable
 internal fun ColumnScope.GuidedScan(
+    intro: String? = null,
     make: String,
     url: String,
     @StringRes linkDescription: Int,
@@ -42,18 +62,58 @@ internal fun ColumnScope.GuidedScan(
     onScanned: (String) -> Unit,
     onCancel: () -> Unit,
 ) {
-    StepHeading(make)
-    val address = shownAddress(url)
-    ExternalLink(
-        text = address,
-        description = stringResource(linkDescription, address),
-        onClick = rememberOpenUrl(url),
-    )
-    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp)) { scanner(onScanned) }
-    StepHeading(read)
-    then?.let { StepHeading(it) }
-    KeyScreenActions {
+    BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        val space = maxHeight
+        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            CameraFill(space) {
+                Column(verticalArrangement = Arrangement.spacedBy(GUIDED_GAP)) {
+                    intro?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    StepHeading(make)
+                    val address = shownAddress(url)
+                    ExternalLink(
+                        text = address,
+                        description = stringResource(linkDescription, address),
+                        onClick = rememberOpenUrl(url),
+                    )
+                }
+                Box(modifier = Modifier.fillMaxWidth()) { scanner(onScanned) }
+                Column(verticalArrangement = Arrangement.spacedBy(GUIDED_GAP)) {
+                    StepHeading(read)
+                    then?.let { StepHeading(it) }
+                }
+            }
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onCancel) { Text(stringResource(R.string.settings_cancel)) }
+    }
+}
+
+/**
+ * Lays out [content]'s three pieces, the instructions, the camera's view and the steps under it, one
+ * above the other, [GUIDED_GAP] apart: the view as tall as the [space] the other two leave, and at
+ * least [GUIDED_CAMERA_MIN_HEIGHT]. When that is more than [space], the whole is taller than it, for
+ * the scroll around it to show.
+ */
+@Composable
+private fun CameraFill(
+    space: Dp,
+    content: @Composable () -> Unit,
+) {
+    Layout(content = content) { measurables, constraints ->
+        val (above, camera, below) = measurables
+        val loose = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
+        val top = above.measure(loose)
+        val bottom = below.measure(loose)
+        val gap = GUIDED_GAP.roundToPx()
+        val left = space.roundToPx() - top.height - bottom.height - 2 * gap
+        val height = maxOf(GUIDED_CAMERA_MIN_HEIGHT.roundToPx(), left)
+        val view = camera.measure(constraints.copy(minHeight = height, maxHeight = height))
+        layout(constraints.maxWidth, top.height + gap + height + gap + bottom.height) {
+            top.place(0, 0)
+            view.place(0, top.height + gap)
+            bottom.place(0, top.height + gap + height + gap)
+        }
     }
 }
 
@@ -88,8 +148,8 @@ internal fun KeyScanScreen(
 
         ScanFor.KEYBOARD -> {
             KeyScreen(R.string.settings_key_type, busy = false, onDismiss) {
-                Text(stringResource(R.string.keyboard_explained), style = MaterialTheme.typography.bodyMedium)
                 GuidedScan(
+                    intro = stringResource(R.string.keyboard_explained),
                     make = stringResource(R.string.keyboard_open),
                     url = KEYBOARD_PAGE_URL,
                     linkDescription = R.string.keyboard_page_of,

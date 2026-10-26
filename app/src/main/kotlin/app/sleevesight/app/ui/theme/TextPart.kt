@@ -28,7 +28,8 @@ internal sealed interface TextPart {
 
 /**
  * [template] as parts: its words, and in place of each `%1$s`, `%2$s`… the link of that number in
- * [links] (#541), so a translation may put the links where its grammar needs them.
+ * [links] (#541), so a translation may put the links where its grammar needs them. A placeholder
+ * with no link of its number stays as written.
  */
 internal fun linkedParts(
     template: String,
@@ -38,7 +39,8 @@ internal fun linkedParts(
     var at = 0
     for (match in PLACEHOLDER.findAll(template)) {
         if (match.range.first > at) parts += TextPart.Words(template.substring(at, match.range.first))
-        parts += links[match.groupValues[1].toInt() - 1]
+        // A number with no link given stays as written, rather than fail.
+        parts += links.getOrNull(match.groupValues[1].toInt() - 1) ?: TextPart.Words(match.value)
         at = match.range.last + 1
     }
     if (at < template.length) parts += TextPart.Words(template.substring(at))

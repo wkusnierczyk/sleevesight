@@ -23,4 +23,12 @@ class LinkedPartsTest {
             linkedParts("%2\$s, then %1\$s", page, guide),
         )
     }
+
+    @Test
+    fun aPlaceholderWithNoLinkOfItsNumberStaysAsWritten() {
+        assertEquals(
+            listOf(page, TextPart.Words(" and "), TextPart.Words("%3\$s")),
+            linkedParts("%1\$s and %3\$s", page, guide),
+        )
+    }
 }

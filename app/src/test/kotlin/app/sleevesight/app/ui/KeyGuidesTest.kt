@@ -7,6 +7,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
@@ -18,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -257,5 +260,54 @@ class KeyGuidesTest {
             openKey(R.string.settings_key_name_lastfm)
             compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
             waitForText(text(R.string.settings_key_scan_shape))
+        }
+
+    /** Scans [code] into Last.fm's field, and waits for [message]; the field stays empty. */
+    private fun scannedSays(
+        code: String,
+        message: Int,
+    ) = show(scanner = scanning(code)) {
+        openKey(R.string.settings_key_name_lastfm)
+        compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+        waitForText(text(message))
+        compose.onNodeWithText(text(R.string.settings_save)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun aSetupCodeOfThisKeyTwiceSaysSoAndLeavesTheFieldEmpty() =
+        scannedSays("sleevesight-keys:v1\nlastfm=$lastFmKey\nlastfm=$lastFmKey", R.string.settings_key_scan_duplicate)
+
+    @Test
+    fun aSetupCodeOfThisKeyAndAnUnknownServiceLeavesTheFieldEmpty() =
+        scannedSays("sleevesight-keys:v1\nlastfm=$lastFmKey\nmistral=abc", R.string.settings_key_scan_setup_more)
+
+    @Test
+    fun aSetupCodeOfThisKeyAndAnUnreadableLineLeavesTheFieldEmpty() =
+        scannedSays("sleevesight-keys:v1\nlastfm=$lastFmKey\nno equals", R.string.settings_key_scan_setup_more)
+
+    @Test
+    fun aSetupCodeOfOnlyAnUnknownServiceSaysNoKeyCanBeRead() =
+        scannedSays("sleevesight-keys:v1\nmistral=abc", R.string.settings_key_scan_setup_none)
+
+    @Test
+    fun aSetupCodeOfALaterVersionAsksForAnUpdate() =
+        scannedSays("sleevesight-keys:v2\nlastfm=$lastFmKey", R.string.settings_key_scan_setup_newer)
+
+    @Test
+    fun anEmptySetupCodeSaysItHoldsNothing() = scannedSays("sleevesight-keys:v1\n", R.string.settings_key_scan_empty)
+
+    @Test
+    fun aScanCancelledLeavesWhatWasTypedInTheField() =
+        show(scanner = notScanning) {
+            openKey(R.string.settings_key_name_lastfm)
+            compose.onNodeWithText(text(R.string.settings_key_field)).performTextInput(lastFmKey)
+            compose.onNodeWithContentDescription(text(R.string.settings_key_scan)).performClick()
+            val make = text(R.string.key_scan_make)
+            waitForText(make)
+            compose.onNode(inScreenWith(text(R.string.settings_cancel), make)).performClick()
+            compose.waitUntil(5_000) { !shown(hasText(make)) }
+
+            compose.onNodeWithText(text(R.string.settings_save)).assertIsEnabled().performClick()
+            compose.waitUntil(5_000) { stored(SecretId.LASTFM) == lastFmKey }
         }
 }
