@@ -11,6 +11,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -57,6 +58,7 @@ internal object SettingsCodec {
     private val SHOW_GENRES = booleanPreferencesKey("genres.show")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
+    private val LAST_AUTOMATIC_MODE = stringPreferencesKey("insights.last_automatic_mode")
     private val PAUSE_AUTO_WRITE = intPreferencesKey("insights.pause_auto_write_after")
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
@@ -99,6 +101,9 @@ internal object SettingsCodec {
             showGenres = prefs[SHOW_GENRES] ?: defaults.showGenres,
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
             writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
+            lastAutomaticMode =
+                enumOf<WriteAutomatically>(prefs[LAST_AUTOMATIC_MODE])?.takeIf { it != WriteAutomatically.NEVER }
+                    ?: defaults.lastAutomaticMode,
             pauseAutoWriteAfter = pauseOf(prefs[PAUSE_AUTO_WRITE], defaults.pauseAutoWriteAfter),
             crossfade = readCrossfade(prefs),
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
@@ -172,6 +177,9 @@ internal object SettingsCodec {
         if (moved { it.writeInsights }) prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         if (moved { it.writeAutomatically }) {
             prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
+        }
+        if (moved { it.lastAutomaticMode }) {
+            prefs.put(LAST_AUTOMATIC_MODE, settings.lastAutomaticMode.name, defaults.lastAutomaticMode.name)
         }
         if (moved { it.pauseAutoWriteAfter }) {
             prefs.put(

@@ -112,6 +112,22 @@ class SettingsStore(
     }
 
     /**
+     * The insight card's toggle for automatic writing (#553): each turn on or off is saved in
+     * [saves], which outlives the screen, as *Reactive* ([Settings.withAutomaticWriting]). A save
+     * that fails leaves the settings, and so the toggle, as they were.
+     */
+    fun automaticWritingSwitch(saves: CoroutineScope): (Boolean) -> Unit =
+        { on ->
+            saves.launch {
+                try {
+                    update { it.withAutomaticWriting(on) }
+                } catch (_: IOException) {
+                    // Only an I/O error: the toggle shows the settings as they stay.
+                }
+            }
+        }
+
+    /**
      * Home's report button's *Hide* (#518): each call sets *Report button* to *Hide*, launched in
      * [saves], which outlives the screen, so leaving Home or a rotation does not cut it short. The
      * result says whether it was saved: false after an I/O error, which leaves the setting as it was.

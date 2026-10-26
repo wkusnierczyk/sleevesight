@@ -64,7 +64,7 @@ internal fun InsightsSection(
                         settings.writeAutomatically,
                         details = modeDetails,
                     ) { mode ->
-                        update { it.copy(writeAutomatically = mode) }
+                        update { it.withWriteAutomatically(mode) }
                     },
                 )
             }.takeIf { settings.writeInsights },

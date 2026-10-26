@@ -92,6 +92,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property lapsed whether the Write offered is offered only because automatic writing paused
  *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
  *   *Saver* names, so the first action expired, and a tap resumes it.
+ * @property paused whether automatic writing is paused by *Saver* ([CoordinatorState.expired],
+ *   #203): the first action expired, and nothing is written without a tap until the user acts
+ *   again. The insight card's toggle (#553) shows it, whether or not Write is offered ([lapsed]).
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -105,6 +108,7 @@ data class PipelineView(
     val stopCall: CallId? = null,
     val offline: Boolean = false,
     val lapsed: Boolean = false,
+    val paused: Boolean = false,
 )
 
 /**
@@ -639,6 +643,7 @@ class PipelineHost(
                 stopCall = owner.stopCall,
                 offline = !owner.online,
                 lapsed = owner.lapsed,
+                paused = owner.expired,
             )
         }.collect {
             view.value = it

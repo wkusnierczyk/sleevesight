@@ -72,6 +72,19 @@
 
     <!-- The insight. -->
     <string name="home_insight_title">Key insights</string>
+    <!-- The insight card's toggle for automatic writing (#553), the same setting as Reactive: its name,
+         read by a screen reader with its state, and shown with it as the tooltip on a long press. -->
+    <string name="home_auto_write">Write insights automatically</string>
+    <string name="home_auto_write_on">on</string>
+    <string name="home_auto_write_off">off</string>
+    <!-- While Saver has paused automatic writing: the toggle stays on, and says it is paused. -->
+    <string name="home_auto_write_paused">on, paused</string>
+    <!-- The tooltip: the toggle's name and its state, one of the three above. -->
+    <string name="home_auto_write_tooltip">Write insights automatically: %1$s</string>
+    <!-- Shown beside the toggle's symbol while Saver has paused automatic writing. -->
+    <string name="home_auto_write_paused_mark">Paused</string>
+    <!-- A short message when the toggle is turned on. -->
+    <string name="home_auto_write_paid">Each new track’s insight is a paid call.</string>
     <string name="home_write">Write insight</string>
     <string name="home_rewrite">Rewrite</string>
     <string name="home_insight_gathering">Gathering evidence…</string>

@@ -49,6 +49,8 @@ import kotlinx.coroutines.flow.StateFlow
  * @property playerActivity the shown player's own screen, read when the player row is tapped.
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
+ * @property autoWrite saves the insight card's toggle for automatic writing (#553) turned on or off
+ *   (`Settings.withAutomaticWriting`).
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -63,6 +65,7 @@ class HomeFeed(
     val write: (RunKey, NowPlaying) -> Unit,
     val stop: (CallId) -> Unit,
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
+    val autoWrite: (Boolean) -> Unit = {},
 )
 
 /**
@@ -118,6 +121,7 @@ private fun HomeFeed.actions(
     playerActivity = playerActivity,
     write = write,
     stop = stop,
+    autoWrite = autoWrite,
     openSettings = openSettings,
     openPage = openPage,
 )
@@ -139,7 +143,8 @@ internal class NowPlayingState(
  * How the screen names what it shows, and where its taps go. [mail] takes a report of a problem
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440). [openPage] opens an
- * item on a page of its own, under *Layout*'s *Separate pages* (#447).
+ * item on a page of its own, under *Layout*'s *Separate pages* (#447). [autoWrite] turns the insight
+ * card's toggle for automatic writing on or off (#553).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -151,6 +156,7 @@ internal class NowPlayingActions(
     val mail: MailHandoff? = null,
     val openSettings: () -> Unit = {},
     val openPage: (HomePage) -> Unit = {},
+    val autoWrite: (Boolean) -> Unit = {},
 )
 
 /**
@@ -227,6 +233,7 @@ internal fun NowPlayingContent(
                         reporting = Reported(reportedTrack, written)
                     },
                     shown.details,
+                    settings?.let { autoWriting(it, view, actions.autoWrite) },
                 )
                 if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
             }
@@ -276,6 +283,19 @@ private fun insightContext(
         ),
     rewriteFailed = view.rewriteFailed.takeIf { track != null },
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
+)
+
+// The insight card's toggle for automatic writing (#553): on while *Reactive* writes automatically,
+// paused while *Saver* has paused it, and fixed while *Show insights* is off.
+private fun autoWriting(
+    settings: Settings,
+    view: PipelineView,
+    toggle: (Boolean) -> Unit,
+) = AutoWriting(
+    on = settings.writesAutomatically,
+    paused = view.paused,
+    enabled = settings.writeInsights,
+    onToggle = toggle,
 )
 
 // What a report is of: the insight, and the track it was written for.
