@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.SQLException
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.os.Build
 import android.util.Log
@@ -542,7 +543,8 @@ class AppGraph(
 
     /**
      * A player's name as the phone knows it, else as the design knows it, else its package. A
-     * player with a launcher icon is visible to the app through the manifest's `<queries>` (#435).
+     * player with a launcher icon (#435) or a media browser service (#535) is visible to the app
+     * through the manifest's `<queries>`.
      */
     fun playerLabel(packageName: String): String {
         val pm = appContext.packageManager
@@ -550,7 +552,7 @@ class AppGraph(
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (_: PackageManager.NameNotFoundException) {
             // Not installed, or not visible to this app (package visibility, Android 11 and later):
-            // a player with no launcher icon.
+            // a player with neither a launcher icon nor a media browser service.
             KNOWN_PLAYERS[packageName] ?: packageName
         }
     }
@@ -561,6 +563,33 @@ class AppGraph(
      */
     fun playerLaunchIntent(packageName: String): Intent? =
         appContext.packageManager.getLaunchIntentForPackage(packageName)
+
+    /**
+     * A player's own launcher icon, as the phone has it (#535; an adaptive icon is drawn under the
+     * phone's mask), for its row under *Players*: nothing bundled or fetched. Null for a player not
+     * installed, or not visible to this app (package visibility: [playerVisible]), whose row, if
+     * shown, has no icon. A package-manager call: not for the main thread.
+     */
+    fun playerIcon(packageName: String): Drawable? =
+        try {
+            appContext.packageManager.getApplicationIcon(packageName)
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
+
+    /**
+     * Whether the phone shows this app [packageName] (#535): installed, and visible through the
+     * manifest's `<queries>` (a launcher entry, a media browser service, or a media-button
+     * receiver). Not seeing one is no proof it is uninstalled, so nothing is deleted on it:
+     * *Players* only hides it ([SettingsStore.forgetPlayer] deletes on Android's word).
+     */
+    fun playerVisible(packageName: String): Boolean =
+        try {
+            appContext.packageManager.getApplicationInfo(packageName, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
 
     private companion object {
         const val TAG = "Sleevesight"

@@ -24,9 +24,9 @@ Each section links the design section that holds the detail, and the issue where
 
 **Its limit.** The check sees whether a sentence cites real lines, not whether those lines say what the sentence says: a plausible false sentence with a valid citation passes. It narrows what the model can invent; it does not prove the text true.
 
-**New or known.** Asking a model to cite retrieved sources is a common technique. The check itself is this project's own code, first written for its browser prototype and ported to Kotlin, with the prototype's sentence splitting corrected where the test tracks showed it wrong (abbreviations such as `U.S.` and `feat.`, a citation after a closing quotation mark). No library was used: what counts as a sentence, a citation and a stated gap is defined by this app's prompts.
+**New or known.** Asking a model to cite retrieved sources is a common technique. The check itself is this project's own code, first written for its browser prototype and ported to Kotlin, with the prototype's sentence splitting corrected where the test tracks showed it wrong (abbreviations such as `U.S.` and `feat.`, a citation after a closing quotation mark) or where a reply in Markdown hid an uncited sentence (a list item, or a sentence opening with an italic title). No library was used: what counts as a sentence, a citation and a stated gap is defined by this app's prompts.
 
-Design: [*Synthesis*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/design.md#synthesis) in the design, [*Synthesis and grounding*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#synthesis-and-grounding-core-ai) in the architecture. Issues: [#42](https://github.com/wkusnierczyk/sleevesight/issues/42), [#423](https://github.com/wkusnierczyk/sleevesight/issues/423).
+Design: [*Synthesis*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/design.md#synthesis) in the design, [*Synthesis and grounding*](https://github.com/wkusnierczyk/sleevesight/blob/main/design/architecture.md#synthesis-and-grounding-core-ai) in the architecture. Issues: [#42](https://github.com/wkusnierczyk/sleevesight/issues/42), [#423](https://github.com/wkusnierczyk/sleevesight/issues/423), [#574](https://github.com/wkusnierczyk/sleevesight/issues/574).
 
 ## The right song, the right article, the right artist
 

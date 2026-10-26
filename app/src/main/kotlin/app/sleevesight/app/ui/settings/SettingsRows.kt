@@ -35,7 +35,8 @@ internal fun Hint(
  * A setting that is on or off; the whole row toggles it. A null [onChange] is disabled. [highlight]
  * sets its title in the theme's error colour, for a privacy choice (#420). [below] goes under the
  * title and summary, as a link to the service the switch is for; a link there is a control of its
- * own, apart from the switch.
+ * own, apart from the switch. [leading] goes at the row's start, before the title: a player's icon
+ * (#535).
  */
 @Suppress("LongParameterList") // Each sets one aspect of the row; all but the first three have defaults.
 @Composable
@@ -45,6 +46,7 @@ internal fun SwitchRow(
     checked: Boolean,
     indent: Boolean = false,
     highlight: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
     onChange: ((Boolean) -> Unit)?,
 ) {
@@ -64,6 +66,10 @@ internal fun SwitchRow(
                 ).padding(start = if (indent) 16.dp else 0.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        leading?.let {
+            it()
+            Spacer(Modifier.width(16.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = color) }

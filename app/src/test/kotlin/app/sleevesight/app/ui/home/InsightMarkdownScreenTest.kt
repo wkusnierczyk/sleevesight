@@ -155,6 +155,9 @@ class InsightMarkdownScreenTest {
             val second = textOf("It was recorded")
             assertEquals("It was recorded in 1973 ${chip("MB1")}.\nIt is great.", second.text)
             assertFalse('#' in first.text || '-' in second.text)
+            // The second item is a sentence of its own, on its own line, and flagged as uncited (#574).
+            val flagged = second.spanStyles.filter { it.item.textDecoration == TextDecoration.Underline }
+            assertEquals(listOf("It is great."), flagged.map { second.text.substring(it.start, it.end) })
         }
 
     @Test

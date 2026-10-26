@@ -134,6 +134,44 @@ class SettingsStoreTest {
         }
 
     @Test
+    fun aRemovedPlayerIsDroppedAndComesBackOffWhileSpotifyKeepsItsSwitch() =
+        runBlocking {
+            val store = store()
+            store.playerSeen(OTHER_PLAYER)
+            store.playerSeen(VIDEO_APP)
+            store.update {
+                it.copy(followedPlayers = it.followedPlayers + (VIDEO_APP to true) + (Settings.SPOTIFY to false))
+            }
+
+            // Android says both apps are gone; Spotify, listed by default, keeps its entry, off.
+            store.forgetPlayer(VIDEO_APP)
+            store.forgetPlayer(Settings.SPOTIFY)
+            stores.close()
+            val restarted = store()
+            assertEquals(
+                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to false),
+                restarted.settings.first().followedPlayers,
+            )
+            assertEquals(emptySet<String>(), restarted.followedPlayers.first())
+
+            // Reinstalled, the dropped one is listed again as any new player is: switched off.
+            restarted.playerSeen(VIDEO_APP)
+            assertEquals(
+                mapOf(Settings.SPOTIFY to false, OTHER_PLAYER to false, VIDEO_APP to false),
+                restarted.settings.first().followedPlayers,
+            )
+        }
+
+    @Test
+    fun spotifyRemovedKeepsItsDefault() =
+        runBlocking {
+            val store = store()
+            store.forgetPlayer(Settings.SPOTIFY)
+            assertEquals(mapOf(Settings.SPOTIFY to true), store.settings.first().followedPlayers)
+            assertEquals(setOf(Settings.SPOTIFY), store.followedPlayers.first())
+        }
+
+    @Test
     fun aFailedReadFollowsNoPlayerShowsNoDefaultsAndIsRetried() =
         runBlocking {
             val flaky = FlakyDataStore(stores.open("settings"))

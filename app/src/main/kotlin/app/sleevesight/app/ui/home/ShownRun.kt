@@ -98,6 +98,10 @@ private class Paragraph(
 
     fun isCite(i: Int): Boolean = i in cites
 
+    // Whether [i] starts a sentence after the first: the check splits a sentence off before a
+    // line's mark only at a line break, which the split takes (#574).
+    fun startsSentence(i: Int): Boolean = i > 0 && sentenceOf[i - 1] < 0
+
     // Plain text: neither taken out, nor code, nor a citation.
     fun isPlain(i: Int): Boolean = !removed[i] && !literal[i] && !isCite(i)
 
@@ -364,14 +368,15 @@ private class BareAddresses(
     }
 }
 
-// A line's marks, at the paragraph's start or after a line break: a heading's `#`s, a list's `-`,
-// `*`, `+` or `1.` and a quotation's `>`, each before a space (a heading's also before the line's
-// end), and a rule (`---`) alone on its line.
+// A line's marks, at the paragraph's start, after a line break or at a sentence's start (the
+// grounding check opens a sentence with a line's mark only after a line break, #574): a heading's
+// `#`s, a list's `-`, `*`, `+` or `1.` and a quotation's `>`, each before a space (a heading's also
+// before the line's end), and a rule (`---`) alone on its line.
 private class LineMarks(
     private val p: Paragraph,
 ) {
     fun run() {
-        for (i in 0 until p.length) if (i == 0 || p[i - 1] == '\n') line(i)
+        for (i in 0 until p.length) if (i == 0 || p[i - 1] == '\n' || p.startsSentence(i)) line(i)
     }
 
     private fun line(start: Int) {
