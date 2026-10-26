@@ -41,7 +41,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The cogwheel**, at the right, opens the settings.
 
-At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too.
+At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too. Opened again, it has a back arrow at the top and *Close* at the bottom, which bring you back, as Android's back does.
 
 ### The playing track
 
@@ -53,7 +53,7 @@ From top to bottom, the card shows:
 - **The cover**, with the playback position under it when the player reports the track's length. Without a cover, a music note stands in.
 - **The title**, large and bold, cleaned of what the player appends: a tag such as "2006 Remaster" is set aside, and featured artists ("feat. Van Morrison") join the artists. When the title names the work it is from or a variant ("From …", "acoustic"), that shows under it.
 - **The artists**, each credited one, featured artists included.
-- **The album**, in italics, followed by the year of first release when MusicBrainz found one: *Rubber Soul*, 1965. The year is the one the recording first came out, not the year of the release being played. When the player gives no album, the year stands alone, or, with no year either, the line reads *Album not reported*.
+- **The album**, in italics, followed by the year of that release, the one being played, when it is known: *Rubber Soul*, 1965. The year comes from MusicBrainz, from the release of the name the player gives, or that name without an edition in brackets such as "(Remastered)" or "(Deluxe Edition)" (never without "(Live)" or "(Original Motion Picture Soundtrack)", which name another album); when several releases go by that name in different years, the year the player sends picks one, and without it no year shows. With no release of that name, the year is the player's own, if it sends one. When the song first came out earlier, on another album, a line under it says so: *Project Hail Mary (Original Motion Picture Soundtrack)*, 2026, then "First released 1990". When the two are the same year, it shows once. When the player gives no album, the first release stands in its place ("First released 1965"), or, with no year either, the line reads *Album not reported*.
 
 A new track shows at once, with its sources and insight to come.
 
