@@ -46,6 +46,21 @@ class SeenPlayersRecorderTest {
             job.cancel()
         }
 
+    @Test
+    fun aForgottenPlayerIsRecordedAgainWhenSeenAgain() =
+        runTest(UnconfinedTestDispatcher()) {
+            val recorder = SeenPlayersRecorder(seen, { recorded += it }, { warnings += it })
+            val job = launch { recorder.run() }
+
+            seen.value = setOf(OTHER)
+            recorder.forget(OTHER)
+            seen.value = emptySet()
+            seen.value = setOf(OTHER)
+
+            assertEquals(listOf(OTHER, OTHER), recorded)
+            job.cancel()
+        }
+
     private companion object {
         const val SPOTIFY = "com.spotify.music"
         const val OTHER = "com.example.player"
