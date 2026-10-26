@@ -91,6 +91,7 @@ class SettingsCodecTest {
                 developerMode = true,
                 reportButton = ReportButton.SHOW,
                 linkStyle = LinkStyle.HIGHLIGHT,
+                markDeveloperItems = false,
                 theme = ThemeChoice.DARK,
                 font = FontChoice.SYSTEM_FONT,
                 introAtStart = false,

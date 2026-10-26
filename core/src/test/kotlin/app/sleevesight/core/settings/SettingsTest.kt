@@ -60,6 +60,18 @@ class SettingsTest {
     }
 
     @Test
+    fun `developer items are marked by default, only in developer mode, and the mark is back on with it off`() {
+        assertTrue(defaults.markDeveloperItems)
+        assertFalse(defaults.marksDeveloperItems, "developer mode is off by default")
+        assertTrue(Settings(developerMode = true).marksDeveloperItems)
+        assertFalse(Settings(developerMode = true, markDeveloperItems = false).marksDeveloperItems)
+        assertFalse(Settings(developerMode = false, markDeveloperItems = true).marksDeveloperItems)
+        val unmarked = Settings(developerMode = true, markDeveloperItems = false)
+        assertTrue(unmarked.withoutDeveloperMode().markDeveloperItems)
+        assertEquals(Settings(), unmarked.withoutDeveloperMode())
+    }
+
+    @Test
     fun `the app's own font is the default, not the system's`() {
         assertEquals(FontChoice.APP_FONT, defaults.font)
     }

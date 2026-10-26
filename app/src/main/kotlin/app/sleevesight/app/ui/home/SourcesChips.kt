@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
 import app.sleevesight.core.evidence.EvidenceLine
@@ -117,7 +118,6 @@ internal fun Notes(
  * [focus], those shown again unfolded to by [fold]; with grounding [details] each with its status,
  * else by name. The chips of a row are centred on one line.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SourceChips(
     chips: List<SourceChip>,
@@ -127,6 +127,23 @@ internal fun SourceChips(
     fold: SourcesFold,
 ) {
     if (chips.isEmpty()) return
+    // Every source's chip with its status shows only in developer mode, marked as such (#536).
+    if (details) {
+        DeveloperMark { ChipRow(chips, true, lines, focus, fold) }
+    } else {
+        ChipRow(chips, false, lines, focus, fold)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipRow(
+    chips: List<SourceChip>,
+    details: Boolean,
+    lines: List<EvidenceLine>,
+    focus: LineFocus,
+    fold: SourcesFold,
+) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
