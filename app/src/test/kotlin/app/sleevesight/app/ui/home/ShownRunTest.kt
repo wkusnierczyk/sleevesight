@@ -1,0 +1,218 @@
+package app.sleevesight.app.ui.home
+
+import app.sleevesight.core.synthesis.GroundingCheck
+import app.sleevesight.core.synthesis.InsightReply
+import app.sleevesight.core.synthesis.SentenceStatus
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+/** The Markdown a model writes anyway, cleaned for display (#555), its citations as they were. */
+class ShownRunTest {
+    private fun text(
+        text: String,
+        italic: Boolean = false,
+        bold: Boolean = false,
+    ) = ShownRun.Text(text, italic, bold)
+
+    private fun cite(id: String) = ShownRun.Cite(id)
+
+    // One sentence, as shown.
+    private fun one(sentence: String): List<ShownRun> = shown(listOf(sentence)).single()
+
+    // A sentence's text as shown, its marks gone.
+    private fun plain(sentence: String): String =
+        one(sentence).joinToString("") {
+            when (it) {
+                is ShownRun.Text -> it.text
+                is ShownRun.Cite -> "[${it.id}]"
+            }
+        }
+
+    @Test
+    fun aTitleInAsterisksShowsInItalics() =
+        assertEquals(
+            listOf(
+                text("It quotes "),
+                text("Project Hail Mary", italic = true),
+                text(" and "),
+                text("Crazy World", italic = true),
+                text("."),
+            ),
+            one("It quotes *Project Hail Mary* and *Crazy World*."),
+        )
+
+    @Test
+    fun aTitleInUnderscoresShowsInItalics() =
+        assertEquals(listOf(text("Title", italic = true), text(" charted.")), one("_Title_ charted."))
+
+    @Test
+    fun doubleAsterisksAndUnderscoresShowInBold() {
+        assertEquals(listOf(text("It was "), text("huge", bold = true), text(".")), one("It was **huge**."))
+        assertEquals(listOf(text("It was "), text("huge", bold = true), text(".")), one("It was __huge__."))
+    }
+
+    @Test
+    fun threeAsterisksShowInBoldItalics() =
+        assertEquals(
+            listOf(text("It was "), text("huge", italic = true, bold = true), text(".")),
+            one("It was ***huge***."),
+        )
+
+    @Test
+    fun aCitationAfterATitleInItalicsStaysACitation() =
+        assertEquals(
+            listOf(text("It covers "), text("Title", italic = true), text(" "), cite("MB1"), text(".")),
+            one("It covers *Title* [MB1]."),
+        )
+
+    @Test
+    fun aCitationInsideItalicsStaysACitationAndTheMarksPairAroundIt() =
+        assertEquals(
+            listOf(text("It covers "), text("Title ", italic = true), cite("MB1"), text(".")),
+            one("It covers *Title [MB1]*."),
+        )
+
+    @Test
+    fun aHeadingsMarkIsTakenOut() {
+        assertEquals("Sundown\nIt charted [W1].", plain("# Sundown\nIt charted [W1]."))
+        assertEquals("Sundown\nIt charted [W1].", plain("### Sundown\nIt charted [W1]."))
+        // A `#` that is no heading stays: a number, a key.
+        assertEquals("It reached #1 in C# minor [W1].", plain("It reached #1 in C# minor [W1]."))
+        assertEquals("#1 for weeks [W1].", plain("#1 for weeks [W1]."))
+    }
+
+    @Test
+    fun aListsMarkersAreTakenOut() {
+        assertEquals("It charted [W1].\nIt sold [MB1].", plain("- It charted [W1].\n- It sold [MB1]."))
+        assertEquals("It charted [W1].\nIt sold [MB1].", plain("* It charted [W1].\n* It sold [MB1]."))
+        assertEquals("It charted [W1].\nIt sold [MB1].", plain("+ It charted [W1].\n  + It sold [MB1]."))
+        assertEquals("It charted [W1].\nIt sold [MB1].", plain("1. It charted [W1].\n2) It sold [MB1]."))
+        // A marker only at a line's start: a dash inside a line, and a year, stay.
+        assertEquals("It charted - twice [W1].", plain("It charted - twice [W1]."))
+        assertEquals("1973. It charted [W1].", plain("1973. It charted [W1]."))
+    }
+
+    @Test
+    fun aQuotationsMarkAndARuleAreTakenOut() {
+        assertEquals("They called it great [W1].", plain("> They called it great [W1]."))
+        assertEquals("It charted [W1].\nIt sold.", plain("It charted [W1].\n---\nIt sold."))
+        assertEquals("It charted [W1].\nIt sold.", plain("It charted [W1].\n* * *\nIt sold."))
+    }
+
+    @Test
+    fun codesBackticksAreTakenOutAndWhatIsInsideStaysAsWritten() {
+        assertEquals("It is on side_a_b [W1].", plain("It is on `side_a_b` [W1]."))
+        assertEquals(listOf(text("It is *not* a title.")), one("It is `*not*` a title."))
+        // A backtick with no pair stays.
+        assertEquals("It's `90s pop [W1].", plain("It's `90s pop [W1]."))
+    }
+
+    @Test
+    fun aLinkShowsAsItsText() {
+        assertEquals(
+            "Its Wikipedia article says so [W1].",
+            plain("Its [Wikipedia article](https://en.wikipedia.org/x) says so [W1]."),
+        )
+        assertEquals("A cover shows it [W1].", plain("A ![cover](https://x.org/c.jpg) shows it [W1]."))
+        // Italics in a link's text stay italics.
+        assertEquals(
+            listOf(text("See "), text("Title", italic = true), text(" "), cite("W1"), text(".")),
+            one("See [*Title*](https://x.org) [W1]."),
+        )
+    }
+
+    @Test
+    fun aCitationWrittenAsALinkStaysTheCitationWithoutTheAddress() {
+        assertEquals("It charted [W1].", plain("It charted [W1](https://en.wikipedia.org/x)."))
+        // Brackets that are no link stay, and so does a year after a citation.
+        assertEquals("It charted [sic] [W1] (1973).", plain("It charted [sic] [W1] (1973)."))
+        assertEquals("It charted [W1](1973).", plain("It charted [W1](1973)."))
+    }
+
+    @Test
+    fun anAsteriskThatIsNoMarkdownStays() {
+        assertEquals(
+            listOf(text("It is 5 * 3 minutes long "), cite("W1"), text(".")),
+            one("It is 5 * 3 minutes long [W1]."),
+        )
+        assertEquals(listOf(text("It is loved * "), cite("W1")), one("It is loved * [W1]"))
+        assertEquals(listOf(text("*")), one("*"))
+        assertEquals(listOf(text("Its B-side* charted "), cite("W1"), text(".")), one("Its B-side* charted [W1]."))
+        assertEquals(listOf(text("It is **"), cite("W1")), one("It is **[W1]"))
+    }
+
+    @Test
+    fun anUnderscoreInsideAWordStays() =
+        assertEquals(
+            listOf(text("Its file is snake_case_name "), cite("W1"), text(".")),
+            one("Its file is snake_case_name [W1]."),
+        )
+
+    @Test
+    fun anOpeningMarkThatNeverClosesStays() {
+        assertEquals(listOf(text("*NSYNC recorded it "), cite("W1"), text(".")), one("*NSYNC recorded it [W1]."))
+        assertEquals(
+            listOf(text("*NSYNC recorded "), text("Celebrity", italic = true), text(" "), cite("W1"), text(".")),
+            one("*NSYNC recorded *Celebrity* [W1]."),
+        )
+    }
+
+    @Test
+    fun plainTextIsShownAsItCame() {
+        val sentence = "It topped the charts in the U.S. in 1973, \"Sundown\" (live) [W1][MB1]."
+        assertEquals(
+            listOf(
+                text("It topped the charts in the U.S. in 1973, \"Sundown\" (live) "),
+                cite("W1"),
+                cite("MB1"),
+                text("."),
+            ),
+            one(sentence),
+        )
+    }
+
+    @Test
+    fun aTitleTheCheckSplitsIsSetInItalicsAcrossItsSentences() {
+        val sentences = GroundingCheck.splitSentences("*Help! I Need Somebody* opens it [W1].")
+        assertEquals(listOf("*Help!", "I Need Somebody* opens it [W1]."), sentences)
+        assertEquals(
+            listOf(
+                listOf(text("Help!", italic = true)),
+                listOf(text("I Need Somebody", italic = true), text(" opens it "), cite("W1"), text(".")),
+            ),
+            shown(sentences),
+        )
+    }
+
+    @Test
+    fun theGroundingCheckReadsTheReplyAsWrittenAndTheShownTextKeepsItsSentencesAndCitations() {
+        val reply = "It covers *Title* [MB1]. It was **huge**. _Other_ is cited [M]."
+        val grounded = (GroundingCheck.check(reply, setOf("MB1"), allowModel = false) as InsightReply.Written).grounded
+        val paragraph = grounded.paragraphs.single()
+        assertEquals(
+            listOf("It covers *Title* [MB1].", "It was **huge**. _Other_ is cited [M]."),
+            paragraph.map { it.text },
+        )
+        assertEquals(listOf(SentenceStatus.OK, SentenceStatus.UNKNOWN), paragraph.map { it.status })
+        val runs = shown(paragraph.map { it.text })
+        assertEquals(paragraph.size, runs.size)
+        assertEquals(
+            paragraph.map { it.cites },
+            runs.map { sentence ->
+                sentence.filterIsInstance<ShownRun.Cite>().map { it.id }
+            },
+        )
+        assertEquals(
+            listOf(
+                text("It was "),
+                text("huge", bold = true),
+                text(". "),
+                text("Other", italic = true),
+                text(" is cited "),
+                cite("M"),
+                text("."),
+            ),
+            runs[1],
+        )
+    }
+}

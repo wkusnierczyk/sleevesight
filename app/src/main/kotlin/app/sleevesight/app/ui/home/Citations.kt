@@ -16,6 +16,7 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
@@ -29,7 +30,8 @@ import app.sleevesight.core.synthesis.SentenceStatus
 
 // The insight's prose as text, with its citations as chips: plain text only (architecture,
 // *Synthesis and grounding*), its one interactive part the chips the app builds from the evidence
-// ids it assigned.
+// ids it assigned. Markdown the model writes anyway is cleaned, its titles set in italics and its
+// bold in bold ([shown], #555); the screen reader hears the text without the marks.
 
 // A paragraph of the insight as shown (its citations as chips) and as a screen reader reads it
 // (each chip by what it points at, `home_cite`, `home_cite_model` or `home_cite_unknown`, rather
@@ -65,10 +67,13 @@ internal fun CheckedProse(
     val flagged = SpanStyle(textDecoration = TextDecoration.Underline, color = MaterialTheme.colorScheme.error)
     val policy = CitePolicy(evidence, grounded.allowModel, held)
     val sentences = paragraph.map { it.text }
+    // A sentence of Markdown alone (a rule, a heading's `#`) shows as nothing, and is not read out.
+    val shown = paragraph.zip(shown(sentences)).filterNot { (_, runs) -> runs.isBlank() }
+    if (shown.isEmpty()) return
     val uncited = resources.getString(R.string.home_cite_none)
     val said =
-        paragraph.joinToString(" ") { sentence ->
-            val words = spoken(sentence.text, policy, resources)
+        shown.joinToString(" ") { (sentence, runs) ->
+            val words = spoken(runs, policy, resources)
             // An uncited sentence is said to be so before its final punctuation, where a citation
             // would be: "It is great (not cited)." A closing quote keeps the note out of the
             // quotation: 'They called it "great." (not cited)'. A closing bracket alone keeps it
@@ -80,10 +85,10 @@ internal fun CheckedProse(
         }
     val text =
         buildAnnotatedString {
-            paragraph.forEachIndexed { i, sentence ->
+            shown.forEachIndexed { i, (sentence, runs) ->
                 if (i > 0) append(' ')
                 val doubtful = sentence.status == SentenceStatus.UNCITED || sentence.status == SentenceStatus.UNKNOWN
-                appendSentence(sentence.text, policy, styles, onCite, if (doubtful) flagged else null)
+                appendSentence(runs, policy, styles, onCite, if (doubtful) flagged else null)
             }
         }
     Prose(ProseText(text, said, lines(sentences, policy)), onCite)
@@ -102,8 +107,10 @@ internal fun UncheckedProse(
 ) {
     val styles = citeStyles()
     val policy = CitePolicy(context.track?.evidence, context.modelAllowed, held)
-    val text = buildAnnotatedString { appendSentence(paragraph, policy, styles, onCite, null) }
-    Prose(ProseText(text, spoken(paragraph, policy, LocalResources.current), lines(listOf(paragraph), policy)), onCite)
+    val shown = shown(listOf(paragraph)).single()
+    if (shown.isBlank()) return
+    val text = buildAnnotatedString { appendSentence(shown, policy, styles, onCite, null) }
+    Prose(ProseText(text, spoken(shown, policy, LocalResources.current), lines(listOf(paragraph), policy)), onCite)
 }
 
 // A paragraph with citation chips, read by a screen reader with each chip said in words, and each
@@ -134,17 +141,18 @@ private fun Prose(
     )
 }
 
-// [text] as a screen reader reads it: each citation, in brackets, by what it points at.
+// A sentence's [runs] as a screen reader reads them: the text without its Markdown, each citation,
+// in brackets, by what it points at.
 private fun spoken(
-    text: String,
+    runs: List<ShownRun>,
     policy: CitePolicy,
     resources: Resources,
 ): String =
-    segments(text)
+    runs
         .joinToString("") { segment ->
             when (segment) {
-                is Segment.Text -> segment.text
-                is Segment.Cite -> {
+                is ShownRun.Text -> segment.text
+                is ShownRun.Cite -> {
                     val said =
                         when (citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)) {
                             CiteKind.LINE -> resources.getString(R.string.home_cite, segment.id)
@@ -201,17 +209,18 @@ private fun citeStyles(): CiteStyles {
     )
 }
 
+// A sentence's [runs], its titles in italics (#555), underlined when [flagged].
 private fun AnnotatedString.Builder.appendSentence(
-    text: String,
+    runs: List<ShownRun>,
     policy: CitePolicy,
     styles: CiteStyles,
     onCite: (String) -> Unit,
     flagged: SpanStyle?,
 ) {
-    for (segment in segments(text)) {
+    for (segment in runs) {
         when (segment) {
-            is Segment.Text -> appendText(segment.text, flagged)
-            is Segment.Cite -> {
+            is ShownRun.Text -> appendText(segment, flagged)
+            is ShownRun.Cite -> {
                 val kind = citeKind(segment.id, policy.evidence, policy.modelAllowed, policy.held)
                 appendCite(segment.id, kind, styles, onCite)
             }
@@ -220,10 +229,16 @@ private fun AnnotatedString.Builder.appendSentence(
 }
 
 private fun AnnotatedString.Builder.appendText(
-    text: String,
+    text: ShownRun.Text,
     flagged: SpanStyle?,
 ) {
-    if (flagged == null) append(text) else withStyle(flagged) { append(text) }
+    val marked =
+        SpanStyle(
+            fontStyle = if (text.italic) FontStyle.Italic else null,
+            fontWeight = if (text.bold) FontWeight.Bold else null,
+        )
+    val style = flagged?.merge(marked) ?: marked
+    if (style == SpanStyle()) append(text.text) else withStyle(style) { append(text.text) }
 }
 
 // A citation as a chip: a line's scrolls to it; the model's and a missing line's only say what they are.
