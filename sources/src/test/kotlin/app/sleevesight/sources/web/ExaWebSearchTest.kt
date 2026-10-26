@@ -17,6 +17,7 @@ import app.sleevesight.net.NetMethod
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -316,8 +317,23 @@ class ExaWebSearchTest {
             "\"The Ode To Newfoundland\" by Charles Cavendish Boyle, Hubert Parry and Cantus Vocum Chamber Choir, song",
             three.query,
         )
-        assertEquals("instant", three.type)
+        assertEquals("lite", three.type)
         assertEquals(RecordingFilter.OWN_SOURCE_HOSTS, three.excludeDomains)
+    }
+
+    @Test
+    fun `the request sends only parameters Exa's lite search accepts`() {
+        // Exa's search reference: `lite` "accepts only" these (among others the adapter does not
+        // send), and "a request that sets any other parameter is rejected".
+        val accepted = setOf("query", "type", "numResults", "excludeDomains", "contents")
+        val acceptedContents = setOf("highlights", "text", "snapshotAsOf")
+        for ((n, _) in RECORDINGS) {
+            val body = ExaWebSearch.JSON.encodeToJsonElement(ExaSearchRequest.of(track(n))).jsonObject
+            assertEquals("lite", body.getValue("type").jsonPrimitive.content, "track $n")
+            assertTrue(accepted.containsAll(body.keys), "track $n: ${body.keys - accepted}")
+            val contents = body.getValue("contents").jsonObject.keys
+            assertTrue(acceptedContents.containsAll(contents), "track $n: ${contents - acceptedContents}")
+        }
     }
 
     private companion object {

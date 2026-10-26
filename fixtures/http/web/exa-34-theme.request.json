@@ -1,6 +1,6 @@
 {
   "query": "\"Theme\" from Coronation Street by London Music Works, song",
-  "type": "instant",
+  "type": "lite",
   "numResults": 10,
   "excludeDomains": [
     "wikipedia.org",
