@@ -8,7 +8,7 @@
     <string name="first_run_intro_again">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
-    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album, length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
+    <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album (with its year, when the player sends one, shown after it), length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
 
     <string name="first_run_leaves_title">What leaves the phone, and to whom</string>
     <string name="first_run_to_sources">To the sources you switch on, such as MusicBrainz and Wikipedia (with Wikidata): the title and artists of the playing track, cleaned of tags such as “2006 Remaster”. Wikidata gets only identifiers. For the genre labels, Last.fm also gets the album name, the only source that does. While “Proactive” is on, as it is by default, the title and artists of the next track in the player’s queue also go to MusicBrainz, if switched on.</string>
@@ -63,10 +63,10 @@
     <!-- The eye in a key's field, named for what a tap does. -->
     <string name="settings_key_show">Show key</string>
     <string name="settings_key_hide">Hide key</string>
-    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. -->
-    <string name="settings_terms_anthropic">Using this key means agreeing to Anthropic’s Commercial Terms of Service. They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
-    <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
-    <string name="settings_terms_google">Using this key means agreeing to Google’s Gemini API terms. They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
+    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. The agreement, a commitment, is in bold (#543); the rest is plain. -->
+    <string name="settings_terms_anthropic"><b>Using this key means agreeing to Anthropic’s Commercial Terms of Service.</b> They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
+    <string name="settings_terms_openai"><b>Using this key means agreeing to the OpenAI Services Agreement.</b> It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
+    <string name="settings_terms_google"><b>Using this key means agreeing to Google’s Gemini API terms.</b> They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
     <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Purge keys” in Secrets.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>

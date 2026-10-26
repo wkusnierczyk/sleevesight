@@ -6,8 +6,9 @@ import app.sleevesight.app.secrets.SecretId
 
 /**
  * The terms an AI service's API is used under, on the user's own key (#409): what they require, in
- * plain words ([note]), and where they are ([url]). Checked against each service's own page on
- * 24 October 2026; `privacy.md` says the same, with the same date.
+ * plain words ([note], its first sentence, the agreement, marked bold: [boldStringResource], #543),
+ * and where they are ([url]). Checked against each service's own page on 24 October 2026;
+ * `privacy.md` says the same, with the same date.
  */
 internal class ServiceTerms(
     @StringRes val note: Int,

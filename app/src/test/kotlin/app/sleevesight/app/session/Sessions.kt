@@ -28,6 +28,8 @@ internal object Sessions {
         albumArtUri: String? = null,
         artUri: String? = null,
         displayTitle: String? = null,
+        year: Long? = null,
+        date: String? = null,
     ): MediaMetadata =
         MediaMetadata
             .Builder()
@@ -42,6 +44,8 @@ internal object Sessions {
                 art?.let { putBitmap(MediaMetadata.METADATA_KEY_ART, it) }
                 albumArtUri?.let { putString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI, it) }
                 artUri?.let { putString(MediaMetadata.METADATA_KEY_ART_URI, it) }
+                year?.let { putLong(MediaMetadata.METADATA_KEY_YEAR, it) }
+                date?.let { putString(MediaMetadata.METADATA_KEY_DATE, it) }
             }.build()
 
     fun state(

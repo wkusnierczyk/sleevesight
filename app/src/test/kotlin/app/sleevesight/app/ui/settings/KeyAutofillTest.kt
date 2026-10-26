@@ -15,6 +15,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -213,6 +215,14 @@ class KeyAutofillTest {
     fun aRemovedKeyEndsTheAutofillSessionUnsaved() =
         show(state = SecretState.SAVED) { shown ->
             compose.onNodeWithText(text(R.string.settings_remove)).performClick()
+            // *Remove* asks first (#543): the confirmation's own *Remove* removes the key.
+            val title = app.getString(R.string.settings_key_remove_title, text(R.string.settings_key_name_anthropic))
+            compose.waitUntil(timeoutMillis = 5_000) {
+                compose.onAllNodes(hasText(title)).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose
+                .onNode(hasText(text(R.string.settings_remove)) and hasAnyAncestor(hasAnyDescendant(hasText(title))))
+                .performClick()
             compose.waitUntil(timeoutMillis = 5_000) { shown.dismissed == 1 }
             compose.waitForIdle()
             assertEquals(1, shown.removed)

@@ -4,6 +4,7 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.SourceId
+import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.platform.JvmHasher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -126,11 +127,11 @@ class PromptEvidenceTest {
 
     @Test
     fun `the player's closing parts are stripped balanced, nested, after any space, while a name is left`() {
-        assertEquals("Sundown", PromptEvidence.edition("Sundown (Remastered (2024))"))
-        assertEquals("Sundown", PromptEvidence.edition("Sundown (Remastered)\u00A0[Deluxe]\u00A0"))
-        assertEquals("(Untitled)", PromptEvidence.edition("(Untitled) (Deluxe)"))
-        assertEquals("()", PromptEvidence.edition("()"))
-        assertEquals("Sundown )", PromptEvidence.edition("Sundown )"))
+        assertEquals("Sundown", Edition.strip("Sundown (Remastered (2024))"))
+        assertEquals("Sundown", Edition.strip("Sundown (Remastered)\u00A0[Deluxe]\u00A0"))
+        assertEquals("(Untitled)", Edition.strip("(Untitled) (Deluxe)"))
+        assertEquals("()", Edition.strip("()"))
+        assertEquals("Sundown )", Edition.strip("Sundown )"))
         assertEquals(listOf("MB1"), sentOn("Sundown (Remastered (2024))", firstRelease("Sundown")))
         assertEquals(listOf("MB1"), sentOn("(Untitled) (Deluxe)", firstRelease("(Untitled)")))
         assertEquals(listOf("MB1"), sentOn("()", firstRelease("()")))

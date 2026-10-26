@@ -9,6 +9,7 @@ import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.sources.Rejection
+import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
@@ -398,6 +399,12 @@ class RetrievalCacheTest {
                 ),
             recordingTags = RecordingTags("mb-sundown", listOf("folk rock", "soft rock")),
             firstReleased = "1974-01-01",
+            releaseDates =
+                listOf(
+                    ReleaseDate("Sundown", "1974-01-01", "rg-1"),
+                    ReleaseDate("Gord's Gold", "1975", "rg-2"),
+                    ReleaseDate("Undated", null, "rg-3"),
+                ),
         )
     }
 

@@ -15,6 +15,8 @@ import kotlin.time.Duration
  * @property mediaId the player's media id, when it sends one.
  * @property queueItemId the active queue item, when the player publishes one; the session's −1
  *   ("no item") is null here.
+ * @property year the year of the release, when the player sends one (`YEAR`, else `DATE`): the
+ *   header's year after the album when MusicBrainz has none for it (#556). Few players send it.
  */
 data class NowPlaying(
     val title: String,
@@ -25,4 +27,5 @@ data class NowPlaying(
     val mediaId: String? = null,
     val queueItemId: Long? = null,
     val artUri: String? = null,
+    val year: Int? = null,
 )
