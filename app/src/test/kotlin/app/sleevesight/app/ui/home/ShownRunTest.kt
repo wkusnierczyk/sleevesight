@@ -122,6 +122,10 @@ class ShownRunTest {
         assertEquals("Its paths are C:\\ and D:\\ [W1].", plain("Its paths are `C:\\` and `D:\\` [W1]."))
         assertEquals("It is a\\b` [W1].", plain("It is `a\\`b` [W1]."))
         assertEquals("It is `not code` [W1].", plain("It is \\`not code` [W1]."))
+        // One space each side of code goes, so it can hold a backtick at its ends.
+        assertEquals("Use `x` here [W1].", plain("Use `` `x` `` here [W1]."))
+        assertEquals("Use  x  here [W1].", plain("Use `  x  ` here [W1]."))
+        assertEquals("Use   here [W1].", plain("Use ` ` here [W1]."))
     }
 
     @Test
@@ -153,15 +157,21 @@ class ShownRunTest {
             ),
             one("It charted [W1] https://x.org/a_b_c and _Title_."),
         )
+        // An address whose `_`s touch punctuation, which would pair as italics.
         assertEquals(
             listOf(
                 text("It charted "),
                 cite("W1"),
-                text("www.x.org/a_b_c and "),
+                text("www.x.org/(a)_b_(c) and "),
                 text("Title", italic = true),
                 text("."),
             ),
-            one("It charted [W1]www.x.org/a_b_c and _Title_."),
+            one("It charted [W1]www.x.org/(a)_b_(c) and _Title_."),
+        )
+        // An address as a link's text ends where the link's marks were taken out.
+        assertEquals(
+            listOf(text("See "), text("www.x.org/a_b", italic = true), text(" "), cite("W1"), text(".")),
+            one("See [*www.x.org/a_b*](https://x.org) [W1]."),
         )
         // The punctuation that ends an address is not part of it: here, the closing mark of italics.
         assertEquals(

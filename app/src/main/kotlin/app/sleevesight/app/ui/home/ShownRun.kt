@@ -211,6 +211,15 @@ private class EscapesAndCode(
         p.remove(open until open + run)
         for (k in open + run until close) p.literal[k] = true
         p.remove(close until close + run)
+        // One space each side goes when both have one and there is more than space between them
+        // (CommonMark), so a backtick can start or end the code: `` `x` `` is the code `x`.
+        val first = open + run
+        val last = close - 1
+        val padded = last > first && p[first] == ' ' && p[last] == ' '
+        if (padded && (first..last).any { p[it] != ' ' }) {
+            p.remove(first..first)
+            p.remove(last..last)
+        }
         return close + run
     }
 
@@ -303,7 +312,8 @@ private class Links(
 
 // A web address written out (`https://…`, `www.…`) shown as written, so its `_`s and `*`s are no
 // emphasis (`…/Help!_(song)` and `…/Help!_(album)` in one paragraph): from its start, after no
-// letter or digit, to the next space or citation, less any punctuation that ends it (`.`, `!`,
+// letter or digit, to the next space, citation or mark taken out (a link's `](…)`, when the address
+// is its text), less any punctuation that ends it (`.`, `!`,
 // `*`, a `)` it did not open), as GitHub's autolinks end. It stays text, never a link.
 private class BareAddresses(
     private val p: Paragraph,
@@ -324,7 +334,7 @@ private class BareAddresses(
 
     private fun end(start: Int): Int {
         var end = start
-        while (end < p.length && !p[end].isWhitespace() && !p.isCite(end)) end++
+        while (end < p.length && inAddress(end)) end++
         while (end > start && endsOff(start, end)) end--
         return end
     }
@@ -334,6 +344,9 @@ private class BareAddresses(
         start: Int,
         end: Int,
     ): Boolean = p[end - 1] in TRAILING || (p[end - 1] == ')' && unbalanced(start, end))
+
+    // Whether [k] may be in an address: no space, citation or mark taken out.
+    private fun inAddress(k: Int): Boolean = !p[k].isWhitespace() && !p.isCite(k) && !p.removed[k]
 
     // Whether the address from [start] to [end] closes more brackets than it opens.
     private fun unbalanced(
