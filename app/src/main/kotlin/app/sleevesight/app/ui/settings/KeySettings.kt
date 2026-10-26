@@ -41,7 +41,8 @@ internal val SHOWN_KEYS =
 
 /**
  * The key [id]'s row: its state, which opens the key's dialog, and, while a key is stored, readable
- * or not, a button that removes it once confirmed.
+ * or not, a button that removes it once confirmed. A service's link to its key lands on it
+ * ([SettingsTarget.key], [KeyLink]).
  */
 @Composable
 internal fun KeyRow(
@@ -52,16 +53,18 @@ internal fun KeyRow(
     open: (SettingsDialog) -> Unit,
 ) {
     val state = secrets[id] ?: SecretState.ABSENT
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.weight(1f)) {
-            ValueRow(title, keyState(state), indent = indent, onClick = { open(SettingsDialog.Key(id)) })
-        }
-        if (state != SecretState.ABSENT) {
-            IconButton(onClick = { open(SettingsDialog.RemoveKey(id)) }) {
-                Icon(
-                    painterResource(R.drawable.ic_delete),
-                    contentDescription = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
-                )
+    LandingSpot(SettingsTarget.key(id)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.weight(1f)) {
+                ValueRow(title, keyState(state), indent = indent, onClick = { open(SettingsDialog.Key(id)) })
+            }
+            if (state != SecretState.ABSENT) {
+                IconButton(onClick = { open(SettingsDialog.RemoveKey(id)) }) {
+                    Icon(
+                        painterResource(R.drawable.ic_delete),
+                        contentDescription = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
+                    )
+                }
             }
         }
     }

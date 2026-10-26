@@ -8,7 +8,7 @@
     <string name="settings_sources_short">External services providing information on artists and music.</string>
     <string name="settings_sources_long">Sleevesight pulls information about the currently played music from services dedicated to music and from general information sources. Switch on the services you want Sleevesight to get information from.</string>
     <string name="settings_ai_short">Large Language Model (LLM) services</string>
-    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time; a service switched off keeps its model and effort.</string>
+    <string name="settings_ai_long">Sleevesight uses LLMs to process, aggregate, and present information retrieved from sources. Use the settings to specify the model and effort; stronger models and higher effort provide better results at a higher cost. One service at a time. Switching off a service does not erase the most recently used model and effort settings.</string>
     <string name="settings_keys_short">Private API keys enabling external services</string>
     <string name="settings_show_phone_name">Share phone’s name with Type on a computer</string>
     <string name="settings_show_phone_name_summary">Type on a computer lets you type an API key on a computer’s keyboard, sent to the phone over Bluetooth: tap the keyboard icon in a key’s field, with the page below open on the computer. Sharing the name lets the computer list the phone by its Bluetooth name while a session is open, instead of as “Unknown or Unsupported Device”; a name the phone cannot advertise is left out, and the session says so. Anyone nearby scanning for Bluetooth can see the name meanwhile.</string>
@@ -38,7 +38,12 @@
     <string name="settings_engine_exa_summary">Searches the web for articles about the track.</string>
     <!-- Under a service that needs a key it lacks; the argument names the service, as Last.fm or Anthropic. -->
     <string name="settings_needs_key">Needs your %1$s key, in Secrets.</string>
+    <!-- Under each service that needs a key (#539): %1$s is the key's name ("Anthropic API key"), a link to its row in Secrets. -->
+    <string name="settings_set_key">Set your %1$s here.</string>
     <string name="settings_key_unreadable_note">Your %1$s key can no longer be read; see Secrets.</string>
+    <!-- The same, above the link to the key in Secrets (settings_set_key), which says where it is. -->
+    <string name="settings_needs_key_linked">Needs your %1$s key.</string>
+    <string name="settings_key_unreadable_linked">Your %1$s key can no longer be read.</string>
 
     <!-- Genres. -->
     <string name="settings_show_genres">Show genres</string>

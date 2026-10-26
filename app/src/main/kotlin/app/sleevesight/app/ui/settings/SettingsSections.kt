@@ -75,6 +75,11 @@ internal class SectionFolds(
         unfolded = if (section in unfolded) unfolded - section else unfolded + section
     }
 
+    /** Unfolds [section], if folded, as a link to a setting in it does ([SettingsNavigator.go]). */
+    fun unfold(section: SettingsSection) {
+        unfolded = unfolded + section
+    }
+
     companion object {
         val Saver: Saver<SectionFolds, ArrayList<String>> =
             Saver(
@@ -113,7 +118,8 @@ internal fun FoldedSection(
  * folded, down while unfolded, as the home screen's folds have it), and its short description
  * under it; the whole of it toggles the fold. A screen reader reads it as a heading with its state,
  * "collapsed" or "expanded", and not the triangle. The one place the headings' style is set:
- * bold, in the text colour, not the accent (#442).
+ * bold, in the text colour, not the accent (#442). It is where a link to the section itself lands
+ * ([SettingsTarget] without a row, [LandingSpot]).
  */
 @Composable
 internal fun SectionHeading(
@@ -124,6 +130,17 @@ internal fun SectionHeading(
     val state =
         stringResource(if (unfolded) R.string.settings_section_expanded else R.string.settings_section_collapsed)
     HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
+    LandingSpot(SettingsTarget(section)) { HeadingText(section, unfolded, state, toggle) }
+}
+
+/** The text of [section]'s heading, under its divider ([SectionHeading]). */
+@Composable
+private fun HeadingText(
+    section: SettingsSection,
+    unfolded: Boolean,
+    state: String,
+    toggle: () -> Unit,
+) {
     Column(
         modifier =
             Modifier
