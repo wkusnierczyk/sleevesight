@@ -81,7 +81,10 @@ class PlayerSettingsTest {
                 }
             }
             compose.openSection(SettingsSection.PLAYERS)
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("Example").fetchSemanticsNodes().isNotEmpty() }
+            // Each row shows once its name and link, asked off the main thread, have arrived.
+            compose.waitUntil(5_000) {
+                listOf("Example", "Spotify").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
+            }
             // No launcher entry, no link.
             assertTrue(compose.onAllNodes(hasContentDescription(openLink("Example"))).fetchSemanticsNodes().isEmpty())
 

@@ -5,6 +5,10 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.settings.PlayerRemovedReceiver
@@ -98,6 +102,56 @@ class UninstalledPlayersTest {
         idleFor("Spotify kept") { stored() == mapOf(Settings.SPOTIFY to false, SHOWN to true) }
     }
 
+    /** A session of [player], playing music, so the session layer sees the player (#435). */
+    private fun play(player: String) {
+        val controller = MediaController(app, MediaSession(app, "test").sessionToken)
+        shadowOf(controller).setPackageName(player)
+        shadowOf(controller).setMetadata(
+            MediaMetadata
+                .Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "Sundown")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "Gordon Lightfoot")
+                .build(),
+        )
+        shadowOf(app.getSystemService(MediaSessionManager::class.java)).addController(controller)
+    }
+
+    /** Uninstalled: its sessions end, and Android says the app was removed. */
+    private fun uninstall(player: String) {
+        shadowOf(app.getSystemService(MediaSessionManager::class.java)).clearControllers()
+        broadcast(Intent.ACTION_PACKAGE_FULLY_REMOVED, player)
+    }
+
+    /**
+     * #579: a player uninstalled and installed again while the process runs is listed again, off,
+     * once it reports music, since the process forgets having seen it; Spotify, seen and then
+     * uninstalled, is no longer listed as seen, and keeps its switch through the reinstall.
+     */
+    @Test
+    fun aPlayerReinstalledWithoutARestartIsListedAgain() {
+        play(PLAYED)
+        play(Settings.SPOTIFY)
+        graph.sessions.start()
+        idleUntil("both seen, the new player listed") {
+            PLAYED in stored() && graph.sessions.seenPlayers.value == setOf(PLAYED, Settings.SPOTIFY)
+        }
+
+        uninstall(PLAYED)
+        idleUntil("the removed player dropped and forgotten") {
+            PLAYED !in stored() && PLAYED !in graph.sessions.seenPlayers.value
+        }
+        uninstall(Settings.SPOTIFY)
+        idleUntil("Spotify forgotten as seen") { Settings.SPOTIFY !in graph.sessions.seenPlayers.value }
+        assertEquals(false, stored()[Settings.SPOTIFY])
+
+        play(PLAYED)
+        play(Settings.SPOTIFY)
+        idleUntil("the reinstalled player listed again") { PLAYED in stored() }
+        assertEquals(false, stored()[PLAYED])
+        idleUntil("Spotify seen again") { Settings.SPOTIFY in graph.sessions.seenPlayers.value }
+        assertEquals(false, stored()[Settings.SPOTIFY])
+    }
+
     /**
      * What the app can see and hear of other apps (package visibility, which Robolectric does not
      * apply), read from the manifest itself: launcher apps (#435), apps with a media browser
@@ -132,6 +186,7 @@ class UninstalledPlayersTest {
     private companion object {
         const val SHOWN = "com.example.player"
         const val NOT_SHOWN = "com.example.hidden"
+        const val PLAYED = "com.example.played"
         const val MEDIA_BROWSER_SERVICE = "android.media.browse.MediaBrowserService"
     }
 }
