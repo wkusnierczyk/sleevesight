@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.home
 
 import app.sleevesight.app.pipeline.PipelineView
+import app.sleevesight.app.pipeline.UnavailableModel
 import app.sleevesight.app.session.TrackIdentity
 import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceSet
@@ -43,8 +44,11 @@ internal fun releaseYear(track: TrackState?): String? {
 /**
  * What the insight card needs besides the insight: the [track] it is of, and from the pipeline's
  * view and the settings, whether an insight can be written, what the pipeline offers beside it
- * ([offers]), and why a rewrite failed or that it was stopped ([rewriteFailed]).
+ * ([offers]), and why a rewrite failed or that it was stopped ([rewriteFailed]); and the switched-on
+ * AI service's model, while it is found unavailable ([unavailable], #540), which no insight is
+ * written with until another is chosen.
  */
+@Suppress("LongParameterList") // Each what one part of the card says.
 internal class InsightContext(
     val track: TrackState?,
     val aiReady: Boolean,
@@ -52,6 +56,7 @@ internal class InsightContext(
     val modelAllowed: Boolean,
     val offers: InsightOffers,
     val rewriteFailed: String?,
+    val unavailable: UnavailableModel? = null,
 )
 
 /**
@@ -69,13 +74,15 @@ internal class InsightOffers(
 
 /**
  * Where the insight card's taps go: Write and Rewrite ([onWrite]) and Stop ([onStop]) to the
- * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line;
- * *Report a problem* ([onReport], #390) with the written insight and the track it was written for.
+ * pipeline, which says whether a tap does anything; a citation chip ([onCite]) to its line; the
+ * link of a model found unavailable to the settings ([onSettings], #540); *Report a problem*
+ * ([onReport], #390) with the written insight and the track it was written for.
  */
 internal class InsightActions(
     val onWrite: () -> Unit,
     val onStop: () -> Unit,
     val onCite: (String) -> Unit,
+    val onSettings: () -> Unit = {},
     val onReport: (TrackState, InsightState.Written) -> Unit,
 )
 

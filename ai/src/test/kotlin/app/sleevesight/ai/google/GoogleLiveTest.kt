@@ -16,9 +16,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * A smoke test against the real API, with the developer's key: skipped unless
- * `SLEEVESIGHT_GOOGLE_API_KEY` is set, which CI never does. It spends a few tokens of the default
- * model, at its default effort, so the thinking level is sent too.
+ * A smoke test against the real API, with the developer's key, or the repository's in the scheduled
+ * check of the defaults (`default-models.yml`, #540): skipped unless `SLEEVESIGHT_GOOGLE_API_KEY`
+ * is set, which the build never does. It fails when the default model is not listed or does not
+ * answer, and spends a few tokens of it, at its default effort, so the thinking level is sent too.
  */
 class GoogleLiveTest {
     private val key: String? = System.getenv(KEY_VARIABLE)?.takeIf { it.isNotBlank() }

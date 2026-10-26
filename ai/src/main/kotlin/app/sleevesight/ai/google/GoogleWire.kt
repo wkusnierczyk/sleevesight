@@ -74,10 +74,14 @@ internal data class WireErrorDetail(
     val retryDelay: String? = null,
 )
 
-/** A quota a request exceeded, by its id (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`). */
+/**
+ * A quota a request exceeded, by its id (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`), with
+ * its limit ([quotaValue], `"0"` for a model the tier has no quota for), where the error gives it.
+ */
 @Serializable
 internal data class WireQuotaViolation(
     val quotaId: String? = null,
+    val quotaValue: String? = null,
 )
 
 @Serializable
