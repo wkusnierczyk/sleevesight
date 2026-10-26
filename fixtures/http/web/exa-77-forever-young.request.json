@@ -1,6 +1,6 @@
 {
   "query": "\"Forever Young\" by dearoldfriend and Winston Hunte, song",
-  "type": "instant",
+  "type": "lite",
   "numResults": 10,
   "excludeDomains": [
     "wikipedia.org",

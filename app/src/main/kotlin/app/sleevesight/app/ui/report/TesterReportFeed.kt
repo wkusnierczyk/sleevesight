@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +31,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.report.TesterReports
 import app.sleevesight.app.report.TesterSnapshot
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.Deferred
@@ -129,32 +129,42 @@ fun TesterReportButton(
         enter = fadeIn(tween(SHOW_MILLIS)) + slideInVertically(tween(SHOW_MILLIS)) { it / 2 },
         exit = fadeOut(tween(HIDE_MILLIS)) + slideOutVertically(tween(HIDE_MILLIS)) { it / 2 },
     ) {
-        Box {
+        // The button and its menu show only in developer mode, and are marked as such (#536).
+        DeveloperMark {
             SmallFloatingActionButton(onClick = { menu = true }, modifier = Modifier.testTag(TESTER_REPORT_TAG)) {
                 Icon(
                     painterResource(R.drawable.ic_bug_report),
                     contentDescription = stringResource(R.string.tester_report_button),
                 )
             }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tester_report_menu_report)) },
-                    onClick = {
-                        menu = false
-                        state.onReport()
-                    },
-                    modifier = Modifier.testTag(TESTER_REPORT_MENU_REPORT_TAG),
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.tester_report_menu_hide)) },
-                    onClick = {
-                        menu = false
-                        state.onHide()
-                    },
-                    modifier = Modifier.testTag(TESTER_REPORT_MENU_HIDE_TAG),
-                )
-            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) { ReportMenu(state) { menu = false } }
         }
+    }
+}
+
+/** The report button's menu (#518): *Report* and *Hide*, each closing it ([close]) first. */
+@Composable
+private fun ReportMenu(
+    state: ReportButtonState,
+    close: () -> Unit,
+) {
+    DeveloperMark {
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.tester_report_menu_report)) },
+            onClick = {
+                close()
+                state.onReport()
+            },
+            modifier = Modifier.testTag(TESTER_REPORT_MENU_REPORT_TAG),
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.tester_report_menu_hide)) },
+            onClick = {
+                close()
+                state.onHide()
+            },
+            modifier = Modifier.testTag(TESTER_REPORT_MENU_HIDE_TAG),
+        )
     }
 }
 
@@ -170,7 +180,10 @@ private fun ReportButtonHiddenDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
-            Text(stringResource(if (saved) R.string.tester_report_hidden else R.string.tester_report_not_hidden))
+            // Only developer mode's button says this: marked as such (#536).
+            DeveloperMark {
+                Text(stringResource(if (saved) R.string.tester_report_hidden else R.string.tester_report_not_hidden))
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag(TESTER_REPORT_HIDDEN_DISMISS_TAG)) {

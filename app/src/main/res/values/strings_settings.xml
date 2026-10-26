@@ -96,6 +96,11 @@
     <string name="settings_link_style_summary">How links are marked: a thin line below them, or a faint highlight behind them.</string>
     <string name="settings_link_style_underline">Underline</string>
     <string name="settings_link_style_highlight">Highlight</string>
+    <!-- Developer (#536): the mark around everything only developer mode shows. -->
+    <string name="settings_mark_developer">Mark developer items</string>
+    <string name="settings_mark_developer_summary">Outlines in teal, with a Developer tag, everything only developer mode shows, so your screenshots show what other users will not see.</string>
+    <!-- The tag on the mark's top edge: drawn only, never read by a screen reader. -->
+    <string name="developer_mark_tag">Developer</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_summary">Developer mode is on. Turn it off here to hide this section and turn off everything in it.</string>
     <!-- Appearance → Layout (#447): how an item of the home screen opens. -->

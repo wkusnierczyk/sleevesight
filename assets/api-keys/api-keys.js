@@ -159,8 +159,8 @@ async function load(file) {
   }
   if (others > 0) said.push(`${others} other name${others > 1 ? 's' : ''} left out.`);
   if (keys.size + repeated.length + empty.length === 0 && unknown.length + others > 0) {
-    const names = SERVICES.map((s) => s.variable);
-    said.push(`Sleevesight’s names are ${names.slice(0, -1).join(', ')} and ${names.at(-1)}.`);
+    const names = SERVICES.map((s) => s.variables.join(' or '));
+    said.push(`Sleevesight reads ${names.slice(0, -1).join(', ')} and ${names.at(-1)}.`);
   }
   if (unreadable > 0) said.push(`${unreadable} line${unreadable > 1 ? 's' : ''} not of the form NAME=value, left out.`);
   report(said.join(' '));
