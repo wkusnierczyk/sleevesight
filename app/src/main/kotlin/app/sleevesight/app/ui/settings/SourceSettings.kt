@@ -19,9 +19,10 @@ import app.sleevesight.core.settings.WebEngine
  * A row of *Sources*: a source's switch ([SourceSwitch]), or a web search engine's ([WebEngine]),
  * each a service of the first level since #444 (a later engine is a row of its own); with its
  * [name], what it is ([summary]), and its site, opened by *Open website ↗* ([url]; none for the AI
- * service's knowledge, which has none of its own).
+ * service's knowledge, which has none of its own); [badge] is the letter of its badge (#537).
  */
 private sealed class SourceRow(
+    val badge: String,
     @StringRes val name: Int,
     @StringRes val summary: Int,
     val url: String?,
@@ -31,14 +32,14 @@ private sealed class SourceRow(
         name: Int,
         summary: Int,
         url: String?,
-    ) : SourceRow(name, summary, url)
+    ) : SourceRow(badgeLetter(switch), name, summary, url)
 
     class Engine(
         val engine: WebEngine,
         name: Int,
         summary: Int,
         url: String,
-    ) : SourceRow(name, summary, url)
+    ) : SourceRow(WEB_BADGE, name, summary, url)
 }
 
 /**
@@ -82,11 +83,11 @@ private val SOURCE_ROWS: List<SourceRow> =
     )
 
 /**
- * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key,
- * a link to it under *Secrets*, where the keys are ([KeyLink]), and, while it lacks the key, that
- * it needs it ([keyNote]). A web search
- * engine's row is on while web search is on with that engine ([Settings.isEnabled] needs both):
- * switching it on turns both on, and off turns the engine off.
+ * *Sources*: a switch per source, each with its badge ([ServiceBadge]), what it is, its site,
+ * and, for one that needs a key, a link to it under *Secrets*, where the keys are ([KeyLink]), and,
+ * while it lacks the key, that it needs it ([keyNote]). A web search engine's row is on while web
+ * search is on with that engine ([Settings.isEnabled] needs both): switching it on turns both on,
+ * and off turns the engine off.
  */
 @Composable
 internal fun SourcesSection(
@@ -110,6 +111,7 @@ internal fun SourcesSection(
             title = name,
             summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) }),
             checked = checked,
+            leading = { ServiceBadge(row.badge) },
             below = {
                 key?.let { KeyLink(it) }
                 row.url?.let { WebsiteLink(name, it) }
@@ -184,11 +186,11 @@ internal fun keyNote(
 
 /**
  * *Genres* (D12, #84, #444): *Show genres*, off for none at all, not asked for from any source
- * ([Settings.givesLabels]), nor shown; then which sources' tags give genre labels, each with where
- * its tags come from and *Open website ↗* (#545). A source gives labels only while *Show genres*
- * is on and the source is on under *Sources*, and Last.fm only with its key saved and readable, so
- * until then its switch shows off and cannot be moved, and says why: a key saved but no longer
- * readable ([SecretState.UNREADABLE]) is told apart from no key.
+ * ([Settings.givesLabels]), nor shown; then which sources' tags give genre labels, each with its
+ * badge ([ServiceBadge]), where its tags come from and *Open website ↗* (#545). A source gives
+ * labels only while *Show genres* is on and the source is on under *Sources*, and Last.fm only
+ * with its key saved and readable, so until then its switch shows off and cannot be moved, and says
+ * why: a key saved but no longer readable ([SecretState.UNREADABLE]) is told apart from no key.
  */
 @Composable
 internal fun GenresSection(
@@ -218,6 +220,7 @@ internal fun GenresSection(
             summary = lines(stringResource(labelSourceSummary(source)), why),
             checked = offered && source in settings.labelSources,
             indent = true,
+            leading = { ServiceBadge(source.source.tag) },
             below = { WebsiteLink(name, labelSourcePage(source)) },
             onChange =
                 { on: Boolean ->

@@ -95,9 +95,14 @@ import kotlinx.coroutines.withContext
  * per process, held by [SleevesightApplication]. Components take what they need through their
  * constructors; nothing outside this class constructs a long-lived object.
  *
+ * The constructor is internal: only [SleevesightApplication] makes the graph, and the module's tests,
+ * through its `makeGraph`, with stand-ins.
+ *
  * @param settingsData the settings' file, made here unless a test passes a stand-in.
+ * @param secretCipher seals the keys; a test seam, since Robolectric has no Android Keystore.
+ * @param musicBrainzThrough wraps the MusicBrainz client; a test seam, to count its questions.
  */
-class AppGraph(
+class AppGraph internal constructor(
     context: Context,
     settingsData: DataStore<Preferences> =
         preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
@@ -385,6 +390,9 @@ class AppGraph(
      */
     val history = SessionHistory(AndroidSqliteDriver(HistoryDatabase.Schema, appContext, HISTORY_DATABASE))
 
+    /** Lists each player the session layer sees under *Players*, switched off. */
+    private val seenPlayersRecorder = SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen)
+
     /** The one writer of [history]: what the session layer sees, and the deletions below. */
     private val historyRecorder =
         HistoryRecorder(
@@ -488,7 +496,7 @@ class AppGraph(
         // The events, in memory only, off the main thread.
         pipelineScope.launch { diagnostics.log.follow(pipeline.events) }
         // Each player the session layer sees appears under *Players*, switched off.
-        mainScope.launch { SeenPlayersRecorder(sessions.seenPlayers, settings::playerSeen).run() }
+        mainScope.launch { seenPlayersRecorder.run() }
         // What the session layer sees is recorded whether or not the app is visible.
         mainScope.launch { historyRecorder.run() }
         mainScope.launch { historyRetention.run() }
@@ -551,6 +559,19 @@ class AppGraph(
         sessions.forgetLastChange()
         diagnostics.log.clear()
         return cleared
+    }
+
+    /**
+     * Forgets [packageName] once Android says its app was removed (#535, #579;
+     * `PlayerRemovedReceiver`): the session layer and the recorder forget they saw it, so a
+     * reinstall in the same process is listed again once it reports music, and its entry under
+     * *Players* is deleted ([SettingsStore.forgetPlayer]; Spotify's is kept, with its switch). On the
+     * main thread; the deletion may throw an `IOException`, and the entry then stays.
+     */
+    suspend fun forgetRemovedPlayer(packageName: String) {
+        sessions.forgetSeen(packageName)
+        seenPlayersRecorder.forget(packageName)
+        settings.forgetPlayer(packageName)
     }
 
     /**

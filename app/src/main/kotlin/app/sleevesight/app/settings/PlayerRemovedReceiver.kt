@@ -13,8 +13,17 @@ import java.io.IOException
  * which a manifest receiver still gets from Android 8 on (it is on the implicit-broadcast
  * exemptions), sent after an uninstall and its data's removal, never for an update. Android sends
  * it only for a package this app can see (package visibility), so a player the app cannot see keeps
- * its entry, hidden. The write runs in the graph's saves scope, the broadcast held open until it
- * ends; one that fails is logged, and the entry stays.
+ * its entry, hidden. The process also forgets having seen the player (`AppGraph.forgetRemovedPlayer`),
+ * so one reinstalled without a restart is listed again once it reports music (#579). The write runs
+ * in the graph's saves scope, the broadcast held open until it ends; one that fails is logged, and
+ * the entry stays.
+ *
+ * It hears the removal of any app visible through `<queries>`, not only of players, and when the
+ * process is not running (notification access off, say), the broadcast starts it and builds the
+ * whole graph, pipeline included, for what is usually a write that changes nothing. That is
+ * accepted: it is rare, as the listener usually keeps the process alive; such a start does what any
+ * start of the process does, and no more; and the settings' DataStore, one per file in a process,
+ * belongs to the graph, so a lighter path would need the store taken out of it.
  */
 class PlayerRemovedReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -27,7 +36,7 @@ class PlayerRemovedReceiver : BroadcastReceiver() {
         val pending = goAsync()
         graph.settingsSaves.launch {
             try {
-                graph.settings.forgetPlayer(packageName)
+                graph.forgetRemovedPlayer(packageName)
             } catch (_: IOException) {
                 // No exception text: an I/O message may name a path.
                 Log.w(TAG, "A removed player could not be dropped from Players")

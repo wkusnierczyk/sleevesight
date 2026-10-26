@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui.settings
 
 import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
@@ -12,15 +13,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.ExternalLink
 import app.sleevesight.app.ui.theme.DeveloperMark
@@ -29,9 +32,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-
-/** A player's icon under *Players*, as Android's own app lists draw it (#535). */
-private val PLAYER_ICON = 40.dp
 
 /** The players seen, where they are not known (tests, previews). */
 private val NONE_SEEN: StateFlow<Set<String>> = MutableStateFlow(emptySet())
@@ -55,13 +55,14 @@ class InstalledPlayers(
  * shows under the name only in developer mode. The icon is decorative: the name beside it says
  * which app it is.
  *
- * Listed: each stored player the phone shows this app, or that reported music since the process
- * started, so a followed player that plays always has its switch. One that is neither, Spotify
- * (listed by default) on a phone without it included, is hidden, and its entry kept: not being
- * shown is no proof the app is gone (`PlayerRemovedReceiver` drops an uninstalled one). A row's
- * icon loads off the main thread, once per row while the section is drawn; the row shows without
- * it until then, and for good when the phone has none to give. With no [PlayerApps.installed]
- * (tests, previews), every stored player is listed, without an icon.
+ * Listed: each stored player the phone shows this app (asked as the section is drawn, and again
+ * each time the screen resumes), or that reported music since the process started, so a followed
+ * player that plays always has its switch. One that is neither, Spotify (listed by default) on a
+ * phone without it included, is hidden, and its entry kept: not being shown is no proof the app is
+ * gone (`PlayerRemovedReceiver` drops an uninstalled one). A row's name, link and icon load off the
+ * main thread, once per row while the section is drawn (#579): the row shows once its name and link
+ * have loaded, without the icon until it has, and for good when the phone has none to give. With no
+ * [PlayerApps.installed] (tests, previews), every stored player is listed, without an icon.
  */
 @Composable
 internal fun PlayersSection(
@@ -72,7 +73,15 @@ internal fun PlayersSection(
     val installed = apps.installed
     val seen = (installed?.seen ?: NONE_SEEN).collectAsState().value
     val players = settings.followedPlayers.keys
-    val visible = installed?.let { remember(players) { players.filterTo(mutableSetOf(), it.visible) } }
+    // Asked again on each resume, so a player installed while *Players* is open shows on return (#579).
+    // The effect also runs on the first resume after the first draw, which needs no second ask: -1 to 0.
+    var resumes by remember { mutableIntStateOf(-1) }
+    LifecycleResumeEffect(Unit) {
+        resumes++
+        onPauseOrDispose {}
+    }
+    val asked = maxOf(resumes, 0)
+    val visible = installed?.let { remember(players, asked) { players.filterTo(mutableSetOf(), it.visible) } }
     val listed = settings.followedPlayers.toSortedMap().filterKeys { visible == null || it in visible || it in seen }
     if (listed.isEmpty()) Hint(R.string.settings_players_none)
     for ((player, followed) in listed) {
@@ -89,20 +98,22 @@ private fun PlayerRow(
     update: Update,
 ) {
     val context = LocalContext.current
-    val name = apps.label(player)
-    val launch = remember(player) { apps.launch(player) }
-    val size = with(LocalDensity.current) { PLAYER_ICON.roundToPx() }
-    val icon by produceState<ImageBitmap?>(null, player, size) {
+    val size = with(LocalDensity.current) { ROW_MARK.roundToPx() }
+    val loaded by produceState<PlayerApp?>(null, player, size) {
+        val app = withContext(Dispatchers.IO) { PlayerApp(apps.label(player), apps.launch(player)) }
+        value = app
         val load = apps.installed?.icon ?: return@produceState
-        value = withContext(Dispatchers.IO) { load(player)?.bitmap(size) }
+        value = app.copy(icon = withContext(Dispatchers.IO) { load(player)?.bitmap(size) })
     }
+    // The row shows once its name is known, so a package name never stands in for it.
+    val (name, launch, icon) = loaded ?: return
     SwitchRow(
         title = name,
         summary = null,
         checked = followed,
         leading =
-            icon?.let { loaded ->
-                { Image(loaded, contentDescription = null, modifier = Modifier.size(PLAYER_ICON)) }
+            icon?.let { bitmap ->
+                { Image(bitmap, contentDescription = null, modifier = Modifier.size(ROW_MARK)) }
             },
         below = {
             // The package name, only in developer mode, and marked as such (#536).
@@ -127,6 +138,16 @@ private fun PlayerRow(
         update { it.copy(followedPlayers = it.followedPlayers + (player to on)) }
     }
 }
+
+/**
+ * What the phone says of a player's app, for its row: its [name], the [launch] intent that opens it,
+ * and its [icon], once loaded. Package-manager calls, all made off the main thread.
+ */
+private data class PlayerApp(
+    val name: String,
+    val launch: Intent?,
+    val icon: ImageBitmap? = null,
+)
 
 /**
  * The icon drawn at [size] pixels a side, as the launcher draws it: an adaptive icon under the
