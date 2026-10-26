@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "check", outlined, weight 400, 24 px (Apache-2.0; google/material-design-icons,
+     symbols/web): marks the mode chosen in the insight card's menu of Reactive's modes (#615). Its
+     path is drawn in Material Symbols' 960-unit box, whose top is at y = -960. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" />
+    </group>
+</vector>

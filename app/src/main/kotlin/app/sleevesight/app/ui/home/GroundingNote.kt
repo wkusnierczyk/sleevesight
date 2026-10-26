@@ -34,7 +34,7 @@ internal fun GroundingLine(
 /**
  * The note under the insight (#437), shown only when there is something to say: how many sentences
  * the sources do not back (uncited, citing missing evidence, or from the model's own knowledge),
- * and that the insight was kept from before, which explains *Rewrite*. A sentence the sources back
+ * and that the insight was kept from before. A sentence the sources back
  * needs no word: its citations show it. The full counts are [Meta]'s, behind *Show grounding details*.
  * A sentence that shows as nothing once its Markdown is cleaned (a rule on its own, #555) is not
  * counted: the reader could not find it.

@@ -59,8 +59,8 @@ class MainActivity : ComponentActivity() {
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
             unavailableModel = graph.unavailableModel,
-            // The insight card's toggle (#553), saved in the process's scope.
-            autoWrite = graph.settings.automaticWritingSwitch(graph.settingsSaves),
+            // The insight card's menu of Reactive's modes (#615), saved in the process's scope.
+            chooseWritingMode = graph.settings.writingModeChooser(graph.settingsSaves),
         )
     }
 

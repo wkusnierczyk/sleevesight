@@ -35,6 +35,7 @@ import app.sleevesight.core.pipeline.RunKey
 import app.sleevesight.core.pipeline.TrackState
 import app.sleevesight.core.settings.Layout
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -50,8 +51,8 @@ import kotlinx.coroutines.flow.StateFlow
  *   the row's way in when the session gives no usable screen (#596).
  * @property unavailableModel the switched-on AI service's model, while it is found unavailable
  *   (#540): no insight is written with it, and the card says so.
- * @property autoWrite saves the insight card's toggle for automatic writing (#553) turned on or off
- *   (`Settings.withAutomaticWriting`).
+ * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
+ *   (#615), as *Reactive*.
  */
 @Suppress("LongParameterList") // What one screen reads, each published on its own.
 class HomeFeed(
@@ -67,7 +68,7 @@ class HomeFeed(
     val stop: (CallId) -> Unit,
     val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
-    val autoWrite: (Boolean) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
 )
 
 /**
@@ -127,7 +128,7 @@ private fun HomeFeed.actions(
     playerLaunch = playerLaunch,
     write = write,
     stop = stop,
-    autoWrite = autoWrite,
+    chooseWritingMode = chooseWritingMode,
     openSettings = openSettings,
     openPage = openPage,
     openSettingsAt = openSettingsAt,
@@ -152,8 +153,8 @@ internal class NowPlayingState(
  * with the insight (#390); null is the phone's own mail apps ([PhoneMail]). [openSettings] opens
  * the settings, from *Sources*' note of a source that needs its key (#440), and [openSettingsAt]
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
- * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [autoWrite] turns the
- * insight card's toggle for automatic writing on or off (#553).
+ * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
+ * a mode chosen in the insight card's menu of *Reactive*'s modes (#615).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -167,7 +168,7 @@ internal class NowPlayingActions(
     val openSettings: () -> Unit = {},
     val openPage: (HomePage) -> Unit = {},
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
-    val autoWrite: (Boolean) -> Unit = {},
+    val chooseWritingMode: (WriteAutomatically) -> Unit = {},
 )
 
 /**
@@ -246,7 +247,7 @@ internal fun NowPlayingContent(
                     reporting = Reported(reportedTrack, written)
                 },
                 shown.details,
-                settings?.let { autoWriting(it, view, actions.autoWrite) },
+                settings?.let { writingChoice(it, view, actions) },
             )
             if (settings != null) SourcesItem(pages, shown, focus, fold, actions)
         }
@@ -288,26 +289,28 @@ private fun insightContext(
     modelAllowed = modelAllowed,
     offers =
         InsightOffers(
-            rewrite = view.rewrite && track != null,
             retry = view.retry && track != null,
             stop = view.stopCall != null && track != null,
             paused = view.lapsed && track != null,
         ),
-    rewriteFailed = view.rewriteFailed.takeIf { track != null },
     unavailable = unavailable.takeIf { settings?.writeInsights != false },
+    mode = settings?.writeAutomatically,
+    waiting = view.waiting,
 )
 
-// The insight card's toggle for automatic writing (#553): on while *Reactive* writes automatically,
-// paused while *Saver* has paused it, and fixed while *Show insights* is off.
-private fun autoWriting(
+// The insight card's menu of *Reactive*'s modes (#615): the mode chosen, paused while *Saver* has
+// paused automatic writing, and fixed while *Show insights* is off; its last item opens the settings
+// at *Reactive*.
+private fun writingChoice(
     settings: Settings,
     view: PipelineView,
-    toggle: (Boolean) -> Unit,
-) = AutoWriting(
-    on = settings.writesAutomatically,
+    actions: NowPlayingActions,
+) = WritingChoice(
+    mode = settings.writeAutomatically,
     paused = view.paused,
     enabled = settings.writeInsights,
-    onToggle = toggle,
+    onChoose = actions.chooseWritingMode,
+    onDetails = { actions.openSettingsAt(SettingsTarget.reactive) },
 )
 
 // What a report is of: the insight, and the track it was written for.

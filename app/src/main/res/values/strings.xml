@@ -109,20 +109,21 @@
 
     <string name="settings_section_insights">Insights</string>
     <string name="settings_write_insights">Show insights</string>
-    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. When disabled, no AI calls are made; the evidence is still shown.</string>
+    <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop ends the writing, but once the request has reached the AI service, it may still charge for it. When disabled, no AI calls are made; the evidence is still shown.</string>
     <string name="settings_write_automatically">Reactive</string>
-    <string name="settings_write_automatically_summary">Select what triggers writing an insight. Automatic writing can also be turned on and off with the toggle beside each insight.</string>
+    <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too.</string>
     <string name="settings_pause_auto_write">Saver</string>
     <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it.</string>
     <string name="settings_write_every_change">On track change</string>
-    <string name="settings_write_when_skip">On skip</string>
-    <string name="settings_write_never">Manual</string>
-    <!-- Reactive's choices, each described under its name in the choice dialog (#546). -->
+    <string name="settings_write_when_skip">On track skip</string>
+    <string name="settings_write_never">Now</string>
+    <!-- Reactive's choices, each described under its name in the choice dialog (#546) and in the
+         insight card's menu beside Write insight (#615). -->
     <string name="settings_write_every_change_detail">An insight for every new track, as it starts.</string>
     <string name="settings_write_when_skip_detail">An insight only when you skip to a track, not when one follows another by itself.</string>
     <string name="settings_write_never_detail">Only when you tap Write insight.</string>
     <string name="settings_crossfade">Crossfade</string>
-    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On skip”.</string>
+    <string name="settings_crossfade_summary">The player’s crossfade, for telling your skips from natural ends under “On track skip”.</string>
     <string name="settings_crossfade_auto">Autodetect</string>
     <string name="settings_crossfade_seconds">%1$d s</string>
     <string name="settings_prepare_next">Proactive</string>
@@ -131,7 +132,7 @@
     <string name="settings_keep_sources">Keep Sources as you left them</string>
     <string name="settings_keep_sources_summary">Keeps the sources under each track’s insight folded or unfolded as you left them on the track before. When disabled, each new track’s sources start folded. Applies with Expandable boxes.</string>
     <string name="settings_background">Look up in the background</string>
-    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change or On skip, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
+    <string name="settings_background_summary">Allows Sleevesight to look up information from sources while it is in the background, for every track played. With Reactive set to On track change or On track skip, insights are then written, and paid for, whether you read them or not, up to the Stop after limit when Saver is on.</string>
     <string name="settings_artist_facts_once">Don’t repeat artist facts</string>
     <!-- %1$s is settings_session_gap, a link to that row; %2$s is settings_section_history (#581). -->
     <string name="settings_artist_facts_once_summary">When you play several tracks by the same artist, each insight would tell the artist’s background again. With this on, an insight leaves out what an earlier one in the same listening session already said about the artist, and focuses on the song when there is enough to say about it. A new session starts after a break in listening, set under %1$s in %2$s.</string>
@@ -261,7 +262,7 @@
         <item quantity="one">%d track change away</item>
         <item quantity="other">%d track changes away</item>
     </plurals>
-    <!-- Stop after's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On skip) is counted but not written. -->
+    <!-- Stop after's description for the count chosen, with Look up in the background on; left out under Off. "Up to": a track the mode does not write on (a natural end under On track skip) is counted but not written. -->
     <plurals name="settings_pause_auto_write_summary_count">
         <item quantity="one">While Sleevesight is in the background, it writes insights automatically for up to %1$d track change. After more than %1$d, it stops writing insights automatically until you tap Write insight.</item>
         <item quantity="other">While Sleevesight is in the background, it writes insights automatically for up to %1$d track changes. After more than %1$d, it stops writing insights automatically until you tap Write insight.</item>

@@ -6,26 +6,22 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
-import app.sleevesight.app.pipeline.PipelineHost
 import app.sleevesight.app.ui.report.ReportAction
 import app.sleevesight.core.pipeline.InsightState
 
 /**
  * *Key insights*: the insight in each of its states (architecture, *Errors and empty
  * states*). Model prose is plain text: its only interactive parts are the citation chips, built
- * from the evidence ids the app assigned, each scrolling to its line. Write, Rewrite and Stop go
+ * from the evidence ids the app assigned, each scrolling to its line. Write and Stop go
  * to the pipeline as taps; whether a tap writes or stops is the pipeline's to say. Under a written
  * insight, [GroundingLine]: a note, or with [groundingDetails] (*Show grounding details*, #437) the
  * grounding check's counts in full.
@@ -34,8 +30,9 @@ import app.sleevesight.core.pipeline.InsightState
  * insight and its track to [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
- * Beside the heading, the toggle for automatic writing (#553, [AutoWriteToggle]), from
- * [autoWriting]; none while it is null, before the settings' first read.
+ * At the card's end, in every state, the split button (#615, [WriteSplitButton]): the card's action
+ * ([cardOffer]) and the menu of *Reactive*'s modes, from [writing]; its arrow cannot be used while
+ * that is null, before the settings' first read.
  */
 @Composable
 internal fun InsightCard(
@@ -43,19 +40,40 @@ internal fun InsightCard(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean = false,
-    autoWriting: AutoWriting? = null,
+    writing: WritingChoice? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.home_insight_title),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
-            autoWriting?.let { AutoWriteToggle(it) }
-        }
+        Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
         InsightBody(insight, context, actions, groundingDetails)
+        WriteSplitButton(cardOffer(insight, context), actions.onWrite, actions.onStop, writing)
     }
+}
+
+// Why the card shows no insight, in words that match the split button's label.
+@Composable
+private fun IdleNote(
+    insight: InsightState.Idle,
+    context: InsightContext,
+) {
+    val auto = automaticMode(context)
+    val line =
+        when {
+            insight.canWrite && waitsForTap(context) -> {
+                val label = stringResource(modeWrite(context))
+                // Offered because automatic writing paused while the app was away (#203): say so.
+                if (context.offers.paused) {
+                    stringResource(R.string.home_insight_paused, label)
+                } else {
+                    stringResource(R.string.home_insight_tap_write_auto, label)
+                }
+            }
+
+            insight.canWrite -> stringResource(R.string.home_insight_tap_write)
+            // Running by itself, the evidence in: it writes next, as the mode says.
+            auto != null && runsByItself(context) -> stringResource(runningLine(auto))
+            else -> stringResource(idleReason(context))
+        }
+    Quiet(line)
 }
 
 @Composable
@@ -66,68 +84,44 @@ private fun InsightBody(
     groundingDetails: Boolean,
 ) {
     // A model found unavailable (#540): said in place of why nothing is written, or of the failure
-    // it caused, with no Write, which would fail again.
+    // it caused; the split button offers no Write, which would fail again.
     val unavailable = context.unavailable
     if (unavailable != null && withoutInsight(insight)) {
         ModelUnavailable(unavailable, actions.onSettings)
         return
     }
     when (insight) {
-        is InsightState.Idle -> {
-            if (insight.canWrite) {
-                // Offered because automatic writing paused while the app was away (#203): say so.
-                val why = if (context.offers.paused) R.string.home_insight_paused else R.string.home_insight_tap_write
-                Quiet(stringResource(why))
-                WriteButton(actions.onWrite)
-            } else {
-                Quiet(stringResource(idleReason(context)))
-            }
-        }
+        is InsightState.Idle -> IdleNote(insight, context)
 
         is InsightState.Writing -> {
             val paragraphs = paragraphsOf(insight.partial)
-            if (paragraphs.isEmpty()) Quiet(stringResource(R.string.home_insight_writing))
             for (paragraph in paragraphs) UncheckedProse(paragraph, context, actions.onCite, insight.held)
-            if (context.offers.stop) StopButton(actions.onStop)
+            // One line, by the split button's Stop while it can stop the call (#615).
+            when {
+                context.offers.stop -> Quiet(stringResource(R.string.home_insight_writing_stop))
+                paragraphs.isEmpty() -> Quiet(stringResource(R.string.home_insight_writing))
+            }
         }
 
         is InsightState.Written -> Written(insight, context, actions, groundingDetails)
         InsightState.NoEvidence -> Quiet(stringResource(R.string.home_insight_no_evidence))
         is InsightState.Failed -> {
             Quiet(stringResource(R.string.home_insight_failed, failureText(insight.reason)))
-            Retry(context, actions.onWrite)
+            Retry(context)
         }
 
         InsightState.Stopped -> {
             Quiet(stringResource(R.string.home_insight_stopped))
-            Retry(context, actions.onWrite)
+            Retry(context)
         }
     }
 }
 
-// Write offered again after a call that failed or was stopped: a new paid call, on a tap only.
+// Write offered again after a call that failed or was stopped: a new paid call, on a tap only, from
+// the split button.
 @Composable
-private fun Retry(
-    context: InsightContext,
-    onWrite: () -> Unit,
-) {
-    if (!context.offers.retry) return
-    Quiet(stringResource(R.string.home_insight_retry))
-    WriteButton(onWrite)
-}
-
-@Composable
-private fun WriteButton(onWrite: () -> Unit) {
-    Button(onClick = onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
-        Text(stringResource(R.string.home_write))
-    }
-}
-
-@Composable
-private fun StopButton(onStop: () -> Unit) {
-    OutlinedButton(onClick = onStop, modifier = Modifier.testTag(STOP_TAG)) {
-        Text(stringResource(R.string.home_stop))
-    }
+private fun Retry(context: InsightContext) {
+    if (context.offers.retry) Quiet(stringResource(R.string.home_insight_retry))
 }
 
 /** Why no insight is offered: insights off, no AI service, the evidence still coming, or the pipeline not there yet. */
@@ -159,21 +153,6 @@ private fun Written(
         context.track?.let { track -> ReportAction { actions.onReport(track, insight) } }
     }
     if (!insight.complete) Quiet(stringResource(R.string.home_insight_incomplete))
-    context.rewriteFailed?.let {
-        if (it == PipelineHost.STOPPED) {
-            Quiet(stringResource(R.string.home_rewrite_stopped))
-        } else {
-            Quiet(stringResource(R.string.home_rewrite_failed, failureText(it)))
-        }
-    }
-    if (context.offers.rewrite) {
-        // The card paid for, written from earlier evidence or with another AI service, or kept
-        // after its rewrite failed or was stopped: a tap writes it again.
-        Quiet(stringResource(R.string.home_rewrite_offered))
-        OutlinedButton(onClick = actions.onWrite, modifier = Modifier.testTag(WRITE_TAG)) {
-            Text(stringResource(R.string.home_rewrite))
-        }
-    }
 }
 
 @Composable
@@ -185,9 +164,3 @@ private fun Prose(text: AnnotatedString) {
 private fun Quiet(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
-
-/** The test tag of Write and Rewrite. */
-const val WRITE_TAG: String = "write"
-
-/** The test tag of Stop. */
-const val STOP_TAG: String = "stop"
