@@ -45,8 +45,8 @@ class PurgeFailureTest {
             }
         }
 
-    private val lastFm = ShownKey(LASTFM, "…1111")
-    private val exa = ShownKey(EXA, "…2222")
+    private val lastFm = ShownKey(LASTFM, "1111")
+    private val exa = ShownKey(EXA, "2222")
 
     private fun listed(before: Before): List<ShownKey> = if (before == Before.NONE) emptyList() else listOf(lastFm, exa)
 

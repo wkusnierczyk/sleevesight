@@ -42,12 +42,13 @@ import kotlinx.coroutines.launch
 
 /**
  * *Purge keys*, a screen of its own ([KeyScreen], secure): the saved keys it would delete
- * ([secrets]), each by its name and last four characters ([ending], which reads them), or as one
- * that can no longer be read; *Delete* and *Cancel*; and *More about safe delete*, which unfolds
- * what the deletion does. [onPurge] deletes every key with the phone's key for them, and says how
- * each step went and what is stored after them: when both succeeded, the screen says the keys listed
- * were deleted, with *Done*; otherwise it says which step failed and lists the keys left, from
- * that result alone ([purgeFailure]), with *Try again*. While it runs, nothing else can be done.
+ * ([secrets]), a table ([KeyTable]) of each by its service and last four characters ([ending],
+ * which reads them), or as one that can no longer be read; *Delete* and *Cancel*; and *More about
+ * safe delete*, which unfolds what the deletion does. [onPurge] deletes every key with the
+ * phone's key for them, and says how each step went and what is stored after them: when both
+ * succeeded, the screen says the keys listed were deleted, with *Done*; otherwise it says which
+ * step failed and lists the keys left, from that result alone ([purgeFailure]), with *Try again*.
+ * While it runs, nothing else can be done.
  */
 @Composable
 internal fun PurgeKeysScreen(
@@ -129,7 +130,7 @@ private fun ColumnScope.PurgeStep(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
-                for (key in failure.left) Text(shownKey(key), style = style)
+                KeyTable(failure.left.map(::KeyRow))
             }
 
             listed == null -> {}
@@ -140,7 +141,7 @@ private fun ColumnScope.PurgeStep(
 
             else -> {
                 Text(stringResource(R.string.purge_keys_listed), style = style)
-                for (key in listed) Text(shownKey(key), style = style)
+                KeyTable(listed.map(::KeyRow))
             }
         }
         MoreAboutSafeDelete()
@@ -169,7 +170,7 @@ private fun ColumnScope.DeletedStep(
             Text(stringResource(R.string.purge_keys_done_none), style = style)
         } else {
             Text(stringResource(R.string.purge_keys_done), style = style)
-            for (key in keys) Text(shownKey(key), style = style)
+            KeyTable(keys.map(::KeyRow))
         }
         MoreAboutSafeDelete()
     }
