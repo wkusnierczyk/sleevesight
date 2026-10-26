@@ -144,12 +144,13 @@ object GroundingCheck {
      *
      * One deviation from the simulator (#46): a `.` that ends an abbreviation, with nothing after it
      * but the whitespace, does not end the sentence. An abbreviation is a run of capital initials
-     * (`U.S.`, `R.E.M.`, `J.`) or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`). The simulator split
-     * `the U.S. Billboard Hot 100` into two sentences, the first of them uncited. Initials before a
-     * word that usually opens a sentence ([SENTENCE_OPENERS]: `... a hit in the U.S. It ...`) still
-     * end one. The cost: a sentence that ends in initials before another word (`... toured the U.S.
-     * Billboard named ...`), or in one of [ABBREVIATIONS], is joined to the next, and if it was
-     * uncited, the next one's citation hides that.
+     * (`U.S.`, `R.E.M.`, `J.`), `etc.`, or one of [ABBREVIATIONS] (`Dr.`, `St.`, `feat.`, `e.g.`,
+     * `i.e.`; #574). The simulator split `the U.S. Billboard Hot 100` into two sentences, the first
+     * of them uncited. Initials or `etc.` before a word that usually opens a sentence
+     * ([SENTENCE_OPENERS]: `... a hit in the U.S. It ...`) still end one. The cost: a sentence that
+     * ends in initials or `etc.` before another word (`... toured the U.S. Billboard named ...`), or
+     * in one of [ABBREVIATIONS], is joined to the next, and if it was uncited, the next one's
+     * citation hides that.
      *
      * Another (#423): a `.`, `!` or `?` followed by closing quotes ([CLOSING_QUOTES]: `"`, `”`,
      * `'`, `’`) and then citations ends a sentence, as it does with the citations straight after it
@@ -287,8 +288,8 @@ object GroundingCheck {
 
     /**
      * Whether the text just before [end] is an abbreviation and its `.`: the word before [end],
-     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials
-     * not followed by one of [SENTENCE_OPENERS], which may be in emphasis marks (#574).
+     * after any opening `(`, `"` or `“`, is one of [ABBREVIATIONS], or a run of capital initials or
+     * `etc.` not followed by one of [SENTENCE_OPENERS], which may be in emphasis marks (#574).
      */
     private fun endsAbbreviation(
         t: String,
@@ -307,7 +308,7 @@ object GroundingCheck {
         // A curly apostrophe reads as a straight one: `It’s` opens a sentence as `It's` does.
         val nextWord = t.substring(next, stop).trimEnd { it in WORD_CLOSERS }
         val opens = nextWord.replace('’', '\'') in SENTENCE_OPENERS
-        return word.dropLast(1) in ABBREVIATIONS || (INITIALS.matches(word) && !opens)
+        return word.dropLast(1) in ABBREVIATIONS || ((INITIALS.matches(word) || word == "etc.") && !opens)
     }
 
     /**
@@ -357,10 +358,11 @@ object GroundingCheck {
     /**
      * Words that end in `.` without ending a sentence, as written before a name or a title: the
      * replies name people (`Dr. Dre`), places (`St. John's`) and featured artists (`feat. Van
-     * Morrison`). Matched with their case.
+     * Morrison`), and give examples (`e.g. *Thriller*`, `i.e. the B-side`; #574), the stop that
+     * ends the sentence never being theirs. Matched with their case, without their last `.`.
      */
     private val ABBREVIATIONS: Set<String> =
-        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs")
+        setOf("Dr", "Mr", "Mrs", "Ms", "St", "feat", "Feat", "ft", "Ft", "vs", "Vs", "e.g", "E.g", "i.e", "I.e")
 
     /** Where the citation (`[W1]`, `[MB12]`, `[M]`) that ends just before [end] starts, or null. */
     private fun citationBefore(

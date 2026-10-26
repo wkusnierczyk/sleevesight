@@ -30,14 +30,19 @@ internal object MarkdownMarks {
         at: Int,
     ): Boolean = LINE_MARK.matchesAt(t, at)
 
-    /** Whether the text just before [end] is a list's number at a line's start, `1.`, as a mark. */
+    /**
+     * Whether the text just before [end] is a list's number at a line's start, `1.`, as a mark, the
+     * line indented or not (a nested list's, `  1.`), as [isLineMark] reads it after a line break.
+     */
     fun isListNumber(
         t: String,
         end: Int,
     ): Boolean {
         var start = end - 1
         while (start > 0 && t[start - 1] in '0'..'9') start--
-        val atLineStart = start == 0 || t[start - 1] == '\n'
+        var indent = start
+        while (indent > 0 && t[indent - 1] == ' ') indent--
+        val atLineStart = indent == 0 || t[indent - 1] == '\n'
         return atLineStart && LIST_NUMBER.matches(t.substring(start, end))
     }
 

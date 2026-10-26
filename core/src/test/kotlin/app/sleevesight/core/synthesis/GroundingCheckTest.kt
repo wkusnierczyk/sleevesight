@@ -128,6 +128,39 @@ class GroundingCheckTest {
         }
     }
 
+    /** The simulator splits after `e.g.` before a capital; the check does not, nor with marks (#574). */
+    @Test
+    fun `e g and i e do not end a sentence, with or without emphasis marks after them`() {
+        val replies =
+            listOf(
+                "He covered several hits, e.g. Thriller and Billie Jean. [W1]",
+                "He covered several hits, e.g. *Thriller* and *Billie Jean*. [W1]",
+                "He covered several hits, e.g. **Thriller** and _Billie Jean_. [W1]",
+                "It opens the B-side, i.e. The Wreck. [W1]",
+                "It opens the B-side, i.e. *The Wreck*. [W1]",
+                "E.g. *Thriller* sold well. [W1]",
+            )
+        for (reply in replies) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), reply)
+    }
+
+    @Test
+    fun `etc ends a sentence before a word that opens one, as initials do`() {
+        assertEquals(
+            listOf("It has guitars, drums, etc.", "It charted. [W1]"),
+            GroundingCheck.splitSentences("It has guitars, drums, etc. It charted. [W1]"),
+        )
+        assertEquals(
+            listOf("It has guitars, drums, etc.", "*It* charted. [W1]"),
+            GroundingCheck.splitSentences("It has guitars, drums, etc. *It* charted. [W1]"),
+        )
+        val joined =
+            listOf(
+                "It has guitars, etc. Billboard named it. [W1]",
+                "It has guitars, etc. *Rolling Stone* named it. [W1]",
+            )
+        for (reply in joined) assertEquals(listOf(reply), GroundingCheck.splitSentences(reply), reply)
+    }
+
     @Test
     fun `a stop after an ordinary word still ends a sentence`() {
         val reply = "It went gold in the US. Plans changed. [W1] Then it went to No. 1 (vs. two). [W2]"

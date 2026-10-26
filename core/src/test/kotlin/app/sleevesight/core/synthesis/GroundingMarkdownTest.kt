@@ -65,6 +65,26 @@ class GroundingMarkdownTest {
     }
 
     @Test
+    fun `an indented or nested list's number ends no sentence either`() {
+        val replies =
+            listOf(
+                "It was recorded [MB1].\n  1. It is great. [W1]",
+                "1. It was recorded [MB1].\n   1. It is great. [W1]\n   2. It sold. [W1]",
+                "- It was recorded [MB1].\n\t10) It is great. [W1]",
+            )
+        val split =
+            listOf(
+                listOf("It was recorded [MB1].", "1. It is great. [W1]"),
+                listOf("1. It was recorded [MB1].", "1. It is great. [W1]", "2. It sold. [W1]"),
+                listOf("- It was recorded [MB1].", "10) It is great. [W1]"),
+            )
+        for ((reply, sentences) in replies.zip(split)) {
+            assertEquals(sentences, GroundingCheck.splitSentences(reply), reply)
+            assertEquals(sentences.map { SentenceStatus.OK }, statuses(reply), reply)
+        }
+    }
+
+    @Test
     fun `a heading opens a sentence after a stop, and is joined to the sentence after it`() {
         val reply = "# Sundown\nIt was recorded [MB1].\n## Reception\nIt is great."
         assertEquals(
