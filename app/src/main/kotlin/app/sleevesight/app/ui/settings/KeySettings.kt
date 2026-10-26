@@ -192,12 +192,13 @@ private suspend fun saveAll(
     return results.filter { it.second != SaveResult.SAVED }.map { it.first }
 }
 
-/** What removing the key [id] says. */
+/** What removing the key [id] says, from its row or its dialog. */
 @Composable
-private fun removeKeyConfirmation(id: SecretId): Confirmation =
+internal fun removeKeyConfirmation(id: SecretId): Confirmation =
     Confirmation(
         title = stringResource(R.string.settings_key_remove_title, stringResource(keyName(id))),
         explained = stringResource(R.string.settings_key_remove_explained, stringResource(keyRecipient(id))),
         confirm = stringResource(R.string.settings_remove),
+        named = stringResource(R.string.settings_key_remove, stringResource(keyName(id))),
         failed = stringResource(R.string.settings_key_remove_failed),
     )
