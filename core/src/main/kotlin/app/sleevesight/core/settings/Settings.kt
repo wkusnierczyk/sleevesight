@@ -91,7 +91,7 @@ import kotlin.time.Duration.Companion.seconds
  *   at its first screenful. The fold is kept through a rotation and when Android restores the
  *   screen it closed, not when the app is started afresh. Only under *Expandable boxes* ([layout]):
  *   under *Separate pages* each page opens fresh.
- * @property showPhoneName *Show this phone's name to the computer* (#433): whether *Type on a
+ * @property showPhoneName *Share phone's name with Type on a computer* (#433): whether *Type on a
  *   computer* advertises the phone's Bluetooth name, in the scan response, while a session's dialog
  *   is open, so the computer's device chooser lists the phone by it. Off by default: anyone nearby
  *   scanning for Bluetooth would see the name meanwhile, and the chooser lists the phone alone

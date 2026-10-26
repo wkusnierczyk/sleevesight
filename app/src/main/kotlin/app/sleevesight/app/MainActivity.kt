@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
             playerActivity = graph.sessions::playerActivity,
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
+            unavailableModel = graph.unavailableModel,
         )
     }
 
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
                                         links.openDiagnostics,
                                         onOpenWhatLeaves = links.openWhatLeaves,
                                         playerLaunch = graph::playerLaunchIntent,
+                                        modelCheck = graph.modelCheck,
                                         playerLabel = graph::playerLabel,
                                     )
                                 },

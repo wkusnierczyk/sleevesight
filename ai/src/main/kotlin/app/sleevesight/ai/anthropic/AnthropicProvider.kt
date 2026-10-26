@@ -37,7 +37,8 @@ import kotlin.time.Instant
 /**
  * Anthropic's Messages API, as a small client over `:net` (D3): one streaming call, `POST
  * /v1/messages` with `stream: true`, read as server-sent events; and the model list, `GET
- * /v1/models`. The key goes in `x-api-key`, through `NetSecrets`, so it is never logged.
+ * /v1/models`, each model offered or not by its lifecycle ([modelInfo]). The key goes in
+ * `x-api-key`, through `NetSecrets`, so it is never logged.
  *
  * [CompletionRequest.effort] becomes `output_config.effort` (`low`, `medium`, `high`; [effortName])
  * for a model that takes it ([takesEffort]); without it, or for any other model, the model's default
@@ -165,7 +166,7 @@ class AnthropicProvider(
                 when {
                     !response.isSuccess -> Page.Failed(kindOf(response))
                     page == null -> Page.Failed(AiErrorKind.UNEXPECTED_RESPONSE)
-                    else -> Page.Read(page.data.map(::modelInfo), page.lastId.takeIf { page.hasMore })
+                    else -> Page.Read(page.data.mapNotNull(::modelInfo), page.lastId.takeIf { page.hasMore })
                 }
             }
         }
@@ -271,12 +272,28 @@ class AnthropicProvider(
 
         private fun secrets(key: Secret) = NetSecrets(headers = mapOf("x-api-key" to key.reveal()))
 
-        private fun modelInfo(model: WireModel) =
-            ModelInfo(
-                id = model.id,
-                displayName = model.displayName ?: model.id,
-                createdAt = model.createdAt?.let { Instant.parseOrNull(it) },
-            )
+        /**
+         * A model the list gives, by its `lifecycle` (Anthropic's models API reference, on
+         * 2026-10-26): an `active` one, or one with none, offered; a `deprecated` one, which "remains
+         * callable for organizations with existing access" but is "closed to new adopters", listed
+         * for a model chosen before and not offered for a new choice ([ModelInfo.offered]); a
+         * `retired` one, which every request naming it fails, not at all. The list leaves the
+         * retired ones out unless asked for them, so that is only a guard.
+         */
+        private fun modelInfo(model: WireModel): ModelInfo? =
+            if (model.lifecycle == RETIRED) {
+                null
+            } else {
+                ModelInfo(
+                    id = model.id,
+                    displayName = model.displayName ?: model.id,
+                    createdAt = model.createdAt?.let { Instant.parseOrNull(it) },
+                    offered = model.lifecycle != DEPRECATED,
+                )
+            }
+
+        private const val DEPRECATED = "deprecated"
+        private const val RETIRED = "retired"
     }
 }
 
