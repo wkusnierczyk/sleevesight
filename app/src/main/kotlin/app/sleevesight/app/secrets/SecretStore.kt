@@ -90,6 +90,20 @@ enum class SaveResult {
     NOT_WRITTEN,
 }
 
+/**
+ * How *Purge keys* ([SecretStore.reset]) ended: whether every key's entry was [removed] from the
+ * file, whether the Keystore key that sealed them was deleted ([sealDeleted]), and each key's state
+ * read from the file after both steps ([left]; null when the file could not be read).
+ */
+class ResetResult(
+    val removed: Boolean,
+    val sealDeleted: Boolean,
+    val left: Map<SecretId, SecretState>?,
+) {
+    /** Both steps succeeded. */
+    val done: Boolean get() = removed && sealDeleted
+}
+
 /** What the settings screen may know of a stored key: never its value. */
 enum class SecretState {
     ABSENT,
@@ -233,7 +247,8 @@ class SecretStore(
     /**
      * *Purge keys*: removes every saved key and deletes the Keystore
      * key, so the next save makes a new one. The way out when the key store cannot read the saved
-     * keys or seal new ones. False when either step failed; the other is still done.
+     * keys or seal new ones. Says how each step went, and what is stored after them ([ResetResult]);
+     * when one step fails, the other is still done.
      *
      * The Keystore key is deleted even when removing the entries failed (the file could not be
      * written). The user asked for every key to go, and without the Keystore key the entries left
@@ -244,15 +259,25 @@ class SecretStore(
      * makes a new Keystore key from API 31 (the entries left stay unreadable); before it, with
      * entries stored, a save fails ([SaveResult.NOT_SEALED]) and *Purge keys* is offered again.
      */
-    suspend fun reset(): Boolean =
+    suspend fun reset(): ResetResult =
         writes.withLock {
             try {
                 val removed = write { prefs -> SecretId.entries.forEach { prefs.remove(keyOf(it)) } }
                 val deleted = withContext(dispatcher) { cipher.deleteKey() }
-                removed && deleted
+                ResetResult(removed, deleted, statesNow())
             } finally {
                 resets.update { it + 1 }
             }
+        }
+
+    /** Each key's state, read from the file itself; null when the read fails. */
+    @Suppress("SwallowedException") // A failed read means "unknown"; that is all the caller needs.
+    private suspend fun statesNow(): Map<SecretId, SecretState>? =
+        try {
+            val prefs = dataStore.data.first()
+            withContext(dispatcher) { SecretId.entries.associateWith { stateOf(prefs, it) } }
+        } catch (e: IOException) {
+            null
         }
 
     /**

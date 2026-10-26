@@ -2,9 +2,6 @@ package app.sleevesight.app.ui
 
 import android.content.Intent
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -45,8 +42,6 @@ import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
 import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.app.testCipher
-import app.sleevesight.app.ui.settings.KeyDialogs
-import app.sleevesight.app.ui.settings.SettingsDialog
 import app.sleevesight.app.ui.settings.SettingsScreen
 import app.sleevesight.app.ui.settings.SettingsSection
 import app.sleevesight.core.Secret
@@ -343,73 +338,6 @@ class SettingsScreenTest {
     }
 
     @Test
-    fun aResetAfterAKeyStoreFailureClearsTheOffer() {
-        // The key store fails until its key is deleted, as a corrupt key blob would.
-        val keys =
-            object : SoftwareKeySource() {
-                override fun find(): SecretKey? =
-                    if (deletions == 0) throw ProviderException("invalid key blob") else super.find()
-            }
-        val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(keys), legacyKeystore = false)
-        show(secretStore = failingSecrets) {
-            compose.openSection(SettingsSection.SECRETS)
-            compose.onNodeWithText(text(R.string.settings_key_name_exa)).performScrollTo().performClick()
-            compose.onNode(hasSetTextAction()).performTextInput("exa-key")
-            compose.onNodeWithText(text(R.string.settings_save)).performClick()
-            waitForText(text(R.string.settings_key_save_failed))
-            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
-
-            waitForText(text(R.string.settings_reset_keys_value))
-            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
-            waitFor("Purge keys no longer saying why") {
-                compose.onAllNodesWithText(text(R.string.settings_reset_keys_value)).fetchSemanticsNodes().isEmpty()
-            }
-            assertEquals(1, keys.deletions)
-        }
-    }
-
-    @Test
-    fun aResetThatEndsAfterItsDialogHasGoneStillClearsTheOffer() {
-        val flaky = FlakyDataStore(stores.open("gated-reset-secrets"))
-        val gatedSecrets = SecretStore(flaky, testCipher())
-        val gate = CompletableDeferred<Unit>()
-        // The screen's state, which outlives the dialog: *Purge keys* saying why after a key store
-        // failure.
-        var sealFailed by mutableStateOf(true)
-        var dialogShown by mutableStateOf(true)
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent {
-                    if (dialogShown) {
-                        KeyDialogs(
-                            SettingsDialog.PurgeKeys,
-                            emptyMap(),
-                            gatedSecrets,
-                            saves,
-                            scanner = { _, _ -> },
-                            keyboard = { _, _, _ -> },
-                            onSealFailed = { sealFailed = it },
-                            open = {},
-                            onDismiss = {},
-                        )
-                    }
-                }
-            }
-            flaky.writeGate = gate
-            waitForText(text(R.string.settings_remove_all))
-            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
-            waitFor("the purge's write started") { flaky.writes.get() == 1 }
-
-            // The dialog goes while the reset waits; the state that observes it stays.
-            dialogShown = false
-            compose.waitForIdle()
-            gate.complete(Unit)
-            waitFor("Purge keys no longer saying why") { !sealFailed }
-        }
-    }
-
-    @Test
     fun beforeApi31AFileThatCannotBeReadIsAStorageFailureWithNoResetOffered() {
         val unreadable =
             object : DataStore<Preferences> by stores.open("unreadable-secrets") {
@@ -467,33 +395,6 @@ class SettingsScreenTest {
             compose.waitForIdle()
             gate.complete(Unit)
             waitFor("the Exa key stored") { runBlocking { gatedSecrets.get(SecretId.EXA) }?.reveal() == "exa-key" }
-        }
-    }
-
-    @Test
-    fun anUnreadableKeyMakesPurgeKeysSayWhy() {
-        val dataStore = stores.open("reset-secrets")
-        runBlocking { SecretStore(dataStore, testCipher()).set(SecretId.LASTFM, Secret("lastfm-key")) }
-        // Another key than the one that sealed it, as after the Keystore lost the first.
-        val resetting = SecretStore(dataStore, testCipher())
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent { SettingsScreen(settings, resetting, emptyMap(), ::clearedAtOnce, saves) { it } }
-            }
-            compose.openSection(SettingsSection.SECRETS)
-            waitForText(text(R.string.settings_reset_keys_value))
-            compose.onNodeWithText(text(R.string.settings_key_unreadable)).performScrollTo().assertIsDisplayed()
-            // A key that cannot be read can still be removed, alone or with the others.
-            compose.onNodeWithContentDescription(removeKey(R.string.settings_key_name_lastfm)).assertExists()
-
-            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
-
-            waitFor("Purge keys gone") {
-                compose.onAllNodesWithText(text(R.string.settings_remove_all_keys)).fetchSemanticsNodes().isEmpty()
-            }
-            assertEquals(SecretState.ABSENT, runBlocking { resetting.states.first() }.getValue(SecretId.LASTFM))
         }
     }
 
@@ -569,52 +470,6 @@ class SettingsScreenTest {
             waitForText(text(R.string.settings_key_remove_failed))
             compose.onNodeWithText(text(R.string.settings_remove)).assertIsDisplayed()
             assertEquals("exa-key", runBlocking { flakySecrets.get(SecretId.EXA) }?.reveal())
-        }
-    }
-
-    @Test
-    fun purgeKeysShowsWhileAnyKeyIsStored() =
-        show {
-            compose.openSection(SettingsSection.SECRETS)
-            val row = text(R.string.settings_remove_all_keys)
-            waitForText(text(R.string.settings_scan_keys))
-            assertTrue(compose.onAllNodesWithText(row).fetchSemanticsNodes().isEmpty())
-
-            runBlocking { secrets.set(SecretId.EXA, Secret("exa-key")) }
-            waitForText(row)
-            // Saying only what it does: no failure brought it.
-            compose.onNodeWithText(text(R.string.settings_remove_all_keys_value)).assertExists()
-            assertTrue(absent(R.string.settings_reset_keys_value))
-
-            compose.onNodeWithText(row).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_reset_keys_explained)).assertIsDisplayed()
-            compose.onNodeWithText(text(R.string.settings_cancel)).performClick()
-            compose.waitForIdle()
-            assertEquals("exa-key", runBlocking { secrets.get(SecretId.EXA) }?.reveal())
-
-            compose.onNodeWithText(row).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
-            waitFor("the row gone") { compose.onAllNodesWithText(row).fetchSemanticsNodes().isEmpty() }
-            assertTrue(runBlocking { secrets.states.first() }.values.all { it == SecretState.ABSENT })
-        }
-
-    @Test
-    fun purgeKeysThatFailsSaysSo() {
-        val failing =
-            object : SoftwareKeySource() {
-                override fun delete(): Unit = throw ProviderException("key store down")
-            }
-        val failingSecrets = SecretStore(stores.open("failing-secrets"), SecretCipher(failing))
-        runBlocking { failingSecrets.set(SecretId.LASTFM, Secret("lastfm-key")) }
-        show(secretStore = failingSecrets) {
-            compose.openSection(SettingsSection.SECRETS)
-            waitForText(text(R.string.settings_remove_all_keys))
-            compose.onNodeWithText(text(R.string.settings_remove_all_keys)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.settings_remove_all)).performClick()
-            waitForText(text(R.string.settings_remove_all_keys_failed))
-            compose.onNodeWithText(text(R.string.settings_remove_all)).assertIsDisplayed()
-            // Only the phone's key could not be deleted: the API keys are gone, as the message allows.
-            assertTrue(runBlocking { failingSecrets.states.first() }.values.all { it == SecretState.ABSENT })
         }
     }
 

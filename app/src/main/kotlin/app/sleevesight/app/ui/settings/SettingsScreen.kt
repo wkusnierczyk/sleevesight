@@ -39,7 +39,6 @@ import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiProvider
-import app.sleevesight.core.keys.SetupRead
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
@@ -139,8 +138,8 @@ fun SettingsScreen(
                 saves,
                 scanner,
                 keyboard,
+                showPhoneName = settings?.showPhoneName ?: false,
                 onSealFailed = { sealFailed = it },
-                open = { dialog = it },
                 onDismiss = close,
             )
         }
@@ -246,15 +245,15 @@ internal sealed interface SettingsDialog {
         val id: SecretId,
     ) : Keys
 
-    /** *Purge keys*, offered while any key is stored, or after a failure. */
+    /** *Purge keys*, offered while any key is stored, or after a failure: the screen (#446). */
     data object PurgeKeys : Keys
 
-    /** *Load keys*: the camera, reading a setup code (#268). */
-    data object ScanKeys : Keys
-
-    /** What the setup code scanned holds, [read], to confirm before anything is saved. */
-    class SetupFound(
-        val read: SetupRead,
+    /**
+     * *Load keys*: the screen that reads a setup code (#268, #446), naming the CLI's `keys-qr` in
+     * [developerMode].
+     */
+    class LoadKeys(
+        val developerMode: Boolean,
     ) : Keys
 
     data object ClearHistory : SettingsDialog
@@ -351,7 +350,7 @@ private fun SettingsContent(
         FoldedSection(SettingsSection.AI_SERVICES, folds) {
             AiSection(settings, secrets, navigation.modelName, update, open)
         }
-        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(keys, open) }
+        FoldedSection(SettingsSection.SECRETS, folds) { SecretsSection(settings, keys, update, open) }
         FoldedSection(SettingsSection.GENRES, folds) { GenresSection(settings, secrets, update) }
         FoldedSection(SettingsSection.INSIGHTS, folds) { InsightsSection(settings, update, open) }
         FoldedSection(SettingsSection.HISTORY, folds) { HistorySection(settings, update, open) }
@@ -361,7 +360,7 @@ private fun SettingsContent(
         }
         if (settings.developerMode) {
             FoldedSection(SettingsSection.DEVELOPER, folds) {
-                DeveloperSection(settings, update, navigation.openDiagnostics)
+                DeveloperSection(settings, update, open, navigation.openDiagnostics)
             }
         }
     }

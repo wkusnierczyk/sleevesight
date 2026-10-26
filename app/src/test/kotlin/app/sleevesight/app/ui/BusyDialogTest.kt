@@ -10,7 +10,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -54,6 +54,8 @@ import org.robolectric.shadows.ShadowDialog
  */
 @RunWith(RobolectricTestRunner::class)
 class BusyDialogTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -83,7 +85,7 @@ class BusyDialogTest {
     private fun text(id: Int) = app.getString(id)
 
     private fun show(
-        scanner: QrScanner = { _, _ -> },
+        scanner: QrScanner = { },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -190,7 +192,7 @@ class BusyDialogTest {
         val lastFmKey = "0123456789abcdef0123456789abcdef"
         // The scanner reads the setup code at once, as the camera would on a code held up to it.
         val code = "sleevesight-keys:v1\nlastfm=$lastFmKey"
-        show(scanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(code) } }) {
+        show(scanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }) {
             compose.onNodeWithText(text(R.string.settings_scan_keys)).performScrollTo().performClick()
             waitForText(text(R.string.setup_title))
             val before = flaky.writes.get()

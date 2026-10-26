@@ -49,6 +49,7 @@ import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.ui.WebLink
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.scan.QrScanDialog
 import app.sleevesight.app.ui.scan.QrScanner
 import app.sleevesight.core.ai.AiErrorKind
 import app.sleevesight.core.keys.KeyShape
@@ -98,7 +99,8 @@ internal fun <T> ChoiceDialog(
  *
  * *Type on a computer* (#394) scans the code `sleevesight.app/keyboard.html` shows, then runs that
  * session with [keyboard]: the field follows what is typed on the computer, unchecked, as typing
- * on the phone is. The session ends when the user stops it or the dialog closes.
+ * on the phone is. The session ends when the user stops it or the dialog closes. The phone
+ * advertises its Bluetooth name meanwhile only with [showPhoneName] (#433).
  *
  * The field is a password to the autofill service (#376), so a password manager offers its saved
  * entries on it. It fills but is never asked to save: Compose commits the autofill session when the
@@ -128,6 +130,7 @@ internal fun KeyDialog(
     onRemove: suspend () -> Boolean,
     scanner: QrScanner,
     keyboard: ComputerKeyboard,
+    showPhoneName: Boolean,
     onDismiss: () -> Unit,
 ) {
     var typed by remember { mutableStateOf("") }
@@ -168,20 +171,17 @@ internal fun KeyDialog(
     }
 
     scanning?.let { purpose ->
-        scanner(
-            { text ->
-                scanning = null
-                val result = scanned(purpose, id, text.trim(), ledger)
-                failed = result.failed
-                result.key?.let { enter(it) }
-                session = result.session
-            },
-            { scanning = null },
-        )
+        QrScanDialog(scanner, onDismiss = { scanning = null }) { text ->
+            scanning = null
+            val result = scanned(purpose, id, text.trim(), ledger)
+            failed = result.failed
+            result.key?.let { enter(it) }
+            session = result.session
+        }
     }
     val running =
         session?.let { s ->
-            @Composable { key(s) { keyboard(s, { enter(it) }, { session = null }) } }
+            @Composable { key(s) { keyboard(s, showPhoneName, { enter(it) }, { session = null }) } }
         }
 
     AlertDialog(
@@ -327,8 +327,7 @@ internal class Confirmation(
 )
 
 /**
- * Confirms a removal: a saved key, or every saved key with the phone's key for them (*Purge
- * keys*). [onConfirm] returns whether it succeeded: the dialog closes only
+ * Confirms the removal of a saved key. [onConfirm] returns whether it succeeded: the dialog closes only
  * then, and otherwise says so. While it runs, the dialog cannot be cancelled or dismissed, and a
  * second tap does not run it again.
  */

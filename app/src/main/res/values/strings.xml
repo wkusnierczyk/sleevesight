@@ -13,11 +13,11 @@
     <string name="first_run_to_ai">To the AI service you choose: the title, artists and album, and what the sources found. This is for the playing track only: the next one in the queue is looked up ahead, but no insight is written for it until it plays.</string>
     <string name="first_run_api_keys">Your API keys: each only to the service it belongs to, with each request to it.</string>
     <string name="first_run_to_art_host">To the server a cover’s web address names, when a player gives the cover only as a web address: a request for that image. The address itself may identify the album or episode.</string>
-    <string name="first_run_to_developer">To the developer, only if you send it: a report of a problem with an insight. “Report a problem” shows the whole report, with the track, the insight and its evidence, and the AI service and model that wrote it, and hands it to your mail app, addressed to support@sleevesight.app. It reaches the developer only if you send it; until then your mail app handles it as any message you write, which may keep a draft in your mail account. Never your API keys, history or settings.</string>
+    <string name="first_run_to_developer">To the developer, only if you send it: a report of a problem with an insight. “Report a problem” shows the whole report, with the track, the insight and its evidence, and the AI service and model that wrote it, and hands it to your mail app, addressed to support@sleevesight.app. It reaches the developer only if you send it; until then your mail app handles it as any message you write, which may keep a draft in your mail account. That report never holds your API keys, history or settings. In developer mode with “Report button” on (the test build’s default), a button on Home does the same for a report of the app’s state: its settings, what it received from the player, the sources and the AI service, and its diagnostics, with the track changes only if you add them; never your API keys.</string>
     <string name="first_run_ip_address">Each of these services also sees your phone’s IP address, as every service you connect to does.</string>
 
     <string name="first_run_stays_title">What stays on the phone</string>
-    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself or hand a problem report to your mail app. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
+    <string name="first_run_stays">Nothing else leaves the phone, unless you export the diagnostics to a file yourself, hand a report to your mail app, or type a key on a computer, when the phone advertises itself over Bluetooth to devices nearby. The length of each track, the list of tracks played, and the record of track changes used to tell your skips from natural ends stay on it, and are left out of Android’s backup. Your API keys are stored encrypted and never logged.</string>
     <string name="first_run_no_tracking">No accounts of our own, no telemetry, no crash reporting of our own, no analytics, no ads.</string>
     <!-- What a screen reader says a tap on a web address shown as a link does (the privacy policy's, an AI service's terms). -->
     <string name="link_open">Open in your browser</string>
@@ -75,9 +75,7 @@
     <string name="settings_change_failed">The last change could not be saved: the phone’s storage failed. The setting keeps its saved value; try again.</string>
     <string name="settings_save">Save</string>
     <string name="settings_reset_keys_value">A saved key cannot be read, or a key could not be saved: delete all saved keys, then enter them again.</string>
-    <string name="settings_reset_keys_explained">Keys for all API services used by Sleevesight are irrecoverably deleted.</string>
     <string name="settings_remove">Remove</string>
-    <string name="settings_remove_all">Purge</string>
     <string name="settings_cancel">Cancel</string>
 
     <string name="settings_model_loading">Listing the service’s models…</string>
@@ -185,20 +183,20 @@
     <string name="keyboard_code_unreadable">This keyboard code cannot be read: it may be of a later version. Update Sleevesight, or reload the page on the computer and scan again.</string>
     <string name="keyboard_code_used">This keyboard code was used already. Reload the page on the computer, and scan its new code.</string>
     <string name="keyboard_starting">Starting Bluetooth…</string>
-    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone.</string>
+    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Show this phone’s name to the computer” is on, under Secrets.</string>
+    <string name="keyboard_waiting_named">Waiting for the computer: on the page, choose “Connect” and pick this phone, listed as “%1$s”.</string>
+    <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name could not be advertised (it may be too long, or not set), so it shows as “Unknown or Unsupported Device”.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>
     <string name="keyboard_off">Bluetooth is off. Turn it on, and the phone waits for the computer.</string>
     <string name="keyboard_refused">Sleevesight may not use Bluetooth. Allow “Nearby devices” for Sleevesight in the phone’s settings, or type the key here.</string>
     <string name="keyboard_unsupported">This phone cannot offer itself to a computer over Bluetooth. Type the key here, or scan it.</string>
     <string name="keyboard_failed">Bluetooth could not be started. Stop, and try again.</string>
     <string name="keyboard_stop">Stop</string>
-    <string name="scan_hint">Point the camera at the QR code.</string>
+    <string name="scan_view">Camera view: hold the QR code inside the frame.</string>
     <string name="scan_camera_refused">Sleevesight may not use the camera. Allow it in the phone’s settings for Sleevesight to scan, or type the key instead.</string>
     <string name="scan_no_camera">This phone has no camera Sleevesight can use. Type the key instead.</string>
     <string name="settings_remove_all_keys">Purge keys</string>
     <string name="settings_remove_all_keys_value">Safely delete all saved keys.</string>
-    <string name="settings_remove_all_keys_title">Purge keys?</string>
-    <string name="settings_remove_all_keys_failed">Not everything could be removed: the phone’s key store or storage failed. Try again.</string>
     <string name="settings_section_about">About</string>
     <string name="settings_credits_value">The data sources, the font, the icons and the libraries, with their licences</string>
     <string name="settings_what_leaves">What leaves the device</string>

@@ -53,6 +53,7 @@ import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
+import app.sleevesight.core.settings.LinkStyle
 import app.sleevesight.core.settings.Settings
 import app.sleevesight.core.settings.ThemeChoice
 import app.sleevesight.store.ArtistKeeping
@@ -84,9 +85,13 @@ import kotlinx.coroutines.withContext
  * The app's objects, wired by hand in one place (architecture, *Technology choices*): one graph
  * per process, held by [SleevesightApplication]. Components take what they need through their
  * constructors; nothing outside this class constructs a long-lived object.
+ *
+ * @param settingsData the settings' file, made here unless a test passes a stand-in.
  */
 class AppGraph(
     context: Context,
+    settingsData: DataStore<Preferences> =
+        preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
 ) {
     private val appContext = context.applicationContext
 
@@ -104,8 +109,11 @@ class AppGraph(
 
     val firstRun = FirstRunAcknowledgement(appContext)
 
-    /** The user's settings. DataStore allows one instance per file in a process, so only here. */
-    val settings = SettingsStore(preferences(appContext, SETTINGS_FILE, listOf(PrunePlayersMigration)))
+    /**
+     * The user's settings, with this build's defaults, in [settingsData]. DataStore allows one
+     * instance per file in a process, so it is made only for the graph.
+     */
+    val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
     val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))
@@ -151,6 +159,19 @@ class AppGraph(
                 lastTheme.value = it
                 nightMode(it)
             }.stateIn(mainScope, SharingStarted.Eagerly, lastTheme.value)
+
+    /**
+     * *Link style* (#519), a developer setting, for the theme: the stored choice, as it changes,
+     * held for the process. Before the settings' first read in a new process, the default
+     * (underlined): unlike [font] and [theme], it is not kept for a new process's first frames, as
+     * a developer option trying a look on the phone need not be; a link on screen then may switch
+     * to the highlight as the settings are read.
+     */
+    val linkStyle: StateFlow<LinkStyle> =
+        settings.settings
+            .map { it.linkStyle }
+            .distinctUntilChanged()
+            .stateIn(mainScope, SharingStarted.Eagerly, Settings().linkStyle)
 
     /**
      * Gives [theme] to the system as the app's night mode (Android 12 and later), which it keeps

@@ -3,6 +3,8 @@ package app.sleevesight.app.ui.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import app.sleevesight.app.R
+import app.sleevesight.core.settings.LinkStyle
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 
 /**
@@ -18,6 +20,12 @@ import app.sleevesight.core.settings.Settings
  *   each insight, where otherwise only a note shows, and only for a sentence the sources do not
  *   back; and under *Sources* every source's status, the `M` chip and the rejected matches (#440)
  *   (`Settings.showGroundingDetails`).
+ * - *Report button* (#452, #518): Home's button for a tester's report ([Settings.reportButton]):
+ *   *Show*, *Auto* (hidden while Home scrolls) or *Hide*; *Auto* by default in the test build and
+ *   *Hide* in any other.
+ * - *Link style* (#519): every link underlined (the default) or highlighted
+ *   ([Settings.linkStyle]), to try both on the phone over real album art; back to the underline
+ *   with developer mode off.
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -25,6 +33,7 @@ import app.sleevesight.core.settings.Settings
 internal fun DeveloperSection(
     settings: Settings,
     update: Update,
+    open: (SettingsDialog) -> Unit,
     openDiagnostics: () -> Unit,
 ) {
     SwitchRow(
@@ -45,6 +54,39 @@ internal fun DeveloperSection(
         summary = stringResource(R.string.settings_grounding_details_summary),
         checked = settings.showGroundingDetails,
     ) { on -> update { it.copy(showGroundingDetails = on) } }
+    val reportButtons =
+        listOf(
+            ReportButton.SHOW to stringResource(R.string.settings_report_button_show),
+            ReportButton.AUTO to stringResource(R.string.settings_report_button_auto),
+            ReportButton.HIDE to stringResource(R.string.settings_report_button_hide),
+        )
+    ValueRow(
+        title = stringResource(R.string.settings_report_button),
+        value = reportButtons.first { it.first == settings.reportButton }.second,
+        summary = stringResource(R.string.settings_report_button_summary),
+    ) {
+        open(
+            SettingsDialog.Choice(R.string.settings_report_button, reportButtons, settings.reportButton) { choice ->
+                update { it.copy(reportButton = choice) }
+            },
+        )
+    }
+    val linkStyles =
+        listOf(
+            LinkStyle.UNDERLINE to stringResource(R.string.settings_link_style_underline),
+            LinkStyle.HIGHLIGHT to stringResource(R.string.settings_link_style_highlight),
+        )
+    ValueRow(
+        title = stringResource(R.string.settings_link_style),
+        value = linkStyles.first { it.first == settings.linkStyle }.second,
+        summary = stringResource(R.string.settings_link_style_summary),
+    ) {
+        open(
+            SettingsDialog.Choice(R.string.settings_link_style, linkStyles, settings.linkStyle) { style ->
+                update { it.copy(linkStyle = style) }
+            },
+        )
+    }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),

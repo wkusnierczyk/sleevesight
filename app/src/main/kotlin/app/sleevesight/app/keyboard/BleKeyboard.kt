@@ -54,6 +54,12 @@ enum class KeyboardState {
  * acknowledgements. A message longer than one packet comes as prepared writes, kept per computer
  * until executed.
  *
+ * The phone's Bluetooth name is advertised only with [showName] (*Show this phone's name to the
+ * computer*, #433), in the scan response, so the chooser lists the phone by it; without it, the
+ * chooser lists it as an unknown device. A start with the name that fails is made again without
+ * it ([PhoneName]). [onName] hears, at each start of the advertising, the name it carries as the
+ * chooser shows it ([advertisedName]), or null for none.
+ *
  * Each time the service is opened (at [start], and again when Bluetooth comes back on) it is an
  * [Opening] of its own: its server, its advertising, the devices linked to it and their writes.
  * Closing one makes everything it is still told, by Bluetooth or by work it posted, do nothing, so
@@ -72,6 +78,8 @@ class BleKeyboard(
     private val session: KeyboardSession,
     private val onText: (String) -> Unit,
     private val onState: (KeyboardState) -> Unit,
+    private val showName: Boolean = false,
+    private val onName: (String?) -> Unit = {},
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val manager = context.getSystemService(BluetoothManager::class.java)
@@ -138,7 +146,7 @@ class BleKeyboard(
             else -> {
                 state(KeyboardState.STARTING)
                 // Current before it opens, so a failure while it opens ends it.
-                val opening = Opening(manager, advertiser)
+                val opening = Opening(manager, advertiser, PhoneName(showName) { adapter.name })
                 current = opening
                 opening.open()
             }
@@ -158,11 +166,13 @@ class BleKeyboard(
 
     /**
      * One opening of the service: its server, its advertising, the devices linked to it and their
-     * writes. Once [closed], what Bluetooth still tells it, and work it posted, does nothing.
+     * writes, and whether its starts carry the phone's [name]. Once [closed], what Bluetooth still
+     * tells it, and work it posted, does nothing.
      */
     private inner class Opening(
         private val manager: BluetoothManager,
         private val advertiser: BluetoothLeAdvertiser,
+        private val name: PhoneName,
     ) {
         private val lock = Any()
 
@@ -243,7 +253,8 @@ class BleKeyboard(
                     .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
                     .setConnectable(true)
                     .build()
-            // The service's UUID alone: the phone's name is not advertised (a device that connects
+            // The service's UUID, with the flags Android adds: 21 of the advertisement's 31 bytes,
+            // which leave little room for a name. The phone's name is not in it (a device that connects
             // can still read it, from the Generic Access service Android keeps).
             val data =
                 AdvertiseData
@@ -252,13 +263,30 @@ class BleKeyboard(
                     .setIncludeTxPowerLevel(false)
                     .addServiceUuid(ParcelUuid(session.serviceUuid))
                     .build()
+            // The name, if shown, goes in the scan response, alone: the answer to a computer's scan
+            // request, 31 bytes of its own. Android shortens a name past 26 bytes there, but refuses
+            // one whose length in characters, with its field's 2 bytes, passes 31 (`totalBytes`).
+            // Read at each start, as it is now.
+            val shown = name.next()
+            val response =
+                shown?.let {
+                    AdvertiseData
+                        .Builder()
+                        .setIncludeDeviceName(true)
+                        .setIncludeTxPowerLevel(false)
+                        .build()
+                }
             // One advertising at a time: the one before, if any, is stopped first.
             stopAdvertising()
-            val attempt = Advertising()
+            val attempt = Advertising(shown)
             advertising = attempt
             // Throws if Bluetooth went off meanwhile, which the receiver then reports too.
             try {
-                advertiser.startAdvertising(settings, data, attempt)
+                if (response == null) {
+                    advertiser.startAdvertising(settings, data, attempt)
+                } else {
+                    advertiser.startAdvertising(settings, data, response, attempt)
+                }
             } catch (_: IllegalStateException) {
                 attempt.failed(bluetoothOff = manager.adapter?.isEnabled != true)
             }
@@ -279,18 +307,31 @@ class BleKeyboard(
             if (!closed && !stopped) onState(if (typing.isEmpty()) KeyboardState.WAITING else KeyboardState.CONNECTED)
         }
 
-        /** One start of the advertising; its results count only while it is the latest. */
-        private inner class Advertising : AdvertiseCallback() {
+        /**
+         * One start of the advertising, with the phone's name [shown] in its scan response, or none;
+         * its results count only while it is the latest.
+         */
+        private inner class Advertising(
+            private val shown: String?,
+        ) : AdvertiseCallback() {
             private fun latest() = !closed && advertising === this
 
             override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
                 if (!latest()) return
                 advertised = true
+                name.started(shown)
+                if (!stopped) onName(shown?.let(::advertisedName))
                 connection()
             }
 
             override fun onStartFailure(errorCode: Int) {
                 if (!latest()) return
+                // A start with the name failed: made again without it, in this opening, at once.
+                if (name.retryNameless(shown, errorCode)) {
+                    advertising = null
+                    advertise()
+                    return
+                }
                 when (errorCode) {
                     ADVERTISE_FAILED_ALREADY_STARTED -> {}
                     // Once advertising has started in this opening, a restart's failure of any kind

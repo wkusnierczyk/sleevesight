@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
+import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -24,20 +25,26 @@ import kotlin.time.Duration.Companion.milliseconds
  * default; *Players* is stored the same way, by package name ([readPlayers]).
  *
  * Reading never fails: a value that is missing, of a name this version does not know (written by a
- * later one), or out of range reads as that setting's default, and the others are unaffected. One
- * exception: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
- * *Diagnostics* on, so someone who used the diagnostics keeps the way to them.
+ * later one), or out of range reads as that setting's default, and the others are unaffected. Two
+ * exceptions: *Developer mode* (#444), stored by no earlier version, reads as on in a file with
+ * *Diagnostics* on, so someone who used the diagnostics keeps the way to them; and *Report button*
+ * (#518), a choice stored under a key of its own, reads in a file from when it was a switch as that
+ * switch was ([reportButtonOf]).
  *
  * Writing keeps what a later version stored, as after a downgrade: [write] rewrites only the
  * settings that changed, so a value this version cannot read stays until the user changes that
  * setting, and in a set of switches only the switches that changed, so the others stay as stored:
  * names this version does not know, and overrides a later version stored against other defaults.
  *
+ * The defaults are `:core`'s [Settings], but for those a build sets: [SettingsStore] passes the
+ * build's ([SettingsStore.BUILD_DEFAULTS]), and a test may pass others. Since only a setting moved
+ * off its default is stored, a default that differs between builds, as developer mode's does
+ * (#451), holds wherever nothing is stored; a choice that differs from this build's default is
+ * stored, and so holds in the other build too, while one equal to it is not.
+ *
  * The AI service's settings are stored per provider by [AiSettingsCodec].
  */
 internal object SettingsCodec {
-    private val defaults = Settings()
-
     private val LAYOUT = stringPreferencesKey("layout")
     private val PLAYERS_ON = stringSetPreferencesKey("players.on")
     private val PLAYERS_OFF = stringSetPreferencesKey("players.off")
@@ -61,9 +68,11 @@ internal object SettingsCodec {
     private val HISTORY_LIFETIME_MS = longPreferencesKey("history.lifetime_ms")
     private val SESSION_GAP_MS = longPreferencesKey("history.session_gap_ms")
     private val KEEP_SOURCES_UNFOLDED = booleanPreferencesKey("home.keep_sources_unfolded")
+    private val SHOW_PHONE_NAME = booleanPreferencesKey("keyboard.show_phone_name")
     private val DIAGNOSTICS = booleanPreferencesKey("developer.diagnostics")
     private val DEVELOPER_MODE = booleanPreferencesKey("developer.mode")
     private val GROUNDING_DETAILS = booleanPreferencesKey("developer.grounding_details")
+    private val LINK_STYLE = stringPreferencesKey("developer.link_style")
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
@@ -74,13 +83,16 @@ internal object SettingsCodec {
     private fun lifetimeKey(source: SourceId) = longPreferencesKey("cache.lifetime_ms.${source.name}")
 
     @Suppress("CyclomaticComplexMethod") // One line per setting, each its own key.
-    fun read(prefs: Preferences): Settings =
+    fun read(
+        prefs: Preferences,
+        defaults: Settings = Settings(),
+    ): Settings =
         Settings(
             layout = enumOf(prefs[LAYOUT]) ?: defaults.layout,
             aiProvider = AiSettingsCodec.readProvider(prefs),
             aiModels = AiSettingsCodec.readModels(prefs),
             aiEfforts = AiSettingsCodec.readEfforts(prefs),
-            followedPlayers = readPlayers(prefs),
+            followedPlayers = readPlayers(prefs, defaults),
             enabledSources = readSwitches(prefs, SOURCES_ON, SOURCES_OFF, defaults.enabledSources),
             webEngines = readSwitches(prefs, ENGINES_ON, ENGINES_OFF, defaults.webEngines),
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
@@ -104,9 +116,12 @@ internal object SettingsCodec {
                 },
             sessionGap = prefs[SESSION_GAP_MS]?.takeIf { it > 0 }?.milliseconds ?: defaults.sessionGap,
             keepSourcesUnfolded = prefs[KEEP_SOURCES_UNFOLDED] ?: defaults.keepSourcesUnfolded,
+            showPhoneName = prefs[SHOW_PHONE_NAME] ?: defaults.showPhoneName,
             showDiagnostics = prefs[DIAGNOSTICS] ?: defaults.showDiagnostics,
             showGroundingDetails = prefs[GROUNDING_DETAILS] ?: defaults.showGroundingDetails,
-            developerMode = developerModeOf(prefs),
+            developerMode = developerModeOf(prefs, defaults),
+            reportButton = reportButtonOf(prefs, defaults),
+            linkStyle = enumOf(prefs[LINK_STYLE]) ?: defaults.linkStyle,
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
@@ -115,14 +130,15 @@ internal object SettingsCodec {
     /**
      * Stores [settings] in [prefs], rewriting only the settings that differ from what [prefs] reads
      * as, so a value a later version stored, which this one reads as the default, stays until the
-     * user changes that setting.
+     * user changes that setting. [defaults] are those [read] reads with.
      */
     @Suppress("CyclomaticComplexMethod", "LongMethod") // One line per setting, each its own key.
     fun write(
         settings: Settings,
         prefs: MutablePreferences,
+        defaults: Settings = Settings(),
     ) {
-        val stored = read(prefs)
+        val stored = read(prefs, defaults)
 
         fun moved(of: (Settings) -> Any?) = of(settings) != of(stored)
 
@@ -208,15 +224,29 @@ internal object SettingsCodec {
         if (moved { it.keepSourcesUnfolded }) {
             prefs.put(KEEP_SOURCES_UNFOLDED, settings.keepSourcesUnfolded, defaults.keepSourcesUnfolded)
         }
+        if (moved { it.showPhoneName }) prefs.put(SHOW_PHONE_NAME, settings.showPhoneName, defaults.showPhoneName)
         if (moved { it.showDiagnostics }) prefs.put(DIAGNOSTICS, settings.showDiagnostics, defaults.showDiagnostics)
         if (moved { it.showGroundingDetails }) {
             prefs.put(GROUNDING_DETAILS, settings.showGroundingDetails, defaults.showGroundingDetails)
         }
-        // Without its key, it reads as *Diagnostics* does ([developerModeOf]), so the key is kept
-        // only where that would read otherwise; either moving can change which.
-        if (moved { it.developerMode } || moved { it.showDiagnostics }) {
-            prefs.put(DEVELOPER_MODE, settings.developerMode, prefs[DIAGNOSTICS] ?: defaults.showDiagnostics)
+        // Without its key, it reads as *Diagnostics*'s key, or with neither as its default
+        // ([developerModeOf]). Moved, it is stored only where that would read otherwise, against its
+        // own default, not *Diagnostics*'s: in a build where it is on by default (#451), developer
+        // mode turned off is stored as off. When only *Diagnostics* moves, a stored key stays, since
+        // it may be a choice another build's default needs (developer mode turned on in the public
+        // build, then *Diagnostics* turned on and off in the test build); without one, it is stored
+        // if *Diagnostics*'s new value would read otherwise.
+        val impliedDeveloperMode = prefs[DIAGNOSTICS] ?: defaults.developerMode
+        if (moved { it.developerMode } || (moved { it.showDiagnostics } && DEVELOPER_MODE !in prefs)) {
+            prefs.put(DEVELOPER_MODE, settings.developerMode, impliedDeveloperMode)
         }
+        // Moved, it is stored under its own key against its default, and the old switch's key goes:
+        // left, it would read in place of a choice equal to the default, which is not stored.
+        if (moved { it.reportButton }) {
+            prefs.remove(REPORT_BUTTON_SWITCH)
+            prefs.put(REPORT_BUTTON, settings.reportButton.name, defaults.reportButton.name)
+        }
+        if (moved { it.linkStyle }) prefs.put(LINK_STYLE, settings.linkStyle.name, defaults.linkStyle.name)
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
@@ -225,9 +255,12 @@ internal object SettingsCodec {
     /**
      * *Developer mode* as stored, or, with no key, as *Diagnostics* is: a file from before developer
      * mode (#444) with *Diagnostics* on reads as on, so its user keeps the way to the diagnostics.
+     * With neither key, the build's default ([defaults]).
      */
-    private fun developerModeOf(prefs: Preferences): Boolean =
-        prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
+    private fun developerModeOf(
+        prefs: Preferences,
+        defaults: Settings,
+    ): Boolean = prefs[DEVELOPER_MODE] ?: prefs[DIAGNOSTICS] ?: defaults.developerMode
 
     /**
      * *Players* as overrides of the defaults, with `on` and `off` keys as the switch sets
@@ -243,7 +276,10 @@ internal object SettingsCodec {
      * A phone call's package ([Settings.isCall]) is never read, whichever key holds it: an older
      * version listed it like any player, and a file with it switched on must not follow it (#435).
      */
-    private fun readPlayers(prefs: Preferences): Map<String, Boolean> =
+    private fun readPlayers(
+        prefs: Preferences,
+        defaults: Settings,
+    ): Map<String, Boolean> =
         (
             defaults.followedPlayers +
                 prefs[PLAYERS_ON].orEmpty().associateWith { true } +
@@ -259,7 +295,7 @@ internal object SettingsCodec {
      * the two players' keys.
      */
     fun prunePlayers(prefs: MutablePreferences) {
-        val listedByDefault = defaults.followedPlayers.keys
+        val listedByDefault = Settings().followedPlayers.keys
         // A player in both keys reads as off, so it is not kept as on.
         val on = (prefs[PLAYERS_ON].orEmpty() - prefs[PLAYERS_OFF].orEmpty()).filterNot(Settings::isCall).toSet()
         val off = prefs[PLAYERS_OFF].orEmpty().filter { it in listedByDefault && !Settings.isCall(it) }.toSet()
@@ -320,6 +356,29 @@ internal object SettingsCodec {
         Settings.DEFAULT_CACHE_LIFETIMES.mapValues { (source, default) ->
             prefs[lifetimeKey(source)]?.takeIf { it > 0 }?.milliseconds ?: default
         }
+}
+
+/** *Report button* (#518), a choice; read through [reportButtonOf]. */
+private val REPORT_BUTTON = stringPreferencesKey("developer.report_button_choice")
+
+/** *Report button* when it was a switch (#452), read only where [REPORT_BUTTON] is not stored. */
+private val REPORT_BUTTON_SWITCH = booleanPreferencesKey("developer.report_button")
+
+/**
+ * *Report button* as stored (#518), or, with no key of its own, as its switch was stored before it
+ * became a choice (#452): on as *Auto*, the test build's default, and off as *Hide*. With neither
+ * key, or a name this version does not know, the build's default ([defaults]).
+ */
+private fun reportButtonOf(
+    prefs: Preferences,
+    defaults: Settings,
+): ReportButton {
+    prefs[REPORT_BUTTON]?.let { return enumOf(it) ?: defaults.reportButton }
+    return when (prefs[REPORT_BUTTON_SWITCH]) {
+        true -> ReportButton.AUTO
+        false -> ReportButton.HIDE
+        null -> defaults.reportButton
+    }
 }
 
 internal inline fun <reified E : Enum<E>> enumOf(name: String?): E? = enumValues<E>().firstOrNull { it.name == name }

@@ -32,10 +32,11 @@ class InsightPromptTest {
     // Stored prompts: a change to the wording shows up here as a reviewed diff.
 
     @Test
-    fun `the stored prompts are version 5's`() {
+    fun `the stored prompts are version 6's`() {
         // A change to the template changes the stored prompts and raises the version with them (the
-        // synthesis cache keys cards by it): update both together.
-        assertEquals(5, InsightPrompt.VERSION)
+        // synthesis cache keys cards by it): update both together. Version 6 (#424) changed the
+        // evidence given, not the template, so the stored prompts are version 5's too.
+        assertEquals(6, InsightPrompt.VERSION)
     }
 
     @Test

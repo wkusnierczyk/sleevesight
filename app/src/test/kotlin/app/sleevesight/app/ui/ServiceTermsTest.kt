@@ -15,7 +15,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -54,6 +54,8 @@ import org.robolectric.Shadows.shadowOf
 /** Each AI service's terms, told where its key is entered (#409). */
 @RunWith(RobolectricTestRunner::class)
 class ServiceTermsTest {
+    // The v2 rule runs effects on a `StandardTestDispatcher`, on the main thread, as the phone does:
+    // the v1 rule's unconfined dispatcher resumed them on the key store's thread.
     @get:Rule
     val compose = createEmptyComposeRule()
 
@@ -78,8 +80,8 @@ class ServiceTermsTest {
         listOf(R.string.settings_terms_anthropic, R.string.settings_terms_openai, R.string.settings_terms_google)
 
     private fun show(
-        scanner: QrScanner = { _, _ -> },
-        keyboard: ComputerKeyboard = { _, _, _ -> },
+        scanner: QrScanner = { },
+        keyboard: ComputerKeyboard = { _, _, _, _ -> },
         block: ActivityScenario<MainActivity>.() -> Unit,
     ) {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -185,7 +187,7 @@ class ServiceTermsTest {
         }
 
     /** A keyboard session taller than the screen, ending in a line of text, [SESSION_END]. */
-    private val tall: ComputerKeyboard = { _, _, _ ->
+    private val tall: ComputerKeyboard = { _, _, _, _ ->
         Column {
             Box(Modifier.height(1_200.dp))
             Text(SESSION_END)
@@ -193,7 +195,7 @@ class ServiceTermsTest {
     }
 
     /** A scanner that reads [text] at once, as the camera would on a code held up to it. */
-    private fun scanning(text: String): QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(text) } }
+    private fun scanning(text: String): QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(text) } }
 
     private companion object {
         const val SESSION_END = "The end of the keyboard session"
