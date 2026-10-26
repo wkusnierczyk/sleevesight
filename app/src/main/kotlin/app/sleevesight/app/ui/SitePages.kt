@@ -24,5 +24,8 @@ private const val SETTINGS_PAGE_URL = "https://sleevesight.app/docs/tutorials/se
  */
 internal const val LOAD_KEYS_DOCS_URL = "${SETTINGS_PAGE_URL}#several-keys-at-once-load-keys"
 
-/** The page that types on a computer for the phone (`keyboard.html`, #394), for *Type on a computer* (#541). */
+/**
+ * The page a computer opens for *Type on a computer* (`keyboard.html`, #394), linked from
+ * *Share phone's name with Type on a computer* (#544) and the keyboard icon's guided screen (#541).
+ */
 internal const val KEYBOARD_PAGE_URL = "https://sleevesight.app/keyboard.html"

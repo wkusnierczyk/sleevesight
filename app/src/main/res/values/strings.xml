@@ -81,6 +81,8 @@
     <string name="settings_model_loading">Listing the service’s models…</string>
     <string name="settings_model_unavailable">This build cannot list the service’s models yet; the default is used until it can.</string>
     <string name="settings_model_no_key">Save the API key to list the service’s models.</string>
+    <!-- Under a service's model row (#540): the service, and the model's name. -->
+    <string name="settings_model_not_available">The currently selected %1$s model %2$s is not available. Please select another model or provider.</string>
     <string name="settings_model_failed_unauthorized">The models could not be listed: the service refused the key.</string>
     <string name="settings_model_failed_offline">The models could not be listed: no connection.</string>
     <string name="settings_model_failed_quota_exhausted">The models could not be listed: the service’s quota is used up for now.</string>
@@ -193,7 +195,7 @@
     <string name="keyboard_code_unreadable">This keyboard code cannot be read: it may be of a later version. Update Sleevesight, or reload the page on the computer and scan again.</string>
     <string name="keyboard_code_used">This keyboard code was used already. Reload the page on the computer, and scan its new code.</string>
     <string name="keyboard_starting">Starting Bluetooth…</string>
-    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Show this phone’s name to the computer” is on, under Secrets.</string>
+    <string name="keyboard_waiting">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. It shows as “Unknown or Unsupported Device”: it does not advertise its name unless “Share phone’s name with Type on a computer” is on, under Secrets.</string>
     <string name="keyboard_waiting_named">Waiting for the computer: on the page, choose “Connect” and pick this phone, listed as “%1$s”.</string>
     <string name="keyboard_waiting_name_not_fitted">Waiting for the computer: on the page, choose “Connect” and pick this phone, the only device listed. Its Bluetooth name could not be advertised (it may be too long, or not set), so it shows as “Unknown or Unsupported Device”.</string>
     <string name="keyboard_connected">Connected: what you type on the computer appears in the field.</string>

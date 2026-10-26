@@ -376,7 +376,8 @@ internal fun kindOf(response: NetResponse): AiErrorKind =
  * is not offered at all ("User location is not supported"), which billing does not, so that one,
  * told apart by its message (no reason in `details` names it), is [AiErrorKind.UNAVAILABLE_HERE].
  * `RESOURCE_EXHAUSTED` is a spent prepaid balance at 402 or a monthly spending cap reached
- * ([reachesSpendCap]), [AiErrorKind.BILLING]; a quota per day or month ([exhaustsAQuota]),
+ * ([reachesSpendCap]), [AiErrorKind.BILLING]; a quota of none at all ([hasNoQuota]), a model the
+ * tier cannot use, [AiErrorKind.MODEL_REFUSED]; a quota per day or month ([exhaustsAQuota]),
  * [AiErrorKind.QUOTA_EXHAUSTED]; a rate limit otherwise.
  */
 internal fun kindOf(error: WireError): AiErrorKind? =
@@ -386,6 +387,7 @@ internal fun kindOf(error: WireError): AiErrorKind? =
             AiErrorKind.UNAVAILABLE_HERE
         }
         error.status == "RESOURCE_EXHAUSTED" && error.code == PAYMENT_REQUIRED -> AiErrorKind.BILLING
+        error.status == "RESOURCE_EXHAUSTED" && hasNoQuota(error) -> AiErrorKind.MODEL_REFUSED
         error.status == "RESOURCE_EXHAUSTED" && reachesSpendCap(error) -> AiErrorKind.BILLING
         error.status == "RESOURCE_EXHAUSTED" && exhaustsAQuota(error) -> AiErrorKind.QUOTA_EXHAUSTED
         else -> error.status?.let(::kindOfStatus)
@@ -405,6 +407,21 @@ internal fun exhaustsAQuota(error: WireError): Boolean =
             LONG_QUOTAS.any { id.contains(it, ignoreCase = true) }
         }
     }
+
+/**
+ * Whether [error] names a quota of none at all for the model: a `QuotaFailure` whose `quotaValue`
+ * is `"0"`, or a message that says `limit: 0` ("Quota exceeded for metric:
+ * generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: …"), as
+ * developers have reported it on Google's forum since 2025 for a model the free tier no longer
+ * offers. The model is listed for every key, whatever its tier, so the list cannot tell; no wait
+ * mends it, and billing on the project, or another model, does.
+ */
+internal fun hasNoQuota(error: WireError): Boolean =
+    error.details.any { detail -> detail.violations.any { it.quotaValue == "0" } } ||
+        error.message?.let { NO_QUOTA.containsMatchIn(it) } == true
+
+/** `limit: 0` in a message, not `limit: 0.5` or `limit: 05`. */
+private val NO_QUOTA = Regex("""\blimit: 0(?![0-9.])""")
 
 /**
  * Whether [error] says a monthly spending cap is reached, the billing account's or the project's:
