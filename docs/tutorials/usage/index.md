@@ -41,7 +41,7 @@ The header stays at the top while the rest of the screen scrolls under it; a thi
 - **The logo**, at the left: a tap scrolls the home screen back to the top. A screen reader calls it "Sleevesight, scroll to top".
 - **The cogwheel**, at the right, opens the settings.
 
-At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too.
+At the bottom of the home screen, under a thin line, *What leaves the device?* opens the first-run screen again, to reread it. *What leaves the device*, under *About* in the settings, opens it too. Opened again, it has a back arrow at the top and *Close* at the bottom, which bring you back, as Android's back does.
 
 ### The playing track
 
@@ -67,7 +67,7 @@ A tap on a label shows where it came from: *… comes from the track's tags on:*
 
 When there are none, it says *None found.*, or *Every genre source is off in Settings.*; with *Show genres* off, nothing of the genres shows.
 
-With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; with labels of one level only, there is no *Genres ›*, and the labels open nothing. Where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
+With [*Layout*]({{ '/docs/tutorials/settings/' | relative_url }}#appearance) set to *Separate pages*, *Genres ›*, or a tap on a label, opens the table on a page of its own, where the labels are plain; with labels of one level only, there is no *Genres ›*, and a tap on a label opens the page all the same. Where a label came from is shown only with *Expandable boxes* ([Pages](#pages)).
 
 ### The insight
 
@@ -139,7 +139,7 @@ With *Layout* set to *Separate pages*, the heading reads **Sources ›**, and a 
 With *Separate pages*, the home screen is shorter, and each part opens a page of its own, in the album art's colours, with a back arrow and the part's name at the top:
 
 - **Sources ›** opens the chips, the note and the list, which works as it does unfolded on the home screen, *show more…* and all.
-- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, the labels are all there is: there is no *Genres ›*, and they open nothing.
+- **Genres ›**, or a label on the home screen, opens the table of genre labels. With labels of one level only, there is no *Genres ›*, and a label opens the table, with its one row (a row per artist for artists' labels).
 - A citation chip in the insight opens *Sources*' page at the line it cites, scrolled to and flashed.
 
 The insight itself stays on the home screen, in full, whichever layout is set.

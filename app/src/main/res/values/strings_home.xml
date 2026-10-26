@@ -46,6 +46,8 @@
     <string name="home_page_symbol">›</string>
     <!-- A page's back arrow, as a screen reader says it. -->
     <string name="page_back">Back</string>
+    <!-- The button at the end of a page opened from somewhere (the credits, the first-run screen opened again), which closes it. -->
+    <string name="page_close">Close</string>
     <string name="home_page_open">open page</string>
     <!-- The genres' page, with Show genres off. -->
     <string name="home_genres_hidden">Show genres is off in Settings.</string>

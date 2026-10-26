@@ -4,6 +4,8 @@
 
     <!-- First-run screen: what leaves the phone, and to whom (design, Privacy and security). -->
     <string name="first_run_intro">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Before you start, here is what it reads, and what leaves your phone.</string>
+    <!-- The first-run screen opened again, from Home or the settings: the introduction, without the first run's "Before you start". -->
+    <string name="first_run_intro_again">Sleevesight reads what your music player is playing, looks it up in the sources you switch on, and has the AI service you choose write about it. Here is what it reads, and what leaves your phone.</string>
 
     <string name="first_run_reads_title">What it reads</string>
     <string name="first_run_reads">Sleevesight needs notification access, which is how Android lets an app read what a player is playing. It checks which players report music (a track with a title and an artist), to list them in its settings by name, and keeps or sends nothing of the players you do not follow. From the players you follow (Spotify by default), it reads which player it is; the title, artists, album (with its year, when the player sends one, shown after it), length and cover; whether it is playing, and how far into the track; and the queue of tracks up next, with its name. It ignores the notifications themselves, never reads calls from the phone app or sessions Android marks as voice calls, and never touches the audio.</string>
