@@ -1,7 +1,7 @@
 What's new in 0.1.4:
-- Home: a header with Settings, key insights, genres by track, artist, album.
-- Sources fold under their heading and show only those with lines.
+- Home: a Settings header, key insights, genres by track, artist, album.
+- Sources fold under their heading and show only those that found something.
 - Report a problem with an insight by email; test builds add a report button.
-- Settings fold into sections; Layout opens Sources and genres in place or as pages.
-- Keys: icons in the field, password-manager fill, guided Load keys; Purge lists them.
-- Players: music apps only, by name; calls never read. The artist cache is opt-in.
+- Settings fold into sections, with Theme (light or dark) and Layout (boxes or pages).
+- Keys: field icons, password-manager fill, guided Load keys; Purge keys lists them.
+- Players: music apps only, by name; calls never read. Artist cache is opt-in.
