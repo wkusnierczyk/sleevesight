@@ -1,5 +1,6 @@
 package app.sleevesight.app.ui.home
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,8 +30,10 @@ internal fun NowPlayingPageContent(
 ) {
     val playing = state.playing
     val shown = playing?.let { Showing(state, it) }
+    // The app's background, read outside the art's scheme, so the page's ground is Home's (#609).
+    val ground = MaterialTheme.colorScheme.surface
     ArtTheme(state.art) {
-        PageFrame(pageTitle(page), onBack) {
+        PageFrame(pageTitle(page), onBack, containerColor = ground) {
             if (playing == null || shown == null) {
                 NothingPlaying()
                 return@PageFrame
