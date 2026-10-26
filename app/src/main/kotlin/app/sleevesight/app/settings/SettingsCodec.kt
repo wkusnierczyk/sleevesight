@@ -11,6 +11,7 @@ import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.ReportButton
 import app.sleevesight.core.settings.Settings
+import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -57,6 +58,7 @@ internal object SettingsCodec {
     private val SHOW_GENRES = booleanPreferencesKey("genres.show")
     private val WRITE_INSIGHTS = booleanPreferencesKey("insights.write")
     private val WRITE_AUTOMATICALLY = stringPreferencesKey("insights.write_automatically")
+    private val LAST_AUTOMATIC_MODE = stringPreferencesKey("insights.last_automatic_mode")
     private val PAUSE_AUTO_WRITE = intPreferencesKey("insights.pause_auto_write_after")
     private val CROSSFADE_MS = longPreferencesKey("insights.crossfade_ms")
     private val PREPARE_NEXT = stringPreferencesKey("insights.prepare_next_track")
@@ -87,8 +89,9 @@ internal object SettingsCodec {
     fun read(
         prefs: Preferences,
         defaults: Settings = Settings(),
-    ): Settings =
-        Settings(
+    ): Settings {
+        val writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically
+        return Settings(
             layout = enumOf(prefs[LAYOUT]) ?: defaults.layout,
             aiProvider = AiSettingsCodec.readProvider(prefs),
             aiModels = AiSettingsCodec.readModels(prefs),
@@ -99,7 +102,10 @@ internal object SettingsCodec {
             labelSources = readSwitches(prefs, LABELS_ON, LABELS_OFF, defaults.labelSources),
             showGenres = prefs[SHOW_GENRES] ?: defaults.showGenres,
             writeInsights = prefs[WRITE_INSIGHTS] ?: defaults.writeInsights,
-            writeAutomatically = enumOf(prefs[WRITE_AUTOMATICALLY]) ?: defaults.writeAutomatically,
+            writeAutomatically = writeAutomatically,
+            lastAutomaticMode =
+                enumOf<WriteAutomatically>(prefs[LAST_AUTOMATIC_MODE])?.takeIf { it != WriteAutomatically.NEVER }
+                    ?: lastModeUnstored(writeAutomatically, defaults),
             pauseAutoWriteAfter = pauseOf(prefs[PAUSE_AUTO_WRITE], defaults.pauseAutoWriteAfter),
             crossfade = readCrossfade(prefs),
             prepareNextTrack = enumOf(prefs[PREPARE_NEXT]) ?: defaults.prepareNextTrack,
@@ -128,6 +134,7 @@ internal object SettingsCodec {
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
         )
+    }
 
     /**
      * Stores [settings] in [prefs], rewriting only the settings that differ from what [prefs] reads
@@ -174,6 +181,11 @@ internal object SettingsCodec {
         if (moved { it.writeInsights }) prefs.put(WRITE_INSIGHTS, settings.writeInsights, defaults.writeInsights)
         if (moved { it.writeAutomatically }) {
             prefs.put(WRITE_AUTOMATICALLY, settings.writeAutomatically.name, defaults.writeAutomatically.name)
+        }
+        // Rewritten with *Reactive* too: where none is stored, it reads as *Reactive*'s own mode.
+        if (moved { it.lastAutomaticMode } || moved { it.writeAutomatically }) {
+            val unstored = lastModeUnstored(settings.writeAutomatically, defaults)
+            prefs.put(LAST_AUTOMATIC_MODE, settings.lastAutomaticMode.name, unstored.name)
         }
         if (moved { it.pauseAutoWriteAfter }) {
             prefs.put(
@@ -400,6 +412,15 @@ private fun pauseOf(
         NEVER_PAUSE -> null
         else -> stored?.takeIf { it > 0 } ?: default
     }
+
+/**
+ * The last automatic mode (#553) read where none is stored: *Reactive*'s own, while it writes
+ * automatically ([mode]), as in a file from before the toggle, or the default's.
+ */
+private fun lastModeUnstored(
+    mode: WriteAutomatically,
+    defaults: Settings,
+): WriteAutomatically = mode.takeIf { it != WriteAutomatically.NEVER } ?: defaults.lastAutomaticMode
 
 /** Stores [value], or removes the key when it is the default or null. */
 internal fun <T : Any> MutablePreferences.put(

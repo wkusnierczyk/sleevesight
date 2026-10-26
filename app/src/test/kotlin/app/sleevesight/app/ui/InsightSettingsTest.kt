@@ -34,6 +34,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -42,9 +43,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On skip*;
- * *Proactive*, a switch; *Don't repeat artist facts* (#407, #546), a switch; and the rows
- * about writing fixed while *Show insights* is off.
+ * *Insights* (#444): *Reactive*, one choice, with *Crossfade* under it only while it is *On skip*,
+ * and the mode chosen there what the insight card's toggle restores (#553); *Proactive*, a switch;
+ * *Don't repeat artist facts* (#407, #546), a switch; and the rows about writing fixed while *Show
+ * insights* is off.
  */
 @RunWith(RobolectricTestRunner::class)
 class InsightSettingsTest {
@@ -106,6 +108,25 @@ class InsightSettingsTest {
             waitFor("Crossfade gone") { !shown(R.string.settings_crossfade) }
             // Under *Manual*, nothing is written away, so *Saver* cannot be changed.
             compose.onNodeWithText(text(R.string.settings_pause_auto_write)).performScrollTo().assertIsNotEnabled()
+        }
+
+    @Test
+    fun aModeChosenUnderReactiveIsWhatTheInsightCardsToggleRestores() =
+        show {
+            // The description says the toggle beside each insight turns it on and off too (#553).
+            compose
+                .onNodeWithText(
+                    "Select what triggers writing an insight. Automatic writing can also be turned on and off " +
+                        "with the toggle beside each insight.",
+                ).performScrollTo()
+            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
+            compose.onNode(inDialog(R.string.settings_write_when_skip)).performClick()
+            waitFor("On skip stored") { settings.now().writeAutomatically == WriteAutomatically.WHEN_I_SKIP }
+            compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
+            compose.onNode(inDialog(R.string.settings_write_never)).performClick()
+            waitFor("Manual stored") { settings.now().writeAutomatically == WriteAutomatically.NEVER }
+            assertEquals(WriteAutomatically.WHEN_I_SKIP, settings.now().lastAutomaticMode)
+            assertEquals(WriteAutomatically.WHEN_I_SKIP, settings.now().withAutomaticWriting(true).writeAutomatically)
         }
 
     @Test

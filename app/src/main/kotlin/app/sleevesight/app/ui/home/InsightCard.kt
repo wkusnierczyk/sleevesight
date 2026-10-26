@@ -34,6 +34,8 @@ import app.sleevesight.core.pipeline.InsightState
  * insight and its track to [InsightActions.onReport].
  *
  * No container of its own (#609): the heading and the text sit on Home's background with the rest.
+ * Beside the heading, the toggle for automatic writing (#553, [AutoWriteToggle]), from
+ * [autoWriting]; none while it is null, before the settings' first read.
  */
 @Composable
 internal fun InsightCard(
@@ -41,9 +43,17 @@ internal fun InsightCard(
     context: InsightContext,
     actions: InsightActions,
     groundingDetails: Boolean = false,
+    autoWriting: AutoWriting? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.home_insight_title), style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.home_insight_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            autoWriting?.let { AutoWriteToggle(it) }
+        }
         InsightBody(insight, context, actions, groundingDetails)
     }
 }

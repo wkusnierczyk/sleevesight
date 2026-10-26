@@ -59,6 +59,8 @@ class MainActivity : ComponentActivity() {
             write = graph.pipeline::write,
             stop = graph.pipeline::stop,
             unavailableModel = graph.unavailableModel,
+            // The insight card's toggle (#553), saved in the process's scope.
+            autoWrite = graph.settings.automaticWritingSwitch(graph.settingsSaves),
         )
     }
 

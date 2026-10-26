@@ -92,6 +92,9 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property lapsed whether the Write offered is offered only because automatic writing paused
  *   ([CoordinatorState.lapsed], #203): the app was not on screen for more track changes than
  *   *Saver* names, so the first action expired, and a tap resumes it.
+ * @property paused whether automatic writing is paused by *Saver* ([CoordinatorState.expired],
+ *   #203): the first action expired, and nothing is written without a tap until the user acts
+ *   again. The insight card's toggle (#553) shows it, whether or not Write is offered ([lapsed]).
  */
 data class PipelineView(
     val track: TrackState? = null,
@@ -105,6 +108,7 @@ data class PipelineView(
     val stopCall: CallId? = null,
     val offline: Boolean = false,
     val lapsed: Boolean = false,
+    val paused: Boolean = false,
 )
 
 /**
@@ -143,7 +147,9 @@ class PipelineKeys(
  * one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203).
+ * settings as *Look up in the background* does (#203), and *Reactive* to or from *Manual* as
+ * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
+ * change made while it runs.
  *
  * [online] is whether the phone is online (its default network has validated internet access),
  * collected after the acknowledgement: when it comes back, the playing track's run asks again the
@@ -302,6 +308,13 @@ class PipelineHost(
             launch {
                 latest.map { it.pauseAutoWriteAfter }.distinctUntilChanged().collect {
                     queue.send(CoordinatorEvent.PauseAutoWriteChanged(it))
+                }
+            }
+            launch {
+                // *Reactive* to or from *Manual* (#553, the insight card's toggle), so a run started
+                // before it was turned off does not write without a tap.
+                latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
                 }
             }
             launch {
@@ -639,6 +652,7 @@ class PipelineHost(
                 stopCall = owner.stopCall,
                 offline = !owner.online,
                 lapsed = owner.lapsed,
+                paused = owner.expired,
             )
         }.collect {
             view.value = it

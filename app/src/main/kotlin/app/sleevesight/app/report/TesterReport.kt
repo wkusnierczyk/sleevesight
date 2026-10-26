@@ -388,6 +388,7 @@ internal val SETTING_LINES: List<Pair<String, (Settings) -> String>> =
         "showGenres" to { onOff(it.showGenres) },
         "writeInsights" to { onOff(it.writeInsights) },
         "writeAutomatically" to { it.writeAutomatically.name },
+        "lastAutomaticMode" to { it.lastAutomaticMode.name },
         "pauseAutoWriteAfter" to { s -> s.pauseAutoWriteAfter?.let { "$it track changes" } ?: "off" },
         "crossfade" to { s ->
             when (val crossfade = s.crossfade) {
