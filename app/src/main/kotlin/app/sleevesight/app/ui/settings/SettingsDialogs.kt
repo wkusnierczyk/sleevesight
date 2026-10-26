@@ -3,7 +3,6 @@ package app.sleevesight.app.ui.settings
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -120,6 +119,9 @@ internal fun <T> ChoiceDialog(
  * accessibility services alike: Compose marks it so from its keyboard type, which stays `Password`
  * so that the keyboard neither learns nor suggests the key. On a phone the dialog takes the
  * screen's width, less a margin ([keyDialogWidth]).
+ *
+ * Its buttons are the same for every key ([KeyDialogButtons], #543): *Cancel* at the start, then
+ * *Remove*, while a key is stored, in the error colour with the trash can, and *Save*.
  */
 @Suppress("LongParameterList") // The key, its state, the actions on it, the scan and the keyboard.
 @Composable
@@ -196,22 +198,18 @@ internal fun KeyDialog(
                 scanning = it
             }
         },
+        // All three in the one slot: Material's dialog puts its dismissal next to its confirmation,
+        // and *Cancel* keeps to the start here, away from them (#543).
         confirmButton = {
-            TextButton(
-                onClick = { run { saveFailure(onSave(value)) } },
-                enabled = value.isNotEmpty() && !busy,
-            ) { Text(stringResource(R.string.settings_save)) }
-        },
-        dismissButton = {
-            Row {
-                if (state != SecretState.ABSENT) {
-                    TextButton(
-                        onClick = { run { R.string.settings_key_remove_failed.takeUnless { onRemove() } } },
-                        enabled = !busy,
-                    ) { Text(stringResource(R.string.settings_remove)) }
-                }
-                TextButton(onClick = ::close, enabled = !busy) { Text(stringResource(R.string.settings_cancel)) }
-            }
+            KeyDialogButtons(
+                name = stringResource(keyName(id)),
+                stored = state != SecretState.ABSENT,
+                savable = value.isNotEmpty(),
+                busy = busy,
+                onCancel = ::close,
+                onRemove = { run { R.string.settings_key_remove_failed.takeUnless { onRemove() } } },
+                onSave = { run { saveFailure(onSave(value)) } },
+            )
         },
     )
     // The dialog can also go without closing itself, when the screen does. After the dialog in
@@ -248,9 +246,10 @@ private fun stillShown(
 
 /**
  * The key dialog's body, scrolling where the screen is short: who gets the key [id], an AI
- * service's terms with a link to them (#409), the field showing [typed], masked unless [shown],
- * with its icons ([KeyFieldIcons]), the [keyboard] session when one runs, and what [failed], if
- * anything; the eye is off while [busy], and the scans while [busy] or while a session runs.
+ * service's terms, the agreement in bold (#543), with a link to them (#409), the field showing
+ * [typed], masked unless [shown], with its icons ([KeyFieldIcons]), the [keyboard] session when one
+ * runs, and what [failed], if anything; the eye is off while [busy], and the scans while [busy] or
+ * while a session runs.
  */
 @Suppress("LongParameterList") // What the body shows, and what it hears.
 @Composable
@@ -276,7 +275,7 @@ private fun KeyEntry(
             style = MaterialTheme.typography.bodyMedium,
         )
         serviceTerms(id)?.let { terms ->
-            Text(stringResource(terms.note), style = MaterialTheme.typography.bodyMedium)
+            Text(boldStringResource(terms.note), style = MaterialTheme.typography.bodyMedium)
             WebLink(terms.url)
         }
         OutlinedTextField(

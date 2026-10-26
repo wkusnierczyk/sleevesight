@@ -61,10 +61,10 @@
     <!-- The eye in a key's field, named for what a tap does. -->
     <string name="settings_key_show">Show key</string>
     <string name="settings_key_hide">Hide key</string>
-    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. -->
-    <string name="settings_terms_anthropic">Using this key means agreeing to Anthropic’s Commercial Terms of Service. They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
-    <string name="settings_terms_openai">Using this key means agreeing to the OpenAI Services Agreement. It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
-    <string name="settings_terms_google">Using this key means agreeing to Google’s Gemini API terms. They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
+    <!-- Each AI service's terms (#409), shown in its key dialog with a link to them; privacy.md says the same. The agreement, a commitment, is in bold (#543); the rest is plain. -->
+    <string name="settings_terms_anthropic"><b>Using this key means agreeing to Anthropic’s Commercial Terms of Service.</b> They set no minimum age, and say the API is not for consumer use, though Anthropic welcomes individuals and hobbyists on it.</string>
+    <string name="settings_terms_openai"><b>Using this key means agreeing to the OpenAI Services Agreement.</b> It is for businesses and developers, and does not allow minors to use the API without their parent’s or guardian’s consent.</string>
+    <string name="settings_terms_google"><b>Using this key means agreeing to Google’s Gemini API terms.</b> They require you to be 18 or older, and are for professional or business purposes, not for consumer use.</string>
     <string name="setup_terms">Using an AI service’s key means agreeing to that service’s terms: its key dialog says what they require.</string>
     <string name="settings_key_save_failed">The key could not be saved: the phone’s key store failed. Try again; if it keeps failing, use “Purge keys” in Secrets.</string>
     <string name="settings_key_write_failed">The key could not be saved: the phone’s storage failed. Try again.</string>
