@@ -296,9 +296,20 @@ class LastFmAdapter(
 
         /**
          * [extractionVersion]. 2: a page other MusicBrainz artists of its name may share has only its
-         * bio verified (#75).
+         * bio verified (#75). 3: without genres, no line of the artist's tags (#545); 1002, the
+         * version without genres before it, holds that line and must not be served.
          */
-        const val EXTRACTION_VERSION: Int = 2
+        const val EXTRACTION_VERSION: Int = 3
+
+        /**
+         * The extraction version of what the artist cache keeps ([ARTIST_PART],
+         * [ArtistCheck.OWNERSHIP_PART]): Last.fm's answers and the search's verdicts, from which
+         * each track's lines are made afresh. It was [EXTRACTION_VERSION] until #545, which changed
+         * the lines but not the answers, so it stays at 2: raising it would ask Last.fm, and
+         * MusicBrainz's rate-limited search, again for every artist kept. Raised when what the
+         * parts keep changes, the bio's sentences among it.
+         */
+        const val ANSWERS_VERSION: Int = 2
 
         /**
          * What Last.fm answers for a credited artist's name (`artist.getInfo` and
@@ -306,7 +317,7 @@ class LastFmAdapter(
          * ([LastFmArtist], its bio as the sentences that may be quoted) with its top tags, or the
          * finding that Last.fm does not know the name. Judged afresh for each track.
          */
-        val ARTIST_PART: ArtistPart = ArtistPart("lastfm.artist", EXTRACTION_VERSION, 1, setOf(SourceId.LASTFM))
+        val ARTIST_PART: ArtistPart = ArtistPart("lastfm.artist", ANSWERS_VERSION, 1, setOf(SourceId.LASTFM))
 
         /**
          * Top tags weighted below this (of 100 for the artist's top tag) are a few listeners' and

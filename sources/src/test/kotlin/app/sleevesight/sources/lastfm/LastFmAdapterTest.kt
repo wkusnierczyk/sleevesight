@@ -19,6 +19,7 @@ import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.sources.Rejection
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.fixtures.BelowSoundtrack
 import app.sleevesight.fixtures.Fixtures
 import app.sleevesight.fixtures.RegressionCase
@@ -672,8 +673,10 @@ class LastFmAdapterTest {
 
     @Test
     fun `the adapter's version and the sources it consults`() {
-        // Raised when the verification became structural (#75): results cached under 1 are missed.
-        assertEquals(2, adapter().extractionVersion)
+        // Raised when the verification became structural (#75): results cached under 1 are missed;
+        // and when the lines without genres lost the tags (#545): those cached under 2 + 1000 are.
+        assertEquals(3, adapter().extractionVersion)
+        assertEquals(3 + WITHOUT_GENRES_VERSION, adapter(genres = false).extractionVersion)
         assertEquals(setOf(SourceId.LASTFM, SourceId.MUSICBRAINZ), adapter().consults)
     }
 
