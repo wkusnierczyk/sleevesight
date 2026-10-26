@@ -68,9 +68,8 @@ import kotlin.time.Duration.Companion.seconds
  * player's session is read, nothing of its metadata is kept, and a player seen has nothing more read.
  *
  * **The player shown** is the first followed session that is playing (or buffering, or seeking),
- * else the first whose position moves (a speed other than 0, [SessionMapping.playingRank]), else
- * the first followed session: the system lists the most recently active first. When none plays and
- * the first is of the player already shown, that player's session already shown stays (#595): a
+ * else the first followed session: the system lists the most recently active first. When none plays
+ * and the first is of the player already shown, that player's session already shown stays (#595): a
  * pause on another device does not hand the row to the player's other, idle session. Every report
  * of every followed session publishes again, so a session of the same player that starts playing
  * is shown at once.
@@ -458,21 +457,20 @@ class SessionRepository(
     }
 
     /**
-     * The session shown of [eligible], in the system's order: the first that plays, else the first
-     * whose position moves ([SessionMapping.playingRank]); with neither, the first, unless the
-     * session already shown is of the same player (#595), which then stays.
+     * The session shown of [eligible], in the system's order: the first that plays
+     * ([SessionMapping.isActive]). With none playing, the player is the first listed's, as before
+     * #595, and of that player's sessions the one already shown stays, so a pause on another device
+     * does not hand the row to the player's idle session; else the first listed. The speed of a
+     * paused session plays no part: many players report `PAUSED` at speed 1.
      */
     private fun choose(eligible: List<Attached>): Attached? {
-        // The first of the highest rank: `maxByOrNull` keeps the first of equals.
-        val best = eligible.maxByOrNull { SessionMapping.playingRank(it.state) }
+        eligible.firstOrNull { SessionMapping.isActive(it.state) }?.let { return it }
+        val first = eligible.firstOrNull()
         val stays =
             lastShown?.takeIf { shown ->
-                best != null &&
-                    SessionMapping.playingRank(best.state) == 0 &&
-                    shown.gate.player == best.gate.player &&
-                    eligible.any { it === shown }
+                first != null && shown.gate.player == first.gate.player && eligible.any { it === shown }
             }
-        return stays ?: best
+        return stays ?: first
     }
 
     /** Publishes [trackChanges]: [track], published after [previous], with the cause it carries. */

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.session.PlaybackState
 import androidx.test.core.app.ApplicationProvider
 import app.sleevesight.app.session.Sessions.SPOTIFY
+import app.sleevesight.app.session.Sessions.YOUTUBE_MUSIC
 import app.sleevesight.app.session.Sessions.metadata
 import app.sleevesight.app.session.Sessions.state
 import org.junit.Assert.assertEquals
@@ -94,18 +95,82 @@ internal class SessionsOfOnePlayerTest : SessionRepositoryFixture() {
         assertEquals(PlaybackStatus.PLAYING, repository.playback.value.status)
     }
 
+    // Many players report `PAUSED` at speed 1: the speed of a paused session plays no part.
     @Test
-    fun aPausedSessionWhosePositionMovesIsShownOverAnIdleOne() {
-        val moving =
+    fun anIdleSessionPausedAtSpeedOneNeverDisplacesTheShownOne() {
+        val phone =
             FakeSession(
                 SPOTIFY,
-                metadata = metadata(title = "Carefree Highway"),
-                playbackState = state(PlaybackState.STATE_PAUSED, positionMs = 24_000, speed = 1f, updatedAt = 1_000),
+                metadata = metadata(title = "Sundown"),
+                playbackState = state(PlaybackState.STATE_PAUSED, positionMs = 0, speed = 1f),
             )
-        system.active = listOf(local(), moving)
+        val car = remote(playing = true)
+        system.active = listOf(phone, car)
+        repository.start()
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+
+        car.settled(state(PlaybackState.STATE_PAUSED, positionMs = 41_000, speed = 0f, updatedAt = 13_000))
+        assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
+        assertEquals(PlaybackInfo(SPOTIFY, PlaybackStatus.PAUSED, 41.seconds, 13_000, 0f), repository.playback.value)
+    }
+
+    // The idle session's reports (another track, another state) change nothing shown, nor the last change.
+    @Test
+    fun whatTheIdleSessionReportsChangesNothingShown() {
+        val phone = local()
+        val car = remote(playing = true)
+        system.active = listOf(phone, car)
+        repository.start()
+        val shown = repository.nowPlaying.value
+        val playback = repository.playback.value
+        val change = repository.lastChange.value
+
+        phone.settled(metadata(title = "If You Could Read My Mind"))
+        phone.settled(state(PlaybackState.STATE_PAUSED, positionMs = 5_000, speed = 1f, updatedAt = 3_000))
+        assertEquals(shown, repository.nowPlaying.value)
+        assertEquals(playback, repository.playback.value)
+        assertSame(change, repository.lastChange.value)
+
+        // Nor once the shown session has paused.
+        car.settled(state(PlaybackState.STATE_PAUSED, positionMs = 41_000, speed = 0f, updatedAt = 13_000))
+        val pausedChange = repository.lastChange.value
+        phone.settled(metadata(title = "Early Morning Rain"))
+        assertEquals(shown, repository.nowPlaying.value)
+        assertSame(pausedChange, repository.lastChange.value)
+    }
+
+    @Test
+    fun acrossPlayersPausedSpeedsDoNotChangeWhichPlayerIsShown() {
+        followed.value = setOf(SPOTIFY, YOUTUBE_MUSIC)
+        val youtube =
+            FakeSession(
+                YOUTUBE_MUSIC,
+                metadata = metadata(title = "Other"),
+                playbackState = state(PlaybackState.STATE_PAUSED, speed = 0f),
+            )
+        val spotify =
+            FakeSession(SPOTIFY, playbackState = state(PlaybackState.STATE_PAUSED, positionMs = 24_000, speed = 1f))
+        system.active = listOf(youtube, spotify)
 
         repository.start()
 
+        // Neither plays: the one the system ranks first, whatever the other's speed.
+        assertEquals(YOUTUBE_MUSIC, repository.nowPlaying.value?.player)
+    }
+
+    @Test
+    fun aSessionLeavingTheListLosesItsCallbackWhileItsSiblingKeepsItsOwn() {
+        val phone = local()
+        val car = remote(playing = true)
+        system.active = listOf(phone, car)
+        repository.start()
+        assertEquals(1, phone.callbacks.size)
+        assertEquals(1, car.callbacks.size)
+
+        system.change(listOf(car))
+
+        assertEquals(0, phone.callbacks.size)
+        assertEquals(1, car.callbacks.size)
         assertEquals("Carefree Highway", repository.nowPlaying.value?.title)
     }
 }

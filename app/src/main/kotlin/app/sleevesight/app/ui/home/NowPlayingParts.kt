@@ -210,7 +210,7 @@ private fun Progress(
             now = SystemClock.elapsedRealtime()
         }
     }
-    val position = (playback.positionAt(now) ?: Duration.ZERO).coerceIn(Duration.ZERO, duration)
+    val position = (playback.displayPositionAt(now) ?: Duration.ZERO).coerceIn(Duration.ZERO, duration)
     val description = stringResource(R.string.home_progress)
     Column(modifier = modifier.semantics { contentDescription = description }) {
         LinearProgressIndicator(
