@@ -66,7 +66,7 @@ These were established while designing, and checked in Phase 0 with the platform
 
 ### Opening the player
 
-- `MediaController.getSessionActivity()` returns a `PendingIntent` to the player's own screen **for Castbox, which opened it (observed by the tester), and for YouTube Music (not tried); Spotify publishes none.** So for Spotify the app opens the player through a `spotify:` URI or its launch intent instead.
+- `MediaController.getSessionActivity()` returns a `PendingIntent` to the player's own screen **for Castbox, which opened it (observed by the tester), and for YouTube Music (not tried); Spotify publishes none.** So for Spotify the app opens the player through a `spotify:` URI or its launch intent instead. The home screen's player row falls back to the launch intent (`AppGraph.playerLaunchIntent`) whenever the session gives no usable screen, none or a cancelled one (#596), and says it has nothing to open only when there is neither.
 - Opening a specific track, album or artist in Spotify needs a Spotify ID: `Intent.ACTION_VIEW` with `spotify:track:<id>`, `spotify:album:<id>` or `spotify:artist:<id>`. **Measured:** `spotify:track:` with the id from `MEDIA_ID` opens the track.
 - When no ID is known, fall back to `spotify:search:<query>`, which always opens (**measured**). Log the fallback.
 
