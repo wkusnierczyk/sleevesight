@@ -1,5 +1,6 @@
 package app.sleevesight.core.resolution
 
+import app.sleevesight.core.normalizer.Edition
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.sources.ReleaseDate
 import kotlinx.coroutines.test.runTest
@@ -134,9 +135,33 @@ class ReleaseDatesTest {
         assertNull(year("Sundown (Live) [Remastered]", dates))
         assertNull(year("Sundown (Demo Version)", dates))
         assertNull(year("Interstellar (Original Motion Picture Soundtrack)", dates))
+        assertNull(year("Sundown (25th Anniversary Concert)", dates))
         // Not named: the player's year, if it sends one.
         assertEquals("1981", year("Sundown (Live)", dates, playerYear = "1981"))
         assertEquals("1974", year("Sundown [Deluxe Edition]", dates))
+    }
+
+    @Test
+    fun `an edition is told by whole words`() {
+        val parts =
+            mapOf(
+                "(Specialist)" to false,
+                "(Livestock Deluxe)" to true,
+                "(Mixtape)" to false,
+                "(Editions)" to true,
+                "(Édition Deluxe)" to true,
+                "(Edición Especial)" to false,
+                "(Remixed & Remastered)" to false,
+                "(Live 2011 Remaster)" to false,
+                "(25th Anniversary Concert)" to false,
+                "(Remastered 2019)" to true,
+                "(2011)" to true,
+                "(Karaoke Version)" to false,
+                "[Bonus Track Version]" to true,
+            )
+        for ((part, edition) in parts) assertEquals(edition, Edition.isEdition(part), part)
+        assertEquals("1974", year("Sundown (Livestock Deluxe)", listOf(ReleaseDate("Sundown", "1974", "g"))))
+        assertNull(year("Sundown (Specialist)", listOf(ReleaseDate("Sundown", "1974", "g"))))
     }
 
     @Test

@@ -155,7 +155,8 @@ data class ReleaseDate(
          *    undated one gives none.
          * 2. [playerYear], when it is one of those years: the player knows which edition it plays.
          * 3. The one year, when they have one.
-         * 4. [playerYear], when no release is named; else null.
+         * 4. [playerYear], when the named releases give no year (none named, or only undated ones);
+         *    else null.
          * 5. Null when they have several years and [playerYear] is none of them: two releases of one
          *    name in different years, and nothing to tell which is playing.
          */

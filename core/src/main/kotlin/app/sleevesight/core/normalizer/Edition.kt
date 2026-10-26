@@ -25,8 +25,10 @@ object Edition {
     fun stripEditions(release: String): String = strip(release, ::isEdition)
 
     /**
-     * Whether a bracketed [part] ("(Remastered 2019)") names an edition: a word of [EDITION_WORDS],
-     * or a year alone ("(2011)"), and no word of [OTHER_RECORDINGS] ("(Live 2011 Remaster)" is not).
+     * Whether a bracketed [part] ("(Remastered 2019)") names an edition: one of [EDITION_WORDS] as a
+     * whole word, or a year alone ("(2011)"), and none of [OTHER_RECORDINGS] ("(Live 2011 Remaster)"
+     * is not). Whole words, case and accents aside only as far as lowercasing goes: "(Specialist)" is
+     * not "special", "(Livestock Deluxe)" is a deluxe edition.
      */
     fun isEdition(part: String): Boolean {
         val words =
@@ -36,8 +38,8 @@ object Edition {
                 .joinToString("")
                 .split(' ')
                 .filter { it.isNotEmpty() }
-        if (words.any { word -> OTHER_RECORDINGS.any { word.startsWith(it) } }) return false
-        return words.any { word -> EDITION_WORDS.any { word.startsWith(it) } } ||
+        if (words.any { it in OTHER_RECORDINGS }) return false
+        return words.any { it in EDITION_WORDS } ||
             (words.size == 1 && YEAR.matches(words.single()))
     }
 
@@ -77,13 +79,53 @@ object Edition {
     private val OPENERS = setOf('(', '[')
     private val CLOSERS = setOf(')', ']')
 
-    /** The beginnings of the words that name an edition: remaster(ed), deluxe, expanded, … */
+    /** The words that name an edition, with their inflections. */
     private val EDITION_WORDS =
-        listOf("remaster", "deluxe", "expanded", "anniversary", "edition", "bonus", "special", "reissue")
+        setOf(
+            "remaster",
+            "remastered",
+            "remasters",
+            "deluxe",
+            "expanded",
+            "anniversary",
+            "edition",
+            "editions",
+            "bonus",
+            "special",
+            "reissue",
+            "reissued",
+        )
 
-    /** The beginnings of the words that name another recording or another kind of release. */
+    /** The words that name another recording or another kind of release, with their inflections. */
     private val OTHER_RECORDINGS =
-        listOf("live", "demo", "soundtrack", "acoustic", "instrumental", "mix", "remix", "session", "unplugged")
+        setOf(
+            "live",
+            "demo",
+            "demos",
+            "soundtrack",
+            "acoustic",
+            "instrumental",
+            "instrumentals",
+            "mix",
+            "mixes",
+            "mixed",
+            "remix",
+            "remixes",
+            "remixed",
+            "session",
+            "sessions",
+            "unplugged",
+            "concert",
+            "karaoke",
+            "orchestral",
+            "orchestra",
+            "symphonic",
+            "symphony",
+            "cover",
+            "covers",
+            "rehearsal",
+            "bootleg",
+        )
 
     private val YEAR = Regex("(1[89]|20)[0-9]{2}")
 }
