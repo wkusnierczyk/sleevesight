@@ -21,10 +21,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.ui.theme.plainSwitchColors
 
 private const val DISABLED_ALPHA = 0.38f
+
+/** How far a row nested under another starts in. */
+private val NESTED = 16.dp
+
+/** The gap between what starts a row ([ROW_MARK]) and its title. */
+private val LEADING_GAP = 16.dp
+
+/**
+ * Where a row under a badged row starts (#537): at the badged row's name, past its badge and the
+ * gap after it, as the model and effort rows under an AI service do.
+ */
+internal val UNDER_BADGE = ROW_MARK + LEADING_GAP
 
 @Composable
 internal fun Hint(
@@ -65,13 +78,13 @@ internal fun SwitchRow(
                     enabled = enabled,
                     role = Role.Switch,
                     onValueChange = { onChange?.invoke(it) },
-                ).padding(start = if (indent) 16.dp else 0.dp, top = 8.dp, bottom = 8.dp),
+                ).padding(start = if (indent) NESTED else 0.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         leading?.let {
             // Dimmed with the row's text when the switch cannot be moved.
             Box(Modifier.alpha(alpha)) { it() }
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(LEADING_GAP))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = titleColor)
@@ -83,13 +96,19 @@ internal fun SwitchRow(
     }
 }
 
-/** A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled. */
+/**
+ * A setting with a value, which [onClick] opens a dialog to change; null [onClick] is disabled.
+ * [indent] nests it under the row above; [underBadge] starts it at the name of the badged row above
+ * ([UNDER_BADGE]) instead.
+ */
+@Suppress("LongParameterList") // Each sets one aspect of the row; all but the title, value and action have defaults.
 @Composable
 internal fun ValueRow(
     title: String,
     value: String,
     summary: String? = null,
     indent: Boolean = false,
+    underBadge: Boolean = false,
     onClick: (() -> Unit)?,
 ) {
     val alpha = if (onClick != null) 1f else DISABLED_ALPHA
@@ -99,7 +118,7 @@ internal fun ValueRow(
             Modifier
                 .fillMaxWidth()
                 .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
-                .padding(start = if (indent) 16.dp else 0.dp, top = 8.dp, bottom = 8.dp),
+                .padding(start = valueRowStart(indent, underBadge), top = 8.dp, bottom = 8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
         Text(
@@ -140,3 +159,14 @@ internal fun RadioRow(
         }
     }
 }
+
+/** Where a [ValueRow] starts: at the badged row's name [underBadge], else nested by [indent]. */
+private fun valueRowStart(
+    indent: Boolean,
+    underBadge: Boolean,
+): Dp =
+    when {
+        underBadge -> UNDER_BADGE
+        indent -> NESTED
+        else -> 0.dp
+    }

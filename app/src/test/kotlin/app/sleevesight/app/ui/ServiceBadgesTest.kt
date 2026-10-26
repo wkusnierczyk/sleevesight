@@ -1,6 +1,7 @@
 package app.sleevesight.app.ui
 
 import androidx.activity.compose.setContent
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -8,6 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -76,6 +78,31 @@ class ServiceBadgesTest {
         }
     }
 
+    private val density get() = app.resources.displayMetrics.density
+
+    /** Where the text [text] starts, in dp from the screen's left. */
+    private fun start(text: String): Float =
+        compose
+            .onNodeWithText(text, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot.left / density
+
+    /** The bounds, in pixels, of the one badge [letter] in the switch row named by [name]. */
+    private fun badgeIn(
+        name: Int,
+        letter: String,
+    ): Rect {
+        val title = app.getString(name)
+        val rowBounds = compose.onNode(isToggleable() and hasText(title)).fetchSemanticsNode().boundsInRoot
+        val badges =
+            compose
+                .onAllNodesWithTag(BADGE_PREFIX + letter, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .filter { rowBounds.contains(it.boundsInRoot.center) }
+        assertEquals("one $letter badge in the row $title", 1, badges.size)
+        return badges.single().boundsInRoot
+    }
+
     /**
      * The row named by [name] starts with the badge [letter], 40 dp a side as a player's icon, before
      * the name; and the row reads as before: its name first, no badge letter, no description.
@@ -87,14 +114,7 @@ class ServiceBadgesTest {
         val title = app.getString(name)
         val row = compose.onNode(isToggleable() and hasText(title)).performScrollTo()
         val rowBounds = row.fetchSemanticsNode().boundsInRoot
-        val badges =
-            compose
-                .onAllNodesWithTag(BADGE_PREFIX + letter, useUnmergedTree = true)
-                .fetchSemanticsNodes()
-                .filter { rowBounds.contains(it.boundsInRoot.center) }
-        assertEquals("one $letter badge in the row $title", 1, badges.size)
-        val badge = badges.single().boundsInRoot
-        val density = app.resources.displayMetrics.density
+        val badge = badgeIn(name, letter)
         assertEquals("$title's badge is 40 dp wide", ROW_MARK_DP, badge.width / density, 0.5f)
         assertEquals("$title's badge is 40 dp high", ROW_MARK_DP, badge.height / density, 0.5f)
         assertTrue("$title's badge starts its row", badge.left - rowBounds.left < 17 * density)
@@ -121,6 +141,9 @@ class ServiceBadgesTest {
             assertBadge(R.string.settings_source_musicbrainz, "MB")
             // Last.fm's switch waits for its key and cannot be moved; its badge is there all the same.
             assertBadge(R.string.settings_source_lastfm, "L")
+            // Nested under *Show genres*, which has no badge, as before: 16 dp in.
+            val musicBrainz = badgeIn(R.string.settings_source_musicbrainz, "MB").left / density
+            assertEquals(16f, musicBrainz - start(app.getString(R.string.settings_show_genres)), 0.5f)
         }
 
     @Test
@@ -129,6 +152,19 @@ class ServiceBadgesTest {
             assertBadge(R.string.settings_ai_provider_anthropic, "A")
             assertBadge(R.string.settings_ai_provider_openai, "O")
             assertBadge(R.string.settings_ai_provider_google, "G")
+        }
+
+    @Test
+    fun anAiServicesModelAndEffortStartAtItsName() =
+        show(SettingsSection.AI_SERVICES) {
+            for (provider in listOf(R.string.settings_ai_provider_anthropic, R.string.settings_ai_provider_google)) {
+                val name = app.getString(provider)
+                val effort = app.getString(R.string.settings_ai_effort_of, name)
+                compose.onNode(hasText(effort)).performScrollTo()
+                val at = start(name)
+                assertEquals("$name's model row", at, start(app.getString(R.string.settings_ai_model_of, name)), 0.5f)
+                assertEquals("$name's effort row", at, start(effort), 0.5f)
+            }
         }
 
     private companion object {

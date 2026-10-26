@@ -90,7 +90,7 @@ private fun ProviderRows(
                 else -> ""
             },
         summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
-        indent = true,
+        underBadge = true,
         onClick = { open(SettingsDialog.Model(provider)) },
     )
     EffortRow(provider, name, settings, update, open)
@@ -114,7 +114,7 @@ private fun EffortRow(
         title = stringResource(R.string.settings_ai_effort_of, name),
         value = efforts.first { it.first == current }.second,
         summary = stringResource(R.string.settings_ai_effort_summary),
-        indent = true,
+        underBadge = true,
     ) {
         open(
             SettingsDialog.Choice(R.string.settings_ai_effort_of, efforts, current, titleArg = name) { effort ->
