@@ -132,6 +132,14 @@ class SessionRepository(
     val lastChange: StateFlow<SessionChange?> = changeState.asStateFlow()
 
     /**
+     * Forgets [lastChange], which names the track before the one playing, for *Clear history*
+     * (#547). On the main thread, as every change of the layer's state.
+     */
+    fun forgetLastChange() {
+        changeState.value = null
+    }
+
+    /**
      * [nowPlaying] with why its track came to play, for the pipeline (D5): the cause of the change
      * judged into it ([classify]; [SessionChange.cause]), kept only across the reports published
      * after it that each play on the one before ([TrackIdentity.playsOn]: a new length, album or

@@ -62,7 +62,7 @@ import java.io.IOException
  * list until a later change is saved.
  *
  * [aiProviders] list a service's models for the model choice; a service missing from it offers
- * its default model only. [clearHistory] clears the session history and the track changes, once
+ * its default model only. [clearHistory] clears everything kept about the tracks played (#547), once
  * the user confirms, outside the screen's lifetime; the screen only waits for the result, and says
  * above the list that the history was cleared, or could not be. The saves (a setting, a key, a
  * removal of keys) run in [saves], which outlives the screen, as the clear does, so leaving the

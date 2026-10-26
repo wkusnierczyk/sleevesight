@@ -6,6 +6,7 @@ import app.sleevesight.core.model.NowPlaying
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.Gathered
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.pipeline.Pipeline
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -146,6 +148,10 @@ class PipelineKeys(
  * [online] is whether the phone is online (its default network has validated internet access),
  * collected after the acknowledgement: when it comes back, the playing track's run asks again the
  * sources it found unreachable (#192), as the coordinator decides.
+ *
+ * Each run and preparation starts marked with [epoch]'s generation, so what it finds is kept only
+ * if *Clear history* has not come since (#547). [forget] is that clear's part here: the track's
+ * state, the insight shown and the coordinator's ledger go, at once.
  */
 @Suppress("LongParameterList", "TooManyFunctions") // The inputs of one loop, each a seam for the tests.
 class PipelineHost(
@@ -161,8 +167,17 @@ class PipelineHost(
     private val onAction: () -> Unit = {},
     private val next: Flow<NowPlaying?> = emptyFlow(),
     private val online: Flow<Boolean> = emptyFlow(),
+    private val epoch: ClearEpoch = ClearEpoch(),
 ) {
     private val queue = Channel<CoordinatorEvent>(Channel.UNLIMITED)
+
+    // The callers of [forget] waiting for the loop to take their clear, in order.
+    private val forgetting = ConcurrentLinkedQueue<CompletableDeferred<Unit>>()
+
+    // The clears the view was last published for, and the track state shown before the last of
+    // them, which is never shown again (#547).
+    private var viewClears = 0L
+    private var forgotten: TrackState? = null
 
     // One per process, never recreated or persisted: its `acted` starting false is what makes a
     // cold start wait for the first action (D5, #190); only its expiry clears it after (#203).
@@ -253,6 +268,19 @@ class PipelineHost(
         queue.trySend(CoordinatorEvent.StopTapped(call))
     }
 
+    /**
+     * *Clear history*'s part here (#547): the run and the preparation cancelled, the live
+     * pipeline's state and the insight shown gone, the coordinator's ledger emptied, and the track
+     * playing not looked up again until another one plays (no paid call on its own). Returns once
+     * the loop has taken it. The host must have been started ([start]).
+     */
+    suspend fun forget() {
+        val done = CompletableDeferred<Unit>()
+        forgetting.add(done)
+        queue.send(CoordinatorEvent.Cleared)
+        done.await()
+    }
+
     /** Runs until [scope] is cancelled; called once. */
     fun start(scope: CoroutineScope) {
         scope.launch { run() }
@@ -306,9 +334,17 @@ class PipelineHost(
         for (event in queue) {
             // A preparation that ended needs its handle no more: no effect names it again.
             if (event is CoordinatorEvent.PreparationEnded) preparations.remove(event.prep)
+            // The pipelines forget their state before the coordinator's clear is published, so the
+            // view never pairs that clear with a state from before it.
+            if (event == CoordinatorEvent.Cleared) {
+                live.value?.pipeline?.forget()
+                built.values.forEach { (pipeline, _) -> pipeline.forget() }
+                failed.value = null
+            }
             val effects = coordinator.on(event)
             snapshot.value = coordinator.state
             effects.forEach { perform(it, scope) }
+            if (event == CoordinatorEvent.Cleared) forgetting.poll()?.complete(Unit)
         }
     }
 
@@ -390,7 +426,7 @@ class PipelineHost(
         runs[effect.run] = handle
         failed.value = null
         handle.job =
-            current.scope.launch {
+            current.scope.launch(epoch.mark()) {
                 try {
                     current.pipeline.run(effect.nowPlaying, handle, effect.again)
                 } catch (e: CancellationException) {
@@ -414,7 +450,7 @@ class PipelineHost(
         val handle = PreparationHandle(effect.prep)
         preparations[effect.prep] = handle
         handle.job =
-            current.scope.launch {
+            current.scope.launch(epoch.mark()) {
                 try {
                     current.pipeline.prepare(effect.next, handle)
                 } catch (e: CancellationException) {
@@ -569,14 +605,23 @@ class PipelineHost(
     private suspend fun publish(latest: StateFlow<Settings>) {
         val tracks = live.flatMapLatest { it?.pipeline?.state ?: flowOf(null) }
         combine(tracks, live, snapshot, latest, failed) { track, current, owner, now, failedKey ->
+            // A clear since the view was published (#547): nothing shown before it is shown again,
+            // not the track shown, nor a state the pipeline published before it that this has not
+            // yet seen replaced.
+            val fresh = owner.clears == viewClears
+            if (!fresh) {
+                viewClears = owner.clears
+                forgotten = track
+            }
+            val own = track?.takeUnless { it === forgotten }
             // Until the live pipeline publishes, the track shown before, with what it said of a
             // rewrite that failed and of the card paid for: the track shown before already carries
             // that card's insight and evidence (the lookup finds no room for it again, and nothing
             // here replaces a written insight), so whether it is the card goes with it, and the
             // note and the card stay in step.
-            val before = view.value
+            val before = if (fresh) view.value else PipelineView()
             val shown =
-                track?.let { shownTrack(it, owner, failedKey) }
+                own?.let { shownTrack(it, owner, failedKey) }
                     ?: before.track
                         ?.let { shownTrack(it, owner, failedKey) }
                         ?.let { Shown(it.track, before.rewriteFailed, before.cardShown) }

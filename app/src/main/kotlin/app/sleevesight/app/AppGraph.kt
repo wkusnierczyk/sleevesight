@@ -53,9 +53,11 @@ import app.sleevesight.app.settings.SettingsStore
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.normalizer.Normalizer
+import app.sleevesight.core.pipeline.ClearEpoch
 import app.sleevesight.core.pipeline.ListeningSessionFacts
 import app.sleevesight.core.platform.JvmAccentFolder
 import app.sleevesight.core.platform.JvmResourceReader
+import app.sleevesight.core.resolution.MusicBrainzLookup
 import app.sleevesight.core.settings.Crossfade
 import app.sleevesight.core.settings.FontChoice
 import app.sleevesight.core.settings.LinkStyle
@@ -98,6 +100,8 @@ class AppGraph(
     context: Context,
     settingsData: DataStore<Preferences> =
         preferences(context.applicationContext, SETTINGS_FILE, listOf(PrunePlayersMigration)),
+    secretCipher: SecretCipher = SecretCipher(AndroidKeystoreKey()),
+    musicBrainzThrough: (MusicBrainzLookup) -> MusicBrainzLookup = { it },
 ) {
     private val appContext = context.applicationContext
 
@@ -122,7 +126,7 @@ class AppGraph(
     val settings = SettingsStore(settingsData, SettingsStore.BUILD_DEFAULTS)
 
     /** The user's keys, sealed with the app's Android Keystore key, in a file of their own. */
-    val secrets = SecretStore(preferences(appContext, SECRETS_FILE), SecretCipher(AndroidKeystoreKey()))
+    val secrets = SecretStore(preferences(appContext, SECRETS_FILE), secretCipher)
 
     /**
      * Where the settings screen saves a setting or a key, or removes keys: the process's scope, so
@@ -219,13 +223,20 @@ class AppGraph(
         ArtistKeeping.over({ caches }, Dispatchers.IO) { latestSettings.value?.keepArtistResults == true }
 
     /**
+     * *Clear history*'s boundary (#547): each run and preparation is marked with it as it starts,
+     * and what it finds is kept (in the caches, MusicBrainz's answers in memory, the session's
+     * facts) only if no clear came since ([forgetTracks]).
+     */
+    private val clearEpoch = ClearEpoch()
+
+    /**
      * What the sources give for an artist, in the caches' artist-level table (#238), only while
      * [artistKeeping] is on. It opens the database only at its first query, a lookup's, after the
      * first-run acknowledgement. What was kept, there and in the retrieval cache, is deleted whenever
      * the switch reads off (`init`), at start too, so an install upgraded from a version that kept it
      * unasked keeps nothing.
      */
-    private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping)
+    private val artistResults = StoreArtistResults({ caches }, Dispatchers.IO, artistKeeping, clearEpoch)
 
     /**
      * The pipeline's network side, on the process's one `NetClient`, which `:wiring` creates and
@@ -233,7 +244,7 @@ class AppGraph(
      * its own; the pipeline, the art fetch and the settings screen's model list send through it.
      * What the sources give for an artist goes in the caches' artist-level table ([artistResults]).
      */
-    private val wiring =
+    internal val wiring =
         appPipelineWiring(
             BuildConfig.VERSION_NAME,
             JvmAccentFolder,
@@ -241,6 +252,8 @@ class AppGraph(
             artistResults,
             // *Show genres* (#444) as last read: on until the first read, which comes before any lookup.
             genres = { latestSettings.value?.showGenres != false },
+            epoch = clearEpoch,
+            musicBrainzThrough = musicBrainzThrough,
         )
 
     /**
@@ -312,7 +325,7 @@ class AppGraph(
      * evicted or rebuilt at the cost of the lookups and paid calls again; so one a newer version
      * left is rebuilt rather than failing ([RebuiltOnDowngrade]).
      */
-    private val caches by lazy {
+    internal val caches by lazy {
         Caches(
             AndroidSqliteDriver(
                 CacheDatabase.Schema,
@@ -382,9 +395,17 @@ class AppGraph(
             Dispatchers.IO,
         )
 
-    /** *Keep history for* and *Clear history*, through the recorder, in the process's scope. */
+    /**
+     * *Keep history for* and *Clear history*, through the recorder, in the process's scope. *Clear
+     * history* also deletes everything else kept about the tracks played ([forgetTracks]).
+     */
     val historyRetention =
-        HistoryRetention(historyRecorder, latestSettings.filterNotNull().map { it.historyLifetime }, mainScope)
+        HistoryRetention(
+            historyRecorder,
+            latestSettings.filterNotNull().map { it.historyLifetime },
+            mainScope,
+            forget = ::forgetTracks,
+        )
 
     /**
      * The artist facts the listening session's insights cited, which the next tracks' prompts leave
@@ -392,7 +413,8 @@ class AppGraph(
      * track starts, usually before its insight is asked for; a track whose insight comes first counts
      * in the session before it.
      */
-    private val sessionFacts = ListeningSessionFacts { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
+    internal val sessionFacts =
+        ListeningSessionFacts(clearEpoch) { withContext(Dispatchers.IO) { history.latestSessionNumber() } }
 
     /**
      * The pipeline, fed from the session layer: lookups and insights while the app is visible, or
@@ -420,7 +442,7 @@ class AppGraph(
                     normalizer,
                     sessionFacts,
                     modelCheck,
-                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping) },
+                ) { StorePipelineCache(caches, Dispatchers.IO, artistKeeping, clearEpoch) },
             normalizer = normalizer,
             // The type only: a message could quote a response or a request.
             onFailure = { Log.e(TAG, "The pipeline stopped: ${it::class.simpleName}") },
@@ -429,6 +451,7 @@ class AppGraph(
             next = combine(sessions.nowPlaying, sessions.queue, NextInQueue::of),
             // Back online, the playing track's unreachable sources are asked again (#192).
             online = appContext.getSystemService(ConnectivityManager::class.java).online(),
+            epoch = clearEpoch,
         )
 
     /**
@@ -489,6 +512,32 @@ class AppGraph(
                 Log.w(TAG, "The cache could not be purged: ${e::class.simpleName}")
             }
         }
+    }
+
+    /**
+     * The rest of *Clear history* (#547), after the history. First the boundary ([clearEpoch]):
+     * once the writes in progress end, nothing found by a run or preparation started before it is
+     * kept. Then the pipeline's part ([PipelineHost.forget]): its run and preparation cancelled, the
+     * insight shown and the coordinator's ledger gone, and the track playing not looked up again
+     * until another one plays. Then every cache (the sources' findings, the artist resolutions and
+     * results, the insights and cards written), in one transaction and in turn with what is written
+     * about artists ([ArtistKeeping.clearWith]); MusicBrainz's answers held in memory; the artist
+     * facts the listening session cited; the session layer's last change, which names the track
+     * before; and the diagnostics' steps, which name the tracks. The API keys and the settings stay.
+     * Returns whether the caches were cleared; the rest cannot fail.
+     */
+    private suspend fun forgetTracks(): Boolean {
+        clearEpoch.advance()
+        pipeline.forget()
+        // Again just before the caches' clear, so it waits for the writes under way then too.
+        clearEpoch.advance()
+        val cleared = artistKeeping.clearWith { withContext(Dispatchers.IO) { caches.clearAll() } }
+        if (!cleared) Log.w(TAG, "The caches could not be cleared")
+        wiring.forgetRemembered()
+        sessionFacts.forget()
+        sessions.forgetLastChange()
+        diagnostics.log.clear()
+        return cleared
     }
 
     /**

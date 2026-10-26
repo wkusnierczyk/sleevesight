@@ -160,6 +160,10 @@ DELETE FROM retrieval WHERE instr(sources, ' ' || :tag || ' ') > 0 AND stored_at
 retrievalSources:
 SELECT id, stored_at, sources FROM retrieval;
 
+-- Every retrieval entry, for *Clear history* (#547).
+retrievalDeleteAll:
+DELETE FROM retrieval;
+
 retrievalPurgeFormat:
 DELETE FROM retrieval WHERE format <> :format;
 
@@ -269,6 +273,10 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 synthesisTouch:
 UPDATE synthesis SET used_at = :usedAt WHERE id = :id;
+
+-- Every written insight and card, for *Clear history* (#547).
+synthesisDeleteAll:
+DELETE FROM synthesis;
 
 synthesisDelete:
 DELETE FROM synthesis WHERE id = :id;
