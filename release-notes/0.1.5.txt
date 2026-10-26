@@ -1,0 +1,9 @@
+What's new in 0.1.5:
+- Settings say what each one does; each service links to its key.
+- Clear history deletes everything kept about the tracks played.
+- Insights: no stray asterisks; uncited list items are flagged.
+- The header shows the album's own year.
+- Players show their icons; uninstalled ones leave the list.
+- If your AI model is no longer offered, the app says so.
+- Secrets: guided QR and keyboard screens; Remove asks first.
+- Genres open their page; Credits have one Close button.
