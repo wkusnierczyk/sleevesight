@@ -107,11 +107,21 @@
     <string name="load_keys_save_these">Save these</string>
     <string name="load_keys_nothing_title">Nothing to save</string>
     <string name="load_keys_saved_title">Keys saved</string>
-    <!-- A key by its name and its last four characters, as Anthropic API key, ending …a1B2. -->
+    <!-- The note under a key read from the code, in the table of the keys read. -->
+    <string name="load_keys_new">New</string>
+    <string name="load_keys_replaces">Replaces the saved key</string>
+    <!-- The key screens' table of keys (#542): its headers, the service of a Gemini key, and the note
+         under a key that cannot be read. -->
+    <string name="key_table_name">API Key</string>
+    <string name="key_table_ending">Ending</string>
+    <string name="key_service_google">Google Gemini</string>
+    <string name="key_table_unreadable">Can no longer be read</string>
+    <!-- What a screen reader says of a row of the table: the service and its last four characters,
+         as Anthropic, ending a1B2, which it reads character by character. -->
     <string name="key_ending">%1$s, ending %2$s</string>
     <string name="key_unreadable">%1$s, which can no longer be read</string>
     <string name="key_screen_done">Done</string>
-    <string name="purge_keys_listed">These saved keys are deleted from this phone:</string>
+    <string name="purge_keys_listed">These saved keys will be deleted from this phone:</string>
     <string name="purge_keys_none">No key is saved. Deleting still deletes the phone’s key that sealed them, so the next key you save is sealed with a new one.</string>
     <string name="purge_keys_delete">Delete</string>
     <string name="purge_keys_try_again">Try again</string>
@@ -125,5 +135,5 @@
     <string name="purge_keys_done">These keys have been safely deleted:</string>
     <string name="purge_keys_done_none">The phone’s key that sealed your keys has been deleted.</string>
     <string name="purge_keys_more">More about safe delete</string>
-    <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Each key still works at its service until you revoke it there, on the service’s website.</string>
+    <string name="purge_keys_more_explained">Purge keys removes every saved key from this phone’s storage, and deletes the key in the phone’s Android Keystore that encrypted them. Any copy left in the storage can then never be decrypted again (crypto-erasure). Sleevesight never sent your keys anywhere but to their own services, and never logged them. Purging keys from Sleevesight does not revoke them. You can still use your API keys elsewhere if you keep another copy.</string>
 </resources>
