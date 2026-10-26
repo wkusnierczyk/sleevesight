@@ -1,6 +1,8 @@
 // Writes the vectors the app's tests read (`ApiKeysPageTest`), made by the page's own code, so the
 // two sides are checked against each other: setup codes and their QR codes, which `KeySetup` and
-// ZXing must read back, and the shape of keys, on which `KeyShape` must agree. Node 22 or later:
+// ZXing must read back, and the shape of keys, on which `KeyShape` must agree. The keys file's names
+// and what the page reads from a file are checked against the CLI's `Keys` (`KeysTest`). Node 22 or
+// later:
 //
 //   node assets/api-keys/make_vectors.mjs           writes the file
 //   node assets/api-keys/make_vectors.mjs --check   fails if the file differs (CI)
@@ -8,7 +10,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { encode } from '../keyboard/qr.js';
-import { check, write } from './keys.js';
+import { SERVICES, check, readFile, write } from './keys.js';
 
 const OUT = fileURLToPath(new URL('../../app/src/test/resources/api-keys-vectors.properties', import.meta.url));
 
@@ -63,6 +65,18 @@ const shapes = [
   ),
 ];
 
+// Keys files, as `KeysTest` checks the CLI reads them too: every name of every service, the first
+// name with a value winning whatever the order of the lines, and an empty value no key. No name is
+// given twice here: on that the page refuses the key and the CLI takes the last.
+const files = [
+  SERVICES.map(({ code, variables }) => `${variables[0]}=${code}-prefixed`),
+  SERVICES.map(({ code, variables }) => `${variables[1]}=${code}-usual`),
+  ['GOOGLE_API_KEY=google-second', 'export LASTFM_API_KEY="lastfm-quoted"'],
+  SERVICES.flatMap(({ code, variables }) => [...variables].reverse().map((name, i) => `${name}=${code}-${i}`)),
+  ['GOOGLE_API_KEY=google-second', 'GEMINI_API_KEY=google-first'],
+  ['SLEEVESIGHT_EXA_API_KEY=', 'EXA_API_KEY=exa-usual', "ANTHROPIC_API_KEY=''", 'OPENAI_API_KEY=openai-usual'],
+].map((file) => `${file.join('\n')}\n`);
+
 const lines = ['# Made by assets/api-keys/make_vectors.mjs from the page\'s own code (#436); do not edit.'];
 lines.push(`setups=${setups.length}`);
 for (const [i, keys] of setups.entries()) {
@@ -78,6 +92,13 @@ for (const [i, [name, value]] of shapes.entries()) {
   lines.push(`shape.${i}.name=${name}`);
   lines.push(`shape.${i}.value=${hex(value)}`);
   lines.push(`shape.${i}.problem=${check(name, value) ?? 'NONE'}`);
+}
+for (const { code, variables } of SERVICES) lines.push(`names.${code}=${variables.join(',')}`);
+lines.push(`files=${files.length}`);
+for (const [i, text] of files.entries()) {
+  const { keys } = readFile(text);
+  lines.push(`file.${i}.text=${hex(text)}`);
+  lines.push(`file.${i}.keys=${[...keys].map(([name, value]) => `${name}:${hex(value)}`).join(',')}`);
 }
 const content = `${lines.join('\n')}\n`;
 

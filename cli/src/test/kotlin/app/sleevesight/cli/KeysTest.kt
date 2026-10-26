@@ -2,10 +2,12 @@ package app.sleevesight.cli
 
 import app.sleevesight.core.model.ProviderId
 import java.io.File
+import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class KeysTest {
     @Test
@@ -34,6 +36,103 @@ class KeysTest {
             assertFalse("from-env" in keys.exa.toString())
         } finally {
             file.delete()
+        }
+    }
+
+    // [text] as a keys file, loaded with [environment].
+    private fun loaded(
+        text: String,
+        environment: Map<String, String> = emptyMap(),
+    ): Keys {
+        val file = File.createTempFile("keys", ".env").apply { writeText(text) }
+        try {
+            return Keys.load(environment, file)
+        } finally {
+            file.delete()
+        }
+    }
+
+    private fun Keys.byCode(): Map<String, String> =
+        mapOf("anthropic" to anthropic, "openai" to openAi, "google" to google, "exa" to exa, "lastfm" to lastFm)
+            .mapNotNull { (code, key) -> key?.let { code to it.reveal() } }
+            .toMap()
+
+    @Test
+    fun `a keys file may name each key by the provider's usual name`() {
+        val keys =
+            loaded(
+                "ANTHROPIC_API_KEY=a\nOPENAI_API_KEY=o\nGEMINI_API_KEY=g\nEXA_API_KEY=e\nexport LASTFM_API_KEY=\"l\"\n",
+            )
+        val expected = mapOf("anthropic" to "a", "openai" to "o", "google" to "g", "exa" to "e", "lastfm" to "l")
+        assertEquals(expected, keys.byCode())
+        assertEquals("g2", loaded("GOOGLE_API_KEY=g2\n").google?.reveal())
+    }
+
+    @Test
+    fun `in a keys file the prefixed name wins, then Gemini's over Google's, whatever the order`() {
+        val keys =
+            loaded(
+                "ANTHROPIC_API_KEY=usual\nSLEEVESIGHT_ANTHROPIC_API_KEY=prefixed\n" +
+                    "GOOGLE_API_KEY=google\nGEMINI_API_KEY=gemini\n" +
+                    "EXA_API_KEY=usual\nSLEEVESIGHT_EXA_API_KEY=\n",
+            )
+        assertEquals("prefixed", keys.anthropic?.reveal())
+        assertEquals("gemini", keys.google?.reveal())
+        // An empty value is no key, so the next name's is taken.
+        assertEquals("usual", keys.exa?.reveal())
+        val google = loaded("GEMINI_API_KEY=gemini\nSLEEVESIGHT_GOOGLE_API_KEY=prefixed\nGOOGLE_API_KEY=google\n")
+        assertEquals("prefixed", google.google?.reveal())
+    }
+
+    @Test
+    fun `the help lists every name a keys file may use`() {
+        for (name in Keys.FILE_NAMES.values.flatten()) assertTrue(name in KeysQr.USAGE, name)
+        assertTrue(KeysQr.USAGE in Options.USAGE)
+    }
+
+    @Test
+    fun `the environment is read by the prefixed names only`() {
+        val usual =
+            mapOf(
+                "ANTHROPIC_API_KEY" to "a",
+                "OPENAI_API_KEY" to "o",
+                "GEMINI_API_KEY" to "g",
+                "GOOGLE_API_KEY" to "g",
+                "EXA_API_KEY" to "e",
+                "LASTFM_API_KEY" to "l",
+            )
+        assertEquals(emptyMap(), loaded("", usual).byCode())
+        // The environment's prefixed key wins over the file's, under either name.
+        val keys = loaded("EXA_API_KEY=from-file\n", usual + ("SLEEVESIGHT_EXA_API_KEY" to "from-env"))
+        assertEquals(mapOf("exa" to "from-env"), keys.byCode())
+    }
+
+    @Test
+    fun `the CLI reads a keys file by the API keys page's names, and finds what the page finds`() {
+        val vectors =
+            Properties().apply { File(System.getProperty("sleevesight.apiKeysVectors")).inputStream().use { load(it) } }
+
+        fun text(hex: String) =
+            hex
+                .chunked(2)
+                .map { it.toInt(16).toByte() }
+                .toByteArray()
+                .toString(Charsets.UTF_8)
+        val names =
+            vectors
+                .stringPropertyNames()
+                .filter { it.startsWith("names.") }
+                .associate { it.removePrefix("names.") to vectors.getProperty(it).split(",") }
+        assertEquals(Keys.FILE_NAMES, names)
+        val count = vectors.getProperty("files").toInt()
+        for (i in 0 until count) {
+            val expected =
+                vectors
+                    .getProperty("file.$i.keys")
+                    .split(",")
+                    .filter { it.isNotEmpty() }
+                    .associate { it.substringBefore(':') to text(it.substringAfter(':')) }
+            assertEquals(expected, loaded(text(vectors.getProperty("file.$i.text"))).byCode(), "file $i")
         }
     }
 

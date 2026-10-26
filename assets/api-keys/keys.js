@@ -6,13 +6,17 @@
 export const PREFIX = 'sleevesight-keys:';
 export const VERSION = 'v1';
 
-/** The services a setup code may carry, in `KeyName`'s order: its name in the code, and in the keys file. */
+/**
+ * The services a setup code may carry, in `KeyName`'s order: its name in the code, and its names in
+ * the keys file, the `SLEEVESIGHT_` one first and then the provider's usual ones; the first one with a
+ * value wins. The CLI reads the same names (`Keys.FILE_NAMES`), checked through the vectors.
+ */
 export const SERVICES = [
-  { code: 'anthropic', label: 'Anthropic', variable: 'SLEEVESIGHT_ANTHROPIC_API_KEY' },
-  { code: 'openai', label: 'OpenAI', variable: 'SLEEVESIGHT_OPENAI_API_KEY' },
-  { code: 'google', label: 'Google', variable: 'SLEEVESIGHT_GOOGLE_API_KEY' },
-  { code: 'exa', label: 'Exa', variable: 'SLEEVESIGHT_EXA_API_KEY' },
-  { code: 'lastfm', label: 'Last.fm', variable: 'SLEEVESIGHT_LASTFM_API_KEY' },
+  { code: 'anthropic', label: 'Anthropic', variables: ['SLEEVESIGHT_ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'] },
+  { code: 'openai', label: 'OpenAI', variables: ['SLEEVESIGHT_OPENAI_API_KEY', 'OPENAI_API_KEY'] },
+  { code: 'google', label: 'Google', variables: ['SLEEVESIGHT_GOOGLE_API_KEY', 'GEMINI_API_KEY', 'GOOGLE_API_KEY'] },
+  { code: 'exa', label: 'Exa', variables: ['SLEEVESIGHT_EXA_API_KEY', 'EXA_API_KEY'] },
+  { code: 'lastfm', label: 'Last.fm', variables: ['SLEEVESIGHT_LASTFM_API_KEY', 'LASTFM_API_KEY'] },
 ];
 
 /** Why a key is refused, by `KeyProblem`'s names. */
@@ -73,15 +77,19 @@ export function write(keys) {
 
 /**
  * The keys in [text], a keys file: `NAME=value` lines, `export` and quotes allowed, comments and
- * blank lines skipped, as the CLI reads it. A key is named by its variable or by its name in the
- * code; an empty value is no key, as the CLI has it. Gives the [keys] found, by service code, the
- * services named more than once with a value ([repeated]), which none of their values is taken
- * from, those named with no value ([empty]), the unknown names that start `SLEEVESIGHT_` or end
- * `_API_KEY` ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
+ * blank lines skipped, as the CLI reads it. A key is named by one of its variables or by its name
+ * in the code, which ranks with the `SLEEVESIGHT_` variable; of a service's names given a value,
+ * the first in its list wins, and the others are left out without a word. An empty value is no
+ * key, as the CLI has it. Gives the [keys] found, by service code, the services whose winning name
+ * is given more than once with a value ([repeated]), which none of its values is taken from, those
+ * named with no value ([empty]), the unknown names that start `SLEEVESIGHT_` or end `_API_KEY`
+ * ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
  * lines were not `NAME=value` ([unreadable]).
  */
 export function readFile(text) {
   const keys = new Map();
+  // By service code: the rank of the best name given a value so far, and how often it was given.
+  const ranks = new Map();
   const counts = new Map();
   const empty = new Set();
   const unknown = [];
@@ -97,15 +105,24 @@ export function readFile(text) {
       continue;
     }
     const value = unquoted(line.slice(at + 1).trim()).trim();
-    const service = SERVICES.find((s) => s.variable === name || s.code === name);
+    const service = SERVICES.find((s) => s.variables.includes(name) || s.code === name);
     if (service === undefined) {
       if (SHOWN.test(name)) unknown.push(name.slice(0, SHOWN_NAME));
       else others++;
     } else if (value === '') {
       empty.add(service.code);
     } else {
-      keys.set(service.code, value);
-      counts.set(service.code, (counts.get(service.code) ?? 0) + 1);
+      const { code } = service;
+      const rank = name === code ? 0 : service.variables.indexOf(name);
+      const best = ranks.get(code) ?? Infinity;
+      if (rank < best) {
+        ranks.set(code, rank);
+        keys.set(code, value);
+        counts.set(code, 1);
+      } else if (rank === best) {
+        keys.set(code, value);
+        counts.set(code, counts.get(code) + 1);
+      }
     }
   }
   const repeated = [...counts].filter(([, n]) => n > 1).map(([code]) => code);

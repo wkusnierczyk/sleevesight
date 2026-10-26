@@ -86,7 +86,8 @@ data class Options(
                                   live: the recorded replies answer the default prompts
               --record <list>     sources to record: musicbrainz, wikidata, wikipedia, and the AI
                                   services anthropic, google (default: musicbrainz,wikidata,wikipedia)
-              --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env)
+              --keys <file>       the keys file (default: ~/.config/sleevesight/keys.env); its names
+                                  are listed under keys-qr below
 
             Exit status: 0 when the gate's criteria pass, or nothing in the run applied to them
             (uncited sentences in live replies are judged over 50 sentences or more, pooled over
