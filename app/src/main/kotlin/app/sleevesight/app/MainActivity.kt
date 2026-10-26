@@ -97,12 +97,7 @@ class MainActivity : ComponentActivity() {
         val intro = if (playsIntro(savedInstanceState)) LogoIntro.random(animatorDurationScale()) else null
         this.intro = intro
         setContent {
-            SleevesightTheme(
-                fonts = graph.font,
-                themes = graph.theme,
-                linkStyles = graph.linkStyle,
-                developerMarks = graph.developerMark,
-            ) {
+            SleevesightTheme(graph.font, graph.theme, graph.linkStyle, graph.developerMark) {
                 SystemBarsFollowTheme()
                 CompositionLocalProvider(LocalLogoIntro provides intro) {
                     // While the intro plays, the screen beneath is out of reach of keys and of
