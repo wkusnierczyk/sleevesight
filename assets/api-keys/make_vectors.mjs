@@ -67,7 +67,8 @@ const shapes = [
 
 // Keys files, as `KeysTest` checks the CLI reads them too: every name of every service, the first
 // name with a value winning whatever the order of the lines, and an empty value no key. No name is
-// given twice here: on that the page refuses the key and the CLI takes the last.
+// given twice here, and no code name (`anthropic=…`): on a name given twice, or a code name beside the
+// `SLEEVESIGHT_` name, the page refuses the key and the CLI takes the last value of its own names.
 const files = [
   SERVICES.map(({ code, variables }) => `${variables[0]}=${code}-prefixed`),
   SERVICES.map(({ code, variables }) => `${variables[1]}=${code}-usual`),

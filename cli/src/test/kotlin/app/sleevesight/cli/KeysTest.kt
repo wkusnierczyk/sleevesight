@@ -85,6 +85,14 @@ class KeysTest {
     }
 
     @Test
+    fun `a later empty value does not replace a key given before it under the same name`() {
+        val parsed = Keys.parse(listOf("SLEEVESIGHT_EXA_API_KEY=prefixed", "SLEEVESIGHT_EXA_API_KEY=", "B=1", "B=2"))
+        assertEquals(mapOf("SLEEVESIGHT_EXA_API_KEY" to "prefixed", "B" to "2"), parsed)
+        val keys = loaded("SLEEVESIGHT_EXA_API_KEY=prefixed\nSLEEVESIGHT_EXA_API_KEY=''\nEXA_API_KEY=usual\n")
+        assertEquals("prefixed", keys.exa?.reveal())
+    }
+
+    @Test
     fun `the help lists every name a keys file may use`() {
         for (name in Keys.FILE_NAMES.values.flatten()) assertTrue(name in KeysQr.USAGE, name)
         assertTrue(KeysQr.USAGE in Options.USAGE)
@@ -102,6 +110,9 @@ class KeysTest {
                 "LASTFM_API_KEY" to "l",
             )
         assertEquals(emptyMap(), loaded("", usual).byCode())
+        // An empty prefixed variable is no key: it hides none of the file's names.
+        val empty = loaded("EXA_API_KEY=from-file\n", mapOf("SLEEVESIGHT_EXA_API_KEY" to " "))
+        assertEquals(mapOf("exa" to "from-file"), empty.byCode())
         // The environment's prefixed key wins over the file's, under either name.
         val keys = loaded("EXA_API_KEY=from-file\n", usual + ("SLEEVESIGHT_EXA_API_KEY" to "from-env"))
         assertEquals(mapOf("exa" to "from-env"), keys.byCode())
@@ -110,7 +121,13 @@ class KeysTest {
     @Test
     fun `the CLI reads a keys file by the API keys page's names, and finds what the page finds`() {
         val vectors =
-            Properties().apply { File(System.getProperty("sleevesight.apiKeysVectors")).inputStream().use { load(it) } }
+            Properties().apply {
+                val path =
+                    requireNotNull(System.getProperty("sleevesight.apiKeysVectors")) {
+                        "run through Gradle: sleevesight.apiKeysVectors not set"
+                    }
+                File(path).inputStream().use { load(it) }
+            }
 
         fun text(hex: String) =
             hex

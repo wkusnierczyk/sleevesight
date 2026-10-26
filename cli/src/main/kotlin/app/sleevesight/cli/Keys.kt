@@ -74,17 +74,24 @@ class Keys(
             fun key(code: String): Secret? {
                 val names = FILE_NAMES.getValue(code)
                 val inFile = names.firstNotNullOfOrNull { name -> fromFile[name]?.trim()?.takeIf { it.isNotEmpty() } }
-                return (environment[names.first()] ?: inFile)?.trim()?.takeIf { it.isNotEmpty() }?.let(::Secret)
+                // An empty value is no key, in the environment as in the file.
+                val inEnvironment = environment[names.first()]?.trim()?.takeIf { it.isNotEmpty() }
+                return (inEnvironment ?: inFile)?.let(::Secret)
             }
             return Keys(key("anthropic"), key("exa"), key("lastfm"), openAi = key("openai"), google = key("google"))
         }
 
-        /** The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped. */
-        fun parse(lines: List<String>): Map<String, String> =
+        /**
+         * The `NAME=value` lines of an env file; comments, blank lines and anything else are skipped.
+         * A name given again takes its later value, except an empty one, which is no key and so does
+         * not replace a value given before it.
+         */
+        fun parse(lines: List<String>): Map<String, String> {
+            val parsed = LinkedHashMap<String, String>()
             lines
                 .map { it.trim().removePrefix("export ").trim() }
                 .filter { it.isNotEmpty() && !it.startsWith("#") && '=' in it }
-                .associate { line ->
+                .forEach { line ->
                     val name = line.substringBefore('=').trim()
                     val value =
                         line
@@ -92,7 +99,9 @@ class Keys(
                             .trim()
                             .removeSurrounding("\"")
                             .removeSurrounding("'")
-                    name to value
+                    if (value.isNotBlank() || parsed[name].isNullOrBlank()) parsed[name] = value
                 }
+            return parsed
+        }
     }
 }

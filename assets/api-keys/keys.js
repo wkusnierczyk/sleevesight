@@ -80,11 +80,14 @@ export function write(keys) {
  * blank lines skipped, as the CLI reads it. A key is named by one of its variables or by its name
  * in the code, which ranks with the `SLEEVESIGHT_` variable; of a service's names given a value,
  * the first in its list wins, and the others are left out without a word. An empty value is no
- * key, as the CLI has it. Gives the [keys] found, by service code, the services whose winning name
- * is given more than once with a value ([repeated]), which none of its values is taken from, those
- * named with no value ([empty]), the unknown names that start `SLEEVESIGHT_` or end `_API_KEY`
- * ([unknown], each cut to [SHOWN_NAME]), how many other names there were ([others]), and how many
- * lines were not `NAME=value` ([unreadable]).
+ * key, as the CLI has it. A key given more than once at its winning rank is refused, where the CLI,
+ * which reads no code names, takes a name's last value: `anthropic=a` beside
+ * `SLEEVESIGHT_ANTHROPIC_API_KEY=b` gives no Anthropic key here, and `b` in the CLI. Gives the
+ * [keys] found, by service code, the services whose winning name is given more than once with a
+ * value ([repeated]), which none of its values is taken from, those named with no value ([empty]),
+ * the unknown names that start `SLEEVESIGHT_` or end `_API_KEY` ([unknown], each cut to
+ * [SHOWN_NAME]), how many other names there were ([others]), and how many lines were not
+ * `NAME=value` ([unreadable]).
  */
 export function readFile(text) {
   const keys = new Map();
