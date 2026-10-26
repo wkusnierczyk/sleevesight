@@ -164,6 +164,8 @@ class SettingsScreenTest {
             waitFor("look-up in the background stored on") { current().lookUpInBackground }
 
             compose.openSection(SettingsSection.PLAYERS)
+            // A row shows once its name, asked off the main thread, has arrived.
+            waitForText("Label of ${Settings.SPOTIFY}")
             compose.onNodeWithText("Label of ${Settings.SPOTIFY}").performScrollTo().performClick()
             waitFor("Spotify stored off") { current().followedPlayers[Settings.SPOTIFY] == false }
         }
