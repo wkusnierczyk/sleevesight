@@ -173,12 +173,15 @@ class ExaWebSearch(
 /**
  * The body of Exa's `POST /search` (https://exa.ai/docs/reference/search), as the adapter sends it.
  *
- * - `instant`: the cheapest type ($4 per 1000 against $7 for `auto`) and about a tenth of the
- *   latency (0.3 s against 3 s in the spike), with results as relevant on the fixture's tracks.
+ * - `lite`: the cheapest type ($4 per 1000 against $7 for `auto`), on the same index as `auto`,
+ *   served from the index without fetching pages at query time. It replaced `instant` (#584), which
+ *   Exa 3.0 made legacy at the same price. In the spike `instant` was as relevant as `auto` on the
+ *   fixture's tracks at a tenth of the latency; `lite` has not been compared live yet (#608).
+ *   `lite` accepts only a restricted set of parameters and rejects a request with any other;
+ *   every field here is in that set (`ExaWebSearchTest`).
  * - [numResults] 10, the most the base price covers, so the filter has enough to choose from: it
- *   kept 0 to 4 of 10 on the thin and same-title tracks. Whether highlights are billed per result on
- *   top is ambiguous in Exa's documents (`design/design.md`, *Web search provider (D11)*); if they
- *   are, 5 would halve that charge at the cost of fewer candidates.
+ *   kept 0 to 4 of 10 on the thin and same-title tracks. Highlights are not billed on top
+ *   (`design/design.md`, *Web search provider (D11)*), so a search costs $0.004 by Exa's pricing.
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
  * - Highlights of at most 300 characters, steered by the title, the work it is from when there is
  *   one, and the artists: the snippet. Exa's results carry no snippet without a `contents` option.
@@ -188,7 +191,7 @@ class ExaWebSearch(
 @Serializable
 internal data class ExaSearchRequest(
     val query: String,
-    val type: String = "instant",
+    val type: String = "lite",
     val numResults: Int = 10,
     val excludeDomains: List<String> = RecordingFilter.OWN_SOURCE_HOSTS,
     val contents: ExaContents,

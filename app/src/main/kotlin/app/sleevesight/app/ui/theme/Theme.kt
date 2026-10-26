@@ -113,13 +113,15 @@ fun ThemeChoice.isDark(systemDark: Boolean): Boolean =
  * dynamic colours where Android has them (12 and later), and its text in [font] (*Font*, #377).
  * The colours taken from the album art (design, *User interface*) replace these on the now-playing
  * screen, and keep the type. Every link inside is marked as [linkStyle] says (*Link style*, #519,
- * [LocalLinkStyle]).
+ * [LocalLinkStyle]), and with [developerMark] what only developer mode shows is outlined
+ * (#536, [LocalDeveloperMark], [DeveloperMark]).
  */
 @Composable
 fun SleevesightTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     font: FontChoice = DEFAULT_FONT,
     linkStyle: LinkStyle = DEFAULT_LINK_STYLE,
+    developerMark: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =
@@ -132,7 +134,11 @@ fun SleevesightTheme(
             else -> lightColorScheme()
         }
     val typography = remember(font) { typographyOf(font) }
-    CompositionLocalProvider(LocalDarkTheme provides darkTheme, LocalLinkStyle provides linkStyle) {
+    CompositionLocalProvider(
+        LocalDarkTheme provides darkTheme,
+        LocalLinkStyle provides linkStyle,
+        LocalDeveloperMark provides developerMark,
+    ) {
         MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
     }
 }
@@ -140,24 +146,28 @@ fun SleevesightTheme(
 /**
  * [SleevesightTheme] in the font [fonts] holds and, when [themes] is given, light or dark as it
  * holds (*Theme*, #444; else as the system is), and, when [linkStyles] is given, with links marked
- * as it holds (*Link style*, #519; else underlined), following each change to them, and starting
- * in their current values, so the first frame is already in them (`AppGraph.font`,
- * `AppGraph.theme`, `AppGraph.linkStyle`).
+ * as it holds (*Link style*, #519; else underlined), and, when [developerMarks] is given, with
+ * what only developer mode shows marked as it holds (#536; else unmarked), following each change
+ * to them, and starting in their current values, so the first frame is already in them
+ * (`AppGraph.font`, `AppGraph.theme`, `AppGraph.linkStyle`, `AppGraph.developerMark`).
  */
 @Composable
 fun SleevesightTheme(
     fonts: StateFlow<FontChoice>,
     themes: StateFlow<ThemeChoice>? = null,
     linkStyles: StateFlow<LinkStyle>? = null,
+    developerMarks: StateFlow<Boolean>? = null,
     content: @Composable () -> Unit,
 ) {
     val font by fonts.collectAsState()
     val theme = themes?.collectAsState()?.value ?: ThemeChoice.SYSTEM
     val linkStyle = linkStyles?.collectAsState()?.value ?: DEFAULT_LINK_STYLE
+    val developerMark = developerMarks?.collectAsState()?.value ?: false
     SleevesightTheme(
         darkTheme = theme.isDark(isSystemInDarkTheme()),
         font = font,
         linkStyle = linkStyle,
+        developerMark = developerMark,
         content = content,
     )
 }

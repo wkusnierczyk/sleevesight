@@ -1,6 +1,6 @@
 {
   "query": "\"Fishin' In A Dory\" by Ray Johnson And The Sou' Westers, song",
-  "type": "instant",
+  "type": "lite",
   "numResults": 10,
   "excludeDomains": [
     "wikipedia.org",

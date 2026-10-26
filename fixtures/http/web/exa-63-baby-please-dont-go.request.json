@@ -1,6 +1,6 @@
 {
   "query": "\"Baby, Please Don't Go\" by Them and Van Morrison, song",
-  "type": "instant",
+  "type": "lite",
   "numResults": 10,
   "excludeDomains": [
     "wikipedia.org",

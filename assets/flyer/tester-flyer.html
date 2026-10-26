@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- The tester flyer (#566): one A4 page in front of the tester brief (`docs/tester/alpha/index.md`),
+     with the closed test's five steps. This is its source; `make_flyer.mjs`, beside it, draws the two
+     QR codes into it and renders it to `tester-flyer.pdf` and `tester-flyer.png`, which the site
+     serves and the brief links at its top. Every line is taken from the brief and the build in the
+     closed test: a change to what testers install, see or send changes the brief, and this page with
+     it. It is public, so it holds no key, no QR code of a key, and nothing private.
+     The look is the brand sheet's (`design/brand.html`): the stacked mark (`assets/logo/mark-light.svg`),
+     its ink, the white ground and the label's red, Roboto Flex for titles and Roboto Slab for the
+     text, from the site's own cut-down copies. Light only, since it is also printed. Plain and flat.
+     The icons are Material Symbols (Apache-2.0), as the app's (`app/src/main/res/drawable/`), but for
+     the download arrow and the bell, drawn here in the same plain style. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Testing Sleevesight: five steps</title>
+<style>
+@font-face{font-family:"Sleevesight Flex";src:url(../fonts/RobotoFlex-page.woff2) format("woff2");
+  font-weight:400 700;font-stretch:88% 100%}
+@font-face{font-family:"Sleevesight Slab";src:url(../fonts/RobotoSlab-page.woff2) format("woff2");
+  font-weight:350 700}
+@page{size:A4;margin:0}
+:root{--ink:#141a22;--muted:#596473;--line:#d2d8e0;--red:#cf222e;--soft:#fafbfc;
+  --f-ui:"Sleevesight Flex",system-ui,sans-serif;--f-text:"Sleevesight Slab",Georgia,serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;color:var(--ink)}
+body{width:210mm;height:297mm;padding:12mm 16mm 11mm;font-family:var(--f-text);font-weight:350;font-size:11pt;line-height:1.38;
+  display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3,.ui{font-family:var(--f-ui)}
+header{display:flex;align-items:center;gap:9mm;padding-bottom:5mm;border-bottom:.4mm solid var(--ink)}
+header img{width:40mm;height:auto;display:block}
+header h1{margin:0;font-size:25pt;line-height:1.05;font-weight:700;font-stretch:90%;letter-spacing:-.01em}
+header p{margin:2mm 0 0;font-family:var(--f-ui);font-size:12.5pt;color:var(--muted)}
+ol{list-style:none;margin:0;padding:0;flex:1;display:flex;flex-direction:column}
+ol>li{display:grid;grid-template-columns:10mm 10mm minmax(0,1fr);column-gap:4mm;align-items:start;padding:3.6mm 0;border-bottom:.25mm solid var(--line)}
+ol>li.qr{grid-template-columns:10mm 10mm minmax(0,1fr) 30mm}
+.n{font-family:var(--f-ui);font-size:28pt;line-height:.9;font-weight:700;font-stretch:90%;color:var(--red)}
+.icon{width:9mm;height:9mm;margin-top:.5mm}
+.icon svg{width:100%;height:100%;display:block}
+ol h2{margin:0 0 1.2mm;font-size:14.5pt;line-height:1.2;font-weight:650;font-stretch:94%}
+ol p{margin:0}
+ol p+p{margin-top:1.2mm}
+.aside{font-size:10pt;color:var(--muted)}
+.code{display:flex;flex-direction:column;align-items:center;gap:1mm}
+.code svg{width:28mm;height:28mm;display:block}
+.code span{font-family:var(--f-ui);font-size:8.5pt;color:var(--muted);text-align:center;line-height:1.2}
+i{font-style:italic}
+b{font-weight:700}
+.try{margin:5mm 0 0;padding:4mm 5mm;background:var(--soft);border:.25mm solid var(--line);border-radius:3mm}
+.try h3{margin:0 0 1.5mm;font-size:10pt;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.try ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4mm;font-size:10.5pt}
+footer{margin-top:6mm;padding-top:5mm;border-top:.4mm solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) 26mm;column-gap:6mm;align-items:center}
+footer .stay{margin:0;font-family:var(--f-ui);font-size:17pt;line-height:1.15;font-weight:700;font-stretch:92%}
+footer .stay span{color:var(--red)}
+footer p{margin:1.5mm 0 0;font-size:10.5pt}
+footer .code svg{width:24mm;height:24mm}
+</style>
+</head>
+<body>
+<header>
+  <img src="../logo/mark-light.svg" alt="Sleevesight">
+  <div>
+    <h1>Testing Sleevesight</h1>
+    <p>Five steps, then 14 days opted in. Thank you for testing.</p>
+  </div>
+</header>
+
+<ol>
+  <li class="qr">
+    <span class="n">1</span>
+    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#141a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg></span>
+    <div>
+      <h2>Opt in and install</h2>
+      <p>Scan the code and accept, signed in to the Google account you were invited on, the one your phone's Play Store uses. Then install Sleevesight from Google Play.</p>
+      <p class="aside">The Play Store says <i>Item not found</i>? Open play.google.com/store/apps/details?id=app.sleevesight in a browser, with the same account, and tap <i>Install</i>.</p>
+    </div>
+    <div class="code"><!--qr:optin--><span>Opt in on Google Play</span></div>
+  </li>
+  <li>
+    <span class="n">2</span>
+    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#141a22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/></svg></span>
+    <div>
+      <h2>Turn on notification access</h2>
+      <p>On the first screen, tap <i>Open notification access</i>, turn on Sleevesight, then come back and tap <i>Continue</i>. It lets the app see what your player is playing; it does not read your messages or other notifications.</p>
+    </div>
+  </li>
+  <li>
+    <span class="n">3</span>
+    <span class="icon" aria-hidden="true"><svg viewBox="0 -960 960 960"><path fill="#141a22" d="M80-707v-173h173v60H140v113H80Zm0 627v-173h60v113h113v60H80Zm627 0v-60h113v-113h60v173H707Zm113-627v-113H707v-60h173v173h-60ZM708-251h63v63h-63v-63Zm0-126h63v63h-63v-63Zm-63 63h63v63h-63v-63Zm-63 63h63v63h-63v-63Zm-63-63h63v63h-63v-63Zm126-126h63v63h-63v-63Zm-63 63h63v63h-63v-63Zm-63-63h63v63h-63v-63Zm252-332v252H519v-252h252ZM440-440v252H188v-252h252Zm0-332v252H188v-252h252Zm-50 534v-152H238v152h152Zm0-332v-152H238v152h152Zm331 0v-152H569v152h152Z"/></svg></span>
+    <div>
+      <h2>Scan your key</h2>
+      <p>Open Settings with the cogwheel at the top of the home screen, unfold <i>Secrets</i>, tap <i>Load keys</i>, point the camera at the code we gave you, and tap <i>Save</i>. Then, under <i>AI services</i>, switch on <i>Anthropic</i>.</p>
+      <p class="aside">The key is yours alone: please do not share it. Using your own key instead is fine too.</p>
+    </div>
+  </li>
+  <li>
+    <span class="n">4</span>
+    <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#141a22" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span>
+    <div>
+      <h2>Play a song, tap <i>Write insight</i></h2>
+      <p>Play music in Spotify, then open Sleevesight. Your first tap on <i>Write insight</i> writes the insight; after it, a new one follows each track change.</p>
+    </div>
+  </li>
+  <li>
+    <span class="n">5</span>
+    <span class="icon" aria-hidden="true"><svg viewBox="0 0 960 960"><path fill="#141a22" d="M480,760Q546,760 593,713Q640,666 640,600L640,440Q640,374 593,327Q546,280 480,280Q414,280 367,327Q320,374 320,440L320,600Q320,666 367,713Q414,760 480,760ZM400,640L560,640L560,560L400,560L400,640ZM400,480L560,480L560,400L400,400L400,480ZM480,840Q415,840 359.5,808Q304,776 272,720L160,720L160,640L244,640Q241,620 240.5,600Q240,580 240,560L160,560L160,480L240,480Q240,460 240.5,440Q241,420 244,400L160,400L160,320L272,320Q286,297 303.5,277Q321,257 344,242L280,176L336,120L422,206Q450,197 479,197Q508,197 536,206L624,120L680,176L614,242Q637,257 655.5,276.5Q674,296 688,320L800,320L800,400L716,400Q719,420 719.5,440Q720,460 720,480L800,480L800,560L720,560Q720,580 719.5,600Q719,620 716,640L800,640L800,720L688,720Q656,776 600.5,808Q545,840 480,840Z"/></svg></span>
+    <div>
+      <h2>Something odd? The bug button, then <i>Report</i></h2>
+      <p>Tap the bug at the bottom right of the home screen as soon as you notice it. The report takes the moment for you: the track, the insight, what the app did. You see all of it before you send it from your mail app.</p>
+    </div>
+  </li>
+</ol>
+
+<section class="try">
+  <h3>Worth trying</h3>
+  <ul>
+    <li><b>Skip a track</b> in your player, and watch the insight follow.</li>
+    <li><b>Tap a citation chip</b> at the end of a sentence to see its source.</li>
+    <li><b>Follow a second player</b>: switch it on under <i>Players</i> in Settings once it has played music.</li>
+  </ul>
+</section>
+
+<footer>
+  <div>
+    <p class="stay">Stay opted in for <span>14 days</span>, and keep the app installed, even on days you do not use it.</p>
+    <p>The full brief, with what to tell us and what leaves your phone: sleevesight.app/docs/tester/alpha</p>
+    <p>Questions and reports: <b>support@sleevesight.app</b></p>
+  </div>
+  <div class="code"><!--qr:brief--><span>The full brief</span></div>
+</footer>
+</body>
+</html>

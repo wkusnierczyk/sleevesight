@@ -266,7 +266,7 @@ class Cli(
             return if (off != null || key == null) {
                 SourceStatus(SourceId.WEB, false, off ?: "off") to null
             } else {
-                SourceStatus(SourceId.WEB, true, "Exa, instant search") to wiring.web(mapOf(WebEngine.EXA to key))
+                SourceStatus(SourceId.WEB, true, "Exa, lite search") to wiring.web(mapOf(WebEngine.EXA to key))
             }
         }
 

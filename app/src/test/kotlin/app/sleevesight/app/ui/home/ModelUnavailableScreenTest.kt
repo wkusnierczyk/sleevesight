@@ -24,6 +24,8 @@ import app.sleevesight.app.ui.home.HomeFixtures.normalizer
 import app.sleevesight.app.ui.home.HomeFixtures.sundown
 import app.sleevesight.app.ui.home.HomeFixtures.track
 import app.sleevesight.app.ui.home.HomeFixtures.written
+import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.pipeline.InsightState
 import app.sleevesight.core.settings.Settings
@@ -44,6 +46,7 @@ class ModelUnavailableScreenTest {
 
     private val app = ApplicationProvider.getApplicationContext<SleevesightApplication>()
     private var settingsOpened = 0
+    private val settingsOpenedAt = mutableListOf<SettingsTarget>()
 
     private val haiku = UnavailableModel(ProviderId.ANTHROPIC, "claude-haiku-5-5")
 
@@ -61,7 +64,12 @@ class ModelUnavailableScreenTest {
                 settings = settings,
                 unavailable = unavailable,
             )
-        val actions = NowPlayingActions(normalizer::normalize, openSettings = { settingsOpened++ })
+        val actions =
+            NowPlayingActions(
+                normalizer::normalize,
+                openSettings = { settingsOpened++ },
+                openSettingsAt = { settingsOpenedAt += it },
+            )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
@@ -79,14 +87,16 @@ class ModelUnavailableScreenTest {
             "Please select another model or provider in AI services."
 
     @Test
-    fun anUnavailableModelIsSaidInPlaceOfWhyNothingIsWrittenWithALinkToTheSettings() =
+    fun anUnavailableModelIsSaidInPlaceOfWhyNothingIsWrittenWithALinkToItsRowInTheSettings() =
         show(InsightState.Idle(canWrite = false), haiku) {
             compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).performScrollTo().assertTextEquals(said)
             val place = app.getString(R.string.home_model_unavailable_place)
             assertEquals(said, app.getString(R.string.home_model_unavailable, "Anthropic", "Claude Haiku 5.5", place))
             compose.onNodeWithTag(MODEL_UNAVAILABLE_TAG).performFirstLinkClick()
             compose.waitForIdle()
-            assertEquals(1, settingsOpened)
+            // The settings open at the service's model row, under *AI services* (#581).
+            assertEquals(listOf(SettingsTarget(SettingsSection.AI_SERVICES, "model_ANTHROPIC")), settingsOpenedAt)
+            assertEquals(0, settingsOpened)
         }
 
     @Test
