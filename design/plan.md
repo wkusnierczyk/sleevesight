@@ -207,7 +207,7 @@ flowchart TD
 
 | Decision | Needed by | Options, and the recommendation |
 |---|---|---|
-| Release-date semantics | [#52][52] | The recording's first release, the release being played, or both. Recommendation: the first release as "Released", the played release in its source line when it differs |
+| Release-date semantics | [#52][52] | The recording's first release, the release being played, or both. Recommendation: the first release as "Released", the played release in its source line when it differs. **Decided 2026-10-26** ([#556][556]): both, the played release's year after the album and "First released" under it when earlier (design, *Key data*) |
 | Players that send only a title | [#52][52] | How much of the home screen to hide when resolution is mostly `none`. Recommendation: decide from what [#46][46] and [#55][55] show, and hide nothing in the meantime |
 | AI providers in the MVP | [#50][50] | Anthropic only, as the phase mapping has it, with the others in Phase 3; or one more in Phase 1. Recommendation: Anthropic only; `AiProvider` keeps the rest cheap. Phase 1 shipped Anthropic only. **Revised 2026-10-18:** OpenAI and Google move to Phase 1.5 ([#228][228], [#229][229]), after the AI settings per provider ([#227][227]), so alpha testers can choose a provider and vary its effort; Ollama stays in Phase 3 |
 | Web search provider (D11) | [#40][40] | Decided by that spike |
@@ -279,3 +279,4 @@ flowchart TD
 [227]: https://github.com/wkusnierczyk/sleevesight/issues/227
 [228]: https://github.com/wkusnierczyk/sleevesight/issues/228
 [229]: https://github.com/wkusnierczyk/sleevesight/issues/229
+[556]: https://github.com/wkusnierczyk/sleevesight/issues/556

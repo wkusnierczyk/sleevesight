@@ -21,6 +21,12 @@ import app.sleevesight.core.model.Outcome
  *   relationship), null otherwise. Empty when no recording was accepted.
  * @property firstRelease the earliest release of the recording; the player's release stays
  *   separate (`P` evidence).
+ * @property releaseDates the titles the releases of the track's recordings go by, each with the
+ *   earliest date MusicBrainz gives a release of that title (#556): of every recording whose title
+ *   and length fit and that credits the track's artists, not only the accepted one, since a
+ *   soundtrack or compilation often has a recording of its own. The home screen finds the album
+ *   the player names among them, for the year after it ([ReleaseDate.yearOf]). Empty when no
+ *   recording was accepted.
  * @property work the work the recording performs, when MusicBrainz links one.
  * @property original the work's earliest dated recording by another artist, when this recording
  *   is a cover or version (step 4) and that recording predates every dated one by the track's
@@ -55,6 +61,7 @@ data class Resolution(
     val artistCredit: String? = null,
     val artists: List<ResolvedArtist> = emptyList(),
     val firstRelease: FirstRelease? = null,
+    val releaseDates: List<ReleaseDate> = emptyList(),
     val work: ResolvedWork? = null,
     val original: OriginalRecording? = null,
     val cover: Boolean = false,
@@ -103,6 +110,42 @@ data class FirstRelease(
     val releaseMbid: String,
     val type: String?,
 )
+
+/**
+ * A title the releases of a track's recordings go by (a release's own, or its release group's), and
+ * the earliest [date] MusicBrainz gives a release of that title, at the precision it has (#556).
+ */
+data class ReleaseDate(
+    val title: String,
+    val date: String,
+) {
+    companion object {
+        /**
+         * The year of the release [album] names, as the player reports it, among [dates]: the year
+         * of the earliest release whose title has [album]'s [key] (the same title, as sources write
+         * it differently), or null when none has it or its date has no year. The title must be
+         * the same: an album named with an edition the releases do not name ("Crazy World
+         * (Remastered 2009)") is not found, rather than given another edition's year.
+         */
+        fun yearOf(
+            album: String,
+            dates: List<ReleaseDate>,
+            key: (String) -> String,
+        ): String? {
+            val wanted = key(album).takeIf { it.isNotEmpty() } ?: return null
+            return dates
+                .filter { key(it.title) == wanted }
+                .minOfOrNull { it.date }
+                ?.let(::yearIn)
+        }
+
+        /** The year [date] begins with (`1974` of `1974-03-25`), or null when it has none. */
+        fun yearIn(date: String): String? =
+            date.take(YEAR_LENGTH).takeIf { it.length == YEAR_LENGTH && it.all(Char::isDigit) }
+
+        private const val YEAR_LENGTH = 4
+    }
+}
 
 /** A MusicBrainz work: the song, apart from any one recording of it. */
 data class ResolvedWork(

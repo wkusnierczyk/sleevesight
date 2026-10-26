@@ -202,7 +202,7 @@ internal fun NowPlayingContent(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 PlayerRow(playing.player, state.playback, actions)
                 ArtAndProgress(state.art, state.playback, header.duration)
-                KeyData(normalized, header, releaseYear(track))
+                KeyData(normalized, header, headerYears(track, header))
                 // Until the settings' first read, the layout is not known: neither item is drawn,
                 // rather than the boxes for a frame and then the pages (#447).
                 if (settings != null) Genres(track, settings, actions.openPage.takeIf { pages })

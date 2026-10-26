@@ -8,6 +8,7 @@ import app.sleevesight.core.genres.RecordingTags
 import app.sleevesight.core.model.Outcome
 import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.sources.Rejection
+import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceResult
 import kotlinx.serialization.Serializable
@@ -32,7 +33,8 @@ internal object RetrievalCodec {
      * ([SourceResult.trackOnly], #420), without which an entry cannot say whether it may be kept
      * while *Keep what sources said about each artist* is off. 7: each artist's genre label names its
      * artist, the artists whose MusicBrainz tags give labels are kept by name too, and MusicBrainz's
-     * result holds the recording's tags (#439); a label no longer keeps a hue.
+     * result holds the recording's tags (#439); a label no longer keeps a hue. The dates of the
+     * releases' titles (#556) are an optional field like the first release's, made a miss the same way.
      */
     const val FORMAT: Int = 7
 
@@ -69,6 +71,7 @@ internal object RetrievalCodec {
                 labelArtists = result.labelArtists.map { LabelArtistJson(it.name, it.mbid) },
                 recordingTags = result.recordingTags?.let { RecordingTagsJson(it.mbid, it.tags) },
                 firstReleased = result.firstReleased,
+                releaseDates = result.releaseDates.map { ReleaseDateJson(it.title, it.date) },
                 trackOnly = result.trackOnly,
             ),
         )
@@ -98,6 +101,7 @@ internal object RetrievalCodec {
                 labelArtists = stored.labelArtists.map { ResolvedArtist(it.name, it.mbid) },
                 recordingTags = stored.recordingTags?.let { RecordingTags(it.mbid, it.tags) },
                 firstReleased = stored.firstReleased,
+                releaseDates = stored.releaseDates.map { ReleaseDate(it.title, it.date) },
                 trackOnly = stored.trackOnly,
             )
         } catch (_: IllegalArgumentException) {
@@ -161,7 +165,14 @@ internal object RetrievalCodec {
         val labelArtists: List<LabelArtistJson> = emptyList(),
         val recordingTags: RecordingTagsJson? = null,
         val firstReleased: String? = null,
+        val releaseDates: List<ReleaseDateJson> = emptyList(),
         val trackOnly: Boolean = false,
+    )
+
+    @Serializable
+    private data class ReleaseDateJson(
+        val title: String,
+        val date: String,
     )
 
     @Serializable

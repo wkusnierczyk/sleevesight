@@ -34,6 +34,21 @@ class SessionMappingTest {
     }
 
     @Test
+    fun theReleasesYearIsYearElseTheYearDateBeginsWith() {
+        assertEquals(2026, SessionMapping.nowPlaying(SPOTIFY, metadata(year = 2026), null)?.year)
+        assertEquals(2026, SessionMapping.year(metadata(date = "20260320T000000")))
+        assertEquals(2026, SessionMapping.year(metadata(date = "2026-03-20")))
+        assertEquals(2026, SessionMapping.year(metadata(year = 2026, date = "1990")))
+        // No year (players send 0), or none plausible: the date's, else none.
+        assertEquals(1990, SessionMapping.year(metadata(year = 0, date = "1990")))
+        assertEquals(1990, SessionMapping.year(metadata(year = 90, date = "1990-11-06")))
+        assertNull(SessionMapping.year(metadata(date = "0000")))
+        assertNull(SessionMapping.year(metadata(date = "199")))
+        assertNull(SessionMapping.year(metadata()))
+        assertNull(SessionMapping.nowPlaying(SPOTIFY, metadata(), null)?.year)
+    }
+
+    @Test
     fun spotifysMetadataMapsToNowPlaying() {
         val metadata =
             metadata(

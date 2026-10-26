@@ -22,7 +22,8 @@ object SessionMapping {
      * The title is `TITLE`, else `DISPLAY_TITLE`; the artists are `ARTIST` as sent, one string the
      * normalizer splits, and empty when the player sends none (a player that sends only a title
      * still runs the pipeline). Blank values are absent. [queueItemId] is the active queue item, as
-     * the repository settles it with the metadata.
+     * the repository settles it with the metadata. The year is `YEAR`, else the year `DATE` begins
+     * with (`20260320T000000`, `2026-03-20`), absent when neither holds a plausible one ([year]).
      */
     fun nowPlaying(
         player: String,
@@ -40,6 +41,7 @@ object SessionMapping {
                 mediaId = metadata.text(MediaMetadata.METADATA_KEY_MEDIA_ID),
                 queueItemId = queueItemId,
                 artUri = artUris(metadata).firstOrNull(),
+                year = year(metadata),
             )
         }
     }
@@ -51,6 +53,29 @@ object SessionMapping {
      */
     fun reportsMusic(metadata: MediaMetadata?): Boolean =
         title(metadata) != null && metadata?.text(MediaMetadata.METADATA_KEY_ARTIST) != null
+
+    /**
+     * The release's year as the player sends it: `YEAR`, else the four digits `DATE` begins with;
+     * either only when it is a plausible year, from [FIRST_YEAR] (players send none as 0).
+     */
+    fun year(metadata: MediaMetadata): Int? {
+        val dated =
+            metadata
+                .text(MediaMetadata.METADATA_KEY_DATE)
+                ?.take(YEAR_DIGITS)
+                ?.takeIf { it.length == YEAR_DIGITS && it.all(Char::isDigit) }
+                ?.toLong()
+        return listOfNotNull(metadata.getLong(MediaMetadata.METADATA_KEY_YEAR), dated)
+            .firstOrNull { it in FIRST_YEAR..LAST_YEAR }
+            ?.toInt()
+    }
+
+    /** The earliest year taken as a release's: earlier ones are a tag's mistake, not a recording's. */
+    private const val FIRST_YEAR = 1800L
+
+    private const val LAST_YEAR = 9999L
+
+    private const val YEAR_DIGITS = 4
 
     /** The track's title as [nowPlaying] reads it. */
     fun title(metadata: MediaMetadata?): String? =

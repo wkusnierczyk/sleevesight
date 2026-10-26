@@ -9,6 +9,7 @@ import app.sleevesight.core.platform.JvmResourceReader
 import app.sleevesight.core.resolution.Lookup
 import app.sleevesight.core.resolution.MbRecordingDetail
 import app.sleevesight.core.sources.FirstRelease
+import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.net.NetError
@@ -67,7 +68,7 @@ class MusicBrainzTagsTest {
             assertEquals(listOf(ResolvedArtist("Gordon Lightfoot", "mb-a")), result.labelArtists)
             assertTrue(result.genres.isEmpty())
             assertEquals(null, result.recordingTags)
-            assertEquals(4, MusicBrainzSource().extractionVersion)
+            assertEquals(5, MusicBrainzSource().extractionVersion)
         }
 
     @Test
@@ -110,11 +111,20 @@ class MusicBrainzTagsTest {
         }
 
     @Test
-    fun `the adapter keeps the first release's date, for a track later served from the cache`() =
+    fun `the adapter keeps the release dates, for a track later served from the cache`() =
         runTest {
-            val released = RESOLVED.copy(firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"))
-            assertEquals("1974-01", MusicBrainzSource().lookup(TRACK, CompletableDeferred(released)).firstReleased)
-            assertEquals(null, MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED)).firstReleased)
+            val dates = listOf(ReleaseDate("Gord's Gold", "1975"), ReleaseDate("Sundown", "1974-01"))
+            val released =
+                RESOLVED.copy(
+                    firstRelease = FirstRelease("1974-01", "Sundown", null, "rel", "Album"),
+                    releaseDates = dates,
+                )
+            val kept = MusicBrainzSource().lookup(TRACK, CompletableDeferred(released))
+            assertEquals("1974-01", kept.firstReleased)
+            assertEquals(dates, kept.releaseDates)
+            val none = MusicBrainzSource().lookup(TRACK, CompletableDeferred(RESOLVED))
+            assertEquals(null, none.firstReleased)
+            assertEquals(emptyList<ReleaseDate>(), none.releaseDates)
         }
 
     @Test

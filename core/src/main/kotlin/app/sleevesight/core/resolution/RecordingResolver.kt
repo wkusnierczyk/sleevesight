@@ -6,6 +6,7 @@ import app.sleevesight.core.sources.Credit
 import app.sleevesight.core.sources.CreditRole
 import app.sleevesight.core.sources.FirstRelease
 import app.sleevesight.core.sources.OriginalRecording
+import app.sleevesight.core.sources.ReleaseDate
 import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.ResolvedWork
@@ -75,7 +76,8 @@ class RecordingResolver(
         // Every candidate whose title and length fit and that names one of the track's artists, by
         // name or as a band's leader, confirmed or not: the same-name check weighs them all.
         val fitting = candidates.filter { it.titleMatches && it.durationMatches && it.ids.isNotEmpty() }
-        val accepted = narrowed(fitting.filter { it.creditedArtists > 0 }, duration)
+        val credited = fitting.filter { it.creditedArtists > 0 }
+        val accepted = narrowed(credited, duration)
         val collision = collision(track, (narrowed(fitting, duration) + accepted).distinct())
         val chosen = accepted.minWithOrNull(PREFERENCE)
         return when {
@@ -83,7 +85,7 @@ class RecordingResolver(
             chosen == null ->
                 (if (fitting.isEmpty()) byVariant(track, duration, candidates, leaders) else null)
                     ?: unmatched(track, candidates)
-            else -> accept(track, chosen, leaders.details[chosen.recording.mbid])
+            else -> accept(track, chosen, leaders.details[chosen.recording.mbid], credited)
         }
     }
 
@@ -105,7 +107,7 @@ class RecordingResolver(
                 .map { it.copy(named = it.variants, led = emptyMap()).identified(emptyMap()) }
         val accepted = narrowed(fitting, duration)
         val chosen = accepted.minWithOrNull(PREFERENCE) ?: return null
-        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid])
+        return collision(track, accepted) ?: accept(track, chosen, leaders.details[chosen.recording.mbid], fitting)
     }
 
     private fun candidate(
@@ -160,10 +162,13 @@ class RecordingResolver(
         )
     }
 
+    // [pool]: every candidate whose title and length fit and that credits the track's artists, whose
+    // releases give the album's year (#556).
     private suspend fun accept(
         track: NormalizedTrack,
         chosen: Candidate,
         fetched: MbRecordingDetail?,
+        pool: List<Candidate>,
     ): Resolution {
         val recording = chosen.recording
         val base =
@@ -177,6 +182,7 @@ class RecordingResolver(
                         ResolvedArtist(artist, artistMbid(artist, recording.credits, emptyList(), chosen.known[artist]))
                     },
                 firstRelease = firstRelease(recording),
+                releaseDates = releaseDates(pool.flatMap { it.recording.releases }),
             )
         val detail = fetched ?: (musicBrainz.recording(recording.mbid) as? Lookup.Found)?.value
         return if (detail == null) base else withDetail(track, chosen, base, detail)
@@ -258,6 +264,19 @@ class RecordingResolver(
             wikidataIds = (withRecording.wikidataIds + work.wikidataIds).distinct(),
         )
     }
+
+    // Each title [releases] go by, their own and their release groups', once per title as [NameMatcher.key]
+    // reads it (written as the earliest release of it writes it), with the earliest date of a release of it.
+    private fun releaseDates(releases: List<MbRelease>): List<ReleaseDate> =
+        releases
+            .mapNotNull { release -> release.date?.let { it to release } }
+            .flatMap { (date, release) -> listOfNotNull(release.title, release.releaseGroup?.title).map { it to date } }
+            .groupBy { (title, _) -> names.key(title) }
+            .filterKeys { it.isNotEmpty() }
+            .values
+            .map { same -> same.minWith(compareBy<Pair<String, String>> { it.second }.thenBy { it.first }) }
+            .map { (title, date) -> ReleaseDate(title, date) }
+            .sortedBy { names.key(it.title) }
 
     // Whether [credit] is [artist]'s, as written on the recording or as MusicBrainz names the artist: by
     // name, or, unless [byName], a band they lead ("Dick Dale and His Del-Tones", #77).
