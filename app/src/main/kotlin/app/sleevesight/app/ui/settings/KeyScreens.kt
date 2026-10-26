@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
-import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.appendCode
 import app.sleevesight.app.ui.theme.codeStyle
@@ -44,24 +43,22 @@ internal data class ShownKey(
     val ending: String?,
 )
 
+/**
+ * A key in a [KeyTable]: [key], and, on *Load keys*' list of the keys read, whether it [replaces] a
+ * saved key (true) or is new (false); null elsewhere.
+ */
+internal data class KeyRow(
+    val key: ShownKey,
+    val replaces: Boolean? = null,
+)
+
 /** [key]'s last characters, as the key screens show them: "a1B2". */
 internal fun endingOf(key: String): String = key.takeLast(SHOWN_END)
 
 /**
- * [key] by its name and its last characters, marked as code ([keyLine]), or, when it cannot be
- * read, by its name and that.
- */
-@Composable
-internal fun shownKey(key: ShownKey): AnnotatedString {
-    val name = stringResource(keyName(key.id))
-    return key.ending?.let { keyLine(R.string.key_ending, name, it) }
-        ?: AnnotatedString(stringResource(R.string.key_unreadable, name))
-}
-
-/**
  * The text [line] of a key, by its [name] (`%1$s`) and its [ending] (`%2$s`, from [endingOf]), the
  * ending marked as code ([codeStyle]) and read by a screen reader character by character (#542):
- * "Anthropic API key, ending `a1B2`".
+ * "Anthropic, ending `a1B2`". A [line] without the ending is that text alone.
  */
 @Composable
 internal fun keyLine(
@@ -73,6 +70,10 @@ internal fun keyLine(
     val code = codeStyle()
     return buildAnnotatedString {
         val at = text.indexOf(ENDING_MARK)
+        if (at < 0) {
+            append(text)
+            return@buildAnnotatedString
+        }
         append(text, 0, at)
         appendCode(ending, code)
         append(text, at + ENDING_MARK.length, text.length)

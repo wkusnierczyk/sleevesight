@@ -198,8 +198,8 @@ class LoadKeysTest {
     fun aGoodCodeShowsWhatItHoldsSavesNothingBeforeSaveAndThenSaysWhatWasSaved() {
         runBlocking { secrets.set(SecretId.EXA, Secret("0c6d1e2f-0000-0000-0000-9a0b1c2d3e4f")) }
         show(scanner = scanning("sleevesight-keys:v1\nanthropic=$anthropicKey\nexa=$exaKey")) {
-            val anthropic = text(R.string.settings_key_name_anthropic)
-            val exa = text(R.string.settings_key_name_exa)
+            val anthropic = text(R.string.settings_ai_provider_anthropic)
+            val exa = text(R.string.settings_key_recipient_exa)
             waitForText(app.getString(R.string.setup_new, anthropic, ending(anthropicKey)))
             compose.onNodeWithText(app.getString(R.string.setup_replaces, exa, ending(exaKey))).assertIsDisplayed()
             // All good: *Save* or *Cancel*, nothing else.
@@ -221,8 +221,8 @@ class LoadKeysTest {
             waitForText(text(R.string.load_keys_saved_title))
             assertEquals(anthropicKey, stored(SecretId.ANTHROPIC))
             assertEquals(exaKey, stored(SecretId.EXA))
-            compose.onNodeWithText(saved(R.string.settings_key_name_anthropic, anthropicKey)).assertIsDisplayed()
-            compose.onNodeWithText(saved(R.string.settings_key_name_exa, exaKey)).assertIsDisplayed()
+            compose.onNodeWithText(saved(R.string.settings_ai_provider_anthropic, anthropicKey)).assertIsDisplayed()
+            compose.onNodeWithText(saved(R.string.settings_key_recipient_exa, exaKey)).assertIsDisplayed()
 
             compose.onNodeWithText(text(R.string.key_screen_done)).performClick()
             waitFor("the screen closed") { !shown(text(R.string.load_keys_saved_title)) }
@@ -267,7 +267,7 @@ class LoadKeysTest {
             assertTrue(!shown(text(R.string.settings_save)) && !shown(text(R.string.load_keys_save_these)))
 
             compose.onNodeWithText(text(R.string.setup_scan_again)).performClick()
-            waitForText(app.getString(R.string.setup_new, text(R.string.settings_key_name_lastfm), ending(lastFmKey)))
+            waitForText(app.getString(R.string.setup_new, text(R.string.settings_source_lastfm), ending(lastFmKey)))
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
             waitFor("the Last.fm key stored") { stored(SecretId.LASTFM) == lastFmKey }
         }
@@ -320,7 +320,8 @@ class LoadKeysTest {
             // The save has reached the screen first: *Secrets*, under it, offers to remove the key.
             val lastFm = text(R.string.settings_key_name_lastfm)
             waitForNode(hasContentDescription(app.getString(R.string.settings_key_remove, lastFm)))
-            compose.onNodeWithText(app.getString(R.string.setup_new, lastFm, ending(lastFmKey))).assertIsDisplayed()
+            val lastFmRow = app.getString(R.string.setup_new, text(R.string.settings_source_lastfm), ending(lastFmKey))
+            compose.onNodeWithText(lastFmRow).assertIsDisplayed()
 
             val writes = flaky.writes.get()
             compose.onNodeWithText(text(R.string.settings_save)).performClick()
@@ -328,8 +329,8 @@ class LoadKeysTest {
             assertEquals(anthropicKey, runBlocking { store.get(SecretId.ANTHROPIC) }?.reveal())
             // Only the key left was saved again, and the confirmation names both.
             assertEquals(writes + 1, flaky.writes.get())
-            compose.onNodeWithText(saved(R.string.settings_key_name_anthropic, anthropicKey)).assertIsDisplayed()
-            compose.onNodeWithText(saved(R.string.settings_key_name_lastfm, lastFmKey)).assertIsDisplayed()
+            compose.onNodeWithText(saved(R.string.settings_ai_provider_anthropic, anthropicKey)).assertIsDisplayed()
+            compose.onNodeWithText(saved(R.string.settings_source_lastfm, lastFmKey)).assertIsDisplayed()
         }
     }
 }
