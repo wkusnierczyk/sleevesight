@@ -34,10 +34,15 @@ import app.sleevesight.core.sources.ResolvedArtist
  * id: without one, a same-name article cannot be told from the right one.
  *
  * Never throws, apart from cancellation: Wikidata not answering is [Verdict.Unreachable].
+ *
+ * Without [genres] (*Show genres* off, #444, #545), an item's genres (P136) are dropped as it is
+ * read: their labels are not asked for, and an accepted item holds none, so its evidence names no
+ * genre ([WikidataEvidence]). The check itself never reads them.
  */
 class IdentityCheck(
     private val wikidata: WikidataLookup,
     private val names: NameMatcher,
+    val genres: Boolean = true,
 ) {
     /** How a candidate item was reached, which decides what may confirm it. */
     enum class Route {
@@ -217,9 +222,10 @@ class IdentityCheck(
             }
         }
 
+    // The item [id], without its genres unless [genres].
     private suspend fun entity(id: String): WdEntity? =
         when (val found = wikidata.entities(listOf(id))) {
-            is Lookup.Found -> found.value[id]
+            is Lookup.Found -> found.value[id]?.let { if (genres) it else it.copy(claims = it.claims - Wd.GENRE) }
             is Lookup.NotFound -> null
             is Lookup.Failed -> throw Unanswered()
         }

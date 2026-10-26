@@ -74,9 +74,11 @@ data class KeptPart(
  *
  * @property name the part's own name, unique among parts, the store's key with the artist's key:
  *   `lastfm.artist`, say. Kept with each entry, so it is never renamed.
- * @property extraction the [SourceAdapter.extractionVersion] of the adapter that makes the value:
- *   the value embeds its extraction rules (which sentences, which verdict), so raising the
- *   adapter's version misses its kept parts too.
+ * @property extraction the version of what the part stores, raised when that changes, so the
+ *   entries kept under the old one are missed. Usually the [SourceAdapter.extractionVersion] of
+ *   the adapter that makes the value, since the value embeds its extraction rules (which
+ *   sentences, which verdict), but not always: a part whose stored answers outlive a change to
+ *   the lines made from them keeps its own (`LastFmAdapter.ANSWERS_VERSION`, #545).
  * @property encoding the version of the part's own encoding, raised when it changes; from 1 to
  *   [ENCODINGS] - 1.
  * @property sources the sources the value depends on: it is kept for the shortest of their
