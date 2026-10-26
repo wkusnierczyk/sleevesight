@@ -88,6 +88,7 @@ internal fun PageLink(
  * opened to the whole screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongParameterList") // The title and the way back; how the page looks, each with a default; its content.
 @Composable
 internal fun PageFrame(
     title: String,
