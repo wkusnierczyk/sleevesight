@@ -323,9 +323,27 @@ class ExaWebSearchTest {
 
     @Test
     fun `the request sends only parameters Exa's lite search accepts`() {
-        // Exa's search reference: `lite` "accepts only" these (among others the adapter does not
-        // send), and "a request that sets any other parameter is rejected".
-        val accepted = setOf("query", "type", "numResults", "excludeDomains", "contents")
+        // Exa's search reference (https://exa.ai/docs/reference/search, checked 2026-10-26): `lite`
+        // "accepts only" these, besides `type` itself, and "a request that sets any other parameter
+        // is rejected".
+        val accepted =
+            setOf(
+                "type",
+                "query",
+                "objective",
+                "userIdentifier",
+                "metadata",
+                "category",
+                "numResults",
+                "contents",
+                "userLocation",
+                "includeDomains",
+                "excludeDomains",
+                "startPublishedDate",
+                "endPublishedDate",
+                "moderation",
+                "compliance",
+            )
         val acceptedContents = setOf("highlights", "text", "snapshotAsOf")
         for ((n, _) in RECORDINGS) {
             val body = ExaWebSearch.JSON.encodeToJsonElement(ExaSearchRequest.of(track(n))).jsonObject
