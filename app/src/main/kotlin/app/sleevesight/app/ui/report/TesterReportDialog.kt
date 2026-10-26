@@ -34,6 +34,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.TesterPart
 import app.sleevesight.app.report.TesterReport
 import app.sleevesight.app.report.TesterSnapshot
+import app.sleevesight.app.ui.theme.DeveloperMark
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -102,10 +103,27 @@ internal fun TesterReportDialog(
         previewHint = stringResource(R.string.tester_report_preview_hint),
         held = held,
     ) {
+        TesterInputs(note, { note = it }, drafts) { draft, on -> include(draft, on, scope, readHistory) }
+    }
+}
+
+/**
+ * What the tester's review alone asks, above the preview: its introduction, the [note] (changed by
+ * [onNote]), and a switch per part of [drafts] ([onInclude]). Only developer mode's, so marked as
+ * such (#536).
+ */
+@Composable
+private fun TesterInputs(
+    note: String,
+    onNote: (String) -> Unit,
+    drafts: Map<TesterPart, PartDraft>,
+    onInclude: (PartDraft, Boolean) -> Unit,
+) {
+    DeveloperMark(spacing = 8.dp) {
         Text(stringResource(R.string.tester_report_intro, Mail.SUPPORT), style = MaterialTheme.typography.bodyMedium)
         OutlinedTextField(
             value = note,
-            onValueChange = { note = it.take(NOTE_LIMIT) },
+            onValueChange = { onNote(it.take(NOTE_LIMIT)) },
             label = { Text(stringResource(R.string.tester_report_note)) },
             minLines = 2,
             modifier = Modifier.fillMaxWidth().testTag(TESTER_NOTE_TAG),
@@ -113,7 +131,7 @@ internal fun TesterReportDialog(
         Text(stringResource(R.string.tester_report_parts), style = MaterialTheme.typography.titleSmall)
         for (part in TesterPart.entries) {
             val draft = drafts.getValue(part)
-            PartRow(part, draft) { on -> include(draft, on, scope, readHistory) }
+            PartRow(part, draft) { on -> onInclude(draft, on) }
         }
     }
 }

@@ -45,6 +45,7 @@ import app.sleevesight.app.diagnostics.ExportResult
 import app.sleevesight.app.diagnostics.ExportState
 import app.sleevesight.app.diagnostics.LoggedEvent
 import app.sleevesight.app.ui.home.PageBar
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.pipeline.EventLine
 import app.sleevesight.store.CacheStats
 import kotlinx.coroutines.NonCancellable
@@ -99,7 +100,8 @@ fun DiagnosticsScreen(
             }
         },
     ) { bars ->
-        Column(modifier = Modifier.padding(bars).consumeWindowInsets(bars)) {
+        // The whole screen is only developer mode's, and marked as such (#536).
+        DeveloperMark(modifier = Modifier.padding(bars).consumeWindowInsets(bars)) {
             ExportNotice(exportState)
             PrimaryTabRow(selectedTabIndex = tab.ordinal, modifier = Modifier.padding(top = 8.dp)) {
                 for (shown in DiagnosticsTab.entries) {

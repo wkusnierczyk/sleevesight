@@ -44,6 +44,7 @@ import app.sleevesight.app.ui.logo.HeaderLogo
 import app.sleevesight.app.ui.report.ReportButtonState
 import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
+import app.sleevesight.app.ui.theme.LocalDeveloperMark
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
 import kotlinx.coroutines.launch
@@ -108,7 +109,12 @@ private fun HomeBody(
                     start = 16.dp,
                     end = 16.dp,
                     top = 8.dp,
-                    bottom = if (reportShown) REPORT_CLEARANCE else 8.dp,
+                    bottom =
+                        when {
+                            !reportShown -> 8.dp
+                            LocalDeveloperMark.current -> REPORT_CLEARANCE + REPORT_MARK_CLEARANCE
+                            else -> REPORT_CLEARANCE
+                        },
                 ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -189,6 +195,9 @@ private val REPORT_MARGIN = 16.dp
  * margin below and 16 dp above it, so the end of Home scrolls clear of it.
  */
 private val REPORT_CLEARANCE = 72.dp
+
+/** The more space under what scrolls while the report button is marked (#536): the mark's room. */
+private val REPORT_MARK_CLEARANCE = 24.dp
 
 /** The link tag of *What leaves the device?* on Home. */
 const val WHAT_LEAVES_TAG: String = "what-leaves"

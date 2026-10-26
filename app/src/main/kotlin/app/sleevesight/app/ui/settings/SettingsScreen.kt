@@ -38,6 +38,7 @@ import app.sleevesight.app.ui.keyboard.BluetoothComputerKeyboard
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
 import app.sleevesight.app.ui.scan.CameraQrScanner
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.theme.DeveloperMark
 import app.sleevesight.core.ai.AiProvider
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.settings.Settings
@@ -393,8 +394,11 @@ private fun SettingsColumn(
             AboutSection(settings, update, navigation.openCredits, navigation.openWhatLeaves)
         }
         if (settings.developerMode) {
-            FoldedSection(SettingsSection.DEVELOPER, folds) {
-                DeveloperSection(settings, update, open, navigation.openDiagnostics)
+            // The whole section marked (#536), so what the mark means shows where it is set.
+            DeveloperMark(spacing = 4.dp) {
+                FoldedSection(SettingsSection.DEVELOPER, folds) {
+                    DeveloperSection(settings, update, open, navigation.openDiagnostics)
+                }
             }
         }
     }

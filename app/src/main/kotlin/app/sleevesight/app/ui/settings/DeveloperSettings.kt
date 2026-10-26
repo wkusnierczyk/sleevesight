@@ -26,6 +26,9 @@ import app.sleevesight.core.settings.Settings
  * - *Link style* (#519): every link underlined (the default) or highlighted
  *   ([Settings.linkStyle]), to try both on the phone over real album art; back to the underline
  *   with developer mode off.
+ * - *Mark developer items* (#536), on by default: everything only developer mode shows, this
+ *   section among it, outlined in teal with a small *Developer* tag ([Settings.markDeveloperItems],
+ *   `DeveloperMark`).
  * - *Developer mode*, which turns developer mode off, and with it every developer option, and
  *   hides the section again.
  */
@@ -71,6 +74,11 @@ internal fun DeveloperSection(
             },
         )
     }
+    SwitchRow(
+        title = stringResource(R.string.settings_mark_developer),
+        summary = stringResource(R.string.settings_mark_developer_summary),
+        checked = settings.markDeveloperItems,
+    ) { on -> update { it.copy(markDeveloperItems = on) } }
     SwitchRow(
         title = stringResource(R.string.settings_developer_mode),
         summary = stringResource(R.string.settings_developer_mode_summary),
