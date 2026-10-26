@@ -104,7 +104,8 @@ internal fun ValueRow(
 
 /**
  * One option in a dialog's list; the whole row selects it. [detail], when given, goes under the
- * label, smaller and muted: a model's id under its name.
+ * label, smaller and muted: a model's id under its name, or what a choice does (#546, #550). The row
+ * is one selectable node, so a screen reader reads the detail with its label.
  */
 @Composable
 internal fun RadioRow(

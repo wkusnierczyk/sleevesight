@@ -110,7 +110,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 - *On track change*, the default: a new insight for each new track.
 - *On skip*: only for a track you skip to, not one that follows a track played to its end. *Crossfade* (*Autodetect* by default), shown under it, helps tell the two apart.
-- *Manual: only when I tap Write*.
+- *Manual*: only when you tap *Write insight*.
 
 *Show insights* off makes no AI calls at all; the sources are still shown.
 

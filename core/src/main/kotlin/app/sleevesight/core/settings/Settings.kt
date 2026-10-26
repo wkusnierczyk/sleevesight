@@ -49,7 +49,7 @@ import kotlin.time.Duration.Companion.seconds
  *   action expires, so nothing more is written without a new tap. Null is *Off*, and the first
  *   action lasts as long as the process.
  *   See [DEFAULT_PAUSE_AUTO_WRITE_AFTER].
- * @property artistFactsOncePerSession *Tell an artist's facts once per session* (#407): on, an
+ * @property artistFactsOncePerSession *Don't repeat artist facts* (#407): on, an
  *   insight's prompt leaves out the artist-level lines another insight of the listening session
  *   cited, and all of them for a track with enough lines of its own (#239, `PromptEvidence`); off,
  *   every insight is written from all its evidence, as before #239.

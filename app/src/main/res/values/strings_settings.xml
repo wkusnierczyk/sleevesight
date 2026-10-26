@@ -82,12 +82,16 @@
     <string name="settings_report_button_show">Show</string>
     <string name="settings_report_button_auto">Auto</string>
     <string name="settings_report_button_hide">Hide</string>
+    <!-- Report button's choices, each described under its name in the choice dialog (#550). -->
+    <string name="settings_report_button_show_detail">Always on the home screen.</string>
+    <string name="settings_report_button_auto_detail">Hidden while the home screen scrolls, back when it stops.</string>
+    <string name="settings_report_button_hide_detail">Not shown; bring it back here.</string>
     <string name="settings_link_style">Link style</string>
     <string name="settings_link_style_summary">How links are marked: a thin line below them, or a faint highlight behind them.</string>
     <string name="settings_link_style_underline">Underline</string>
     <string name="settings_link_style_highlight">Highlight</string>
     <string name="settings_developer_mode">Developer mode</string>
-    <string name="settings_developer_mode_summary">Off: hides this section, and turns off what it holds.</string>
+    <string name="settings_developer_mode_summary">Developer mode is on. Turn it off here to hide this section and turn off everything in it.</string>
     <!-- Appearance → Layout (#447): how an item of the home screen opens. -->
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_boxes">Expandable boxes</string>

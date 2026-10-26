@@ -10,7 +10,7 @@ import app.sleevesight.core.settings.WriteAutomatically
 import kotlin.time.Duration.Companion.seconds
 
 // *Insights* (#444): *Show insights*, *Reactive* with *Crossfade*, *Proactive*, *Saver*, *Look up in
-// the background* and *Tell an artist's facts once per session* (#407).
+// the background* and *Don't repeat artist facts* (#407, #546).
 
 private val MAX_CROSSFADE_SECONDS =
     Crossfade.Fixed.MAX.inWholeSeconds
@@ -21,9 +21,10 @@ private val MAX_CROSSFADE_SECONDS =
  * (`writeAutomatically`, D5), which track changes write an insight without a tap, with *Crossfade*
  * under it while it is *On skip*, the only choice that uses it; *Proactive* (`prepareNextTrack`,
  * D13), the next track's evidence ahead; *Saver* (`pauseAutoWriteAfter`, #203); and *Look up in the
- * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Tell an
- * artist's facts once per session* (`artistFactsOncePerSession`, #407), what an insight's prompt
- * holds of the artist's facts. The rows about writing cannot be changed while *Show insights* is
+ * background* (D6) beside it, since both govern what happens while Sleevesight is away; and *Don't
+ * repeat artist facts* (`artistFactsOncePerSession`, #407; once *Tell an artist's facts once per
+ * session*), what an insight's prompt holds of the artist's facts. *Reactive*'s choices are
+ * described in its dialog (#546). The rows about writing cannot be changed while *Show insights* is
  * off; *Proactive* can, as it writes nothing.
  */
 @Composable
@@ -44,6 +45,12 @@ internal fun InsightsSection(
             WriteAutomatically.WHEN_I_SKIP to stringResource(R.string.settings_write_when_skip),
             WriteAutomatically.NEVER to stringResource(R.string.settings_write_never),
         )
+    val modeDetails =
+        mapOf(
+            WriteAutomatically.ON_EVERY_TRACK_CHANGE to stringResource(R.string.settings_write_every_change_detail),
+            WriteAutomatically.WHEN_I_SKIP to stringResource(R.string.settings_write_when_skip_detail),
+            WriteAutomatically.NEVER to stringResource(R.string.settings_write_never_detail),
+        )
     ValueRow(
         title = stringResource(R.string.settings_write_automatically),
         value = modes.first { it.first == settings.writeAutomatically }.second,
@@ -55,6 +62,7 @@ internal fun InsightsSection(
                         R.string.settings_write_automatically,
                         modes,
                         settings.writeAutomatically,
+                        details = modeDetails,
                     ) { mode ->
                         update { it.copy(writeAutomatically = mode) }
                     },
@@ -77,6 +85,8 @@ internal fun InsightsSection(
         checked = settings.lookUpInBackground,
     ) { on -> update { it.copy(lookUpInBackground = on) } }
 
+    // TODO(#546): link *New session idle trigger* in the description to its row under *History*,
+    // once Settings has the shared link that unfolds a section at a row (#563).
     SwitchRow(
         title = stringResource(R.string.settings_artist_facts_once),
         summary = stringResource(R.string.settings_artist_facts_once_summary),
