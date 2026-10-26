@@ -8,6 +8,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
@@ -15,8 +17,6 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
@@ -164,7 +164,10 @@ class PhoneNameSettingTest {
                 .config[SemanticsActions.GetTextLayoutResult]
                 .action
                 ?.invoke(layouts)
-            val color = layouts.single().layoutInput.style.color
+            val color =
+                layouts
+                    .single()
+                    .layoutInput.style.color
             val drawn = checkNotNull(scheme)
             assertNotEquals(drawn.error, color)
             assertEquals(drawn.onSurface, color)
