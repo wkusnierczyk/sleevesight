@@ -121,8 +121,8 @@ class NowPlayingScreenTest {
         settings: Settings = Settings(),
     ) = NowPlayingState(view, sundown, PlaybackInfo(Settings.SPOTIFY, PlaybackStatus.PLAYING), settings = settings)
 
-    // The *Sources* list starts folded (#269): its first screenful, or all of it.
-    private fun unfold() = compose.onNodeWithTag(FOLD_SHOW_TAG).performScrollTo().performClick()
+    // The *Sources* list starts folded (#269), its heading the fold (#440): its first screenful, or all of it.
+    private fun unfold() = compose.onNodeWithTag(SOURCES_FOLD_TAG).performScrollTo().performClick()
 
     private fun unfoldAll() {
         unfold()
@@ -155,6 +155,7 @@ class NowPlayingScreenTest {
         ) {
             compose.onNodeWithText("Carefree Highway").assertExists()
             assertEquals(0, compose.onAllNodesWithText("It was recorded", substring = true).fetchSemanticsNodes().size)
+            unfold()
             compose.onNodeWithText(text(R.string.home_evidence_looking)).assertExists()
         }
 
@@ -567,11 +568,18 @@ class NowPlayingScreenTest {
     }
 
     @Test
-    fun aFilterChipKeepsItsTextAndSaysWhetherItsLinesShow() =
+    fun aChipIsReadAsItsSourcesNameAndWhetherItsLinesShow() =
         show(state(PipelineView(track()))) {
             unfold()
             val chip = compose.onNodeWithTag(CHIP_PREFIX + "MB").performScrollTo()
-            chip.assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+            chip.assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(text(R.string.settings_source_musicbrainz)),
+                ),
+            )
+            // Its letter is drawn, not read.
+            assertEquals(0, compose.onAllNodesWithText("MB").fetchSemanticsNodes().size)
             chip.assert(
                 SemanticsMatcher.expectValue(
                     SemanticsProperties.StateDescription,
@@ -631,26 +639,32 @@ class NowPlayingScreenTest {
 
     // Native graphics, on the phone's width and density: with Robolectric's default graphics every
     // chip lays out at one height, so a row could not be misaligned. A chip that filters reserves
-    // 48 dp for touch and draws centred in it; one that does not (L, no key) reserves nothing, and
-    // drew at the top of the row, above the others.
+    // 48 dp for touch and draws centred in it; one that does not (L, no key, under *Show grounding
+    // details*) reserves nothing, and drew at the top of the row, above the others. The chips by
+    // name (#440), a letter and a name of two sizes, share the row's centre too.
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w411dp-h891dp-420dpi")
-    fun theChipsOfARowShareACentre() =
-        show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)))) {
-            val chips =
-                listOf("MB", "W", "L").map {
-                    val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
-                    // Unclipped: a chip scrolled out of view has empty bounds in the root.
-                    node.positionInRoot.y to node.positionInRoot.y + node.size.height
-                }
-            // On one row, or the centres below would differ for another reason: chips of one row
-            // overlap in height (each is more than half the row's height), and the next row starts
-            // below them all.
-            assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
-            val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
-            assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
+    fun theChipsOfARowShareACentre() {
+        val details = Settings(showGroundingDetails = true)
+        for ((settings, tags) in listOf(details to listOf("MB", "W", "L"), Settings() to listOf("MB", "W"))) {
+            show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)), settings)) {
+                unfold()
+                val chips =
+                    tags.map {
+                        val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
+                        // Unclipped: a chip scrolled out of view has empty bounds in the root.
+                        node.positionInRoot.y to node.positionInRoot.y + node.size.height
+                    }
+                // On one row, or the centres below would differ for another reason: chips of one
+                // row overlap in height (each is more than half the row's height), and the next row
+                // starts below them all.
+                assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
+                val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
+                assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
+            }
         }
+    }
 
     @Test
     fun theSourcesSayWhatEachFoundNeedsOrRejected() {
@@ -662,12 +676,13 @@ class NowPlayingScreenTest {
                         SourceId.WIKIPEDIA to done(Outcome.Rejected("a different Sundown")),
                     ),
             )
-        show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)))) {
+        // Under *Show grounding details* (#440): every source's status, as before.
+        show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
+            unfold()
             val kept = text(R.string.home_source_cached, text(R.string.home_source_found_song))
             compose.onNodeWithText(text(R.string.home_source_chip, "MB", kept)).assertExists()
             val needsKey = text(R.string.home_source_chip, "L", text(R.string.home_source_needs_key))
             compose.onNodeWithText(needsKey).assertExists()
-            unfold()
             val wikipedia = text(R.string.settings_source_wikipedia)
             compose.onNodeWithText(text(R.string.home_rejected, wikipedia, "a different Sundown")).assertExists()
         }
@@ -678,9 +693,11 @@ class NowPlayingScreenTest {
         val unreachable =
             track(sources = mapOf(SourceId.MUSICBRAINZ to done(), SourceId.WIKIPEDIA to done(Outcome.Unreachable)))
         show(state(PipelineView(unreachable, offline = true))) {
+            unfold()
             compose.onNodeWithText(text(R.string.home_sources_offline)).performScrollTo().assertIsDisplayed()
         }
         show(state(PipelineView(unreachable, offline = false))) {
+            unfold()
             compose.onNodeWithText(text(R.string.home_sources_offline)).assertDoesNotExist()
         }
     }

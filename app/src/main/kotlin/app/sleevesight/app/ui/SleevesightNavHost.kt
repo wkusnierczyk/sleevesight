@@ -51,8 +51,9 @@ class SettingsLinks(
  * [Home] itself sends the user to [FirstRun] until they have continued past it, so no other way in
  * (a deep link, a restored back stack) skips it; nor do [SettingsPage], which [settings] draws,
  * given the ways to [CreditsPage] and [DiagnosticsPage], [CreditsPage], and [DiagnosticsPage],
- * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, and, with
- * a [testerReport] feed, the tester's report button while its settings show it (#452).
+ * which [diagnostics] draws. [Home] shows the pipeline's state, as [pipeline] draws it, given the
+ * way to the settings, and, with a [testerReport] feed, the tester's report button while its
+ * settings show it (#452).
  */
 @Suppress("LongParameterList") // The access and first-run seams, and each screen's content.
 @Composable
@@ -63,7 +64,7 @@ fun SleevesightNavHost(
     navController: NavHostController = rememberNavController(),
     testerReport: TesterReportFeed? = null,
     settings: @Composable (links: SettingsLinks) -> Unit = {},
-    pipeline: @Composable () -> Unit = { NothingPlaying() },
+    pipeline: @Composable (openSettings: () -> Unit) -> Unit = { NothingPlaying() },
     diagnostics: @Composable () -> Unit = {},
 ) {
     val granted by notificationAccess.granted.collectAsState()
@@ -89,14 +90,16 @@ fun SleevesightNavHost(
         }
         composable<Home> {
             if (firstRun.acknowledged) {
+                // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
+                val openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } }
                 WithTesterReport(testerReport) { report ->
                     HomeScreen(
                         accessGranted = granted,
                         // Single top: a double tap opens it once, so one Continue comes back.
                         onOpenFirstRun = { navController.navigate(FirstRun) { launchSingleTop = true } },
-                        onOpenSettings = { navController.navigate(SettingsPage) },
+                        onOpenSettings = openSettings,
                         report = report,
-                        pipeline = pipeline,
+                        pipeline = { pipeline(openSettings) },
                     )
                 }
             } else {

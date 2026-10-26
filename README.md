@@ -35,7 +35,7 @@ Sleevesight is an open-source Android app that reads what your music player is p
 - Notices the track change in Spotify, or any other player you follow that publishes an Android media session.
 - Shows the cover, title, artists, album and release year, plus the genre labels of the track, its artists and its album, folded to the most specific level found, each telling where it came from.
 - Writes a few sentences on why the track is interesting. Every factual sentence links to the source it came from.
-- Shows the sources themselves, with what each found, rejected or could not verify.
+- Shows the sources themselves, folded under their heading: each source that gave lines, the lines with a link to where they were found, what was found but could not be verified, and a note when a source needs your key, could not be reached or failed.
 - Opens the player with a tap on its name.
 
 Planned ([Roadmap](#roadmap)): deeper insight on the song, each artist, the album, a genre or a similar artist; follow-up questions; playing, pausing and skipping from the app.
@@ -43,7 +43,7 @@ Planned ([Roadmap](#roadmap)): deeper insight on the song, each artist, the albu
 ## How it works
 
 1. **Read.** A notification listener gives the app the player's media session: which player it is; the title, artists, album, duration and cover; whether it is playing, and how far in; and the queue up next, with its name. Sleevesight never touches the audio.
-2. **Look up.** The track's title and artists are cleaned up: tags the player appends, such as "2006 Remaster" or "feat. Van Morrison", are set aside, and featured artists are added to the artist list, so the song can be found under its plain name. It is then matched against the sources you switched on: MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search. Matches that fail an identity check are rejected and shown as rejected, not used quietly. A source that cannot be reached shows as unreachable; while the phone is offline the app says so, and once it is back online the playing track's unreachable sources are asked again.
+2. **Look up.** The track's title and artists are cleaned up: tags the player appends, such as "2006 Remaster" or "feat. Van Morrison", are set aside, and featured artists are added to the artist list, so the song can be found under its plain name. It is then matched against the sources you switched on: MusicBrainz, Wikipedia and Wikidata, Last.fm, and the Exa web search. Matches that fail an identity check are rejected and never used; *Show grounding details*, a developer option, lists them with the reason. A source that cannot be reached says so; while the phone is offline the app says so, and once it is back online the playing track's unreachable sources are asked again.
 3. **Write.** The AI service you chose turns the retrieved evidence into the insight, citing evidence ids. It is not allowed to add facts of its own unless you turn that on, and then they are marked unverified.
 4. **Check.** The citations are checked in code: uncited sentences and citations to missing evidence are flagged on the card, and a note under the insight says how many sentences the sources do not back, shown only when there are any.
 5. **Report.** *Report a problem*, under the insight, sends the developer a report of an insight that is wrong or offensive, by email from your own mail app, once you have seen what it holds ([Privacy](#privacy)).

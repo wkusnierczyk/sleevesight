@@ -2,13 +2,10 @@ package app.sleevesight.app.ui.home
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +15,6 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -29,12 +25,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,26 +36,32 @@ import app.sleevesight.core.evidence.EvidenceDraft
 import app.sleevesight.core.evidence.EvidenceLine
 import app.sleevesight.core.evidence.Scope
 import app.sleevesight.core.model.Outcome
+import app.sleevesight.core.model.SourceId
 import app.sleevesight.core.pipeline.SourceState
 import app.sleevesight.core.pipeline.TrackState
 
 /**
- * The *Sources* section, quiet, at the bottom (design, *Home screen*): a chip per source with its
- * state, which shows or hides that source's lines (a display filter only: what the model may use
- * is the settings'), the chips of a row centred on one line; the evidence lines, each with its
- * scope and a link to where it was found; the lines of matches that could not be verified, which
- * are shown but never cited; and the matches rejected, with their reasons. The lines are a table
- * of two columns (#270): the tags right-aligned in the first, as wide as the widest, so every
- * line's text starts at the same place.
+ * The *Sources* section, quiet, at the bottom (design, *Home screen*). Its heading is its fold
+ * (#440): `Sources ▸` folded, and nothing else; `Sources ▾` unfolded, and under it a chip for each
+ * source that gave lines, by name with the letter its citations use ([chipsWithLines]), which shows
+ * or hides that source's lines (a display filter only: what the model may use is the settings'),
+ * the chips of a row centred on one line; a note when a source needs the listener's key, could not
+ * be reached or failed ([sourceNotes]), its key's linking to the settings ([openSettings]); and the
+ * list: the evidence lines, each with its scope and a link to where it was found, and the lines of
+ * matches that could not be verified, which are shown but never cited. The lines are a table of two
+ * columns (#270): the tags right-aligned in the first, as wide as the widest, so every line's text
+ * starts at the same place.
  *
- * The list is folded ([fold], #269): it starts folded, the heading and the chips showing and
- * *show* under them, and unfolds a screenful ([Fold.PAGE] lines) at a time, *more* and *show all*
- * under it while lines remain, *less* back to the first screenful once past it, and *hide* above
- * it and under it, so folding it is never a scroll away. The unverified lines and the rejected
- * matches are part of the list, after the evidence lines, under their own headings. While the
- * list is folded, a chip unfolds it to its source's first line rather than hiding its lines, and
- * a citation tapped unfolds it to the line cited ([LineFocus.cite]). Each control is a button a
- * screen reader names in words, and the list says how much of it shows.
+ * With *Show grounding details* on ([details]), the chips are every source's, as [chips] has them,
+ * each with its letter and its status ("W the song (kept)"), the model's own knowledge's `M` among
+ * them, and the list ends with the matches the sources rejected, with their reasons.
+ *
+ * The list unfolds a screenful ([Fold.PAGE] lines) at a time ([fold], #269): *show more…* and
+ * *show all* under it while lines remain, *… show less* back to the first screenful once past it.
+ * The unverified lines and the rejected matches are part of the list, after the evidence lines,
+ * under their own headings. A citation tapped unfolds it to the line cited ([LineFocus.cite]). The
+ * heading is a button a screen reader names *Sources*, collapsed or expanded, each control one it
+ * names in words, and the list says how much of it shows.
  *
  * When the insight shown is the one written earlier ([cardKept]: the pipeline shows the card paid
  * for in place of an insight the run lacks, `PipelineView.cardShown`, whether Rewrite is offered,
@@ -74,7 +70,7 @@ import app.sleevesight.core.pipeline.TrackState
  * While the phone is offline and a source is unreachable ([offline], #192), it says so: those
  * sources are asked again once it is back online.
  */
-@Suppress("LongParameterList") // What the section shows, and the two states it is unfolded by.
+@Suppress("LongParameterList") // What the section shows, the states it is unfolded by, and its link.
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SourcesSection(
@@ -84,56 +80,62 @@ internal fun SourcesSection(
     fold: SourcesFold,
     cardKept: Boolean,
     offline: Boolean = false,
+    details: Boolean = false,
+    openSettings: () -> Unit = {},
 ) {
     val hidden = focus.hidden
+    val lines = track?.evidence?.lines.orEmpty()
+    val unverified = track?.let(::unverifiedLines).orEmpty()
+    val entries = entriesOf(track, hidden, details)
+    // The lines the chips hide: with every entry hidden, the count still shows.
+    val filtered = lines.count { it.source in hidden }
     val folded = fold.fold == Fold.Folded
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(R.string.home_sources_title),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.semantics { heading() },
-        )
-        val lines = track?.evidence?.lines.orEmpty()
-        val unverified = track?.let(::unverifiedLines).orEmpty()
-        // Of every line, hidden ones too, so the column does not move when a chip hides some.
-        val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
-            for (chip in chips) {
-                val filters = lines.any { it.source in chip.filters }
-                val shown = chip.filters.none { it in hidden }
-                StatusChip(chip, filtering = filters, shown = shown, folded = folded) {
-                    // Lines shown again are unfolded to, wherever they fall in the list.
-                    (if (folded) focus.reveal(chip) else focus.toggle(chip))?.let(fold::reach)
-                }
+        SourcesHeading(folded) {
+            if (!folded) {
+                fold.set(Fold.Folded)
+            } else {
+                // Every entry hidden by the chips: unfolding shows their lines, not an empty list.
+                if (entries.isEmpty()) focus.showAll()
+                fold.set(Fold.Pages(1))
             }
         }
+        if (folded) return@Column
+        // Of every line, hidden ones too, so the column does not move when a chip hides some.
+        val tagWidth = tagColumnWidth(lines.map { it.id } + unverified.map { it.source.tag })
+        SourceChips(if (details) chips else chipsWithLines(chips, track?.evidence), details, lines, focus, fold)
+        Notes(sourceNotes(chips, offline), openSettings)
         if (offline) Small(stringResource(R.string.home_sources_offline))
         if (lines.isEmpty()) {
             val empty = if (track?.gathered == true) R.string.home_evidence_empty else R.string.home_evidence_looking
             Small(stringResource(empty))
         }
-        val entries =
-            lines.filter { it.source !in hidden }.map(Entry::Line) +
-                unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
-                track
-                    ?.let(::rejectedMatches)
-                    .orEmpty()
-                    .mapIndexed { index, match -> Entry.Rejected(match, index) }
-        // The lines the chips hide: with every entry hidden, the fold and its count still show.
-        val filtered = lines.count { it.source in hidden }
         if (entries.isEmpty() && filtered == 0) return@Column
         val total = entries.size
         val shown = fold.fold.shown(total)
-        FoldStatus(fold, shown, total, filtered, focus::showAll)
+        FoldStatus(fold, shown, total, filtered)
         if (shown == 0) return@Column
         if (cardKept && lines.isNotEmpty()) Small(stringResource(R.string.home_evidence_cited))
         Entries(entries.take(shown), tagWidth, focus)
         FoldControls(fold, shown, total)
     }
+}
+
+/**
+ * The list's entries for [track]: its evidence lines but those of the [hidden] sources, its
+ * unverified lines, and with grounding [details] the matches rejected.
+ */
+private fun entriesOf(
+    track: TrackState?,
+    hidden: Set<SourceId>,
+    details: Boolean,
+): List<Entry> {
+    val lines = track?.evidence?.lines.orEmpty()
+    val unverified = track?.let(::unverifiedLines).orEmpty()
+    val rejected = if (details) track?.let(::rejectedMatches).orEmpty() else emptyList()
+    return lines.filter { it.source !in hidden }.map(Entry::Line) +
+        unverified.mapIndexed { index, line -> Entry.Unverified(line, index) } +
+        rejected.mapIndexed { index, match -> Entry.Rejected(match, index) }
 }
 
 /**
@@ -211,68 +213,6 @@ internal fun offlineShown(
 ): Boolean =
     view.offline &&
         track?.sources?.values?.any { (it as? SourceState.Done)?.result?.outcome == Outcome.Unreachable } == true
-
-/**
- * A source's chip: its tag and state. One whose source has lines ([filtering]) shows or hides them
- * ([shown]); while the list is [folded], it unfolds the list to them instead, a button then.
- */
-@Composable
-private fun StatusChip(
-    chip: SourceChip,
-    filtering: Boolean,
-    shown: Boolean,
-    folded: Boolean,
-    onToggle: () -> Unit,
-) {
-    val colors = MaterialTheme.colorScheme
-    val label = stringResource(R.string.home_source_chip, chip.source.tag, statusText(chip.status))
-    val bad = chip.status == ChipStatus.Failed || (chip.status as? ChipStatus.Done)?.outcome is Outcome.Rejected
-    val shape = RoundedCornerShape(8.dp)
-    // The chip's own text is what it says; the filter is its action and its state.
-    val name = sourceName(chip.source)
-    val action = stringResource(if (folded) R.string.home_source_reveal else R.string.home_source_filter, name)
-    val state = stringResource(if (shown) R.string.home_source_lines_shown else R.string.home_source_lines_hidden)
-    val toggle =
-        when {
-            !filtering -> {
-                Modifier
-            }
-
-            folded -> {
-                Modifier
-                    .semantics { stateDescription = state }
-                    .clickable(onClickLabel = action, role = Role.Button, onClick = onToggle)
-            }
-
-            else -> {
-                Modifier
-                    .semantics {
-                        stateDescription = state
-                        toggleableState = ToggleableState(shown)
-                    }.clickable(onClickLabel = action, role = Role.Switch, onClick = onToggle)
-            }
-        }
-    Text(
-        label,
-        style = MaterialTheme.typography.labelMedium,
-        color =
-            if (bad) {
-                colors.error
-            } else if (filtering && !shown) {
-                colors.outline
-            } else {
-                colors.onSurfaceVariant
-            },
-        modifier =
-            Modifier
-                .testTag(CHIP_PREFIX + chip.source.tag)
-                .then(if (filtering) Modifier.minimumInteractiveComponentSize() else Modifier)
-                .background(if (filtering && shown) colors.secondaryContainer else Color.Transparent, shape)
-                .border(1.dp, colors.outlineVariant, shape)
-                .then(toggle)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-    )
-}
 
 /**
  * One evidence line: its id, its text, and its scope with a link to where it was found; flashed
@@ -379,9 +319,6 @@ private fun Small(text: String) {
 }
 
 private val TAG_PADDING = 4.dp
-
-/** The test tag of a source's chip, before its tag (`MB`, `W`). */
-const val CHIP_PREFIX: String = "chip:"
 
 /** The test tag of an evidence line, before its id. */
 const val LINE_PREFIX: String = "line:"

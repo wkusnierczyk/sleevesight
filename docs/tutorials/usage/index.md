@@ -87,9 +87,24 @@ When little is documented about a track, the insight is short rather than filled
 
 *Sources*, at the bottom of the card, shows what the insight was written from.
 
-<!-- screenshot: Sources unfolded, with chips, evidence lines and a rejected match, from the app version it is taken from -->
+<!-- screenshot: Sources unfolded, with chips, a note and evidence lines, from the app version it is taken from -->
 
-**The chips.** One per source, each with its tag and what it found:
+**Folded and unfolded.** *Sources* starts folded: only its heading shows, **Sources ▸**. A tap on the heading unfolds it (**Sources ▾**), and another folds it again. A screen reader reads the heading as *Sources*, collapsed or expanded.
+
+**The chips.** Unfolded, a chip for each source that gave lines, by its name, with the letter its lines and citations use beside it, small, so a citation can be matched to its chip: `MB` *MusicBrainz*, `W` *Wikipedia* (its chip covers Wikidata's `WD` lines too), `L` *Last.fm*, `G` *Web search*, and `P` *Player*, the release the player reports, the album as a line of evidence. A source that gave no lines has no chip.
+
+A chip shows or hides its source's lines. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}). A screen reader reads a chip as its source's name, and whether its lines are shown or hidden.
+
+**The note.** Under the chips, a note only when something needs you or went wrong, a sentence for each source: *Last.fm needs your key, in Settings.* (a tap on *Settings* opens them; the key goes under *Secrets*), *Web search could not be reached.*, or *MusicBrainz failed.* A source that found nothing, whose match was rejected, or that you switched off says nothing.
+
+**The list.** Then the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own heading, come *Found, but not verified, so not cited*: lines from matches that could not be checked against the track, which are shown but never given to the insight. Above the list, how many entries show ("Showing 8 of 12 entries"). It unfolds 8 entries at a time:
+
+- *show more…* shows the next 8, and *show all* the rest, while entries remain;
+- *… show less* goes back to the first 8, once past them.
+
+A citation tapped in the insight unfolds the list as far as its line. When the chips hide every line, the count says so, and folding and unfolding *Sources* shows them again.
+
+**Grounding details.** With [*Show grounding details*]({{ '/docs/tutorials/settings/' | relative_url }}), a developer option, on, the chips are every source's, each with its letter and what it found, and the list ends with *Rejected matches*, each with its source and the reason it was rejected:
 
 | Chip says | Meaning |
 |---|---|
@@ -97,7 +112,7 @@ When little is documented about a track, the insight is short rather than filled
 | *the song* | It found the song |
 | *the artist only* | It found the artist, not the song |
 | *the original song* | It found the song this one covers |
-| *release* | The `P` chip: the release the player reports, the album as a line of evidence |
+| *release* | The `P` chip: the release the player reports |
 | *nothing found* | It answered, with nothing on this track |
 | *rejected* | What it found failed the identity check (shown in the error colour) |
 | *unreachable* | It could not be reached |
@@ -106,21 +121,6 @@ When little is documented about a track, the insight is short rather than filled
 | *needs your key, in Settings* | Last.fm or web search is on, but its key is not saved |
 | *allowed* | The `M` chip: the model's own knowledge may be cited |
 | *(kept)*, after any of these | The answer was kept on the phone from an earlier lookup |
-
-The tags are `MB` MusicBrainz, `W` Wikipedia (its chip covers Wikidata's `WD` lines too), `L` Last.fm, `G` web search, `P` the player and `M` the model's own knowledge.
-
-A chip of a source with lines shows or hides those lines. That only changes what you see: what the AI service may use is set under [*Sources*]({{ '/docs/tutorials/settings/' | relative_url }}).
-
-**The list.** Under the chips come the evidence lines, each with its id, its text, what it is about (*song*, *artist*, *original song*, *release*, *web*) and a link to the page it was found on, which opens in the browser. After them, under their own headings, come *Found, but not verified, so not cited*, lines from matches that could not be checked against the track, which are shown but never given to the insight, and *Rejected matches*, each with its source and the reason it was rejected.
-
-**Folded and unfolded.** The list starts folded: the heading, the chips, and *show ▸* with how many entries it holds ("12 entries, folded"). It unfolds 8 entries at a time:
-
-- *show ▸* unfolds the first 8;
-- *more…* the next 8, and *show all ▸▸* the rest, while entries remain;
-- *… less* goes back to the first 8, once past them;
-- *hide ▾*, above the list and under it, folds it again.
-
-While the list is folded, a chip unfolds it to its source's first line instead of hiding the lines. A citation tapped in the insight unfolds the list as far as its line. When the chips hide every line, the count says so, and *show ▸* shows them again.
 
 Each new track's list starts folded, so the insight is what you see first. With [*Keep Sources as you left them*]({{ '/docs/tutorials/settings/' | relative_url }}) on, it stays as you left it on the track before. Either way, the fold is kept through a rotation and when Android restores the screen, not when the app starts afresh.
 
@@ -213,13 +213,13 @@ Playing, pausing and skipping from inside Sleevesight are not built yet; use the
 
 | Situation | What you see |
 |---|---|
-| **Offline** | Sources that cannot be reached show *unreachable*, and *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again, and show *looking* meanwhile; the rest keep what they found. What was kept on the phone from earlier lookups still shows, marked *(kept)*. An insight that cannot be written for want of a connection says *The insight could not be written: no connection.* |
+| **Offline** | *Sources* says *Offline. The sources that could not be reached are asked again when the phone is back online.* Once the phone is back online, the playing track's unreachable sources are asked again; the rest keep what they found. What was kept on the phone from earlier lookups still shows. An insight that cannot be written for want of a connection says *The insight could not be written: no connection.* |
 | **No AI service on, or no key for it** | The sources are still looked up and shown. The insight says *Choose an AI service and save its key in Settings to have insights written.*, and no Write is offered. Set it up under [*AI services*]({{ '/docs/tutorials/settings/' | relative_url }}), with its key under *Secrets*. |
 | **Insights switched off** | *Insights are off. Turn them on in Settings.* No AI calls at all; the evidence is still shown. |
-| **No key for Last.fm or web search** | Its chip says *needs your key, in Settings*, and it is not asked. MusicBrainz and Wikipedia need no key. |
-| **A source rejects a match** | Its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. A rejected match is never used. |
+| **No key for Last.fm or web search** | *Sources* says *Last.fm needs your key, in Settings.* or *Web search needs your key, in Settings.*, and it is not asked. MusicBrainz and Wikipedia need no key. |
+| **A source rejects a match** | The match is never used, and the source has no chip unless it gave other lines. With *Show grounding details* on, its chip says *rejected*, and the match is listed under *Rejected matches* with the reason. |
 | **A match that cannot be verified** | Its lines show under *Found, but not verified, so not cited*, and the insight is not given them. Web search results have nothing to be verified against: those its filter keeps are given to the insight, and may be cited. |
-| **A source fails** | Its chip says *failed*; the other sources' lines are used. |
+| **A source fails** | *Sources* says so (*MusicBrainz failed.*, or *… could not be reached.*); the other sources' lines are used. |
 | **The AI service refuses or fails** | *The insight could not be written:* and the reason: the service did not accept the key, the account needs credit, its quota is used up for now, it is busy, it is not offered in your country, it does not know the model, and the like. *Write insight* tries again, as a new call. |
 | **The reply stopped early** | The insight shows with *The reply stopped early, so this is incomplete, and it was not kept.* |
 | **The app itself fails while writing** | *The insight could not be written: something went wrong.*, with no Write; the next track runs as usual. |

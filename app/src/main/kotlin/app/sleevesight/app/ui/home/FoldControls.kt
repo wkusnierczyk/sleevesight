@@ -5,12 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -23,14 +21,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 
-// The controls of the *Sources* list's fold (#269), above the list and under it.
+// The paging of the *Sources* list (#269, #440): how much of it shows, above it, and the controls
+// under it. The fold itself is the section's heading ([SourcesSection]).
 
 /**
- * Above the list: *show* while it is folded, else *hide*; beside it, how much of the list shows
- * ([shown] of [total] entries), or, with every entry hidden by the chips, that they hide the
- * [filtered] lines, which *show* then shows again ([showFiltered]). A screen reader announces it
- * as it changes once the listener has changed the fold on this track ([SourcesFold.announced]):
- * not while sources land and the list grows by itself, nor on each new track.
+ * Above the unfolded list: how much of it shows ([shown] of [total] entries), or, with every entry
+ * hidden by the chips, that they hide the [filtered] lines. A screen reader announces it as it
+ * changes once the listener has changed the fold on this track ([SourcesFold.announced]): not
+ * while sources land and the list grows by itself, nor on each new track.
  */
 @Composable
 internal fun FoldStatus(
@@ -38,44 +36,29 @@ internal fun FoldStatus(
     shown: Int,
     total: Int,
     filtered: Int,
-    showFiltered: () -> Unit,
 ) {
-    val folded = fold.fold == Fold.Folded
     val status =
         when {
             total == 0 -> pluralStringResource(R.plurals.home_sources_filtered, filtered, filtered)
-            folded -> pluralStringResource(R.plurals.home_sources_folded, total, total)
             shown < total -> stringResource(R.string.home_sources_showing, shown, total)
             else -> pluralStringResource(R.plurals.home_sources_showing_all, total, total)
         }
     val announced = fold.announced
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (folded) {
-            FoldButton(R.string.home_sources_show, R.string.home_sources_show_words, FOLD_SHOW_TAG) {
-                // Every entry hidden by the chips: *show* shows their lines, not an empty list.
-                if (total == 0) showFiltered()
-                fold.set(Fold.Pages(1))
-            }
-        } else {
-            FoldButton(R.string.home_sources_hide, R.string.home_sources_hide_words, FOLD_HIDE_TAG) {
-                fold.set(Fold.Folded)
-            }
-        }
-        Text(
-            status,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier =
-                Modifier
-                    .testTag(FOLD_STATUS_TAG)
-                    .semantics { if (announced) liveRegion = LiveRegionMode.Polite },
-        )
-    }
+    Text(
+        status,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier
+                .testTag(FOLD_STATUS_TAG)
+                .semantics { if (announced) liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 /**
- * Under the list: *hide*; *less* once past the first screenful; *more* and *show all* while entries
- * remain, of [total], past the [shown].
+ * Under the unfolded list: *… show less* once past the first screenful; *show more…* and *show
+ * all* while entries remain, of [total], past the [shown]; nothing when the list shows whole within
+ * its first screenful.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -84,16 +67,16 @@ internal fun FoldControls(
     shown: Int,
     total: Int,
 ) {
+    val less = shown > Fold.PAGE
+    val more = shown < total
+    if (!less && !more) return
     FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        FoldButton(R.string.home_sources_hide, R.string.home_sources_hide_words, FOLD_HIDE_TAG) {
-            fold.set(Fold.Folded)
-        }
-        if (shown > Fold.PAGE) {
+        if (less) {
             FoldButton(R.string.home_sources_less, R.string.home_sources_less_words, FOLD_LESS_TAG) {
                 fold.set(Fold.Pages(1))
             }
         }
-        if (shown < total) {
+        if (more) {
             FoldButton(R.string.home_sources_more, R.string.home_sources_more_words, FOLD_MORE_TAG) {
                 fold.set(fold.fold.more(total))
             }
@@ -105,8 +88,8 @@ internal fun FoldControls(
 }
 
 /**
- * A control of the fold: its [label] drawn (arrows and dots), and [words] for a screen reader,
- * which reads those in its place; a button with a 48 dp target.
+ * A control of the paging: its [label] drawn, and [words] for a screen reader, which reads those
+ * in its place ("Show more sources" for *show more…*); a button with a 48 dp target.
  */
 @Composable
 private fun FoldButton(
@@ -125,9 +108,7 @@ private fun FoldButton(
     }
 }
 
-/** The test tags of the fold's controls (both *hide* share theirs) and of how much shows. */
-const val FOLD_SHOW_TAG: String = "fold:show"
-const val FOLD_HIDE_TAG: String = "fold:hide"
+/** The test tags of the paging's controls and of how much shows. */
 const val FOLD_MORE_TAG: String = "fold:more"
 const val FOLD_ALL_TAG: String = "fold:all"
 const val FOLD_LESS_TAG: String = "fold:less"

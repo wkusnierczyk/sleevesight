@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
                                         playerLabel = graph::playerLabel,
                                     )
                                 },
-                                pipeline = { NowPlayingHome(homeFeed) },
+                                pipeline = { openSettings -> NowPlayingHome(homeFeed, openSettings) },
                                 diagnostics = { DiagnosticsScreen(graph.diagnostics) },
                                 testerReport = testerReport,
                             )

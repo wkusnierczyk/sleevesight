@@ -76,7 +76,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **The sources.** The sources are what the AI may use, under *Sources* in the settings, each with a link to its website:
 
 - *MusicBrainz*, and *Wikipedia and Wikidata*: no key needed; on by default.
-- *Last.fm*: on by default, but it needs your own Last.fm API key, saved under *Secrets*; without one it is not asked, and its chip on the home screen says *needs your key, in Settings*.
+- *Last.fm*: on by default, but it needs your own Last.fm API key, saved under *Secrets*; without one it is not asked, and *Sources* on the home screen says *Last.fm needs your key, in Settings.*
 - *Exa web search*: likewise on by default, and searching only once your Exa API key is saved.
 - *AI service knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
 
@@ -94,7 +94,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **Its citations.** Each sentence ends with chips for the sources it cites. A tap on a chip unfolds *Sources* and jumps to the line it cites. A sentence that cites nothing is underlined. When a sentence is not backed by the sources (it cites nothing, a line that does not exist, or the model's own knowledge), a note under the insight says how many, such as *1 sentence is not backed by the sources.*; otherwise there is none.
 
-**The *Sources* list.** Under the insight, each source has a chip saying what it found: *the song*, *the artist only*, *nothing found*, *rejected* or *unreachable*, among others, with *(kept)* when the finding came from the phone rather than a new request. The list starts folded; *show >* opens it. Below the evidence lines come what was found but not verified, so not cited, and the matches the app rejected, with why.
+**The *Sources* list.** Under the insight, *Sources* starts folded, its heading alone: *Sources ▸*; a tap on it unfolds it. Unfolded, each source that gave lines has a chip, by name, which shows or hides its lines; a note says when a source needs your key, could not be reached or failed; then come the evidence lines, and below them what was found but not verified, so not cited.
 
 **What you decide.** Nothing, as a rule: you listen. A wrong-looking sentence can be checked against its line under *Sources*. [Usage]({{ '/docs/tutorials/usage/' | relative_url }}) says what each state of the card means, offline or when a source fails.
 

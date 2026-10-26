@@ -98,7 +98,7 @@ private fun Fold(
     toggle: () -> Unit,
 ) {
     val name = stringResource(R.string.home_genres)
-    val state = stringResource(if (unfolded) R.string.home_genres_expanded else R.string.home_genres_collapsed)
+    val state = stringResource(if (unfolded) R.string.home_fold_expanded else R.string.home_fold_collapsed)
     val symbol = stringResource(if (unfolded) R.string.home_fold_unfolded else R.string.home_fold_folded)
     Text(
         "$name $symbol",
