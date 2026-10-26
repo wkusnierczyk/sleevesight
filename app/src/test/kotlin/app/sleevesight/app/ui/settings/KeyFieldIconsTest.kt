@@ -87,8 +87,8 @@ class KeyFieldIconsTest {
         typed: String = "",
         block: (Shown) -> Unit,
     ) {
-        val scanner: QrScanner = { onScanned, _ -> LaunchedEffect(Unit) { onScanned(code) } }
-        val keyboard: ComputerKeyboard = { session, onText, _ -> LaunchedEffect(session) { onText(typed) } }
+        val scanner: QrScanner = { onScanned -> LaunchedEffect(Unit) { onScanned(code) } }
+        val keyboard: ComputerKeyboard = { session, _, onText, _ -> LaunchedEffect(session) { onText(typed) } }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val shown = Shown(scenario)
             scenario.onActivity { activity ->
@@ -101,6 +101,7 @@ class KeyFieldIconsTest {
                             onRemove = { true },
                             scanner = scanner,
                             keyboard = keyboard,
+                            showPhoneName = false,
                             onDismiss = { shown.open = false },
                         )
                     }

@@ -41,6 +41,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
 import app.sleevesight.app.ui.logo.HeaderLogo
+import app.sleevesight.app.ui.report.ReportButtonState
+import app.sleevesight.app.ui.report.TesterReportButton
 import app.sleevesight.app.ui.theme.LinkLabel
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
@@ -52,43 +54,77 @@ import kotlinx.coroutines.launch
  * bottom under a muted divider, the way back to what leaves the device (#441); while it is off, the
  * way to turn it on. Everything under the header scrolls, so a citation can bring its evidence line
  * into view.
+ *
+ * With [report] (#452: developer mode on, and *Report button* at *Show* or *Auto*), a small
+ * report button floats at the bottom end, on Home only; what scrolls ends far enough below it that,
+ * scrolled to the end, the button covers none of it. Under *Auto* (#518) it is hidden while Home
+ * scrolls, and back once the scrolling stops ([TesterReportButton]).
  */
 @Composable
 fun HomeScreen(
     accessGranted: Boolean,
     onOpenFirstRun: () -> Unit,
     onOpenSettings: () -> Unit,
+    report: ReportButtonState? = null,
     pipeline: @Composable () -> Unit = {},
 ) {
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.safeDrawingPadding()) {
-            // Animated under Compose's motion duration scale, which follows the phone's animator
-            // duration scale: with animations off, Home is at the top at once.
-            HomeHeader(scroll, onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } }, onOpenSettings)
-            Column(
-                modifier =
-                    Modifier
-                        .verticalScroll(scroll)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (accessGranted) {
-                    pipeline()
-                    // Reference, read once: under what the user came for, set apart by a muted line.
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
-                    // A link, as every link is (#442), with a full touch target.
-                    LinkLabel(
-                        TextPart.Action(stringResource(R.string.home_what_leaves), WHAT_LEAVES_TAG, onOpenFirstRun),
-                        onClickLabel = stringResource(R.string.home_what_leaves_open),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                } else {
-                    Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
-                    Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
-                }
+        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+            Column {
+                // Animated under Compose's motion duration scale, which follows the phone's animator
+                // duration scale: with animations off, Home is at the top at once.
+                HomeHeader(scroll, onScrollToTop = { scope.launch { scroll.animateScrollTo(0) } }, onOpenSettings)
+                HomeBody(scroll, accessGranted, onOpenFirstRun, reportShown = report != null, pipeline)
             }
+            report?.let {
+                TesterReportButton(
+                    it,
+                    scrolling = { scroll.isScrollInProgress },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(REPORT_MARGIN),
+                )
+            }
+        }
+    }
+}
+
+// What scrolls under the header: while access is on, what is playing and the way back to what
+// leaves the device; while it is off, the way to turn it on. It ends below the report button when
+// that shows, under *Auto* too, so scrolled to the end, where the button is back, it covers nothing.
+@Composable
+private fun HomeBody(
+    scroll: ScrollState,
+    accessGranted: Boolean,
+    onOpenFirstRun: () -> Unit,
+    reportShown: Boolean,
+    pipeline: @Composable () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .verticalScroll(scroll)
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = if (reportShown) REPORT_CLEARANCE else 8.dp,
+                ),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (accessGranted) {
+            pipeline()
+            // Reference, read once: under what the user came for, set apart by a muted line.
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = MUTED_ALPHA))
+            // A link, as every link is (#442), with a full touch target.
+            LinkLabel(
+                TextPart.Action(stringResource(R.string.home_what_leaves), WHAT_LEAVES_TAG, onOpenFirstRun),
+                onClickLabel = stringResource(R.string.home_what_leaves_open),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            Text(stringResource(R.string.home_access_off), style = MaterialTheme.typography.bodyLarge)
+            Button(onClick = onOpenFirstRun) { Text(stringResource(R.string.home_turn_on_access)) }
         }
     }
 }
@@ -144,6 +180,15 @@ private fun HomeHeader(
         HorizontalDivider(color = if (scroll.canScrollBackward) DividerDefaults.color else Color.Transparent)
     }
 }
+
+/** The report button's margin from the screen's edges. */
+private val REPORT_MARGIN = 16.dp
+
+/**
+ * The space under what scrolls while the report button shows: the small button's 40 dp, its
+ * margin below and 16 dp above it, so the end of Home scrolls clear of it.
+ */
+private val REPORT_CLEARANCE = 72.dp
 
 /** The link tag of *What leaves the device?* on Home. */
 const val WHAT_LEAVES_TAG: String = "what-leaves"

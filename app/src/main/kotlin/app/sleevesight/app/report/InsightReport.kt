@@ -15,7 +15,8 @@ import kotlin.time.Duration
  * The report of a problem with [insight], written for [track], for the developer (#390): the
  * [reason] and the user's [note]; the track as the player reported it (title, artists, album,
  * length) and the MusicBrainz ids resolved for it; the insight's text, and the evidence lines its
- * prompt held, each with its source, scope and address; and the prompt version, AI service, model
+ * prompt held (every line of the track for an insight served from the cache, which keeps no record
+ * of them), each with its source, scope and address; and the prompt version, AI service, model
  * and effort it was written with. Nothing else: never a key, the history, the settings, the player
  * or anything about the phone. In English, as the developer reads it, whatever the phone's
  * language; addressed to [Mail.SUPPORT].
@@ -64,7 +65,7 @@ fun insightReport(
 // The MusicBrainz ids the run resolved. With no resolution, the artists' ids MusicBrainz's result
 // holds, if it has one: the run makes none when every source's findings were kept from before, which
 // it then says; it has none either when MusicBrainz is off, or the resolution failed.
-private fun StringBuilder.appendMusicBrainz(track: TrackState) {
+internal fun StringBuilder.appendMusicBrainz(track: TrackState) {
     appendLine("MusicBrainz ids")
     val resolution = track.resolution
     if (resolution == null) {
@@ -122,12 +123,12 @@ private fun StringBuilder.appendEvidence(
     }
 }
 
-private fun length(duration: Duration): String {
+internal fun length(duration: Duration): String {
     val seconds = duration.inWholeSeconds
     return "${seconds / SECONDS_PER_MINUTE}:${(seconds % SECONDS_PER_MINUTE).toString().padStart(2, '0')}"
 }
 
-private fun providerName(provider: ProviderId): String =
+internal fun providerName(provider: ProviderId): String =
     when (provider) {
         ProviderId.ANTHROPIC -> "Anthropic"
         ProviderId.OPENAI -> "OpenAI"
@@ -135,7 +136,7 @@ private fun providerName(provider: ProviderId): String =
         ProviderId.OLLAMA -> "Ollama"
     }
 
-private fun effortName(effort: ReasoningEffort?): String = effort?.name?.lowercase() ?: "the service's default"
+internal fun effortName(effort: ReasoningEffort?): String = effort?.name?.lowercase() ?: "the service's default"
 
 private const val NONE = "none"
 private const val NOT_REPORTED = "not reported"

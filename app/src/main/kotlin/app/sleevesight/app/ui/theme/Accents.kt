@@ -10,9 +10,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.input.pointer.pointerInput
@@ -27,19 +27,28 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
-import androidx.compose.ui.unit.sp
+import app.sleevesight.core.settings.LinkStyle
 
 // Links without the palette's accent colour (#442): the system's dynamic accent (on
 // Android 12 and later, from the wallpaper or the chosen colour theme) looked out of place, and
 // links were styled two ways. Every link in the app is drawn here, by [LinkedText] or [LinkLabel],
 // so none can take another look or lose its line (`LinkSourcesTest` holds the rest of the app to
-// that).
+// that). How a link is marked, a line below it or a highlight behind it, is *Link style* (#519),
+// which [SleevesightTheme] provides as [LocalLinkStyle].
+
+/**
+ * *Link style* (#519), as [SleevesightTheme] was given it: how every link drawn here is marked, a
+ * thin line below it ([LinkStyle.UNDERLINE], the default) or a faint highlight behind it
+ * ([LinkStyle.HIGHLIGHT]).
+ */
+internal val LocalLinkStyle = staticCompositionLocalOf { LinkStyle.UNDERLINE }
 
 /**
  * [parts] as one text, each link in it marked as every link in the app is (#442): in the text
  * colour ([color], else the style's, else the content colour), with a thin line a little below the
- * text, clear of the descenders, which Android's own underline crosses; focused, hovered or
- * pressed, a faint tint of the text colour behind it.
+ * text, clear of the descenders, which Android's own underline crosses, or, as *Link style* says
+ * (#519, [LocalLinkStyle]), a faint rounded highlight of the text colour behind it; focused,
+ * hovered or pressed, a faint tint of the text colour behind it.
  */
 @Composable
 internal fun LinkedText(
@@ -63,7 +72,7 @@ internal fun LinkedText(
                 if (part is TextPart.Linked) links += start until length
             }
         }
-    UnderlinedText(text, links, style, ink, color, modifier)
+    MarkedText(text, links, style, ink, color, modifier)
 }
 
 /**
@@ -95,7 +104,7 @@ internal fun LinkLabel(
                 }
             }.pointerInput(Unit) { detectTapGestures { follow() } }
             .minimumInteractiveComponentSize()
-    UnderlinedText(text, listOf(link.text.indices), style, ink, color, target)
+    MarkedText(text, listOf(link.text.indices), style, ink, color, target)
 }
 
 /**
@@ -110,7 +119,7 @@ internal fun LinkLook(
     color: Color = Color.Unspecified,
 ) {
     val ink = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } }
-    UnderlinedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
+    MarkedText(AnnotatedString(text), listOf(text.indices), style, ink, color, Modifier)
 }
 
 /** What following [link] does: open its page in the browser, or run its action. */
@@ -149,10 +158,15 @@ private fun linkStyles(ink: Color): TextLinkStyles {
     return TextLinkStyles(style = null, focusedStyle = inUse, hoveredStyle = inUse, pressedStyle = inUse)
 }
 
-/** [text] with a line under each of [links], worked out once per layout and only drawn after. */
+/**
+ * [text] with each of [links] marked as *Link style* says ([LocalLinkStyle]): a line under it, or a
+ * highlight behind it. The marks are worked out in the draw phase, from the layout the same frame
+ * made, so a link is marked on its first frame and at once after a new layout. They are worked out
+ * again only when the layout, the links, the style or the colour change; other draws only draw them.
+ */
 @Suppress("LongParameterList") // The text and its links, and how both are drawn.
 @Composable
-private fun UnderlinedText(
+private fun MarkedText(
     text: AnnotatedString,
     links: List<IntRange>,
     style: TextStyle,
@@ -160,79 +174,30 @@ private fun UnderlinedText(
     color: Color,
     modifier: Modifier,
 ) {
-    var lines by remember { mutableStateOf(emptyList<Rect>()) }
+    val look = LocalLinkStyle.current
+    val layout = remember { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text,
         style = style,
         color = color,
-        onTextLayout = { lines = underlines(it, links) },
-        modifier = modifier.drawBehind { for (line in lines) drawRect(ink, line.topLeft, line.size) },
+        onTextLayout = { layout.value = it },
+        modifier =
+            modifier.drawWithCache {
+                // Read here, in the draw phase, the layout is the one this frame measured.
+                val marks = layout.value?.let { marks(it, links, look) } ?: Marks.NONE
+                val fill = ink.copy(alpha = ink.alpha * HIGHLIGHT_ALPHA)
+                onDrawBehind {
+                    when (look) {
+                        LinkStyle.UNDERLINE -> for (mark in marks.rects) drawRect(ink, mark.topLeft, mark.size)
+                        LinkStyle.HIGHLIGHT ->
+                            for (mark in marks.rects) drawRoundRect(fill, mark.topLeft, mark.size, marks.corner)
+                    }
+                }
+            },
     )
 }
 
-/**
- * The lines under [links] in [layout]: on each line of text a link spans, one under each stretch
- * of it as drawn, so a link that mixes left-to-right and right-to-left text is underlined where its
- * glyphs are and nowhere between them.
- */
-private fun underlines(
-    layout: TextLayoutResult,
-    links: List<IntRange>,
-): List<Rect> {
-    val em = emOf(layout)
-    val thickness = maxOf(1f, em * UNDERLINE_THICKNESS)
-    val lines = mutableListOf<Rect>()
-    for (link in links.filterNot { it.isEmpty() }) {
-        for (line in layout.getLineForOffset(link.first)..layout.getLineForOffset(link.last)) {
-            val from = maxOf(link.first, layout.getLineStart(line))
-            val to = minOf(link.last, layout.getLineEnd(line, visibleEnd = true) - 1)
-            if (to < from) continue
-            // Inside the line's own box, should a tight line height leave less room below.
-            val top = minOf(layout.getLineBaseline(line) + em * UNDERLINE_GAP, layout.getLineBottom(line) - thickness)
-            for ((left, right) in stretches(layout, from..to)) lines += Rect(left, top, right, top + thickness)
-        }
-    }
-    return lines
-}
-
-/** The stretches, left to right, that the characters of [range] (on one line) are drawn over. */
-private fun stretches(
-    layout: TextLayoutResult,
-    range: IntRange,
-): List<Pair<Float, Float>> {
-    val boxes = range.map { layout.getBoundingBox(it) }.filter { it.width > 0f }.sortedBy { it.left }
-    val stretches = mutableListOf<Pair<Float, Float>>()
-    for (box in boxes) {
-        val last = stretches.lastOrNull()
-        if (last != null && box.left <= last.second + TOUCHING) {
-            stretches[stretches.lastIndex] = last.first to maxOf(last.second, box.right)
-        } else {
-            stretches += box.left to box.right
-        }
-    }
-    return stretches
-}
-
-/** The text's em in pixels: its font size, which a style may leave out or give in ems. */
-private fun emOf(layout: TextLayoutResult): Float =
-    with(layout.layoutInput.density) {
-        val size = layout.layoutInput.style.fontSize
-        when {
-            size.isSp -> size.toPx()
-            size.isEm -> size.value * DEFAULT_FONT_SIZE.toPx()
-            else -> DEFAULT_FONT_SIZE.toPx()
-        }
-    }
-
-// The line's thickness and its distance below the baseline, in ems: about as thick as Roboto's
-// own underline, and far enough down to leave a gap under g, p and y.
-private const val UNDERLINE_THICKNESS = 0.05f
-private const val UNDERLINE_GAP = 0.24f
-
-// Compose's own default size, which an em is relative to when nothing sets one.
-private val DEFAULT_FONT_SIZE = 14.sp
-
-// Characters of one stretch touch, give or take rounding, in pixels.
-private const val TOUCHING = 0.5f
+// The highlight's fill (#519): the text colour at this alpha.
+private const val HIGHLIGHT_ALPHA = 0.10f
 
 private const val IN_USE_ALPHA = 0.12f

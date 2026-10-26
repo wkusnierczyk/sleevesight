@@ -36,19 +36,26 @@ import app.sleevesight.app.keyboard.KeyboardState
 /**
  * Runs a session of *Type on a computer* (#394) while it is shown: says where it is, passes each
  * text the computer sends to `onText`, and offers *Stop*, which calls `onStop`. Leaving it ends the
- * session and forgets its key. The settings screen takes it as a parameter, so its tests type
- * without Bluetooth.
+ * session and forgets its key. `showName` is *Show this phone's name to the computer* (#433):
+ * whether the phone advertises its Bluetooth name meanwhile. The settings screen takes it as a
+ * parameter, so its tests type without Bluetooth.
  */
 typealias ComputerKeyboard =
-    @Composable (session: KeyboardSession, onText: (String) -> Unit, onStop: () -> Unit) -> Unit
+    @Composable (
+        session: KeyboardSession,
+        showName: Boolean,
+        onText: (String) -> Unit,
+        onStop: () -> Unit,
+    ) -> Unit
 
 /** The phone's Bluetooth, as [ComputerKeyboard]. */
-val BluetoothComputerKeyboard: ComputerKeyboard = { session, onText, onStop ->
-    BluetoothKeyboard(session, onText, onStop)
+val BluetoothComputerKeyboard: ComputerKeyboard = { session, showName, onText, onStop ->
+    BluetoothKeyboard(session, showName, onText, onStop)
 }
 
 // Android 12's runtime permissions for advertising and taking connections; before it, BLUETOOTH and
-// BLUETOOTH_ADMIN, which come with the app.
+// BLUETOOTH_ADMIN, which come with the app. BLUETOOTH_CONNECT also lets the phone's name be read,
+// and BLUETOOTH_ADVERTISE be measured for the scan response (#433), so showing it asks for nothing more.
 private val PERMISSIONS =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT)
@@ -58,12 +65,14 @@ private val PERMISSIONS =
 
 /**
  * Asks for Bluetooth's permissions when it opens, unless already allowed, then runs a
- * [BleKeyboard] until it leaves. A refusal is said, and a permission allowed in the phone's settings
- * meanwhile starts it on return.
+ * [BleKeyboard] until it leaves, advertising the phone's name with [showName]. A refusal is said,
+ * and a permission allowed in the phone's settings meanwhile starts it on return. While it waits,
+ * it says how the computer lists the phone ([waitingMessage]).
  */
 @Composable
 private fun BluetoothKeyboard(
     session: KeyboardSession,
+    showName: Boolean,
     onText: (String) -> Unit,
     onStop: () -> Unit,
 ) {
@@ -71,6 +80,7 @@ private fun BluetoothKeyboard(
     var allowed by remember { mutableStateOf(granted(context)) }
     var refused by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf(KeyboardState.STARTING) }
+    var advertised by remember { mutableStateOf<String?>(null) }
     val text by rememberUpdatedState(onText)
     val ask =
         // Read again rather than from the results, which an interrupted request leaves empty.
@@ -88,19 +98,48 @@ private fun BluetoothKeyboard(
     }
     DisposableEffect(session) { onDispose { session.forget() } }
     if (allowed) {
-        DisposableEffect(session) {
-            val keyboard = BleKeyboard(context, session, { text(it) }, { state = it })
+        // The setting cannot change while the dialog is open; if it did, the keyboard would start
+        // again with it, on the same session.
+        DisposableEffect(session, showName) {
+            val keyboard = BleKeyboard(context, session, { text(it) }, { state = it }, showName) { advertised = it }
             keyboard.start()
             onDispose { keyboard.stop() }
         }
     }
-    KeyboardStatus(if (refused) R.string.keyboard_refused else message(state), onStop)
+    when {
+        refused -> KeyboardStatus(stringResource(R.string.keyboard_refused), onStop)
+        state == KeyboardState.WAITING -> KeyboardStatus(waitingMessage(showName, advertised), onStop)
+        else -> KeyboardStatus(stringResource(message(state)), onStop)
+    }
 }
+
+/**
+ * What the session says while it waits for the computer: how its chooser lists the phone. By the
+ * name [advertised], with [showName] on and the name in the scan response; otherwise as an unknown
+ * device, the only one listed, and why: the setting is off, or the name did not fit.
+ */
+@Composable
+internal fun waitingMessage(
+    showName: Boolean,
+    advertised: String?,
+): String =
+    when {
+        !showName -> stringResource(R.string.keyboard_waiting)
+        advertised == null -> stringResource(R.string.keyboard_waiting_name_not_fitted)
+        else -> stringResource(R.string.keyboard_waiting_named, advertised)
+    }
 
 /** Where the session is, and *Stop*. */
 @Composable
 internal fun KeyboardStatus(
     @StringRes message: Int,
+    onStop: () -> Unit,
+) = KeyboardStatus(stringResource(message), onStop)
+
+/** Where the session is, [message], and *Stop*. */
+@Composable
+internal fun KeyboardStatus(
+    message: String,
     onStop: () -> Unit,
 ) {
     Row(
@@ -108,7 +147,7 @@ internal fun KeyboardStatus(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         TextButton(onClick = onStop) { Text(stringResource(R.string.keyboard_stop)) }
     }
 }

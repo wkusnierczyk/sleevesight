@@ -58,11 +58,7 @@ internal object DiagnosticsText {
         out.appendLine("Sleevesight diagnostics, version $version, exported $exportedAt")
         out.appendLine()
         out.appendLine("## Skip detection")
-        when {
-            learned == null -> out.appendLine(NOT_LEARNING)
-            learned.isEmpty() -> out.appendLine(NOTHING_LEARNED)
-            else -> learned.toSortedMap().forEach { (player, crossfade) -> out.appendLine(learned(player, crossfade)) }
-        }
+        appendLearned(out, learned)
         out.appendLine()
         out.appendLine("## Caches")
         if (caches == null) {
@@ -75,7 +71,7 @@ internal object DiagnosticsText {
         }
         out.appendLine()
         out.appendLine("## Pipeline events, oldest first (${events.size})")
-        events.forEach { out.appendLine("${it.at} ${EventLine.of(it.event)}") }
+        appendEvents(out, events)
         out.appendLine()
         out.appendLine("## Track changes, newest first")
         var before: Long? = null
@@ -85,13 +81,42 @@ internal object DiagnosticsText {
                 out.appendLine("The history could not be read.")
                 return false
             }
-            for (change in page.page.changes) {
-                out.appendLine("${change.changedAt} ${change(change)}")
-                change.states.forEach { out.appendLine("  ${state(it)}") }
-            }
+            page.page.changes.forEach { appendChange(out, it) }
             before = page.page.next
         } while (before != null)
         return caches != null
+    }
+
+    /**
+     * What skip detection has learned ([learned]), a line per player, or that it has learned nothing
+     * yet, or that nothing supplies it (null). The export's and the tester's report's (#452).
+     */
+    fun appendLearned(
+        out: Appendable,
+        learned: Map<String, Duration>?,
+    ) {
+        when {
+            learned == null -> out.appendLine(NOT_LEARNING)
+            learned.isEmpty() -> out.appendLine(NOTHING_LEARNED)
+            else -> learned.toSortedMap().forEach { (player, crossfade) -> out.appendLine(learned(player, crossfade)) }
+        }
+    }
+
+    /** The pipeline's [events], a line each with when it arrived, in the order given. */
+    fun appendEvents(
+        out: Appendable,
+        events: List<LoggedEvent>,
+    ) {
+        events.forEach { out.appendLine("${it.at} ${EventLine.of(it.event)}") }
+    }
+
+    /** A track change on a line with when it began, and under it the playback states before it. */
+    fun appendChange(
+        out: Appendable,
+        change: TrackChangeRecord,
+    ) {
+        out.appendLine("${change.changedAt} ${change(change)}")
+        change.states.forEach { out.appendLine("  ${state(it)}") }
     }
 
     /** Said when nothing supplies what skip detection has learned. */

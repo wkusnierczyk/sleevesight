@@ -247,7 +247,7 @@ class SecretStoreTest {
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
             assertEquals(0, keys.deletions)
 
-            assertTrue(store.reset())
+            assertTrue(store.reset().done)
             assertEquals(1, keys.deletions)
             assertEquals(SecretId.entries.associateWith { SecretState.ABSENT }, store.states.first())
 
@@ -472,7 +472,7 @@ class SecretStoreTest {
             assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
             assertEquals(0, keys.creations)
 
-            assertTrue(store.reset())
+            assertTrue(store.reset().done)
             assertEquals(1, keys.deletions)
             // Nothing is stored after the reset, so the save may make the key, once.
             assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
@@ -494,7 +494,7 @@ class SecretStoreTest {
                 val reset = async(Dispatchers.IO) { store.reset() }
                 // One runs after the other, in either order: both succeed.
                 assertEquals(SaveResult.SAVED, save.await())
-                assertTrue(reset.await())
+                assertTrue(reset.await().done)
 
                 // Saved before the reset, the key is gone; saved after it, under a new Keystore
                 // key, it opens. Never a key left that cannot be opened.
@@ -523,7 +523,11 @@ class SecretStoreTest {
             assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
 
             flaky.writeFailures.set(1)
-            assertFalse(store.reset())
+            val result = store.reset()
+            // Each step's outcome, and the entry left as the reset read it.
+            assertFalse(result.removed)
+            assertTrue(result.sealDeleted)
+            assertEquals(SecretState.UNREADABLE, result.left?.get(SecretId.LASTFM))
             // The key removed is no longer usable: its Keystore key is gone, and the entry left
             // cannot be opened.
             assertEquals(1, keys.deletions)
@@ -536,7 +540,7 @@ class SecretStoreTest {
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
 
             // A reset that can write removes everything.
-            assertTrue(store.reset())
+            assertTrue(store.reset().done)
             assertEquals(SecretId.entries.associateWith { SecretState.ABSENT }, store.states.first())
         }
 
@@ -549,7 +553,7 @@ class SecretStoreTest {
             assertEquals(SaveResult.SAVED, store.set(SecretId.LASTFM, Secret(LASTFM_KEY)))
 
             flaky.writeFailures.set(1)
-            assertFalse(store.reset())
+            assertFalse(store.reset().done)
             assertEquals(1, keys.deletions)
             assertEquals(SecretState.UNREADABLE, store.state(SecretId.LASTFM))
 
@@ -558,7 +562,7 @@ class SecretStoreTest {
             assertEquals(SaveResult.NOT_SEALED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(0, keys.creations)
 
-            assertTrue(store.reset())
+            assertTrue(store.reset().done)
             assertEquals(SaveResult.SAVED, store.set(SecretId.EXA, Secret("exa")))
             assertEquals(1, keys.creations)
             assertEquals("exa", store.get(SecretId.EXA)?.reveal())
