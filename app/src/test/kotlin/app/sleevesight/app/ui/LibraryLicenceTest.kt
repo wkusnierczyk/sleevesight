@@ -92,7 +92,7 @@ class LibraryLicenceTest {
     @Test
     fun theCreditsShowEachLibraryWithItsLicence() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { activity -> activity.setContent { CreditsScreen() } }
+            scenario.onActivity { activity -> activity.setContent { CreditsScreen(onClose = {}) } }
             compose.onNodeWithText(text(R.string.credits_libraries_apache)).performScrollTo().assertIsDisplayed()
 
             // The line that links to the site's page on what each library does (#502).
@@ -168,7 +168,7 @@ class LibraryLicenceTest {
                     if (emitted) {
                         CompositionLocalProvider(
                             LocalSaveableStateRegistry provides registry,
-                        ) { CreditsScreen() }
+                        ) { CreditsScreen(onClose = {}) }
                     }
                 }
             }

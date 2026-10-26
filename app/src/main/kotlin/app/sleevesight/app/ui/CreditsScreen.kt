@@ -1,15 +1,9 @@
 package app.sleevesight.app.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +19,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.sleevesight.app.R
+import app.sleevesight.app.ui.home.PageCloseButton
+import app.sleevesight.app.ui.home.PageFrame
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.SleevesightTheme
 import app.sleevesight.app.ui.theme.TextPart
@@ -37,41 +33,39 @@ import java.io.IOException
  * the libraries it ships, by licence, each with the licence's text (#488), and a link to the site's
  * page on what each library does in the app (#502). MusicBrainz is listed
  * with both its licences, CC0 for its core data and CC BY-NC-SA 3.0 for its tags, which are a
- * genre label source (D12, #84).
+ * genre label source (D12, #84). A page opened from the settings (#549): the back arrow at its top and
+ * *Close* at its end go back to them ([onClose]), as Android's back does.
  */
 @Composable
-fun CreditsScreen() {
+fun CreditsScreen(onClose: () -> Unit) {
     val assets = LocalContext.current.assets
     // Read as the screen composes, not after: a recreated screen restores its scroll position on
     // its first layout, and content that came later would find it cut to the shorter screen. The
     // list and the longest licence are about 12 to 17 KB.
     val read = { name: String -> readAsset { assets.open(name).bufferedReader().use { it.readText() } } }
     val libraries = remember { libraryNotices(read(LIBRARIES)) }
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier =
-                Modifier
-                    .safeDrawingPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(stringResource(R.string.credits_title), style = MaterialTheme.typography.headlineMedium)
-            Text(stringResource(R.string.credits_intro), style = MaterialTheme.typography.bodyLarge)
-            for (credit in CREDITS) CreditEntry(credit)
-            CreditEntry(FONT_CREDIT)
-            CreditEntry(ICON_CREDIT)
-            Text(
-                stringResource(R.string.credits_libraries),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 16.dp),
-            )
-            Text(stringResource(R.string.credits_libraries_text), style = MaterialTheme.typography.bodyMedium)
-            LibraryUses()
-            for (library in libraries) {
-                LibraryEntry(library) { read(LICENCES + it) }
-            }
+    PageFrame(
+        title = stringResource(R.string.credits_title),
+        onBack = onClose,
+        containerColor = MaterialTheme.colorScheme.surface,
+        padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+        spacing = 8.dp,
+    ) {
+        Text(stringResource(R.string.credits_intro), style = MaterialTheme.typography.bodyLarge)
+        for (credit in CREDITS) CreditEntry(credit)
+        CreditEntry(FONT_CREDIT)
+        CreditEntry(ICON_CREDIT)
+        Text(
+            stringResource(R.string.credits_libraries),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+        Text(stringResource(R.string.credits_libraries_text), style = MaterialTheme.typography.bodyMedium)
+        LibraryUses()
+        for (library in libraries) {
+            LibraryEntry(library) { read(LICENCES + it) }
         }
+        PageCloseButton(onClose, Modifier.padding(top = 16.dp))
     }
 }
 
@@ -282,5 +276,5 @@ private fun CreditEntry(credit: Credit) {
 @Preview(showBackground = true)
 @Composable
 private fun CreditsPreview() {
-    SleevesightTheme { CreditsScreen() }
+    SleevesightTheme { CreditsScreen(onClose = {}) }
 }
