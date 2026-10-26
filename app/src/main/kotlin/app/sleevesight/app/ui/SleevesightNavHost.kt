@@ -18,6 +18,8 @@ import app.sleevesight.app.ui.home.HomePage
 import app.sleevesight.app.ui.home.NothingPlaying
 import app.sleevesight.app.ui.report.TesterReportFeed
 import app.sleevesight.app.ui.report.WithTesterReport
+import app.sleevesight.app.ui.settings.SettingsSection
+import app.sleevesight.app.ui.settings.SettingsTarget
 import kotlinx.serialization.Serializable
 
 /**
@@ -31,9 +33,24 @@ data object FirstRun
 @Serializable
 data object Home
 
-/** The settings screen, opened from [Home]. */
+/**
+ * The settings screen, opened from [Home]: all folded, or, with a [section] (a [SettingsSection]'s
+ * name), unfolded and landed on it, at its row [row] if one is named ([SettingsTarget]), as Home's
+ * note of a model found unavailable opens them (#581).
+ */
 @Serializable
-data object SettingsPage
+data class SettingsPage(
+    val section: String? = null,
+    val row: String? = null,
+) {
+    /** Where the settings open; null for all folded. */
+    val target: SettingsTarget? get() = SettingsTarget.named(section, row)
+
+    companion object {
+        /** The settings opened at [target]. */
+        fun at(target: SettingsTarget): SettingsPage = SettingsPage(target.section.name, target.row)
+    }
+}
 
 /** The data sources and their licences, opened from [SettingsPage], as a page that closes back to it (#549). */
 @Serializable
@@ -44,20 +61,26 @@ data object CreditsPage
 data object DiagnosticsPage
 
 /**
- * Where Home and its pages lead: the settings ([openSettings]), a page of Home's ([openPage], under
- * *Layout*'s *Separate pages*, #447), and, from a page, back ([back]) to where it was opened from.
+ * Where Home and its pages lead: the settings ([openSettings]), or the settings at a setting
+ * ([openSettingsAt], #581), a page of Home's ([openPage], under *Layout*'s *Separate pages*, #447),
+ * and, from a page, back ([back]) to where it was opened from.
  */
 class HomeLinks(
     val openSettings: () -> Unit,
     val openPage: (HomePage) -> Unit,
     val back: () -> Unit,
+    val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
 )
 
-/** Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen. */
+/**
+ * Where the settings screen leads: the credits, the diagnostics screen, and the first-run screen;
+ * and where it opens ([landOn]: a setting, as its route names it, or null for all folded; #581).
+ */
 class SettingsLinks(
     val openCredits: () -> Unit,
     val openDiagnostics: () -> Unit,
     val openWhatLeaves: () -> Unit,
+    val landOn: SettingsTarget? = null,
 )
 
 /**
@@ -137,13 +160,14 @@ fun SleevesightNavHost(
         }
         composable<HomePage.Sources> { homePage(it.toRoute<HomePage.Sources>(), it) }
         composable<HomePage.Genres> { homePage(HomePage.Genres, it) }
-        composable<SettingsPage> {
+        composable<SettingsPage> { entry ->
             val links =
                 SettingsLinks(
                     openCredits = { navController.navigate(CreditsPage) },
                     openDiagnostics = { navController.navigate(DiagnosticsPage) },
                     // Single top, as from Home.
                     openWhatLeaves = { navController.navigate(FirstRun) { launchSingleTop = true } },
+                    landOn = entry.toRoute<SettingsPage>().target,
                 )
             if (firstRun.acknowledged) settings(links) else FirstRunFirst(navController)
         }
@@ -175,9 +199,11 @@ private fun homeLinks(
     val onTop = { navController.currentBackStackEntry?.id == entry.id }
     return HomeLinks(
         // Single top: a double tap (the cogwheel, or *Sources*' link) opens it once.
-        openSettings = { navController.navigate(SettingsPage) { launchSingleTop = true } },
+        openSettings = { navController.navigate(SettingsPage()) { launchSingleTop = true } },
         openPage = { page -> if (onTop()) navController.navigate(page) },
         back = { if (onTop()) navController.popBackStack() },
+        // Single top too: the settings on top are not opened again over themselves.
+        openSettingsAt = { target -> navController.navigate(SettingsPage.at(target)) { launchSingleTop = true } },
     )
 }
 

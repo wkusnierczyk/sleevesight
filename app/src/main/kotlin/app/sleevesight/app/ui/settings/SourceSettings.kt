@@ -71,8 +71,7 @@ private val SOURCE_ROWS: List<SourceRow> =
             R.string.settings_engine_exa_summary,
             "https://exa.ai/",
         ),
-        // TODO(#538): link *AI services* in the description to that section, once Settings has the
-        // shared link that unfolds a section (#563).
+        // Its description names *AI services*, a link to that section (#581): [SourcesSection].
         SourceRow.Source(
             SourceSwitch.MODEL,
             R.string.settings_source_model,
@@ -84,7 +83,8 @@ private val SOURCE_ROWS: List<SourceRow> =
 /**
  * *Sources*: a switch per source, each with what it is, its site, and, for one that needs a key,
  * a link to it under *Secrets*, where the keys are ([KeyLink]), and, while it lacks the key, that
- * it needs it ([keyNote]). A web search
+ * it needs it ([keyNote]); *AI service knowledge* links to *AI services*, and says when none of
+ * them is switched on (#581). A web search
  * engine's row is on while web search is on with that engine ([Settings.isEnabled] needs both):
  * switching it on turns both on, and off turns the engine off.
  */
@@ -106,14 +106,27 @@ internal fun SourcesSection(
                 is SourceRow.Engine -> SourceSwitch.WEB in settings.enabledSources && row.engine in settings.webEngines
             }
         val name = stringResource(row.name)
+        val model = row is SourceRow.Source && row.switch == SourceSwitch.MODEL
+        val aiServices = stringResource(R.string.settings_section_ai)
+        val summary =
+            if (model) {
+                // With no AI service on, it says so: there is no model to ask (#538, #581).
+                lines(
+                    stringResource(row.summary, aiServices),
+                    stringResource(R.string.settings_source_model_no_service).takeIf { settings.aiProvider == null },
+                )
+            } else {
+                lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) })
+            }
         SwitchRow(
             title = name,
-            summary = lines(stringResource(row.summary), key?.let { keyNote(it, secrets, linked = true) }),
+            summary = summary,
             checked = checked,
             below = {
                 key?.let { KeyLink(it) }
                 row.url?.let { WebsiteLink(name, it) }
             },
+            summaryLink = settingsLink(aiServices, SettingsTarget.aiServices).takeIf { model },
         ) { on -> update { switched(it, row, on) } }
     }
 }

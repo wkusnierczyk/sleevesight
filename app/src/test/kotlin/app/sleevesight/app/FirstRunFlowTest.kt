@@ -510,7 +510,7 @@ class FirstRunFlowTest {
             }
             compose.waitForIdle()
             app.getSharedPreferences("first_run", Context.MODE_PRIVATE).edit { clear() }
-            scenario.onActivity { nav.navigate(SettingsPage) }
+            scenario.onActivity { nav.navigate(SettingsPage()) }
 
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             assertEquals(0, compose.onAllNodesWithText("Settings drawn").fetchSemanticsNodes().size)

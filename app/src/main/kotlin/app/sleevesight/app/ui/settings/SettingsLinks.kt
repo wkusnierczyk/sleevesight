@@ -50,6 +50,7 @@ import app.sleevesight.app.R
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.ui.theme.LinkedText
 import app.sleevesight.app.ui.theme.TextPart
+import app.sleevesight.core.model.ProviderId
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -66,10 +67,11 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Where a link in the settings leads (#539): [section], unfolded, and in it the row [row] names, or,
  * for none, the section's heading. A row is named by an id of its own, unique among the screen's
- * rows; the factories in the companion name the rows that are linked to.
+ * rows; the factories in the companion name the rows that are linked to. Public, as Home opens the
+ * settings at one (#581: [SettingsScreen]'s `landOn`, through the settings' route).
  */
 @Immutable
-internal data class SettingsTarget(
+data class SettingsTarget(
     val section: SettingsSection,
     val row: String? = null,
 ) {
@@ -81,7 +83,29 @@ internal data class SettingsTarget(
 
     companion object {
         /** The key [id]'s row under *Secrets* ([KeyRow]). */
-        fun key(id: SecretId): SettingsTarget = SettingsTarget(SettingsSection.SECRETS, "key_${id.name}")
+        internal fun key(id: SecretId): SettingsTarget = SettingsTarget(SettingsSection.SECRETS, "key_${id.name}")
+
+        /** The section *AI services* itself, its heading (#581). */
+        internal val aiServices: SettingsTarget = SettingsTarget(SettingsSection.AI_SERVICES)
+
+        /** [provider]'s model row under *AI services* (#581), where another model is chosen. */
+        internal fun model(provider: ProviderId): SettingsTarget =
+            SettingsTarget(SettingsSection.AI_SERVICES, "model_${provider.name}")
+
+        /** *New session idle trigger*'s row under *History* (#581). */
+        internal val sessionGap: SettingsTarget = SettingsTarget(SettingsSection.HISTORY, "session_gap")
+
+        /**
+         * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
+         * state carries it; null for no section, or a name no section has.
+         */
+        internal fun named(
+            section: String?,
+            row: String?,
+        ): SettingsTarget? =
+            SettingsSection.entries
+                .firstOrNull { it.name == section }
+                ?.let { SettingsTarget(it, row?.ifEmpty { null }) }
     }
 }
 
@@ -151,10 +175,10 @@ internal class SettingsNavigator(
                 },
                 restore = { saved ->
                     SettingsNavigator(folds).also { navigator ->
-                        SettingsSection.entries
-                            .firstOrNull { it.name == saved[0] }
-                            ?.takeIf { folds.isUnfolded(it) }
-                            ?.let { navigator.resume(SettingsTarget(it, saved[1].ifEmpty { null })) }
+                        SettingsTarget
+                            .named(saved[0], saved[1])
+                            ?.takeIf { folds.isUnfolded(it.section) }
+                            ?.let { navigator.resume(it) }
                     }
                 },
             )
