@@ -265,13 +265,8 @@ internal sealed interface SettingsDialog {
     /** *Purge keys*, offered while any key is stored, or after a failure: the screen (#446). */
     data object PurgeKeys : Keys
 
-    /**
-     * *Load keys*: the screen that reads a setup code (#268, #446), naming the CLI's `keys-qr` in
-     * [developerMode].
-     */
-    class LoadKeys(
-        val developerMode: Boolean,
-    ) : Keys
+    /** *Load keys*: the screen that reads a setup code (#268, #446). */
+    data object LoadKeys : Keys
 
     data object ClearHistory : SettingsDialog
 }

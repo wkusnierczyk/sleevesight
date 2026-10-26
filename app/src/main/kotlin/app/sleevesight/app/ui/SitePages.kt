@@ -15,8 +15,17 @@ internal const val LICENCE_URL = "https://github.com/wkusnierczyk/sleevesight/bl
 /** The dependencies page on the site (`docs/dependencies/index.md`, #412), linked from *Credits* (#502). */
 internal const val DEPENDENCIES_PAGE_URL = "https://sleevesight.app/docs/dependencies/"
 
+/** The settings page of the documentation (`docs/tutorials/settings`, #415). */
+private const val SETTINGS_PAGE_URL = "https://sleevesight.app/docs/tutorials/settings/"
+
+/**
+ * The settings page's part on loading several keys from one QR code (`docs/tutorials/settings`,
+ * #415), linked under *Load keys* (#541).
+ */
+internal const val LOAD_KEYS_DOCS_URL = "${SETTINGS_PAGE_URL}#several-keys-at-once-load-keys"
+
 /**
  * The page a computer opens for *Type on a computer* (`keyboard.html`, #394), linked from
- * *Share phone's name with Type on a computer* (#544).
+ * *Share phone's name with Type on a computer* (#544) and the keyboard icon's guided screen (#541).
  */
 internal const val KEYBOARD_PAGE_URL = "https://sleevesight.app/keyboard.html"
