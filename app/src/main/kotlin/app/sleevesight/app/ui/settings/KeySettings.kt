@@ -14,8 +14,12 @@ import app.sleevesight.app.secrets.SaveResult
 import app.sleevesight.app.secrets.SecretId
 import app.sleevesight.app.secrets.SecretState
 import app.sleevesight.app.secrets.SecretStore
+import app.sleevesight.app.ui.ExternalLink
+import app.sleevesight.app.ui.KEYBOARD_PAGE_URL
 import app.sleevesight.app.ui.keyboard.ComputerKeyboard
+import app.sleevesight.app.ui.rememberOpenUrl
 import app.sleevesight.app.ui.scan.QrScanner
+import app.sleevesight.app.ui.shownAddress
 import app.sleevesight.core.Secret
 import app.sleevesight.core.settings.Settings
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +69,8 @@ internal fun KeyRow(
  * too ([LoadKeysScreen]); *Purge keys*, while any key is stored, readable or not, or after a failure
  * ([KeysShown.offerReset]), when it says why (what was *Reset saved keys*, which did the same), on a
  * screen of its own ([PurgeKeysScreen]); each key's row, the AI services' and the sources' alike;
- * and *Show this phone's name to the computer* (#433), for the key dialogs' *Type on a computer*.
+ * and *Share phone's name with Type on a computer* (#433, #544), for the key dialogs' *Type on a
+ * computer*, which its summary explains, with a link to the page the computer opens.
  */
 @Composable
 internal fun SecretsSection(
@@ -88,13 +93,20 @@ internal fun SecretsSection(
         )
     }
     for (id in SHOWN_KEYS) KeyRow(stringResource(keyName(id)), id, keys.states, indent = false, open)
-    // A privacy choice, so its title is in the theme's error colour, as *Keep what sources said
-    // about each artist* is: on, anyone nearby can see the phone's name during a session.
+    // Its trade-off, that anyone nearby can see the phone's name during a session, is said in the
+    // summary in the normal colour (#544): the error colour made it look alarming for what it is.
+    val keyboardPage = shownAddress(KEYBOARD_PAGE_URL)
     SwitchRow(
         title = stringResource(R.string.settings_show_phone_name),
         summary = stringResource(R.string.settings_show_phone_name_summary),
         checked = settings.showPhoneName,
-        highlight = true,
+        below = {
+            ExternalLink(
+                text = keyboardPage,
+                description = stringResource(R.string.settings_open_page, keyboardPage),
+                onClick = rememberOpenUrl(KEYBOARD_PAGE_URL),
+            )
+        },
     ) { on -> update { it.copy(showPhoneName = on) } }
 }
 

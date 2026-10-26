@@ -112,6 +112,7 @@ private val FAILURE_TEXTS: Map<String, Int> =
         "overloaded" to R.string.home_failure_overloaded,
         "server" to R.string.home_failure_server,
         "model_not_found" to R.string.home_failure_model_not_found,
+        "model_refused" to R.string.home_failure_model_refused,
         "request_too_large" to R.string.home_failure_request_too_large,
         "incomplete" to R.string.home_failure_incomplete,
         "declined" to R.string.home_failure_declined,

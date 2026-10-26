@@ -27,8 +27,10 @@ internal val OFFERED_PROVIDERS: List<ProviderId> = listOf(ProviderId.ANTHROPIC, 
  * off, and with all off no insight is written. A provider's model and effort can be set while it
  * is off, and stay when it is switched off, so switching back restores them. Its key is under
  * *Secrets*, which a link under the switch leads to ([KeyLink]); switched on without it, the
- * provider says so.
+ * provider says so. A provider whose selected model was found unavailable ([unavailable], by
+ * provider; #540) says so under its model, and asks for another.
  */
+@Suppress("LongParameterList") // What the rows show, and what they change.
 @Composable
 internal fun AiSection(
     settings: Settings,
@@ -36,11 +38,15 @@ internal fun AiSection(
     modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
+    unavailable: Map<ProviderId, String> = emptyMap(),
 ) {
-    for (provider in OFFERED_PROVIDERS) ProviderRows(provider, settings, secrets, modelName, update, open)
+    for (provider in OFFERED_PROVIDERS) {
+        val gone = settings.model(provider)?.takeIf { unavailable[provider] == it }
+        ProviderRows(provider, settings, secrets, modelName, update, open, gone)
+    }
 }
 
-/** [provider]'s switch, model and effort. */
+/** [provider]'s switch, model and effort; [gone] its selected model, when found unavailable. */
 @Suppress("LongParameterList") // The provider, what the rows show, and what they change.
 @Composable
 private fun ProviderRows(
@@ -50,6 +56,7 @@ private fun ProviderRows(
     modelName: (String) -> String,
     update: Update,
     open: (SettingsDialog) -> Unit,
+    gone: String?,
 ) {
     val on = settings.aiProvider == provider
     val keyId = SecretId.forProvider(provider)
@@ -81,6 +88,7 @@ private fun ProviderRows(
                 default != null -> stringResource(R.string.settings_ai_model_default, modelName(default))
                 else -> ""
             },
+        summary = gone?.let { stringResource(R.string.settings_model_not_available, name, modelName(it)) },
         indent = true,
         onClick = { open(SettingsDialog.Model(provider)) },
     )

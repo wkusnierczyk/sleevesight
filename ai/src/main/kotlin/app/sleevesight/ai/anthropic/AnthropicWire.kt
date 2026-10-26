@@ -69,4 +69,6 @@ internal data class WireModel(
     val id: String,
     @SerialName("display_name") val displayName: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    /** `active`, `deprecated` (answered for those using it, closed to new ones) or `retired`. */
+    val lifecycle: String? = null,
 )
