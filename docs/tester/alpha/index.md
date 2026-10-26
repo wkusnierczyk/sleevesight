@@ -1,12 +1,16 @@
 ---
 # The tester brief for the closed test on Google Play (#158), at `/docs/tester/alpha/`: linked from
 # the invitation. Written from the build in the test, its first-run screen and settings, and the
-# privacy policy (`privacy.md`); a change to what testers install, see or send changes it too.
+# privacy policy (`privacy.md`); a change to what testers install, see or send changes it too, and
+# the one-page flyer linked at its top with it (`assets/flyer/tester-flyer.html`, rendered by
+# `assets/flyer/make_flyer.mjs` to the PDF and PNG the site serves; #566).
 title: Testing Sleevesight
 permalink: /docs/tester/alpha/
 ---
 
 # Testing Sleevesight
+
+**The short version:** the five steps of the test on one page, the [tester flyer]({{ '/assets/flyer/tester-flyer.pdf' | relative_url }}) (PDF, A4; also as an [image]({{ '/assets/flyer/tester-flyer.png' | relative_url }})). This page has the details.
 
 Thank you for testing Sleevesight. This page says what the app is, how to install it, what to try, what to tell us, and what leaves your phone while you test.
 
