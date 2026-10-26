@@ -19,6 +19,7 @@ import app.sleevesight.core.sources.Resolution
 import app.sleevesight.core.sources.ResolvedArtist
 import app.sleevesight.core.sources.SourceAdapter
 import app.sleevesight.core.sources.SourceResult
+import app.sleevesight.core.sources.WITHOUT_GENRES_VERSION
 import app.sleevesight.sources.lastfm.LastFmBio
 import kotlinx.coroutines.Deferred
 import kotlinx.serialization.Serializable
@@ -50,6 +51,10 @@ import kotlin.time.TimeSource
  * a second track by the same artist asks Wikidata and Wikipedia nothing about the artist while it
  * is fresh. An artist without a MusicBrainz id is not kept: its article, found by name with the
  * track's own titles, is rejected for want of an id to confirm it.
+ *
+ * Without genres ([IdentityCheck.genres], *Show genres* off, #444, #545), Wikidata's lines name no
+ * genre, so its results, in the retrieval cache and in the artist cache, are kept apart from those
+ * made with them ([WITHOUT_GENRES_VERSION]), and neither is served for the other.
  */
 class WikipediaSource(
     private val wikipedia: WikipediaClient,
@@ -61,7 +66,10 @@ class WikipediaSource(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.WIKIPEDIA
 
-    override val extractionVersion: Int = EXTRACTION_VERSION
+    override val extractionVersion: Int = EXTRACTION_VERSION + if (check.genres) 0 else WITHOUT_GENRES_VERSION
+
+    // [ARTIST_PART], or, without genres, its counterpart at this adapter's version.
+    private val artistPart: ArtistPart = ARTIST_PART.copy(extraction = extractionVersion)
 
     // The identity check asks Wikidata, so a rejection depends on it too.
     override val consults: Set<SourceId> = SourceSwitch.WIKIPEDIA.sources
@@ -174,7 +182,7 @@ class WikipediaSource(
     // What the artist cache keeps for [artist]; null for none, or a value that cannot be read.
     private suspend fun stored(artist: ResolvedArtist): ArtistFinding? {
         val key = keyOf(artist)
-        val part = if (key == null) null else artists.get(ARTIST_PART, key)
+        val part = if (key == null) null else artists.get(artistPart, key)
         return try {
             part?.let { json.decodeFromString(StoredArtist.serializer(), it.value) }?.let { kept ->
                 val lines = kept.lines.map { it.draft() }
@@ -193,7 +201,7 @@ class WikipediaSource(
         val key = keyOf(artist)
         if (key == null || finding.unreachable) return
         val kept = StoredArtist(finding.accepted, finding.lines.map(::StoredLine), finding.rejection)
-        artists.keep(ARTIST_PART, key, json.encodeToString(StoredArtist.serializer(), kept))
+        artists.keep(artistPart, key, json.encodeToString(StoredArtist.serializer(), kept))
     }
 
     /**
@@ -341,7 +349,8 @@ class WikipediaSource(
         /**
          * A resolved artist's article in the artist cache (#238), by its MusicBrainz id and the name
          * as credited, a space between ([StoredArtist]): its Wikipedia sentences and Wikidata lines,
-         * or the identity check's rejection, or nothing, when no Wikidata item has the id.
+         * or the identity check's rejection, or nothing, when no Wikidata item has the id; made with
+         * genres. Without genres, an adapter keeps its own, at its [extractionVersion].
          */
         val ARTIST_PART: ArtistPart =
             ArtistPart("wikipedia.artist", EXTRACTION_VERSION, 1, SourceSwitch.WIKIPEDIA.sources)
