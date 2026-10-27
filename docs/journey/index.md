@@ -53,7 +53,7 @@ The first run does not ask for an AI service or a key. Without one, Sleevesight 
 
 The settings are in sections, each folded under its name: a tap on a section's name unfolds it.
 
-**The AI service.** Under *AI services*, switch on one of *Anthropic*, *OpenAI* or *Google*. One service writes at a time: switching one on switches the other off. Switching off a service does not erase its key or the most recently used model and effort settings, so you can switch back. Under each service, *Set your Anthropic API key here.* (or OpenAI's, or Google Gemini's) links to its key under *Secrets*. Until its key is saved, the service switched on says *Needs your Anthropic key.* (or OpenAI's, or Google's), above that link.
+**The AI service.** Under *AI services*, *Anthropic*, *OpenAI* and *Google* each have a switch. Under each service, *Set your Anthropic API key here.* (or OpenAI's, or Google Gemini's) links to its key under *Secrets*. Until its key is saved, the service's switch is off and cannot be switched on, and the service says *Needs your Anthropic key.* (or OpenAI's, or Google's), above that link. Save the key (below), then switch the service on: saving a key does not switch its service on, and the link then reads *Update your Anthropic API key here.* One service writes at a time: switching one on switches the other off. Switching off a service does not erase its key or the most recently used model and effort settings, so you can switch back. Removing a service's key switches the service off.
 
 **The key.** Each service's key has its row under *Secrets* (for example *Anthropic API key*, *Not set*). Tap it, and the dialog offers three ways to enter the key, the last two as icons in the *Key* field:
 
@@ -67,7 +67,7 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 
 **What it costs.** Each insight written is a paid call on your key (now and then two; the [usage page]({{ '/docs/tutorials/usage/' | relative_url }}) says when), billed by the service to your account; Sleevesight takes no payment of its own. Each service starts on its cheapest current text model and a low reasoning effort (*Anthropic model*, *Anthropic reasoning effort* and their like), which you can change. How many calls you make depends on when insights are written: see step 6.
 
-<!-- screenshot: Settings, the "AI services" section, with Anthropic switched on and its key not set ("Needs your Anthropic key." and "Set your Anthropic API key here."), from app version … -->
+<!-- screenshot: Settings, the "AI services" section, with Anthropic's key not set, its switch off and greyed ("Needs your Anthropic key." and "Set your Anthropic API key here."), from app version … -->
 <!-- screenshot: the key dialog: the masked "Key" field with its QR code, keyboard and eye icons, from app version … -->
 <!-- screenshot: "Save these keys?" after "Load keys", listing keys by their last four characters, from app version … (with test keys only) -->
 
@@ -76,8 +76,8 @@ To save several keys at once, *Load keys*, under *Secrets*, reads one QR code of
 **The sources.** The sources are what the AI may use, under *Sources* in the settings, each with a link to its website:
 
 - *MusicBrainz*, and *Wikipedia and Wikidata*: no key needed; on by default.
-- *Last.fm*: on by default, but it needs your own Last.fm API key, saved under *Secrets*; without one it is not asked, and *Sources* on the home screen says *Last.fm needs your key, in Settings.*
-- *Exa web search*: likewise on by default, and searching only once your Exa API key is saved.
+- *Last.fm*: it needs your own Last.fm API key, saved under *Secrets*; without one its switch is off and cannot be switched on. Once the key is saved, switch it on.
+- *Exa web search*: likewise off until your Exa API key is saved and you switch it on.
 - *AI service knowledge*: off by default. On, the insight may hold at most one claim from what the model knows, marked unverified.
 
 **What you decide.** Which sources to use, and whether to add keys for Last.fm and Exa. Each source you switch on receives the playing track's title and artists (Last.fm the artists only, Wikidata only identifiers, and Exa also the film or show a title says it is from); a source switched off receives nothing. Under *Genres* you choose whose tags give the genre labels, or, with *Show genres* off, none at all. With *Proactive* on, as it is by default, under *Insights*, the next track in the player's queue is also looked up at MusicBrainz ahead of its play; off sends nothing about it. The [privacy policy]({{ '/privacy.html' | relative_url }}) lists what goes to each.
