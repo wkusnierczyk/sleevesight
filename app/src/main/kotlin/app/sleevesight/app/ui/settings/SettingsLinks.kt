@@ -99,6 +99,12 @@ data class SettingsTarget(
         /** *Reactive*'s row under *Insights*, from the insight card's menu of its modes (#615). */
         internal val reactive: SettingsTarget = SettingsTarget(SettingsSection.INSIGHTS, "reactive")
 
+        /** The section *Players* itself, its heading, from Home's list of players (#627). */
+        internal val players: SettingsTarget = SettingsTarget(SettingsSection.PLAYERS)
+
+        /** *Home guide*'s row under *Appearance*, from the guide's *Re-enable in Settings* (#627). */
+        internal val homeGuide: SettingsTarget = SettingsTarget(SettingsSection.APPEARANCE, "home_guide")
+
         /**
          * The target [section] (a [SettingsSection]'s name) and [row] name, as a route or a saved
          * state carries it; null for no section, or a name no section has.

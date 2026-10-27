@@ -51,23 +51,23 @@ import app.sleevesight.app.ui.settings.writingModeName
 import app.sleevesight.core.settings.WriteAutomatically
 
 /** Each half's height, and the arrow's least width: the touch target Android's accessibility guidance asks for. */
-private val TARGET = 48.dp
+internal val TARGET = 48.dp
 
 /** The corner where the two halves meet, as Material 3's split button has it. */
-private val INNER_CORNER = CornerSize(4.dp)
+internal val INNER_CORNER = CornerSize(4.dp)
 
 /** The outer corners: round. */
-private val OUTER_CORNER = CornerSize(percent = 50)
+internal val OUTER_CORNER = CornerSize(percent = 50)
 
 /** The gap between the halves. */
-private val GAP = 2.dp
+internal val GAP = 2.dp
 
 /** The alpha of a control's content that cannot be used, and of its container, as Material's. */
 private const val DISABLED_CONTENT_ALPHA = 0.38f
 private const val DISABLED_CONTAINER_ALPHA = 0.12f
 
 /** The arrow turned up while the menu is open. */
-private const val OPEN_ROTATION = 180f
+internal const val OPEN_ROTATION = 180f
 
 /**
  * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; [paused] while

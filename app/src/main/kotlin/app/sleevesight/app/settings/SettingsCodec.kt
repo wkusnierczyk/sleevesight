@@ -77,6 +77,7 @@ internal object SettingsCodec {
     private val THEME = stringPreferencesKey("display.theme")
     private val FONT = stringPreferencesKey("display.font")
     private val INTRO = booleanPreferencesKey("display.intro")
+    private val HOME_GUIDE = booleanPreferencesKey("display.home_guide")
 
     /** `historyLifetime` null is *Forever*, which needs a value of its own to be stored. */
     private const val FOREVER = -1L
@@ -127,6 +128,7 @@ internal object SettingsCodec {
             theme = enumOf(prefs[THEME]) ?: defaults.theme,
             font = enumOf(prefs[FONT]) ?: defaults.font,
             introAtStart = prefs[INTRO] ?: defaults.introAtStart,
+            homeGuide = prefs[HOME_GUIDE] ?: defaults.homeGuide,
         )
 
     /**
@@ -255,6 +257,7 @@ internal object SettingsCodec {
         if (moved { it.theme }) prefs.put(THEME, settings.theme.name, defaults.theme.name)
         if (moved { it.font }) prefs.put(FONT, settings.font.name, defaults.font.name)
         if (moved { it.introAtStart }) prefs.put(INTRO, settings.introAtStart, defaults.introAtStart)
+        if (moved { it.homeGuide }) prefs.put(HOME_GUIDE, settings.homeGuide, defaults.homeGuide)
     }
 
     /**
