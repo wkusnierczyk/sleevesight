@@ -631,35 +631,6 @@ class NowPlayingScreenTest {
             }
         }
 
-    // Native graphics, on the phone's width and density: with Robolectric's default graphics every
-    // chip lays out at one height, so a row could not be misaligned. A chip that filters reserves
-    // 48 dp for touch and draws centred in it; one that does not (L, no key, under *Show grounding
-    // details*) reserves nothing, and drew at the top of the row, above the others. The chips by
-    // name (#440), a letter and a name of two sizes, share the row's centre too.
-    @Test
-    @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Config(qualifiers = "w411dp-h891dp-420dpi")
-    fun theChipsOfARowShareACentre() {
-        val details = Settings(showGroundingDetails = true)
-        for ((settings, tags) in listOf(details to listOf("MB", "W", "L"), Settings() to listOf("MB", "W"))) {
-            show(state(PipelineView(track(), needsKey = setOf(SourceId.LASTFM)), settings)) {
-                unfold()
-                val chips =
-                    tags.map {
-                        val node = compose.onNodeWithTag(CHIP_PREFIX + it).fetchSemanticsNode()
-                        // Unclipped: a chip scrolled out of view has empty bounds in the root.
-                        node.positionInRoot.y to node.positionInRoot.y + node.size.height
-                    }
-                // On one row, or the centres below would differ for another reason: chips of one
-                // row overlap in height (each is more than half the row's height), and the next row
-                // starts below them all.
-                assertTrue("one row: $chips", chips.maxOf { it.first } < chips.minOf { it.second })
-                val centres = chips.map { (top, bottom) -> (top + bottom) / 2f }
-                assertTrue("one centre: $centres", centres.maxOf { it } - centres.minOf { it } < 1f)
-            }
-        }
-    }
-
     @Test
     fun theSourcesSayWhatEachFoundNeedsOrRejected() {
         val state =
@@ -670,13 +641,12 @@ class NowPlayingScreenTest {
                         SourceId.WIKIPEDIA to done(Outcome.Rejected("a different Sundown")),
                     ),
             )
-        // Under *Show grounding details* (#440): every source's status, as before.
+        // Under *Show grounding details* (#440, #662): the diagnostics, and the sources that are off.
         show(state(PipelineView(state, needsKey = setOf(SourceId.LASTFM)), Settings(showGroundingDetails = true))) {
             unfold()
             val kept = text(R.string.home_source_cached, text(R.string.home_source_found_song))
-            compose.onNodeWithText(text(R.string.home_source_chip, "MB", kept)).assertExists()
-            val needsKey = text(R.string.home_source_chip, "L", text(R.string.home_source_needs_key))
-            compose.onNodeWithText(needsKey).assertExists()
+            compose.onNodeWithText(kept).assertExists()
+            compose.onNodeWithText(text(R.string.home_source_needs_key)).assertExists()
             val wikipedia = text(R.string.settings_source_wikipedia)
             compose.onNodeWithText(text(R.string.home_rejected, wikipedia, "a different Sundown")).assertExists()
         }

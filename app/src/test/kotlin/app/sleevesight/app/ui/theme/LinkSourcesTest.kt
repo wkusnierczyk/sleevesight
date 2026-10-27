@@ -8,8 +8,9 @@ import java.io.File
 /**
  * Every link in the app is made in `Accents.kt` (#442), by `LinkedText` or `LinkLabel`, so none
  * takes another look or loses its line: the app's sources make no link, link style or underline
- * anywhere else, the citations' chips and the sentences they flag aside. A line struck through (a
- * hidden source's filter chip, #623) is neither, and is let through.
+ * anywhere else, the citations' chips and the sentences they flag aside. A line struck through (as a
+ * hidden source's filter chip's name was, #623, before *Sources*' table, #662) is neither, and is
+ * let through.
  */
 class LinkSourcesTest {
     @Test
