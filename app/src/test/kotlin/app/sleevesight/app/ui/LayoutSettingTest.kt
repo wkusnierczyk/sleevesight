@@ -3,14 +3,14 @@ package app.sleevesight.app.ui
 import androidx.activity.compose.setContent
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -78,9 +78,11 @@ class LayoutSettingTest {
             block()
         }
 
+    // The choice's button in *Layout*'s row (#637).
+    private fun button(option: Int) = compose.onNode(hasText(text(option)) and isSelectable())
+
     private fun choose(option: Int) {
-        compose.onNodeWithText(text(R.string.settings_layout)).performScrollTo().performClick()
-        compose.onNode(hasText(text(option)) and hasAnyAncestor(isDialog())).performClick()
+        button(option).performScrollTo().performClick()
     }
 
     // The *Keep Sources as you left them* switch.
@@ -90,12 +92,13 @@ class LayoutSettingTest {
     fun theLayoutIsExpandableBoxesUntilSeparatePagesIsChosenAndBack() =
         show {
             assertEquals(Layout.EXPANDABLE_BOXES, settings.now().layout)
-            // The row says the current choice.
-            compose.onNodeWithText(text(R.string.settings_layout_boxes)).performScrollTo()
+            // The row marks the current choice.
+            button(R.string.settings_layout_boxes).performScrollTo().assertIsSelected()
 
             choose(R.string.settings_layout_pages)
             compose.waitUntil(5_000) { settings.now().layout == Layout.SEPARATE_PAGES }
-            compose.onNodeWithText(text(R.string.settings_layout_pages)).performScrollTo()
+            button(R.string.settings_layout_pages).assertIsSelected()
+            button(R.string.settings_layout_boxes).assertIsNotSelected()
 
             choose(R.string.settings_layout_boxes)
             compose.waitUntil(5_000) { settings.now().layout == Layout.EXPANDABLE_BOXES }
