@@ -127,7 +127,7 @@ class InsightSettingsTest {
             compose
                 .onNodeWithText(
                     "Select what triggers writing an insight. The arrow beside Write insight, under Key insights, " +
-                        "sets it too. Choosing an automatic mode starts automatic writing at once.",
+                        "sets it too. Choosing an automatic mode starts automatic writing from the next track.",
                 ).performScrollTo()
             compose.onNodeWithText(text(R.string.settings_write_automatically)).performScrollTo().performClick()
             val tops =

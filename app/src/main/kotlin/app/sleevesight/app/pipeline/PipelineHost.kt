@@ -155,8 +155,8 @@ class PipelineKeys(
  * one that each track change is recorded with (D15).
  *
  * *Saver* reaches the coordinator as `PauseAutoWriteChanged`, from the
- * settings as *Look up in the background* does (#203), and *Reactive* to or from *On demand* as
- * `AutomaticWritingChanged` (#553), so a run's settings, read when it started, are narrowed by a
+ * settings as *Look up in the background* does (#203), and *Reactive*'s mode as
+ * `WritingModeChanged` (#553, #625), so a run's settings, read when it started, are narrowed by a
  * change made while it runs.
  *
  * [online] is whether the phone is online (its default network has validated internet access),
@@ -275,12 +275,13 @@ class PipelineHost(
 
     /**
      * The user chose [mode] for *Reactive* (#625), in the insight card's menu or in the settings,
-     * the mode chosen already included: an automatic one is the first action (D5), so automatic
-     * writing starts, or resumes, at once. The setting is saved apart, and reaches the coordinator
-     * as any change to it does.
+     * the mode chosen already included. It applies from the next track: the track playing is
+     * written only on a tap. An automatic one is the first action (D5), so automatic writing
+     * starts, or resumes, with the next track. The setting is saved apart, and reaches the
+     * coordinator as any change to it does.
      */
     fun modeChosen(mode: WriteAutomatically) {
-        queue.trySend(CoordinatorEvent.ModeChosen(automatic = mode != WriteAutomatically.NEVER))
+        queue.trySend(CoordinatorEvent.ModeChosen(mode))
     }
 
     /**
@@ -329,10 +330,10 @@ class PipelineHost(
                 }
             }
             launch {
-                // *Reactive* to or from *On demand* (#553; the insight card's menu, #615), so a run started
-                // before it was turned off does not write without a tap.
-                latest.map { it.writesAutomatically }.distinctUntilChanged().collect {
-                    queue.send(CoordinatorEvent.AutomaticWritingChanged(it))
+                // *Reactive*'s mode (#553, #625; the insight card's menu, #615), so a run started
+                // before it changed writes only on what the mode now selected writes on.
+                latest.map { it.writeAutomatically }.distinctUntilChanged().collect {
+                    queue.send(CoordinatorEvent.WritingModeChanged(it))
                 }
             }
             launch {

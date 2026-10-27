@@ -89,7 +89,7 @@ private const val OPEN_ROTATION = 180f
 /**
  * *Reactive* (D5) as the split button's menu shows it (#615): the [mode] chosen; not [enabled]
  * while *Show insights* is off, as *Reactive* cannot be changed then. [onChoose] saves a mode
- * chosen, the one chosen already included (an automatic one starts automatic writing at once,
+ * chosen, the one chosen already included (an automatic one starts automatic writing from the next track,
  * #625); [onDetails] opens the settings at *Reactive*, where each mode is described.
  */
 internal class WritingChoice(

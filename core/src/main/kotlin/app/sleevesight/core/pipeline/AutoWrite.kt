@@ -50,13 +50,17 @@ object AutoWrite {
      * latest report it holds (`PipelineCoordinator`).
      */
     fun causes(settings: Settings): Set<ChangeCause> =
-        if (!settings.writeInsights) {
-            emptySet()
-        } else {
-            when (settings.writeAutomatically) {
-                WriteAutomatically.ON_EVERY_TRACK_CHANGE -> ChangeCause.entries.toSet()
-                WriteAutomatically.WHEN_I_SKIP -> setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER)
-                WriteAutomatically.NEVER -> emptySet()
-            }
+        if (!settings.writeInsights) emptySet() else causes(settings.writeAutomatically)
+
+    /**
+     * The causes of a change that [mode] writes on, *Show insights* aside: what the app's coordinator
+     * also checks against the mode selected now, which may have changed since a run read its
+     * settings (#625).
+     */
+    fun causes(mode: WriteAutomatically): Set<ChangeCause> =
+        when (mode) {
+            WriteAutomatically.ON_EVERY_TRACK_CHANGE -> ChangeCause.entries.toSet()
+            WriteAutomatically.WHEN_I_SKIP -> setOf(ChangeCause.USER_ACTION, ChangeCause.SKIP_IN_PLAYER)
+            WriteAutomatically.NEVER -> emptySet()
         }
 }

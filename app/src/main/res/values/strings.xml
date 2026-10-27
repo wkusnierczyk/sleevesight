@@ -115,7 +115,7 @@
     <string name="settings_write_insights">Show insights</string>
     <string name="settings_write_insights_summary">Insights on the playing track, written by your AI service from the sources’ evidence. Each insight written is a paid call on your AI service key. Stop writing ends the call at once; if the request has reached your AI service, it still charges for what it has read and written so far. When disabled, no AI calls are made; the evidence is still shown.</string>
     <string name="settings_write_automatically">Reactive</string>
-    <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too. Choosing an automatic mode starts automatic writing at once.</string>
+    <string name="settings_write_automatically_summary">Select what triggers writing an insight. The arrow beside Write insight, under Key insights, sets it too. Choosing an automatic mode starts automatic writing from the next track.</string>
     <string name="settings_pause_auto_write">Saver</string>
     <string name="settings_pause_auto_write_summary">Stops automatic writing after a number of track changes while Sleevesight is not on screen, counted again from each time you open it. Opening Sleevesight resumes it.</string>
     <!-- Reactive's choices (#625), in order of how much is written automatically; the same names

@@ -26,7 +26,7 @@ private val MAX_CROSSFADE_SECONDS =
  * session*), what an insight's prompt holds of the artist's facts, its description linking to *New
  * session idle trigger* under *History* (#581). *Reactive*'s choices are
  * described in its dialog (#546); a mode chosen there, the one chosen already included, is told to
- * [modeChosen] as well as saved: an automatic one starts automatic writing at once (#625). The rows
+ * [modeChosen] as well as saved: an automatic one starts automatic writing from the next track (#625). The rows
  * about writing cannot be changed while *Show insights* is off; *Proactive* can, as it writes nothing.
  */
 @Composable

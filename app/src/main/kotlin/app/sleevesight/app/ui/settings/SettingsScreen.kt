@@ -82,7 +82,7 @@ import java.io.IOException
  * landed on as a link to it would ([SettingsNavigator.go]), once per visit: Home's note of a model
  * found unavailable opens them at the model's row (#581); null opens them all folded, at the top.
  * [onWritingModeChosen] hears each mode chosen for *Reactive*, the one chosen already included,
- * besides its save: an automatic one starts automatic writing at once (#625).
+ * besides its save: an automatic one starts automatic writing from the next track (#625).
  */
 @Suppress("LongParameterList", "LongMethod") // The stores and actions it works on; a branch per dialog.
 @Composable

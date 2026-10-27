@@ -1,5 +1,6 @@
 package app.sleevesight.app.pipeline
 
+import app.sleevesight.core.settings.WriteAutomatically
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -20,7 +21,7 @@ class PipelineCoordinatorAutomaticWritingTest {
                 "A",
             ) {
                 acted()
-                send(CoordinatorEvent.AutomaticWritingChanged(false))
+                send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.NEVER))
                 network(online = false)
                 play("A")
                 settle()
@@ -52,7 +53,7 @@ class PipelineCoordinatorAutomaticWritingTest {
                 hide()
                 play("B")
                 settle()
-                send(CoordinatorEvent.AutomaticWritingChanged(false))
+                send(CoordinatorEvent.WritingModeChanged(WriteAutomatically.NEVER))
                 network(online = false)
                 play("C")
                 settle()
