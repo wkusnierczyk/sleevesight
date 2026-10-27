@@ -60,6 +60,8 @@ class ExaWebSearch(
 ) : SourceAdapter {
     override val id: SourceId = SourceId.WEB
 
+    override val extractionVersion: Int = EXTRACTION_VERSION
+
     private val filter = RecordingFilter(accentFolder)
 
     override suspend fun lookup(
@@ -157,7 +159,18 @@ class ExaWebSearch(
                 encodeDefaults = true
             }
 
-        private val WHITESPACE = Regex("\\s+")
+        /**
+         * [extractionVersion]. 2: each line cut to [LINE_CHARACTERS] and judged as cut (#634), so a
+         * result kept before, with a line up to ten times as long or kept for words past the cut,
+         * is missed instead of served.
+         */
+        const val EXTRACTION_VERSION: Int = 2
+
+        // Unicode's White_Space, listed (no-break spaces, line and paragraph separators, NEL): a
+        // JVM `\s` is ASCII only, and `(?U)` is not portable (D2). [cut] then finds every word
+        // boundary as a plain space.
+        private val WHITESPACE =
+            Regex("[\\s\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]+")
 
         /**
          * The most characters of a line's text before the ellipsis that marks a cut: the 300 the
@@ -186,7 +199,9 @@ class ExaWebSearch(
          * otherwise its longest start of at most [max] characters that ends at a word boundary,
          * with `…` after it, so the line is still a verbatim quote and the cut shows. A start that
          * ends in the separator between two highlights leaves the separator out. Text with no space
-         * in its first [max] characters is cut at [max], never inside a surrogate pair.
+         * in its first [max] characters is cut at the last boundary at or before [max] between two
+         * characters as a reader sees them ([joinsPrevious]): never inside a surrogate pair,
+         * between a letter and its accent, or inside an emoji sequence or a flag.
          */
         internal fun cut(
             text: String,
@@ -194,18 +209,89 @@ class ExaWebSearch(
         ): String {
             if (text.length <= max) return text
             val space = if (text[max] == ' ') max else text.lastIndexOf(' ', max - 1)
-            val end =
-                when {
-                    space > 0 -> space
-                    text[max - 1].isHighSurrogate() -> max - 1
-                    else -> max
-                }
+            val end = if (space > 0) space else characterBoundary(text, max)
             return text
                 .substring(0, end)
                 .trimEnd()
                 .removeSuffix(SEPARATOR.trimEnd())
                 .trimEnd() + ELLIPSIS
         }
+
+        // The last boundary between characters as a reader sees them at or before [max] in [text];
+        // if the first such character is longer, [max] itself, outside a surrogate pair.
+        private fun characterBoundary(
+            text: String,
+            max: Int,
+        ): Int {
+            var end = max
+            while (end > 0 && joinsPrevious(text, end)) end--
+            return when {
+                end > 0 -> end
+                text[max].isLowSurrogate() -> max - 1
+                else -> max
+            }
+        }
+
+        /**
+         * Whether the character at [i] in [text] belongs with the one before it, so a cut at [i]
+         * would split what a reader sees as one: the second half of a surrogate pair; a combining
+         * mark or a variation selector; either side of a zero-width joiner (emoji sequences); a
+         * skin-tone modifier or a tag character (subdivision flags); or the second of a pair of
+         * regional indicators (a flag). Unicode's grapheme rules, in the part a quote meets;
+         * `java.text.BreakIterator` has them all but is JVM-only (D2).
+         */
+        internal fun joinsPrevious(
+            text: String,
+            i: Int,
+        ): Boolean {
+            val c = text[i]
+            val point = codePointAt(text, i)
+            return c.isLowSurrogate() ||
+                c.category in MARKS ||
+                c == ZERO_WIDTH_JOINER ||
+                text[i - 1] == ZERO_WIDTH_JOINER ||
+                point in SKIN_TONES ||
+                point in TAGS ||
+                (point in REGIONAL_INDICATORS && regionalIndicatorsBefore(text, i) % 2 == 1)
+        }
+
+        // The number of regional indicators in a row just before [i].
+        private fun regionalIndicatorsBefore(
+            text: String,
+            i: Int,
+        ): Int {
+            var count = 0
+            var j = i
+            while (j >= 2 && codePointAt(text, j - 2) in REGIONAL_INDICATORS) {
+                count++
+                j -= 2
+            }
+            return count
+        }
+
+        // The code point starting at [i]: a surrogate pair's, or the single character's.
+        private fun codePointAt(
+            text: String,
+            i: Int,
+        ): Int {
+            val high = text[i]
+            val low = text.getOrNull(i + 1)
+            return if (high.isHighSurrogate() && low != null && low.isLowSurrogate()) {
+                SUPPLEMENTARY_BASE + ((high.code - Char.MIN_HIGH_SURROGATE.code) shl SURROGATE_BITS) +
+                    (low.code - Char.MIN_LOW_SURROGATE.code)
+            } else {
+                high.code
+            }
+        }
+
+        private val MARKS =
+            setOf(CharCategory.NON_SPACING_MARK, CharCategory.ENCLOSING_MARK, CharCategory.COMBINING_SPACING_MARK)
+        private const val ZERO_WIDTH_JOINER = '\u200D'
+        private const val SUPPLEMENTARY_BASE = 0x10000
+        private const val SURROGATE_BITS = 10
+        private val SKIN_TONES = 0x1F3FB..0x1F3FF
+        private val TAGS = 0xE0020..0xE007F
+        private val REGIONAL_INDICATORS = 0x1F1E6..0x1F1FF
 
         /** A 2xx body read as a search response; null for any other status, which has no results. */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
