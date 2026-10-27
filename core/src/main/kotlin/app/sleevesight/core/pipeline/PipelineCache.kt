@@ -1,6 +1,7 @@
 package app.sleevesight.core.pipeline
 
 import app.sleevesight.core.ai.ReasoningEffort
+import app.sleevesight.core.evidence.Hasher
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.ProviderId
 import app.sleevesight.core.sources.SourceAdapter
@@ -82,6 +83,9 @@ interface PipelineCache {
  * @property duration the player's length for the track, part of its entity key.
  * @property modelKnowledge whether the model's own knowledge was allowed.
  * @property effort the reasoning effort asked for, null for the provider's default.
+ * @property subject what the card is about besides the track, null for none: for a genre's reason
+ *   ([CardKind.GENRE], #523), the genre's identity (`GenreLabel.identity`), so each genre of a
+ *   track keeps its own.
  */
 data class CardKey(
     val kind: CardKind,
@@ -94,4 +98,26 @@ data class CardKey(
     val model: String,
     val modelKnowledge: Boolean,
     val effort: ReasoningEffort?,
+    val subject: String? = null,
 )
+
+/**
+ * The hash of a card's user style (D14), SHA-256 in hex, as [CardKey.styleHash] keeps it. D14's style
+ * is not built yet: every card uses the built-in style, the hash of no style ([NO_STYLE]).
+ */
+internal fun styleHash(
+    hasher: Hasher,
+    style: String = NO_STYLE,
+): String =
+    hasher.sha256(style.encodeToByteArray()).joinToString("") { byte ->
+        val value = byte.toInt() and BYTE_MASK
+        HEX[value shr NIBBLE].toString() + HEX[value and NIBBLE_MASK]
+    }
+
+/** No user style: the built-in style alone. */
+internal const val NO_STYLE: String = ""
+
+private const val HEX = "0123456789abcdef"
+private const val BYTE_MASK = 0xFF
+private const val NIBBLE = 4
+private const val NIBBLE_MASK = 0x0F

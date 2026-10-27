@@ -70,7 +70,9 @@ class StorePipelineCache(
     private fun CardKey.toStore(): SynthesisKey =
         SynthesisKey(
             kind = kind,
-            entityKey = caches.retrieval.keyOf(track, duration),
+            // A card about more than the track (a genre's reason, #523) keeps its subject after it,
+            // past a line break: the retrieval key's parts are length-prefixed, so the two never blur.
+            entityKey = caches.retrieval.keyOf(track, duration) + subject?.let { "\n$it" }.orEmpty(),
             evidenceFingerprint = evidenceFingerprint,
             promptVersion = promptVersion,
             styleHash = styleHash,
