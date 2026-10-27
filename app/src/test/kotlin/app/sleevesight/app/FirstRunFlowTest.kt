@@ -23,6 +23,7 @@ import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -46,7 +47,9 @@ import app.sleevesight.app.ui.Home
 import app.sleevesight.app.ui.PRIVACY_POLICY_SHOWN
 import app.sleevesight.app.ui.SettingsPage
 import app.sleevesight.app.ui.SleevesightNavHost
+import app.sleevesight.app.ui.home.NOTHING_PLAYING_TAG
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
+import app.sleevesight.app.ui.home.awaitIdleHome
 import app.sleevesight.app.ui.openSection
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.flow.first
@@ -235,7 +238,7 @@ class FirstRunFlowTest {
 
             compose.onNodeWithText(text(R.string.access_on)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
 
             // The first-run screen is not left behind Home: nothing in the app handles Back.
             var handlesBack = true
@@ -250,11 +253,11 @@ class FirstRunFlowTest {
         launch().use {
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
         // Continuing is remembered: the next start opens on Home.
         launch().use {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
     }
 
@@ -263,7 +266,7 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
     }
 
@@ -302,7 +305,8 @@ class FirstRunFlowTest {
                     SleevesightNavHost(graph.notificationAccess, graph.firstRun, { true }, nav)
                 }
             }
-            compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+            compose.awaitIdleHome()
+            compose.onNodeWithText(text(R.string.home_what_leaves)).performScrollTo().performClick()
             // FirstRun drawn first, so the redirect checked below is the one Home makes now, not
             // one left over from the start.
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
@@ -323,7 +327,7 @@ class FirstRunFlowTest {
             assertFalse(handlesBack)
 
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
             scenario.onActivity { routes = nav.currentBackStack.value.map { it.destination.route } }
             assertEquals(listOf(null, Home.serializer().descriptor.serialName), routes)
         }
@@ -347,7 +351,7 @@ class FirstRunFlowTest {
             scenario.onActivity { nav.navigate(Home) }
 
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
-            assertEquals(0, compose.onAllNodesWithText(text(R.string.home_placeholder)).fetchSemanticsNodes().size)
+            assertEquals(0, compose.onAllNodesWithTag(NOTHING_PLAYING_TAG).fetchSemanticsNodes().size)
             var routes = emptyList<String?>()
             scenario.onActivity { routes = nav.currentBackStack.value.map { it.destination.route } }
             assertEquals(listOf(null, FirstRun.serializer().descriptor.serialName), routes)
@@ -359,7 +363,7 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launchDeepLinkedToHome().use {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
     }
 
@@ -368,13 +372,14 @@ class FirstRunFlowTest {
         acknowledgeFirstRun()
         setAccess(granted = true)
         launch().use { scenario ->
-            compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+            compose.awaitIdleHome()
+            compose.onNodeWithText(text(R.string.home_what_leaves)).performScrollTo().performClick()
             // Robolectric runs out of touch mode, so the back arrow, at the top, takes focus when Home
             // opens the first-run screen again (#549).
             compose.onNodeWithTag(PAGE_BACK_TAG).assertIsFocused()
             compose.onNodeWithText(text(R.string.first_run_leaves_title)).performScrollTo().assertIsDisplayed()
             compose.onNodeWithText(text(R.string.page_close)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
             // Back on the Home it came from, not a second one over it: nothing left for Back to pop.
             var handlesBack = true
             scenario.onActivity { handlesBack = it.onBackPressedDispatcher.hasEnabledCallbacks() }
@@ -390,7 +395,8 @@ class FirstRunFlowTest {
         instrumentation.setInTouchMode(true)
         try {
             launch().use {
-                compose.onNodeWithText(text(R.string.home_what_leaves)).performClick()
+                compose.awaitIdleHome()
+                compose.onNodeWithText(text(R.string.home_what_leaves)).performScrollTo().performClick()
                 // As on a phone the user touches: nothing takes focus, so nothing is scrolled into view.
                 compose.onNodeWithText(text(R.string.first_run_intro_again)).assertIsDisplayed()
                 compose.onNodeWithText(text(R.string.first_run_leaves_title)).assertIsDisplayed()
@@ -458,10 +464,10 @@ class FirstRunFlowTest {
                 compose.onNodeWithText(text(R.string.page_close)).performScrollTo().performClick()
                 // Back on the settings, not Home.
                 compose.onNodeWithText(text(R.string.settings_what_leaves)).assertIsDisplayed()
-                compose.onNodeWithText(text(R.string.home_placeholder)).assertDoesNotExist()
+                compose.onNodeWithTag(NOTHING_PLAYING_TAG).assertDoesNotExist()
                 // And Home under them, as before the explanation opened.
                 scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-                compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+                compose.awaitIdleHome()
             }
         } finally {
             instrumentation.setInTouchMode(false)

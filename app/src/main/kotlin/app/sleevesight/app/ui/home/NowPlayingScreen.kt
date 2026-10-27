@@ -6,8 +6,6 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,9 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.sleevesight.app.R
 import app.sleevesight.app.pipeline.CallId
 import app.sleevesight.app.pipeline.GenreNotes
 import app.sleevesight.app.pipeline.PipelineView
@@ -27,6 +23,7 @@ import app.sleevesight.app.report.MailHandoff
 import app.sleevesight.app.report.PhoneMail
 import app.sleevesight.app.session.PlaybackInfo
 import app.sleevesight.app.ui.report.InsightReportDialog
+import app.sleevesight.app.ui.settings.InstalledPlayers
 import app.sleevesight.app.ui.settings.SettingsTarget
 import app.sleevesight.core.model.NormalizedTrack
 import app.sleevesight.core.model.NowPlaying
@@ -54,6 +51,11 @@ import kotlinx.coroutines.flow.StateFlow
  *   (#540): no insight is written with it, and the card says so.
  * @property chooseWritingMode saves a mode chosen in the insight card's menu of *Reactive*'s modes
  *   (#615), as *Reactive*.
+ * @property installedPlayers the players' icons, whether the phone shows them, and the players seen,
+ *   for the players listed while nothing plays (#627); null lists every stored player, without an
+ *   icon.
+ * @property guideDismissed whether the guide to Home is dismissed for now (#627: *Dismiss once*),
+ *   which [dismissGuide] does, until a track plays; [hideGuide] switches *Home guide* off.
  * @property genreNotes what a genre's panel shows above its table (#523): what the genre is, and
  *   *Why is this …?*.
  */
@@ -72,6 +74,10 @@ class HomeFeed(
     val playerLaunch: (String) -> Intent? = { null },
     val unavailableModel: StateFlow<UnavailableModel?> = MutableStateFlow(null),
     val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val installedPlayers: InstalledPlayers? = null,
+    val guideDismissed: StateFlow<Boolean> = MutableStateFlow(false),
+    val dismissGuide: () -> Unit = {},
+    val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
 )
 
@@ -117,7 +123,8 @@ private fun nowPlayingState(feed: HomeFeed): NowPlayingState {
     val art by feed.art.collectAsState()
     val settings by feed.settings.collectAsState()
     val unavailable by feed.unavailableModel.collectAsState()
-    return NowPlayingState(view, playing, playback, art, settings, unavailable)
+    val guideDismissed by feed.guideDismissed.collectAsState()
+    return NowPlayingState(view, playing, playback, art, settings, unavailable, guideDismissed)
 }
 
 private fun HomeFeed.actions(
@@ -133,6 +140,9 @@ private fun HomeFeed.actions(
     write = write,
     stop = stop,
     chooseWritingMode = chooseWritingMode,
+    installedPlayers = installedPlayers,
+    dismissGuide = dismissGuide,
+    hideGuide = hideGuide,
     genreNotes = genreNotes,
     openSettings = openSettings,
     openPage = openPage,
@@ -141,8 +151,10 @@ private fun HomeFeed.actions(
 
 /**
  * What the screen shows, as published: [settings] is null until the first read; [unavailable] is
- * the switched-on AI service's model while it is found unavailable (#540).
+ * the switched-on AI service's model while it is found unavailable (#540); [guideDismissed], whether
+ * the guide to Home shown while nothing plays is dismissed for now (#627).
  */
+@Suppress("LongParameterList") // What the screen shows, each published on its own.
 internal class NowPlayingState(
     val view: PipelineView,
     val playing: NowPlaying?,
@@ -150,6 +162,7 @@ internal class NowPlayingState(
     val art: Bitmap? = null,
     val settings: Settings? = null,
     val unavailable: UnavailableModel? = null,
+    val guideDismissed: Boolean = false,
 )
 
 /**
@@ -160,7 +173,9 @@ internal class NowPlayingState(
  * the settings at a setting, from the note of a model found unavailable (#581). [openPage] opens
  * an item on a page of its own, under *Layout*'s *Separate pages* (#447). [chooseWritingMode] saves
  * a mode chosen in the insight card's menu of *Reactive*'s modes (#615). [genreNotes] gives what a
- * genre's panel shows above its table (#523).
+ * genre's panel shows above its table (#523). While nothing plays (#627), the players are listed
+ * with [installedPlayers]' icons, and the guide's *Dismiss* goes to [dismissGuide] (*Dismiss once*)
+ * or [hideGuide] (*Do not show again*).
  */
 @Suppress("LongParameterList") // Each of the screen's ways out, on its own.
 internal class NowPlayingActions(
@@ -175,6 +190,9 @@ internal class NowPlayingActions(
     val openPage: (HomePage) -> Unit = {},
     val openSettingsAt: (SettingsTarget) -> Unit = { openSettings() },
     val chooseWritingMode: (WriteAutomatically) -> Unit = {},
+    val installedPlayers: InstalledPlayers? = null,
+    val dismissGuide: () -> Unit = {},
+    val hideGuide: () -> Unit = {},
     val genreNotes: GenreNotes = GenreNotes.None,
 )
 
@@ -182,8 +200,8 @@ internal class NowPlayingActions(
  * The home screen's content, top to bottom (design, *Home screen*): the player row, the art with
  * the playback position, the key data, the genre labels, *Key insights* and *Sources*,
  * straight on Home's background, their accents in the art's colours (#609). Nothing playing in a
- * followed player shows the idle line. A track the pipeline has not reached yet shows at once, its
- * evidence and insight to come.
+ * followed player shows the players to start and the guide to Home ([IdleHome], #627). A track the
+ * pipeline has not reached yet shows at once, its evidence and insight to come.
  *
  * *Sounds like* waits for its card (Phase 2: `TrackState` has no similar artists yet), and so do
  * the song, artist and album insights (#522, Phase 1.5), and the rest of the detail content, the
@@ -209,7 +227,7 @@ internal fun NowPlayingContent(
     // Above the return, so the fold outlives a while with nothing playing.
     val foldMemory = rememberFoldMemory()
     if (playing == null) {
-        NothingPlaying()
+        IdleHome(state.settings, state.guideDismissed, actions)
         return
     }
     val shown = Showing(state, playing)
@@ -343,12 +361,6 @@ private fun ReportOpen(
     val context = LocalContext.current
     val handoff = mail ?: remember(context) { PhoneMail(context) }
     InsightReportDialog(reported.track, reported.insight, handoff, onDismiss)
-}
-
-/** Nothing playing in a player followed. */
-@Composable
-fun NothingPlaying() {
-    Text(stringResource(R.string.home_placeholder), style = MaterialTheme.typography.bodyLarge)
 }
 
 // A track the pipeline has not reached yet.

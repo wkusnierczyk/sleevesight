@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
@@ -95,6 +96,34 @@ class PlayerSettingsTest {
             // The link opens the player; it does not toggle its switch.
             compose.waitForIdle()
             assertEquals(true, settings.now().followedPlayers[Settings.SPOTIFY])
+        }
+    }
+
+    @Test
+    fun playersAreListedAToZByTheirNamesNotTheirPackages() {
+        // The packages sort the other way from the names (#627).
+        val zulu = "com.a.zzz"
+        val alpha = "com.z.aaa"
+        runBlocking { settings.update { it.copy(followedPlayers = mapOf(zulu to true, alpha to false)) } }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    SettingsScreen(settings, secrets, emptyMap(), { CompletableDeferred(true) }, saves) {
+                        mapOf(zulu to "Zulu", alpha to "Alpha")[it] ?: it
+                    }
+                }
+            }
+            compose.openSection(SettingsSection.PLAYERS)
+            compose.waitUntil(5_000) {
+                listOf("Alpha", "Zulu").all { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
+            }
+            val top = { name: String ->
+                compose
+                    .onNodeWithText(name)
+                    .fetchSemanticsNode()
+                    .boundsInRoot.top
+            }
+            assertTrue(top("Alpha") < top("Zulu"))
         }
     }
 }

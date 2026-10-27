@@ -38,6 +38,7 @@ import app.sleevesight.app.session.SleevesightListenerService
 import app.sleevesight.app.ui.home.PAGE_BACK_TAG
 import app.sleevesight.app.ui.home.PAGE_CLOSE_TAG
 import app.sleevesight.app.ui.home.PAGE_TITLE_TAG
+import app.sleevesight.app.ui.home.awaitIdleHome
 import app.sleevesight.app.ui.settings.SettingsSection
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -75,7 +76,7 @@ class ClosingPagesTest {
         FirstRunAcknowledgement(app).acknowledge()
         setAccess(granted = true)
         return ActivityScenario.launch(MainActivity::class.java).also {
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
     }
 
@@ -224,7 +225,7 @@ class ClosingPagesTest {
             assertBar(R.string.home_what_leaves)
             assertEquals(0, countText(R.string.first_run_continue))
             close()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
             assertEquals(0, count(PAGE_BACK_TAG))
         }
     }
@@ -270,7 +271,7 @@ class ClosingPagesTest {
             scenario.moveToState(Lifecycle.State.RESUMED)
             assertFirstRunOwn()
             compose.onNodeWithText(text(R.string.first_run_continue)).performScrollTo().performClick()
-            compose.onNodeWithText(text(R.string.home_placeholder)).assertIsDisplayed()
+            compose.awaitIdleHome()
         }
     }
 
