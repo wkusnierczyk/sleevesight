@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The debug build's name in the launcher, App info and the notification-access list (#614),
+         so that it can be told from the Play build on a phone that has both; its icon has a bug on
+         it (app/src/debug/res/drawable). The app's own screens still say Sleevesight (app_name). -->
+    <string name="app_label">Sleevesight Debug</string>
+</resources>

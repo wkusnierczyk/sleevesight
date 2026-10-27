@@ -42,4 +42,18 @@ class ReleaseVersionTest {
             assertTrue("'$version'" in error.message.orEmpty(), error.message)
         }
     }
+
+    @Test
+    fun `the newest release notes give the highest version, in version order, not by name`() {
+        val names = listOf("0.1.9.txt", "0.1.10.txt", "0.1.2.txt", "README.md", ".hidden.txt")
+        assertEquals(ReleaseVersion("0.1.10", 1_010), ReleaseVersion.newestOf(names))
+    }
+
+    @Test
+    fun `names that are not release notes for a version are passed over`() {
+        val names = listOf("0.1.6.txt", "0.2.0.md", "0.3.0", "v0.4.0.txt", "0.5.txt", "01.0.0.txt", "0.0.0.txt")
+        assertEquals(ReleaseVersion("0.1.6", 1_006), ReleaseVersion.newestOf(names))
+        assertEquals(null, ReleaseVersion.newestOf(listOf("0.2.0.md", "notes.txt")))
+        assertEquals(null, ReleaseVersion.newestOf(emptyList()))
+    }
 }

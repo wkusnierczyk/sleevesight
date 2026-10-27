@@ -4,9 +4,21 @@ plugins {
     id("sleevesight.android-app")
 }
 
-// A release takes its version from its tag, `v<major>.<minor>.<patch>`, which the release workflow
-// passes as `-Psleevesight.version` (`design/release.md`, *Versioning*); other builds are 0.1.0.
-val appVersion = ReleaseVersion.parse(providers.gradleProperty("sleevesight.version").getOrElse("0.1.0"))
+// The version (`design/release.md`, *Versioning*): a release takes its tag's,
+// `v<major>.<minor>.<patch>`, which the release workflow passes as `-Psleevesight.version`; CI's
+// builds for an integration branch, `dev-<version>`, take that version, passed the same way (#614).
+// Without the property, a build takes the version of the newest release notes,
+// `release-notes/<version>.txt`, or 0.1.0 when there are none. A debug build adds `-debug` (below).
+val releaseNotes =
+    rootDir
+        .resolve("release-notes")
+        .list()
+        .orEmpty()
+        .asList()
+val appVersion =
+    providers.gradleProperty("sleevesight.version").orNull?.let(ReleaseVersion::parse)
+        ?: ReleaseVersion.newestOf(releaseNotes)
+        ?: ReleaseVersion.parse("0.1.0")
 
 // Developer mode's default (#451): on in a build for Play's testing tracks, which the release
 // workflow makes with `-Psleevesight.developerMode=true` (`design/release.md`, *Test and production
@@ -37,9 +49,12 @@ android {
         unitTests.all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
     }
     buildTypes {
-        // The debug APK (the CI artifact) installs beside a release from Google Play.
+        // The debug APK (the CI artifact) installs beside a release from Google Play, and tells
+        // itself apart from it (#614): its version ends in `-debug` (*About* and the tester report
+        // show it), and its name and icon are its own (`src/debug/res`).
         debug {
             applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
 }

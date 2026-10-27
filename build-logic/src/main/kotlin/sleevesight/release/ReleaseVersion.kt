@@ -17,6 +17,7 @@ data class ReleaseVersion(
         const val MAX_CODE = 2_100_000_000
 
         private const val PART_LIMIT = 1_000
+        private const val NOTES_SUFFIX = ".txt"
         private val pattern = Regex("""(0|[1-9]\d{0,3})\.(0|[1-9]\d{0,2})\.(0|[1-9]\d{0,2})""")
 
         /** Parses [version], or fails with a message that names the expected form. */
@@ -31,5 +32,17 @@ data class ReleaseVersion(
             require(code in 1..MAX_CODE) { "Version '$version' gives versionCode $code, outside 1..$MAX_CODE" }
             return ReleaseVersion(version, code.toInt())
         }
+
+        /**
+         * The highest version named by [fileNames] of release notes, each `<version>.txt`
+         * (`release-notes/`), or null when none is: a build given no version takes the release the
+         * newest notes are for (#614). A name in another form, or with a version [parse] refuses,
+         * is passed over, as CI's check of the notes fails it anyway.
+         */
+        fun newestOf(fileNames: Iterable<String>): ReleaseVersion? =
+            fileNames
+                .filter { it.endsWith(NOTES_SUFFIX) }
+                .mapNotNull { runCatching { parse(it.removeSuffix(NOTES_SUFFIX)) }.getOrNull() }
+                .maxByOrNull { it.code }
     }
 }
