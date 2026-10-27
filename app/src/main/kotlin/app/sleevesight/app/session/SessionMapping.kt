@@ -146,8 +146,9 @@ object SessionMapping {
     /**
      * [state] as the app reads it, by whether its session plays on another device ([remote],
      * `PLAYBACK_TYPE_REMOTE`): a remote session of one of [CONNECT_PLAYERS] reporting `PAUSED` at a
-     * speed above 0 is `PLAYING` at that speed; every other state is as reported. Every reader of a followed session's state takes it
-     * from here: the status shown, the bar, the choice of session, skip detection and the history.
+     * speed above 0 is `PLAYING` at that speed; every other state is as reported. Every reader of
+     * a followed session's state takes it from here: the status shown, the bar, the choice of
+     * session, skip detection and the history.
      *
      * Spotify Connect publishes one session for the device it plays on, always `PAUSED`; only the
      * speed tells playing (1) from paused (0), and the position is reported at each change (#595,
