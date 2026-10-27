@@ -31,10 +31,12 @@ import kotlin.time.TimeSource
 /**
  * Web search through Exa, the first provider (D11; `design/design.md`, *Web search provider (D11)*), on the
  * user's own key. One evidence line per kept result: Exa's highlight for it, verbatim apart from
- * whitespace, with the result's URL (architecture, *Source adapters*).
+ * whitespace and cut to at most [LINE_CHARACTERS] at a word boundary ([cut]), with the result's URL
+ * (architecture, *Source adapters*).
  *
  * The query names the song and its credited artists ([ExaSearchRequest.of]); the results are then
- * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The adapter does not
+ * kept or dropped by [RecordingFilter], at most [MAX_LINES] in Exa's order. The filter judges the
+ * line as cut, so a result is never kept for words the line then leaves out. The adapter does not
  * wait for [Resolution]: a web result has no id to verify against, so the filter is its only check.
  * A kept result's line goes in [SourceResult.evidence] and may be cited, as a line about the track
  * (scope web), never checked against the ids MusicBrainz resolves.
@@ -157,12 +159,53 @@ class ExaWebSearch(
 
         private val WHITESPACE = Regex("\\s+")
 
-        /** The result's highlights joined as Exa joins its own fragments, whitespace collapsed. */
+        /**
+         * The most characters of a line's text before the ellipsis that marks a cut: the 300 the
+         * request asks Exa for, which Exa does not hold to (#608), so the adapter does (#634). D1:
+         * an evidence line is a short quote, never a whole passage.
+         */
+        internal const val LINE_CHARACTERS: Int = ExaSearchRequest.HIGHLIGHT_CHARACTERS
+
+        private const val SEPARATOR = " ... "
+        private const val ELLIPSIS = "…"
+
+        /**
+         * The result's highlights joined as Exa joins its own fragments, whitespace collapsed, and
+         * [cut] to at most [LINE_CHARACTERS].
+         */
         internal fun snippetOf(result: ExaResult): String =
-            result.highlights
-                .map { it.replace(WHITESPACE, " ").trim() }
-                .filter { it.isNotEmpty() }
-                .joinToString(" ... ")
+            cut(
+                result.highlights
+                    .map { it.replace(WHITESPACE, " ").trim() }
+                    .filter { it.isNotEmpty() }
+                    .joinToString(SEPARATOR),
+            )
+
+        /**
+         * [text] (whitespace already collapsed) as it comes when it has at most [max] characters;
+         * otherwise its longest start of at most [max] characters that ends at a word boundary,
+         * with `…` after it, so the line is still a verbatim quote and the cut shows. A start that
+         * ends in the separator between two highlights leaves the separator out. Text with no space
+         * in its first [max] characters is cut at [max], never inside a surrogate pair.
+         */
+        internal fun cut(
+            text: String,
+            max: Int = LINE_CHARACTERS,
+        ): String {
+            if (text.length <= max) return text
+            val space = if (text[max] == ' ') max else text.lastIndexOf(' ', max - 1)
+            val end =
+                when {
+                    space > 0 -> space
+                    text[max - 1].isHighSurrogate() -> max - 1
+                    else -> max
+                }
+            return text
+                .substring(0, end)
+                .trimEnd()
+                .removeSuffix(SEPARATOR.trimEnd())
+                .trimEnd() + ELLIPSIS
+        }
 
         /** A 2xx body read as a search response; null for any other status, which has no results. */
         internal fun parse(response: NetResponse): ExaSearchResponse? =
@@ -187,7 +230,8 @@ class ExaWebSearch(
  * - [excludeDomains]: [RecordingFilter.OWN_SOURCE_HOSTS], which the filter drops anyway.
  * - Highlights asked for at 300 characters, steered by the title, the work it is from when there
  *   is one, and the artists: the snippet. Exa's results carry no snippet without a `contents`
- *   option. `maxCharacters` is not a cap: about three in ten came back longer, up to 3,000 (#608).
+ *   option. `maxCharacters` is not a cap: about three in ten came back longer, up to 3,000 (#608),
+ *   so the adapter cuts each line to it ([ExaWebSearch.cut], #634).
  * - The results are then judged by [RecordingFilter]: the song (and its work) and a distinctive
  *   credited artist named, and the result's own title not naming the artist without the song.
  */
@@ -228,7 +272,8 @@ internal data class ExaSearchRequest(
             )
         }
 
-        private const val HIGHLIGHT_CHARACTERS = 300
+        /** What the request asks Exa for, and what the adapter cuts a line to ([ExaWebSearch.cut]). */
+        const val HIGHLIGHT_CHARACTERS: Int = 300
     }
 }
 

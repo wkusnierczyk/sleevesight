@@ -51,7 +51,7 @@ Anthropic's prices are for prompts of up to 100,000 tokens; an insight's prompt 
 - 1,051 tokens in at $0.10 per million: $0.000105;
 - 157 tokens out at $0.50 per million: $0.000079.
 
-Web search, on by default once Exa has a key, adds what it found to the prompt: at most five results, which over the fixture playlist came to about 1,700 characters a track on average and at most about 3,900 (27 October 2026), so about 400 tokens more on average and about a thousand at most, at most $0.0001 more on Claude Haiku 5.5. The other services count tokens their own way, and their models reason at different lengths, so for them the same prices give a rough guide only: about $0.0002 an insight on GPT-6 Luna, and about $0.0007 on Gemini 3.5 Flash-Lite, whose prices are higher.
+Web search, on by default once Exa has a key, adds what it found to the prompt: at most five results of at most 300 characters each, so at most about 1,500 characters a track, about 400 tokens: less than $0.0001 more on Claude Haiku 5.5. The other services count tokens their own way, and their models reason at different lengths, so for them the same prices give a rough guide only: about $0.0002 an insight on GPT-6 Luna, and about $0.0007 on Gemini 3.5 Flash-Lite, whose prices are higher.
 
 **The web search.** One Exa search for each new track, $0.004: each of 156 searches measured on 27 October 2026 reported that cost in Exa's answer, the highlights included. With web search on, the search is most of what a new track costs.
 
